@@ -6,21 +6,23 @@ class IbkrAccount::Processor
   end
 
   def process
-    return unless ibkr_account.current_account.present?
+    return unless account.present?
 
     update_account_balance!
     IbkrAccount::HoldingsProcessor.new(ibkr_account).process
     IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
     repair_default_opening_anchor!
 
-    ibkr_account.current_account.broadcast_sync_complete
+    account.broadcast_sync_complete
   end
 
   private
 
-    def update_account_balance!
-      account = ibkr_account.current_account
+    def account
+      @account ||= ibkr_account.current_account
+    end
 
+    def update_account_balance!
       total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
       cash_balance = ibkr_account.cash_balance || 0
 
@@ -34,7 +36,6 @@ class IbkrAccount::Processor
     end
 
     def repair_default_opening_anchor!
-      account = ibkr_account.current_account
       return unless account&.linked_to?("IbkrAccount")
       return unless account.has_opening_anchor?
 
@@ -51,6 +52,12 @@ class IbkrAccount::Processor
         date: opening_anchor_entry.date
       )
 
-      raise result.error if result.error
+      # Don't raise — broadcast_sync_complete must still run after a repair failure.
+      if result.error
+        Rails.logger.error(
+          "IbkrAccount::Processor - Failed to repair opening anchor for account #{account.id}: #{result.error}"
+        )
+        Sentry.capture_message(result.error)
+      end
     end
 end

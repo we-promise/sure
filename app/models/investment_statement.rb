@@ -14,11 +14,9 @@ class InvestmentStatement
 
   # Get totals for a specific period
   def totals(period: Period.current_month)
-    trades_in_period = family.trades
-      .joins(:entry)
-      .where(entries: { date: period.date_range, account_id: investment_account_ids })
+    account_ids = investment_account_ids
 
-    result = totals_query(trades_scope: trades_in_period)
+    result = totals_query(account_ids: account_ids, date_range: period.date_range)
 
     PeriodTotals.new(
       contributions: Money.new(result[:contributions], family.currency),
@@ -156,6 +154,77 @@ class InvestmentStatement
     )
   end
 
+  def period_return_trend(period: Period.current_month)
+    currency = family.currency
+    account_ids = investment_account_ids
+    return nil if account_ids.empty?
+
+    absolute_return = ActiveRecord::Base.connection.select_value(
+      ActiveRecord::Base.sanitize_sql_array([
+        <<~SQL.squish,
+          SELECT COALESCE(SUM(b.net_market_flows * COALESCE(er.rate, 1)), 0)
+          FROM balances b
+          JOIN accounts a ON a.id = b.account_id
+          LEFT JOIN exchange_rates er ON (
+            er.date = b.date
+            AND er.from_currency = b.currency
+            AND er.to_currency = :currency
+          )
+          WHERE a.id IN (:account_ids)
+            AND a.family_id = :family_id
+            AND a.status IN ('draft', 'active')
+            AND b.date BETWEEN :start_date AND :end_date
+        SQL
+        {
+          currency: currency,
+          account_ids: account_ids,
+          family_id: family.id,
+          start_date: period.date_range.begin,
+          end_date: period.date_range.end
+        }
+      ])
+    ).to_d
+
+    period_start = period.date_range.begin
+
+    # Single query for all accounts' most recent pre-period balance (strict < to avoid
+    # double-counting the first day's net_market_flows in both the denominator and absolute_return).
+    # FX conversion is done in SQL (matching absolute_return) so balance rows whose currency
+    # differs from the account's current currency (e.g. after a currency change) are still picked up.
+    start_value = ActiveRecord::Base.connection.select_value(
+      ActiveRecord::Base.sanitize_sql_array([
+        <<~SQL.squish,
+          SELECT COALESCE(SUM(b.end_balance * COALESCE(er.rate, 1)), 0)
+          FROM accounts a
+          INNER JOIN balances b ON b.account_id = a.id
+          LEFT JOIN exchange_rates er ON (
+            er.date = :period_start
+            AND er.from_currency = b.currency
+            AND er.to_currency = :currency
+          )
+          INNER JOIN (
+            SELECT b2.account_id, MAX(b2.date) AS max_date
+            FROM balances b2
+            WHERE b2.account_id IN (:account_ids)
+              AND b2.date < :period_start
+            GROUP BY b2.account_id
+          ) latest ON latest.account_id = b.account_id AND b.date = latest.max_date
+          WHERE a.id IN (:account_ids)
+            AND a.family_id = :family_id
+            AND a.status IN ('draft', 'active')
+        SQL
+        { account_ids: account_ids, period_start: period_start, family_id: family.id, currency: currency }
+      ])
+    ).to_d
+
+    return nil if start_value.zero?
+
+    Trend.new(
+      current: Money.new(start_value + absolute_return, currency),
+      previous: Money.new(start_value, currency)
+    )
+  end
+
   # Day change across portfolio, summed in family currency
   def day_change
     changes = current_holdings.to_a.filter_map do |h|
@@ -180,7 +249,7 @@ class InvestmentStatement
   # Investment accounts
   def investment_accounts
     @investment_accounts ||= begin
-      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
       scope = scope.included_in_finances_for(user) if user
       scope
     end
@@ -234,12 +303,17 @@ class InvestmentStatement
       @investment_account_ids ||= investment_accounts.pluck(:id)
     end
 
-    def totals_query(trades_scope:)
-      sql_hash = Digest::MD5.hexdigest(trades_scope.to_sql)
+    def totals_query(account_ids:, date_range:)
+      if account_ids.empty?
+        return Totals.new(family, account_ids: account_ids, date_range: date_range).call
+      end
+
+      account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query", family.id, user&.id, sql_hash, family.entries_cache_version
-      ]) { Totals.new(family, trades_scope: trades_scope).call }
+        "investment_statement", "totals_query", family.id, user&.id,
+        account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version
+      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
     end
 
     def monetizable_currency

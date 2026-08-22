@@ -6,11 +6,12 @@ class Budget < ApplicationRecord
   attr_accessor :current_user
 
   belongs_to :family
+  belongs_to :user, optional: true
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
 
   validates :start_date, :end_date, presence: true
-  validates :start_date, :end_date, uniqueness: { scope: :family_id }
+  validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
@@ -31,32 +32,42 @@ class Budget < ApplicationRecord
     end
 
     def budget_date_valid?(date, family:)
-      budget_start = if family.uses_custom_month_start?
-        family.custom_month_start_for(date)
-      else
-        date.beginning_of_month
-      end
-
+      budget_start, _ = period_for(date, family: family)
       budget_start >= oldest_valid_budget_date(family) &&
         budget_start <= latest_valid_budget_start_date(family)
     end
 
-    def find_or_bootstrap(family, start_date:, user: nil)
+    def period_for(date, family:)
+      if family.uses_custom_month_start?
+        [ family.custom_month_start_for(date), family.custom_month_end_for(date) ]
+      else
+        [ date.beginning_of_month, date.end_of_month ]
+      end
+    end
+
+    # `household: true` explicitly requests the shared household budget
+    # (user_id NULL) regardless of `user:` — this is what lets a household
+    # budget and personal budgets coexist once `family.personal_budgets?` is
+    # on. Without it, `user:` resolves to that user's personal budget when
+    # personal_budgets is on, or the shared budget otherwise (unchanged
+    # behavior for families that never turned personal budgets on).
+    #
+    # Returns nil if the household budget was explicitly requested but the
+    # family opted out of it via `household_budget_enabled?`.
+    def find_or_bootstrap(family, start_date:, user: nil, household: false)
       return nil unless budget_date_valid?(start_date, family: family)
+      return nil if household && family.personal_budgets? && !family.household_budget_enabled?
 
       Budget.transaction do
-        if family.uses_custom_month_start?
-          budget_start = family.custom_month_start_for(start_date)
-          budget_end = family.custom_month_end_for(start_date)
-        else
-          budget_start = start_date.beginning_of_month
-          budget_end = start_date.end_of_month
-        end
+        budget_start, budget_end = period_for(start_date, family: family)
+
+        owner = (household || !family.personal_budgets?) ? nil : user
 
         budget = Budget.find_or_create_by!(
           family: family,
           start_date: budget_start,
-          end_date: budget_end
+          end_date: budget_end,
+          user: owner
         ) do |b|
           b.currency = family.currency
         end
@@ -93,7 +104,9 @@ class Budget < ApplicationRecord
   end
 
   def sync_budget_categories
-    current_category_ids = family.categories.pluck(:id).to_set
+    # Category changes can leave the association memoized before this sync runs.
+    current_categories_by_id = family.categories.reload.index_by(&:id)
+    current_category_ids = current_categories_by_id.keys.to_set
     existing_budget_category_ids = budget_categories.pluck(:category_id).to_set
     categories_to_add = current_category_ids - existing_budget_category_ids
     categories_to_remove = existing_budget_category_ids - current_category_ids
@@ -101,7 +114,7 @@ class Budget < ApplicationRecord
     # Create missing categories
     categories_to_add.each do |category_id|
       budget_categories.create!(
-        category_id: category_id,
+        category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
         currency: family.currency
       )
@@ -118,11 +131,20 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Personal budgets only ever reflect the owner's own accounts, regardless
+  # of who's viewing (a shared read-only/read-write viewer sees the owner's
+  # numbers, not their own accessible accounts). The household budget keeps
+  # the pre-personal-budgets behavior: whatever the requesting viewer can
+  # see, since it has no single owner to scope by.
   def transactions
     scope = family.transactions.visible.in_period(period)
-    if current_user
-      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).select(:id) })
+
+    if user_id.present?
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.where(owner_id: user_id).included_in_reports.select(:id) })
+    elsif current_user
+      scope = scope.joins(:entry).where(entries: { account_id: family.accounts.accessible_by(current_user).included_in_reports.select(:id) })
     end
+
     scope
   end
 
@@ -130,11 +152,11 @@ class Budget < ApplicationRecord
     if family.uses_custom_month_start?
       I18n.t(
         "budgets.name.custom_range",
-        start: start_date.strftime("%b %d"),
-        end_date: end_date.strftime("%b %d, %Y")
+        start: I18n.l(start_date, format: :short),
+        end_date: I18n.l(end_date, format: :long)
       )
     else
-      I18n.t("budgets.name.month_year", month: start_date.strftime("%B %Y"))
+      I18n.t("budgets.name.month_year", month: I18n.l(start_date, format: :month_year))
     end
   end
 
@@ -142,17 +164,37 @@ class Budget < ApplicationRecord
     budgeted_spending.present?
   end
 
+  # The household budget (user_id nil) is visible/editable by every family
+  # member, matching pre-personal_budgets behavior. A personal budget is
+  # only visible/editable by its owner, or by someone the owner shared it
+  # with via BudgetShare.
+  def viewable_by?(user)
+    return true if user_id.nil?
+    return true if user_id == user.id
+
+    BudgetShare.exists?(owner_id: user_id, viewer_id: user.id)
+  end
+
+  def editable_by?(user)
+    return true if user_id.nil?
+    return true if user_id == user.id
+
+    BudgetShare.exists?(owner_id: user_id, viewer_id: user.id, permission: "read_write")
+  end
+
   def most_recent_initialized_budget
     family.budgets
       .includes(:budget_categories)
       .where("start_date < ?", start_date)
       .where.not(budgeted_spending: nil)
+      .where(user_id: user_id)
       .order(start_date: :desc)
       .first
   end
 
   def copy_from!(source_budget)
     raise ArgumentError, "source budget must belong to the same family" unless source_budget.family_id == family_id
+    raise ArgumentError, "source budget must belong to the same user" unless source_budget.user_id == user_id
     raise ArgumentError, "source budget must precede target budget" unless source_budget.start_date < start_date
 
     Budget.transaction do
@@ -189,6 +231,25 @@ class Budget < ApplicationRecord
     end
   end
 
+  # Whole days from today through the period's last day (today counts).
+  # 0 once the period is over. Also feeds
+  # BudgetCategory#suggested_daily_spending's per-day split.
+  def days_remaining
+    [ (end_date - Date.current).to_i + 1, 0 ].max
+  end
+
+  # Biggest parent categories by what's actually been spent this period,
+  # falling back to allocation size early in the month before spending
+  # lands. Categories with neither spend nor an allocation are noise in a
+  # summary. (The budget_categories association preloads :category.)
+  def top_spending_categories(limit: 4)
+    budget_categories
+      .reject(&:subcategory?)
+      .reject { |bc| bc.actual_spending.to_d.zero? && bc.budgeted_spending.to_d.zero? }
+      .sort_by { |bc| [ -bc.actual_spending.to_d, -bc.budgeted_spending.to_d ] }
+      .first(limit)
+  end
+
   def previous_budget_param
     previous_date = start_date - 1.month
     return nil unless self.class.budget_date_valid?(previous_date, family: family)
@@ -209,7 +270,7 @@ class Budget < ApplicationRecord
     # Continuous gray segment for empty budgets
     return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
 
-    segments = budget_categories.reject(&:subcategory?).map do |bc|
+    segments = donut_budget_categories.map do |bc|
       { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
     end
 
@@ -218,6 +279,17 @@ class Budget < ApplicationRecord
     end
 
     segments
+  end
+
+  def donut_budget_categories
+    categories = budget_categories.reject(&:subcategory?).to_a
+    uncategorized = uncategorized_budget_category
+
+    if budget_category_actual_spending(uncategorized).positive?
+      categories << uncategorized
+    end
+
+    categories
   end
 
   # =============================================================================
@@ -287,11 +359,11 @@ class Budget < ApplicationRecord
   # Income: How much user earned relative to what they expected to earn
   # =============================================================================
   def estimated_income
-    family.income_statement.median_income(interval: "month")
+    income_statement.median_income(interval: "month")
   end
 
   def actual_income
-    family.income_statement.income_totals(period: self.period).total
+    income_statement.income_totals(period: self.period).total
   end
 
   def actual_income_percent
@@ -312,7 +384,16 @@ class Budget < ApplicationRecord
 
   private
     def income_statement
-      @income_statement ||= family.income_statement(user: current_user)
+      @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)
+    end
+
+    # nil for the household budget (IncomeStatement falls back to whatever
+    # `current_user` can see, unchanged pre-personal-budgets behavior). For a
+    # personal budget, restrict to the owner's own accounts so a shared
+    # viewer sees the owner's numbers, and household vs. personal actually
+    # differ instead of both reflecting the viewer's full accessible set.
+    def income_statement_accounts
+      family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 
     def net_totals

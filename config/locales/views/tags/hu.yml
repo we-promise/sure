@@ -6,6 +6,8 @@ hu:
       error: 'Hiba a címke létrehozásakor: %{error}'
     destroy:
       deleted: Címke törölve
+    destroy_all:
+      all_deleted: Minden címke törölve
     edit:
       edit: Címke szerkesztése
     form:
@@ -14,6 +16,7 @@ hu:
       empty: Még nincsenek címkék
       new: Új címke
       tags: Címkék
+      delete_all: Összes törlése
     new:
       new: Új címke
     tag:

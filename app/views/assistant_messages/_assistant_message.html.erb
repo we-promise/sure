@@ -2,7 +2,10 @@
 
 <div id="<%= dom_id(assistant_message) %>">
   <% if assistant_message.pending? %>
-    <div class="flex items-start gap-3 mb-6">
+    <div class="flex items-start gap-3 mb-6"
+         data-chat-target="pendingResponse"
+         data-pending-response-created-at="<%= assistant_message.created_at&.iso8601 %>"
+         data-pending-response-timeout-url="<%= report_timeout_chat_message_path(assistant_message.chat, assistant_message) %>">
       <%= render "chats/ai_avatar" %>
       <p class="text-sm text-secondary animate-pulse"><%= t("chats.thinking") %></p>
     </div>

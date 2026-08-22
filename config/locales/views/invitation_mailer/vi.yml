@@ -1,0 +1,8 @@
+---
+vi:
+  invitation_mailer:
+    invite_email:
+      accept_button: Chấp nhận lời mời
+      body: "%{inviter} đã mời bạn tham gia %{family} %{moniker} trên %{product_name}!"
+      expiry_notice: Lời mời này sẽ hết hạn sau %{days} ngày
+      greeting: Chào mừng đến với %{product_name}!

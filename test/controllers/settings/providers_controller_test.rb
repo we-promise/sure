@@ -4,6 +4,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
 
     # Ensure provider adapters are loaded for all tests
@@ -51,6 +52,20 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.providers.taglines.brex")
     assert_includes response.body, connect_form_settings_providers_path(provider_key: "brex")
     refute_includes response.body, "Test Brex Connection"
+  end
+
+  test "sync all control submits with POST" do
+    SimplefinItem.create!(
+      family: families(:dylan_family),
+      name: "Test SimpleFIN Sync All Control",
+      access_url: "https://bridge.simplefin.org/simplefin/access"
+    )
+
+    with_self_hosting do
+      get settings_providers_url
+      assert_response :success
+      assert_select "form[action=?][method=?]", sync_all_settings_providers_path, "post"
+    end
   end
 
   test "correctly identifies declared vs dynamic fields" do
@@ -405,6 +420,44 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/Interactive Brokers/i, response.body)
     assert_match(/Query ID/i, response.body)
+  end
+
+  test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_setup_step_3")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
+  end
+
+  test "GET connect_form for snaptrade shows connect CTA when configured but item is not authorized" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
+  end
+
+  test "GET connect_form for snaptrade shows authorized status and reauthorize CTA when item is connected" do
+    # Default signed-in user (family_admin) belongs to dylan_family, which owns
+    # the oauth-authorized `configured_item` fixture.
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
+    assert_includes response.body, I18n.t("providers.snaptrade.manage_connections")
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
   end
 
   test "POST sync for ibkr without an active Ibkr sync enqueues SyncJob" do

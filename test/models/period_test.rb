@@ -63,6 +63,29 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal Date.current, period.end_date
   end
 
+  test "current_month_for preserves the current_month key for custom-month families" do
+    family = mock("family")
+    family.stubs(:uses_custom_month_start?).returns(true)
+    family.stubs(:current_custom_month_period).returns(
+      Period.custom(start_date: Date.new(2026, 6, 5), end_date: Date.new(2026, 7, 4))
+    )
+
+    period = Period.current_month_for(family)
+    assert_equal "current_month", period.key
+    assert_equal Date.new(2026, 6, 5), period.start_date
+    assert_equal Date.new(2026, 7, 4), period.end_date
+  end
+
+  test "last_month_for preserves the last_month key for custom-month families" do
+    family = mock("family")
+    family.stubs(:uses_custom_month_start?).returns(true)
+    family.stubs(:custom_month_start_for).returns(Date.new(2026, 5, 5))
+    family.stubs(:custom_month_end_for).returns(Date.new(2026, 6, 4))
+
+    period = Period.last_month_for(family)
+    assert_equal "last_month", period.key
+  end
+
   test "all_time period uses fallback when no family or entries exist" do
     Current.expects(:family).returns(nil)
 

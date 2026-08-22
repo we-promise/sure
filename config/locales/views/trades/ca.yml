@@ -5,15 +5,26 @@ ca:
       account: Compte de transferència (opcional)
       account_prompt: Cerca compte
       amount: Import
+      dividend_requires_security: El valor és obligatori per als dividends
+      fee: Comissió de la transacció
       holding: Símbol del valor
+      holding_optional: Símbol del valor (opcional)
       price: Preu per acció
       qty: Quantitat
-      submit: Afegeix transacció
+      submit: Afegeix la transacció
       ticker_placeholder: AAPL
       type: Tipus
+      type_buy: Compra
+      type_deposit: Dipòsit
+      type_dividend: Dividend
+      type_interest: Interès
+      type_sell: Venda
+      type_withdrawal: Retirada
     header:
       buy: Compra
       current_market_price_label: Preu de mercat actual
+      dividend: Dividend
+      interest: Interès
       overview: Resum
       purchase_price_label: Preu de compra
       purchase_qty_label: Quantitat comprada
@@ -24,17 +35,25 @@ ca:
       title: Nova transacció
     show:
       additional: Addicional
+      amount_label: Import
+      buy: Compra
       category_label: Categoria
       cost_per_share_label: Cost per acció
       date_label: Data
       delete: Elimina
       delete_subtitle: Aquesta acció no es pot desfer
-      delete_title: Elimina operació
+      delete_title: Elimina l'operació
       details: Detalls
-      exclude_subtitle: Aquesta operació no s'inclourà en informes ni càlculs
+      exclude_subtitle: Aquesta operació no s'inclourà als informes ni als càlculs
       exclude_title: Exclou de l'analítica
+      fee_label: Comissió de la transacció
       no_category: Sense categoria
       note_label: Nota
       note_placeholder: Afegeix aquí qualsevol nota addicional...
+      provider_disabled_warning: Actualitzacions de preu en pausa — el proveïdor %{provider}
+        està desactivat. Torna a activar-lo a la configuració o reassigna la posició
+        a un altre proveïdor.
       quantity_label: Quantitat
+      sell: Venda
       settings: Configuració
+      type_label: Tipus

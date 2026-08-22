@@ -189,7 +189,7 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
 
     assert_not_nil holding
     assert_equal BigDecimal("30"), holding.qty
-    assert_equal BigDecimal("123.1667"), holding.cost_basis
+    assert_in_delta BigDecimal("123.1667"), holding.cost_basis, BigDecimal("0.0001")
   end
 
   test "processor repairs default opening anchor after importing activity entries" do

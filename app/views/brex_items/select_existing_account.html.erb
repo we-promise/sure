@@ -48,9 +48,12 @@
             <%= link_to t(".cancel"), @return_to || accounts_path,
                 class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
                 data: { turbo_frame: "_top" } %>
-            <%= submit_tag t(".link_account"),
-                disabled: !has_selectable,
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled disabled:cursor-not-allowed" %>
+            <%= render DS::Button.new(
+              text: t(".link_account"),
+              variant: :primary,
+              type: :submit,
+              disabled: !has_selectable
+            ) %>
           </div>
         <% end %>
       </div>

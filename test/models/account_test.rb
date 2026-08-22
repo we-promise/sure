@@ -99,6 +99,77 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal opening_date, opening_anchor.entry.date
   end
 
+  test "subtype set as a top-level account attribute persists on create" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors the create flow: the form submits `account[subtype]` as a
+    # top-level attribute (not nested under accountable_attributes). The
+    # accountable does not exist yet, so the delegating writer must build it.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      subtype: "savings"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype assigned before accountable is built is not dropped" do
+    account = Account.new
+    account.accountable_type = "Depository"
+    account.subtype = "checking"
+
+    assert_not_nil account.accountable
+    assert_equal "checking", account.subtype
+  end
+
+  test "subtype assigned before accountable_type is not dropped" do
+    # The real controller path: strong-params `permit` preserves filter order,
+    # and `account_params` lists `:subtype` before `:accountable_type`, so the
+    # subtype writer runs while the type is still unknown.
+    account = Account.new
+    account.subtype = "savings"
+    account.accountable_type = "Depository"
+
+    assert_not_nil account.accountable
+    assert_equal "savings", account.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype persists on create when attributes arrive in permit order" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors `account_params`: `permit` yields keys in filter order, so the
+    # create hash carries `subtype` before `accountable_type` — the ordering
+    # that previously dropped the subtype on create.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      subtype: "savings",
+      currency: "USD",
+      accountable_type: "Depository"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "accountable display names expose singular and group contexts" do
+    assert_equal "Investment", Investment.singular_display_name
+    assert_equal "Investments", Investment.display_name
+    assert_equal "Cash", Depository.singular_display_name
+    assert_equal "Cash", Depository.display_name
+  end
+
   test "gets short/long subtype label" do
     investment = Investment.new(subtype: "hsa")
     account = @family.accounts.create!(
@@ -148,10 +219,32 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal I18n.t("accounts.tax_treatments.taxable"), account.tax_treatment_label
   end
 
-  test "tax_treatment returns nil for non-investment accounts" do
-    # Depository accounts don't have tax_treatment
+  test "tax_treatment returns nil for non-HSA depository accounts" do
+    # Depository exposes a `tax_treatment` method so HSA cash flips
+    # tax-advantaged, but non-HSA subtypes (checking, savings, cd,
+    # money_market) return nil. nil still reads as taxable via `taxable?`,
+    # and keeps `tax_treatment.present?` false so the header tax badge does
+    # not appear on ordinary bank accounts that never displayed it before.
     assert_nil @account.tax_treatment
     assert_nil @account.tax_treatment_label
+    assert_not @account.tax_treatment.present?
+    assert @account.taxable?
+  end
+
+  test "tax_treatment returns nil for accountables that do not implement it" do
+    # CreditCard / Loan / Property / OtherAsset / OtherLiability do not
+    # implement `tax_treatment`, so the `TaxTreatable#respond_to?` short-
+    # circuit still returns nil for them.
+    credit_card_account = @family.accounts.create!(
+      owner: @admin,
+      name: "Test Credit Card",
+      balance: 100,
+      currency: "USD",
+      accountable: CreditCard.new
+    )
+
+    assert_nil credit_card_account.tax_treatment
+    assert_nil credit_card_account.tax_treatment_label
   end
 
   test "tax_advantaged? returns true for tax-advantaged accounts" do
@@ -168,6 +261,20 @@ class AccountTest < ActiveSupport::TestCase
     assert_not account.taxable?
   end
 
+  test "tax_advantaged? returns true for HSA depository accounts" do
+    hsa_depository = @family.accounts.create!(
+      owner: @admin,
+      name: "Fidelity HSA Cash",
+      balance: 3_000,
+      currency: "USD",
+      accountable: Depository.new(subtype: "hsa")
+    )
+
+    assert_equal :tax_advantaged, hsa_depository.tax_treatment
+    assert hsa_depository.tax_advantaged?
+    assert_not hsa_depository.taxable?
+  end
+
   test "tax_advantaged? returns false for taxable accounts" do
     investment = Investment.new(subtype: "brokerage")
     account = @family.accounts.create!(
@@ -182,8 +289,9 @@ class AccountTest < ActiveSupport::TestCase
     assert account.taxable?
   end
 
-  test "taxable? returns true for accounts without tax_treatment" do
-    # Depository accounts
+  test "taxable? returns true for non-HSA depository accounts" do
+    # `@account` is the checking depository fixture; `tax_treatment` is
+    # `nil` (no subtype override), which `taxable?` reads as true.
     assert @account.taxable?
     assert_not @account.tax_advantaged?
   end
@@ -302,6 +410,15 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_includes @family.accounts.included_in_finances_for(@member), @account
   end
 
+  test "included_in_reports scope excludes accounts marked as exclude_from_reports" do
+    included = @family.accounts.create! name: "Included", balance: 100, currency: "USD", accountable: Depository.new
+    excluded = @family.accounts.create! name: "Excluded", balance: 200, currency: "USD", accountable: Depository.new, exclude_from_reports: true
+
+    results = @family.accounts.included_in_reports
+    assert_includes results, included
+    assert_not_includes results, excluded
+  end
+
   test "auto_share_with_family creates shares for all non-owner members" do
     @family.update!(default_account_sharing: "private")
 
@@ -323,6 +440,27 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_nil share
     assert_equal "read_write", share.permission
     assert share.include_in_finances?
+  end
+
+  test "auto_share_with_family grants guests read_only and other members read_write" do
+    @family.update!(default_account_sharing: "private")
+    guest = users(:empty)
+    guest.update_columns(family_id: @family.id, role: "guest")
+
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Guest Permission Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+
+    account.auto_share_with_family!
+
+    assert_equal "read_only", account.account_shares.find_by(user: guest).permission
+    assert_equal "read_write", account.account_shares.find_by(user: @member).permission
   end
 
   test "current_holdings prefers latest provider snapshot holdings across currencies" do
@@ -374,5 +512,42 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal [ provider_holding.id, second_provider_holding.id ].sort, account.current_holdings.pluck(:id).sort
     assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
+  end
+
+  test "on account destroyed cascade transfer destroyed" do
+    outflow_account = @family.accounts.create!({
+      owner: @admin,
+      name: "test_account_outflow",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+    inflow_account = @family.accounts.create!({
+      owner: @admin,
+      name: "test_account_inflow",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+
+    transfer = create_transfer(
+      from_account: outflow_account,
+      to_account: inflow_account,
+      amount: 50
+    )
+
+    outflow_transaction = transfer.outflow_transaction
+
+    outflow_transaction.reload
+    assert_equal "funds_movement", outflow_transaction.kind
+
+    inflow_account.destroy!
+
+    assert_raises(ActiveRecord::RecordNotFound) { transfer.reload }
+
+    outflow_transaction.reload
+    assert_equal "standard", outflow_transaction.kind
   end
 end

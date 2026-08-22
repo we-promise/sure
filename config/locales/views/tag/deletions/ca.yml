@@ -6,6 +6,7 @@ ca:
         deleted: Etiqueta eliminada
       new:
         delete_and_leave_uncategorized: Elimina "%{tag_name}"
+        delete_and_reassign: Elimina i reassigna
         delete_and_recategorize: Elimina "%{tag_name}" i assigna una nova etiqueta
         delete_tag: Vols eliminar l'etiqueta?
         explanation: "%{tag_name} s'eliminarà de les transaccions i altres entitats

@@ -1,0 +1,9 @@
+---
+vi:
+  other_assets:
+    edit:
+      edit: Chỉnh sửa %{account}
+      balance_tracking_info: "Tài sản khác được theo dõi thông qua định giá thủ công bằng 'Số dư mới', không phải giao dịch. Dòng tiền sẽ không ảnh hưởng đến số dư tài khoản."
+    new:
+      title: Nhập thông tin tài sản
+      balance_tracking_info: "Tài sản khác được theo dõi thông qua định giá thủ công bằng 'Số dư mới', không phải giao dịch. Dòng tiền sẽ không ảnh hưởng đến số dư tài khoản."

@@ -15,7 +15,7 @@ hu:
       account/depository: Bankszámla
       account/investment: Befektetés
       account/loan: Kölcsön
-      account/other_asset: Egyéb eszköz
+      account/other_asset: Egyéb vagyon
       account/other_liability: Egyéb kötelezettség
       account/property: Ingatlan
       account/vehicle: Jármű

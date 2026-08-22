@@ -1,0 +1,9 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        rule:
+          duplicate_actions: La regla no pot tenir accions duplicades %{types}
+          min_actions: ha de tenir com a mínim una acció
+          nested_conditions: Les condicions compostes no es poden imbricar

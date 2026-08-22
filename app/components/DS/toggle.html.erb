@@ -1,5 +1,9 @@
 <div class="relative inline-block select-none">
+  <%# Paired hidden field carries the off-state value when the checkbox is unchecked. Do NOT add an external `hidden_field_tag` with the same `name` in the caller view — it causes ID/label collisions and duplicate params. %>
   <%= hidden_field_tag name, unchecked_value, id: nil %>
-  <%= check_box_tag name, checked_value, checked, class: "sr-only peer", disabled: disabled, id: id, **opts %>
+  <%# `role="switch"` upgrades the underlying checkbox so AT users hear
+      "switch, on" / "switch, off" instead of "checkbox, checked". The
+      visual already reads as a switch — semantics now match. %>
+  <%= check_box_tag name, checked_value, checked, class: "sr-only peer", disabled: disabled, id: id, role: "switch", **opts %>
   <%= label_tag name, "&nbsp;".html_safe, class: label_classes, for: id %>
 </div>

@@ -26,13 +26,13 @@ ro:
         rows_label: Rânduri
         unassigned_account: Trebuie să creezi un cont nou pentru rândurile neasignate?
       show:
-        account_mapping_description: Asignează toate conturile din fișierul tău importat conturilor existente din Maybe. Poți adăuga și conturi noi sau le poți lăsa necategorizate.
+        account_mapping_description: Asignează toate conturile din fișierul tău importat conturilor existente din %{product_name}. Poți adăuga și conturi noi sau le poți lăsa necategorizate.
         account_mapping_title: Asignează-ți conturile
-        account_type_mapping_description: Asignează toate tipurile de cont din fișierul tău importat celor din Maybe.
+        account_type_mapping_description: Asignează toate tipurile de cont din fișierul tău importat celor din %{product_name}.
         account_type_mapping_title: Asignează-ți tipurile de cont
-        category_mapping_description: Asignează toate categoriile din fișierul tău importat categoriilor existente din Maybe. Poți adăuga și categorii noi sau le poți lăsa necategorizate.
+        category_mapping_description: Asignează toate categoriile din fișierul tău importat categoriilor existente din %{product_name}. Poți adăuga și categorii noi sau le poți lăsa necategorizate.
         category_mapping_title: Asignează-ți categoriile
-        tag_mapping_description: Asignează toate etichetele din fișierul tău importat etichetelor existente din Maybe. Poți adăuga și etichete noi sau le poți lăsa necategorizate.
+        tag_mapping_description: Asignează toate etichetele din fișierul tău importat etichetelor existente din %{product_name}. Poți adăuga și etichete noi sau le poți lăsa necategorizate.
         tag_mapping_title: Asignează-ți etichetele
     uploads:
       show:

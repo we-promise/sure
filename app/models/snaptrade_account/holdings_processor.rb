@@ -9,30 +9,71 @@ class SnaptradeAccount::HoldingsProcessor
     return unless account.present?
 
     holdings_data = @snaptrade_account.raw_holdings_payload
-    return if holdings_data.blank?
 
-    Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
+    if holdings_data.present?
+      Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
 
-    # Log sample of first holding to understand structure
-    if holdings_data.first
-      sample = holdings_data.first
-      Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Sample holding keys: #{sample.keys.first(10).join(', ')}"
-      if sample["symbol"] || sample[:symbol]
-        symbol_sample = sample["symbol"] || sample[:symbol]
-        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Symbol data keys: #{symbol_sample.keys.first(10).join(', ')}" if symbol_sample.is_a?(Hash)
+      # Log sample of first holding to understand structure
+      if holdings_data.first
+        sample = holdings_data.first
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Sample holding keys: #{sample.keys.first(10).join(', ')}"
+        if sample["symbol"] || sample[:symbol]
+          symbol_sample = sample["symbol"] || sample[:symbol]
+          Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Symbol data keys: #{symbol_sample.keys.first(10).join(', ')}" if symbol_sample.is_a?(Hash)
+        end
+      end
+
+      holdings_data.each_with_index do |holding_data, idx|
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
+        process_holding(holding_data.with_indifferent_access)
+      rescue => e
+        Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
+        Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
       end
     end
 
-    holdings_data.each_with_index do |holding_data, idx|
-      Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
-      process_holding(holding_data.with_indifferent_access)
-    rescue => e
-      Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
-    end
+    # Always run, even with no security holdings — secondary-currency cash
+    # should still be surfaced (issue #1809).
+    process_cash_holdings
   end
 
   private
+
+    # Surface cash held in currencies other than the account's primary currency
+    # as synthetic cash holdings (issue #1809). The primary currency stays in
+    # account.cash_balance; without this, SnapTrade's secondary-currency cash
+    # (e.g. USD cash in a CAD account) was silently discarded.
+    def process_cash_holdings
+      @snaptrade_account.non_primary_cash_entries.each do |entry|
+        amount = parse_decimal(entry[:amount])
+        next if amount.nil?
+
+        # SnapTrade's per-currency cash includes money market / sweep funds
+        # that are also reported as `cash_equivalent: true` positions and
+        # imported as holdings — remove the overlap so the synthetic cash
+        # holding doesn't double count them.
+        amount -= @snaptrade_account.cash_equivalent_position_value(entry[:currency])
+
+        security = Security.cash_for(account, currency: entry[:currency])
+
+        Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing #{entry[:currency]} cash holding"
+
+        import_adapter.import_holding(
+          security: security,
+          quantity: amount,
+          amount: amount,
+          currency: entry[:currency],
+          date: Date.current,
+          price: 1,
+          external_id: "snaptrade_cash_#{entry[:currency].to_s.downcase}",
+          account_provider_id: @snaptrade_account.account_provider&.id,
+          source: "snaptrade",
+          delete_future_holdings: false
+        )
+      rescue => e
+        Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to import #{entry[:currency]} cash holding: #{e.class} - #{e.message}"
+      end
+    end
 
     def account
       @snaptrade_account.current_account
@@ -43,18 +84,7 @@ class SnaptradeAccount::HoldingsProcessor
     end
 
     def process_holding(data)
-      # Extract security info from the holding
-      # SnapTrade has DEEPLY NESTED structure:
-      #   holding.symbol.symbol.symbol = ticker (e.g., "TSLA")
-      #   holding.symbol.symbol.description = name (e.g., "Tesla Inc")
-      raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
-      symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
-
-      # The actual security data is nested inside symbol.symbol
-      raw_symbol_data = symbol_wrapper["symbol"] || symbol_wrapper[:symbol] || {}
-      symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
-
-      # Get the ticker - it's at symbol.symbol.symbol
+      symbol_data = extract_symbol_data(data)
       ticker = symbol_data["symbol"] || symbol_data[:symbol]
 
       # If that's still a hash, we need to go deeper or use raw_symbol
@@ -81,15 +111,9 @@ class SnaptradeAccount::HoldingsProcessor
       # Get the holding date (use current date if not provided)
       holding_date = Date.current
 
-      # Extract currency - it can be at the holding level or in symbol_data
-      currency_data = data["currency"] || data[:currency] || symbol_data["currency"] || symbol_data[:currency]
-      currency = if currency_data.is_a?(Hash)
-        currency_data.with_indifferent_access["code"]
-      elsif currency_data.is_a?(String)
-        currency_data
-      else
-        account.currency
-      end
+      # Must resolve to the same bucket as cash_equivalent_position_value, or
+      # cash-equivalent positions stop cancelling out (#2729).
+      currency = extract_currency(data, symbol_data, account.currency)
 
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Importing holding: #{ticker} qty=#{quantity} price=#{price} currency=#{currency}"
 
@@ -106,8 +130,11 @@ class SnaptradeAccount::HoldingsProcessor
         delete_future_holdings: false
       )
 
-      # Store cost basis if available
-      avg_price = data["average_purchase_price"] || data[:average_purchase_price]
+      # Store cost basis if available. Both fields are per-share, which is
+      # what update_holding_cost_basis expects — unlike the identically named
+      # tax_lots[].cost_basis, which SnapTrade documents as a whole-lot total.
+      avg_price = data["average_purchase_price"] || data[:average_purchase_price] ||
+                  data["cost_basis"] || data[:cost_basis]
       if avg_price.present?
         update_holding_cost_basis(security, avg_price)
       end

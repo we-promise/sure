@@ -1,6 +1,31 @@
 ---
 hu:
   mercury_items:
+    api_error:
+      title: Mercury kapcsolati hiba
+      unable_to_connect: Nem sikerült csatlakozni a Mercury-hoz
+      common_issues: "Gyakori problémák:"
+      invalid_api_token_label: Érvénytelen API token
+      invalid_api_token_desc: Ellenőrizd az API tokenedet a Szolgáltatói beállításokban
+      expired_credentials_label: Lejárt hitelesítő adatok
+      expired_credentials_desc: Generálj új API tokent a Mercury-ban
+      insufficient_permissions_label: Elégtelen jogosultságok
+      insufficient_permissions_desc: Győződj meg róla, hogy a tokened csak olvasási hozzáféréssel rendelkezik
+      network_issue_label: Hálózati hiba
+      network_issue_desc: Ellenőrizd az internetkapcsolatodat
+      service_down_label: Szolgáltatás nem elérhető
+      service_down_desc: A Mercury API átmenetileg nem elérhető
+      check_provider_settings: Szolgáltatói beállítások ellenőrzése
+    setup_required:
+      title: Mercury beállítás szükséges
+      api_token_not_configured: Az API token nincs beállítva
+      api_token_description: Mielőtt Mercury-számlákat kapcsolnál össze, be kell állítanod a Mercury API tokenedet.
+      setup_steps_title: "Beállítási lépések:"
+      setup_step_1_html: "Menj a <strong>Beállítások > Szolgáltatók</strong> menübe"
+      setup_step_2_html: "Keresd meg a <strong>Mercury</strong> részt"
+      setup_step_3: Add meg a Mercury API tokenedet
+      setup_step_4: Térj vissza ide a számlák összekapcsolásához
+      go_to_provider_settings: Ugrás a szolgáltatói beállításokhoz
     create:
       success: Mercury kapcsolat sikeresen létrehozva
     destroy:
@@ -121,7 +146,7 @@ hu:
         credit_card: Hitelkártya
         investment: Befektetési számla
         loan: Hitel vagy jelzálog
-        other_asset: Egyéb eszköz
+        other_asset: Egyéb vagyon
       subtype_labels:
         depository: "Számla altípusa:"
         credit_card: ""
@@ -130,7 +155,7 @@ hu:
         other_asset: ""
       subtype_messages:
         credit_card: "A hitelkártyák automatikusan hitelkártya számlákként lesznek beállítva."
-        other_asset: "Az egyéb eszközökhöz nincs szükség további beállításokra."
+        other_asset: "Az egyéb vagyonelemekhez nincs szükség további beállításokra."
       subtypes:
         depository:
           checking: Folyószámla
@@ -176,3 +201,8 @@ hu:
       success: Szinkronizálás elindítva
     update:
       success: Mercury kapcsolat frissítve
+    mercury_item_selection_error_payload:
+      select_connection: Válassz Mercury kapcsolatot a számlák betöltése előtt.
+    render_mercury_item_selection_failure:
+      select_connection: Válassz Mercury kapcsolatot a Szolgáltatói beállításokban.
+      no_credentials_configured: Kérlek előbb állítsd be a Mercury API tokenedet a Szolgáltatói beállításokban.

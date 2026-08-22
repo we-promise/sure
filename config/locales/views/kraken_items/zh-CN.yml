@@ -1,0 +1,85 @@
+---
+zh-CN:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: 连接到 Kraken 交易所账户
+      name: "Kraken - %{name}"
+      description: "连接到 %{name}"
+    create:
+      default_name: Kraken
+      success: 已成功连接到 Kraken。您的交易所账户正在同步。
+    update:
+      success: Kraken 连接更新成功。
+    destroy:
+      success: Kraken 连接已安排删除。
+    select_accounts:
+      select_connection: 请在提供商设置中选择一个 Kraken 连接。
+      no_credentials_configured: 在设置账户之前，请先添加 Kraken API 凭据。
+    link_accounts:
+      select_connection: 在关联账户之前请选择一个 Kraken 连接。
+    select_existing_account:
+      title: 关联 Kraken 账户
+      no_accounts_found: 未找到 Kraken 账户。
+      wait_for_sync: 等待 Kraken 完成同步。
+      check_provider_health: 检查您的 Kraken API 凭据是否有效。
+      link: 关联
+      cancel: 取消
+    link_existing_account:
+      success: 已成功关联到 Kraken 账户
+      select_connection: 在关联账户之前请选择一个 Kraken 连接。
+      errors:
+        only_manual: 只有没有现有提供商关联的手动加密交易所账户才能关联到 Kraken
+        invalid_kraken_account: 无效的 Kraken 账户
+        kraken_account_already_linked: 此 Kraken 账户已关联
+    setup_accounts:
+      title: 导入 Kraken 账户
+      subtitle: 选择要跟踪的交易所账户
+      instructions: Kraken 会为此连接导入一个合并后的加密交易所账户，仅包含持仓和现货成交。
+      no_accounts: 所有 Kraken 账户都已导入。
+      accounts_count:
+        one: 有 %{count} 个账户可用
+        other: 有 %{count} 个账户可用
+      select_all: 全选
+      import_selected: 导入所选
+      cancel: 取消
+      creating: 正在导入...
+    complete_account_setup:
+      success:
+        one: 已导入 %{count} 个账户
+        other: 已导入 %{count} 个账户
+      none_selected: 未选择账户
+      no_accounts: 没有可导入的账户
+    kraken_item:
+      provider_name: Kraken
+      syncing: 正在同步...
+      reconnect: 凭据需要更新
+      deletion_in_progress: 正在删除...
+      sync_status:
+        no_accounts: 未找到账户
+        all_synced:
+          one: 已同步 %{count} 个账户
+          other: 已同步 %{count} 个账户
+        partial_sync: 已同步 %{linked_count} 个，%{unlinked_count} 个需要设置
+      status: "%{timestamp} 前上次同步"
+      status_with_summary: "%{timestamp} 前上次同步 - %{summary}"
+      status_never: 从未同步
+      delete: 删除
+      no_accounts_title: 未找到账户
+      no_accounts_message: 您的 Kraken 交易所账户在同步后会显示在这里。
+      setup_needed: 账户已准备好导入
+      setup_description: 将此 Kraken 连接作为加密交易所账户导入。
+      setup_action: 导入账户
+      import_accounts_menu: 导入账户
+      stale_rate_warning: "余额为近似值，因为 %{date} 的准确汇率不可用。将在下次同步时更新。"
+  kraken_item:
+    syncer:
+      checking_credentials: 正在检查凭据...
+      credentials_invalid: Kraken API 凭据无效。请检查您的 API key 和 secret。
+      importing_accounts: 正在从 Kraken 导入账户...
+      checking_configuration: 正在检查账户配置...
+      accounts_need_setup:
+        one: "%{count} 个账户需要设置"
+        other: "%{count} 个账户需要设置"
+      processing_accounts: 正在处理账户数据...
+      calculating_balances: 正在计算余额...

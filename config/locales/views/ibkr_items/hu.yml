@@ -1,0 +1,92 @@
+---
+hu:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Csatlakozás egy Interactive Brokers Flex Web Service jelentéshez
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Törlés folyamatban
+      flex_web_service: Flex Web Service
+      syncing: Szinkronizálás
+      requires_update: A hitelesítő adatok figyelmet igényelnek
+      error: Hiba
+      synced: Szinkronizálva %{time} ezelőtt. %{summary}.
+      never_synced: Még nem szinkronizált.
+      setup_accounts: Számlák beállítása
+      delete: Törlés
+      accounts_need_setup: A számlák beállítást igényelnek
+      accounts_need_setup_description: Az IBKR-ből importált néhány számlát össze kell kapcsolni a Sure-számlákkal.
+      no_accounts_discovered: Még nem találhatók IBKR-számlák.
+      no_accounts_discovered_description: Futtass egy szinkronizálást a Flex-lekérdezés konfigurálása után a számlák felderítéséhez.
+    setup_accounts:
+      page_title: Interactive Brokers-számlák beállítása
+      dialog_title: Interactive Brokers-számlák beállítása
+      subtitle: Válaszd ki, melyik IBKR brókerszámlákat szeretnéd összekapcsolni.
+      info_box:
+        title: IBKR Flex Query importálás
+        items:
+          item_1: Pozíciók aktuális árakkal és mennyiségekkel
+          item_2: Bekerülési érték pozíciónként
+          item_3: Ügyletek, osztalékok, jutalékok és készpénzbefizetések vagy -kifizetések
+        warning: A historikus tevékenység a Flex Query jelentési ablakára korlátozódik
+      status:
+        fetching_accounts: Számlák lekérése az Interactive Brokers-től...
+        no_accounts_found_title: Nem található számla.
+        no_accounts_found_description: A Sure nem talált IBKR-számlákat a legutóbbi Flex-jelentésben.
+      available_accounts:
+        title: Elérhető számlák
+        account_type_investment: Befektetés
+        account_summary: "%{account_type} • Egyenleg: %{balance}"
+        account_id: "Számlaazonosító: %{account_id}"
+      link_existing:
+        description: Vagy kapcsolj össze egy felderített IBKR-számlát egy meglévő manuális befektetési számlával.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Válassz számlát...
+      linked_accounts:
+        title: Már összekapcsolt
+        linked_to_html: "Összekapcsolva: %{account}"
+      buttons:
+        refresh: Frissítés
+        cancel: Mégse
+        back_to_settings: Vissza a beállításokhoz
+        create_selected_accounts: Kijelölt számlák létrehozása
+        link: Összekapcsolás
+        done: Kész
+    sync_status:
+      no_accounts: Még nem találhatók IBKR-számlák
+      all_linked:
+        one: 1 számla összekapcsolva
+        other: "%{count} számla összekapcsolva"
+      partial: "%{linked} összekapcsolt, %{unlinked} beállítást igényel"
+    select_existing_account:
+      title: Interactive Brokers-számla összekapcsolása
+      no_accounts_available: Még nem érhető el összekapcsolatlan Interactive Brokers-számla.
+      run_sync_hint: "Futtass szinkronizálást a Beállítások > Szolgáltatók menüből a Flex-lekérdezés frissítése után."
+      wait_for_sync: Várd meg, amíg a számlafelderítési szinkronizálás befejeződik.
+      balance: Egyenleg
+      link: Összekapcsolás
+      cancel: Mégse
+    create:
+      success: Az Interactive Brokers sikeresen konfigurálva.
+    update:
+      success: Az Interactive Brokers konfigurációja sikeresen frissítve.
+    destroy:
+      success: Az Interactive Brokers kapcsolat törlési sorba került.
+    select_accounts:
+      not_configured: Az Interactive Brokers nincs konfigurálva.
+    link_existing_account:
+      not_found: A számla vagy az Interactive Brokers konfiguráció nem található.
+      only_manual_investment: Csak manuális befektetési számlák kapcsolhatók össze az Interactive Brokers-szel.
+      already_linked: Ez az Interactive Brokers-számla már össze van kapcsolva.
+      success: Sikeresen összekapcsolva az Interactive Brokers-számlával.
+      failed: Nem sikerült összekapcsolni az Interactive Brokers-számlával.
+    complete_account_setup:
+      success:
+        one: Sikeresen létrehozva %{count} Interactive Brokers-számla.
+        other: Sikeresen létrehozva %{count} Interactive Brokers-számla.
+      none_selected: Nem lett számla kijelölve.
+      none_created: Nem lett számla létrehozva.

@@ -3,9 +3,10 @@ ca:
   category:
     dropdowns:
       row:
-        delete: Elimina categoria
-        edit: Edita categoria
+        delete: Elimina la categoria
+        edit: Edita la categoria
       show:
-        clear: Neteja categoria
+        clear: Esborra la categoria
         no_categories: No s'han trobat categories
+        recent: Recents
         search_placeholder: Cerca

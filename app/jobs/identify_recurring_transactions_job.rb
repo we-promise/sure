@@ -42,21 +42,13 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
       "recurring_transaction_identify:#{family_id}"
     end
 
+    # Debounce gate: delegate to `Sync.any_incomplete_for?`, which polls every
+    # `Syncable` provider association on `Family` via reflection. The previous
+    # hand-rolled list covered only 5 of the 14 `*_items` associations on
+    # `Family`, so a Coinbase/Mercury/Brex/etc. sync in flight silently
+    # bypassed this gate and let the identifier run against a partial dataset.
     def family_has_incomplete_syncs?(family)
-      # Check family's own syncs
-      return true if family.syncs.incomplete.exists?
-
-      # Check all provider items' syncs
-      return true if family.plaid_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:plaid_items)
-      return true if family.simplefin_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:simplefin_items)
-      return true if family.lunchflow_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:lunchflow_items)
-      return true if family.enable_banking_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:enable_banking_items)
-      return true if family.sophtron_items.joins(:syncs).merge(Sync.incomplete).exists? if family.respond_to?(:sophtron_items)
-
-      # Check accounts' syncs
-      return true if family.accounts.joins(:syncs).merge(Sync.incomplete).exists?
-
-      false
+      Sync.any_incomplete_for?(family)
     end
 
     def with_advisory_lock(family_id)

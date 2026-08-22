@@ -29,11 +29,43 @@ export default class extends Controller {
   addEventListeners() {
     this.element.addEventListener("mouseenter", this.show);
     this.element.addEventListener("mouseleave", this.hide);
+    // Keyboard parity: keyboard users hit the trigger via Tab + focus,
+    // not hover. Without these the tooltip never appears for them.
+    this.element.addEventListener("focusin", this.show);
+    this.element.addEventListener("focusout", this.hide);
+    // Esc-to-dismiss matches the WAI-ARIA Authoring Practices for the
+    // tooltip pattern.
+    this.element.addEventListener("keydown", this.handleKeydown);
+
+    // `as: :span` renders a non-focusable trigger inside an
+    // already-focusable ancestor (`<summary>`, icon-only `<a>`, …).
+    // When the ancestor receives keyboard focus the `focusin` event
+    // fires on *it* and bubbles UP to the document — it never reaches
+    // a descendant span. Without a listener on the ancestor itself,
+    // the tooltip stays hidden for keyboard users. Bind the same
+    // handlers on the closest interactive ancestor (if any) so
+    // focusing it reveals the tooltip and Esc still dismisses it.
+    this.focusableAncestor = this.element.closest("summary, a");
+    if (this.focusableAncestor) {
+      this.focusableAncestor.addEventListener("focusin", this.show);
+      this.focusableAncestor.addEventListener("focusout", this.hide);
+      this.focusableAncestor.addEventListener("keydown", this.handleKeydown);
+    }
   }
 
   removeEventListeners() {
     this.element.removeEventListener("mouseenter", this.show);
     this.element.removeEventListener("mouseleave", this.hide);
+    this.element.removeEventListener("focusin", this.show);
+    this.element.removeEventListener("focusout", this.hide);
+    this.element.removeEventListener("keydown", this.handleKeydown);
+
+    if (this.focusableAncestor) {
+      this.focusableAncestor.removeEventListener("focusin", this.show);
+      this.focusableAncestor.removeEventListener("focusout", this.hide);
+      this.focusableAncestor.removeEventListener("keydown", this.handleKeydown);
+      this.focusableAncestor = null;
+    }
   }
 
   show = () => {
@@ -45,6 +77,12 @@ export default class extends Controller {
   hide = () => {
     this.tooltipTarget.classList.add("hidden");
     this.stopAutoUpdate();
+  };
+
+  handleKeydown = (event) => {
+    if (event.key === "Escape" && !this.tooltipTarget.classList.contains("hidden")) {
+      this.hide();
+    }
   };
 
   startAutoUpdate() {

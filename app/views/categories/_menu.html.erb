@@ -1,7 +1,7 @@
 <%# locals: (transaction:, in_split_group: false) %>
 
-<%= render DS::Menu.new(variant: "button") do |menu| %>
-  <% menu.with_button(class: "block w-full overflow-hidden") do %>
+<%= render DS::Popover.new(variant: "button") do |popover| %>
+  <% popover.with_button(class: "block w-full overflow-hidden") do %>
     <div class="hidden min-w-0 w-full lg:flex">
       <%= render partial: "categories/badge", locals: { category: transaction.category } %>
     </div>
@@ -10,7 +10,7 @@
     </div>
   <% end %>
 
-  <% menu.with_custom_content do %>
+  <% popover.with_custom_content do %>
     <%= turbo_frame_tag "category_dropdown", src: category_dropdown_path(category_id: transaction.category_id, transaction_id: transaction.id, grouped: in_split_group), loading: :lazy do %>
       <div class="p-6 flex items-center justify-center">
         <p class="text-sm text-secondary animate-pulse"><%= t(".loading") %></p>

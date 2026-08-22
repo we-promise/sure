@@ -1,6 +1,148 @@
 ---
 ca:
   transactions:
+    activity_labels:
+      buy: Compra
+      contribution: Aportació
+      dividend: Dividend
+      exchange: Bescanvi
+      fee: Comissió
+      interest: Interès
+      other: Altres
+      reinvestment: Reinversió
+      sell: Venda
+      sweep_in: Sweep entrant
+      sweep_out: Sweep sortint
+      transfer: Transferència
+      withdrawal: Retirada
+    attachments:
+      attachment_deleted: Adjunt eliminat correctament
+      browse_to_add: Cerca per afegir fitxers
+      cannot_exceed: No es poden superar %{count} adjunts per transacció
+      delete_failed: No s'ha pogut eliminar l'adjunt. Torna-ho a provar o contacta
+        amb suport.
+      failed_delete: 'No s''ha pogut eliminar l''adjunt: %{error}'
+      failed_upload: 'No s''ha pogut pujar l''adjunt: %{error}'
+      files:
+        one: Fitxer (1)
+        other: Fitxers (%{count})
+      max_reached: S'ha arribat al límit de fitxers (%{count}/%{max}). Elimina un
+        fitxer existent per pujar-ne un altre.
+      no_attachments: Encara no hi ha adjunts
+      no_files_selected: No s'ha seleccionat cap fitxer per pujar
+      select_up_to: Selecciona fins a %{count} fitxers (imatges o PDF, màx %{size}MB
+        cadascun) • %{used} d'%{count} utilitzats
+      upload: Puja
+      upload_failed: No s'ha pogut pujar l'adjunt. Torna-ho a provar o contacta amb
+        suport.
+      uploaded_many: "%{count} adjunts pujats correctament"
+      uploaded_one: Adjunt pujat correctament
+    bulk_updates:
+      new:
+        cancel: Cancel·la
+        category_label: Categoria
+        category_prompt: Selecciona una categoria
+        date_label: Data
+        header_title: Edita transaccions
+        merchant_label: Comerç
+        merchant_prompt: Selecciona un comerç
+        name_label: Nom
+        name_placeholder: Introdueix un nom que s'aplicarà a les transaccions seleccionades
+        none: "(cap)"
+        notes_label: Notes
+        notes_placeholder: Introdueix una nota que s'aplicarà a les transaccions seleccionades
+        overview: Resum
+        save: Desa
+        tags_label: Etiquetes
+        transactions_section: Transaccions
+    categorizes:
+      create:
+        categorized:
+          one: 1 transacció categoritzada
+          other: "%{count} transaccions categoritzades"
+        rule_creation_failed: Transaccions categoritzades, però no s'ha pogut crear
+          la regla (potser ja existeix).
+      entry_row:
+        assign_category_select: Assigna categoria per a %{name}
+        include_checkbox: Inclou %{name}
+      show:
+        all_done: Totes les transaccions estan categoritzades
+        assign_category: Assigna una categoria
+        assign_category_prompt: "→ assigna"
+        col_amount: Import
+        col_category: Categoria
+        col_date: Data
+        col_transaction: Transacció
+        create_rule_label: Crea regla de categorització
+        exit: Surt
+        filter_placeholder: Cerca categories...
+        no_categories: No hi ha categories coincidents
+        remaining:
+          one: Queda 1 transacció sense categoritzar
+          other: Queden %{count} transaccions sense categoritzar
+        rule_description_prefix: Les futures transaccions de tipus %{type} amb nom
+          que contingui
+        rule_description_suffix: també haurien de rebre aquesta categoria.
+        skip: Omet
+        transaction_count:
+          one: 1 transacció
+          other: "%{count} transaccions"
+        transactions_hint: Desmarca per excloure una transacció, o assigna-li una
+          categoria diferent directament a la seva fila.
+        type_expense: Despesa
+        type_income: Ingrés
+    convert_to_trade:
+      account_label: 'Compte:'
+      amount_label: 'Import:'
+      cancel: Cancel·la
+      conversion_note: 'Convertit de la transacció: %{original_name} (%{original_date})'
+      date_label: 'Data:'
+      description: Converteix aquesta transacció en una operació amb detalls de valor
+      errors:
+        already_converted: Aquesta transacció ja s'ha convertit o exclòs
+        conversion_failed: 'No s''ha pogut convertir la transacció: %{error}'
+        enter_qty_or_price: Introdueix la quantitat o el preu per acció. L'altre es
+          calcularà a partir de l'import de la transacció.
+        enter_ticker: Introdueix un símbol de cotització
+        invalid_qty_or_price: Quantitat o preu invàlids. Introdueix valors positius
+          vàlids.
+        not_investment_account: Només es poden convertir en operacions les transaccions
+          de comptes d'inversió
+        security_not_found: El valor seleccionat ja no existeix. Selecciona'n un altre.
+        select_security: Selecciona o introdueix un valor
+        unexpected_error: 'Error inesperat durant la conversió: %{error}'
+      exchange_hint: Deixa-ho en blanc per detectar-ho automàticament
+      exchange_label: Mercat (opcional)
+      exchange_placeholder: XNAS
+      price_hint: Preu per acció (%{currency})
+      price_label: Preu per acció
+      price_mismatch_message: El teu preu (%{entered_price}/acció) difereix significativament
+        del preu de mercat actual de %{ticker} (%{market_price}). Si sembla incorrecte,
+        potser has seleccionat el valor equivocat — prova "Introdueix una cotització
+        personalitzada" per especificar el correcte.
+      price_mismatch_title: El preu pot no coincidir
+      price_placeholder: p. ex. 52,15
+      qty_or_price_hint: Introdueix com a mínim la quantitat O el preu. L'altre es
+        calcularà a partir de l'import de la transacció (%{amount}).
+      quantity_hint: Nombre d'accions operades
+      quantity_label: Quantitat (accions)
+      quantity_placeholder: p. ex. 20
+      security_custom: "+ Introdueix un ticker personalitzat"
+      security_label: Valor
+      security_not_listed_hint: No veus el teu valor? Selecciona "Introdueix un ticker
+        personalitzat" al final de la llista.
+      security_prompt: Selecciona un valor...
+      submit: Converteix en operació
+      success: Transacció convertida en operació
+      ticker_hint: Introdueix el símbol del valor (p. ex. AAPL, MSFT)
+      ticker_placeholder: AAPL
+      ticker_search_hint: Cerca per símbol o nom d'empresa, o escriu un símbol personalitzat
+      ticker_search_placeholder: Cerca un símbol...
+      title: Converteix en operació de valors
+      trade_type_hint: Compra o ven accions d'un valor
+      trade_type_label: Tipus d'operació
+    create:
+      created: Transacció creada
     dismiss_duplicate:
       failure: No s'ha pogut rebutjar la suggerència de duplicat
       success: Mantingudes com a transaccions separades
@@ -9,6 +151,7 @@ ca:
       account_prompt: Selecciona un compte
       amount: Import
       category: Categoria
+      category_label: Categoria
       category_prompt: Selecciona una categoria
       date: Data
       description: Descripció
@@ -16,34 +159,69 @@ ca:
       details: Detalls
       expense: Despesa
       income: Ingrés
+      merchant_label: Comerç
       none: "(cap)"
       note_label: Notes
       note_placeholder: Introdueix una nota
+      create_tag: Crea
       submit: Afegeix transacció
+      tag_search_placeholder: Cerca o crea una etiqueta
       tags_label: Etiquetes
       transfer: Transferència
     header:
       edit_categories: Edita categories
       edit_imports: Edita importacions
-      edit_merchants: Edita comerciants
+      edit_merchants: Edita comerços
       edit_tags: Edita etiquetes
       import: Importa
     index:
+      categorize_button:
+        one: Categoritza (1)
+        other: Categoritza (%{count})
+      edit_categories: Edita categories
+      edit_imports: Edita importacions
+      edit_merchants: Edita comerços
+      edit_rules: Edita regles
+      edit_tags: Edita etiquetes
       import: Importa
+      new_rule: Nova regla
+      new_transaction: Nova transacció
+      title: Transaccions
       transaction: transacció
       transactions: transaccions
+    keep_both: 'No, mantén-les totes dues'
+    list:
+      drag_drop_subtitle: Puja transaccions directament
+      drag_drop_title: Deixa anar el CSV per importar
+      transaction: transacció
+      transactions: transaccions
+    mark_recurring: Marca com a recurrent
+    mark_recurring_subtitle: Segueix-ho com a transacció recurrent. La variància d'import
+      es calcula automàticament a partir dels últims 6 mesos de transaccions similars.
+    mark_recurring_title: Transacció recurrent
     merge_duplicate:
       failure: No s'han pogut fusionar les transaccions
       success: Les transaccions s'han fusionat correctament
     new:
       new_transaction: Nova transacció
+    pending_duplicate_merge:
+      confirm_title: Fusiona amb la transacció publicada (%{posted_amount})
+      possible_duplicate: Duplicat?
+      possible_duplicate_short: Dup?
+      reject_title: Mantén com a transaccions separades
+      review_recommended: Revisa
+      review_recommended_short: Rev
+    potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa
+      que la transacció publicada a sota. Si és així, fusiona-les per evitar comptabilitzar
+      dues vegades.
+    potential_duplicate_title: S'ha detectat un duplicat possible
     search:
       filters:
         account: Compte
         amount: Import
         category: Categoria
         date: Data
-        merchant: Comerciant
+        merchant: Comerç
         status: Estat
         tag: Etiqueta
         type: Tipus
@@ -62,6 +240,9 @@ ca:
           on_or_before: el %{date} o abans
           pending: Pendent
           transfer: Transferència
+        date_filter:
+          end_date: Data de fi
+          start_date: Data d'inici
         status_filter:
           confirmed: Confirmada
           pending: Pendent
@@ -70,6 +251,8 @@ ca:
           income: Ingrés
           transfer: Transferència
       form:
+        filter: Filtra
+        search_placeholder: Cerca transaccions...
         toggle_selection_checkboxes: Commuta totes les caselles
       menu:
         account_filter: Compte
@@ -79,7 +262,7 @@ ca:
         category_filter: Categoria
         clear_filters: Neteja filtres
         date_filter: Data
-        merchant_filter: Comerciant
+        merchant_filter: Comerç
         status_filter: Estat
         tag_filter: Etiqueta
         type_filter: Tipus
@@ -87,45 +270,102 @@ ca:
         equal_to: igual a
         greater_than: major que
         less_than: menor que
+    selection_bar:
+      duplicate: Duplica
+      edit: Edita
+      selected: seleccionades
     show:
       account_label: Compte
+      activity_type: Tipus d'activitat
+      activity_type_description: Tipus d'activitat d'inversió (compra, venda, dividend,
+        etc.). Detectat automàticament o establert manualment.
+      additional_details: Detalls addicionals
       amount: Import
+      attachments: Adjunts
       category_label: Categoria
+      convert: Converteix
+      convert_to_trade_button: Converteix en operació
+      convert_to_trade_description: Converteix aquesta transacció en una operació
+        de compra o venda amb detalls de valor per al seguiment de la cartera.
+      convert_to_trade_title: Converteix en operació de valors
       date_label: Data
       delete: Elimina
       delete_subtitle: Això eliminarà permanentment la transacció, afectarà els teus
         saldos històrics i no es podrà desfer.
-      delete_title: Eliminar transacció
+      delete_title: Elimina la transacció
+      description: Descripció
       details: Detalls
-      keep_both: No, mantenir ambdós
-      mark_recurring: Marcar com a recurrent
-      mark_recurring_subtitle: Segueix-ho com a transacció recurrent. La variància d'import
-        es calcula automàticament a partir dels últims 6 mesos de transaccions similars.
+      exclude: Exclou
+      exclude_description: Les transaccions excloses es retiraran dels càlculs i informes
+        de pressupost.
+      keep_both: 'No, mantén-les totes dues'
+      loan_payment: Pagament de préstec
+      mark_recurring: Marca com a recurrent
+      mark_recurring_subtitle: Segueix-ho com a transacció recurrent. La variància
+        d'import es calcula automàticament a partir dels últims 6 mesos de transaccions
+        similars.
       mark_recurring_title: Transacció recurrent
-      merchant_label: Comerciant
+      memo: Memo
+      merchant_label: Comerç
       merge_duplicate: Sí, fusiona-les
       name_label: Nom
       nature: Tipus
       none: "(cap)"
       note_label: Notes
       note_placeholder: Introdueix una nota
+      one_time_description: Les transaccions puntuals s'exclouran de determinats càlculs
+        i informes de pressupost per ajudar-te a veure el que realment és important.
+      one_time_title: "%{type} puntual"
+      open_matcher: Obre l'aparellador
       overview: Resum
-      potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa que
-        la transacció publicada a sota. Si és així, fusiona-les per evitar comptabilitzar dues vegades.
-      potential_duplicate_title: S'ha detectat duplicat possible
+      payee: Beneficiari
+      pending_duplicate_merger_button: Obre el fusionador
+      pending_duplicate_merger_description: Fusiona manualment aquesta transacció
+        pendent amb la seva versió publicada.
+      pending_duplicate_merger_title: Duplicat d'una transacció publicada?
+      potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa
+        que la transacció publicada a sota. Si és així, fusiona-les per evitar comptabilitzar
+        dues vegades.
+      potential_duplicate_title: S'ha detectat un duplicat possible
+      provider_extras: Extres del proveïdor
       settings: Configuració
+      tab_transactions: Transaccions
+      tab_upcoming: Properes
       tags_label: Etiquetes
-      uncategorized: "(sense categoritzar)"
-      loan_payment: Pagament de préstec
       transfer: Transferència
+      transfer_matcher_description: Connecta aquesta transacció amb la seva contrapart
+        en un altre compte.
+      transfer_or_debt_payment: Transferència o pagament de deute?
+      uncategorized: "(sense categoritzar)"
+    split_parent_row:
+      split_label: Divisió
+    transfer_match:
+      auto_matched: Aparellada
+      auto_matched_short: A/A
+      confirm_match: Confirma la coincidència
+      payment_confirmed: Pagament confirmat
+      reject_match: Rebutja la coincidència
+      transfer_confirmed: Transferència confirmada
+    summary:
+      expenses: Despeses
+      income: Ingressos
+      inflow: Entrada
+      outflow: Sortida
+      total_transactions: Total de transaccions
     toggle_recurring_section: Mostra/Amaga les transaccions recurrents properes
     transaction:
+      activity_type_tooltip: Tipus d'activitat d'inversió
+      linked_with_provider: Vinculat amb %{provider}
       pending: Pendent
       pending_tooltip: Transacció pendent — pot canviar quan es publiqui
-      linked_with_provider: Vinculat amb %{provider}
       possible_duplicate: Duplicat?
       potential_duplicate_tooltip: Això pot ser un duplicat d'una altra transacció
       review_recommended: Revisa
       review_recommended_tooltip: Diferència d'import important — es recomana revisar
         per comprovar si és un duplicat
+      split: Divisió
+      split_child_tooltip: Part d'una transacció dividida
+      split_tooltip: Aquesta transacció s'ha dividit en múltiples entrades
     unknown_name: Transacció desconeguda
+    update:
+      updated: Transacció actualitzada

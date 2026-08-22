@@ -1,0 +1,17 @@
+<%= tag.div class: container_classes do %>
+  <%= tag.input type: "search",
+                name: name,
+                value: value,
+                placeholder: placeholder,
+                "aria-label": aria_label,
+                autocomplete: "off",
+                class: input_classes,
+                **opts %>
+  <% if variant == :embedded %>
+    <%= helpers.icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+  <% else %>
+    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+      <%= helpers.icon("search", class: "text-secondary") %>
+    </div>
+  <% end %>
+<% end %>

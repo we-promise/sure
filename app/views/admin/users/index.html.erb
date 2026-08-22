@@ -1,18 +1,18 @@
 <%= content_for :page_title, t(".title") %>
 
-<div class="bg-container rounded-xl shadow-border-xs p-4">
-  <div class="mb-6">
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-6">
+  <div>
     <p class="text-sm text-secondary"><%= t(".description") %></p>
   </div>
 
   <!-- Filters -->
-  <div class="mb-6">
+  <div>
     <%= form_with url: admin_users_path, method: :get, class: "flex gap-4 items-end flex-wrap" do |f| %>
       <div class="w-full md:w-auto">
         <%= f.label :role, t(".filters.role"), class: "block text-sm font-medium text-primary mb-1" %>
         <%= f.select :role,
             options_for_select(
-              [[t(".filters.role_all"), ""], [t(".roles.guest"), "guest"], [t(".roles.member", default: "Member"), "member"], [t(".roles.admin"), "admin"], [t(".roles.super_admin"), "super_admin"]],
+              [[t(".filters.role_all"), ""], [t(".roles.guest"), "guest"], [t(".roles.member"), "member"], [t(".roles.admin"), "admin"], [t(".roles.super_admin"), "super_admin"]],
               params[:role]
             ),
             {},
@@ -33,7 +33,7 @@
   </div>
 
   <!-- Summary: trials expiring in next 7 days -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <div class="bg-container-inset rounded-lg p-4">
       <div class="flex items-center gap-2 mb-2">
         <%= icon "calendar-clock", class: "w-5 h-5 text-secondary" %>
@@ -51,10 +51,16 @@
       <div class="space-y-4">
         <% @families_with_users.each do |family, users| %>
           <% pending_invitations = @invitations_by_family[family.id] || [] %>
-          <details class="bg-container-inset rounded-lg overflow-hidden group"
-                   data-controller="admin-invitation-delete"
-                   data-admin-invitation-delete-delete-all-label-value="<%= t(".invitations.delete_all") %>">
-            <summary class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover">
+          <%= render DS::Disclosure.new(
+                variant: :bare,
+                summary_class: "list-none focus-ring flex items-center justify-between gap-4 px-4 py-3 cursor-pointer select-none hover:bg-surface-hover",
+                class: "bg-container-inset rounded-lg overflow-hidden",
+                data: {
+                  controller: "admin-invitation-delete",
+                  admin_invitation_delete_delete_all_label_value: t(".invitations.delete_all")
+                }
+              ) do |disclosure| %>
+            <% disclosure.with_summary_content do %>
               <div class="flex items-center gap-3">
                 <%= icon "users", class: "w-5 h-5 text-secondary shrink-0" %>
                 <div>
@@ -74,20 +80,17 @@
                     <%= t(".table.trial_ends_at") %>: <%= sub.trial_ends_at&.to_fs(:long) || t(".not_available") %>
                   </span>
                 <% elsif sub %>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                    <%= sub.active? ? "bg-green-100 text-green-800" : "bg-surface text-secondary" %>">
-                    <%= sub.status.humanize %>
-                  </span>
+                  <%= render DS::Pill.new(label: sub.status.humanize, tone: sub.active? ? :success : :neutral) %>
                 <% else %>
                   <span class="text-xs text-secondary"><%= t(".no_subscription") %></span>
                 <% end %>
                 <%= icon "chevron-down", class: "w-4 h-4 text-secondary transition-transform group-open:rotate-180" %>
               </div>
-            </summary>
+            <% end %>
 
             <div class="border-t border-primary">
               <table class="w-full">
-                <thead class="bg-surface-default border-b border-primary">
+                <thead class="bg-surface border-b border-primary">
                   <tr>
                     <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.user") %></th>
                     <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.last_login") %></th>
@@ -123,7 +126,7 @@
                             <%= form.select :role,
                                 options_for_select([
                                   [t(".roles.guest"), "guest"],
-                                  [t(".roles.member", default: "Member"), "member"],
+                                  [t(".roles.member"), "member"],
                                   [t(".roles.admin"), "admin"],
                                   [t(".roles.super_admin"), "super_admin"]
                                 ], user.role),
@@ -139,7 +142,7 @@
                 <% if pending_invitations.any? %>
                   <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200 border-t border-dashed border-primary">
                     <% pending_invitations.each do |invitation| %>
-                      <tr class="bg-red-50/30 dark:bg-red-950/20">
+                      <tr class="bg-destructive/5">
                         <td class="px-4 py-3">
                           <div class="flex items-center gap-3">
                             <%= icon "mail", class: "w-5 h-5 text-secondary shrink-0" %>
@@ -157,12 +160,16 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                           <%= form_with url: admin_invitation_path(invitation), method: :delete, class: "inline" do |f| %>
-                            <button type="submit"
-                                    data-admin-invitation-delete-target="button"
-                                    data-action="click->admin-invitation-delete#handleClick"
-                                    class="text-sm text-red-600 hover:text-red-800 border border-red-300 rounded-lg px-2 py-1 hover:bg-red-50 transition-colors">
-                              <%= t(".invitations.delete") %>
-                            </button>
+                            <%= render DS::Button.new(
+                                  text: t(".invitations.delete"),
+                                  type: "submit",
+                                  variant: :outline_destructive,
+                                  size: :sm,
+                                  data: {
+                                    admin_invitation_delete_target: "button",
+                                    action: "click->admin-invitation-delete#handleClick"
+                                  }
+                                ) %>
                           <% end %>
                         </td>
                       </tr>
@@ -177,7 +184,7 @@
                 <% end %>
               <% end %>
             </div>
-          </details>
+          <% end %>
         <% end %>
       </div>
     <% else %>
@@ -191,27 +198,19 @@
   <%= settings_section title: t(".role_descriptions_title"), collapsible: true, open: true do %>
     <div class="space-y-3 text-sm">
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.guest") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.guest"), tone: :neutral) %>
         <p class="text-secondary"><%= t(".role_descriptions.guest") %></p>
       </div>
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.member", default: "Member") %>
-        </span>
-        <p class="text-secondary"><%= t(".role_descriptions.member", default: "Basic user access. Can manage their own accounts, transactions, and settings.") %></p>
+        <%= render DS::Pill.new(label: t(".roles.member"), tone: :neutral) %>
+        <p class="text-secondary"><%= t(".role_descriptions.member") %></p>
       </div>
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface text-primary shrink-0">
-          <%= t(".roles.admin") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.admin"), tone: :neutral) %>
         <p class="text-secondary"><%= t(".role_descriptions.admin") %></p>
       </div>
       <div class="flex items-start gap-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 shrink-0">
-          <%= t(".roles.super_admin") %>
-        </span>
+        <%= render DS::Pill.new(label: t(".roles.super_admin"), tone: :success) %>
         <p class="text-secondary"><%= t(".role_descriptions.super_admin") %></p>
       </div>
     </div>

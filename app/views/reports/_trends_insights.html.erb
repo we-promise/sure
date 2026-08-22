@@ -66,7 +66,7 @@
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
-            <p class="text-lg font-semibold text-destructive privacy-sensitive">
+            <p class="text-lg font-semibold text-primary privacy-sensitive">
               <%= Money.new(avg_expenses, Current.family.currency).format %>
             </p>
           </div>

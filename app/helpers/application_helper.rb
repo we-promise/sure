@@ -14,6 +14,24 @@ module ApplicationHelper
     form_with(**options, &block)
   end
 
+  # Locale-aware ordinal label for integers.
+  # English falls through to Ruby's ordinalize ("1st"); Catalan returns "1r"/"2n"/...
+  def localized_ordinal(number)
+    case I18n.locale
+    when :ca
+      n = number.to_i
+      suffix = case n
+      when 1, 3 then "r"
+      when 2 then "n"
+      when 4 then "t"
+      else "è"
+      end
+      "#{n}#{suffix}"
+    else
+      number.to_i.ordinalize
+    end
+  end
+
   def icon(key, size: "md", color: "default", custom: false, as_button: false, **opts)
     extra_classes = opts.delete(:class)
     sizes = { xs: "w-3 h-3", sm: "w-4 h-4", md: "w-5 h-5", lg: "w-6 h-6", xl: "w-7 h-7", "2xl": "w-8 h-8" }
@@ -57,6 +75,43 @@ module ApplicationHelper
 
   def page_active?(path)
     current_page?(path) || (request.path.start_with?(path) && path != "/")
+  end
+
+  # Wraps a nav-item hash so a single call performs both halves of a
+  # preview-gated entry: returns `nil` for users without the flag (so the
+  # entry never reaches the rendered nav), and stamps `preview: true` on
+  # the hash for users with the flag (so the partial paints the violet
+  # dot on the icon). Use inside an `Array#compact` nav-items list.
+  def preview_gated_nav_item(item)
+    return nil unless preview_features_enabled?
+    item.merge(preview: true)
+  end
+
+  # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
+  # entry fronting both (it stays lit while browsing either subpage, since
+  # page_active? is a path-prefix match and /budgets · /goals don't share
+  # the /plan prefix). Everyone else gets exactly the pre-Plan Budgets
+  # entry — Goals was already hidden without the flag, so their nav is
+  # unchanged.
+  def plan_nav_item
+    if preview_features_enabled?
+      {
+        name: t("layouts.application.nav.plan"),
+        path: plan_path,
+        icon: "compass",
+        icon_custom: false,
+        active: page_active?(plan_path) || page_active?(budgets_path) || page_active?(goals_path),
+        preview: true
+      }
+    else
+      {
+        name: t("layouts.application.nav.budgets"),
+        path: budgets_path,
+        icon: "map",
+        icon_custom: false,
+        active: page_active?(budgets_path)
+      }
+    end
   end
 
   # Wrapper around I18n.l to support custom date formats
@@ -119,6 +174,11 @@ module ApplicationHelper
     end
 
     cookies[:admin] == "true"
+  end
+
+  def sidekiq_web_available?
+    named_routes = Rails.application.routes.named_routes
+    named_routes.route_defined?(:sidekiq_web_path) || named_routes.route_defined?(:sidekiq_web_url)
   end
 
   def assistant_icon

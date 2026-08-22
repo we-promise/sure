@@ -15,3 +15,10 @@ hu:
       unauthorized: Nincs jogosultságod ezt a műveletet végrehajtani.
     reset_with_sample_data:
       success: A fiókod visszaállítva, és a mintaadatok előkészítése folyamatban van. Hamarosan megjelennek a demóadatok.
+    user_menu:
+      version: Verzió
+      settings: Beállítások
+      changelog: Változásnapló
+      feedback: Visszajelzés
+      contact: Kapcsolat
+      log_out: Kijelentkezés

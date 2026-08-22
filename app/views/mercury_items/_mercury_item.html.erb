@@ -1,82 +1,84 @@
 <%# locals: (mercury_item:) %>
 
 <%= tag.div id: dom_id(mercury_item) do %>
-  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
-    <summary class="flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-        <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
-          <% if mercury_item.logo.attached? %>
-            <%= image_tag mercury_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
-          <% else %>
-            <div class="flex items-center justify-center">
-              <%= tag.p mercury_item.name.first.upcase, class: "text-blue-600 text-xs font-medium" %>
-            </div>
-          <% end %>
-        </div>
-
-        <div class="pl-1 text-sm">
-          <div class="flex items-center gap-2">
-            <%= tag.p mercury_item.name, class: "font-medium text-primary" %>
-            <% if mercury_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+          <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
+            <% if mercury_item.logo.attached? %>
+              <%= image_tag mercury_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
+            <% else %>
+              <div class="flex items-center justify-center">
+                <%= tag.p mercury_item.name.first.upcase, class: "text-blue-600 text-xs font-medium" %>
+              </div>
             <% end %>
           </div>
-          <% if mercury_item.accounts.any? %>
-            <p class="text-xs text-secondary">
-              <%= mercury_item.institution_summary %>
-            </p>
-          <% end %>
-          <% if mercury_item.syncing? %>
-            <div class="text-secondary flex items-center gap-1">
-              <%= icon "loader", size: "sm", class: "animate-spin" %>
-              <%= tag.span t(".syncing") %>
-            </div>
-          <% elsif mercury_item.sync_error.present? %>
-            <div class="text-secondary flex items-center gap-1">
-              <%= render DS::Tooltip.new(text: mercury_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
-              <%= tag.span t(".error"), class: "text-destructive" %>
-            </div>
-          <% else %>
-            <p class="text-secondary">
-              <% if mercury_item.last_synced_at %>
-                <% if mercury_item.sync_status_summary %>
-                  <%= t(".status_with_summary", timestamp: time_ago_in_words(mercury_item.last_synced_at), summary: mercury_item.sync_status_summary) %>
-                <% else %>
-                  <%= t(".status", timestamp: time_ago_in_words(mercury_item.last_synced_at)) %>
-                <% end %>
-              <% else %>
-                <%= t(".status_never") %>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p mercury_item.name, class: "font-medium text-primary" %>
+              <% if mercury_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
-            </p>
-          <% end %>
+            </div>
+            <% if mercury_item.accounts.any? %>
+              <p class="text-xs text-secondary">
+                <%= mercury_item.institution_summary %>
+              </p>
+            <% end %>
+            <% if mercury_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif mercury_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: mercury_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if mercury_item.last_synced_at %>
+                  <% if mercury_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(mercury_item.last_synced_at), summary: mercury_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(mercury_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
         </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <% if Rails.env.development? %>
+              <%= icon(
+                "refresh-cw",
+                as_button: true,
+                href: sync_mercury_item_path(mercury_item)
+              ) %>
+            <% end %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: mercury_item_path(mercury_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(mercury_item.name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
       </div>
-
-      <% if Current.user&.admin? %>
-        <div class="flex items-center gap-2">
-          <% if Rails.env.development? %>
-            <%= icon(
-              "refresh-cw",
-              as_button: true,
-              href: sync_mercury_item_path(mercury_item)
-            ) %>
-          <% end %>
-
-          <%= render DS::Menu.new do |menu| %>
-            <% menu.with_item(
-              variant: "button",
-              text: t(".delete"),
-              icon: "trash-2",
-              href: mercury_item_path(mercury_item),
-              method: :delete,
-              confirm: CustomConfirm.for_resource_deletion(mercury_item.name, high_severity: true)
-            ) %>
-          <% end %>
-        </div>
-      <% end %>
-    </summary>
+    <% end %>
 
     <% unless mercury_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
@@ -128,5 +130,5 @@
         <% end %>
       </div>
     <% end %>
-  </details>
+  <% end %>
 <% end %>

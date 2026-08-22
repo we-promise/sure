@@ -1,0 +1,30 @@
+---
+ca:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Compte
+        account_last4_hint: Quatre últims dígits del compte
+        account_name_hint: Pista del nom del compte
+        closing_balance: Saldo final
+        content_sha256: Resum del contingut
+        currency: Divisa
+        filename: Nom del fitxer
+        institution_name_hint: Pista de la institució
+        opening_balance: Saldo inicial
+        original_file: Fitxer de l'extracte
+        period_end_on: Final del període
+        period_start_on: Inici del període
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: ja s'ha pujat per a aquesta família
+            content_sha256:
+              duplicate_statement_file: ja s'ha pujat per a aquesta família
+            original_file:
+              invalid_format: ha de ser un fitxer PDF, CSV o XLSX
+              too_large: és massa gran. La mida màxima és %{max_mb}MB
+            period_end_on:
+              on_or_after_start: ha de ser igual o posterior a l'inici del període

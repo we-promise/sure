@@ -29,16 +29,23 @@ jobs:
       app_version: ${{ steps.version.outputs.app_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Install Helm
-        uses: azure/setup-helm@v5
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
 
       - name: Resolve chart and app versions
         id: version
         shell: bash
+        # Bind workflow inputs to env so the values arrive as shell variables
+        # instead of being interpolated verbatim by the `${{ }}` runner pass.
+        # zizmor flags the direct expansion as a template-injection risk.
+        env:
+          CHART_VERSION_INPUT: ${{ inputs.chart_version }}
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
         run: |
           set -euo pipefail
 
@@ -47,18 +54,24 @@ jobs:
             echo "${raw#v}"
           }
 
-          if [ -n "${{ inputs.chart_version }}" ]; then
-            CHART_VERSION="$(normalize_version "${{ inputs.chart_version }}")"
+          if [ -n "$CHART_VERSION_INPUT" ]; then
+            CHART_VERSION="$(normalize_version "$CHART_VERSION_INPUT")"
           elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
             CHART_VERSION="$(normalize_version "${GITHUB_REF_NAME}")"
           else
             CHART_VERSION="0.0.0-nightly.$(date -u +'%Y%m%d.%H%M%S')"
           fi
 
-          if [ -n "${{ inputs.app_version }}" ]; then
-            APP_VERSION="${{ inputs.app_version }}"
+          # Normalize APP_VERSION the same way CHART_VERSION is — appVersion
+          # must match the OCI image tag in GHCR, which is published without a
+          # leading `v`. Without this, a release on tag `v0.7.1-rc.1` writes
+          # `appVersion: "v0.7.1-rc.1"` into Chart.yaml / index.yaml, and Helm
+          # then fails to pull `ghcr.io/we-promise/sure:v0.7.1-rc.1` (the real
+          # tag is `0.7.1-rc.1`). See #2050.
+          if [ -n "$APP_VERSION_INPUT" ]; then
+            APP_VERSION="$(normalize_version "$APP_VERSION_INPUT")"
           elif [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
-            APP_VERSION="${GITHUB_REF_NAME}"
+            APP_VERSION="$(normalize_version "${GITHUB_REF_NAME}")"
           else
             APP_VERSION="${CHART_VERSION}"
           fi
@@ -88,7 +101,7 @@ jobs:
           helm package charts/sure -d .cr-release-packages
 
       - name: Upload packaged chart artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: helm-chart-package
           path: .cr-release-packages/*.tgz
@@ -98,7 +111,7 @@ jobs:
 
       - name: Checkout gh-pages
         if: ${{ inputs.update_gh_pages }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           ref: gh-pages
           path: gh-pages

@@ -9,32 +9,28 @@
     </p>
 
     <% if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } } %>
-      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div class="flex items-start gap-2">
-          <%= icon "info", class: "w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" %>
-          <div class="text-xs">
-            <p class="font-medium text-blue-900 mb-1"><%= t("rules.apply_all.ai_cost_title") %></p>
-            <% if @estimated_cost.present? %>
-              <p class="text-blue-700">
-                <%= t("rules.apply_all.ai_cost_message", transactions: @total_affected_count) %>
-                <%= t("rules.apply_all.estimated_cost", cost: sprintf("%.4f", @estimated_cost)) %>
-              </p>
-            <% else %>
-              <p class="text-blue-700">
-                <%= t("rules.apply_all.ai_cost_message", transactions: @total_affected_count) %>
-                <% if @selected_model.present? %>
-                  <span class="font-semibold"><%= t("rules.apply_all.cost_unavailable_model", model: @selected_model) %></span>
-                <% else %>
-                  <span class="font-semibold"><%= t("rules.apply_all.cost_unavailable_no_provider") %></span>
-                <% end %>
-                <%= t("rules.apply_all.cost_warning") %>
-              </p>
-            <% end %>
-            <p class="text-blue-600 mt-1">
-              <%= link_to t("rules.apply_all.view_usage"), settings_llm_usage_path, class: "underline hover:text-blue-800" %>
+      <div class="mb-4">
+        <%= render DS::Alert.new(title: t("rules.apply_all.ai_cost_title"), variant: :info) do %>
+          <% if @estimated_cost.present? %>
+            <p>
+              <%= t("rules.apply_all.ai_cost_message", transactions: @total_affected_count) %>
+              <%= t("rules.apply_all.estimated_cost", cost: sprintf("%.4f", @estimated_cost)) %>
             </p>
-          </div>
-        </div>
+          <% else %>
+            <p>
+              <%= t("rules.apply_all.ai_cost_message", transactions: @total_affected_count) %>
+              <% if @selected_model.present? %>
+                <span class="font-semibold"><%= t("rules.apply_all.cost_unavailable_model", model: @selected_model) %></span>
+              <% else %>
+                <span class="font-semibold"><%= t("rules.apply_all.cost_unavailable_no_provider") %></span>
+              <% end %>
+              <%= t("rules.apply_all.cost_warning") %>
+            </p>
+          <% end %>
+          <p>
+            <%= link_to t("rules.apply_all.view_usage"), settings_llm_usage_path, class: "text-link underline" %>
+          </p>
+        <% end %>
       </div>
     <% end %>
 

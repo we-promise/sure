@@ -1,4 +1,6 @@
 class PlaidItemsController < ApplicationController
+  include StreamExtensions
+
   before_action :set_plaid_item, only: %i[edit destroy sync]
   before_action :require_admin!, only: %i[new create select_existing_account link_existing_account edit destroy sync]
 
@@ -12,6 +14,8 @@ class PlaidItemsController < ApplicationController
       accountable_type: params[:accountable_type] || "Depository",
       region: region
     )
+  rescue Plaid::ApiError => e
+    handle_link_token_error(e)
   end
 
   def edit
@@ -21,6 +25,8 @@ class PlaidItemsController < ApplicationController
       webhooks_url: webhooks_url,
       redirect_url: accounts_url,
     )
+  rescue Plaid::ApiError => e
+    handle_link_token_error(e)
   end
 
   def create
@@ -102,6 +108,58 @@ class PlaidItemsController < ApplicationController
 
     def item_name
       plaid_item_params.dig(:metadata, :institution, :name)
+    end
+
+    # When `link_token/create` (or the update equivalent) raises, surface a
+    # friendly alert to the user instead of letting the modal frame render
+    # blank. Plaid configuration/product-access errors are the common case for
+    # self-hosted users — without this, the Link modal simply never opens and
+    # the only signal lives in server logs.
+    def handle_link_token_error(error)
+      error_body = safe_parse_plaid_error(error)
+      error_code = error_body["error_code"].to_s
+
+      Rails.logger.warn(
+        "Plaid link_token request failed: #{error_code} - #{error_body['error_message']}"
+      )
+      Sentry.capture_exception(error) if defined?(Sentry)
+
+      alert = friendly_link_token_alert(error_code, error_body["error_message"])
+
+      respond_to do |format|
+        format.html { redirect_to accounts_path, alert: alert }
+        format.turbo_stream { stream_redirect_to(accounts_path, alert: alert) }
+      end
+    end
+
+    def safe_parse_plaid_error(error)
+      JSON.parse(error.response_body.to_s)
+    rescue JSON::ParserError
+      {}
+    end
+
+    # Plaid surfaces its own actionable copy on configuration / product-access
+    # failures (e.g. "Your account is not enabled for the following products
+    # [...]. To request access, visit dashboard.plaid.com..."). Those messages
+    # are safe to show verbatim — they describe a Plaid-side config issue,
+    # not user data. For everything else we fall back to a generic message
+    # and rely on the log + Sentry trail.
+    SHOWABLE_PLAID_ERROR_CODES = %w[
+      INVALID_PRODUCT
+      PRODUCTS_NOT_SUPPORTED
+      NO_PRODUCTS_PERMISSION
+      ADDITION_LIMIT
+      INVALID_INSTITUTION
+      INSTITUTION_NOT_ENABLED_IN_REGION
+      INSTITUTION_NOT_SUPPORTED
+    ].freeze
+
+    def friendly_link_token_alert(error_code, error_message)
+      if SHOWABLE_PLAID_ERROR_CODES.include?(error_code) && error_message.present?
+        t("plaid_items.errors.link_token_with_message", message: error_message)
+      else
+        t("plaid_items.errors.link_token_generic")
+      end
     end
 
     def plaid_us_webhooks_url

@@ -854,6 +854,22 @@ class QifImportTest < ActiveSupport::TestCase
 
   # ── QifParser: normalize_qif_date ──────────────────────────────────────────
 
+  test "normalize_qif_date preserves single spaces for month-name dates" do
+    assert_equal "26 Jan 2026", QifParser.send(:normalize_qif_date, "26 Jan 2026")
+  end
+
+  test "normalize_qif_date collapses multiple spaces in month-name dates" do
+    assert_equal "26 Jan 2026", QifParser.send(:normalize_qif_date, "26  Jan  2026")
+  end
+
+  test "normalize_qif_date still strips spaces from numeric dates" do
+    assert_equal "6/4/2020", QifParser.send(:normalize_qif_date, "6/ 4/2020")
+  end
+
+  test "normalize_qif_date expands 2-digit year for month-name dates" do
+    assert_equal "26 Jan 2026", QifParser.send(:normalize_qif_date, "26 Jan 26")
+  end
+
   test "normalize_qif_date converts apostrophe 2-digit year" do
     assert_equal "6/4/2020", QifParser.send(:normalize_qif_date, "6/ 4'20")
   end
@@ -896,6 +912,14 @@ class QifImportTest < ActiveSupport::TestCase
 
   test "parse_qif_date parses ISO format (YYYY-MM-DD)" do
     assert_equal "2020-06-04", QifParser.send(:parse_qif_date, "2020-06-04", date_format: "%Y-%m-%d")
+  end
+
+  test "parse_qif_date parses month-name format (DD MMM YYYY)" do
+    assert_equal "2026-01-26", QifParser.send(:parse_qif_date, "26 Jan 2026", date_format: "%d %b %Y")
+  end
+
+  test "parse_qif_date parses month-name format with 2-digit year" do
+    assert_equal "2026-01-26", QifParser.send(:parse_qif_date, "26 Jan 26", date_format: "%d %b %Y")
   end
 
   test "parse_qif_date returns nil for invalid date" do
@@ -962,6 +986,11 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal "%Y-%m-%d", Import.detect_date_format(samples)
   end
 
+  test "detect_date_format identifies month-name DD MMM YYYY format" do
+    samples = [ "26 Jan 2026", "23 Jan 2026", "02 Feb 2026" ]
+    assert_equal "%d %b %Y", Import.detect_date_format(samples)
+  end
+
   test "detect_date_format returns fallback for blank samples" do
     assert_equal "%Y-%m-%d", Import.detect_date_format([])
     assert_equal "%Y-%m-%d", Import.detect_date_format(nil)
@@ -1014,6 +1043,48 @@ class QifImportTest < ActiveSupport::TestCase
 
     # Should not re-detect since qif_date_format is already set
     assert_equal "%d/%m/%Y", @import.reload.qif_date_format
+  end
+
+  # Reproduces #2498: Amex-style QIF with dd mmm yyyy dates previously failed
+  # with "Unable to detect date format" because normalize_qif_date stripped all
+  # spaces (turning "26 Jan 2026" into the unparseable "26Jan2026").
+  AMEX_DDD_MMM_YYYY_QIF = <<~QIF
+    !Type:CCard
+    D26 Jan 2026
+    N20260126
+    T-25.24
+    PAMAZON.COM.CA           WWW.AMAZON.CO
+    M
+    ^
+    D23 Jan 2026
+    N20260123
+    T-10.49
+    PSKIPTHEDISHES           WINNIPEG (BROAD
+    M
+    ^
+  QIF
+
+  test "generate_rows_from_csv auto-detects DD MMM YYYY format" do
+    @import.update!(raw_file_str: AMEX_DDD_MMM_YYYY_QIF)
+    @import.generate_rows_from_csv
+
+    assert_equal "%d %b %Y", @import.reload.qif_date_format
+    row = @import.rows.find_by(name: "AMAZON.COM.CA           WWW.AMAZON.CO")
+    assert_not_nil row
+    assert_equal "2026-01-26", row.date
+    assert_equal "-25.24",     row.amount
+  end
+
+  test "DD MMM YYYY format appears in valid_date_formats_with_preview for Amex QIF" do
+    @import.update!(raw_file_str: AMEX_DDD_MMM_YYYY_QIF)
+    @import.generate_rows_from_csv
+
+    formats = @import.valid_date_formats_with_preview
+    format_strs = formats.map { |f| f[:format] }
+
+    assert_includes format_strs, "%d %b %Y"
+    dd_mmm = formats.find { |f| f[:format] == "%d %b %Y" }
+    assert_equal "2026-01-26", dd_mmm[:preview]
   end
 
   # ── QifParser: try_parse_date ───────────────────────────────────────────────

@@ -1,0 +1,54 @@
+---
+hu:
+  period:
+    last_day:
+      label_short: "1N"
+      label: "Tegnap óta"
+      comparison_label: "vs. tegnap"
+    current_week:
+      label_short: "HE"
+      label: "Jelenlegi hét"
+      comparison_label: "vs. hét eleje"
+    last_7_days:
+      label_short: "7N"
+      label: "Utóbbi 7 nap"
+      comparison_label: "vs. előző hét"
+    current_month:
+      label_short: "HÓE"
+      label: "Jelenlegi hónap"
+      comparison_label: "vs. hónap eleje"
+    last_month:
+      label_short: "EHÓ"
+      label: "Előző hónap"
+      comparison_label: "vs. előző hónap"
+    last_30_days:
+      label_short: "30N"
+      label: "Utóbbi 30 nap"
+      comparison_label: "vs. utóbbi 30 nap"
+    last_90_days:
+      label_short: "90N"
+      label: "Utóbbi 90 nap"
+      comparison_label: "vs. előző negyedév"
+    current_year:
+      label_short: "ÉE"
+      label: "Jelenlegi év"
+      comparison_label: "vs. év eleje"
+    last_365_days:
+      label_short: "365N"
+      label: "Utóbbi 365 nap"
+      comparison_label: "vs. 1 évvel ezelőtt"
+    last_5_years:
+      label_short: "5É"
+      label: "Utóbbi 5 év"
+      comparison_label: "vs. 5 évvel ezelőtt"
+    last_10_years:
+      label_short: "10É"
+      label: "Utóbbi 10 év"
+      comparison_label: "vs. 10 évvel ezelőtt"
+    all_time:
+      label_short: "Mind"
+      label: "Teljes időszak"
+      comparison_label: "vs. kezdet"
+    custom:
+      label_short: "Egyéni"
+      label: "Egyéni időszak"

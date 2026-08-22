@@ -24,19 +24,84 @@
             country_options,
             { label: t(".country") },
             { data: { auto_submit_form_target: "auto" } } %>
-        <%= family_form.select :month_start_day,
-            (1..28).map { |day| [day.ordinalize, day] },
-            { label: t(".month_start_day"), hint: t(".month_start_day_hint") },
-            { data: { auto_submit_form_target: "auto" } } %>
-        <% if @user.family.uses_custom_month_start? %>
-          <div class="text-sm text-warning bg-warning/10 p-3 rounded-lg">
-            <%= t(".month_start_day_warning") %>
-          </div>
-        <% end %>
-        <p class="text-xs italic pl-2 text-secondary">Please note, we are still working on translations for various languages.</p>
+        <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
       <% end %>
     <% end %>
   </div>
+<% end %>
+<%= settings_section title: t(".budget_title"), subtitle: t(".budget_subtitle") do %>
+  <div>
+    <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+      <%= form.hidden_field :redirect_to, value: "preferences" %>
+      <%= form.fields_for :family do |family_form| %>
+        <%= family_form.select :month_start_day,
+            (1..28).map { |day| [localized_ordinal(day), day] },
+            { label: t(".month_start_day"), hint: t(".month_start_day_hint") },
+            { data: { auto_submit_form_target: "auto" } } %>
+        <% if @user.family.uses_custom_month_start? %>
+          <%= render DS::Alert.new(message: t(".month_start_day_warning"), variant: :warning) %>
+        <% end %>
+        <% if Current.user.admin? && preview_features_enabled? %>
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <p class="text-sm flex items-center gap-1.5">
+                <%= t(".personal_budgets") %>
+                <%= render DS::Pill.new(label: t("shared.preview"), size: :sm) %>
+              </p>
+              <p class="text-secondary text-sm"><%= t(".personal_budgets_hint") %></p>
+            </div>
+            <%= family_form.toggle :personal_budgets,
+                data: { auto_submit_form_target: "auto" } %>
+          </div>
+
+          <% if @user.family.personal_budgets? %>
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <p class="text-sm"><%= t(".household_budget_enabled") %></p>
+                <p class="text-secondary text-sm"><%= t(".household_budget_enabled_hint") %></p>
+              </div>
+              <%= family_form.toggle :household_budget_enabled,
+                  data: { auto_submit_form_target: "auto" } %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+<% if @user.family.personal_budgets? && preview_features_enabled? %>
+  <%= settings_section title: t(".budget_sharing_title"), subtitle: t(".budget_sharing_subtitle") do %>
+    <% if @family_members.any? %>
+      <%= styled_form_with url: settings_budget_shares_path, method: :patch, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+        <div class="bg-container-inset rounded-xl p-1">
+          <% @family_members.each_with_index do |member, index| %>
+            <% share = @budget_shares[member.id] %>
+            <% select_id = "budget_share_permission_#{member.id}" %>
+            <input type="hidden" name="budget_shares[members][<%= index %>][viewer_id]" value="<%= member.id %>">
+            <div class="flex items-center justify-between gap-3 bg-container p-4 shadow-border-xs rounded-lg mt-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 shrink-0 rounded-full bg-surface-inset flex items-center justify-center text-xs font-medium text-secondary">
+                  <%= member.initials %>
+                </div>
+                <span class="text-sm text-primary truncate"><%= member.display_name %></span>
+              </div>
+              <label for="<%= select_id %>" class="sr-only"><%= t(".budget_sharing_permission_label", name: member.display_name) %></label>
+              <select id="<%= select_id %>" name="budget_shares[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary" data-auto-submit-form-target="auto">
+                <option value="" <%= "selected" if share.nil? %>><%= t(".budget_sharing_permissions.none") %></option>
+                <% BudgetShare::PERMISSIONS.each do |perm| %>
+                  <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
+                    <%= t(".budget_sharing_permissions.#{perm}") %>
+                  </option>
+                <% end %>
+              </select>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".budget_sharing_no_members", moniker: family_moniker_downcase) %></p>
+    <% end %>
+  <% end %>
 <% end %>
 <% if Current.user.admin? %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
@@ -127,18 +192,13 @@
                  aria-atomic="true"></p>
             </div>
             <div data-controller="list-filter" class="space-y-3">
-              <div class="relative">
-                <input type="search"
-               autocomplete="off"
-               placeholder="<%= t(".currency_search_placeholder") %>"
-               aria-label="<%= t(".currency_search_placeholder") %>"
-               data-list-filter-target="input"
-               data-action="input->list-filter#filter"
-                class="block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container focus:ring-gray-500 sm:text-sm">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <%= icon("search", class: "text-secondary") %>
-                </div>
-              </div>
+              <%= render DS::SearchInput.new(
+                placeholder: t(".currency_search_placeholder"),
+                data: {
+                  list_filter_target: "input",
+                  action: "input->list-filter#filter"
+                }
+              ) %>
               <div data-list-filter-target="list" class="max-h-80 overflow-auto rounded-xl border border-secondary divide-y divide-alpha-black-100 theme-dark:divide-alpha-white-100">
                 <p class="hidden px-4 py-3 text-sm text-secondary" data-list-filter-target="emptyMessage">
                   <%= t(".no_matching_currencies") %>
@@ -167,7 +227,7 @@
                           <div class="flex items-center gap-2">
                             <span class="text-sm font-medium text-primary"><%= currency.iso_code %></span>
                             <% if base_currency %>
-                              <span class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-[11px] font-medium text-secondary">
+                              <span class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-secondary">
                                 <%= t(".base_currency_badge") %>
                               </span>
                             <% end %>
@@ -182,7 +242,7 @@
             </div>
             <div class="flex justify-end gap-2">
               <%= render DS::Button.new(text: t("shared.cancel"), type: :button, variant: :ghost, data: { action: "DS--dialog#close" }) %>
-              <%= render DS::Button.new(text: t(".save_currencies")) %>
+              <%= render DS::Button.new(text: t(".save_currencies"), type: :submit) %>
             </div>
           <% end %>
         <% end %>
@@ -204,5 +264,31 @@
         <% end %>
       <% end %>
     </div>
+  <% end %>
+<% end %>
+
+<%# Preview features toggle — visible to all users, not just admins. Lives at
+    the bottom of Preferences as a standalone card (no section header) so the
+    toggle row is the entire surface. Posts directly to
+    settings#preferences#update via the Settings::PreferencesController,
+    matching the auto-submit pattern used on the Appearance page. %>
+<%= settings_section do %>
+  <%= form_with url: settings_preferences_path, method: :patch,
+        data: { controller: "auto-submit-form" } do |f| %>
+    <%# Wrapping the row in <label for=…> makes the title + description
+        themselves a click target for the toggle, so the cursor-pointer
+        affordance on the container is honest. %>
+    <label for="user_preview_features_enabled" class="flex cursor-pointer items-center gap-4 justify-between">
+      <div class="text-sm space-y-1">
+        <p class="text-primary font-medium"><%= t(".preview.title") %></p>
+        <p class="text-secondary"><%= t(".preview.description") %></p>
+      </div>
+      <%= render DS::Toggle.new(
+            id: "user_preview_features_enabled",
+            name: "user[preview_features_enabled]",
+            checked: @user.preview_features_enabled?,
+            data: { auto_submit_form_target: "auto" }
+      ) %>
+    </label>
   <% end %>
 <% end %>

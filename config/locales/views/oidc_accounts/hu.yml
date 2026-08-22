@@ -2,6 +2,7 @@
 hu:
   oidc_accounts:
     link:
+      no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
       title_link: OIDC-fiók összekapcsolása
       title_create: Fiók létrehozása
       verify_heading: Igazold az azonosságodat
@@ -21,7 +22,10 @@ hu:
       submit_accept_invitation: Meghívó elfogadása
       account_creation_disabled: Az egyszeri bejelentkezésen keresztüli új fiók létrehozása le van tiltva. Kérjük, lépj kapcsolatba egy rendszergazdával a fiókod létrehozásához.
       cancel: Mégse
+    create_link:
+      no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
     new_user:
+      no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
       title: Fiókod véglegesítése
       heading: Hozd létre a fiókodat
       description: Kérjük, erősítsd meg az adataidat a fiókod létrehozásának befejezéséhez a(z) %{provider} azonosítóddal.
@@ -32,3 +36,7 @@ hu:
       last_name_placeholder: Add meg a vezetéknevedet
       submit: Fiók létrehozása
       cancel: Mégse
+    create_user:
+      no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
+      account_creation_disabled: Az SSO-fiók létrehozása le van tiltva. Kérjük, lépj kapcsolatba egy rendszergazdával.
+      account_created: "Üdvözlünk! A fiókod sikeresen létrejött."

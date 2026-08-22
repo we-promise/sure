@@ -1,0 +1,24 @@
+<% if dot_only %>
+  <%# Compact dot — no label, no border, just the colored marker. Used on the
+      collapsed sidebar nav. Keeps tone semantics without taking up label
+      width. %>
+  <span role="img"
+        class="inline-block shrink-0 align-middle rounded-full"
+        style="width: <%= dot_size_px %>px; height: <%= dot_size_px %>px; background-color: <%= dot_color %>;"
+        aria-label="<%= title || t("ds.pill.aria_label", label: label) %>"
+        title="<%= title || t("ds.pill.aria_label", label: label) %>"></span>
+<% else %>
+  <span class="<%= container_classes %>" style="<%= container_styles %>" title="<%= title || label %>">
+    <% if icon %>
+      <span class="shrink-0"><%= helpers.icon(icon, size: icon_size, color: "current") %></span>
+    <% elsif show_dot %>
+      <span class="inline-block shrink-0 rounded-full"
+            style="width: <%= dot_size_px %>px; height: <%= dot_size_px %>px; background-color: <%= dot_color %>;"></span>
+    <% end %>
+    <% if truncate || label_testid %>
+      <%= tag.span label, class: ("min-w-0 truncate" if truncate), data: (label_testid ? { testid: label_testid } : nil) %>
+    <% else %>
+      <%= label %>
+    <% end %>
+  </span>
+<% end %>

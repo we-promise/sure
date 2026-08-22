@@ -1,6 +1,29 @@
 ---
 hu:
   pages:
+    feedback:
+      title: Visszajelzés
+      heading: Visszajelzés küldése
+      description: Oszd meg velünk, ha konkrét visszajelzésed van. Nyugodtan csatolhatsz videóhivatkozásokat vagy képernyőképeket.
+      feature_request: Funkcióigény beküldése
+      bug_report: Hibajelentés
+      discuss: "%{product} megbeszélése másokkal"
+    intro:
+      not_authorized: "Az intro csak vendégfelhasználók számára érhető el."
+      welcome: "Üdvözöllek!"
+      coming_soon: Az intro hamarosan elérhető
+      description: "Gazdagabb bevezetési élményt fejlesztünk, hogy megismerjük a céljaidat, mérföldköveidet és mindennapi igényeidet. Addig is menj a csevegőoldalsávba, indíts egy beszélgetést a Sure-ral, és mesélj a pénzügyi útjaidról."
+      start_chatting: Csevegés indítása
+    redis_configuration_error:
+      page_title: Redis konfiguráció szükséges – Sure
+      heading: Redis konfiguráció szükséges
+      subheading: Az önállóan üzemeltetett Sure telepítésedhez megfelelően konfigurált Redis szükséges.
+      why_required_title: Miért szükséges a Redis?
+      why_required_body: A Sure Redis-t használ a Sidekiq háttérfeladatokhoz, például a számlaadatok szinkronizálásához, importálások feldolgozásához és más háttérműveletekhez, amelyek naprakészen tartják a pénzügyi adataidat.
+      view_setup_guide: Beállítási útmutató megtekintése
+      setup_guide_hint: Kövesd az átfogó Docker beállítási útmutatónkat a Redis konfigurálásához
+      refresh_hint: "Ha konfigurálta a Redis-t, frissítsd ezt az oldalt a folytatáshoz."
+      refresh_page: Oldal frissítése
     changelog:
       title: Újdonságok
     privacy:
@@ -26,8 +49,18 @@ hu:
         no_account_title: Még nincs számla
       balance_sheet:
         title: "Mérleg"
-        no_items: "Még nincs %{name}"
-        add_accounts: "Add hozzá a(z) %{name} számláidat a teljes áttekintésért"
+        no_items: "Még nincsenek %{name}"
+        add_accounts: "Add hozzá %{name} számláidat a teljes áttekintésért"
+        no_asset: "Még nincs vagyonod"
+        no_liability: "Még nincsenek kötelezettségeid"
+        add_asset_accounts: "Adj hozzá vagyonszámlákat a teljes pénzügyi áttekintésért"
+        add_liability_accounts: "Adj hozzá kötelezettségszámlákat a teljes pénzügyi áttekintésért"
+        name: "Név"
+        weight: "Arány"
+        value: "Érték"
+        classifications:
+          asset: "Vagyon"
+          liability: "Kötelezettségek"
       cashflow_sankey:
         title: "Pénzforgalom"
         no_data_title: "Nincs pénzforgalmi adat erre az időszakra"

@@ -1,0 +1,20 @@
+<%= tag.div class: "relative inline-flex shrink-0",
+            style: "width: #{size}px; height: #{size}px;",
+            **wrapper_aria do %>
+  <svg width="<%= size %>" height="<%= size %>" viewBox="0 0 <%= size %> <%= size %>" aria-hidden="true">
+    <circle cx="<%= center %>" cy="<%= center %>" r="<%= radius %>"
+            fill="none" stroke="<%= track_color %>" stroke-width="<%= stroke_width %>" />
+    <circle cx="<%= center %>" cy="<%= center %>" r="<%= radius %>"
+            fill="none" stroke="<%= stroke_color %>" stroke-width="<%= stroke_width %>"
+            stroke-linecap="round"
+            stroke-dasharray="<%= circumference %>"
+            stroke-dashoffset="<%= dash_offset %>"
+            transform="rotate(-90 <%= center %> <%= center %>)" />
+  </svg>
+  <% if show_percent %>
+    <div class="absolute inset-0 flex items-center justify-center font-medium text-primary tabular-nums"
+         style="font-size: <%= percent_font_px %>px;" aria-hidden="true">
+      <%= clamped_percent %>%
+    </div>
+  <% end %>
+<% end %>

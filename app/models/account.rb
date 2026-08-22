@@ -2,7 +2,10 @@ class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+
   before_destroy :capture_account_statement_ids_to_move
+  before_destroy :cleanup_transfers
+
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
@@ -22,6 +25,9 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :goal_accounts, dependent: :destroy
+  has_many :goals, through: :goal_accounts
+  has_many :goal_pledges, dependent: :destroy
   # Inverse for recurring transfers where this account is the destination.
   # Account#recurring_transactions only matches account_id; without this
   # association, destroying the destination account would hit the FK
@@ -35,7 +41,14 @@ class Account < ApplicationRecord
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
-  scope :visible, -> { where(status: [ "draft", "active" ]) }
+  VISIBLE_STATUSES = %w[draft active].freeze
+  HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
+
+  scope :visible, -> { where(status: VISIBLE_STATUSES) }
+  scope :historical, -> { where(status: HISTORICAL_STATUSES) }
+  # Accounts whose data should be included in financial reports, dashboards,
+  # and exports. Excludes accounts where the user has opted to suppress them.
+  scope :included_in_reports, -> { where(exclude_from_reports: false) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
@@ -85,10 +98,43 @@ class Account < ApplicationRecord
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
 
-  # Writer for subtype that delegates to the accountable
-  # This allows forms to set subtype directly on the account
+  # Writer for subtype that delegates to the accountable, allowing forms to set
+  # subtype directly on the account.
+  #
+  # On create the accountable is not built yet, and the chosen subtype is easy to
+  # drop because of mass-assignment ordering. Two cases:
+  #
+  #   1. `subtype` is applied while `accountable_type` is already known — build
+  #      the accountable from the delegated type so the value lands on it. The
+  #      later `accountable_attributes` assignment (update_only) then updates that
+  #      same record instead of building a new one.
+  #   2. `subtype` is applied *before* `accountable_type` — this is the real
+  #      controller path: strong-params `permit` preserves filter order, and
+  #      `account_params` lists `:subtype` before `:accountable_type`, so the
+  #      writer runs while the type (and thus `accountable_class`) is still
+  #      unknown. We can't build the accountable yet, so stash the value and
+  #      apply it from `accountable_type=` once the type is set.
   def subtype=(value)
-    accountable&.subtype = value
+    self.accountable = accountable_class.new if accountable.nil? && accountable_type.present?
+
+    if accountable
+      accountable.subtype = value
+    else
+      @deferred_subtype = value
+    end
+  end
+
+  # Applies a subtype that arrived before the type was known (see `subtype=`
+  # case 2). `super` resolves `accountable_type`/`accountable_class` first, then
+  # the re-entrant `subtype=` builds the accountable and assigns the value.
+  def accountable_type=(value)
+    super
+
+    if defined?(@deferred_subtype)
+      pending = @deferred_subtype
+      remove_instance_variable(:@deferred_subtype)
+      self.subtype = pending
+    end
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -234,6 +280,23 @@ class Account < ApplicationRecord
       )
     end
 
+    def create_from_wise_account(wise_account)
+      family = wise_account.wise_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: wise_account.name || "Wise #{wise_account.currency}",
+          balance: wise_account.current_balance || 0,
+          cash_balance: wise_account.current_balance || 0,
+          currency: wise_account.currency,
+          accountable_type: "Depository",
+          accountable_attributes: { subtype: wise_account.account_subtype }
+        },
+        skip_initial_sync: true
+      )
+    end
+
     def create_from_coinbase_account(coinbase_account)
       # All Coinbase accounts are crypto exchange accounts
       family = coinbase_account.coinbase_item.family
@@ -260,7 +323,9 @@ class Account < ApplicationRecord
     end
 
     def create_from_binance_account(binance_account)
-      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+      account = create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
+      account.set_opening_anchor_balance(balance: 0)
+      account
     end
 
     def create_from_ibkr_account(ibkr_account)
@@ -277,6 +342,25 @@ class Account < ApplicationRecord
         balance: 0,
         cash_balance: 0,
         currency: ibkr_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      # Capture the created account in a variable
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
+    def create_from_trading212_account(trading212_account)
+      family = trading212_account.trading212_item.family
+
+      attributes = {
+        family: family,
+        name: trading212_account.name.presence || "Trading 212",
+        balance: 0,
+        cash_balance: 0,
+        currency: trading212_account.currency.presence || family.currency,
         accountable_type: "Investment",
         accountable_attributes: {
           subtype: "brokerage"
@@ -341,9 +425,67 @@ class Account < ApplicationRecord
   def manual_crypto_exchange?
     accountable_type == "Crypto" &&
       accountable&.subtype == "exchange" &&
-      account_providers.none? &&
+      manual?
+  end
+
+  # True when the account has no live sync provider attached. Mirrors the
+  # `Account.manual` scope so per-instance checks don't drift from the query.
+  def manual?
+    account_providers.none? &&
       plaid_account_id.blank? &&
       simplefin_account_id.blank?
+  end
+
+  # Default GoalPledge kind for this account. Manual accounts get
+  # `manual_save` (resolves on the next valuation), live-synced accounts
+  # get `transfer` (resolves when the synced deposit posts). Keeps the
+  # decision in one place so the new-pledge controller / preview helper
+  # can't disagree on what they're going to save.
+  def default_pledge_kind
+    # Investment accounts never use manual_save: a positive valuation delta on a
+    # brokerage is usually a market move, not a deposit, and would false-match a
+    # pledge. They resolve on transfer (cash-inflow) entries only.
+    manual? && !investment? ? "manual_save" : "transfer"
+  end
+
+  # Total fixed earmark this account currently has reserved across every
+  # non-archived goal (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending.
+  def goal_earmarked_total
+    GoalAccount.joins(:goal)
+               .where(account_id: id)
+               .where.not(allocated_amount: nil)
+               .where.not(goals: { state: "archived" })
+               .sum(:allocated_amount)
+               .to_d
+  end
+
+  # Headroom left to earmark toward goals before fixed allocations exceed the
+  # balance. Negative means the account is over-earmarked. Intended to back a
+  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
+  # Budget#available_to_allocate.
+  def free_to_earmark
+    balance.to_d - goal_earmarked_total
+  end
+
+  # Total fixed earmark this account currently has reserved across every
+  # non-archived goal (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending.
+  def goal_earmarked_total
+    GoalAccount.joins(:goal)
+               .where(account_id: id)
+               .where.not(allocated_amount: nil)
+               .where.not(goals: { state: "archived" })
+               .sum(:allocated_amount)
+               .to_d
+  end
+
+  # Headroom left to earmark toward goals before fixed allocations exceed the
+  # balance. Negative means the account is over-earmarked. Intended to back a
+  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
+  # Budget#available_to_allocate.
+  def free_to_earmark
+    balance.to_d - goal_earmarked_total
   end
 
   def logo_url
@@ -502,8 +644,12 @@ class Account < ApplicationRecord
   end
 
   def auto_share_with_family!
-    records = family.users.where.not(id: owner_id).pluck(:id).map do |user_id|
-      { account_id: id, user_id: user_id, permission: "read_write",
+    # Guests get read_only, everyone else read_write. This mirrors
+    # Family#auto_share_existing_accounts_with so a guest's permission on an
+    # account is the same whether they joined before or after it was created.
+    records = family.users.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
+      { account_id: id, user_id: user_id,
+        permission: role == "guest" ? "read_only" : "read_write",
         include_in_finances: true, created_at: Time.current, updated_at: Time.current }
     end
 
@@ -542,5 +688,13 @@ class Account < ApplicationRecord
         match_confidence: nil,
         updated_at: Time.current
       )
+    end
+
+    def cleanup_transfers
+      transaction_ids = entries.where(entryable_type: "Transaction").pluck(:entryable_id)
+
+      transfers = Transfer.where(inflow_transaction_id: transaction_ids).or(Transfer.where(outflow_transaction_id: transaction_ids))
+
+      transfers.find_each(&:destroy!)
     end
 end

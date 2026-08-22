@@ -47,7 +47,7 @@ class Assistant::Builtin < Assistant::Base
 
     responder.on(:response) do |data|
       if data[:function_tool_calls].present?
-        assistant_message.tool_calls = data[:function_tool_calls]
+        assistant_message.tool_calls.concat(data[:function_tool_calls])
         latest_response_id = data[:id]
       else
         chat.update_latest_response!(data[:id])
@@ -60,7 +60,7 @@ class Assistant::Builtin < Assistant::Base
       if assistant_message.content.blank?
         assistant_message.destroy
       else
-        # Demote partially-streamed turns to `failed` so `Responder#conversation_history` excludes them.
+        # Demote partially-streamed turns to `failed` so the responder's history builders (`#openai_messages_payload`, `#chat_message_records`) exclude them.
         assistant_message.update_columns(status: "failed")
       end
     end

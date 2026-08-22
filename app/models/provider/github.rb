@@ -1,16 +1,24 @@
 class Provider::Github
-  attr_reader :name, :owner, :branch
+  attr_reader :name, :owner, :branch, :client
 
   def initialize
     @name = "sure"
     @owner = "we-promise"
     @branch = "main"
+    @client = Octokit::Client.new(
+      connection_options: {
+        request: {
+          open_timeout: 10,
+          timeout: 10
+        }
+      }
+    )
   end
 
   def fetch_latest_release_notes
     begin
       Rails.cache.fetch("latest_github_release_notes", expires_in: 2.hours) do
-        release = Octokit.releases(repo).first
+        release = client.releases(repo).first
         if release
           {
             avatar: release.author.avatar_url,
@@ -18,7 +26,7 @@ class Provider::Github
             username: release.author.login,
             name: release.name,
             published_at: release.published_at,
-            body: Octokit.markdown(release.body, mode: "gfm", context: repo)
+            body: client.markdown(release.body, mode: "gfm", context: repo)
           }
         else
           nil

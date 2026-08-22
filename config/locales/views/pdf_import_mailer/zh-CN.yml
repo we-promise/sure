@@ -1,0 +1,17 @@
+---
+zh-CN:
+  pdf_import_mailer:
+    next_steps:
+      greeting: "你好 %{name}，"
+      intro: "我们已经完成了您上传到 %{product} 的 PDF 文档分析。"
+      document_type_label: 文档类型
+      summary_label: AI 摘要
+      transactions_note: 此文档似乎包含交易。您现在可以提取并检查它们。
+      document_stored_note: 此文档已保存供您参考。它可用于在未来的 AI 对话中提供上下文。
+      next_steps_label: 接下来做什么？
+      next_steps_intro: "您有几个选择："
+      option_extract_transactions: 从此对账单中提取交易
+      option_keep_reference: 将此文档保留，以便未来 AI 对话参考
+      option_delete: 如果不再需要，可删除此导入
+      view_import_button: 查看导入详情
+      footer_note: 这是一封自动发送的消息。请不要直接回复此邮件。

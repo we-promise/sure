@@ -6,8 +6,20 @@ ca:
     dashboard:
       balance_sheet:
         add_accounts: Afegeix els teus comptes de %{name} per veure'n el detall complet
+        add_asset_accounts: Afegeix els teus comptes d'actius per veure'n el detall
+          complet
+        add_liability_accounts: Afegeix els teus comptes de passius per veure'n el
+          detall complet
+        classifications:
+          asset: Actius
+          liability: Passius
+        name: Nom
+        no_asset: Encara no hi ha actius
         no_items: Encara no hi ha %{name}
+        no_liability: Encara no hi ha passius
         title: Balanç patrimonial
+        value: Valor
+        weight: Pes
       cashflow_sankey:
         add_transaction: Afegeix una transacció
         no_data_description: Afegeix transaccions per mostrar dades de flux de caixa
@@ -16,15 +28,15 @@ ca:
         title: Flux de caixa
       drag_to_reorder: Arrossega per reordenar la secció
       investment_summary:
-        add_investment: Afegeix un compte d'inversió per seguir el teu portafoli
-        contributions: Contribucions
+        add_investment: Afegeix un compte d'inversió per seguir la teva cartera
+        contributions: Aportacions
         holding: Posició
         no_investments: No hi ha comptes d'inversió
-        period_activity: "Activitat del %{period}"
+        period_activity: 'Activitat — %{period}'
         return: Rendiment
         title: Inversions
         total_return: Rendiment total
-        trades: Negocis
+        trades: Operacions
         value: Valor
         weight: Pes
         withdrawals: Retirades
@@ -44,10 +56,50 @@ ca:
         title: Encara no hi ha comptes
       outflows_donut:
         categories: Categories
-        title: Sortides
-        total_outflows: Total sortides
+        title: Sortides de caixa
+        total_outflows: Total de sortides de caixa
         value: Valor
         weight: Pes
       subtitle: Això és el que està passant amb les teves finances
       toggle_section: Commuta la visibilitat de la secció
       welcome: Benvingut/da de nou, %{name}
+    feedback:
+      bug_report: Informa d'un error
+      description: Fes-nos saber si tens cap comentari específic. No dubtis a incloure
+        enllaços a vídeos o captures de pantalla.
+      discuss: Comenta %{product} amb d'altres
+      feature_request: Sol·licita una funcionalitat
+      heading: Deixa un comentari
+      title: Comentaris
+    intro:
+      coming_soon: Experiència d'introducció properament
+      description: Estem creant una experiència d'inici més rica per conèixer els
+        teus objectius, fites i necessitats diàries. De moment, ves a la barra lateral
+        del xat per iniciar una conversa amb Sure i explica'ns on et trobes al teu
+        recorregut financer.
+      not_authorized: La introducció només està disponible per a usuaris convidats.
+      start_chatting: Comença a xatejar
+      welcome: Benvingut/da!
+    privacy:
+      heading: Política de privadesa
+      placeholder: El contingut de la política de privadesa es mostrarà aquí.
+      title: Política de privadesa
+    redis_configuration_error:
+      heading: Cal configurar Redis
+      page_title: Cal configurar Redis - Sure
+      refresh_hint: Un cop hagis configurat Redis, recarrega aquesta pàgina per continuar.
+      refresh_page: Recarrega la pàgina
+      setup_guide_hint: Segueix la nostra guia completa de configuració de Docker
+        per configurar Redis
+      subheading: La teva instal·lació de Sure amb self hosting necessita Redis configurat
+        correctament.
+      view_setup_guide: Veure la guia de configuració
+      why_required_body: Sure utilitza Redis per executar les tasques en segon pla
+        de Sidekiq, com ara la sincronització de dades de comptes, el processament
+        d'importacions i altres operacions de fons que mantenen les teves dades financeres
+        actualitzades.
+      why_required_title: Per què cal Redis?
+    terms:
+      heading: Condicions del servei
+      placeholder: El contingut de les condicions del servei es mostrarà aquí.
+      title: Condicions del servei

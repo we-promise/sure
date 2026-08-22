@@ -1,6 +1,32 @@
 @layer base {
+  /* Bind CSS color-scheme to Sure's data-theme attribute so the CSS
+     `light-dark()` function resolves to the side that matches the active
+     theme (used by DS::Pill and any future tokens that opt in). */
+  :root {
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   button {
-    @apply cursor-pointer focus-visible:outline-gray-900;
+    @apply cursor-pointer;
+
+    /* Canonical keyboard-focus indicator (#2136) — the same recipe as
+       `.focus-ring` in components.css, applied here so every <button> gets
+       it by default. This used to be a `ring-2 ring-offset-2` box-shadow,
+       which double-painted alongside the `.focus-ring` outline on DS
+       primitives (Buttonish, tabs, popover, tooltip): box-shadow and
+       outline are independent properties, so the components-layer class
+       could never clear it. Transparent resting outline for the same
+       transition reasoning as `.focus-ring`. */
+    outline: 2px solid transparent;
+    outline-offset: 0;
+
+    &:focus-visible {
+      outline-color: var(--color-focus-ring);
+    }
   }
 
   hr {

@@ -24,24 +24,26 @@
   <% if items.any? %>
     <div class="space-y-3">
       <% items.each do |item| %>
-        <details class="group bg-container p-4 shadow-border-xs rounded-xl">
-          <summary class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
-                <%= icon "waves", size: "sm", class: "text-primary" %>
-              </div>
-              <div class="min-w-0">
-                <p class="font-medium text-primary truncate"><%= item.name %></p>
-                <p class="text-xs text-secondary">
-                  <% if item.syncing? %>
-                    <%= t("settings.providers.kraken_panel.syncing") %>
-                  <% else %>
-                    <%= item.sync_status_summary %>
-                  <% end %>
-                </p>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-3 w-full">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
+                  <%= icon "waves", size: "sm", class: "text-primary" %>
+                </div>
+                <div class="min-w-0">
+                  <p class="font-medium text-primary truncate"><%= item.name %></p>
+                  <p class="text-xs text-secondary">
+                    <% if item.syncing? %>
+                      <%= t("settings.providers.kraken_panel.syncing") %>
+                    <% else %>
+                      <%= item.sync_status_summary %>
+                    <% end %>
+                  </p>
+                </div>
               </div>
             </div>
-          </summary>
+          <% end %>
 
           <div class="mt-4 space-y-4">
             <div class="flex flex-wrap items-center gap-2">
@@ -93,12 +95,11 @@
                                   value: nil %>
 
               <div class="flex justify-end">
-                <%= form.submit t("settings.providers.kraken_panel.update_connection"),
-                                class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+                <%= form.submit t("settings.providers.kraken_panel.update_connection") %>
               </div>
             <% end %>
           </div>
-        </details>
+        <% end %>
       <% end %>
     </div>
   <% end %>
@@ -134,8 +135,7 @@
                         value: nil %>
 
     <div class="flex justify-end">
-      <%= form.submit t("settings.providers.kraken_panel.add_connection"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-inverse bg-inverse hover:bg-inverse-hover focus:outline-none focus:ring-2 focus:ring-primary transition-colors" %>
+      <%= form.submit t("settings.providers.kraken_panel.add_connection") %>
     </div>
   <% end %>
 </div>

@@ -1,6 +1,13 @@
 ---
 hu:
   pending_duplicate_merges:
+    create:
+      no_posted_selected: Kérlek válassz egy könyvelt tranzakciót az összevonáshoz
+      invalid_transaction: Érvénytelen tranzakció van kijelölve az összevonáshoz
+      merge_success: A függőben lévő tranzakció összevonva a könyvelt tranzakcióval
+      merge_failed: Nem sikerült összevonni a tranzakciókat
+    set_transaction:
+      pending_only: Ez a funkció csak függőben lévő tranzakciókhoz érhető el
     new:
       title: Összevonás könyvelt tranzakcióval
       warning_title: Manuális duplikáció-összevonás

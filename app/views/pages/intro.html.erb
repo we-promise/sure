@@ -15,7 +15,11 @@
       <%= t(".description") %>
     </p>
     <div>
-      <%= link_to t(".start_chatting"), chats_path, class: "inline-flex items-center gap-2 px-4 py-2 rounded-lg button-bg-primary text-inverse font-medium" %>
+      <%= render DS::Link.new(
+        text: t(".start_chatting"),
+        href: chats_path,
+        variant: :primary
+      ) %>
     </div>
   </div>
 </div>

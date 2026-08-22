@@ -1,9 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import { buildCategoryTransactionsUrl } from "utils/transactions_filter_url";
 
 // Connects to data-controller="donut-chart"
 export default class extends Controller {
-  static targets = ["chartContainer", "contentContainer", "defaultContent"];
+  static targets = ["chartContainer", "contentContainer", "defaultContent", "amount"];
   static values = {
     segments: { type: Array, default: [] },
     unusedSegmentId: { type: String, default: "unused" },
@@ -21,12 +22,27 @@ export default class extends Controller {
   #minSegmentAngle = 0.02; // Minimum angle in radians (~1.15 degrees)
   #padAngle = 0.005; // Spacing between segments (~0.29 degrees)
   #visiblePaths = null;
+  #resizeObserver = null;
+  #measureCanvas = null;
+  // Largest square inscribed in a circle has side D/√2 ≈ 0.707·D. A single
+  // line of text only needs horizontal room, so 0.78 leaves a touch of
+  // padding without being overly conservative.
+  #innerRingTextWidthRatio = 0.78;
+  // ~text-sm (0.875rem at the default 16px root). Acceptance criterion is
+  // "shrink proportionally, never below text-sm".
+  #minAmountFontSizePx = 14;
 
   connect() {
     this.#draw();
+    this.#fitAmountTargets();
     document.addEventListener("turbo:load", this.#redraw);
     this.element.addEventListener("mouseleave", this.#clearSegmentHover);
     this.contentContainerTarget.addEventListener("mouseleave", this.#clearSegmentHover);
+
+    if (typeof ResizeObserver !== "undefined" && this.hasChartContainerTarget) {
+      this.#resizeObserver = new ResizeObserver(() => this.#fitAmountTargets());
+      this.#resizeObserver.observe(this.chartContainerTarget);
+    }
   }
 
   disconnect() {
@@ -34,6 +50,11 @@ export default class extends Controller {
     document.removeEventListener("turbo:load", this.#redraw);
     this.element.removeEventListener("mouseleave", this.#clearSegmentHover);
     this.contentContainerTarget.removeEventListener("mouseleave", this.#clearSegmentHover);
+
+    if (this.#resizeObserver) {
+      this.#resizeObserver.disconnect();
+      this.#resizeObserver = null;
+    }
   }
 
   get #data() {
@@ -202,6 +223,10 @@ export default class extends Controller {
 
     this.defaultContentTarget.classList.add("hidden");
     template.classList.remove("hidden");
+
+    // The newly-visible amount is now in flow; re-fit in case the container
+    // size has changed since initial draw.
+    this.#fitAmountTargets(template);
   }
 
   // Restores original segment colors and hides segment specific content
@@ -226,14 +251,15 @@ export default class extends Controller {
 
   // Handles click on segment (optional, controlled by enableClick value)
   #handleClick(segment) {
-    if (!segment.name || !this.startDateValue || !this.endDateValue) return;
+    if (!segment.name) return;
 
-    const segmentName = encodeURIComponent(segment.name);
-    const startDate = this.startDateValue;
-    const endDate = this.endDateValue;
-
-    const url = `/transactions?q[categories][]=${segmentName}&q[start_date]=${startDate}&q[end_date]=${endDate}`;
-    window.location.href = url;
+    Turbo.visit(
+      buildCategoryTransactionsUrl({
+        name: segment.name,
+        startDate: this.startDateValue,
+        endDate: this.endDateValue,
+      }),
+    );
   }
 
   // Public methods for external highlighting (e.g., from category list hover)
@@ -253,5 +279,73 @@ export default class extends Controller {
     const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
     paths.style("opacity", null); // Clear inline opacity style
+  }
+
+  // Shrinks amount text down so it never overflows the inner ring of the
+  // donut. Re-runs on draw, on resize, and when a segment template becomes
+  // visible. Optional `scope` limits the work to a subtree (e.g. the segment
+  // that just appeared).
+  #fitAmountTargets(scope = null) {
+    if (!this.hasChartContainerTarget || !this.hasAmountTarget) return;
+
+    // The donut SVG uses `preserveAspectRatio="xMidYMid meet"`, so the actual
+    // rendered diameter is the *smaller* of the container's width and height.
+    // Using width alone over-estimates available room in non-square cells
+    // (e.g. the budget show page renders the donut inside a grid column that
+    // grows wider than tall on large viewports).
+    const rect = this.chartContainerTarget.getBoundingClientRect();
+    const containerSize = Math.min(rect.width, rect.height);
+    if (containerSize <= 0) return;
+
+    const innerDiameterRatio =
+      (this.#viewBoxSize - 2 * this.segmentHeightValue) / this.#viewBoxSize;
+    const availableWidth = containerSize * innerDiameterRatio * this.#innerRingTextWidthRatio;
+    if (availableWidth <= 0) return;
+
+    const targets = scope
+      ? this.amountTargets.filter((el) => scope.contains(el))
+      : this.amountTargets;
+
+    targets.forEach((el) => this.#fitAmountElement(el, availableWidth));
+  }
+
+  #fitAmountElement(element, availableWidth) {
+    // Reset previous inline sizing so we measure at the source size each pass.
+    element.style.fontSize = "";
+
+    const text = element.textContent.trim();
+    if (!text) return;
+
+    const computed = window.getComputedStyle(element);
+    const baseFontSize = Number.parseFloat(computed.fontSize);
+    if (!baseFontSize) return;
+
+    // Canvas-based measurement works for hidden elements (segment_<id>
+    // templates start with `display: none`), where scrollWidth would be 0.
+    const intrinsicWidth = this.#measureTextWidth(text, computed, baseFontSize);
+    if (intrinsicWidth <= 0 || intrinsicWidth <= availableWidth) return;
+
+    const scaled = Math.max(
+      this.#minAmountFontSizePx,
+      Math.floor((availableWidth / intrinsicWidth) * baseFontSize),
+    );
+
+    if (Math.abs(scaled - baseFontSize) >= 1) {
+      element.style.fontSize = `${scaled}px`;
+    }
+  }
+
+  #measureTextWidth(text, computed, fontSize) {
+    if (!this.#measureCanvas) {
+      this.#measureCanvas = document.createElement("canvas");
+    }
+    const ctx = this.#measureCanvas.getContext("2d");
+    if (!ctx) return 0;
+
+    const fontStyle = computed.fontStyle || "normal";
+    const fontWeight = computed.fontWeight || "400";
+    const fontFamily = computed.fontFamily || "sans-serif";
+    ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+    return ctx.measureText(text).width;
   }
 }

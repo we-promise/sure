@@ -56,7 +56,7 @@ jobs:
 
       - name: Download Android AAB artifact
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: app-release-aab
           path: ${{ runner.temp }}/android-aab
@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload to Google Play
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJson: ${{ steps.play_creds.outputs.credentials-path }}
           packageName: am.sure.mobile

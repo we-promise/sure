@@ -65,6 +65,52 @@
 {{- $chainWindow = int (.Values.pipelock.toolChainDetection.windowSize | default 20) -}}
 {{- $chainGap = int (.Values.pipelock.toolChainDetection.maxGap | default 3) -}}
 {{- end -}}
+{{- $rbsEnabled := true -}}
+{{- $rbsAction := "warn" -}}
+{{- $rbsMaxBytes := 5242880 -}}
+{{- $rbsScanHeaders := true -}}
+{{- $rbsHeaderMode := "sensitive" -}}
+{{- if .Values.pipelock.requestBodyScanning -}}
+{{- if hasKey .Values.pipelock.requestBodyScanning "enabled" -}}
+{{- $rbsEnabled = .Values.pipelock.requestBodyScanning.enabled -}}
+{{- end -}}
+{{- $rbsAction = .Values.pipelock.requestBodyScanning.action | default "warn" -}}
+{{- $rbsMaxBytes = int (.Values.pipelock.requestBodyScanning.maxBodyBytes | default 5242880) -}}
+{{- if hasKey .Values.pipelock.requestBodyScanning "scanHeaders" -}}
+{{- $rbsScanHeaders = .Values.pipelock.requestBodyScanning.scanHeaders -}}
+{{- end -}}
+{{- $rbsHeaderMode = .Values.pipelock.requestBodyScanning.headerMode | default "sensitive" -}}
+{{- end -}}
+{{- $hwEnabled := true -}}
+{{- $hwInterval := 2 -}}
+{{- $hwExpose := false -}}
+{{- if .Values.pipelock.healthWatchdog -}}
+{{- if hasKey .Values.pipelock.healthWatchdog "enabled" -}}
+{{- $hwEnabled = .Values.pipelock.healthWatchdog.enabled -}}
+{{- end -}}
+{{- $hwInterval = int (.Values.pipelock.healthWatchdog.intervalSeconds | default 2) -}}
+{{- if hasKey .Values.pipelock.healthWatchdog "exposeSubsystems" -}}
+{{- $hwExpose = .Values.pipelock.healthWatchdog.exposeSubsystems -}}
+{{- end -}}
+{{- end -}}
+{{- $frEnabled := true -}}
+{{- $frRequireReceipts := false -}}
+{{- $frRedact := true -}}
+{{- $frDir := "" -}}
+{{- $frSigningKeyPath := "" -}}
+{{- if .Values.pipelock.flightRecorder -}}
+{{- if hasKey .Values.pipelock.flightRecorder "enabled" -}}
+{{- $frEnabled = .Values.pipelock.flightRecorder.enabled -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.flightRecorder "requireReceipts" -}}
+{{- $frRequireReceipts = .Values.pipelock.flightRecorder.requireReceipts -}}
+{{- end -}}
+{{- if hasKey .Values.pipelock.flightRecorder "redact" -}}
+{{- $frRedact = .Values.pipelock.flightRecorder.redact -}}
+{{- end -}}
+{{- $frDir = .Values.pipelock.flightRecorder.dir | default "" -}}
+{{- $frSigningKeyPath = .Values.pipelock.flightRecorder.signingKeyPath | default "" -}}
+{{- end -}}
 {{- $logFormat := "json" -}}
 {{- $logOutput := "stdout" -}}
 {{- $logIncludeAllowed := false -}}
@@ -128,6 +174,25 @@ data:
     mcp_tool_policy:
       enabled: {{ $mcpPolicyEnabled }}
       action: {{ $mcpPolicyAction }}
+{{- if and .Values.pipelock.mcpToolPolicy .Values.pipelock.mcpToolPolicy.rules }}
+      rules:
+{{- range .Values.pipelock.mcpToolPolicy.rules }}
+        - name: {{ required "pipelock.mcpToolPolicy.rules[].name is required" .name | quote }}
+          tool_pattern: {{ required "pipelock.mcpToolPolicy.rules[].toolPattern is required" .toolPattern | quote }}
+{{- if .argPattern }}
+          arg_pattern: {{ .argPattern | quote }}
+{{- end }}
+{{- if .argKey }}
+          arg_key: {{ .argKey | quote }}
+{{- end }}
+{{- if .action }}
+          action: {{ .action | quote }}
+{{- end }}
+{{- if .redirectProfile }}
+          redirect_profile: {{ .redirectProfile | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- if and .Values.pipelock.mcpToolPolicy .Values.pipelock.mcpToolPolicy.redirectProfiles }}
       redirect_profiles:
         {{- toYaml .Values.pipelock.mcpToolPolicy.redirectProfiles | nindent 8 }}
@@ -140,6 +205,26 @@ data:
       action: {{ $chainAction }}
       window_size: {{ $chainWindow }}
       max_gap: {{ $chainGap }}
+    request_body_scanning:
+      enabled: {{ $rbsEnabled }}
+      action: {{ $rbsAction }}
+      max_body_bytes: {{ $rbsMaxBytes }}
+      scan_headers: {{ $rbsScanHeaders }}
+      header_mode: {{ $rbsHeaderMode }}
+    health_watchdog:
+      enabled: {{ $hwEnabled }}
+      interval_seconds: {{ $hwInterval }}
+      expose_subsystems: {{ $hwExpose }}
+    flight_recorder:
+      enabled: {{ $frEnabled }}
+      require_receipts: {{ $frRequireReceipts }}
+      redact: {{ $frRedact }}
+{{- if $frDir }}
+      dir: {{ $frDir | quote }}
+{{- end }}
+{{- if $frSigningKeyPath }}
+      signing_key_path: {{ $frSigningKeyPath | quote }}
+{{- end }}
     logging:
       format: {{ $logFormat }}
       output: {{ $logOutput }}

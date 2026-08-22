@@ -14,7 +14,13 @@
         <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
         <p class="text-secondary"><%= t("indexa_capital_items.select_existing_account.no_accounts") %></p>
         <p class="text-sm text-secondary mt-2"><%= t("indexa_capital_items.select_existing_account.connect_hint") %></p>
-        <%= link_to t("indexa_capital_items.select_existing_account.settings_link"), settings_providers_path, class: "btn btn--primary btn--sm mt-4" %>
+        <%= render DS::Link.new(
+          text: t("indexa_capital_items.select_existing_account.settings_link"),
+          href: settings_providers_path,
+          variant: :primary,
+          size: :sm,
+          class: "mt-4"
+        ) %>
       </div>
     <% else %>
       <div class="space-y-4">

@@ -29,10 +29,12 @@
                         type: :password %>
     <p class="text-xs text-secondary px-1 -mt-1"><%= t("indexa_capital_items.panel.fields.api_token.description") %></p>
 
-    <details class="group">
-      <summary class="text-sm text-secondary cursor-pointer hover:text-primary transition-colors">
-        <%= t("indexa_capital_items.panel.alternative_auth") %>
-      </summary>
+    <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
+      <% disclosure.with_summary_content do %>
+        <span class="text-sm text-secondary hover:text-primary transition-colors">
+          <%= t("indexa_capital_items.panel.alternative_auth") %>
+        </span>
+      <% end %>
       <div class="mt-3 space-y-3 pt-3 border-t border-primary">
         <%= form.text_field :username,
                             label: t("indexa_capital_items.panel.fields.username.label"),
@@ -49,11 +51,11 @@
                             placeholder: is_new_record ? t("indexa_capital_items.panel.fields.password.placeholder_new") : t("indexa_capital_items.panel.fields.password.placeholder_update"),
                             type: :password %>
       </div>
-    </details>
+    <% end %>
 
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("indexa_capital_items.panel.save_button") : t("indexa_capital_items.panel.update_button"),
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium" %>
     </div>
   <% end %>
 

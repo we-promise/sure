@@ -21,6 +21,7 @@
             <%= render DS::Button.new(
               text: @account.active? ? t(".save") : t(".next"),
               variant: "primary",
+              type: :submit,
             ) %>
           </div>
         <% end %>

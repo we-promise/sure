@@ -12,6 +12,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     stub_spot_result([ { symbol: "BTC", free: "1.0", locked: "0.0", total: "1.0" } ])
     stub_margin_result([])
     stub_earn_result([])
+    stub_futures_result([])
   end
 
   test "creates a binance_account of type combined" do
@@ -48,6 +49,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     stub_spot_result([])
     stub_margin_result([])
     stub_earn_result([])
+    stub_futures_result([])
 
     assert_no_difference "@item.binance_accounts.count" do
       BinanceItem::Importer.new(@item, binance_provider: @provider).import
@@ -61,6 +63,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert ba.raw_payload.key?("spot")
     assert ba.raw_payload.key?("margin")
     assert ba.raw_payload.key?("earn")
+    assert ba.raw_payload.key?("futures")
   end
 
   private
@@ -80,6 +83,12 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     def stub_earn_result(assets)
       BinanceItem::EarnImporter.any_instance.stubs(:import).returns(
         { assets: assets, raw: {}, source: "earn" }
+      )
+    end
+
+    def stub_futures_result(assets)
+      BinanceItem::FuturesImporter.any_instance.stubs(:import).returns(
+        { assets: assets, raw: {}, source: "futures" }
       )
     end
 end

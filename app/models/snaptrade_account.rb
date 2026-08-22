@@ -8,6 +8,7 @@ class SnaptradeAccount < ApplicationRecord
     encrypts :raw_transactions_payload
     encrypts :raw_holdings_payload
     encrypts :raw_activities_payload
+    encrypts :raw_balances_payload
   end
 
   belongs_to :snaptrade_item
@@ -25,6 +26,25 @@ class SnaptradeAccount < ApplicationRecord
   # Helper to get the linked Sure account
   def current_account
     linked_account
+  end
+
+  # SnapTrade normalizes provider-specific account types into three categories.
+  # Keep this derived from the raw API payload so existing records immediately
+  # receive a sensible setup default without a data migration.
+  def suggested_account_type
+    payload = raw_payload.to_h.with_indifferent_access
+    raw_type = payload[:raw_type].presence || account_type
+
+    case payload[:account_category]
+    when "DEPOSIT"
+      "Depository"
+    when "LOC"
+      raw_type.to_s.gsub(/[^a-z]/i, "").downcase.include?("card") ? "CreditCard" : "Loan"
+    else
+      # SnapTrade documents INVESTMENT and an unknown category as investment
+      # accounts. The user may still select a more appropriate Sure type.
+      raw_type.to_s.match?(/crypto|bitcoin|ethereum|digital.?asset/i) ? "Crypto" : "Investment"
+    end
   end
 
   # Ensure there is an AccountProvider link for this SnapTrade account and the given Account.
@@ -132,17 +152,67 @@ class SnaptradeAccount < ApplicationRecord
 
     Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - raw data: #{data.inspect}"
 
-    # Find cash balance (usually in USD or account currency)
-    cash_entry = data.find { |b| b.dig(:currency, :code) == currency } ||
-                 data.find { |b| b.dig(:currency, :code) == "USD" } ||
-                 data.first
+    # The primary entry (account currency → USD → first) stays in cash_balance;
+    # the full set is persisted so the processor can surface non-primary-currency
+    # cash as holdings (issue #1809).
+    cash_entry = primary_cash_entry(data)
 
-    if cash_entry
-      cash_value = cash_entry[:cash]
-      Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}"
+    cash_value = cash_entry ? cash_entry[:cash] : cash_balance
+    Rails.logger.info "SnaptradeAccount##{id} upsert_balances! - setting cash_balance=#{cash_value}, persisting #{data.size} entrie(s)"
 
-      # Only update cash_balance, preserve current_balance (total account value)
-      update!(cash_balance: cash_value)
+    # Only update cash_balance, preserve current_balance (total account value)
+    update!(cash_balance: cash_value, raw_balances_payload: data)
+  end
+
+  # Cash entries from the last balances snapshot that are NOT the one stored in
+  # cash_balance. The primary entry (account currency → USD → first) lives in
+  # cash_balance; the rest are surfaced as synthetic cash holdings so
+  # multi-currency cash isn't discarded (issue #1809). Excludes the actual
+  # primary currency — including the USD fallback — to avoid double-counting.
+  def non_primary_cash_entries
+    entries = normalized_balance_entries
+    primary_code = primary_cash_entry(entries)&.dig(:currency, :code)
+
+    entries.filter_map do |e|
+      code = e.dig(:currency, :code)
+      next if code.blank? || code == primary_code
+      amount = e[:cash]
+      next if amount.blank?
+      { currency: code, amount: amount }
+    end
+  end
+
+  # Currency of the amount stored in cash_balance. upsert_balances! falls back
+  # to a USD (or first) balance entry when there is no entry in the account
+  # currency, so the stored cash is not guaranteed to be denominated in
+  # `currency` — cash adjustments must use this instead.
+  def primary_cash_currency
+    primary_cash_entry(normalized_balance_entries)&.dig(:currency, :code) || currency
+  end
+
+  # Total value of positions SnapTrade flags as `cash_equivalent` (usually
+  # money market / sweep funds such as Fidelity's SPAXX) held in the given
+  # currency. Per SnapTrade's docs, these positions are ALSO included in the
+  # balances endpoint's `cash` figure, so cash figures must have this value
+  # removed to avoid double counting the same money. The positions themselves
+  # are still imported as holdings by SnaptradeAccount::HoldingsProcessor.
+  def cash_equivalent_position_value(currency_code = currency)
+    Array(raw_holdings_payload).sum(BigDecimal("0")) do |holding|
+      data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
+      next BigDecimal("0") unless data[:cash_equivalent] == true
+
+      # Positions without currency metadata deliberately fall back to the
+      # ACCOUNT currency (not currency_code): that's where HoldingsProcessor
+      # books such a position as a holding, so it must be subtracted from that
+      # same bucket — using currency_code here would subtract the position
+      # from every caller's currency bucket.
+      position_currency = extract_currency(data, extract_symbol_data(data), currency)
+      next BigDecimal("0") unless position_currency == currency_code
+
+      units = parse_decimal(data[:units]) || BigDecimal("0")
+      price = parse_decimal(data[:price]) || BigDecimal("0")
+
+      units * price
     end
   end
 
@@ -151,12 +221,23 @@ class SnaptradeAccount < ApplicationRecord
     snaptrade_item.snaptrade_provider
   end
 
-  # Get SnapTrade credentials for API calls
-  def snaptrade_credentials
-    snaptrade_item.snaptrade_credentials
-  end
-
   private
+
+    def normalized_balance_entries
+      Array(raw_balances_payload).map do |entry|
+        entry.respond_to?(:with_indifferent_access) ? entry.with_indifferent_access : {}
+      end
+    end
+
+    # Selects the primary cash entry from a list of indifferent-access balance
+    # hashes: account currency first, then USD, then the first entry. Shared by
+    # upsert_balances!, non_primary_cash_entries, and primary_cash_currency so
+    # they stay in sync.
+    def primary_cash_entry(entries)
+      entries.find { |b| b.dig(:currency, :code) == currency } ||
+        entries.find { |b| b.dig(:currency, :code) == "USD" } ||
+        entries.first
+    end
 
     # Enqueue a background job to clean up the SnapTrade connection
     # This runs asynchronously after the record is destroyed to avoid

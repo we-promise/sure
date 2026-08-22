@@ -29,8 +29,7 @@ class PlaidItem < ApplicationRecord
 
   # Get accounts from both new and legacy systems
   def accounts
-    # Preload associations to avoid N+1 queries
-    plaid_accounts
+    @accounts ||= plaid_accounts
       .includes(:account, account_provider: :account)
       .map(&:current_account)
       .compact
@@ -45,15 +44,24 @@ class PlaidItem < ApplicationRecord
       access_token: access_token
     )
   rescue Plaid::ApiError => e
-    error_body = JSON.parse(e.response_body)
-
-    if error_body["error_code"] == "ITEM_NOT_FOUND"
-      # Mark the connection as invalid but don't auto-delete
-      update!(status: :requires_update)
+    error_body = begin
+      JSON.parse(e.response_body.to_s)
+    rescue JSON::ParserError
+      {}
     end
 
-    Sentry.capture_exception(e)
-    nil
+    if error_body["error_code"] == "ITEM_NOT_FOUND"
+      # Mark the connection as invalid but don't auto-delete. The caller
+      # gets nil so the calling controller can decide what to render.
+      update!(status: :requires_update)
+      Sentry.capture_exception(e) if defined?(Sentry)
+      nil
+    else
+      # Re-raise so the controller can surface a friendly alert to the user
+      # (issue #1792). Swallowing here previously left the Plaid modal frame
+      # blank with no actionable signal.
+      raise
+    end
   end
 
   def destroy_later

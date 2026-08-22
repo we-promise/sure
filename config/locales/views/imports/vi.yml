@@ -1,0 +1,435 @@
+---
+vi:
+  import:
+    qif_category_selections:
+      update:
+        success: "Đã lưu danh mục và nhãn."
+      show:
+        title: "Cấu hình & chọn"
+        description: "Xem lại định dạng ngày được phát hiện, sau đó chọn danh mục và nhãn từ tệp QIF để đưa vào %{product_name}."
+        categories_heading: Danh mục
+        categories_found:
+          one: "Tìm thấy 1 danh mục"
+          other: "Tìm thấy %{count} danh mục"
+        category_name_col: Tên danh mục
+        transactions_col: Giao dịch
+        tags_heading: Nhãn
+        tags_found:
+          one: "Tìm thấy 1 nhãn"
+          other: "Tìm thấy %{count} nhãn"
+        tag_name_col: Tên nhãn
+        txn_count:
+          one: "1 giao dịch"
+          other: "%{count} giao dịch"
+        split_warning_title: Phát hiện giao dịch phân chia
+        split_warning_description: "Tệp QIF này chứa giao dịch phân chia. Phân chia chưa được hỗ trợ, mỗi giao dịch phân chia sẽ được nhập như một giao dịch đơn với toàn bộ số tiền và không có danh mục."
+        split_badge: phân chia
+        empty_state_primary: Không tìm thấy danh mục hoặc nhãn nào trong tệp QIF này.
+        empty_state_secondary: Tất cả giao dịch sẽ được nhập mà không có danh mục hoặc nhãn.
+        submit: Tiếp tục xem xét
+    cleans:
+      show:
+        not_configured: "Vui lòng cấu hình nhập dữ liệu trước khi tiếp tục."
+        description: Chỉnh sửa dữ liệu trong bảng bên dưới. Ô đỏ là không hợp lệ.
+        errors_notice: Dữ liệu của bạn có lỗi. Di chuột qua lỗi để xem chi tiết.
+        errors_notice_mobile: Dữ liệu của bạn có lỗi. Nhấn vào tooltip lỗi để xem chi tiết.
+        title: Làm sạch dữ liệu
+        data_cleaned: Dữ liệu của bạn đã được làm sạch
+        next_step: Bước tiếp theo
+        all_rows: Tất cả hàng
+        error_rows: Hàng lỗi
+    configurations:
+      update:
+        success: Đã cấu hình nhập dữ liệu thành công.
+      account_import:
+        leave_empty: Để trống
+        default: Mặc định
+        entity_type: Loại thực thể
+        name: Tên
+        balance: Số dư
+        currency: Tiền tệ
+        balance_date: Ngày số dư
+        date_format: Định dạng ngày
+        select_format: Chọn định dạng
+        apply_configuration: Áp dụng cấu hình
+      transaction_import:
+        date_label: Ngày
+        select_column: Chọn cột
+        select_format: Chọn định dạng
+        amount_label: Số tiền
+        default: Mặc định
+        currency_label: Tiền tệ
+        format_label: Định dạng
+        amount_type_strategy_label: Chiến lược loại số tiền
+        select_strategy: Chọn chiến lược
+        set: Đặt
+        as_amount_type_column: là cột loại số tiền
+        select_value: Chọn giá trị
+        as_identifier_value: là giá trị định danh
+        treat_as_html: "Xem \"<span class=\"font-medium\">%{value}</span>\" là"
+        income_inflow: Thu nhập (dòng vào)
+        expense_outflow: Chi tiêu (dòng ra)
+        select_type: Chọn loại
+        leave_empty: Để trống
+        account_label: Tài khoản
+        name_label: Tên
+        category_label: Danh mục
+        tags_label: Nhãn
+        notes_label: Ghi chú
+        apply_configuration: Áp dụng cấu hình
+        incomes_are_positive: Thu nhập là số dương
+        incomes_are_negative: Thu nhập là số âm
+        amount_type_label: Loại số tiền
+        select_convention: Chọn quy ước
+        date_format_label: Định dạng ngày
+        rows_to_skip_label: Bỏ qua n hàng đầu
+      trade_import:
+        select_column: Chọn cột
+        date_label: Ngày
+        quantity_label: Số lượng
+        buys_are_positive: Mua là số lượng dương
+        buys_are_negative: Mua là số lượng âm
+        default: Mặc định
+        currency_label: Tiền tệ
+        format_label: Định dạng
+        select_format: Chọn định dạng
+        ticker_label: Mã ticker
+        leave_empty: Để trống
+        stock_exchange_code_label: Mã sàn giao dịch
+        price_label: Giá
+        account_label: Tài khoản
+        name_label: Tên
+        note_label: Ghi chú
+        no_security_provider_warning: Nhà cung cấp giá chứng khoán chưa được cấu hình. Nhập giao dịch sẽ hoạt động, nhưng Sure sẽ không bổ sung lịch sử giá. Vui lòng vào cài đặt để cấu hình.
+        date_format_label: Định dạng ngày
+        apply_configuration: Áp dụng cấu hình
+      category_import:
+        button_label: Tiếp tục
+        description: Tải lên tệp CSV đơn giản (như tệp chúng tôi tạo khi bạn xuất dữ liệu). Chúng tôi sẽ tự động ánh xạ các cột cho bạn.
+        instructions: Chọn tiếp tục để phân tích CSV và chuyển sang bước làm sạch.
+      mint_import:
+        date_format_label: Định dạng ngày
+      actual_import:
+        preconfigured_notice: Chúng tôi đã cấu hình sẵn nhập Actual Budget cho bạn. Vui lòng tiến hành bước tiếp theo.
+        leave_empty: Để trống
+        date_label: Ngày
+        date_format_label: Định dạng ngày
+        amount_label: Số tiền
+        signage_convention_label: Quy ước dấu
+        incomes_are_negative: Thu nhập là số âm
+        incomes_are_positive: Thu nhập là số dương
+        account_label: Tài khoản (tùy chọn)
+        name_label: Người trả (tùy chọn)
+        category_label: Danh mục (tùy chọn)
+        notes_label: Ghi chú (tùy chọn)
+        apply_configuration: Áp dụng cấu hình
+      rule_import:
+        description: Cấu hình nhập quy tắc. Các quy tắc sẽ được tạo hoặc cập nhật dựa trên dữ liệu CSV.
+        process_button: Xử lý quy tắc
+        process_help: Nhấn nút bên dưới để xử lý CSV và tạo các hàng quy tắc.
+      show:
+        description: Chọn các cột tương ứng với từng trường trong CSV.
+        title: Cấu hình nhập dữ liệu
+    confirms:
+      sure_import:
+        title: Xác nhận nhập dữ liệu
+        description: Xem lại dữ liệu sẽ được nhập từ tệp xuất.
+        summary: Tóm tắt nhập dữ liệu
+        empty_summary: Chúng tôi không tìm thấy bản ghi nào có thể nhập trong tệp này. Tệp có thể trống hoặc các dòng không khớp định dạng xuất mong đợi.
+        publish_button: Bắt đầu nhập
+        cancel: Hủy
+      mappings:
+        create_account: Tạo tài khoản
+        csv_mapping_label: "%{mapping} trong CSV"
+        sure_mapping_label: "%{mapping} trong %{product_name}"
+        no_accounts: Bạn chưa có tài khoản nào. Vui lòng tạo tài khoản để sử dụng cho các hàng (chưa gán) trong CSV hoặc quay lại bước Làm sạch và cung cấp tên tài khoản.
+        rows_label: Hàng
+        unassigned_account: Cần tạo tài khoản mới cho các hàng chưa gán?
+        next: Tiếp theo
+      show:
+        invalid_data: "Dữ liệu không hợp lệ, vui lòng chỉnh sửa cho đến khi tất cả lỗi được giải quyết"
+        account_mapping_description: Gán tất cả tài khoản từ tệp nhập vào các tài khoản hiện có của %{product_name}. Bạn cũng có thể thêm tài khoản mới hoặc để chưa phân loại.
+        account_mapping_title: Gán tài khoản
+        account_type_mapping_description: Gán tất cả loại tài khoản từ tệp nhập vào %{product_name}
+        account_type_mapping_title: Gán loại tài khoản
+        category_mapping_description: Gán tất cả danh mục từ tệp nhập vào các danh mục hiện có của %{product_name}. Bạn cũng có thể thêm danh mục mới hoặc để chưa phân loại.
+        category_mapping_title: Gán danh mục
+        tag_mapping_description: Gán tất cả nhãn từ tệp nhập vào các nhãn hiện có của %{product_name}. Bạn cũng có thể thêm nhãn mới hoặc để chưa phân loại.
+        tag_mapping_title: Gán nhãn
+    uploads:
+      update:
+        qif_uploaded: "Tệp QIF đã được tải lên thành công."
+      show:
+        csv_invalid: "Phải là CSV hợp lệ có tiêu đề và ít nhất một hàng dữ liệu"
+        drop_csv_title: Thả CSV để tải lên
+        drop_csv_subtitle: Tệp của bạn sẽ được tải lên tự động
+        upload_csv_tab: Tải CSV lên
+        copy_paste_tab: Sao chép & Dán
+        account_optional_label: Tài khoản (tùy chọn)
+        multi_account_import: Nhập nhiều tài khoản
+        upload_csv_button: Tải CSV lên
+        paste_csv_placeholder: Dán nội dung tệp CSV của bạn tại đây
+        download_sample_csv: Tải xuống CSV mẫu
+        to_see_format: để xem định dạng CSV yêu cầu
+        qif_title: Tải tệp QIF lên
+        qif_description: Chọn tài khoản mà tệp QIF này thuộc về, rồi tải lên tệp xuất .qif từ Quicken.
+        qif_account_label: Tài khoản
+        qif_account_placeholder: Chọn tài khoản…
+        qif_file_prompt: để thêm tệp QIF tại đây
+        qif_file_hint: Chỉ tệp .qif
+        qif_submit: Tải QIF lên
+        browse: Duyệt
+        csv_file_prompt: để thêm tệp CSV tại đây
+        description: Dán hoặc tải lên tệp CSV bên dưới. Vui lòng xem hướng dẫn trong bảng bên dưới trước khi bắt đầu.
+        instructions_1: Bên dưới là CSV mẫu với các cột có thể nhập.
+        instructions_2: CSV của bạn phải có hàng tiêu đề
+        instructions_3: Bạn có thể đặt tên cột tùy ý. Bạn sẽ ánh xạ chúng ở bước sau.
+        instructions_4: Các cột được đánh dấu dấu hoa thị (*) là dữ liệu bắt buộc.
+        instructions_5: Không có dấu phẩy, ký hiệu tiền tệ và dấu ngoặc đơn trong số.
+        title: Nhập dữ liệu
+      sure_import:
+        title: Nhập từ xuất
+        description: Tải lên tệp all.ndjson từ xuất dữ liệu để khôi phục tài khoản, giao dịch, danh mục và nhiều hơn nữa.
+        drop_title: Thả NDJSON để tải lên
+        drop_subtitle: Tệp của bạn sẽ được tải lên tự động
+        browse: Duyệt
+        browse_hint: để thêm tệp all.ndjson tại đây
+        upload_button: Tải NDJSON lên
+        hint_html: Tải lên tệp <strong>all.ndjson</strong> từ tệp ZIP xuất dữ liệu
+        ndjson_invalid: Phải là NDJSON hợp lệ với ít nhất một bản ghi
+  imports:
+    mapping_labels:
+      account_type: "Loại tài khoản"
+      account: "Tài khoản"
+      category: "Danh mục"
+      tag: "Nhãn"
+    dry_run_resources:
+      transactions: "Giao dịch"
+      balances: "Số dư"
+      accounts: "Tài khoản"
+      categories: "Danh mục"
+      tags: "Nhãn"
+      rules: "Quy tắc"
+      merchants: "Nhà cung cấp"
+      recurring_transactions: "Giao dịch định kỳ"
+      transfers: "Chuyển khoản"
+      rejected_transfers: "Chuyển khoản bị từ chối"
+      trades: "Giao dịch chứng khoán"
+      holdings: "Danh mục nắm giữ"
+      valuations: "Định giá"
+      budgets: "Ngân sách"
+      budget_categories: "Danh mục ngân sách"
+    column_labels:
+      date: "Ngày"
+      amount: "Số tiền"
+      name: "Tên"
+      currency: "Tiền tệ"
+      category: "Danh mục"
+      tags: "Nhãn"
+      account: "Tài khoản"
+      notes: "Ghi chú"
+      qty: "Số lượng"
+      ticker: "Mã ticker"
+      exchange: "Sàn giao dịch"
+      price: "Giá"
+      entity_type: "Loại"
+      category_parent: "Danh mục cha"
+      category_color: "Màu sắc"
+      category_icon: "Biểu tượng Lucide"
+    update:
+      account_saved: "Đã lưu tài khoản."
+      invalid_account: "Không tìm thấy tài khoản."
+    publish:
+      started: "Quá trình nhập đã bắt đầu trong nền."
+      max_rows_exceeded: "Tệp nhập vượt quá số hàng tối đa là %{max}."
+    revert:
+      started: "Đang hoàn tác nhập dữ liệu trong nền."
+    apply_template:
+      template_applied: "Đã áp dụng mẫu."
+      no_template_found: "Không tìm thấy mẫu, vui lòng cấu hình nhập thủ công."
+    destroy:
+      deleted: "Đã xóa nhập dữ liệu."
+    failure:
+      title: Nhập thất bại
+      description: Vui lòng kiểm tra định dạng tệp, các lỗi và đảm bảo tất cả trường bắt buộc được điền, rồi thử lại.
+      try_again: Thử lại
+    success:
+      title: Nhập thành công
+      description: Dữ liệu đã được thêm thành công vào ứng dụng và sẵn sàng sử dụng.
+      back_to_dashboard: Quay lại bảng điều khiển
+      verification:
+        title: Xác minh đọc lại
+        checked: Đã kiểm tra
+        mismatches: Không khớp
+        status:
+          not_verified: Chưa xác minh
+          matched: Khớp
+          mismatch: Không khớp
+          failed: Thất bại
+          reverted: Đã hoàn tác
+    importing:
+      title: Đang nhập dữ liệu
+      description: "Nhập dữ liệu đang được thực hiện. Kiểm tra menu nhập để biết cập nhật hoặc nhấn 'Kiểm tra trạng thái' để làm mới. Bạn có thể tiếp tục sử dụng ứng dụng."
+      check_status: Kiểm tra trạng thái
+      back_to_dashboard: Quay lại bảng điều khiển
+    revert_failure:
+      title: Hoàn tác nhập thất bại
+      description: Vui lòng thử lại
+      try_again: Thử lại
+    date_format:
+      heading: Định dạng ngày
+      description: "Định dạng ngày đã được tự động phát hiện từ tệp. Thay đổi nếu ngày hiển thị không đúng."
+      preview: "Ngày được phân tích đầu tiên"
+      error_title: "Không thể phát hiện định dạng ngày"
+      error_description: "Không có định dạng ngày được hỗ trợ nào có thể phân tích các ngày trong tệp này. Vui lòng kiểm tra tệp có chứa ngày hợp lệ."
+    type_labels:
+      transaction_import: "Nhập giao dịch"
+      trade_import: "Nhập giao dịch chứng khoán"
+      account_import: "Nhập tài khoản"
+      mint_import: "Nhập từ Mint"
+      actual_import: "Nhập từ Actual"
+      qif_import: "Nhập từ QIF"
+      category_import: "Nhập danh mục"
+      rule_import: "Nhập quy tắc"
+      pdf_import: "Nhập PDF"
+      document_import: "Nhập tài liệu"
+      sure_import: "Nhập từ Sure"
+    steps:
+      upload: Tải lên
+      configure: Cấu hình
+      clean: Làm sạch
+      map: Ánh xạ
+      confirm: Xác nhận
+      select: Chọn
+      progress: "Bước %{step} trong %{total}"
+    empty:
+      message: Không tìm thấy nhập dữ liệu.
+    index:
+      title: Nhập dữ liệu
+      new: Nhập mới
+    table:
+      title: Nhập dữ liệu
+      header:
+        date: Ngày
+        operation: Thao tác
+        status: Trạng thái
+        actions: Hành động
+      row:
+        type_labels:
+          transaction_import: "Giao dịch"
+          trade_import: "Giao dịch CK"
+          account_import: "Tài khoản"
+          mint_import: "Mint"
+          actual_import: "Actual"
+          qif_import: "QIF"
+          category_import: "Danh mục"
+          rule_import: "Quy tắc"
+          pdf_import: "PDF"
+          document_import: "Tài liệu"
+          sure_import: "Sure"
+        status:
+          in_progress: Đang xử lý
+          uploading: Đang xử lý hàng
+          reverting: Đang hoàn tác
+          revert_failed: Hoàn tác thất bại
+          complete: Hoàn thành
+          failed: Thất bại
+        actions:
+          revert: Hoàn tác
+          confirm_revert: Thao tác này sẽ xóa các giao dịch đã nhập, nhưng bạn vẫn có thể xem lại và nhập lại dữ liệu bất cứ lúc nào.
+          delete: Xóa
+          view: Xem
+      empty: Chưa có nhập dữ liệu.
+    new:
+      description: Nhập từ công cụ tài chính hoặc tải lên tệp dữ liệu thô.
+      tab_financial_tools: Công cụ tài chính & Tệp
+      tab_raw_data: Dữ liệu thô
+      import_ynab: Nhập từ YNAB
+      import_accounts: Nhập tài khoản
+      import_categories: Nhập danh mục
+      import_mint: Nhập từ Mint
+      import_actual: Nhập từ Actual Budget
+      import_portfolio: Nhập đầu tư
+      import_rules: Nhập quy tắc
+      import_transactions: Nhập giao dịch
+      import_qif: Nhập từ Quicken (QIF)
+      import_sure: Nhập từ Sure
+      import_sure_description: Tệp xuất .ndjson đầy đủ
+      import_file: Nhập tài liệu
+      import_file_description: Phân tích bằng AI cho PDF và tải lên tệp tìm kiếm được
+      requires_account: Nhập tài khoản trước để mở khóa tùy chọn này.
+      resume: Tiếp tục nhập %{type}
+      sources: Nguồn
+      title: Nhập mới
+    create:
+      file_too_large: Tệp quá lớn. Kích thước tối đa là %{max_size}MB.
+      invalid_file_type: Loại tệp không hợp lệ. Vui lòng tải lên tệp CSV.
+      csv_uploaded: Đã tải lên CSV thành công.
+      ndjson_uploaded: Đã tải lên tệp NDJSON thành công.
+      pdf_too_large: Tệp PDF quá lớn. Kích thước tối đa là %{max_size}MB.
+      pdf_processing: PDF của bạn đang được xử lý. Bạn sẽ nhận email khi phân tích hoàn tất.
+      invalid_pdf: Tệp đã tải lên không phải PDF hợp lệ.
+      document_too_large: Tệp tài liệu quá lớn. Kích thước tối đa là %{max_size}MB.
+      invalid_document_file_type: Loại tệp tài liệu không hợp lệ cho kho vector hiện tại.
+      document_uploaded: Đã tải lên tài liệu thành công.
+      document_upload_failed: Không thể tải tài liệu lên kho vector. Vui lòng thử lại.
+      invalid_ndjson_file_type: Loại hoặc định dạng tệp không hợp lệ. Vui lòng tải lên tệp xuất .ndjson hoặc .json hợp lệ.
+      document_provider_not_configured: Chưa cấu hình kho vector để tải tài liệu lên.
+    show:
+      finalize_upload: Vui lòng hoàn tất tải lên tệp.
+      finalize_mappings: Vui lòng hoàn tất ánh xạ trước khi tiếp tục.
+    ready:
+      description: Dưới đây là tóm tắt các mục mới sẽ được thêm vào tài khoản sau khi bạn xuất bản nhập này.
+      title: Xác nhận dữ liệu nhập
+      summary_item_label: Mục
+      summary_count_label: Số lượng
+      empty_summary: Chúng tôi không tìm thấy bản ghi nào có thể nhập trong tệp này.
+      publish_import: Xuất bản nhập
+      back_to_imports: Quay lại nhập dữ liệu
+    errors:
+      custom_column_requires_inflow: "Nhập cột tùy chỉnh yêu cầu phải chọn cột dòng vào"
+    document_types:
+      bank_statement: Sao kê ngân hàng
+      credit_card_statement: Sao kê thẻ tín dụng
+      investment_statement: Sao kê đầu tư
+      financial_document: Tài liệu tài chính
+      contract: Hợp đồng
+      other: Tài liệu khác
+      unknown: Tài liệu không xác định
+    pdf_import:
+      processing_title: Đang xử lý PDF
+      processing_description: Chúng tôi đang phân tích tài liệu bằng AI. Quá trình này có thể mất chút thời gian. Bạn sẽ nhận email khi phân tích hoàn tất.
+      check_status: Kiểm tra trạng thái
+      back_to_dashboard: Quay lại bảng điều khiển
+      failed_title: Xử lý thất bại
+      failed_description: Chúng tôi không thể xử lý tài liệu PDF. Vui lòng thử lại hoặc liên hệ hỗ trợ.
+      try_again: Thử lại
+      delete_import: Xóa nhập
+      complete_title: Tài liệu đã được phân tích
+      complete_description: Chúng tôi đã phân tích PDF và đây là kết quả.
+      document_type_label: Loại tài liệu
+      summary_label: Tóm tắt
+      email_sent_notice: Email đã được gửi đến bạn với các bước tiếp theo.
+      back_to_imports: Quay lại nhập dữ liệu
+      unknown_state_title: Trạng thái không xác định
+      unknown_state_description: Nhập này ở trạng thái không mong đợi. Vui lòng quay lại nhập dữ liệu.
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Xử lý thất bại: %{error}"
+      ready_for_review_title: Sẵn sàng xem xét
+      ready_for_review_description: "Chúng tôi đã trích xuất %{count} giao dịch từ sao kê. Xem xét và xuất bản để thêm vào tài khoản."
+      transactions_extracted: Giao dịch đã trích xuất
+      transactions_extracted_count:
+        one: "%{count} giao dịch"
+        other: "%{count} giao dịch"
+      select_account: Nhập vào tài khoản
+      select_account_placeholder: Chọn tài khoản...
+      select_account_hint: Chọn tài khoản để nhập các giao dịch này vào.
+      no_accounts: Chưa có tài khoản. Vui lòng tạo tài khoản trước.
+      create_account: Tạo tài khoản
+      save_account: Lưu
+      publish_transactions:
+        one: "Xuất bản %{count} giao dịch"
+        other: "Xuất bản %{count} giao dịch"
+      review_transactions: Xem xét giao dịch
+      select_account_to_continue: Vui lòng chọn tài khoản ở trên để tiếp tục.
+      unknown_document_type: Không xác định

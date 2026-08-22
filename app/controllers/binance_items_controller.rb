@@ -211,7 +211,23 @@ class BinanceItemsController < ApplicationController
   end
 
   def complete_account_setup
-    selected_accounts = Array(params[:selected_accounts]).reject(&:blank?)
+    setup_params = complete_account_setup_params
+
+    if setup_params[:sync_start_date].present?
+      parsed_date = begin
+        Date.parse(setup_params[:sync_start_date].to_s)
+      rescue ArgumentError
+        nil
+      end
+
+      if parsed_date.present? && parsed_date <= Date.current
+        @binance_item.update!(sync_start_date: parsed_date)
+      else
+        flash.now[:alert] = "Sync start date must be a valid date in the past."
+      end
+    end
+
+    selected_accounts = Array(setup_params[:selected_accounts]).reject(&:blank?)
     created_accounts = []
 
     selected_accounts.each do |binance_account_id|
@@ -283,5 +299,9 @@ class BinanceItemsController < ApplicationController
 
     def binance_item_params
       params.require(:binance_item).permit(:name, :sync_start_date, :api_key, :api_secret)
+    end
+
+    def complete_account_setup_params
+      params.permit(:sync_start_date, selected_accounts: [])
     end
 end

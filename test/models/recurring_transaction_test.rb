@@ -457,6 +457,53 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert recurring.next_expected_date >= Date.current
   end
 
+  test "create_from_transaction does not blend a distinct same-day charge type into the variance band" do
+    # Mirrors a real production case: two genuinely different charges from
+    # the same merchant, same day (a small fee alongside a larger due),
+    # ~6.5x apart -- not one fluctuating payment.
+    fee_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    fee_entry = @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 3.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: fee_transaction
+    )
+
+    due_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 19.68,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: due_transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(fee_entry.transaction)
+
+    assert_equal 3.00, recurring.expected_amount_min
+    assert_equal 3.00, recurring.expected_amount_max
+    assert_equal 3.00, recurring.expected_amount_avg
+    assert_equal 1, recurring.occurrence_count
+  end
+
+  test "amount_within_variance_band? allows up to 2x and excludes beyond" do
+    assert RecurringTransaction.amount_within_variance_band?(199, 100)
+    assert_not RecurringTransaction.amount_within_variance_band?(201, 100)
+    assert RecurringTransaction.amount_within_variance_band?(50, 100) # halved is still within band
+    assert_not RecurringTransaction.amount_within_variance_band?(49, 100)
+  end
+
+  test "amount_within_variance_band? handles a zero anchor without dividing by zero" do
+    assert RecurringTransaction.amount_within_variance_band?(0, 0)
+    assert_not RecurringTransaction.amount_within_variance_band?(5, 0)
+  end
+
+  test "amount_within_variance_band? does not match across a sign mismatch" do
+    assert_not RecurringTransaction.amount_within_variance_band?(50, -50)
+    assert_not RecurringTransaction.amount_within_variance_band?(-10, 100)
+  end
+
   test "matching_transactions with amount variance matches within range" do
     # Create manual recurring with variance for day 15 of the month
     recurring = @family.recurring_transactions.create!(
@@ -608,6 +655,54 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 60.00, manual_recurring.expected_amount_max
     assert_in_delta 53.33, manual_recurring.expected_amount_avg.to_f, 0.01 # (45 + 55 + 60) / 3
     assert manual_recurring.occurrence_count > 1
+  end
+
+  test "identify_patterns_for does not re-blend a distinct charge type into an existing manual recurring transaction" do
+    # Mirrors the real production corruption: a manual recurring row seeded
+    # at 3.00 must not have its variance widened by a same-day, same-merchant
+    # 19.68 entry when the periodic identification job runs.
+    manual_recurring = @family.recurring_transactions.create!(
+      account: @account,
+      merchant: @merchant,
+      amount: 3.00,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: 3.months.ago,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1,
+      expected_amount_min: 3.00,
+      expected_amount_max: 3.00,
+      expected_amount_avg: 3.00
+    )
+
+    fee_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 3.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: fee_transaction
+    )
+
+    due_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago.beginning_of_month + 14.days,
+      amount: 19.68,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: due_transaction
+    )
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+
+    manual_recurring.reload
+    assert_equal 3.00, manual_recurring.expected_amount_min
+    assert_equal 3.00, manual_recurring.expected_amount_max
+    assert_equal 3.00, manual_recurring.expected_amount_avg
   end
 
   test "cleaner does not delete manual recurring transactions" do
@@ -998,12 +1093,9 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_not RecurringTransaction.exists?(rt.id)
   end
 
-  test "Cleaner skips recurring transfers so they aren't mistakenly marked inactive" do
-    # `matching_transactions` is single-account name/amount-based and never
-    # matches a Transfer pair, so without the skip the recurring transfer
-    # would flip to inactive at the 6-month threshold even when the user
-    # is still doing the transfer monthly. Issue #1590 tracks the proper
-    # pair-detection fix.
+  test "Cleaner keeps a recurring transfer active when its pair still occurs (issue #1590)" do
+    # The seed name rarely matches future occurrences, so pair detection (not
+    # name matching) is what keeps a live transfer active past the threshold.
     rt = @family.recurring_transactions.create!(
       account: @account, destination_account: accounts(:credit_card),
       name: "Transfer to CC", amount: 250, currency: "USD",
@@ -1012,10 +1104,59 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       next_expected_date: 5.days.from_now.to_date,
       manual: true
     )
-    assert rt.should_be_inactive?, "guard sanity: row would be marked inactive without the skip"
+    assert rt.should_be_inactive?, "guard sanity: stale last_occurrence_date"
+
+    # A fresh transfer pair this cycle, carrying a *different* free-text name.
+    date = 1.month.ago.beginning_of_month + 4.days # day-of-month 5
+    outflow = @account.entries.create!(
+      date: date, amount: 250, currency: "USD", name: "rent transfer",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    inflow = accounts(:credit_card).entries.create!(
+      date: date, amount: -250, currency: "USD", name: "rent transfer",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
 
     RecurringTransaction.cleanup_stale_for(@family)
     assert_equal "active", rt.reload.status
+  end
+
+  test "Cleaner retires a recurring transfer whose pair has stopped" do
+    # No matching Transfer pair → genuinely stale → should be retired. This is
+    # the correctness the pair-detection (vs the old blanket skip) buys us.
+    rt = @family.recurring_transactions.create!(
+      account: @account, destination_account: accounts(:credit_card),
+      name: "Transfer to CC", amount: 250, currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: 7.months.ago.to_date,
+      next_expected_date: 5.days.from_now.to_date,
+      manual: true
+    )
+
+    RecurringTransaction.cleanup_stale_for(@family)
+    assert_equal "inactive", rt.reload.status
+  end
+
+  test "matching_transactions finds the transfer pair regardless of occurrence name" do
+    rt = @family.recurring_transactions.create!(
+      account: @account, destination_account: accounts(:credit_card),
+      name: "Transfer to CC", amount: 250, currency: "USD",
+      expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, manual: true
+    )
+    date = Date.current.beginning_of_month + 4.days # day-of-month 5
+    outflow = @account.entries.create!(
+      date: date, amount: 250, currency: "USD", name: "an importer's wording",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    inflow = accounts(:credit_card).entries.create!(
+      date: date, amount: -250, currency: "USD", name: "an importer's wording",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+
+    assert_includes rt.matching_transactions.map(&:id), outflow.id
   end
 
   test "Identifier#update_manual_recurring_transactions skips recurring transfers" do

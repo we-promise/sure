@@ -1,5 +1,8 @@
 <%= tag.div style: transparent? ? container_styles : nil,
-            class: container_classes do %>
+            class: container_classes,
+            role: (!aria_hidden && description.present?) ? "img" : nil,
+            "aria-label": aria_hidden ? nil : description.presence,
+            "aria-hidden": aria_hidden ? "true" : nil do %>
   <% if icon %>
     <%= helpers.icon(icon, size: icon_size, color: "current") %>
   <% elsif text %>

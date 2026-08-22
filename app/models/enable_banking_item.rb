@@ -73,19 +73,31 @@ class EnableBankingItem < ApplicationRecord
     raise StandardError.new("Enable Banking provider is not configured") unless provider
 
     validated_psu_type = psu_type
+    selected_method = nil
 
     # Store ASPSP metadata before calling provider so it's available even if auth fails
     if aspsp_data.present?
       aspsp_data = aspsp_data.with_indifferent_access
-      first_auth_method = aspsp_data.dig(:auth_methods, 0) || aspsp_data.dig("auth_methods", 0)
-      aspsp_types = aspsp_data[:psu_types] || []
+      aspsp_types = Array(aspsp_data[:psu_types]).map(&:to_s)
+
+      # If the requested PSU type isn't supported by this ASPSP, fall back to the
+      # first type it advertises rather than failing outright.
+      validated_psu_type = if psu_type.present? && aspsp_types.include?(psu_type)
+        psu_type
+      elsif aspsp_types.any?
+        aspsp_types.first
+      else
+        psu_type
+      end
+
+      selected_method = select_auth_method(aspsp_data, validated_psu_type)
+
       update!(
         aspsp_required_psu_headers: aspsp_data[:required_psu_headers] || [],
         aspsp_maximum_consent_validity: aspsp_data[:maximum_consent_validity],
-        aspsp_auth_approach: first_auth_method&.dig(:approach) || first_auth_method&.dig("approach"),
+        aspsp_auth_approach: selected_method&.dig(:approach),
         aspsp_psu_types: aspsp_types
       )
-      validated_psu_type = psu_type.present? && aspsp_types.include?(psu_type) ? psu_type : nil
     end
 
     result = provider.start_authorization(
@@ -95,7 +107,8 @@ class EnableBankingItem < ApplicationRecord
       state: state,
       psu_type: validated_psu_type,
       maximum_consent_validity: aspsp_maximum_consent_validity,
-      language: language
+      language: language,
+      auth_method: selected_method&.dig(:name)
     )
 
     attributes = {
@@ -107,6 +120,26 @@ class EnableBankingItem < ApplicationRecord
     update!(attributes)
 
     result[:url]
+  end
+
+  # Shared entry point for both initial authorization and reauthorization.
+  # Re-fetches ASPSP metadata (so the auth method / PSU type selection and the
+  # stored approach stay accurate) and starts the provider authorization. The
+  # re-fetch — rather than caching the full ASPSP object in the session — keeps
+  # us under the 4KB session cookie limit.
+  # @return [String] Redirect URL for the user
+  def begin_authorization!(redirect_url:, state:, language: nil, psu_type: nil, aspsp_name: nil)
+    name = aspsp_name.presence || self.aspsp_name
+    raise StandardError.new("No bank selected for this connection") if name.blank?
+
+    start_authorization(
+      aspsp_name: name,
+      redirect_url: redirect_url,
+      state: state,
+      psu_type: psu_type.presence || self.psu_type || "personal",
+      aspsp_data: fetch_aspsp_data(name),
+      language: language
+    )
   end
 
   # Complete the authorization flow with the code from callback
@@ -128,6 +161,27 @@ class EnableBankingItem < ApplicationRecord
     import_accounts_from_session(result[:accounts] || [])
 
     result
+  end
+
+  # Reconcile the locally-stored session expiry with what the API reports.
+  # The session info returned by GET /sessions carries the authoritative
+  # access.valid_until; persisting it on every sync keeps session_valid? accurate
+  # and avoids both premature "expired" states and stale "still valid" states.
+  def reconcile_session_expiry!(session_data)
+    return unless session_data.is_a?(Hash)
+
+    valid_until = session_data.dig(:access, :valid_until) || session_data.dig("access", "valid_until")
+    return if valid_until.blank?
+
+    parsed = Time.zone.parse(valid_until.to_s)
+    return if parsed.nil? || parsed == session_expires_at
+
+    update!(session_expires_at: parsed)
+  rescue ArgumentError, TypeError, ActiveRecord::ActiveRecordError => e
+    # Best-effort reconciliation: swallow bad timestamps (ArgumentError/TypeError)
+    # as well as validation/locking failures from update! (RecordInvalid,
+    # StaleObjectError) so a sync is never derailed by expiry bookkeeping.
+    Rails.logger.warn "EnableBankingItem #{id} - Failed to reconcile session expiry: #{e.message}"
   end
 
   def import_latest_enable_banking_data
@@ -287,6 +341,51 @@ class EnableBankingItem < ApplicationRecord
   end
 
   private
+
+    # Authentication approach preference, lowest number wins.
+    # REDIRECT is the smoothest (PSU authenticates entirely on the ASPSP page).
+    # DECOUPLED works through Enable Banking's hosted page (push-to-app / photoTAN
+    # / chipTAN). EMBEDDED is last resort (handled by the hosted page too).
+    AUTH_APPROACH_PRIORITY = { "REDIRECT" => 0, "DECOUPLED" => 1, "EMBEDDED" => 2 }.freeze
+
+    # Choose the best authentication method for the given PSU type.
+    # Returns a hash with :name and :approach, or nil when the ASPSP exposes no
+    # API-selectable methods (Enable Banking then falls back to its default).
+    def select_auth_method(aspsp_data, psu_type)
+      methods = Array(aspsp_data[:auth_methods]).map(&:with_indifferent_access)
+      return nil if methods.empty?
+
+      # Hidden methods aren't surfaced on Enable Banking's hosted page, so we don't
+      # auto-select one (the PSU couldn't complete it). If every method is hidden,
+      # return nil and let /auth fall back to the ASPSP's default rather than
+      # forcing a non-selectable method.
+      methods = methods.reject { |m| ActiveModel::Type::Boolean.new.cast(m[:hidden_method]) }
+      return nil if methods.empty?
+
+      # Prefer methods that match the chosen PSU type; if none declare a psu_type
+      # (or none match), consider all of them.
+      matching = methods.select { |m| m[:psu_type].blank? || m[:psu_type].to_s == psu_type.to_s }
+      candidates = matching.presence || methods
+
+      best = candidates.min_by { |m| AUTH_APPROACH_PRIORITY.fetch(m[:approach].to_s, 99) }
+      return nil unless best
+
+      { name: best[:name], approach: best[:approach] }
+    end
+
+    # Fetch the ASPSP object for a given name from the provider's /aspsps list.
+    # Returns a HashWithIndifferentAccess, or nil if unavailable.
+    def fetch_aspsp_data(aspsp_name)
+      provider = enable_banking_provider
+      return nil unless provider
+
+      response = provider.get_aspsps(country: country_code)
+      raw_aspsps = response[:aspsps] || response["aspsps"] || []
+      raw_aspsps.find { |a| (a[:name] || a["name"]) == aspsp_name }&.with_indifferent_access
+    rescue Provider::EnableBanking::EnableBankingError => e
+      Rails.logger.warn "EnableBankingItem #{id} - could not fetch ASPSP metadata for #{aspsp_name}: #{e.message}"
+      nil
+    end
 
     def parse_session_expiry(session_result)
       if session_result[:access].present? && session_result[:access][:valid_until].present?

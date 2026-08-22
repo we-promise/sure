@@ -15,9 +15,13 @@ ca:
                 han d'estar dins d'un marge de 4 dies
               must_have_opposite_amounts: Les transaccions de transferència han de
                 tenir imports oposats
-              must_have_single_currency: La transferència ha de tenir una sola moneda
+              must_have_single_currency: La transferència ha de tenir una sola divisa
               outflow_cannot_be_in_multiple_transfers: La transacció de sortida no
                 pot formar part de múltiples transferències
+          different_accounts: Han de ser de comptes diferents
+          opposite_amounts: Han de tenir imports oposats
+          same_family: Han de ser de la mateixa família
+          within_days: Han d'estar dins de %{count} dies
   transfer:
     name: Transferència a %{to_account}
     payment_name: Pagament a %{to_account}

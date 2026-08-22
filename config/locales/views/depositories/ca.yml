@@ -8,3 +8,21 @@ ca:
       subtype_prompt: Selecciona el tipus de compte
     new:
       title: Introdueix el saldo del compte
+    subtypes:
+      cd:
+        long: Certificat de dipòsit
+        short: CD
+      checking:
+        long: Corrent
+        short: Corrent
+      hsa:
+        long: Compte d'estalvi per a salut
+        short: HSA
+      money_market:
+        long: Mercat monetari
+        short: MM
+      savings:
+        long: Estalvis
+        short: Estalvis
+    types_plural:
+      depository: Comptes corrents i estalvis

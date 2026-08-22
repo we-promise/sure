@@ -46,9 +46,10 @@ class SimplefinItem::Importer
         import_regular_sync
       end
 
-      # Reset status to good if no auth errors occurred in this sync.
-      # This allows the item to recover automatically when a bank's auth issue is resolved
-      # in SimpleFIN Bridge, without requiring the user to manually reconnect.
+      # A successful import proves the SimpleFIN access URL still works, so clear
+      # any lingering item-level requires_update. Per-institution auth errors are
+      # recorded in sync stats but do not mean the access URL itself is dead; a
+      # dead access URL fails the fetch earlier and never reaches this line.
       maybe_clear_requires_update_status
 
       # Detect likely card-replacement scenarios (e.g., fraud replacement).
@@ -107,7 +108,7 @@ class SimplefinItem::Importer
         currency: (account_data[:currency].presence || account_data["currency"].presence || sfa.currency.presence || sfa.current_account&.currency.presence || simplefin_item.family&.currency.presence || "USD"),
         current_balance: account_data[:balance],
         available_balance: account_data[:"available-balance"],
-        balance_date: (account_data["balance-date"] || account_data[:"balance-date"]),
+        balance_date: normalize_balance_date(account_data["balance-date"] || account_data[:"balance-date"]),
         raw_payload: account_data,
         org_data: account_data[:org]
       )
@@ -353,19 +354,17 @@ class SimplefinItem::Importer
       )
     end
 
-    # Reset status to good if no auth errors occurred in this sync.
-    # This allows automatic recovery when a bank's auth issue is resolved in SimpleFIN Bridge.
+    # Reset status to good after a successful import. Per-institution auth
+    # errors are recorded in sync stats, but they do not mean the SimpleFIN
+    # access URL itself is dead.
     def maybe_clear_requires_update_status
       return unless simplefin_item.requires_update?
 
-      auth_errors = stats.dig("error_buckets", "auth").to_i
-      if auth_errors.zero?
-        simplefin_item.update!(status: :good)
-        Rails.logger.info(
-          "SimpleFIN: cleared requires_update status for item ##{simplefin_item.id} " \
-          "(no auth errors in this sync)"
-        )
-      end
+      simplefin_item.update!(status: :good)
+      Rails.logger.info(
+        "SimpleFIN: cleared requires_update status for item ##{simplefin_item.id} " \
+        "after successful import"
+      )
     end
 
     def import_with_chunked_history
@@ -734,6 +733,16 @@ class SimplefinItem::Importer
       simplefin_item.last_synced_at - sync_buffer_period.days
     end
 
+    def normalize_balance_date(value)
+      return nil if value.nil?
+
+      parsed = Simplefin::DateUtils.parse_provider_time(value)
+      return parsed if parsed.present?
+
+      Rails.logger.warn("Invalid balance date for SimpleFin importer: #{value.inspect}")
+      nil
+    end
+
     def import_account(account_data)
       account_id = account_data[:id].to_s
 
@@ -781,7 +790,7 @@ class SimplefinItem::Importer
         currency: (account_data[:currency].presence || account_data["currency"].presence || simplefin_account.currency.presence || simplefin_account.current_account&.currency.presence || simplefin_item.family&.currency.presence || "USD"),
         current_balance: account_data[:balance],
         available_balance: account_data[:"available-balance"],
-        balance_date: (account_data["balance-date"] || account_data[:"balance-date"]),
+        balance_date: normalize_balance_date(account_data["balance-date"] || account_data[:"balance-date"]),
         raw_payload: account_data,
         org_data: account_data[:org]
       }

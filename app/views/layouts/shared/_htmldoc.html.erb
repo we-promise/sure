@@ -1,3 +1,4 @@
+<%# locals: (sidebar_aware: false) %>
 <!DOCTYPE html>
 
 <% theme = Current.user&.theme || "system" %>
@@ -13,18 +14,10 @@
     <%= yield :head %>
   </head>
 
-  <body class="h-[var(--app-height)] overflow-hidden antialiased">
+  <body class="h-[var(--app-height)] overflow-hidden antialiased"<% if sidebar_aware %> data-controller="notification-tray"<% end %>>
     <% if Rails.env.development? %>
       <button hidden data-controller="hotkey" data-hotkey="t t /" data-action="theme#toggle"></button>
     <% end %>
-
-    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]">
-      <div id="notification-tray" class="space-y-1 w-full">
-        <%= render_flash_notifications %>
-
-        <div id="cta"></div>
-      </div>
-    </div>
 
     <% if Current.family %>
       <%= turbo_stream_from Current.family %>
@@ -40,5 +33,17 @@
     <%= render "impersonation_sessions/approval_bar" if Current.true_user&.impersonated_support_sessions&.initiated&.any? %>
 
     <%= yield %>
+
+    <%# `left-1/2 -translate-x-1/2` centers on the viewport by default, correct
+        for every single-column layout. Layouts with a persistent sidebar
+        (settings, application) pass sidebar_aware: true, which wires up
+        notification_tray_controller.js to override `left` with the actual
+        content pane's center instead — see that controller for why a
+        ResizeObserver beats hand-rolled sidebar-width math, and for why it
+        also has to guard that inline style against turbo_refreshes_with's
+        morph reconciliation. %>
+    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]"<% if sidebar_aware %> data-notification-tray-target="tray" data-action="turbo:before-morph-attribute->notification-tray#preserveStyle"<% end %>>
+      <%= render "layouts/shared/notification_tray" %>
+    </div>
   </body>
 </html>

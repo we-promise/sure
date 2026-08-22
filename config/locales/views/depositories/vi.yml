@@ -1,0 +1,26 @@
+---
+vi:
+  depositories:
+    edit:
+      edit: Chỉnh sửa %{account}
+    form:
+      none: Không có
+      subtype_prompt: Chọn loại tài khoản
+    new:
+      title: Nhập số dư tài khoản
+    subtypes:
+      cd:
+        long: Chứng chỉ tiền gửi
+        short: CD
+      checking:
+        long: Tài khoản thanh toán
+        short: Thanh toán
+      hsa:
+        long: Tài khoản tiết kiệm y tế
+        short: HSA
+      money_market:
+        long: Thị trường tiền tệ
+        short: MM
+      savings:
+        long: Tài khoản tiết kiệm
+        short: Tiết kiệm

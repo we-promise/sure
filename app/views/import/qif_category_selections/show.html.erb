@@ -83,7 +83,7 @@
                   <div class="col-span-8 flex items-center gap-2">
                     <span class="text-sm text-primary"><%= category %></span>
                     <% if is_split %>
-                      <span class="inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning"><%= t(".split_badge") %></span>
+                      <%= render DS::Pill.new(label: t(".split_badge"), tone: :warning, marker: false, show_dot: false) %>
                     <% end %>
                   </div>
                   <span class="col-span-3 text-sm text-secondary text-right">

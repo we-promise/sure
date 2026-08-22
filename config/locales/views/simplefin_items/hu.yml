@@ -30,7 +30,34 @@ hu:
         label: "SimpleFIN beállítási token:"
         placeholder: "Illeszd be ide a SimpleFIN beállítási tokenedet..."
         help_text: "A token egy betűkkel és számokkal kezdődő hosszú karakterlánc"
+      title: SimpleFIN kapcsolat frissítése
+      header_subtitle: Szerezz be egy új beállítási tokent a SimpleFIN-fiókod újracsatlakoztatásához
+      connection_needs_update: "A SimpleFIN kapcsolatodat frissíteni kell:"
+      step_1_html: "Látogass el a <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> oldalra egy új beállítási token létrehozásához"
+      step_2: Másold ki a tokent és illeszd be alább
+      step_3: "Kattints a \"Frissítés\" gombra a hozzáférés visszaállításához"
+      update: Frissítés
+      cancel: Mégse
     setup_accounts:
+      title: SimpleFIN számlák beállítása
+      header_subtitle: Válaszd ki az importált számlák helyes típusait
+      choose_account_type: "Válaszd ki a megfelelő számlatípust minden SimpleFIN számlához:"
+      account_type_checking_savings: Folyó- vagy megtakarítási
+      account_type_checking_savings_desc: Normál bankszámlák
+      account_type_credit_card: Hitelkártya
+      account_type_credit_card_desc: Hitelkártya számlák
+      account_type_investment: Befektetési
+      account_type_investment_desc: "Brókeri, 401(k), IRA számlák"
+      account_type_loan: Hitel vagy jelzálog
+      account_type_loan_desc: Adósságszámlák
+      account_type_other_asset: Egyéb vagyon
+      account_type_other_asset_desc: Minden más
+      transaction_history_title: "Tranzakciós előzmények:"
+      transaction_history_description_html: "A SimpleFIN általában <strong>60-90 nap</strong> tranzakciós előzményt biztosít, a banktól függően. A kezdeti beállítás után az új tranzakciók automatikusan szinkronizálódnak. Az előzmények elérhetősége intézményenként és számlatípusonként változó."
+      account_type_label: "Számla típusa:"
+      create_accounts: Számlák létrehozása
+      creating_accounts: Számlák létrehozása...
+      cancel: Mégse
       account_card:
         balance: "Egyenleg"
       activity:

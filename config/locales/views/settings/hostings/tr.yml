@@ -2,28 +2,260 @@
 tr:
   settings:
     hostings:
+      alpha_vantage_settings:
+        description: Alpha Vantage'dan aldığınız API anahtarını girin. Londra Menkul
+          Kıymetler Borsası, XETRA ve diğer borsalardaki AB ETF'lerini destekler.
+        env_configured_message: ALPHA_VANTAGE_API_KEY ortam değişkeni aracılığıyla
+          başarıyla yapılandırıldı.
+        label: API Anahtarı
+        no_health_check_note: Katı hız sınırı nedeniyle bu sağlayıcı için bağlantı
+          sağlık kontrolü kullanılamıyor.
+        placeholder: Alpha Vantage API anahtarınızı buraya girin
+        rate_limit_warning: Alpha Vantage ücretsiz katmanı günde 25 API çağrısıyla
+          sınırlıdır. Diğer sağlayıcılarda bulunmayan AB ETF'leri için tamamlayıcı
+          bir sağlayıcı olarak en iyi şekilde kullanılır.
+        show_details: "(detayları göster)"
+        step_1_html: <a href="https://www.alphavantage.co/support/#api-key" target="_blank"
+          rel="noopener noreferrer" class="underline">alphavantage.co</a> adresini
+          ziyaret edin ve ücretsiz API anahtarınızı alın.
+        step_2: API anahtarını kopyalayıp aşağıya yapıştırın.
+        title: Alpha Vantage
+      anthropic_settings:
+        access_token_label: API Anahtarı
+        access_token_placeholder: Anthropic API anahtarınızı girin
+        base_url_label: Temel URL (İsteğe Bağlı)
+        base_url_placeholder: https://api.anthropic.com (varsayılan)
+        description: Anthropic API anahtarınızı girin. İsteğe bağlı olarak Temel URL'yi
+          AWS Bedrock veya GCP Vertex'e yönlendirebilirsiniz.
+        env_configured_message: Ortam değişkenleri aracılığıyla başarıyla yapılandırıldı.
+        model_help: Sohbet ve PDF işleme için kullanılır. Toplu işlemler (kategorilendirme,
+          satıcı tespiti) maliyet nedeniyle varsayılan olarak Haiku kullanır.
+        model_label: Varsayılan Model (İsteğe Bağlı)
+        model_placeholder: claude-sonnet-4-6 (varsayılan)
+        title: Anthropic (Claude)
+      assistant_settings:
+        agent_id_help: Sağlayıcı birden fazla ajan barındırdığında belirli bir ajana
+          yönlendirir. Varsayılan için boş bırakın.
+        agent_id_label: Ajan Kimliği (İsteğe Bağlı)
+        agent_id_placeholder: main (varsayılan)
+        confirm_disconnect:
+          body: Bu, kaydedilmiş URL'yi, token'ı ve ajan kimliğini kaldıracak ve yerleşik
+            asistana geçecektir. Daha sonra yeni kimlik bilgileri girerek yeniden
+            bağlanabilirsiniz.
+          title: Harici asistan bağlantısı kesilsin mi?
+        description: Sohbet asistanının nasıl yanıt vereceğini seçin. Yerleşik, yapılandırdığınız
+          LLM sağlayıcısını doğrudan kullanır. Harici, MCP aracılığıyla Sure'un finansal
+          araçlarını çağırabilen uzak bir yapay zeka ajanına devreder.
+        disconnect_button: Bağlantıyı kes
+        disconnect_description: Harici asistan bağlantısını kaldırın ve yerleşik asistana
+          geri dönün.
+        disconnect_title: Harici bağlantı
+        env_configured_external: Ortam değişkenleri aracılığıyla başarıyla yapılandırıldı.
+        env_notice: Asistan türü, ASSISTANT_TYPE ortam değişkeni aracılığıyla '%{type}'
+          olarak kilitlenmiştir.
+        external_configured: Yapılandırıldı
+        external_not_configured: Yapılandırılmamış. Aşağıya URL ve token girin veya
+          EXTERNAL_ASSISTANT_URL ve EXTERNAL_ASSISTANT_TOKEN ortam değişkenlerini
+          ayarlayın.
+        external_status: Harici asistan uç noktası
+        title: Yapay Zeka Asistanı
+        token_help: Harici ajanınız tarafından sağlanan kimlik doğrulama token'ı.
+          Bu, her istekle birlikte Bearer token olarak gönderilir.
+        token_label: API Token'ı
+        token_placeholder: Ajan sağlayıcınızdan aldığınız token'ı girin
+        type_builtin: Yerleşik (doğrudan LLM)
+        type_external: Harici (uzak ajan)
+        type_label: Asistan türü
+        url_help: Ajanınızın API uç noktasının tam URL'si. Ajan sağlayıcınız bunu
+          size verecektir.
+        url_label: Uç Nokta URL'si
+        url_placeholder: https://your-agent-host/v1/chat
+      brand_fetch_settings:
+        description: Brand Fetch tarafından sağlanan İstemci Kimliğini girin
+        env_configured_message: Brand Fetch İstemci Kimliğinizi BRAND_FETCH_CLIENT_ID
+          ortam değişkeni aracılığıyla başarıyla yapılandırdınız.
+        high_res_description: Etkinleştirildiğinde, logolar 40x40 yerine 120x120 çözünürlükte
+          alınır. Bu, yüksek DPI'lı ekranlarda daha net görüntüler sağlar.
+        high_res_label: Yüksek çözünürlüklü logoları etkinleştir
+        label: İstemci Kimliği
+        placeholder: İstemci Kimliğinizi buraya girin
+        setup_step_1_html: <a href="https://brandfetch.com/developers" target="_blank"
+          rel="noopener noreferrer" class="underline">brandfetch.com</a> adresini
+          ziyaret edin ve ücretsiz bir Brand Fetch Geliştirici hesabı oluşturun.
+        setup_step_2_html: <a href="https://developers.brandfetch.com/dashboard/logo-api"
+          target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>
+          sayfasına gidin.
+        setup_step_3: İstemci Kimliğinizi göstermek için "İstemci Kimliğiniz" bölümündeki
+          göz simgesine dokunun ve aşağıya yapıştırın.
+        show_details: "(detayları göster)"
+        title: Brand Fetch Ayarları
+      clear_cache:
+        cache_cleared: Veri önbelleği temizlendi. Bu işlemin tamamlanması birkaç dakika
+          sürebilir.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Harici asistan bağlantısı kesildi
+      ensure_admin:
+        not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
+      ensure_super_admin_for_onboarding:
+        not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
+      eodhd_settings:
+        description: EODHD tarafından sağlanan API token'ını girin. LSE, XETRA ve
+          diğer uluslararası borsalardaki AB ETF'lerini destekler.
+        env_configured_message: EODHD_API_KEY ortam değişkeni aracılığıyla başarıyla
+          yapılandırıldı.
+        label: API Token'ı
+        placeholder: EODHD API token'ınızı buraya girin
+        rate_limit_warning: EODHD ücretsiz katmanı günde 20 API çağrısıyla sınırlıdır.
+          Diğer sağlayıcılarda bulunmayan AB ETF'leri için tamamlayıcı bir sağlayıcı
+          olarak en iyi şekilde kullanılır.
+        show_details: "(detayları göster)"
+        step_1_html: <a href="https://eodhd.com/register" target="_blank" rel="noopener
+          noreferrer" class="underline">eodhd.com</a> adresini ziyaret edin ve ücretsiz
+          bir hesap oluşturun.
+        step_2_html: API token'ınızı bulmak için <a href="https://eodhd.com/cp/dashboard"
+          target="_blank" rel="noopener noreferrer" class="underline">Kontrol Paneli</a>nize
+          gidin.
+        step_3: API token'ınızı kopyalayıp aşağıya yapıştırın.
+        title: EODHD
       invite_code_settings:
-        description: Yeni kullanıcıların %{product} örneğinize nasıl kaydolacağını kontrol edin.
-        email_confirmation_description: Etkinleştirildiğinde, kullanıcılar e-posta adreslerini değiştirirken e-posta onayı yapmak zorundadır.
+        default_family_description: Yeni kullanıcıları, yalnızca bir davetleri yoksa
+          bu aile/gruba yerleştirin.
+        default_family_none: Yok (yeni aile oluştur)
+        default_family_title: Yeni kullanıcılar için varsayılan aile
+        description: Yeni kullanıcıların %{product} örneğinize nasıl kaydolacağını
+          kontrol edin.
+        email_confirmation_description: Etkinleştirildiğinde, kullanıcılar e-posta
+          adreslerini değiştirirken e-posta onayı yapmak zorundadır.
         email_confirmation_title: E-posta onayı gerektir
         generate_tokens: Yeni kod oluştur
         generated_tokens: Oluşturulan kodlar
-        title: Onboarding
         states:
-          open: Açık
           closed: Kapalı
           invite_only: Davet ile
+          open: Açık
+        title: Onboarding
+      llm_provider_selector:
+        data_retention: API girdileri varsayılan olarak modelleri eğitmek için kullanılmaz;
+          sağlayıcıların barındırılan API'leri, güven ve güvenlik amacıyla verileri
+          ~30 gün boyunca saklar. Özel veya kendi barındırdığınız uç noktalar kendi
+          politikanızı izler.
+        data_retention_heading: Veri işleme
+        description: Yapay zeka sohbetini hangi LLM'nin güçlendireceğini seçin. Toplu
+          işlemler (işlem kategorilendirme, satıcı tespiti ve PDF işleme) şu anda
+          her zaman OpenAI kullanır.
+        env_configured_message: LLM_PROVIDER ortam değişkeni aracılığıyla başarıyla
+          yapılandırıldı.
+        not_configured_hint: Etkinleştirmek için aşağıya bir %{provider} API anahtarı
+          ekleyin.
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Sağlayıcı değiştirmek bir sonraki sohbette etkili olur. Aktif
+          sağlayıcının kimlik bilgilerini aşağıda yapılandırın.
+        provider_label: Aktif LLM sağlayıcısı
+        provider_openai: OpenAI
+        title: Yapay Zeka Sağlayıcısı
+      not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
+      openai_settings:
+        access_token_label: Erişim Token'ı
+        access_token_placeholder: Erişim token'ınızı buraya girin
+        budget_description: OpenAI uyumlu çağrılar için geçerlidir (sohbet, otomatik
+          kategorilendirme, satıcı tespiti ve PDF işleme). Varsayılanlar, küçük bağlamlı
+          yerel modeller için muhafazakârdır. Daha büyük bağlam pencerelerine sahip
+          bulut modelleri için yükseltin.
+        budget_heading: Token Bütçesi
+        context_window_help: 'Modelin kabul edeceği toplam token sayısı. Varsayılan:
+          2048 — bulut OpenAI veya büyük bağlamlı yerel modeller için 8192+''e yükseltin.'
+        context_window_label: Bağlam Penceresi (İsteğe Bağlı)
+        description: Erişim token'ını girin ve isteğe bağlı olarak özel bir OpenAI
+          uyumlu sağlayıcı yapılandırın
+        env_configured_message: Ortam değişkenleri aracılığıyla başarıyla yapılandırıldı.
+        json_mode_auto: Otomatik (önerilen)
+        json_mode_help: Sıkı mod, düşünen modellerle (qwen-thinking, deepseek-reasoner)
+          en iyi şekilde çalışır. Yok modu, standart modellerle (llama, mistral, gpt-oss)
+          en iyi şekilde çalışır.
+        json_mode_json_object: JSON Nesnesi
+        json_mode_label: JSON Modu
+        json_mode_none: Yok (standart modeller için en iyisi)
+        json_mode_strict: Sıkı (düşünen modeller için en iyisi)
+        max_items_per_call_help: 'Otomatik kategorilendirme / satıcı tespiti toplu
+          işlemleri için üst sınır. Varsayılan: 25. Daha büyük toplu işlemler bağlam
+          penceresine sığacak şekilde otomatik olarak bölünür.'
+        max_items_per_call_label: Toplu İşlem Başına Maksimum Öğe (İsteğe Bağlı)
+        max_response_tokens_help: 'Modelin yanıtı için ayrılan token sayısı. Varsayılan:
+          512. Daha uzun geçmiş için yer açmak amacıyla düşürün.'
+        max_response_tokens_label: Maksimum Yanıt Token'ı (İsteğe Bağlı)
+        model_label: Model (İsteğe Bağlı)
+        model_placeholder: gpt-4.1 (varsayılan)
+        title: OpenAI
+        uri_base_label: API Temel URL'si (İsteğe Bağlı)
+        uri_base_placeholder: https://api.openai.com/v1 (varsayılan)
+      provider_selection:
+        binance_public_hint: ücretsiz, API anahtarı gerekmez -- yalnızca kripto (BTC,
+          ETH vb.)
+        env_configured_message: Ortam değişkenleri ayarlandığı için sağlayıcı seçimi
+          devre dışı bırakıldı. Burada seçimi etkinleştirmek için bu ortam değişkenlerini
+          yapılandırmanızdan kaldırın.
+        exchange_rate_description: Döviz kurlarını almak için tek bir sağlayıcı seçin.
+        exchange_rate_provider_label: Döviz Kuru Sağlayıcısı
+        exchange_rate_title: Döviz Kuru Sağlayıcısı
+        mfapi_hint: ücretsiz, API anahtarı gerekmez -- yalnızca Hint yatırım fonları
+        moex_public_hint: ücretsiz, API anahtarı gerekmez -- Rus hisse senetleri,
+          fonlar ve tahviller (MOEX), RUB döviz kuru dahil
+        providers:
+          alpha_vantage: Alpha Vantage
+          binance_public: Binance
+          eodhd: EODHD
+          frankfurter: Frankfurter
+          mfapi: MFAPI.in
+          moex_public: MOEX
+          tiingo: Tiingo
+          tinkoff_invest: T-Invest (T-Bank)
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        requires_api_key: API anahtarı gerektirir
+        requires_api_key_alpha_vantage: API anahtarı gerektirir, günlük 25 çağrı sınırı
+        requires_api_key_eodhd: API anahtarı gerektirir, günlük 20 çağrı sınırı
+        securities_description: Hisse senedi, ETF ve yatırım fonu fiyatlarını almak
+          için bir veya daha fazla sağlayıcıyı etkinleştirin. Arama yaptığınızda,
+          etkinleştirilen tüm sağlayıcılar sorgulanır ve sonuçlar birleştirilir.
+        securities_title: Menkul Kıymet Sağlayıcıları
+        tinkoff_invest_hint: salt okunur token gerektirir -- Rus hisse senedi/fon/tahvil
+          fiyatları + marka logoları
+        twelve_data_hint: API anahtarı gerektirir, günlük 800 kredi
+        yahoo_finance_hint: ücretsiz, API anahtarı gerekmez
       show:
-        general: Genel Ayarlar
-        financial_data_providers: Finansal Veri Sağlayıcıları
-        invites: Davet Kodları
-        title: Kendi Sunucunda Barındırma
-        danger_zone: Tehlikeli Bölge
+        ai_assistant: Yapay Zeka Asistanı
         clear_cache: Veri önbelleğini temizle
-        clear_cache_warning: Veri önbelleğini temizlemek tüm döviz kurları, menkul kıymet fiyatları, hesap bakiyeleri ve diğer verileri kaldıracaktır. Bu işlem hesapları, işlemleri, kategorileri veya diğer kullanıcıya ait verileri silmez.
+        clear_cache_warning: Veri önbelleğini temizlemek tüm döviz kurları, menkul
+          kıymet fiyatları, hesap bakiyeleri ve diğer verileri kaldıracaktır. Bu işlem
+          hesapları, işlemleri, kategorileri veya diğer kullanıcıya ait verileri silmez.
         confirm_clear_cache:
+          body: Veri önbelleğini temizlemek istediğinizden emin misiniz? Bu işlem
+            tüm döviz kurları, menkul kıymet fiyatları, hesap bakiyeleri ve diğer
+            verileri kaldıracaktır. Bu işlem geri alınamaz.
           title: Veri önbelleği temizlensin mi?
-          body: Veri önbelleğini temizlemek istediğinizden emin misiniz? Bu işlem tüm döviz kurları, menkul kıymet fiyatları, hesap bakiyeleri ve diğer verileri kaldıracaktır. Bu işlem geri alınamaz.
+        danger_zone: Tehlikeli Bölge
+        financial_data_providers: Finansal Veri Sağlayıcıları
+        general: Genel Ayarlar
+        invites: Davet Kodları
+        sync_settings: Eşitleme Ayarları
+        title: Kendi Sunucunda Barındırma
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Ayarlar kaydedildi, ancak eşitleme zamanlaması güncellenemedi.
+          Lütfen tekrar deneyin veya sunucu günlüklerini kontrol edin.
+      sync_settings:
+        auto_sync_description: Etkinleştirildiğinde, tüm hesaplar belirtilen saatte
+          otomatik olarak günlük eşitlenecektir.
+        auto_sync_label: Otomatik eşitlemeyi etkinleştir
+        auto_sync_time_description: Otomatik eşitlemenin gerçekleşeceği günün saatini
+          belirtin.
+        auto_sync_time_label: Eşitleme saati (HH:MM)
+        env_configured_message: Bir sağlayıcı ortam değişkeni (SIMPLEFIN_INCLUDE_PENDING
+          veya PLAID_INCLUDE_PENDING) ayarlandığı için bu ayar devre dışı bırakıldı.
+          Bu ayarı etkinleştirmek için kaldırın.
+        include_pending_description: Etkinleştirildiğinde, bekleyen (henüz kesinleşmemiş)
+          işlemler içe aktarılır ve kesinleştiklerinde otomatik olarak eşleştirilir.
+          Bankanız güvenilmez bekleyen veri sağlıyorsa devre dışı bırakın.
+        include_pending_label: Bekleyen işlemleri dahil et
       synth_settings:
         api_calls_used: "%{used} / %{limit} API çağrısı kullanıldı (%{percentage})"
         description: Synth tarafından sağlanan API anahtarını girin
@@ -31,17 +263,76 @@ tr:
         placeholder: API anahtarınızı buraya girin
         plan: "%{plan} planı"
         title: Synth Ayarları
+      tiingo_settings:
+        description: Tiingo tarafından sağlanan API token'ını girin. Ücretsiz katman,
+          30+ yıllık geçmiş veriyle saatte 50 benzersiz sembolü destekler.
+        env_configured_message: TIINGO_API_KEY ortam değişkeni aracılığıyla başarıyla
+          yapılandırıldı.
+        label: API Token'ı
+        placeholder: Tiingo API token'ınızı buraya girin
+        show_details: "(detayları göster)"
+        step_1_html: <a href="https://www.tiingo.com" target="_blank" rel="noopener
+          noreferrer" class="underline">tiingo.com</a> adresini ziyaret edin ve ücretsiz
+          bir hesap oluşturun.
+        step_2_html: <a href="https://www.tiingo.com/account/api/token" target="_blank"
+          rel="noopener noreferrer" class="underline">API Token</a> sayfasına gidin.
+        step_3: API token'ınızı kopyalayıp aşağıya yapıştırın.
+        title: Tiingo
+      tinkoff_invest_settings:
+        description: Salt okunur bir T-Invest API token'ı girin. Menkul kıymetler
+          için marka logolarını almak (MOEX fiyatlandırsa bile fonlar ve tahviller
+          dahil) ve yukarıda etkinleştirildiğinde Rus enstrümanları için fiyatları
+          almak amacıyla kullanılır.
+        env_configured_message: TINKOFF_INVEST_API_KEY ortam değişkeni aracılığıyla
+          başarıyla yapılandırıldı.
+        label: API Token'ı
+        placeholder: T-Invest API token'ınızı buraya girin
+        show_details: "(detayları göster)"
+        step_1: T-Bank yatırımlarını açın, ardından Ayarlar, ardından API token'ları
+          (açık bir T-Bank aracılık hesabı gerektirir).
+        step_2: Salt okunur erişimle bir token oluşturun.
+        step_3: Token'ı kopyalayıp aşağıya yapıştırın.
+        title: T-Invest (T-Bank)
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} günlük API çağrısı kullanıldı (%{percentage})"
+        description: Twelve Data tarafından sağlanan API anahtarını girin
+        env_configured_message: TWELVE_DATA_API_KEY ortam değişkeni aracılığıyla başarıyla
+          yapılandırıldı.
+        label: API Anahtarı
+        placeholder: API anahtarınızı buraya girin
+        plan: "%{plan} planı"
+        plan_upgrade_warning_description: Portföyünüzdeki aşağıdaki semboller mevcut
+          Twelve Data planınızla fiyat eşitleyemiyor.
+        plan_upgrade_warning_title: Bazı semboller ücretli bir plan gerektiriyor
+        requires_plan: "%{plan} planı gerektirir"
+        show_details: "(detayları göster)"
+        step_1_html: <a href="https://twelvedata.com/register" target="_blank" rel="noopener
+          noreferrer" class="underline">twelvedata.com</a> adresini ziyaret edin ve
+          ücretsiz bir Twelve Data Geliştirici hesabı oluşturun.
+        step_2_html: <a href="https://twelvedata.com/account/api-keys" target="_blank"
+          rel="noopener noreferrer" class="underline">API Anahtarları</a> sayfasına
+          gidin.
+        step_3: Gizli Anahtarınızı ortaya çıkarın ve aşağıya yapıştırın.
+        title: Twelve Data
+        view_pricing: Twelve Data fiyatlandırmasını görüntüle
       update:
+        anthropic_model_required_for_base_url: Özel bir Temel URL ayarlandığında Anthropic
+          Modeli gereklidir.
         failure: Geçersiz ayar değeri
-        success: Ayarlar güncellendi
+        invalid_anthropic_base_url: Anthropic Temel URL'si bir http(s) URL'si olmalıdır.
+        invalid_llm_budget: "%{field}, %{minimum} veya daha büyük bir tam sayı olmalıdır."
         invalid_onboarding_state: Geçersiz onboarding durumu
-      clear_cache:
-        cache_cleared: Veri önbelleği temizlendi. Bu işlemin tamamlanması birkaç dakika sürebilir.
-      not_authorized: Bu işlemi gerçekleştirmek için yetkiniz yok
+        invalid_sync_time: Geçersiz eşitleme saati biçimi. Lütfen HH:MM biçimini kullanın
+          (örn. 02:30).
+        scheduler_sync_failed: Ayarlar kaydedildi, ancak eşitleme zamanlaması güncellenemedi.
+          Lütfen tekrar deneyin veya sunucu günlüklerini kontrol edin.
+        success: Ayarlar güncellendi
       yahoo_finance_settings:
-        title: Yahoo Finance
-        description: Yahoo Finance, API anahtarı gerektirmeden hisse senedi fiyatları, döviz kurları ve finansal verilere ücretsiz erişim sağlar.
+        connection_failed: Yahoo Finance'e bağlanılamıyor
+        description: Yahoo Finance, API anahtarı gerektirmeden hisse senedi fiyatları,
+          döviz kurları ve finansal verilere ücretsiz erişim sağlar.
         status_active: Yahoo Finance aktif ve çalışıyor
         status_inactive: Yahoo Finance bağlantısı başarısız
-        connection_failed: Yahoo Finance'e bağlanılamıyor
-        troubleshooting: İnternet bağlantınızı ve güvenlik duvarı ayarlarınızı kontrol edin. Yahoo Finance geçici olarak kullanılamayabilir.
+        title: Yahoo Finance
+        troubleshooting: İnternet bağlantınızı ve güvenlik duvarı ayarlarınızı kontrol
+          edin. Yahoo Finance geçici olarak kullanılamayabilir.

@@ -64,12 +64,15 @@ hu:
         deny: 'Elutasítás'
       error:
         title: 'Hiba történt'
+        go_back: 'Vissza'
       new:
         title: 'Engedélyezés szükséges'
         prompt: 'Engedélyezed, hogy %{client_name} hozzáférjen a fiókodhoz?'
         able_to: 'Az alkalmazás a következőkre lesz jogosult'
       show:
         title: 'Engedélyezési kód'
+        authorization_code_label: 'Engedélyezési kód:'
+        copy_instructions: 'Másold ki ezt a kódot, és illeszd be az alkalmazásba.'
       form_post:
         title: 'Küldd el ezt az űrlapot'
     authorized_applications:

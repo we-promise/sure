@@ -1,0 +1,29 @@
+<%# locals: (linkable_account_count:) %>
+
+<div class="bg-container rounded-xl shadow-border-xs py-20">
+  <div class="flex flex-col items-center text-center max-w-md mx-auto px-6">
+    <div class="w-24 h-24 rounded-full bg-surface-inset flex items-center justify-center mb-5 text-secondary">
+      <%= icon("target", size: "2xl") %>
+    </div>
+    <h2 class="text-lg font-medium text-primary mb-2"><%= t("goals.empty_state.heading") %></h2>
+    <p class="text-sm text-secondary leading-relaxed mb-5"><%= t("goals.empty_state.body") %></p>
+
+    <% if linkable_account_count > 0 %>
+      <%= render DS::Link.new(
+        text: t("goals.empty_state.new_goal"),
+        variant: "primary",
+        href: new_goal_path,
+        icon: "plus",
+        frame: :modal
+      ) %>
+    <% else %>
+      <p class="text-sm text-secondary mb-3"><%= t("goals.empty_state.no_depository_accounts") %></p>
+      <%= render DS::Link.new(
+        text: t("goals.empty_state.add_account"),
+        variant: "primary",
+        href: new_account_path(return_to: goals_path),
+        icon: "plus"
+      ) %>
+    <% end %>
+  </div>
+</div>

@@ -9,6 +9,9 @@ module IbkrAccount::DataHelpers
       normalized = value.is_a?(String) ? value.delete(",").strip : value.to_s
       return nil if normalized.blank? || normalized == "-"
 
+      # Convert accounting parentheses notation: "(1234.56)" → "-1234.56"
+      normalized = "-#{normalized[1..-2]}" if normalized.start_with?("(") && normalized.end_with?(")")
+
       BigDecimal(normalized)
     rescue ArgumentError
       nil

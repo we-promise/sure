@@ -7,4 +7,3 @@ ca:
           attributes:
             value:
               must_be_a_money_or_numeric: ha de ser un Money o un valor numèric
-

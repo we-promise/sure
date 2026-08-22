@@ -30,7 +30,7 @@ class SettingsTest < ApplicationSystemTestCase
       @settings_links.insert(merchants_index + 1, [ "Statement Vault", account_statements_path ])
       @settings_links += [
         [ "AI Prompts", settings_ai_prompts_path ],
-        [ "API Key", settings_api_key_path ]
+        [ "API Keys", settings_api_keys_path ]
       ]
     end
   end
@@ -54,6 +54,8 @@ class SettingsTest < ApplicationSystemTestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:github).returns(stub(fetch_latest_release_notes: nil))
     open_settings_from_sidebar
     assert_selector "li", text: "Self-Hosting"
@@ -93,7 +95,7 @@ class SettingsTest < ApplicationSystemTestCase
 
       # Assert that admin-only settings are not present in the navigation
       assert_no_selector "li", text: "AI Prompts"
-      assert_no_selector "li", text: "API Key"
+      assert_no_selector "li", text: "API Keys"
       assert_no_selector "li", text: "Bank sync"
       assert_no_selector "li", text: "Statement Vault"
     end
@@ -104,7 +106,7 @@ class SettingsTest < ApplicationSystemTestCase
     def open_settings_from_sidebar
       user_menu = find("div[data-testid=user-menu]", match: :first, visible: :visible)
       within user_menu do
-        find("[data-DS--menu-target='button']", match: :first).click
+        find("[data-DS--popover-target='button']", match: :first).click
         click_link "Settings", match: :first
       end
     end

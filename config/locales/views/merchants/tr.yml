@@ -2,35 +2,88 @@
 tr:
   family_merchants:
     create:
-      error: "Satıcı oluşturulurken hata: %{error}"
-      success: "Yeni satıcı başarıyla oluşturuldu"
+      error: 'Satıcı oluşturulurken hata: %{error}'
+      success: Yeni satıcı başarıyla oluşturuldu
     destroy:
-      success: "Satıcı başarıyla silindi"
+      success: Satıcı başarıyla silindi
+      unlinked_success: Satıcı işlemlerinizden kaldırıldı
     edit:
-      title: "Satıcıyı düzenle"
+      title: Satıcıyı düzenle
+    enhance:
+      already_running: İyileştirme zaten devam ediyor. Lütfen bitmesini bekleyin.
+      success: Sağlayıcı satıcı iyileştirmesi başlatıldı. Satıcılar kısa süre içinde
+        iyileştirilecek ve kopyalar birleştirilecek.
+    family_merchant:
+      delete: Sil
+      edit: Düzenle
     form:
-      name_placeholder: "Satıcı adı"
+      name_placeholder: Satıcı adı
+      website_hint: Logosunun otomatik olarak görüntülenmesi için satıcının web sitesini
+        girin
+      website_placeholder: Web sitesi (örn. starbucks.com)
     index:
-      empty: "Henüz satıcı yok"
-      new: "Yeni satıcı"
-      title: "Satıcılar"
-      family_title: "Aile satıcıları"
-      family_empty: "Henüz aile satıcısı yok"
-      provider_title: "Sağlayıcı satıcıları"
-      provider_empty: "Bu aileye bağlı sağlayıcı satıcısı yok"
-      provider_read_only: "Sağlayıcı satıcılar bağlı olduğunuz kurumlarla otomatik olarak eşitlenir. Burada düzenlenemezler."
+      empty: Henüz satıcı yok
+      enhance_button: Yapay Zeka ile İyileştir
+      enhance_info:
+        one: "%{count} sağlayıcı satıcısının web sitesi bilgisi eksik. Web sitelerini
+          tespit etmek, logoları görüntülemek ve yinelenen satıcıları birleştirmek
+          için Yapay Zeka ile İyileştirin."
+        other: "%{count} sağlayıcı satıcısının web sitesi bilgisi eksik. Web sitelerini
+          tespit etmek, logoları görüntülemek ve yinelenen satıcıları birleştirmek
+          için Yapay Zeka ile İyileştirin."
+      family_empty: Henüz %{moniker} satıcısı yok
+      family_title: "%{moniker} satıcıları"
+      import: Satıcıları içe aktar
+      merge: Satıcıları birleştir
+      new: Yeni satıcı
+      provider_empty: Bu %{moniker} hesabına bağlı sağlayıcı satıcısı yok
+      provider_info: Bu satıcılar banka bağlantılarınız veya Yapay Zeka tarafından
+        otomatik olarak tespit edildi. Kendi kopyanızı oluşturmak için düzenleyebilir
+        veya işlemlerinizden bağlantısını kaldırmak için kaldırabilirsiniz.
+      provider_read_only: Sağlayıcı satıcılar bağlı olduğunuz kurumlarla otomatik
+        olarak eşitlenir. Burada düzenlenemezler.
+      provider_title: Sağlayıcı satıcıları
       table:
-        merchant: "Satıcı"
-        actions: "İşlemler"
-        source: "Kaynak"
+        actions: İşlemler
+        merchant: Satıcı
+        source: Kaynak
+      title: Satıcılar
+      unlinked_info: Bu satıcılar yakın zamanda işlemlerinizden kaldırıldı. Bir işleme
+        yeniden atanmadıkça 30 gün sonra bu listeden kaybolacaklar.
+      unlinked_title: Son bağlantısı kaldırılanlar
     merchant:
-      confirm_accept: "Satıcıyı sil"
-      confirm_body: "Bu satıcıyı silmek istediğinizden emin misiniz? Satıcıyı kaldırmak
-        ilişkili tüm işlemlerin bağlantısını kaldıracak ve raporlamanızı etkileyebilir."
-      confirm_title: "Satıcı silinsin mi?"
-      delete: "Satıcıyı sil"
-      edit: "Satıcıyı düzenle"
+      confirm_accept: Satıcıyı sil
+      confirm_body: Bu satıcıyı silmek istediğinizden emin misiniz? Satıcıyı kaldırmak
+        ilişkili tüm işlemlerin bağlantısını kaldıracak ve raporlamanızı etkileyebilir.
+      confirm_title: Satıcı silinsin mi?
+      delete: Satıcıyı sil
+      edit: Satıcıyı düzenle
+    merge:
+      description: Hedef bir satıcı ve onunla birleştirilecek satıcıları seçin. Birleştirilen
+        satıcılardaki tüm işlemler hedefe yeniden atanacaktır.
+      select_target: Hedef satıcı seçin...
+      sources_hint: Seçilen satıcılar hedefle birleştirilecek. Aile satıcıları silinecek,
+        sağlayıcı satıcılarının bağlantısı kaldırılacaktır.
+      sources_label: Birleştirilecek satıcılar
+      submit: Seçilenleri birleştir
+      target_label: Şununla birleştir (hedef)
+      title: Satıcıları birleştir
     new:
-      title: "Yeni satıcı"
+      title: Yeni satıcı
+    perform_merge:
+      invalid_merchants: Geçersiz satıcılar seçildi
+      no_merchants_selected: Birleştirmek için satıcı seçilmedi
+      success:
+        one: "%{count} satıcı başarıyla birleştirildi"
+        other: "%{count} satıcı başarıyla birleştirildi"
+      target_not_found: Hedef satıcı bulunamadı
+    provider_merchant:
+      edit: Düzenle
+      remove: Kaldır
+      remove_confirm_body: "%{name} adlı satıcıyı kaldırmak istediğinizden emin misiniz?
+        Bu, bu satıcıyla ilişkili tüm işlemlerin bağlantısını kaldıracak ancak satıcının
+        kendisini silmeyecektir."
+      remove_confirm_title: Satıcı kaldırılsın mı?
     update:
-      success: "Satıcı başarıyla güncellendi"
+      converted_success: Satıcı başarıyla dönüştürüldü ve güncellendi
+      success: Satıcı başarıyla güncellendi

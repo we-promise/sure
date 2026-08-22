@@ -39,15 +39,15 @@ export default class extends Controller {
     }
   }
 
-  // Sets or removes the data-theme attribute
+  // Sets the data-theme attribute and broadcasts a `theme:change` event so
+  // imperative consumers (D3/SVG/canvas) can repaint without polling.
   setTheme(isDark) {
-    if (isDark) {
-      localStorage.theme = "dark";
-      document.documentElement.setAttribute("data-theme", "dark");
-    } else {
-      localStorage.theme = "light";
-      document.documentElement.setAttribute("data-theme", "light");
-    }
+    const theme = isDark ? "dark" : "light";
+    localStorage.theme = theme;
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.dispatchEvent(
+      new CustomEvent("theme:change", { detail: { theme } }),
+    );
   }
 
   systemPrefersDark() {

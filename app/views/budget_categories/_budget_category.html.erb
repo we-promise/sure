@@ -1,7 +1,9 @@
 <%# locals: (budget_category:, show_budget_meta: true) %>
 
+<% category_display_name = budget_category.category.display_name %>
+
 <%= turbo_frame_tag dom_id(budget_category), class: "flex-1 min-w-0 block" do %>
-  <%= link_to budget_budget_category_path(budget_category.budget, budget_category), class: "group block w-full px-4 py-2 bg-container", data: { turbo_frame: "drawer" } do %>
+  <%= link_to budget_budget_category_path(budget_category.budget, budget_category, **budget_owner_query), class: "group block w-full px-4 py-2 bg-container", data: { turbo_frame: "drawer" } do %>
 
     <% if budget_category.initialized? %>
       <%# Category Header with Status Badge %>
@@ -17,29 +19,20 @@
             <%= render DS::FilledIcon.new(
               variant: :text,
               hex_color: budget_category.category.color,
-              text: budget_category.category.name,
+              text: category_display_name,
               size: "md",
               rounded: true
             ) %>
           <% end %>
         </div>
-        <h3 class="flex-1 min-w-0 font-medium text-primary truncate"><%= budget_category.category.name %></h3>
+        <h3 class="flex-1 min-w-0 font-medium text-primary truncate"><%= category_display_name %></h3>
         <div class="flex items-center gap-3 flex-shrink-0 ml-auto">
           <% if budget_category.over_budget? %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-500/10 text-red-500 text-xs font-medium rounded-full whitespace-nowrap">
-              <%= icon("alert-circle", size: "sm", color: "red") %>
-              <%= t("reports.budget_performance.status.over") %>
-            </span>
+            <%= render DS::Pill.new(label: t("reports.budget_performance.status.over"), tone: :error, marker: false, icon: "alert-circle") %>
           <% elsif budget_category.near_limit? %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-warning text-xs font-medium rounded-full whitespace-nowrap">
-              <%= icon("alert-triangle", size: "sm", color: "yellow") %>
-              <%= t("reports.budget_performance.status.warning") %>
-            </span>
+            <%= render DS::Pill.new(label: t("reports.budget_performance.status.warning"), tone: :warning, marker: false, icon: "alert-triangle") %>
           <% else %>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-success text-xs font-medium rounded-full whitespace-nowrap">
-              <%= icon("check-circle", size: "sm", color: "green") %>
-              <%= t("reports.budget_performance.status.good") %>
-            </span>
+            <%= render DS::Pill.new(label: t("reports.budget_performance.status.good"), tone: :success, marker: false, icon: "check-circle") %>
           <% end %>
         </div>
       </div>
@@ -47,7 +40,7 @@
       <%# Progress Bar %>
       <div class="mb-3">
         <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
-          <% bar_color = budget_category.over_budget? ? "bg-red-500" : (budget_category.near_limit? ? "bg-yellow-500" : "bg-green-500") %>
+          <% bar_color = budget_category.over_budget? ? "bg-destructive" : (budget_category.near_limit? ? "bg-warning" : "bg-success") %>
           <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
             style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
         </div>
@@ -76,8 +69,7 @@
           <div class="w-full sm:w-auto text-xs text-subdued">
             <%= t("reports.budget_performance.suggested_daily",
               amount: daily_info[:amount].format,
-              days: daily_info[:days_remaining])
-            %>
+              days: daily_info[:days_remaining]) %>
           </div>
         <% end %>
         <% end %>
@@ -106,7 +98,7 @@
             <%= render DS::FilledIcon.new(
               variant: :text,
               hex_color: budget_category.category.color,
-              text: budget_category.category.name,
+              text: category_display_name,
               size: "sm",
               rounded: true
             ) %>
@@ -114,9 +106,9 @@
         </div>
 
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-primary truncate"><%= budget_category.category.name %></p>
+          <p class="text-sm font-medium text-primary truncate"><%= category_display_name %></p>
           <p class="text-sm text-secondary font-medium privacy-sensitive">
-            <%= budget_category.median_monthly_expense_money.format %> avg
+            <%= t("budget_categories.budget_category_form.monthly_average", amount: budget_category.median_monthly_expense_money.format(precision: 0)) %>
           </p>
         </div>
 

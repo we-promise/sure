@@ -4,7 +4,7 @@ ca:
     edit:
       password: Nova contrasenya
       password_challenge: Contrasenya actual
-      submit: Restableix contrasenya
-      title: Actualitza contrasenya
+      submit: Restableix la contrasenya
+      title: Actualitza la contrasenya
     update:
       success: La teva contrasenya s'ha restablert.

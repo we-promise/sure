@@ -177,6 +177,97 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 3980, trend.previous.amount, 0.001
   end
 
+  test "period_return_trend returns nil when no balance data in period" do
+    period = Period.custom(start_date: 10.years.ago.to_date, end_date: 9.years.ago.to_date)
+    assert_nil @statement.period_return_trend(period: period)
+  end
+
+  test "period_return_trend returns nil when start portfolio value is zero" do
+    account = create_investment_account(balance: 5000)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+    # Balance only inside the period — nothing strictly before period_start means start_value = 0
+    account.balances.create!(
+      date: period.date_range.begin,
+      balance: 5000,
+      currency: @family.currency,
+      net_market_flows: 200
+    )
+    assert_nil @statement.period_return_trend(period: period)
+  end
+
+  test "period_return_trend returns Trend with correct absolute and percent return" do
+    account = create_investment_account(balance: 10_500)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+
+    # Pre-period row: start_non_cash_balance drives end_balance (virtual stored column)
+    account.balances.create!(
+      date: period.date_range.begin - 1.day,
+      balance: 10_000,
+      currency: @family.currency,
+      start_non_cash_balance: 10_000,
+      net_market_flows: 0
+    )
+    # In-period row: 500 of market gains
+    account.balances.create!(
+      date: period.date_range.begin,
+      balance: 10_500,
+      currency: @family.currency,
+      start_non_cash_balance: 10_000,
+      net_market_flows: 500
+    )
+
+    trend = @statement.period_return_trend(period: period)
+    assert_not_nil trend
+    assert_in_delta 500, trend.value.amount, 1
+    assert_in_delta 5.0, trend.percent, 0.1
+  end
+
+  test "totals skips cache when there are no investment accounts" do
+    Rails.cache.expects(:fetch).never
+
+    totals = @statement.totals(period: Period.current_month)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.dividends
+    assert_equal Money.new(0, "USD"), totals.interest
+    assert_equal 0, totals.trades_count
+  end
+
+  test "totals aggregate directly from trade entries" do
+    # Use the full current month: a month-to-date period collapses to a single
+    # day on the 1st, which would drop the start_date + 1.day trade below.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    shared_user = users(:new_email)
+    investment_account = create_investment_account(balance: 500)
+    hidden_account = create_investment_account(balance: 500)
+    investment_account.share_with!(shared_user, permission: "read_only", include_in_finances: true)
+
+    create_trade(account: investment_account, qty: 2, amount: 120, date: period.start_date)
+    create_trade(account: investment_account, qty: -1, amount: -40, date: period.start_date + 1.day)
+    create_trade(account: investment_account, qty: 1, amount: 999, date: period.start_date - 1.day)
+    create_trade(account: hidden_account, qty: 1, amount: 9999, date: period.start_date)
+
+    statement = InvestmentStatement.new(@family, user: shared_user)
+    totals = nil
+    queries = capture_sql_queries { totals = statement.totals(period: period) }
+
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(40, "USD"), totals.withdrawals
+    assert_equal 2, totals.trades_count
+
+    aggregate_queries = queries.grep(/SUM\(CASE WHEN trades\.qty > 0/)
+    assert_equal 1, aggregate_queries.size
+    assert_includes aggregate_queries.first, "FROM entries JOIN trades"
+    assert_includes aggregate_queries.first, "entries.entryable_type = 'Trade'"
+    assert_includes aggregate_queries.first, "entries.account_id IN"
+    assert_includes aggregate_queries.first, "entries.excluded = false"
+    assert_no_match(/FROM \(SELECT "trades"\.\*/, aggregate_queries.first)
+    # account_ids is pre-scoped to the family's visible accounts, so the
+    # aggregate trusts that input and no longer joins back to accounts.
+    assert_no_match(/JOIN accounts/, aggregate_queries.first)
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
@@ -185,6 +276,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    def create_trade(account:, qty:, amount:, date:)
+      account.entries.create!(
+        name: "Trade #{SecureRandom.hex(3)}",
+        amount: amount,
+        date: date,
+        currency: account.currency,
+        entryable: Trade.new(
+          security: Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
+          qty: qty,
+          price: amount.to_d.abs / qty.to_d.abs,
+          currency: account.currency
+        )
       )
     end
 end

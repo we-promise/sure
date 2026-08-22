@@ -1,0 +1,9 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          invalid_json: 'JSON no vàlid a les condicions o accions: %{message}'
+          min_actions: La regla ha de tenir com a mínim una acció
+          unsupported_resource_type: 'Tipus de recurs no compatible: %{resource_type}'

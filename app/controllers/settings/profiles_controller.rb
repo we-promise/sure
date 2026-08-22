@@ -6,8 +6,8 @@ class Settings::ProfilesController < ApplicationController
     @users = Current.family.users.order(:created_at)
     @pending_invitations = Current.family.invitations.pending
     @breadcrumbs = [
-      [ "Home", root_path ],
-      [ "Profile Info", nil ]
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.profile"), nil ]
     ]
   end
 
@@ -22,6 +22,12 @@ class Settings::ProfilesController < ApplicationController
 
     if @user == Current.user
       flash[:alert] = t("settings.profiles.destroy.cannot_remove_self")
+      redirect_to settings_profile_path
+      return
+    end
+
+    if @user.owned_accounts.where.not(family_id: Current.family.id).exists?
+      flash[:alert] = t(".member_owns_other_family_data")
       redirect_to settings_profile_path
       return
     end

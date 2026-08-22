@@ -1,5 +1,10 @@
 class StyledFormBuilder < ActionView::Helpers::FormBuilder
-  class_attribute :text_field_helpers, default: field_helpers - [ :label, :check_box, :radio_button, :fields_for, :fields, :hidden_field, :file_field ]
+  # Rails 8 renamed two field_helpers entries: :text_area -> :textarea and
+  # :check_box -> :checkbox. Exclude both spellings of the non-text helpers, and
+  # alias the legacy method names below so existing `form.text_area` call sites
+  # stay styled. (Harmless on Rails 7.2, where the old names are present instead.)
+  NON_TEXT_FIELD_HELPERS = [ :label, :check_box, :checkbox, :radio_button, :fields_for, :fields, :hidden_field, :file_field ].freeze
+  class_attribute :text_field_helpers, default: field_helpers - NON_TEXT_FIELD_HELPERS
 
   text_field_helpers.each do |selector|
     class_eval <<-RUBY_EVAL, __FILE__, __LINE__ + 1
@@ -13,6 +18,9 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       end
     RUBY_EVAL
   end
+
+  # Keep `form.text_area` styled after Rails 8 renamed the helper to `textarea`.
+  alias_method :text_area, :textarea if method_defined?(:textarea)
 
   def radio_button(method, tag_value, options = {})
     merged_options = { class: "form-field__radio" }.merge(options)
@@ -89,6 +97,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     @template.render(
       DS::Button.new(
         text: value,
+        type: "submit",
         data: (options[:data] || {}).merge({ turbo_submits_with: "Submitting..." }),
         full_width: true
       )

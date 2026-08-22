@@ -1,6 +1,27 @@
 ---
 tr:
   properties:
+    address:
+      address_line1_label: Adres Satırı 1
+      address_line1_placeholder: Örnek Cadde No:123
+      city_label: Şehir
+      city_placeholder: İstanbul
+      country_label: Ülke
+      country_placeholder: Türkiye
+      postal_code_label: Posta Kodu
+      postal_code_placeholder: '12345'
+      save: Kaydet
+      state_region_label: Eyalet/Bölge
+      state_region_placeholder: CA
+      title: Mülk bilgilerini manuel girin
+    balances:
+      market_value_label: Tahmini piyasa değeri
+      market_value_tooltip: Mülkünüzün tahmini piyasa değeri. Bu rakam genellikle
+        Zillow veya Redfin gibi sitelerde bulunabilir ve hiçbir zaman kesin bir sayı
+        değildir.
+      next: İleri
+      save: Kaydet
+      title: Mülk bilgilerini manuel girin
     edit:
       edit: "%{account} düzenle"
     form:
@@ -22,6 +43,7 @@ tr:
       year_built: İnşa yılı
       year_built_placeholder: '2000'
     new:
+      next: İleri
       title: Mülk bilgilerini girin
     overview:
       living_area: Yaşam Alanı
@@ -30,3 +52,40 @@ tr:
       trend: Eğilim
       unknown: Bilinmiyor
       year_built: İnşa Yılı
+    overview_fields:
+      area_label: Alan (isteğe bağlı)
+      area_placeholder: '1200'
+      area_unit_label: Alan Birimi
+      name_label: Ad
+      name_placeholder: Yazlık ev
+      property_type_label: Mülk türü
+      square_feet: Fit Kare
+      square_meters: Metrekare
+      subtype_prompt: Tür seçin
+      year_built_label: İnşa Yılı (isteğe bağlı)
+      year_built_placeholder: '1990'
+    subtypes:
+      agri_land:
+        long: Tarım Arazisi
+        short: Tarım Arazisi
+      apartment:
+        long: Daire
+        short: Daire
+      commercial:
+        long: Ticari Mülk
+        short: Ticari
+      plot:
+        long: Arsa
+        short: Arsa
+      rented:
+        long: Kiralık Mülk
+        short: Kiralık
+    tabs:
+      overview:
+        edit_account_details: Hesap bilgilerini düzenle
+        living_area: Yaşam Alanı
+        market_value: Piyasa Değeri
+        purchase_price: Satın Alma Fiyatı
+        trend: Eğilim
+        unknown: Bilinmiyor
+        year_built: İnşa Yılı

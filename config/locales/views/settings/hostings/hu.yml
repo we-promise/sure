@@ -44,6 +44,7 @@ hu:
         requires_api_key_alpha_vantage: API-kulcs szükséges, 25 hívás/nap limit
         mfapi_hint: ingyenes, nem kell API-kulcs – csak indiai befektetési alapok
         binance_public_hint: ingyenes, nem kell API-kulcs – csak kriptó (BTC, ETH stb.)
+        moex_public_hint: ingyenes, nem kell API-kulcs – orosz részvények, alapok és kötvények (MOEX), RUB devizával
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -52,6 +53,7 @@ hu:
           alpha_vantage: Alpha Vantage
           mfapi: MFAPI.in
           binance_public: Binance
+          moex_public: MOEX
       assistant_settings:
         title: AI-asszisztens
         description: Válaszd ki, hogyan válaszoljon a csevegési asszisztens. A beépített mód közvetlenül a beállított LLM-szolgáltatót használja. A külső mód egy távoli AI-ügynökhöz továbbítja a kérést, amely MCP-n keresztül hozzáférhet a Sure pénzügyi eszközeihez.
@@ -80,6 +82,11 @@ hu:
           body: Ez eltávolítja a mentett URL-t, tokent és ügynökazonosítót, és visszavált a beépített asszisztensre. Később újra csatlakozhatsz új hitelesítő adatok megadásával.
       brand_fetch_settings:
         description: Add meg a Brand Fetch által biztosított kliens-azonosítót
+        env_configured_message: Sikeresen konfiguráltad a Brand Fetch kliens-azonosítódat a BRAND_FETCH_CLIENT_ID környezeti változón keresztül.
+        show_details: "(részletek megjelenítése)"
+        setup_step_1_html: 'Látogass el a <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> oldalra, és hozz létre egy ingyenes Brand Fetch fejlesztői fiókot.'
+        setup_step_2_html: 'Menj a <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> oldalra.'
+        setup_step_3: 'Kattints a szem ikonra a „Your Client ID" rész alatt, hogy megjelenítsd a kliens-azonosítódat, majd illeszd be alább.'
         label: Kliens-azonosító
         placeholder: Add meg ide a kliens-azonosítódat
         title: Brand Fetch beállítások
@@ -176,6 +183,10 @@ hu:
       clear_cache:
         cache_cleared: Az adatcache törölve. Ez néhány percet vehet igénybe.
       not_authorized: Nincs jogosultságod ehhez a művelethez
+      ensure_super_admin_for_onboarding:
+        not_authorized: Nincs jogosultságod ehhez a művelethez
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: A beállítások mentve, de a szinkronizálási ütemezés frissítése nem sikerült. Kérjük, próbáld újra, vagy ellenőrizd a szerver naplóit.
       sync_settings:
         auto_sync_label: Automatikus szinkronizálás engedélyezése
         auto_sync_description: Ha engedélyezve van, az összes fiók naponta automatikusan szinkronizálódik a megadott időpontban.

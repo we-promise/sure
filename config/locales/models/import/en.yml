@@ -3,6 +3,10 @@ en:
   activerecord:
     attributes:
       import:
+        col_sep: Column separator
+        col_seps:
+          comma: Comma (,)
+          semicolon: Semicolon (;)
         currency: Currency
         number_format: Number Format
     errors:

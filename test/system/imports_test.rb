@@ -22,9 +22,7 @@ class ImportsTest < ApplicationSystemTestCase
 
     fill_in "import[raw_file_str]", with: file_fixture("imports/transactions.csv").read
 
-    within "form" do
-      click_on "Upload CSV"
-    end
+    find_field("import[raw_file_str]").find(:xpath, "./ancestor::form").click_button("Upload CSV")
 
     select "Date", from: "import[date_col_label]"
     select "YYYY-MM-DD", from: "import[date_format]"
@@ -73,9 +71,7 @@ class ImportsTest < ApplicationSystemTestCase
 
     fill_in "import[raw_file_str]", with: file_fixture("imports/trades.csv").read
 
-    within "form" do
-      click_on "Upload CSV"
-    end
+    find_field("import[raw_file_str]").find(:xpath, "./ancestor::form").click_button("Upload CSV")
 
     select "date", from: "import[date_col_label]"
     select "YYYY-MM-DD", from: "import[date_format]"
@@ -116,9 +112,7 @@ class ImportsTest < ApplicationSystemTestCase
 
     fill_in "import[raw_file_str]", with: file_fixture("imports/accounts.csv").read
 
-    within "form" do
-      click_on "Upload CSV"
-    end
+    find_field("import[raw_file_str]").find(:xpath, "./ancestor::form").click_button("Upload CSV")
 
     select "type", from: "import[entity_type_col_label]"
     select "name", from: "import[name_col_label]"
@@ -166,9 +160,7 @@ class ImportsTest < ApplicationSystemTestCase
 
     fill_in "import[raw_file_str]", with: file_fixture("imports/mint.csv").read
 
-    within "form" do
-      click_on "Upload CSV"
-    end
+    find_field("import[raw_file_str]").find(:xpath, "./ancestor::form").click_button("Upload CSV")
 
     click_on "Apply configuration"
 
@@ -178,6 +170,82 @@ class ImportsTest < ApplicationSystemTestCase
     click_on "Next"
 
     assert_selector "h1", text: "Assign your tags"
+    click_on "Next"
+
+    assert_selector "h1", text: "Assign your accounts"
+    click_on "Next"
+
+    click_on "Publish import"
+
+    assert_text "Import in progress"
+
+    perform_enqueued_jobs
+
+    click_on "Check status"
+
+    assert_text "Import successful"
+
+    click_on "Back to dashboard"
+  end
+
+  test "actual import" do
+    visit new_import_path
+
+    # Pending CSV-style imports default the dialog to the Raw Data tab; Actual lives under Financial Tools.
+    click_on "Financial Tools"
+    click_on "Import from Actual Budget"
+
+    within_testid("import-tabs") do
+      click_on "Copy & Paste"
+    end
+
+    fill_in "import[raw_file_str]", with: file_fixture("imports/actual.csv").read
+
+    find_field("import[raw_file_str]").find(:xpath, "./ancestor::form").click_button("Upload CSV")
+
+    click_on "Apply configuration"
+
+    click_on "Next step"
+
+    assert_selector "h1", text: "Assign your categories"
+    click_on "Next"
+
+    assert_selector "h1", text: "Assign your accounts"
+    click_on "Next"
+
+    click_on "Publish import"
+
+    assert_text "Import in progress"
+
+    perform_enqueued_jobs
+
+    click_on "Check status"
+
+    assert_text "Import successful"
+
+    click_on "Back to dashboard"
+  end
+
+  test "ynab import" do
+    visit new_import_path
+
+    # Pending CSV-style imports default the dialog to the Raw Data tab; YNAB lives under Financial Tools.
+    click_on "Financial Tools"
+    click_on "Import from YNAB"
+
+    within_testid("import-tabs") do
+      click_on "Copy & Paste"
+    end
+
+    fill_in "import[raw_file_str]", with: file_fixture("imports/ynab.csv").read
+
+    find_field("import[raw_file_str]").find(:xpath, "./ancestor::form").click_button("Upload CSV")
+
+    click_on "Apply configuration"
+
+    click_on "Next step"
+
+    assert_selector "h1", text: "Assign your categories"
     click_on "Next"
 
     assert_selector "h1", text: "Assign your accounts"

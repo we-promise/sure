@@ -1,0 +1,26 @@
+---
+vi:
+  tags:
+    create:
+      created: Nhãn đã được tạo
+      error: 'Lỗi khi tạo nhãn: %{error}'
+    destroy:
+      deleted: Nhãn đã được xóa
+    destroy_all:
+      all_deleted: Tất cả nhãn đã được xóa
+    edit:
+      edit: Chỉnh sửa nhãn
+    form:
+      placeholder: Tên nhãn
+    index:
+      empty: Chưa có nhãn nào
+      new: Nhãn mới
+      tags: Nhãn
+      delete_all: Xóa tất cả
+    new:
+      new: Nhãn mới
+    tag:
+      delete: Xóa
+      edit: Chỉnh sửa
+    update:
+      updated: Nhãn đã được cập nhật

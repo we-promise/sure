@@ -1,0 +1,54 @@
+---
+ca:
+  period:
+    all_time:
+      comparison_label: vs. inici
+      label: Sempre
+      label_short: Tot
+    current_month:
+      comparison_label: vs. inici de mes
+      label: Mes en curs
+      label_short: MTD
+    current_week:
+      comparison_label: vs. inici de setmana
+      label: Setmana en curs
+      label_short: STD
+    current_year:
+      comparison_label: vs. inici d'any
+      label: Any en curs
+      label_short: YTD
+    custom:
+      label: Període personalitzat
+      label_short: Personalitzat
+    last_10_years:
+      comparison_label: vs. fa 10 anys
+      label: Últims 10 anys
+      label_short: 10A
+    last_30_days:
+      comparison_label: vs. últims 30 dies
+      label: Últims 30 dies
+      label_short: 30D
+    last_365_days:
+      comparison_label: vs. fa 1 any
+      label: Últims 365 dies
+      label_short: 365D
+    last_5_years:
+      comparison_label: vs. fa 5 anys
+      label: Últims 5 anys
+      label_short: 5A
+    last_7_days:
+      comparison_label: vs. setmana anterior
+      label: Últims 7 dies
+      label_short: 7D
+    last_90_days:
+      comparison_label: vs. trimestre anterior
+      label: Últims 90 dies
+      label_short: 90D
+    last_day:
+      comparison_label: vs. ahir
+      label: Últim dia
+      label_short: 1D
+    last_month:
+      comparison_label: vs. mes anterior
+      label: Mes anterior
+      label_short: MA

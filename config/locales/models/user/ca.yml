@@ -4,8 +4,8 @@ ca:
     attributes:
       user:
         email: Correu electrònic
-        family: Família
-        family_id: Família
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: Nom
         last_name: Cognom
         password: Contrasenya
@@ -16,7 +16,6 @@ ca:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: L'administrador no pot eliminar
-                el compte mentre hi hagi altres usuaris. Elimina tots els membres
-                primer.
+                el compte mentre hi hagi altres usuaris. Elimina primer tots els membres.
             profile_image:
               invalid_file_size: la mida del fitxer ha de ser inferior a %{max_megabytes}MB

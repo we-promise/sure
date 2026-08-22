@@ -1,33 +1,49 @@
 ---
 ca:
   oidc_accounts:
+    create_link:
+      no_pending_oidc: No s'ha trobat cap autenticació OIDC pendent
+    create_user:
+      account_created: Benvingut/da! S'ha creat el teu compte.
+      account_creation_disabled: La creació de comptes SSO està desactivada. Contacta
+        amb un administrador.
+      no_pending_oidc: No s'ha trobat cap autenticació OIDC pendent
     link:
-      title_link: Enllaçar compte OIDC
-      title_create: Crear compte
-      verify_heading: Verificar la vostra identitat
-      verify_description_html: "Per enllaçar el vostre compte %{provider}%{email_suffix}, verifiqueu la vostra identitat introduint la contrasenya."
-      email_suffix_html: " (<strong>%{email}</strong>)"
+      account_creation_disabled: La creació de nous comptes mitjançant inici de sessió
+        únic està desactivada. Contacta amb un administrador per crear el teu compte.
+      cancel: Cancel·la
+      create_description_html: No s'ha trobat cap compte amb el correu electrònic
+        <strong>%{email}</strong>. Fes clic a sota per crear un compte nou amb la
+        teva identitat de %{provider}.
+      create_heading: Crea un compte nou
       email_label: Correu electrònic
-      email_placeholder: Introduïu el vostre correu electrònic
+      email_placeholder: Introdueix el teu correu electrònic
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      info_email: 'Correu electrònic:'
+      info_name: 'Nom:'
+      no_pending_oidc: No s'ha trobat cap autenticació OIDC pendent
       password_label: Contrasenya
-      password_placeholder: Introduïu la vostra contrasenya
-      verify_hint: Això garanteix que només vós pugueu enllaçar comptes externs al vostre perfil.
-      submit_link: Enllaçar compte
-      create_heading: Crear compte nou
-      create_description_html: "No s'ha trobat cap compte amb el correu electrònic <strong>%{email}</strong>. Feu clic a baix per crear un compte nou amb la vostra identitat %{provider}."
-      info_email: "Correu electrònic:"
-      info_name: "Nom:"
-      submit_create: Crear compte
-      account_creation_disabled: La creació de comptes mitjançant l'inici de sessió únic està desactivada. Contacteu amb un administrador.
-      cancel: Cancel·lar
+      password_placeholder: Introdueix la teva contrasenya
+      submit_accept_invitation: Accepta la invitació
+      submit_create: Crea el compte
+      submit_link: Enllaça el compte
+      title_create: Crea un compte
+      title_link: Enllaça el compte OIDC
+      verify_description_html: Per enllaçar el teu compte %{provider}%{email_suffix},
+        verifica la teva identitat introduint la contrasenya.
+      verify_heading: Verifica la teva identitat
+      verify_hint: Així garantim que només tu pots enllaçar comptes externs al teu
+        perfil.
     new_user:
-      title: Completar el compte
-      heading: Crear el compte
-      description: Confirmeu les vostres dades per completar la creació del compte amb la vostra identitat %{provider}.
+      cancel: Cancel·la
+      description: Confirma les teves dades per completar la creació del compte amb
+        la teva identitat de %{provider}.
       email_label: Correu electrònic (del proveïdor SSO)
       first_name_label: Nom
-      first_name_placeholder: Introduïu el vostre nom
+      first_name_placeholder: Introdueix el teu nom
+      heading: Crea el teu compte
       last_name_label: Cognom
-      last_name_placeholder: Introduïu el vostre cognom
-      submit: Crear compte
-      cancel: Cancel·lar
+      last_name_placeholder: Introdueix el teu cognom
+      no_pending_oidc: No s'ha trobat cap autenticació OIDC pendent
+      submit: Crea el compte
+      title: Completa el teu compte

@@ -1,0 +1,30 @@
+---
+ca:
+  account_sharings:
+    show:
+      exclude_from_finances: Exclou dels meus pressupostos i informes
+      finance_toggle_description: Compta aquest compte al teu patrimoni net, pressupostos
+        i informes
+      include_in_finances: Inclou als meus pressupostos i informes
+      member: Membre
+      no_members: Encara no hi ha altres membres amb qui compartir aquest compte
+      owner_label: 'Propietari: %{name}'
+      permission: Permís
+      permissions:
+        full_control: Control total
+        full_control_description: Pot veure, editar i gestionar transaccions
+        read_only: Només visualització
+        read_only_description: Només pot veure les dades del compte
+        read_write: Pot anotar
+        read_write_description: Pot categoritzar, etiquetar i afegir notes
+      save: Desa la configuració de compartició
+      shared: Compartit
+      shared_with_count:
+        one: Compartit amb 1 membre
+        other: Compartit amb %{count} membres
+      subtitle: Controla qui pot veure i interactuar amb aquest compte
+      title: Compartició de comptes
+    update:
+      finance_toggle_success: Preferència d'inclusió a les finances actualitzada
+      not_owner: Només el propietari del compte pot gestionar la compartició
+      success: Configuració de compartició actualitzada

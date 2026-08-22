@@ -497,7 +497,7 @@ pipelock:
   enabled: false
   image:
     repository: ghcr.io/luckypipewrench/pipelock
-    tag: "2.2.0"
+    tag: "2.8.0"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
@@ -530,8 +530,17 @@ pipelock:
     originPolicy: rewrite          # rewrite, forward, or strip
   # MCP tool policy: pre-execution rules for tool calls (shell obfuscation, etc.)
   mcpToolPolicy:
-    enabled: true
+    # Enable only when at least one rule is configured; pipelock rejects an
+    # enabled mcp_tool_policy with no rules.
+    enabled: false
     action: warn
+    # Example:
+    #   rules:
+    #     - name: redirect-fetch
+    #       toolPattern: "^(fetch|web_fetch)$"
+    #       action: redirect
+    #       redirectProfile: safe-fetch
+    rules: []
     # Redirect profiles: route matched tool calls to audited handler programs instead
     # of blocking. The handler returns a synthetic MCP response. Fail-closed on error.
     # Example:
@@ -550,6 +559,34 @@ pipelock:
     action: warn
     windowSize: 20
     maxGap: 3
+  # Request body scanning (pipelock 2.5+): detect prompt-injection payloads
+  # in outbound request bodies (JSON, form-encoded, raw text, WebSocket frames).
+  # In enforce mode, prompt-injection findings hard-block non-provider
+  # destinations even when action is "warn"; trusted provider hosts (OpenAI,
+  # Anthropic, etc.) remain exempt via the response_scanning exemption list.
+  requestBodyScanning:
+    enabled: true
+    action: warn               # warn or block
+    maxBodyBytes: 5242880      # 5 MB; fail-closed above this
+    scanHeaders: true          # scan request headers for DLP
+    headerMode: sensitive      # "sensitive" or "all"
+  # Health watchdog (pipelock 2.4+): /health returns 503 when any subsystem
+  # heartbeat goes stale. Enabled by default in pipelock; exposed here so
+  # operators can opt into per-subsystem detail in the health payload.
+  healthWatchdog:
+    enabled: true
+    intervalSeconds: 2
+    exposeSubsystems: false    # include per-subsystem map in /health response
+  # Flight recorder: signed, hash-chained action receipts. Enabled by default in
+  # Pipelock, but inert until both dir and signingKeyPath are set and mounted.
+  # Use extraVolumes/extraVolumeMounts below to mount persistent storage and a
+  # Secret containing the signing key.
+  flightRecorder:
+    enabled: true
+    requireReceipts: false      # true = fail closed if allow-path receipt cannot be emitted
+    redact: true                # redact DLP-shaped content before writing receipts
+    dir: ""                     # e.g. /var/lib/pipelock/evidence
+    signingKeyPath: ""          # e.g. /run/secrets/pipelock/flight-recorder-signing.key
   service:
     type: ClusterIP
   resources:
@@ -563,6 +600,8 @@ pipelock:
   tolerations: []
   affinity: {}
   topologySpreadConstraints: []
+  extraVolumes: []
+  extraVolumeMounts: []
 
   # Prometheus Operator ServiceMonitor for /metrics on the proxy port
   serviceMonitor:
@@ -601,8 +640,10 @@ pipelock:
     includeBlocked: true
 
   # Escape hatch: ADDITIONAL config sections appended to pipelock.yaml.
-  # Use for sections not covered by structured values above (session_profiling,
-  # data_budget, adaptive_enforcement, kill_switch, sandbox, reverse_proxy, etc.)
+  # Use for sections not covered by structured values above. Examples:
+  # session_profiling, data_budget, adaptive_enforcement, kill_switch, sandbox,
+  # reverse_proxy, redaction, browser_shield, mediation_envelope, learn,
+  # media_policy, a2a_scanning, emit (OTel agent.threat.detection attributes).
   # Do NOT duplicate keys already rendered above - behavior is parser-dependent.
   extraConfig: {}
 
