@@ -575,6 +575,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.datetime "updated_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.decimal "fixed_return_rate", precision: 10, scale: 3
+    t.string "fixed_return_frequency"
+    t.date "fixed_return_start_date"
   end
 
   create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

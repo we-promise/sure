@@ -4,4 +4,29 @@
   <%= form.select :subtype,
                  Depository.subtype_options_for_select,
                  { label: true, prompt: t("depositories.form.subtype_prompt"), include_blank: t("depositories.form.none") } %>
+
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <p class="text-sm text-secondary"><%= t("depositories.form.fixed_return_hint") %></p>
+
+    <%= form.fields_for :accountable do |depository_form| %>
+      <div class="flex items-center gap-2">
+        <%= depository_form.number_field :fixed_return_rate,
+                                 label: t("depositories.form.fixed_return_rate"),
+                                 placeholder: t("depositories.form.fixed_return_rate_placeholder"),
+                                 min: 0,
+                                 step: 0.005 %>
+        <%= depository_form.select :fixed_return_frequency,
+                           Depository::FIXED_RETURN_FREQUENCIES.map { |frequency| [ t("depositories.form.frequencies.#{frequency}"), frequency ] },
+                           { label: t("depositories.form.fixed_return_frequency"), include_blank: t("depositories.form.none") } %>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <%= depository_form.date_field :fixed_return_start_date,
+                                 label: t("depositories.form.fixed_return_start_date"),
+                                 max: Date.current %>
+      </div>
+    <% end %>
+  </div>
 <% end %>
