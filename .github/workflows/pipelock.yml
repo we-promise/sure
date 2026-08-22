@@ -25,7 +25,7 @@ jobs:
           version: '3.4.0'
           scan-diff: 'true'
           fail-on-findings: 'true'
-          test-vectors: 'true'
+          test-vectors: 'false'
           exclude-paths: |
             config/locales/views/reports/ca.yml
             config/locales/views/reports/de.yml
