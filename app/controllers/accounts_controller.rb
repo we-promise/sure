@@ -60,16 +60,18 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
-
+    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
     end
 
+    per_page = safe_per_page(stored_per_page_default)
+    store_per_page!(per_page) if params[:per_page].present?
+
     @pagy, @entries = pagy(
       entries,
-      limit: safe_per_page,
+      limit: per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
 
@@ -273,6 +275,19 @@ class AccountsController < ApplicationController
   private
     def family
       Current.family
+    end
+
+    # Shares the "per page" preference with TransactionsController's
+    # prev_transaction_page_params so the page size the user picks on either
+    # the account activity feed or the global transactions page applies to both.
+    def store_per_page!(value)
+      Current.session.update!(
+        prev_transaction_page_params: Current.session.prev_transaction_page_params.merge("per_page" => value)
+      )
+    end
+
+    def stored_per_page_default
+      Current.session.prev_transaction_page_params["per_page"].presence || 10
     end
 
     def set_account

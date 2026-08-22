@@ -31,7 +31,7 @@ class Provider::Openai::PdfProcessor
     span&.end(output: response.to_h)
     response
   rescue => e
-    span&.end(output: { error: e.message }, level: "ERROR")
+    span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
     raise
   end
 

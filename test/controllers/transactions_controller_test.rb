@@ -35,6 +35,27 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "create without an account re-renders the form instead of raising" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: "",
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {
@@ -72,6 +93,78 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Transaction updated", flash[:notice]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "re-renders show with mark-recurring state when update fails validation" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        name: "",
+        date: entry.date,
+        currency: entry.currency,
+        amount: entry.amount.abs,
+        nature: "outflow",
+        entryable_type: entry.entryable_type,
+        entryable_attributes: { id: entry.entryable_id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+    assert_select "button[disabled]", text: /Mark as Recurring/
+  end
+
+  test "turbo_stream update refreshes mark-recurring state when it newly matches" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, name: "Other Name")
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        date: entry.date,
+        currency: entry.currency,
+        amount: entry.amount.abs,
+        nature: "outflow",
+        entryable_type: entry.entryable_type,
+        entryable_attributes: { id: entry.entryable_id, merchant_id: merchant.id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
   test "transaction count represents filtered total" do
@@ -238,6 +331,35 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   overflow_count = css_select("turbo-frame[id^='entry_']").count
   assert_operator overflow_count, :>, 0, "Overflow should show some transactions"
 end
+
+  test "filtered requests without per_page keep the stored page size" do
+    family = families(:empty)
+    sign_in users(:empty)
+
+    family.accounts.each { |account| account.entries.delete_all }
+
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    25.times do |i|
+      create_transaction(
+        account: account,
+        name: "Transaction #{i + 1}",
+        amount: 100 + i,
+        date: Date.current - i.days
+      )
+    end
+
+    get transactions_url(per_page: 20)
+    assert_response :success
+
+    # A filtered request that omits per_page has query params present, so it
+    # is not eligible for the "restore stored params" redirect - it must fall
+    # back to the previously stored per_page instead of the hardcoded default.
+    get transactions_url(q: { search: "Transaction" })
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='20'][selected]"
+    assert_equal 20, css_select("turbo-frame[id^='entry_']").count
+  end
 
   test "pagination does not duplicate or skip transactions with same date and timestamp" do
     family = families(:empty)
