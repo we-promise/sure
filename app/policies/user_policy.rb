@@ -12,6 +12,14 @@ class UserPolicy < ApplicationPolicy
     user.id != record.id
   end
 
+  # Permanent removal of a user from the instance. Super-admin only, and never
+  # the acting user themselves (self-removal is blocked here and re-checked in
+  # the controller so it surfaces a friendly message instead of a hard 403).
+  def destroy?
+    return false unless user&.super_admin?
+    user.id != record.id
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       if user&.super_admin?
