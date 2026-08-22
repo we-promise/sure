@@ -60,6 +60,11 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
+
+    if tab_panel_frame_request?
+      return render_tab_panel_frame
+    end
+
     entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
 
     if statement_tab_active?
@@ -75,38 +80,16 @@ class AccountsController < ApplicationController
       limit: per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
-
-    # Preload transfer associations only for Transaction entries
-    txn_entryables = @entries.filter_map { |e| e.entryable if e.entryable_type == "Transaction" }
-    ActiveRecord::Associations::Preloader.new(
-      records: txn_entryables,
-      associations: {
-        transfer_as_outflow: { inflow_transaction: { entry: :account } },
-        transfer_as_inflow: { outflow_transaction: { entry: :account } }
-      }
-    ).call
-
+    # Batches merchant/category/security + nested transfer counterpart associations
+    # (covers #2643 counterpart UI and category-menu to_account walks).
+    # Intentionally scoped to the current page (@entries) — only this page is
+    # rendered, so a child entry whose split parent sits on another page
+    # deliberately won't resolve it.
+    Entry::ActivityFeedPreloader.new(@entries).preload
     Transaction::ActivitySecurityPreloader.new(@entries).preload
 
-    # The preload and split-parent lookup below are intentionally scoped to the
-    # current page (@entries) — only this page is rendered, so a child entry
-    # whose split parent sits on another page deliberately won't resolve it.
-    transactions = @entries.filter_map { |e| e.entryable if e.transaction? }
-    if transactions.any?
-      ActiveRecord::Associations::Preloader.new(
-        records: transactions,
-        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant ]
-      ).call
-    end
-
-    trades = @entries.filter_map { |e| e.entryable if e.entryable_type == "Trade" }
-    if trades.any?
-      ActiveRecord::Associations::Preloader.new(
-        records: trades,
-        associations: [ :security ]
-      ).call
-    end
-
+    # Avoid per-row `child_entries.exists?` from Entry#split_parent? during
+    # transaction row render (same pattern as TransactionsController#index).
     entry_ids = @entries.map(&:id)
     @split_parent_entry_ids = if entry_ids.any?
       Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
@@ -292,7 +275,19 @@ class AccountsController < ApplicationController
     end
 
     def set_account
-      @account = Current.user.accessible_accounts.find(params[:id])
+      accounts = Current.user.accessible_accounts
+      # Only the show page touches these associations (menu/logo/activity). Keep
+      # sparkline/sync/default toggles lean — sparkline is hit once per sidebar row.
+      if action_name == "show"
+        accounts = accounts.includes(
+          :accountable,
+          :plaid_account,
+          :simplefin_account,
+          account_providers: :provider
+        )
+      end
+
+      @account = accounts.find(params[:id])
     end
 
     def set_manageable_account
@@ -368,6 +363,32 @@ class AccountsController < ApplicationController
 
     def render_statement_tab_frame
       render partial: "accounts/show/statements_frame", locals: statement_tab_locals, layout: false
+    end
+
+    def tab_panel_frame_request?
+      return false unless turbo_frame_request?
+
+      frame_id = request.headers["Turbo-Frame"]
+      return false if frame_id.blank?
+
+      case @tab
+      when "holdings", "overview"
+        frame_id == helpers.account_tab_panel_frame_id(account: @account, tab: @tab.to_sym)
+      else
+        false
+      end
+    end
+
+    def render_tab_panel_frame
+      tab = @tab&.to_sym
+      unless tab.in?([ :holdings, :overview ])
+        head :bad_request
+        return
+      end
+
+      frame_id = helpers.account_tab_panel_frame_id(account: @account, tab: tab)
+      partial_path = "#{@account.accountable_type.downcase.pluralize}/tabs/#{tab}"
+      render partial: "accounts/show/tab_panel_frame", locals: { frame_id: frame_id, partial_path: partial_path, account: @account }, layout: false
     end
 
     def statement_tab_locals
