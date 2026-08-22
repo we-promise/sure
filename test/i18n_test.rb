@@ -111,5 +111,7 @@ class I18nTest < ActiveSupport::TestCase
       when Psych::Nodes::Sequence
         node.children.each { |child| offenses.concat(duplicate_key_offenses(child, path, file)) }
       end
+
+      offenses
     end
 end
