@@ -41,8 +41,8 @@ class Import::UploadsController < ApplicationController
         return
       end
 
-      if uploaded.size > SureImport::MAX_NDJSON_SIZE
-        flash.now[:alert] = t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+      if uploaded.size > SureImport.max_ndjson_size
+        flash.now[:alert] = t("imports.create.file_too_large", max_size: SureImport.max_ndjson_size / 1.megabyte)
         render :show, status: :unprocessable_entity
         return
       end
