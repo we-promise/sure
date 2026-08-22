@@ -131,6 +131,7 @@ en:
         one: "Overdue by 1 day, was due %{date}"
         other: "Overdue by %{count} days, was due %{date}"
       today: "Due today"
+      settled: "Was due %{date}"
       snoozed: "Snoozed until %{date}"
       upcoming:
         one: "Due tomorrow, %{date}"
@@ -146,9 +147,9 @@ en:
       paycheck: Income plan
       all: All bills
     pay_period:
-      paid_on: "Paid %{date}"
+      paycheck_on: "Paycheck %{date}"
       before_next_paycheck: Before your next paycheck
-      due_before_next: "%{amount} due before next"
+      due_before_date: "%{amount} due before %{date}"
     paycheck:
       unconvertible:
         one: "1 obligation is not included, no exchange rate available"

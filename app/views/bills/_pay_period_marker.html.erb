@@ -8,30 +8,40 @@
     the one the list cannot answer.
 
     So this stays a marker, not a section header. Same card, same rhythm, one
-    tinted band naming the paycheck and what it has to carry. %>
+    tinted band naming the money that arrives and the date it has to stretch to.
+
+    Both halves name a date on purpose. "Paid Aug 26" read as past tense for a
+    date four days out, and "due before next" never said before what, so the
+    band described a pay period without ever saying where it ended. %>
+<% next_payday = period.ends_on + 1 %>
+
 <div class="flex items-center gap-2 px-4 py-2 bg-container-inset">
-<%# A leading window with nothing arriving is not a payday. Labelling it
-    "Paid $0.00" would read as a missed cheque rather than the stretch before
-    the next one, so it says what it is, the same wording the income plan uses. %>
-<% if period.bridge? %>
-  <%= icon "wallet", size: "sm" %>
+  <%# A leading window with nothing arriving is not a payday. Labelling it
+      "Paid $0.00" would read as a missed cheque rather than the stretch before
+      the next one, so it says what it is, the same wording the income plan uses. %>
+  <% if period.bridge? %>
+    <%= icon "wallet", size: "sm" %>
 
-  <p class="text-xs font-medium text-secondary">
-    <%= t("bills.pay_period.before_next_paycheck") %>
-  </p>
-<% else %>
-  <%= icon "arrow-down-circle", size: "sm", color: "success" %>
+    <p class="text-xs font-medium text-secondary">
+      <%= t("bills.pay_period.before_next_paycheck") %>
+    </p>
+  <% else %>
+    <%= icon "arrow-down-circle", size: "sm", color: "success" %>
 
-  <p class="text-xs font-medium text-secondary">
-    <%= t("bills.pay_period.paid_on", date: l(period.starts_on, format: :short)) %>
-    <span class="text-subdued">&middot;</span>
-    <span class="privacy-sensitive"><%= format_money(Money.new(period.income, currency)) %></span>
-  </p>
-<% end %>
+    <p class="text-xs font-medium text-secondary">
+      <%= t("bills.pay_period.paycheck_on", date: l(period.starts_on, format: :short)) %>
+      <span class="text-subdued">&middot;</span>
+      <span class="text-success privacy-sensitive">
+        +<%= format_money(Money.new(period.income, currency)) %>
+      </span>
+    </p>
+  <% end %>
 
   <% if due_total.positive? %>
     <p class="ml-auto text-xs text-subdued privacy-sensitive shrink-0">
-      <%= t("bills.pay_period.due_before_next", amount: format_money(Money.new(due_total, currency))) %>
+      <%= t("bills.pay_period.due_before_date",
+            amount: format_money(Money.new(due_total, currency)),
+            date: l(next_payday, format: :short)) %>
     </p>
   <% end %>
 </div>

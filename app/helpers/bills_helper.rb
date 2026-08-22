@@ -159,6 +159,12 @@ module BillsHelper
     days = (due - Date.current).to_i
     date = l(due, format: :short)
 
+    # A settled cycle is not late. This label only ever looked at dates, so a
+    # bill paid three weeks after its due date reported "Overdue by 20 days"
+    # directly beside its own "$11.99 of $11.99 paid" total. Once a cycle is
+    # closed the only useful fact left is when it had been due.
+    return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
+
     if occurrence.snoozed_until.present? && occurrence.snoozed_until > occurrence.due_on && days.positive?
       t("bills.due_label.snoozed", date: date)
     elsif days.negative?

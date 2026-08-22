@@ -150,7 +150,53 @@ class BillsHelperTest < ActionView::TestCase
     assert_match(/2 income sources/, paycheck_period_heading(period))
   end
 
+
+  # Reported from live use: a Twitch charge showed "$11.99 of $11.99 paid" and
+  # "Overdue by 20 days" on the same line. The label only ever read dates, so a
+  # cycle settled after its due date stayed "overdue" forever.
+  test "a settled cycle is not overdue" do
+    occurrence = build_occurrence(due_on: 20.days.ago.to_date, status: "paid")
+
+    label = occurrence_due_label(occurrence)
+
+    assert_match(/was due/i, label)
+    assert_no_match(/overdue/i, label, "a paid cycle cannot also be late")
+  end
+
+  test "skipped and missed cycles read the same way" do
+    %w[skipped missed].each do |status|
+      occurrence = build_occurrence(due_on: 20.days.ago.to_date, status: status)
+
+      assert_no_match(/overdue/i, occurrence_due_label(occurrence),
+        "a #{status} cycle is closed, so it is not still running late")
+    end
+  end
+
+  test "an open cycle past its due date is still overdue" do
+    occurrence = build_occurrence(due_on: 20.days.ago.to_date, status: "scheduled")
+
+    assert_match(/overdue/i, occurrence_due_label(occurrence),
+      "the overdue case must survive: that is the one the label exists for")
+  end
+
   private
+
+    def build_occurrence(due_on:, status:)
+      family = users(:family_admin).family
+      series = family.recurring_transactions.create!(
+        name: "Twitch #{status} #{due_on}", account: accounts(:depository),
+        amount: 11.99, currency: "USD", expected_day_of_month: due_on.day,
+        status: "active", bill_type: "subscription", manual: true,
+        dedup_scope: "twitch-#{status}-#{due_on}",
+        last_occurrence_date: due_on, next_expected_date: due_on
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: family, original_due_on: due_on, due_on: due_on,
+        currency: "USD", expected_amount: 11.99, status: status,
+        closed_at: (status == "scheduled" ? nil : Time.current)
+      )
+    end
     def build_period(income:, due:, reserved:, sources: [ "Payroll" ], leading: false)
       obligations = BigDecimal(due.to_s) + BigDecimal(reserved.to_s)
 

@@ -1416,7 +1416,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_match(/due before next/, response.body,
+    assert_match(/due before [A-Z][a-z]{2} \d+/, response.body,
       "a weekly paycheck should mark its period inside the month")
   end
 
@@ -1427,7 +1427,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_no_match(/due before next/, response.body,
+    assert_no_match(/due before [A-Z][a-z]{2} \d+/, response.body,
       "one paycheck a month does not subdivide the month, so nothing should be marked")
   end
 
@@ -1437,7 +1437,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url
 
     assert_response :success
-    assert_no_match(/due before next/, response.body)
+    assert_no_match(/due before [A-Z][a-z]{2} \d+/, response.body)
   end
 
   private
