@@ -184,12 +184,32 @@ class Transaction::Search
 
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
-      query.joins(:merchant).where(merchants: { name: merchants })
+
+      # Check for "No merchant" in any supported locale (handles URL params in different languages)
+      all_no_merchant_names = Merchant.all_no_merchant_names
+      include_no_merchant = (merchants & all_no_merchant_names).any?
+      real_merchants = merchants - all_no_merchant_names
+
+      if include_no_merchant
+        query.left_joins(:merchant).where("merchants.name IN (?) OR merchants.id IS NULL", real_merchants)
+      else
+        query.joins(:merchant).where(merchants: { name: real_merchants })
+      end
     end
 
     def apply_tag_filter(query, tags)
       return query unless tags.present?
-      query.joins(:tags).where(tags: { name: tags })
+
+      # Check for "Untagged" in any supported locale (handles URL params in different languages)
+      all_untagged_names = Tag.all_untagged_names
+      include_untagged = (tags & all_untagged_names).any?
+      real_tags = tags - all_untagged_names
+
+      if include_untagged
+        query.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).distinct
+      else
+        query.joins(:tags).where(tags: { name: real_tags })
+      end
     end
 
     def apply_status_filter(query, statuses)
