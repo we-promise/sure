@@ -345,6 +345,72 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert existing_token.revoked?
   end
 
+  test "should not login a deactivated user even with correct password" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+
+    assert_no_difference([ "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
+  test "should not login a user deactivated between the initial check and token issuance" do
+    user = users(:family_admin)
+
+    # Simulate deactivation landing after the early active? check but before
+    # the token is actually minted — device validation runs in that window
+    # in the real flow, so hook the deactivation there.
+    Api::V1::AuthController.any_instance.stubs(:valid_device_info?).with do
+      user.update_column(:active, false)
+      true
+    end.returns(true)
+
+    assert_no_difference([ "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
+  test "should not login a user deactivated between device upsert and token issuance" do
+    user = users(:family_admin)
+    # Pre-create the real device so the stub below can return it as-is —
+    # this isolates the test to the gap between upsert_device! and
+    # issue_token!, not the earlier device-creation step.
+    device = MobileDevice.upsert_device!(user, @device_info)
+
+    MobileDevice.stubs(:upsert_device!).with do |*_args|
+      user.update_column(:active, false)
+      true
+    end.returns(device)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
   test "should not login with invalid password" do
     user = users(:family_admin)
 
@@ -450,6 +516,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert initial_token.revoked?
   end
 
+  test "should not refresh for a deactivated user" do
+    user = users(:family_admin)
+    device = user.mobile_devices.create!(@device_info)
+
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: @shared_app,
+      resource_owner_id: user.id,
+      mobile_device_id: device.id,
+      expires_in: 30.days.to_i,
+      scopes: "read_write",
+      use_refresh_token: true
+    )
+
+    user.update_column(:active, false)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: {
+        refresh_token: initial_token.refresh_token,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+    assert_not initial_token.reload.revoked?, "the still-valid old token should be left alone, not silently revoked"
+  end
+
   test "should not refresh with invalid refresh token" do
     assert_no_difference("Doorkeeper::AccessToken.count") do
       post "/api/v1/auth/refresh", params: {
@@ -547,6 +641,68 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should be consumed
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "should reject SSO link for a deactivated user even with correct password" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-deactivated",
+      email: "google-deactivated@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("OidcIdentity.count") do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+
+    # Linking code should NOT be consumed on rejection
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a rejected link attempt"
+  end
+
+  test "should reject SSO link for a user deactivated between the initial check and token issuance" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-race",
+      email: "google-race@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    # Simulate deactivation landing after the initial active? check but
+    # before issue_mobile_tokens actually mints a token — SsoAuditLog.log_link!
+    # runs in that window in the real flow, so hook the deactivation there.
+    SsoAuditLog.stubs(:log_link!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    assert_difference("OidcIdentity.count", 1) do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
   end
 
   test "should reject SSO link with invalid password" do

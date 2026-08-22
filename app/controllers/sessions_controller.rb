@@ -65,6 +65,16 @@ class SessionsController < ApplicationController
     end
 
     if user
+      # Check before starting the MFA challenge, not just after — otherwise a
+      # deactivated user's correct password still sets session[:mfa_user_id],
+      # and completing MFA later (e.g. after being reactivated) would finish
+      # a login whose first factor was accepted while inactive.
+      unless user.active?
+        flash.now[:alert] = t(".account_deactivated")
+        render :new, status: :unprocessable_entity
+        return
+      end
+
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
@@ -72,8 +82,14 @@ class SessionsController < ApplicationController
       else
         log_super_admin_override_login(user)
         @session = create_session_for(user)
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-        redirect_to root_path
+
+        if @session
+          flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+          redirect_to root_path
+        else
+          flash.now[:alert] = t(".account_deactivated")
+          render :new, status: :unprocessable_entity
+        end
       end
     else
       flash.now[:alert] = t(".invalid_credentials")
@@ -206,13 +222,26 @@ class SessionsController < ApplicationController
       return
     end
 
+    # Same reasoning as SessionsController#create: check before starting the
+    # MFA challenge, not just after, so a stale in-flight login can't finish
+    # once the user is reactivated.
+    unless user.active?
+      redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+      return
+    end
+
     if user.otp_required?
       session[:mfa_user_id] = user.id
       redirect_to verify_mfa_path
     else
       @session = create_session_for(user)
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-      redirect_to root_path
+
+      if @session
+        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+        redirect_to root_path
+      else
+        redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+      end
     end
   end
 
@@ -231,6 +260,25 @@ class SessionsController < ApplicationController
     if oidc_identity
       # Existing OIDC identity found - authenticate the user
       user = oidc_identity.user
+
+      # Check before recording authentication/audit success — a deactivated
+      # user's credentials being valid shouldn't show up in the audit trail
+      # as a successful login when access is actually being denied.
+      unless user.active?
+        Rails.logger.warn("[AUTH] Rejected OIDC login for deactivated user_id=#{user.id}")
+
+        if session[:mobile_sso].present?
+          session.delete(:mobile_sso)
+          mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        elsif session[:desktop_sso].present?
+          session.delete(:desktop_sso)
+          redirect_to "sure://sso/callback?error=account_deactivated", allow_other_host: true
+        else
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        end
+        return
+      end
+
       oidc_identity.record_authentication!
       oidc_identity.sync_user_attributes!(auth)
 
@@ -266,8 +314,13 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-        redirect_to root_path
+
+        if @session
+          flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+          redirect_to root_path
+        else
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        end
       end
     else
       # Mobile SSO with no linked identity - cache pending auth and redirect
@@ -341,6 +394,17 @@ class SessionsController < ApplicationController
 
   private
     def handle_mobile_sso_callback(user)
+      # openid_connect already checked user.active? before dispatching here,
+      # but record_authentication!/sync_user_attributes!/audit logging run in
+      # between — reload right before actually minting a token to narrow that
+      # window, same reasoning as Authentication#create_session_for.
+      unless user.reload.active?
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        session.delete(:mobile_sso)
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        return
+      end
+
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?
@@ -350,6 +414,14 @@ class SessionsController < ApplicationController
 
       device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
       token_response = device.issue_token!
+
+      # issue_token! itself is the authoritative active? gate (see its
+      # comment) — nil means a deactivation landed after the check above.
+      unless token_response
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        return
+      end
 
       # Store tokens behind a one-time authorization code instead of passing in URL
       authorization_code = SecureRandom.urlsafe_base64(32)

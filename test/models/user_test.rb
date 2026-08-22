@@ -812,4 +812,72 @@ class UserTest < ActiveSupport::TestCase
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
   end
+
+  # Deactivation: immediate session invalidation
+  test "deactivating a user destroys all of their sessions immediately" do
+    user = users(:family_member)
+    user.sessions.create!
+    user.sessions.create!
+    assert_equal 2, user.sessions.count
+
+    user.deactivate
+
+    assert_equal 0, user.sessions.count
+  end
+
+  test "deactivating a user with no sessions does not raise" do
+    user = users(:family_member)
+    assert_equal 0, user.sessions.count
+
+    assert_nothing_raised { user.deactivate }
+  end
+
+  test "deactivating a user revokes their API keys, access tokens, and authorization grants" do
+    user = users(:family_member)
+    api_key = ApiKey.create!( # pipelock:ignore
+      user: user,
+      name: "Test Key",
+      display_key: "test_revoke_key_#{SecureRandom.hex(8)}",
+      scopes: [ "read" ]
+    )
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+    # An unexchanged authorization code — the step before a token is minted,
+    # which /oauth/token would otherwise still accept post-deactivation.
+    grant = Doorkeeper::AccessGrant.create!(
+      application: app,
+      resource_owner_id: user.id,
+      redirect_uri: app.redirect_uri,
+      expires_in: 10.minutes,
+      scopes: "read_write"
+    )
+
+    assert api_key.active?
+    assert_nil token.revoked_at
+    assert_nil grant.revoked_at
+
+    user.deactivate
+
+    assert api_key.reload.revoked?
+    assert token.reload.revoked_at.present?
+    assert grant.reload.revoked_at.present?
+  end
+
+  test "updating unrelated attributes does not destroy sessions" do
+    user = users(:family_member)
+    user.sessions.create!
+
+    user.update!(first_name: "Updated")
+
+    assert_equal 1, user.sessions.count
+  end
 end
