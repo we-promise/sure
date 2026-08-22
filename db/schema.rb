@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_20_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -2054,6 +2054,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_20_120000) do
     t.index ["event_type"], name: "index_sso_audit_logs_on_event_type"
     t.index ["user_id", "created_at"], name: "index_sso_audit_logs_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_sso_audit_logs_on_user_id"
+  end
+
+  create_table "sso_identity_blocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "identity_label", null: false
+    t.string "provider", null: false
+    t.string "uid_digest", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "uid_digest"], name: "index_sso_identity_blocks_on_provider_and_uid_digest", unique: true
   end
 
   create_table "sso_providers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
