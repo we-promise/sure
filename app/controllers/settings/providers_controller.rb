@@ -2,6 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
 
   def show
     @breadcrumbs = [
@@ -115,6 +116,7 @@ class Settings::ProvidersController < ApplicationController
       @panel_key     = panel[:key]
       @panel_partial = panel[:partial]
       @panel_title   = panel[:title]
+      @panel_handles_encryption_warning = panel[:handles_encryption_warning]
       load_provider_items(provider_key)
       return render :connect_form
     end
@@ -153,6 +155,11 @@ class Settings::ProvidersController < ApplicationController
       redirect_to root_path, alert: t("settings.providers.not_authorized")
     end
 
+    def set_encryption_warning_context
+      @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
+        !ActiveRecordEncryptionConfig.explicitly_configured?
+    end
+
     # Reload provider configurations after settings update
     def reload_provider_configs(updated_fields)
       # Build a set of provider keys that had fields updated
@@ -189,9 +196,9 @@ class Settings::ProvidersController < ApplicationController
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
-      { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" },
+      { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel", handles_encryption_warning: true },
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
-      { key: "brex",           title: "Brex",            turbo_id: "brex",           partial: "brex_panel" },
+      { key: "brex",           title: "Brex",            turbo_id: "brex",           partial: "brex_panel", handles_encryption_warning: true },
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },

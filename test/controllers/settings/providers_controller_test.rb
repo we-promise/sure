@@ -414,12 +414,101 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Flex Query/i, response.body)
   end
 
+  test "GET show warns on configured provider forms when self-hosted encryption keys are not explicitly configured" do
+    Setting["plaid_client_id"] = "test-client-id"
+    Setting["plaid_secret"] = "test-secret"
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  ensure
+    Setting["plaid_client_id"] = nil
+    Setting["plaid_secret"] = nil
+  end
+
+  test "GET show hides provider form encryption warning in managed mode" do
+    Setting["plaid_client_id"] = "test-client-id"
+    Setting["plaid_secret"] = "test-secret"
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  ensure
+    Setting["plaid_client_id"] = nil
+    Setting["plaid_secret"] = nil
+  end
+
   test "GET connect_form renders Interactive Brokers panel" do
     get connect_form_settings_providers_path(provider_key: "ibkr")
 
     assert_response :success
     assert_match(/Interactive Brokers/i, response.body)
     assert_match(/Query ID/i, response.body)
+  end
+
+  test "GET connect_form warns when self-hosted encryption keys are not explicitly configured" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+  end
+
+  test "GET connect_form hides encryption warning when self-hosted encryption keys are configured" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  end
+
+  test "GET connect_form hides encryption warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  end
+
+  test "GET connect_form does not duplicate provider-specific encryption warnings" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    WiseItem.stubs(:encryption_ready?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "wise")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.title")
+    assert_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.message")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
   end
 
   test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
