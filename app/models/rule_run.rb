@@ -53,10 +53,8 @@ class RuleRun < ApplicationRecord
 
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
       self.status = "failed"
-      self.error_message = [ error_message.presence, current_error_message ]
-        .compact
-        .uniq
-        .join("\n")
+      existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
+      self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
 
       save!
     end
