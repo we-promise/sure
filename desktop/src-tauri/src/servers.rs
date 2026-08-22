@@ -195,12 +195,18 @@ pub fn save_active(url: &str) -> Result<(), ServerError> {
     file_write("active_server", url)
 }
 
-/// True if `url` normalizes to a server the user has saved (or the active one).
+/// True if `url` is `base` itself or sits under it. The boundary check is what
+/// keeps `https://sure.example.com.evil.test` from passing as `https://sure.example.com`.
+pub fn base_covers(base: &str, url: &str) -> bool {
+    url == base || url.strip_prefix(base).is_some_and(|rest| rest.starts_with('/'))
+}
+
+/// True if `url` is served by a server the user has saved (or the active one).
 /// Gates deep-link navigation and SSO so only trusted origins can drive them.
 pub fn is_known_server(url: &str) -> bool {
     let Ok(canonical) = normalize_server_url(url) else {
         return false;
     };
-    ServerStore::load().iter().any(|e| e.url == canonical)
-        || load_active().as_deref() == Some(canonical.as_str())
+    ServerStore::load().iter().any(|e| base_covers(&e.url, &canonical))
+        || load_active().is_some_and(|active| base_covers(&active, &canonical))
 }

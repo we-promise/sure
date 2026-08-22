@@ -1,5 +1,5 @@
 use sure_desktop_lib::servers::{
-    base_candidates, health_check_url, is_healthy_status, normalize_server_url,
+    base_candidates, base_covers, health_check_url, is_healthy_status, normalize_server_url,
     MAX_BASE_CANDIDATES,
 };
 
@@ -58,6 +58,20 @@ fn keeps_the_port_on_every_candidate() {
         base_candidates("http://localhost:3000/sure"),
         vec!["http://localhost:3000/sure", "http://localhost:3000"]
     );
+}
+
+#[test]
+fn a_base_covers_itself_and_what_sits_under_it() {
+    assert!(base_covers("https://s.example.com", "https://s.example.com"));
+    assert!(base_covers("https://s.example.com", "https://s.example.com/accounts"));
+    assert!(base_covers("https://s.example.com/sure", "https://s.example.com/sure/accounts"));
+}
+
+#[test]
+fn a_base_does_not_cover_a_lookalike_host_or_a_sibling_path() {
+    assert!(!base_covers("https://s.example.com", "https://s.example.com.evil.test/accounts"));
+    assert!(!base_covers("https://s.example.com/sure", "https://s.example.com/surely"));
+    assert!(!base_covers("https://s.example.com/sure", "https://s.example.com"));
 }
 
 #[test]
