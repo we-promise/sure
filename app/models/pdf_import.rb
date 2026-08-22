@@ -217,8 +217,8 @@ class PdfImport < Import
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # process_pdf (PR #1985).
     provider = Provider::Registry.preferred_llm_provider
-    raise "AI provider not configured" unless provider
-    raise "AI provider does not support PDF processing" unless provider.supports_pdf_processing?
+    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
+    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
     response = provider.process_pdf(
       pdf_content: pdf_file_content,
@@ -227,7 +227,7 @@ class PdfImport < Import
 
     unless response.success?
       error_message = response.error&.message || "Unknown PDF processing error"
-      raise error_message
+      raise Provider::Error, error_message
     end
 
     result = response.data
@@ -245,7 +245,7 @@ class PdfImport < Import
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # extract_bank_statement (PR #1985).
     provider = Provider::Registry.preferred_llm_provider
-    raise "AI provider not configured" unless provider
+    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_file_content,
@@ -254,7 +254,7 @@ class PdfImport < Import
 
     unless response.success?
       error_message = response.error&.message || "Unknown extraction error"
-      raise error_message
+      raise Provider::Error, error_message
     end
 
     # BankStatementExtractor returns symbol keys, but every reader here (and in
