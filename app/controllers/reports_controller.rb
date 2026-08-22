@@ -425,13 +425,18 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
-      process_entry = ->(category, entry, is_trade) do
-        type = entry.amount > 0 ? "expense" : "income"
+      process_entry = ->(category, entry, is_trade, is_refund: false) do
+        type = entry.classification
         begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
+          unsigned_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
-          converted_amount = entry.amount.abs
+          unsigned_amount = entry.amount.abs
         end
+        # A refund's `type` is already flipped to "expense" above, but without
+        # this it would still *add* its magnitude to that expense bucket.
+        # Force it negative so it nets against real expenses instead —
+        # mirrors IncomeStatement::ClassificationSql.signed_amount's -ABS().
+        converted_amount = is_refund ? -unsigned_amount : unsigned_amount
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -466,7 +471,7 @@ class ReportsController < ApplicationController
 
       # Process transactions
       transactions.each do |transaction|
-        process_entry.call(transaction.category, transaction.entry, false)
+        process_entry.call(transaction.category, transaction.entry, false, is_refund: transaction.refund?)
       end
 
       # Process trades
@@ -758,17 +763,20 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
+        type = entry.classification
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
         begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
+          unsigned_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
-          converted_amount = entry.amount.abs
+          unsigned_amount = entry.amount.abs
         end
+        # See build_transactions_breakdown above — a refund must net against
+        # expense, not add to it, so the export agrees with the on-screen
+        # breakdown for the same transaction.
+        converted_amount = transaction.refund? ? -unsigned_amount : unsigned_amount
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
