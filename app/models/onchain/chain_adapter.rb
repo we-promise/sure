@@ -75,6 +75,11 @@ module Onchain::ChainAdapter
   # ONE bounded request and never by reading paginated history. Only chains that
   # share an address format with other chains (every EVM network) need to
   # override this; elsewhere a well-formed address is answer enough.
+  #
+  # Three answers, not two: true, false, and nil for "could not tell" — a source
+  # that timed out or refused has not reported an empty address. An override
+  # that collapses the third into false lets detection settle on another chain
+  # without asking, which is how a wallet gets linked to the wrong network.
   def has_activity?(address)
     valid_address?(address)
   end

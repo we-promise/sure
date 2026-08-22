@@ -42,10 +42,15 @@ class OnchainWalletItem::ChainDetector
     definitions = candidates.map(&:first)
     return Result.new(chain: definitions.first.key, candidates: definitions, detected_keys: []) if candidates.one?
 
-    detected = candidates.select { |_definition, adapter| adapter.has_activity?(address) }.map { |definition, _| definition }
+    answers = probe(candidates)
+    detected = definitions.select { |definition| answers[definition.key] == true }
 
     Result.new(
-      chain: detected.one? ? detected.first.key : nil,
+      # One chain answering yes settles it only when every other chain actually
+      # answered. If one could not tell, the address may well belong there too,
+      # and taking the single yes would link the wrong network for good — so the
+      # user is asked, which is the screen an ambiguous answer already produces.
+      chain: (detected.one? && answers.values.none?(&:nil?)) ? detected.first.key : nil,
       candidates: definitions,
       detected_keys: detected.map(&:key)
     )
@@ -53,4 +58,32 @@ class OnchainWalletItem::ChainDetector
 
   private
     attr_reader :onchain_wallet_item, :address
+
+    # Concurrently, because the page waits on this: asked in turn, the form's
+    # latency is the sum of every chain's, and a 0x address is a candidate on
+    # six. The deadline is shared and absolute, so it bounds the whole detection
+    # instead of each probe — which is precisely what a per-socket client
+    # timeout cannot do.
+    def probe(candidates)
+      finish_by = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Onchain::DetectionBudget.deadline
+
+      threads = candidates.map do |definition, adapter|
+        thread = Thread.new do
+          Rails.application.executor.wrap { adapter.has_activity?(address) }
+        rescue StandardError => e
+          Rails.logger.warn("OnchainWalletItem::ChainDetector - probe failed for #{definition.key}: #{e.class}")
+          nil
+        end
+
+        [ definition.key, thread ]
+      end
+
+      threads.to_h do |key, thread|
+        remaining = finish_by - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        answer = thread.join([ remaining, 0 ].max) ? thread.value : nil
+        thread.kill
+
+        [ key, answer ]
+      end
+    end
 end

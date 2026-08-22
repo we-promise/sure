@@ -70,7 +70,8 @@ class Onchain::SolanaAdapter
     held_token_accounts(detection_provider.get_token_accounts(address)).any?
   rescue StandardError => e
     Rails.logger.warn("Onchain::SolanaAdapter - activity probe failed: #{e.class}")
-    false
+    # Not false — see Onchain::ChainAdapter#has_activity? on the third answer.
+    nil
   end
 
   def fetch_snapshot(address)

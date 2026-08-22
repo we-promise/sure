@@ -53,7 +53,10 @@ class Onchain::EvmAdapter
     detection_backend.has_activity?(address)
   rescue StandardError => e
     Rails.logger.warn("Onchain::EvmAdapter(#{chain}) - activity probe failed: #{e.class}")
-    false
+    # Not false: an explorer that timed out has not told us the address is
+    # empty here, and answering "no" would let detection settle on another
+    # chain without ever asking the user.
+    nil
   end
 
   def fetch_snapshot(address)
