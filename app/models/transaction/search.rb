@@ -184,12 +184,34 @@ class Transaction::Search
 
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
-      query.joins(:merchant).where(merchants: { name: merchants })
+
+      include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
+      real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
+
+      if include_no_merchant
+        query.left_joins(:merchant).where("merchants.name IN (?) OR merchants.id IS NULL", real_merchants)
+      else
+        query.joins(:merchant).where(merchants: { name: real_merchants })
+      end
     end
 
     def apply_tag_filter(query, tags)
       return query unless tags.present?
-      query.joins(:tags).where(tags: { name: tags })
+
+      include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
+      real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
+
+      if include_untagged
+        # A top-level `.distinct` here would break controller-level ordering (e.g. reverse_chronological's
+        # CASE expression) under PostgreSQL, since DISTINCT requires all ORDER BY expressions to appear in
+        # the select list. Deduplicate via a subquery instead so `query`'s own select/order stay untouched.
+        matching_transaction_ids = Transaction.left_joins(:tags)
+          .where("tags.name IN (?) OR tags.id IS NULL", real_tags)
+          .select(:id)
+        query.where(transactions: { id: matching_transaction_ids })
+      else
+        query.joins(:tags).where(tags: { name: real_tags })
+      end
     end
 
     def apply_status_filter(query, statuses)
