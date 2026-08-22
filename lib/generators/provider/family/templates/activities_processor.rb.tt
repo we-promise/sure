@@ -129,15 +129,25 @@ class <%= class_name %>Account::ActivitiesProcessor
         return
       end
 
-      # Get the activity date
-      # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
-                      parse_date(data[:trade_date], family: account&.family) ||
+      # Activity dates: prefer trade_date for display when available; preserve
+      # settlement_date as provenance. Do NOT clamp future settlement dates —
+      # investment settlement in the future can be legitimate (#2907).
+      trade_date = parse_date(data[:trade_date], family: account&.family)
+      settlement_date = parse_date(data[:settlement_date], family: account&.family)
+      activity_date = trade_date ||
+                      settlement_date ||
                       parse_date(data[:date], family: account&.family) ||
                       Date.current
 
       currency = extract_currency(data, fallback: account.currency)
       description = data[:description] || "#{activity_type} #{ticker}"
+      date_provenance = {
+        "<%= file_name %>" => Provider::BankEntryDate.provenance([
+          [ :trade_date, data[:trade_date] ],
+          [ :settlement_date, data[:settlement_date] ],
+          [ :date, data[:date] ]
+        ])
+      }
 
       Rails.logger.info "<%= class_name %>Account::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} date=#{activity_date}"
 
@@ -151,7 +161,8 @@ class <%= class_name %>Account::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "<%= file_name %>",
-        activity_label: label_from_type(activity_type)
+        activity_label: label_from_type(activity_type),
+        extra: date_provenance
       )
       @trades_count += 1 if result
     end
@@ -163,10 +174,11 @@ class <%= class_name %>Account::ActivitiesProcessor
       return if amount.nil?
       # Note: Zero-amount transactions (splits, free shares) are allowed
 
-      # Get the activity date
-      # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
-                      parse_date(data[:trade_date], family: account&.family) ||
+      # Prefer trade_date for display; keep settlement_date unclamped (#2907).
+      trade_date = parse_date(data[:trade_date], family: account&.family)
+      settlement_date = parse_date(data[:settlement_date], family: account&.family)
+      activity_date = trade_date ||
+                      settlement_date ||
                       parse_date(data[:date], family: account&.family) ||
                       Date.current
 
@@ -178,6 +190,13 @@ class <%= class_name %>Account::ActivitiesProcessor
       amount = normalize_cash_amount(amount, activity_type)
 
       currency = extract_currency(data, fallback: account.currency)
+      date_provenance = {
+        "<%= file_name %>" => Provider::BankEntryDate.provenance([
+          [ :trade_date, data[:trade_date] ],
+          [ :settlement_date, data[:settlement_date] ],
+          [ :date, data[:date] ]
+        ])
+      }
 
       Rails.logger.info "<%= class_name %>Account::ActivitiesProcessor - Importing cash activity: type=#{activity_type} amount=#{amount} date=#{activity_date}"
 
@@ -188,7 +207,8 @@ class <%= class_name %>Account::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "<%= file_name %>",
-        investment_activity_label: label_from_type(activity_type)
+        investment_activity_label: label_from_type(activity_type),
+        extra: date_provenance
       )
       @transactions_count += 1 if result
     end

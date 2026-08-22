@@ -78,6 +78,39 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal Date.new(2024, 3, 10), @account.entries.last.date
   end
 
+  test "uses non-future createdAt when postedAt is in the future" do
+    travel_to Date.new(2026, 8, 5) do
+      process(tx(
+        id: "tx_future_posted",
+        posted_at: "2026-08-08",
+        created_at: "2026-08-04"
+      ))
+
+      entry = @account.entries.find_by!(external_id: "mercury_tx_future_posted", source: "mercury")
+      assert_equal Date.new(2026, 8, 4), entry.date
+      assert_equal "2026-08-08", entry.transaction.extra.dig("mercury", "postedAt")
+      assert_equal "2026-08-04", entry.transaction.extra.dig("mercury", "createdAt")
+    end
+  end
+
+  test "all-future date clamp stays put across daily resyncs" do
+    payload = tx(
+      id: "tx_future_clamp",
+      posted_at: "2026-08-10",
+      created_at: "2026-08-09"
+    )
+
+    travel_to Date.new(2026, 8, 5) do
+      process(payload)
+      assert_equal Date.new(2026, 8, 5), @account.entries.find_by!(external_id: "mercury_tx_future_clamp").date
+    end
+
+    travel_to Date.new(2026, 8, 6) do
+      process(payload)
+      assert_equal Date.new(2026, 8, 5), @account.entries.find_by!(external_id: "mercury_tx_future_clamp").date
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # notes
   # ---------------------------------------------------------------------------

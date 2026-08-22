@@ -330,6 +330,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal 0.91, entry.entryable.exchange_rate
   end
 
+  test "imports trade with provider date provenance in extra" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+
+    entry = adapter.import_trade(
+      security: security,
+      quantity: 5,
+      price: 150.00,
+      amount: 750.00,
+      currency: "USD",
+      date: Date.new(2026, 8, 4),
+      source: "example_broker",
+      extra: {
+        "example_broker" => {
+          "trade_date" => "2026-08-04",
+          "settlement_date" => "2026-08-08"
+        }
+      }
+    )
+
+    entry.reload
+    trade = entry.entryable.reload
+
+    assert_equal Date.new(2026, 8, 4), entry.date
+    assert_equal "2026-08-04", trade.extra.dig("example_broker", "trade_date")
+    assert_equal "2026-08-08", trade.extra.dig("example_broker", "settlement_date")
+  end
+
   test "raises error when security is missing for trade import" do
     exception = assert_raises(ArgumentError) do
       @adapter.import_trade(
