@@ -96,6 +96,50 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
     assert result[:hint].present?
   end
 
+  # Reported from live use: "What am I paying monthly for subscriptions?" answered
+  # "No active subscriptions found, total monthly equivalent $0" while five
+  # detected subscriptions sat in `suggested`. The status filter was right; the
+  # silence about what it filtered out was the bug.
+  test "an empty status-filtered result says where the matches actually are" do
+    create_series(name: "Crunchyroll", amount: 12, status: "suggested", bill_type: "subscription", manual: false)
+    create_series(name: "Huntr", amount: 40, status: "suggested", bill_type: "subscription", manual: false)
+
+    result = call_tool("bill_type" => "subscription")
+
+    assert_equal 0, result[:total_results]
+    assert result[:hint].present?, "an empty result must say what other statuses hold"
+    assert_match(/2 suggested/, result[:hint])
+    assert_match(/status: all/, result[:hint])
+  end
+
+  test "the hint counts only the requested bill type" do
+    create_series(name: "Crunchyroll", amount: 12, status: "suggested", bill_type: "subscription", manual: false)
+    create_series(name: "Rent", amount: 2000, status: "suggested", bill_type: "bill", manual: false)
+
+    result = call_tool("bill_type" => "subscription")
+
+    assert_equal 0, result[:total_results]
+    assert_match(/1 suggested/, result[:hint])
+  end
+
+  test "no hint when results are found" do
+    create_series(name: "Crunchyroll", amount: 12, bill_type: "subscription")
+
+    result = call_tool("bill_type" => "subscription")
+
+    assert_operator result[:total_results], :>, 0
+    assert_nil result[:hint]
+  end
+
+  test "no hint when the caller already asked for every status" do
+    create_series(name: "Rent", amount: 2000, status: "suggested", bill_type: "bill", manual: false)
+
+    result = call_tool("status" => "all", "bill_type" => "subscription")
+
+    assert_equal 0, result[:total_results]
+    assert_nil result[:hint], "status: all already saw everything, so there is nowhere else to point"
+  end
+
   private
 
     def call_tool(params = {})

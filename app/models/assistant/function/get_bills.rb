@@ -103,7 +103,7 @@ class Assistant::Function::GetBills < Assistant::Function
       family_currency: family.currency,
       bills: shown.map { |series| serialize_series(series).merge(current_occurrence: serialize_occurrence(currents[series])) },
       totals: totals_over(rows, currents)
-    }
+    }.merge(rows.empty? ? { hint: other_status_hint(params) }.compact : {})
   end
 
   private
@@ -111,6 +111,34 @@ class Assistant::Function::GetBills < Assistant::Function
       return scope if status == "all"
 
       scope.where(status: STATUS_VOCABULARY.fetch(status.presence || "active", STATUS_VOCABULARY.fetch("active")))
+    end
+
+    # An empty answer is ambiguous: it reads as "you have none of these" when it
+    # usually means "every one you have sits under a status this call filtered
+    # out". Detection parks new series in `suggested`, so asking about
+    # subscriptions on a family that has confirmed none answers zero results and
+    # a $0 total, which is worse than no answer at all. Only runs when nothing
+    # matched, so the normal path costs no extra query.
+    def other_status_hint(params)
+      requested = params["status"].presence || "active"
+      return if requested == "all"
+
+      known = STATUS_VOCABULARY.fetch(requested, STATUS_VOCABULARY.fetch("active"))
+      scope = accessible_series.where.not(status: known)
+
+      if (bill_type = params["bill_type"]).presence_in(RecurringTransaction.bill_types.keys)
+        scope = scope.where(bill_type: bill_type)
+      end
+
+      elsewhere = scope.group(:status).count
+      return if elsewhere.empty?
+
+      summary = elsewhere.sort_by { |_status, count| -count }
+                         .map { |status, count| "#{count} #{status}" }
+                         .join(", ")
+
+      "Nothing matched status #{requested}, but this family has #{summary}. Call get_bills " \
+        "again with that status, or status: all, before telling the user they have none."
     end
 
     def payment_state_matches?(occurrence, state)
