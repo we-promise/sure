@@ -131,19 +131,19 @@ class CreateBillsSubsystem < ActiveRecord::Migration[7.2]
     remove_index :recurring_transactions, name: "idx_recurring_txns_pair_name"
 
     add_index :recurring_transactions,
-              [ :family_id, :account_id, :merchant_id, :currency, :dedup_scope ],
+              [ :family_id, :account_id, :merchant_id, :amount, :currency, :dedup_scope ],
               unique: true, name: "idx_recurring_txns_acct_merchant",
               where: "merchant_id IS NOT NULL AND destination_account_id IS NULL"
     add_index :recurring_transactions,
-              [ :family_id, :account_id, :name, :currency, :dedup_scope ],
+              [ :family_id, :account_id, :name, :amount, :currency, :dedup_scope ],
               unique: true, name: "idx_recurring_txns_acct_name",
               where: "name IS NOT NULL AND merchant_id IS NULL AND destination_account_id IS NULL"
     add_index :recurring_transactions,
-              [ :family_id, :account_id, :destination_account_id, :merchant_id, :currency, :dedup_scope ],
+              [ :family_id, :account_id, :destination_account_id, :merchant_id, :amount, :currency, :dedup_scope ],
               unique: true, name: "idx_recurring_txns_pair_merchant",
               where: "destination_account_id IS NOT NULL AND merchant_id IS NOT NULL"
     add_index :recurring_transactions,
-              [ :family_id, :account_id, :destination_account_id, :name, :currency, :dedup_scope ],
+              [ :family_id, :account_id, :destination_account_id, :name, :amount, :currency, :dedup_scope ],
               unique: true, name: "idx_recurring_txns_pair_name",
               where: "destination_account_id IS NOT NULL AND name IS NOT NULL AND merchant_id IS NULL"
 

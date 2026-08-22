@@ -1,0 +1,76 @@
+<%# locals: (onchain_wallet_item:, card:) %>
+
+<%= tag.div id: dom_id(onchain_wallet_item, :accounts_index) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset shrink-0">
+            <%= icon "wallet", size: "sm", class: "text-primary" %>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p onchain_wallet_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if onchain_wallet_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+
+            <p class="text-xs text-secondary">
+              <%= t(".addresses_tracked", count: card[:address_count]) %>
+            </p>
+
+            <% if onchain_wallet_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif onchain_wallet_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".needs_attention") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if onchain_wallet_item.last_synced_at %>
+                  <%= t(".status", timestamp: time_ago_in_words(onchain_wallet_item.last_synced_at)) %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Management lives in the provider settings panel, where linking,
+            token review and disconnection already are — this card links to it
+            rather than growing a second, partial copy of those controls. %>
+        <% if Current.user&.admin? %>
+          <%= render DS::Link.new(
+                text: t(".manage"),
+                icon: "settings",
+                variant: "secondary",
+                href: settings_providers_path,
+                frame: "_top"
+              ) %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless onchain_wallet_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if card[:accounts].any? %>
+          <%= render "accounts/index/account_groups", accounts: card[:accounts] %>
+        <% else %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_wallets_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_wallets_message") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

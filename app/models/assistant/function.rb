@@ -93,22 +93,9 @@ class Assistant::Function
       end
     end
 
-    def family_account_names
-      @family_account_names ||= user.accessible_accounts.visible.pluck(:name)
-    end
-
-    def family_category_names
-      @family_category_names ||= begin
-        names = family.categories.pluck(:name)
-        names << "Uncategorized"
-        names
-      end
-    end
-
-    def family_merchant_names
-      @family_merchant_names ||= family.merchants.pluck(:name)
-    end
-
+    # Still used by update_tag, which identifies tags by name. Tag lists are
+    # small; the large data-driven enums (accounts, categories, merchants)
+    # are gone from schemas in favor of exact-name params.
     def family_tag_names
       @family_tag_names ||= family.tags.pluck(:name)
     end
@@ -135,14 +122,21 @@ class Assistant::Function
       UuidFormat.valid?(str)
     end
 
-    # To save tokens, we provide the AI metadata about the series and a flat array of
-    # raw, formatted values which it can infer dates from
+    # To save tokens, we provide the AI metadata about the series and a flat
+    # array of raw numeric values it can infer dates from. Currency is stated
+    # once here instead of formatting every value; the system prompt's
+    # formatting rules cover rendering. Values round to the currency's own
+    # precision (BTC carries 8 decimals, OMR 3), never a flat 2.
     def to_ai_time_series(series)
+      currency = series.values.first&.trend&.current&.currency
+      precision = currency&.default_precision || 2
+
       {
         start_date: series.start_date,
         end_date: series.end_date,
         interval: series.interval,
-        values: series.values.map { |v| v.trend.current.format }
-      }
+        currency: currency&.iso_code,
+        values: series.values.map { |v| v.trend.current.amount.round(precision).to_f }
+      }.compact
     end
 end

@@ -792,6 +792,59 @@ class UserTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 
+  # Admin-initiated permanent removal (super-admin action)
+  test "permanently_remove! deactivates, revokes all credentials, and schedules purge" do
+    target = users(:family_member)
+    target.sessions.create!
+    assert target.sessions.exists?
+    assert target.api_keys.exists?
+    assert target.oidc_identities.exists?
+
+    assert target.permanently_remove!
+
+    target.reload
+    assert_not target.active?
+    assert_empty target.sessions
+    assert_empty target.api_keys
+    assert_empty target.oidc_identities
+  end
+
+  test "permanently_remove! is blocked (fail-closed) for an admin with co-members and keeps credentials" do
+    target = users(:family_admin)
+    target.sessions.create!
+    assert_operator target.family.users.count, :>, 1
+
+    assert_not target.permanently_remove!
+
+    assert target.reload.active?
+    assert target.sessions.exists?
+    assert target.oidc_identities.exists?
+  end
+
+  test "permanently_remove! schedules purge for an already inactive user" do
+    target = users(:family_member)
+    target.update_column(:active, false)
+
+    assert_enqueued_with(job: UserPurgeJob, args: [ target ]) do
+      assert target.permanently_remove!
+    end
+  end
+
+  test "deactivate refuses the last active super admin" do
+    family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
+    target = User.create!(
+      family: family,
+      email: "sole-super-admin@example.com",
+      password: user_password_test,
+      role: :super_admin
+    )
+    User.where(role: :super_admin).where.not(id: target.id).update_all(active: false)
+
+    assert_not target.deactivate
+    assert target.reload.active?
+    assert_match(/last active super admin/, target.errors.full_messages.to_sentence)
+  end
+
   test "purging the last user cascades to remove family and its export attachments" do
     family = Family.create!(name: "Solo Family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
     user = User.create!(family: family, email: "solo@example.com", password: "password123")
