@@ -362,13 +362,46 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     connection = mock("faraday")
     connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
     connection.expects(:post).yields(request)
-      .returns(faraday_response(status: 200, body: { device_code: "dev-c0de", user_code: "WXYZ-1234" }.to_json))
+      .returns(faraday_response(status: 200, body: {
+        device_code: "dev-c0de", user_code: "WXYZ-1234", verification_uri: "https://app.snaptrade.com/device"
+      }.to_json))
     Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
 
     Provider::Snaptrade.start_device_authorization
 
     assert_equal "Basic #{Base64.strict_encode64('client-id:client-secret')}", request.headers["Authorization"]
     assert_nil Rack::Utils.parse_query(request.body)["client_id"]
+  end
+
+  test "start_device_authorization rejects a 2xx that cannot drive the flow" do
+    configure_device_flow_only!
+
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
+    # A device code with nothing to show the user and nowhere to send them
+    # would render a blank drawer the user can only abandon.
+    connection.expects(:post).returns(faraday_response(status: 200, body: { device_code: "dev-c0de" }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    error = assert_raises(Provider::Snaptrade::ApiError) { Provider::Snaptrade.start_device_authorization }
+    assert_match "user_code", error.message
+    assert_match "verification_uri", error.message
+  end
+
+  test "start_device_authorization accepts verification_uri_complete in place of verification_uri" do
+    configure_device_flow_only!
+
+    connection = mock("faraday")
+    connection.expects(:get).returns(faraday_response(status: 200, body: discovery_body))
+    connection.expects(:post).returns(faraday_response(status: 200, body: {
+      device_code: "dev-c0de", user_code: "WXYZ-1234",
+      verification_uri_complete: "https://app.snaptrade.com/device?code=WXYZ-1234"
+    }.to_json))
+    Provider::Snaptrade.stubs(:oauth_connection).returns(connection)
+
+    payload = Provider::Snaptrade.start_device_authorization
+
+    assert_equal "dev-c0de", payload["device_code"]
   end
 
   test "start_device_authorization raises when the metadata has no device endpoint" do

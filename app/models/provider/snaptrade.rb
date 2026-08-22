@@ -50,6 +50,10 @@ class Provider::Snaptrade
   DASHBOARD_URL = "https://dashboard.snaptrade.com".freeze
   OAUTH_DISCOVERY_URL = "https://api.snaptrade.com/.well-known/oauth-authorization-server".freeze
   DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code".freeze
+  # What the drawer needs to be usable at all: a code to show, a place to enter
+  # it, and a code to redeem afterwards. verification_uri_complete substitutes
+  # for verification_uri when present.
+  DEVICE_AUTHORIZATION_FIELDS = %w[device_code user_code verification_uri].freeze
   # The discovery document is static; cached so device authorization doesn't pay
   # a blocking round trip for it on every attempt.
   OAUTH_METADATA_CACHE_KEY = "snaptrade:oauth_authorization_server_metadata".freeze
@@ -144,12 +148,30 @@ class Provider::Snaptrade
       end
 
       payload = parse_json(response.body)
-      return payload if response.success?
 
-      raise ApiError.new(
-        "SnapTrade OAuth device authorization failed: #{oauth_error_summary(payload, response.status)}",
-        status_code: response.status, response_body: response.body
-      )
+      unless response.success?
+        raise ApiError.new(
+          "SnapTrade OAuth device authorization failed: #{oauth_error_summary(payload, response.status)}",
+          status_code: response.status, response_body: response.body
+        )
+      end
+
+      # A 2xx missing any of these is a partial or schema-changed response, and
+      # every one of them is load-bearing: without them the drawer renders a
+      # blank code and a link to nowhere, which the user can only abandon.
+      # Better to fail with a message they can act on. Same reasoning as the
+      # results-array check in get_positions.
+      missing = DEVICE_AUTHORIZATION_FIELDS.reject { |field| payload[field].present? }
+      missing -= [ "verification_uri" ] if payload["verification_uri_complete"].present?
+
+      if missing.any?
+        raise ApiError.new(
+          "SnapTrade OAuth device authorization response is missing #{missing.join(', ')}",
+          status_code: response.status, response_body: response.body
+        )
+      end
+
+      payload
     end
 
     # Step 2: redeem the device code once the user has confirmed it. Until they
