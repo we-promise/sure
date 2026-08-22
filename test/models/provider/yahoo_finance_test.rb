@@ -677,6 +677,32 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal 0.5, @provider.send(:min_request_interval)
   end
 
+  test "client retries on 5xx statuses in addition to 429" do
+    retry_statuses = retry_middleware_options(@provider.send(:client)).retry_statuses
+    assert_equal [ 429, 500, 502, 503, 504 ], retry_statuses
+  end
+
+  test "authenticated_client retries on 5xx statuses in addition to 429" do
+    retry_statuses = retry_middleware_options(@provider.send(:authenticated_client, "cookie")).retry_statuses
+    assert_equal [ 429, 500, 502, 503, 504 ], retry_statuses
+  end
+
+  test "fetch_chart_data logs (rather than silently swallows) a Faraday error" do
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:fetch_authenticated_chart).raises(Faraday::ConnectionFailed, "connection failed")
+
+    Rails.logger.expects(:warn).with(regexp_matches(/fetch_chart_data failed for EURUSD=X/))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:provider_key] == "yahoo_finance" &&
+        attributes[:metadata][:symbol] == "EURUSD=X" &&
+        attributes[:metadata][:exception_class] == "Faraday::ConnectionFailed"
+    end
+
+    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current) { |ts, close| close }
+
+    assert_nil result
+  end
+
   # ================================
   #  Cookie/Crumb Authentication Tests
   # ================================
@@ -919,6 +945,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   end
 
   private
+
+    def retry_middleware_options(faraday_connection)
+      handler = faraday_connection.builder.handlers.find { |h| h.klass.to_s.include?("Retry") }
+      handler.build.instance_variable_get(:@options)
+    end
 
     def stub_successful_health_authentication(provider: @provider, count: 1)
       responses = count.times.flat_map do |index|

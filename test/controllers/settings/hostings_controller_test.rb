@@ -27,7 +27,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key
+       market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -678,5 +679,57 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   ensure
     Setting.securities_providers = ""
+  end
+
+  test "can update market data sync settings when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "18:30" } }
+
+      assert_redirected_to settings_hosting_url
+      assert Setting.market_data_sync_enabled
+      assert_equal "18:30", Setting.market_data_sync_time
+
+      job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+      assert job, "Expected the market data cron job to be (re)created"
+      assert_equal "ImportMarketDataJob", job.klass
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "disabling market data sync removes its cron job" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
+      assert Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "0" } }
+      refute Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "rejects an invalid market data sync time" do
+    with_self_hosting do
+      original_time = Setting.market_data_sync_time
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_time: "not-a-time" } }
+
+      assert_redirected_to settings_hosting_path
+      assert_equal original_time, Setting.market_data_sync_time
+    end
+  end
+
+  test "still applies market_data_sync_enabled when market_data_sync_time in the same request is invalid" do
+    with_self_hosting do
+      Setting.market_data_sync_enabled = false
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "not-a-time" } }
+
+      assert_redirected_to settings_hosting_path
+      assert Setting.market_data_sync_enabled, "enabled flag from the same submission should not be dropped by the invalid time"
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
   end
 end
