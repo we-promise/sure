@@ -49,6 +49,8 @@ module Authentication
         cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
         session
       end
+    rescue ActiveRecord::RecordNotFound
+      false
     end
 
     def self_hosted_first_login?
