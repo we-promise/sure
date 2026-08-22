@@ -84,6 +84,13 @@ services:
       # "Binding to IPv6" for details.
       # - "[::]:${PORT:-3000}:3000"
     restart: unless-stopped
+    # Inject any variables you set in .env (ONBOARDING_STATE, APP_DOMAIN,
+    # SMTP_*, etc.). The explicit `environment` values below take precedence
+    # over .env, so container-critical settings (DB_HOST, REDIS_URL, ...) stay
+    # correct. `required: false` keeps this working when no .env file exists.
+    env_file:
+      - path: .env
+        required: false
     environment:
       <<: *rails_env
       # BINDING: "::"  # Uncomment for IPv6 dual-stack inside the container
@@ -104,6 +111,10 @@ services:
     volumes:
       - app-storage:/rails/storage
     restart: unless-stopped
+    # Same as `web`: pass through .env while keeping explicit values authoritative.
+    env_file:
+      - path: .env
+        required: false
     depends_on:
       db:
         condition: service_healthy
