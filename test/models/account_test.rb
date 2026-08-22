@@ -16,6 +16,24 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "default owner prefers a family admin before a super admin" do
+    family = families(:empty)
+    admin = users(:empty)
+    super_admin = users(:sure_support_staff)
+
+    Current.reset
+
+    account = family.accounts.create!(
+      name: "Unowned test account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    assert_equal admin, account.owner
+    assert_not_equal super_admin, account.owner
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 

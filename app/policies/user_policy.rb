@@ -7,8 +7,11 @@ class UserPolicy < ApplicationPolicy
   end
 
   def update?
+    user&.super_admin?
+  end
+
+  def destroy?
     return false unless user&.super_admin?
-    # Prevent users from changing their own role (must be done by another super_admin)
     user.id != record.id
   end
 

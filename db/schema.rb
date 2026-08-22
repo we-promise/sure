@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_20_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_21_034200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -2280,6 +2280,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_20_120000) do
     t.uuid "family_id", null: false
     t.string "first_name"
     t.string "last_name"
+    t.datetime "last_login_at"
     t.string "email"
     t.string "password_digest"
     t.datetime "created_at", null: false
@@ -2300,6 +2301,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_20_120000) do
     t.boolean "rule_prompts_disabled", default: false
     t.datetime "rule_prompt_dismissed_at"
     t.text "goals", default: [], array: true
+    t.integer "sessions_count", default: 0, null: false
     t.datetime "set_onboarding_preferences_at"
     t.datetime "set_onboarding_goals_at"
     t.string "default_account_order", default: "name_asc"

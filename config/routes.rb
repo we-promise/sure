@@ -856,9 +856,9 @@ Rails.application.routes.draw do
         post :test_connection
       end
     end
-    resources :users, only: [ :index, :update ]
+    resources :users, only: [ :index, :update, :destroy ]
     resources :invitations, only: [ :destroy ]
-    resources :families, only: [] do
+    resources :families, only: [ :destroy ] do
       member do
         delete :invitations, to: "invitations#destroy_all"
       end
