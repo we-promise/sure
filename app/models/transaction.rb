@@ -104,6 +104,20 @@ class Transaction < ApplicationRecord
     .join(" OR ")
     .freeze
 
+  # Transfer eager-loading scope for N+1 prevention in lists
+  # Union of #2643 counterpart UI + Skylight category-menu N+1:
+  # - outflow rows need inflow_transaction (to_account) for both
+  #   counterpart display and Transfer#categorizable?/#payment?
+  # - inflow rows need outflow_transaction (from_account) for
+  #   counterpart display, and inflow_transaction (to_account)
+  #   for the category menu on the same row
+  scope :with_transfer_counterparties, -> {
+    includes(
+      transfer_as_outflow: { inflow_transaction: { entry: :account } },
+      transfer_as_inflow: { outflow_transaction: { entry: :account }, inflow_transaction: { entry: :account } }
+    )
+  }
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> {
