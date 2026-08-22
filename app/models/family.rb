@@ -331,9 +331,10 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
-  # Memoized per user: the layout renders the sidebar for desktop and mobile
-  # (each with three tab panels), so one request asks for the balance sheet
-  # many times; rebuilding it repeats the account/sync/exchange-rate queries.
+  # Memoized per user: the layout renders the account sidebar on every page
+  # (mobile + desktop, each with 3 tabs), so a single request can ask for the
+  # balance sheet many times. Rebuilding it repeats the account/sync/exchange-
+  # rate queries it depends on.
   def balance_sheet(user: Current.user)
     @balance_sheets ||= {}
     @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
@@ -410,8 +411,10 @@ class Family < ApplicationRecord
     end
   end
 
+  # Memoized per user for the same reason as #balance_sheet above.
   def investment_statement(user: Current.user)
-    InvestmentStatement.new(self, user: user)
+    @investment_statements ||= {}
+    @investment_statements[user&.id] ||= InvestmentStatement.new(self, user: user)
   end
 
   def eu?
@@ -485,6 +488,37 @@ class Family < ApplicationRecord
       ts = entries.maximum(:updated_at)
       ts.present? ? ts.to_i : 0
     end
+  end
+
+  # Used for invalidating caches keyed on entries (e.g. the transactions
+  # index's uncategorized count). Unlike #entries_cache_version, includes
+  # .count so a hard-deleted entry busts the cache even when it didn't hold
+  # the current max updated_at, and uses full-precision timestamps so two
+  # updates within the same second still produce distinct versions.
+  def entries_version
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches keyed on recurring transactions (e.g. the
+  # transactions index's projected recurring list). See #entries_version for
+  # why .count is included alongside the timestamp.
+  def recurring_transactions_version
+    "#{recurring_transactions.count}-#{recurring_transactions.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches whose results depend on which accounts are
+  # active/draft vs. disabled (e.g. AccountsController#toggle_active changes
+  # nothing on entries, but changes which entries `uncategorized_transactions`
+  # considers accessible).
+  def accounts_status_version
+    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches that render merchant name/logo (e.g. the
+  # transactions index's projected recurring list), since editing or
+  # deleting a FamilyMerchant doesn't touch `recurring_transactions`.
+  def merchants_version
+    "#{merchants.count}-#{merchants.maximum(:updated_at)&.to_f}"
   end
 
   def self_hoster?
