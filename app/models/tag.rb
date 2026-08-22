@@ -13,6 +13,28 @@ class Tag < ApplicationRecord
 
   UNCATEGORIZED_COLOR = "#737373"
 
+  # Tag name key for i18n
+  UNTAGGED_NAME_KEY = "models.tag.untagged"
+
+  class << self
+    def untagged
+      new(name: I18n.t(UNTAGGED_NAME_KEY), color: UNCATEGORIZED_COLOR)
+    end
+
+    # Helper to get the localized name for "Untagged"
+    def untagged_name
+      I18n.t(UNTAGGED_NAME_KEY)
+    end
+
+    # Returns all possible "Untagged" names across all supported locales
+    # Used to detect the untagged filter regardless of URL parameter language
+    def all_untagged_names
+      LanguagesHelper::SUPPORTED_LOCALES.map do |locale|
+        I18n.t(UNTAGGED_NAME_KEY, locale: locale)
+      end.uniq
+    end
+  end
+
   def replace_and_destroy!(replacement)
     transaction do
       raise ActiveRecord::RecordInvalid, "Replacement tag cannot be the same as the tag being destroyed" if replacement == self

@@ -626,6 +626,154 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "filtering for only No merchant returns only transactions without a merchant" do
+    with_merchant = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: merchants(:netflix),
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { merchants: [ Merchant.no_merchant.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, without_merchant.entryable.id
+    assert_not_includes result_ids, with_merchant.entryable.id
+  end
+
+  test "filtering for No merchant plus a real merchant returns both" do
+    with_netflix = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: merchants(:netflix),
+      kind: "standard"
+    )
+
+    with_amazon = create_transaction(
+      account: @checking_account,
+      amount: 150,
+      merchant: merchants(:amazon),
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(
+      @family,
+      filters: { merchants: [ merchants(:netflix).name, Merchant.no_merchant.name ] }
+    ).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_netflix.entryable.id
+    assert_includes result_ids, without_merchant.entryable.id
+    assert_not_includes result_ids, with_amazon.entryable.id
+  end
+
+  test "filtering excludes transactions without a merchant when No merchant is not in the filter" do
+    with_merchant = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: merchants(:netflix),
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { merchants: [ merchants(:netflix).name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_merchant.entryable.id
+    assert_not_includes result_ids, without_merchant.entryable.id
+  end
+
+  test "filtering for only Untagged returns only transactions without tags" do
+    with_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ Tag.untagged.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, without_tag.entryable.id
+    assert_not_includes result_ids, with_tag.entryable.id
+  end
+
+  test "filtering for Untagged plus a real tag returns both" do
+    with_trips_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    with_other_tag = create_transaction(
+      account: @checking_account,
+      amount: 150,
+      tags: [ tags(:two) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(
+      @family,
+      filters: { tags: [ tags(:one).name, Tag.untagged.name ] }
+    ).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_trips_tag.entryable.id
+    assert_includes result_ids, without_tag.entryable.id
+    assert_not_includes result_ids, with_other_tag.entryable.id
+  end
+
+  test "filtering excludes transactions without tags when Untagged is not in the filter" do
+    with_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ tags(:one).name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_tag.entryable.id
+    assert_not_includes result_ids, without_tag.entryable.id
+  end
+
   test "empty accessible_account_ids yields no visible transactions" do
     create_transaction(account: @checking_account, amount: 100)
 
