@@ -14,22 +14,26 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
   # A deployment with a confidential OAuth client: both the browser redirect and
   # the device code are available.
-  def with_oauth_app
-    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
-    Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
-    yield
-  ensure
-    Rails.configuration.x.snaptrade.oauth_client_id = nil
-    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  def with_oauth_app(&block)
+    with_snaptrade_oauth("client-id", "client-secret", &block)
   end
 
   # A deployment that only registered a public client: device code only.
-  def with_device_flow_only
-    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
-    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  def with_device_flow_only(&block)
+    with_snaptrade_oauth("client-id", nil, &block)
+  end
+
+  # Restores whatever was configured rather than clearing, so a test env that
+  # does set SnapTrade credentials doesn't leak nils into later tests.
+  def with_snaptrade_oauth(client_id, client_secret)
+    original_id = Rails.configuration.x.snaptrade.oauth_client_id
+    original_secret = Rails.configuration.x.snaptrade.oauth_client_secret
+    Rails.configuration.x.snaptrade.oauth_client_id = client_id
+    Rails.configuration.x.snaptrade.oauth_client_secret = client_secret
     yield
   ensure
-    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    Rails.configuration.x.snaptrade.oauth_client_id = original_id
+    Rails.configuration.x.snaptrade.oauth_client_secret = original_secret
   end
 
   test "connect redirects to portal when successful" do
@@ -158,6 +162,26 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
       assert_redirected_to settings_providers_path
       assert_equal "device-at", item.reload.oauth_access_token
       assert item.good?
+    end
+  end
+
+  test "complete_oauth_device_flow leaves the drawer instead of navigating inside it" do
+    with_device_flow_only do
+      Provider::Snaptrade.stubs(:poll_device_token).returns({
+        "access_token" => "device-at", "refresh_token" => "device-rt", "expires_in" => 900
+      })
+
+      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item),
+           params: { device_code: "dev-c0de" },
+           headers: { "Turbo-Frame" => "drawer" }
+
+      # A plain redirect would be followed as a frame navigation and swap in the
+      # layout's empty drawer frame, closing the dialog and going nowhere.
+      assert_response :success
+      assert_match "turbo-stream", response.body
+      assert_match "redirect", response.body
+      assert_match settings_providers_path, response.body
+      assert_equal I18n.t("snaptrade_items.complete_oauth_device_flow.success"), flash[:notice]
     end
   end
 

@@ -316,11 +316,13 @@ class SnaptradeItemsController < ApplicationController
     @snaptrade_item.complete_oauth_device_flow!(device_code: params[:device_code])
     @snaptrade_item.sync_later_with_follow_up
 
-    if @return_to == "setup_accounts"
-      redirect_to setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: @accountable_type.presence), notice: t(".success")
+    destination = if @return_to == "setup_accounts"
+      setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: @accountable_type.presence)
     else
-      redirect_to settings_providers_path, notice: t(".success")
+      settings_providers_path
     end
+
+    redirect_after_device_flow destination, notice: t(".success")
   rescue Provider::Snaptrade::Error => e
     Rails.logger.error "SnapTrade device token request failed: #{e.class} - #{e.message}"
 
@@ -487,6 +489,7 @@ class SnaptradeItemsController < ApplicationController
       @return_to = params[:return_to]
       @accountable_type = params[:accountable_type]
       @oauth_scope = permitted_oauth_scope
+      @device_flow_available = Provider::Snaptrade.oauth_configured?
     end
 
     def permitted_oauth_scope
@@ -511,8 +514,23 @@ class SnaptradeItemsController < ApplicationController
     end
 
     def render_device_flow_unconfigured
+      @device_flow_available = false
       @error_message = t("snaptrade_items.oauth_device_flow.missing_client_id")
       render :oauth_device_flow, status: :unprocessable_entity
+    end
+
+    # The drawer form posts into the `drawer` frame so errors re-render in
+    # place. A plain redirect would be followed as a frame navigation, and both
+    # destinations carry the layout's empty `drawer` frame -- Turbo would swap
+    # that in and just close the dialog, losing the notice and never advancing
+    # to account setup. A redirect stream action breaks out to the top level.
+    def redirect_after_device_flow(path, notice:)
+      if turbo_frame_request?
+        flash[:notice] = notice
+        render turbo_stream: turbo_stream.action(:redirect, path)
+      else
+        redirect_to path, notice: notice
+      end
     end
 
     def device_flow_pending?(error)
