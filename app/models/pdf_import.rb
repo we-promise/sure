@@ -343,6 +343,39 @@ class PdfImport < Import
     Entry.reconciled_by(account_statement)
   end
 
+  # The half of reconciled_entries this import did not create -- transactions the
+  # account already held when the statement arrived. Everything this import
+  # creates is born reconciled too, so the two have to be told apart before
+  # either count means anything.
+  def already_recorded_entries
+    reconciled_entries.where.not(id: entries.select(:id))
+  end
+
+  def already_recorded_count
+    already_recorded_entries.count
+  end
+
+  def imported_count
+    entries.count
+  end
+
+  def extracted_count
+    extracted_transactions.size
+  end
+
+  # Rows still on offer. import! creates an entry per row and leaves the rows in
+  # place as the record of what was published, so past that point rows_count is
+  # a history, not a queue.
+  def awaiting_review_count
+    data_committed? ? 0 : rows_count
+  end
+
+  # Whether the statement described transactions the account already had. The
+  # difference between "nothing to import" and "nothing was found".
+  def reconciled_anything?
+    already_recorded_count.positive?
+  end
+
   def send_next_steps_email(user)
     PdfImportMailer.with(
       user: user,

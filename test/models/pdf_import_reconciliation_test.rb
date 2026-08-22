@@ -331,6 +331,62 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal @account, @import.reload.account
   end
 
+  test "the outcome counts separate what was already recorded from what is new" do
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    @import.update!(extracted_data: { "transactions" => [
+      extracted(date: @date, amount: -50, name: "Coffee"),
+      extracted(date: @date, amount: -12, name: "Bookstore")
+    ] })
+    @import.generate_rows_from_extracted_data
+    @import.reload
+
+    assert_equal 2, @import.extracted_count
+    assert_equal 1, @import.already_recorded_count
+    assert_equal 0, @import.imported_count
+    assert_equal 1, @import.awaiting_review_count
+    assert @import.reconciled_anything?
+  end
+
+  test "publishing moves the offered rows into the imported count" do
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    @import.update!(extracted_data: { "transactions" => [
+      extracted(date: @date, amount: -50, name: "Coffee"),
+      extracted(date: @date, amount: -12, name: "Bookstore")
+    ] })
+    @import.generate_rows_from_extracted_data
+    @import.import!
+    @import.reload
+
+    # Entries this import created are born reconciled too, so they must not be
+    # counted as transactions the account already had.
+    assert_equal 1, @import.already_recorded_count
+    assert_equal 1, @import.imported_count
+    # Rows survive publishing as the record of what was written, so the count
+    # has to stop describing them as a queue.
+    assert_equal 0, @import.awaiting_review_count
+  end
+
+  test "a fully reconciled statement reports everything as already recorded" do
+    create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+    @import.reload
+
+    assert_equal 1, @import.extracted_count
+    assert_equal 1, @import.already_recorded_count
+    assert_equal 0, @import.imported_count
+    assert_equal 0, @import.awaiting_review_count
+  end
+
+  test "an import that matched nothing reports nothing as already recorded" do
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -12, name: "Bookstore") ] })
+    @import.generate_rows_from_extracted_data
+    @import.reload
+
+    assert_equal 0, @import.already_recorded_count
+    assert_not @import.reconciled_anything?
+  end
+
   private
 
     def create_statement

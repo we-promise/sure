@@ -1,7 +1,7 @@
 class ImportsController < ApplicationController
   include SettingsHelper
 
-  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
 
   def update
@@ -38,6 +38,14 @@ class ImportsController < ApplicationController
     redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  end
+
+  # Statement imports only: what became of each extracted transaction. Without it
+  # a statement whose lines all matched finishes on the generic complete screen,
+  # which cannot distinguish "everything was already recorded" from "nothing was
+  # found".
+  def summary
+    raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport)
   end
 
   def cancel
