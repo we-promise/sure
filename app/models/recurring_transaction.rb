@@ -293,12 +293,39 @@ class RecurringTransaction < ApplicationRecord
   # The occurrence the user most needs to see: the earliest still-open one
   # (which is also the most overdue), falling back to the most recent closed
   # one when everything is settled.
+  # Preload-aware: get_bills and the bills page both include occurrences, and
+  # this runs once per row.
+  def next_open_occurrence
+    if recurring_occurrences.loaded?
+      recurring_occurrences.select(&:scheduled?).min_by(&:due_on)
+    else
+      recurring_occurrences.open_status.order(:due_on).first
+    end
+  end
+
   def current_occurrence
     recurring_occurrences.open_status.order(:due_on).first ||
       recurring_occurrences.order(due_on: :desc).first
   end
 
+  # The occurrences are the schedule. They are what the app materializes,
+  # settles, displays and reports on, so the next one still open is what this
+  # bill is actually waiting for.
+  #
+  # next_expected_date is only a cached hint, and the sole paths that advance
+  # it are a sync-time match against a real bank entry and record_occurrence!,
+  # which nothing calls. Settle a bill any other way, through mark_paid!, a
+  # manual payment or the assistant, and the hint froze on a date in the past
+  # for good. This method returned it verbatim, so a fully paid bill reported a
+  # due date 45 days gone, answered due_within_days: 3, and was filed as two
+  # cycles overdue while its own occurrence sat upcoming.
+  #
+  # The hint still serves as the fallback for a series with nothing
+  # materialized yet.
   def next_due_date
+    occurrence = next_open_occurrence
+    return occurrence.effective_due_on if occurrence
+
     return next_expected_date if next_expected_date <= Date.current
 
     [ next_expected_date, schedule.next_occurrence_from_today ].compact.min
@@ -334,12 +361,15 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # How many whole cycles have elapsed since this was due, using the series'
-  # real cadence length.
+  # real cadence length. Whole is meant literally: a bill one day late has not
+  # yet missed a cycle. The trailing +1 this used to carry reported 1 on the
+  # first day late, which put a bill inside its own grace period into a section
+  # documented as "overdue by at least one whole billing cycle".
   def cycles_overdue
     return 0 unless overdue?
 
     cycle_days = 365.25 / schedule.occurrences_per_year
-    ((Date.current - next_due_date).to_i / cycle_days).floor + 1
+    ((Date.current - next_due_date).to_i / cycle_days).floor
   end
   scope :accessible_by, ->(user) {
     accessible_account_ids = Account.accessible_by(user).select(:id)

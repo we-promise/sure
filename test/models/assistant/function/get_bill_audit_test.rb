@@ -80,10 +80,19 @@ class Assistant::Function::GetBillAuditTest < ActiveSupport::TestCase
 
   test "long_overdue measures in the bill's own cycles" do
     overdue_day = 45.days.ago.to_date
-    create_series(name: "Forgotten bill", amount: 60,
-                  expected_day_of_month: overdue_day.day,
-                  last_occurrence_date: overdue_day << 1,
-                  next_expected_date: overdue_day)
+    series = create_series(name: "Forgotten bill", amount: 60,
+                           expected_day_of_month: overdue_day.day,
+                           last_occurrence_date: overdue_day << 1,
+                           next_expected_date: overdue_day)
+
+    # The cycle actually left unpaid is what makes a bill overdue. Declared
+    # series do not fabricate past occurrences, so the one that was forgotten
+    # has to exist for there to be anything to forget.
+    series.recurring_occurrences.destroy_all
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: overdue_day, due_on: overdue_day,
+      currency: "USD", expected_amount: 60, status: "scheduled"
+    )
 
     result = call_tool
 

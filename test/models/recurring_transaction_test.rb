@@ -1456,7 +1456,60 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "Rent", build_recurring(merchant: nil, name: "Rent").display_name
   end
 
+
+  # next_expected_date only advances when a bank entry matches during sync, so
+  # a bill settled through mark_paid!, a manual payment or the assistant froze
+  # it in the past forever. next_due_date returned it verbatim, which reported
+  # a fully paid bill as long overdue and answered due_within_days for a date
+  # 45 days gone.
+  test "a settled bill looks ahead to its next open cycle, not at a stale hint" do
+    series = stale_hint_series
+
+    series.recurring_occurrences.where("due_on <= ?", Date.current).find_each do |occurrence|
+      RecurringTransaction::Allocator.new(occurrence).mark_paid!
+    end
+    series.reload
+
+    assert_operator series.next_due_date, :>, Date.current,
+      "every owed cycle is paid, so nothing is due in the past"
+    assert_not series.overdue?
+    assert_equal 0, series.cycles_overdue
+  end
+
+  test "an unpaid past cycle is still overdue" do
+    series = stale_hint_series
+
+    assert series.overdue?, "the oldest unpaid cycle is what makes a bill late"
+    assert_equal series.recurring_occurrences.open_status.minimum(:due_on), series.next_due_date
+  end
+
+  # "Whole cycles" is meant literally. The old formula added one, so a bill a
+  # single day late already claimed a full cycle missed.
+  test "cycles_overdue counts only whole cycles elapsed" do
+    series = stale_hint_series
+    due = Date.current - 1
+    series.recurring_occurrences.destroy_all
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 60, status: "scheduled"
+    )
+
+    assert series.reload.overdue?
+    assert_equal 0, series.cycles_overdue, "one day late is not one cycle missed"
+  end
+
   private
+
+    def stale_hint_series
+      stale = 45.days.ago.to_date
+      series = @family.recurring_transactions.create!(
+        name: "Gym #{stale}", account: accounts(:depository), amount: 60,
+        currency: "USD", status: "active", bill_type: "subscription", manual: true,
+        dedup_scope: "gym-#{stale}", expected_day_of_month: stale.day,
+        last_occurrence_date: stale << 1, next_expected_date: stale
+      )
+      series.reload
+    end
 
     def build_recurring(**overrides)
       @family.recurring_transactions.build({
