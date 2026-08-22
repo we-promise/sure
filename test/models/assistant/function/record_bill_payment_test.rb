@@ -77,7 +77,94 @@ class Assistant::Function::RecordBillPaymentTest < ActiveSupport::TestCase
     assert_equal Date.current - 1, allocation.paid_on
   end
 
+
+  # An LLM retries on timeout. Every payment recorded through this tool was
+  # capped by nothing, because the allocator only guarded payments attached to
+  # a bank entry. Two identical calls settled a $2,000 bill at $3,000.
+  test "a repeated partial payment cannot overfill the cycle" do
+    series = declare_capped_bill(amount: 2000)
+    args = { "bill_id" => series.id, "amount" => 1500 }
+
+    first = Assistant::Function::RecordBillPayment.new(@user).call(args)
+    second = Assistant::Function::RecordBillPayment.new(@user).call(args)
+
+    assert first[:recorded]
+    assert second[:error].present?, "the retry must be refused, not absorbed"
+    assert_match(/more than the/, second[:error])
+
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    assert_equal 1500, occurrence.allocations.confirmed.sum(:allocated_amount)
+  end
+
+  test "an amount larger than the cycle owes is refused" do
+    series = declare_capped_bill(amount: 2000)
+
+    result = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id, "amount" => 999_999)
+
+    assert result[:error].present?
+    assert_equal 0, series.recurring_occurrences.order(:due_on).first.allocations.count
+  end
+
+  # After a cycle settles, the next one becomes current. A retried settle used
+  # to fall through and pay it, closing two cycles from two identical requests.
+  test "a repeated full settle does not pay the following cycle" do
+    series = declare_capped_bill(amount: 2000)
+
+    first = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id)
+    second = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id)
+
+    assert first[:recorded]
+    assert second[:error].present?, "nothing is owed once the due cycle is settled"
+    assert_match(/pay ahead/, second[:hint])
+    assert_equal 1, series.recurring_occurrences.where(status: "paid").count
+  end
+
+  test "paying ahead still works when the cycle is named" do
+    series = declare_capped_bill(amount: 2000)
+    Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id)
+    future = series.recurring_occurrences.open_status.order(:due_on).first
+
+    result = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id, "occurrence_due_on" => future.due_on.iso8601)
+
+    assert result[:recorded], "naming the date is the deliberate act a retry never performs"
+  end
+
+  test "non-finite and negative amounts are refused instead of coerced" do
+    series = declare_capped_bill(amount: 2000)
+
+    %w[Infinity NaN].each do |value|
+      result = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id, "amount" => value)
+      assert_equal "amount is not a number", result[:error]
+    end
+
+    negative = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id, "amount" => -500)
+    assert_equal "amount must be greater than zero", negative[:error],
+      "a negative used to be flipped with .abs and recorded as a payment"
+
+    assert_equal 0, series.recurring_occurrences.order(:due_on).first.allocations.count
+  end
+
   private
+
+    def declare_capped_bill(amount:)
+      due = Date.current
+      series = @family.recurring_transactions.create!(
+        name: "Rent #{amount}", account: accounts(:depository), amount: amount,
+        currency: "USD", status: "active", bill_type: "bill", manual: true,
+        dedup_scope: "rent-#{amount}", expected_day_of_month: due.day,
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: due
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: @family, original_due_on: due, due_on: due,
+        currency: "USD", expected_amount: amount, status: "scheduled"
+      )
+      series.recurring_occurrences.create!(
+        family: @family, original_due_on: due + 30, due_on: due + 30,
+        currency: "USD", expected_amount: amount, status: "scheduled"
+      )
+      series.reload
+    end
 
     def call_tool(params)
       Assistant::Function::RecordBillPayment.new(@user).call({ "bill_id" => @series.id.to_s }.merge(params))

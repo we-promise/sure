@@ -41,13 +41,17 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
     )
   end
 
+  AMOUNT_HINT = "Check the occurrence's remaining amount via get_bill_details and retry once with a valid amount."
+
   def call(params = {})
     return recurring_disabled_result if recurring_disabled?
 
     series, error = find_series(params["bill_id"])
     return error if error
 
-    occurrence, occurrence_error = resolve_occurrence(series, params["occurrence_due_on"])
+    occurrence, occurrence_error = resolve_occurrence(
+      series, params["occurrence_due_on"], settling: params["amount"].blank?
+    )
     return occurrence_error if occurrence_error
 
     paid_on = parse_paid_on(params["paid_on"])
@@ -56,7 +60,13 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
     allocator = RecurringTransaction::Allocator.new(occurrence)
 
     if params["amount"].present?
-      allocator.allocate!(amount: BigDecimal(params["amount"].to_s).abs, paid_on: paid_on, source: "user_created")
+      amount = parse_amount(params["amount"])
+      return amount if amount.is_a?(Hash)
+
+      capacity = check_capacity(occurrence, amount)
+      return capacity if capacity
+
+      allocator.allocate!(amount: amount, paid_on: paid_on, source: "user_created")
     else
       allocator.mark_paid!(paid_on: paid_on)
     end
@@ -70,7 +80,7 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
   end
 
   private
-    def resolve_occurrence(series, due_on)
+    def resolve_occurrence(series, due_on, settling: false)
       if due_on.present?
         date = begin
           Date.parse(due_on.to_s)
@@ -91,6 +101,23 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
         } ]
       else
         occurrence = series.current_occurrence
+
+        # Settling without naming a cycle means the one that is owed now. After
+        # a cycle is paid the next one becomes current, so a retried settle used
+        # to fall straight through and close NEXT month too: two identical
+        # requests, two cycles paid, no money moved for either.
+        #
+        # Only the settle path is guarded. Sending an explicit amount toward the
+        # next open cycle is a deliberate act with its own test, and an amount
+        # is exactly what a blind retry of a settle does not carry.
+        if settling && occurrence&.scheduled? && occurrence.derived_state == :upcoming
+          return [ nil, {
+            error: "#{series.display_name} has nothing owed right now",
+            hint: "Its next cycle is due #{occurrence.due_on.iso8601} and is not owed yet. " \
+                  "If you really mean to pay ahead, retry with occurrence_due_on set to that date."
+          } ]
+        end
+
         return [ occurrence, nil ] if occurrence&.scheduled?
 
         [ nil, {
@@ -98,6 +125,40 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
           hint: "Nothing is currently owed on this bill. Use get_bill_details to see its state."
         } ]
       end
+    end
+
+    # BigDecimal parses "Infinity" and "NaN"; the tool caller does not enforce
+    # params_schema, so both are rejected here rather than escaping as a raw
+    # PG::NumericValueOutOfRange. A negative was previously flipped with .abs,
+    # which turned a confused model into a silent payment.
+    def parse_amount(value)
+      magnitude = begin
+        BigDecimal(value.to_s)
+      rescue ArgumentError
+        nil
+      end
+
+      return { error: "amount is not a number", hint: AMOUNT_HINT } if magnitude.nil? || !magnitude.finite?
+      return { error: "amount must be greater than zero", hint: AMOUNT_HINT } unless magnitude.positive?
+
+      magnitude
+    end
+
+    # An occurrence cannot absorb more than it owes. The allocator only ever
+    # capped payments attached to a bank entry, so every payment recorded
+    # through this tool was capped by nothing: two identical $1,500 retries
+    # settled a $2,000 bill at $3,000, and $999,999 was accepted outright. The
+    # error hint has always promised this ceiling; now it exists.
+    def check_capacity(occurrence, amount)
+      remaining = occurrence.remaining_amount
+      return nil if amount <= remaining
+
+      {
+        error: "#{Money.new(amount, occurrence.currency).format} is more than the " \
+               "#{occurrence.remaining_amount_money.format} still owed on the cycle due " \
+               "#{occurrence.due_on.iso8601}",
+        hint: "Record at most the remaining amount. If this payment was already recorded, do not retry."
+      }
     end
 
     def open_due_dates(series)
