@@ -92,6 +92,13 @@ class ChatTest < ActiveSupport::TestCase
   test "creates with configured model when OPENAI_MODEL env is set" do
     prompt = "Test prompt"
 
+    # Pin the active provider to OpenAI so default_model resolution is
+    # deterministic regardless of which provider credentials the environment
+    # happens to have configured (otherwise a configured Anthropic key makes
+    # default_model fall through to claude-sonnet-4-6).
+    Setting.stubs(:llm_provider).returns("openai")
+    Provider::Openai.stubs(:configured?).returns(true)
+
     with_env_overrides OPENAI_MODEL: "custom-model" do
       chat = @user.chats.start!(prompt, model: "")
 
