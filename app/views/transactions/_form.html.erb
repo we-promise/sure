@@ -90,14 +90,14 @@
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <section class="space-y-2">
       <%= f.fields_for :entryable do |ef| %>
-        <%= ef.collection_select :merchant_id,
-                  merchants,
-                  :id, :name,
-                  { include_blank: t(".none"),
-                    label: t(".merchant_label"),
-                    variant: :logo,
-                    searchable: true,
-                    menu_placement: :auto } %>
+        <%= render DS::MerchantSelect.new(
+              form: ef,
+              method: :merchant_id,
+              merchants: merchants,
+              selected_id: ef.object.merchant_id,
+              include_blank: t(".none"),
+              label: t(".merchant_label")
+            ) %>
         <%= render DS::TagSelect.new(
               form: ef,
               tags: tags,
