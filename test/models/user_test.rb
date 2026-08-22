@@ -821,6 +821,15 @@ class UserTest < ActiveSupport::TestCase
     assert target.oidc_identities.exists?
   end
 
+  test "permanently_remove! schedules purge for an already inactive user" do
+    target = users(:family_member)
+    target.update_column(:active, false)
+
+    assert_enqueued_with(job: UserPurgeJob, args: [ target ]) do
+      assert target.permanently_remove!
+    end
+  end
+
   test "deactivate refuses the last active super admin" do
     family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
     target = User.create!(

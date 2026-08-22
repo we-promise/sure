@@ -17,4 +17,25 @@ class SsoIdentityBlockTest < ActiveSupport::TestCase
       2.times { SsoIdentityBlock.block_all!(OidcIdentity.where(id: identity.id), identity_label: identity.user.email) }
     end
   end
+
+  test "uses a keyed digest instead of a plain subject hash" do
+    uid = "predictable-subject"
+
+    assert_equal SsoIdentityBlock.digest(uid), SsoIdentityBlock.digest(uid)
+    assert_not_equal Digest::SHA256.hexdigest(uid), SsoIdentityBlock.digest(uid)
+  end
+
+  test "does not store the identity label in plaintext without encryption" do
+    SsoIdentityBlock.stubs(:encryption_ready?).returns(false)
+    raw_label = "removed-user@example.com"
+
+    block = SsoIdentityBlock.create!(
+      provider: "openid_connect",
+      uid_digest: SsoIdentityBlock.digest("removed-subject"),
+      identity_label: raw_label
+    )
+
+    assert_not_equal raw_label, block.identity_label
+    assert_match(/Removed identity/, block.identity_label)
+  end
 end

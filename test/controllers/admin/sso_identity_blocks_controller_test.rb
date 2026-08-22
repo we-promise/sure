@@ -4,7 +4,7 @@ class Admin::SsoIdentityBlocksControllerTest < ActionDispatch::IntegrationTest
   setup do
     @block = SsoIdentityBlock.create!(
       provider: "openid_connect",
-      uid_digest: Digest::SHA256.hexdigest("removed-subject"),
+      uid_digest: SsoIdentityBlock.digest("removed-subject"),
       identity_label: "removed-user@example.com"
     )
   end
@@ -30,7 +30,9 @@ class Admin::SsoIdentityBlocksControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_member)
 
     assert_no_difference -> { SsoIdentityBlock.count } do
-      delete admin_sso_identity_block_url(@block)
+      assert_no_difference -> { SsoAuditLog.by_event("identity_unblocked").count } do
+        delete admin_sso_identity_block_url(@block)
+      end
     end
 
     assert_redirected_to root_path

@@ -91,6 +91,9 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     sign_out
 
     post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+    assert_equal @user.id, session[:mfa_user_id]
+
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
     post verify_mfa_path, params: { code: totp.now }
@@ -105,6 +108,9 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     sign_out
 
     post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+    assert_equal @user.id, session[:mfa_user_id]
+
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
     @user.update_column(:active, false)
 

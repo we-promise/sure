@@ -61,6 +61,22 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "Invalid email or password", flash[:alert]
   end
 
+  test "should reject linking an identity to an inactive user" do
+    @user.update_column(:active, false)
+    session[:pending_oidc_auth] = pending_auth
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "Invalid email or password", flash[:alert]
+  end
+
   test "should redirect to MFA when user has MFA enabled" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -348,7 +364,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
   test "create_user refuses a pending auth whose identity was removed" do
     SsoIdentityBlock.create!(
       provider: pending_auth["provider"],
-      uid_digest: Digest::SHA256.hexdigest(pending_auth["uid"]),
+      uid_digest: SsoIdentityBlock.digest(pending_auth["uid"]),
       identity_label: pending_auth["email"]
     )
     session[:pending_oidc_auth] = pending_auth.merge("email" => "blocked-jit@example.com")
@@ -364,7 +380,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
   test "create_link refuses a pending auth whose identity was removed" do
     SsoIdentityBlock.create!(
       provider: pending_auth["provider"],
-      uid_digest: Digest::SHA256.hexdigest(pending_auth["uid"]),
+      uid_digest: SsoIdentityBlock.digest(pending_auth["uid"]),
       identity_label: pending_auth["email"]
     )
     session[:pending_oidc_auth] = pending_auth
@@ -380,7 +396,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
   test "link and new_user refuse a pending auth whose identity was removed" do
     SsoIdentityBlock.create!(
       provider: pending_auth["provider"],
-      uid_digest: Digest::SHA256.hexdigest(pending_auth["uid"]),
+      uid_digest: SsoIdentityBlock.digest(pending_auth["uid"]),
       identity_label: pending_auth["email"]
     )
 

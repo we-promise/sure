@@ -96,8 +96,14 @@ module Admin
         return
       end
 
-      if @user.permanently_remove!
+      removed = @user.transaction do
+        next false unless @user.permanently_remove!
+
         SsoAuditLog.log_user_removed!(user: @user, actor: Current.user, request: request)
+        true
+      end
+
+      if removed
         redirect_to admin_users_path, notice: t(".success")
       else
         redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence.presence || t(".failure")

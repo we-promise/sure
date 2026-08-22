@@ -325,7 +325,7 @@ class SessionsController < ApplicationController
     # Mobile SSO: redirect back to the app with error instead of web login page
     if session[:mobile_sso].present?
       session.delete(:mobile_sso)
-      mobile_sso_redirect(error: sanitized_reason, message: "SSO authentication failed")
+      mobile_sso_redirect(error: sanitized_reason, message: t("sessions.failure.sso_failed"))
       return
     end
 
@@ -358,7 +358,7 @@ class SessionsController < ApplicationController
       )
 
       if session.delete(:mobile_sso).present?
-        mobile_sso_redirect(error: "sso_failed", message: "SSO authentication failed")
+        mobile_sso_redirect(error: "sso_failed", message: t("sessions.failure.sso_failed"))
       elsif session.delete(:desktop_sso).present?
         redirect_to "sure://sso/callback?error=sso_failed", allow_other_host: true
       else

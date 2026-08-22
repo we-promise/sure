@@ -1,4 +1,4 @@
-class CreateSsoIdentityBlocks < ActiveRecord::Migration[8.1]
+class CreateSsoIdentityBlocks < ActiveRecord::Migration[7.2]
   def change
     create_table :sso_identity_blocks, id: :uuid do |t|
       t.string :provider, null: false

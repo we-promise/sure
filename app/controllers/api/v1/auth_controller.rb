@@ -10,6 +10,7 @@ module Api
       before_action :ensure_write_scope, only: :enable_ai
       before_action :check_api_key_rate_limit, only: :enable_ai
       before_action :log_api_access, only: :enable_ai
+      rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
 
       def signup
         # Check if invite code is required
@@ -153,7 +154,7 @@ module Api
 
         user = User.authenticate_by(email: params[:email], password: params[:password])
 
-        unless user
+        unless user&.active?
           render json: { error: "Invalid email or password" }, status: :unauthorized
           return
         end
@@ -410,6 +411,10 @@ module Api
           end
 
           cached
+        end
+
+        def render_removed_identity
+          render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
         end
 
         # Atomically deletes the linking code from cache.

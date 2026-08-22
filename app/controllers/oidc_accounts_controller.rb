@@ -1,6 +1,7 @@
 class OidcAccountsController < ApplicationController
   skip_authentication only: [ :link, :create_link, :new_user, :create_user ]
   before_action :reject_removed_identity, only: [ :link, :create_link, :new_user, :create_user ]
+  rescue_from SsoIdentityBlock::BlockedIdentity, with: :reject_removed_identity_after_lock
   layout "auth"
 
   def link
@@ -34,7 +35,7 @@ class OidcAccountsController < ApplicationController
     # Verify user's password to confirm identity
     user = User.authenticate_by(email: params[:email], password: params[:password])
 
-    if user
+    if user&.active?
       # Create the OIDC identity link
       oidc_identity = OidcIdentity.create_from_omniauth(
         build_auth_hash(@pending_auth),
@@ -198,6 +199,11 @@ class OidcAccountsController < ApplicationController
   end
 
   private
+
+    def reject_removed_identity_after_lock
+      session.delete(:pending_oidc_auth)
+      redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+    end
 
     def reject_removed_identity
       pending_auth = session[:pending_oidc_auth]

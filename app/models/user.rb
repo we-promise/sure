@@ -257,7 +257,8 @@ class User < ApplicationRecord
   # runs. Returns false (with errors populated) when the user cannot be
   # deactivated, e.g. an admin who still has co-members in their family.
   def permanently_remove!
-    transaction do
+    was_active = active?
+    removed = transaction do
       identity_label = email
       raise ActiveRecord::Rollback unless deactivate
 
@@ -265,6 +266,9 @@ class User < ApplicationRecord
       revoke_all_credentials!
       true
     end || false
+
+    purge_later if removed && !was_active
+    removed
   end
 
   # Destroys every credential/session that can authenticate as this user.

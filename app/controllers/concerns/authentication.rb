@@ -29,16 +29,18 @@ module Authentication
 
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
+      return if cookie_value.blank?
 
-      if cookie_value.present?
-        Session.find_by(id: cookie_value)
-      else
-        nil
-      end
+      session_record = Session.includes(:user).find_by(id: cookie_value)
+      return session_record if session_record&.user&.active?
+
+      session_record&.destroy!
+      cookies.delete(:session_token)
+      nil
     end
 
     def create_session_for(user)
-      return false unless user&.active?
+      return false unless user&.persisted? && User.where(id: user.id, active: true).exists?
 
       session = user.sessions.create!
       cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }

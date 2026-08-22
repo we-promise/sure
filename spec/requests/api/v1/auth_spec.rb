@@ -267,6 +267,10 @@ RSpec.describe 'API V1 Auth', type: :request do
         ]
         run_test!
       end
+
+      response '403', 'SSO identity removed by an administrator' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+      end
     end
   end
 
@@ -319,7 +323,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'account creation disabled' do
+      response '403', 'SSO identity removed or account creation disabled' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

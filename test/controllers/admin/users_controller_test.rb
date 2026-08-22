@@ -52,7 +52,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
   test "index shows removed SSO identities with a recovery action" do
     block = SsoIdentityBlock.create!(
       provider: "openid_connect",
-      uid_digest: Digest::SHA256.hexdigest("blocked-subject"),
+      uid_digest: SsoIdentityBlock.digest("blocked-subject"),
       identity_label: "removed-user@example.com"
     )
 
@@ -60,7 +60,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "form[action=?]", admin_sso_identity_block_path(block)
-    assert_match "removed-user@example.com", response.body
+    assert_match block.identity_label, response.body
   end
 
   test "super admin permanently removes a user and revokes their credentials" do
@@ -98,7 +98,12 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_empty target.api_keys
     assert oauth_token.reload.revoked?
     assert SsoIdentityBlock.blocked?(provider: removed_provider, uid: removed_uid)
-    assert_equal target_email, SsoIdentityBlock.find_by(provider: removed_provider).identity_label
+    identity_block = SsoIdentityBlock.find_by!(provider: removed_provider)
+    if SsoIdentityBlock.encryption_ready?
+      assert_equal target_email, identity_block.identity_label
+    else
+      assert_not_equal target_email, identity_block.identity_label
+    end
     audit_log = SsoAuditLog.by_event("user_removed").order(:created_at).last
     assert_equal target.id, audit_log.metadata.fetch("target_user_id")
     assert_not audit_log.metadata.key?("target_email")
@@ -117,7 +122,22 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert me.reload.active?
   end
 
-  test "cannot remove the last active super admin" do
+  test "audit failure rolls back user removal" do
+    target = users(:family_member)
+    target_email = target.email
+    SsoAuditLog.expects(:log_user_removed!).raises("audit failure")
+
+    assert_no_enqueued_jobs only: UserPurgeJob do
+      assert_raises(RuntimeError, match: /audit failure/) do
+        delete admin_user_url(target), params: { confirmation_email: target_email }
+      end
+    end
+
+    assert target.reload.active?
+    assert target.oidc_identities.exists?
+  end
+
+  test "inactive super admin cannot use an existing session to remove the last active super admin" do
     target = users(:family_admin)
     target.update!(role: :super_admin)
     User.where(role: :super_admin).where.not(id: target.id).update_all(active: false)
@@ -126,15 +146,9 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       delete admin_user_url(target), params: { confirmation_email: target.email }
     end
 
-    assert_redirected_to admin_users_path
+    assert_redirected_to new_session_path
     assert User.exists?(target.id)
     assert target.reload.active?
-    # The guard reports through flash, and its message comes from a model-level
-    # error symbol resolved under activerecord.errors — a different i18n scope
-    # than the controller's t(".key") lookups. Without that key the admin is
-    # shown a raw "translation missing:" string while the block still succeeds.
-    assert_no_match(/translation missing/, flash[:alert].to_s)
-    assert_match(/last active super admin/, flash[:alert].to_s)
   end
 
   test "deletion page redirects instead of erroring when targeting yourself" do
