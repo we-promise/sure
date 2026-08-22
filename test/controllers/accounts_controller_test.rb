@@ -180,7 +180,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "turbo-frame##{dom_id(trade_entry)}"
   end
-  
+
   test "renders investment account with gains chart view" do
     get account_url(accounts(:investment), chart_view: "gains")
 
