@@ -328,12 +328,22 @@ class Provider::EnableBanking
         @response_data = response_data
       end
 
+      # Different ASPSPs signal the same "requested date range exceeds the
+      # allowed lookback" condition with different payload shapes. Most use
+      # `{"error": "WRONG_TRANSACTIONS_PERIOD"}` (422), but some (e.g. N26)
+      # instead return `{"code": "PERIOD_INVALID", "detail": "dateFrom=...,dateTo=..."}`
+      # with a plain string `detail`, not a hash. (Issue #1262)
       def wrong_transactions_period?
-        error_type == :validation_error && response_data.is_a?(Hash) && response_data[:error] == "WRONG_TRANSACTIONS_PERIOD"
+        return false unless response_data.is_a?(Hash)
+
+        response_data[:error] == "WRONG_TRANSACTIONS_PERIOD" || response_data[:code] == "PERIOD_INVALID"
       end
 
       def corrected_date_from
-        value = response_data&.dig(:detail, :date_from)
+        detail = response_data.is_a?(Hash) ? response_data[:detail] : nil
+        return nil unless detail.is_a?(Hash)
+
+        value = detail[:date_from]
 
         if value.is_a?(Date)
           value
