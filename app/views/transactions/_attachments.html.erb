@@ -71,7 +71,7 @@
     <div class="space-y-2">
       <h4 class="text-sm font-medium text-primary"><%= t(".files", count: transaction.attachments.count) %></h4>
       <div class="space-y-2">
-        <% transaction.attachments.each do |attachment| %>
+        <% transaction.attachments.select(&:persisted?).each do |attachment| %>
           <div class="flex items-center justify-between p-3 border border-primary rounded-lg bg-container">
             <div class="flex items-center gap-3">
               <div class="flex-shrink-0">
