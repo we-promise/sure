@@ -92,6 +92,93 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_equal "Jones", @user.last_name
   end
 
+  test "sync_user_attributes! applies guest role mapping from groups claim" do
+    @user.update!(role: :member)
+    AuthConfig.stubs(:sso_providers).returns([
+      {
+        name: @oidc_identity.provider,
+        settings: {
+          role_mapping: {
+            guest: [ "sure-guests" ]
+          }
+        }
+      }
+    ])
+    auth = OmniAuth::AuthHash.new(
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email },
+      extra: {
+        raw_info: {
+          groups: [ "sure-guests" ]
+        }
+      }
+    )
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    assert_predicate @user.reload, :guest?
+  end
+
+  test "sync_user_attributes! prefers member over guest when both group mappings match" do
+    @user.update!(role: :guest)
+    AuthConfig.stubs(:sso_providers).returns([
+      {
+        name: @oidc_identity.provider,
+        settings: {
+          role_mapping: {
+            member: [ "sure-members" ],
+            guest: [ "sure-guests" ]
+          }
+        }
+      }
+    ])
+    auth = OmniAuth::AuthHash.new(
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email },
+      extra: {
+        raw_info: {
+          groups: [ "sure-members", "sure-guests" ]
+        }
+      }
+    )
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    assert_predicate @user.reload, :member?
+  end
+
+  test "sync_user_attributes! leaves role unchanged when mapped groups claim is absent" do
+    @user.update!(role: :member)
+    AuthConfig.stubs(:sso_providers).returns([
+      {
+        name: @oidc_identity.provider,
+        settings: {
+          role_mapping: {
+            admin: [ "sure-admins" ],
+            guest: [ "sure-guests" ]
+          }
+        }
+      }
+    ])
+    auth = OmniAuth::AuthHash.new(
+      provider: @oidc_identity.provider,
+      uid: @oidc_identity.uid,
+      info: { email: @user.email },
+      extra: {
+        raw_info: {
+          name: "No Groups User"
+        }
+      }
+    )
+
+    @oidc_identity.sync_user_attributes!(auth)
+
+    assert_predicate @user.reload, :member?
+    assert_equal [], @oidc_identity.reload.info["groups"]
+  end
+
   test "creates from omniauth hash" do
     auth = OmniAuth::AuthHash.new({
       provider: "google_oauth2",

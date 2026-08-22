@@ -131,9 +131,9 @@ class IndexaCapitalAccount::ActivitiesProcessor
 
       # Get the activity date
       # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date]) ||
-                      parse_date(data[:trade_date]) ||
-                      parse_date(data[:date]) ||
+      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
+                      parse_date(data[:trade_date], family: account&.family) ||
+                      parse_date(data[:date], family: account&.family) ||
                       Date.current
 
       currency = extract_currency(data, fallback: account.currency)
@@ -165,9 +165,9 @@ class IndexaCapitalAccount::ActivitiesProcessor
 
       # Get the activity date
       # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date]) ||
-                      parse_date(data[:trade_date]) ||
-                      parse_date(data[:date]) ||
+      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
+                      parse_date(data[:trade_date], family: account&.family) ||
+                      parse_date(data[:date], family: account&.family) ||
                       Date.current
 
       # Build description
@@ -196,9 +196,9 @@ class IndexaCapitalAccount::ActivitiesProcessor
     def normalize_cash_amount(amount, activity_type)
       case activity_type
       when "WITHDRAWAL", "TRANSFER_OUT", "FEE", "TAX"
-        -amount.abs  # These should be negative (money out)
+        amount.abs   # Money out should be positive in Sure
       when "CONTRIBUTION", "TRANSFER_IN", "DIVIDEND", "DIV", "INTEREST"
-        amount.abs   # These should be positive (money in)
+        -amount.abs  # Money in should be negative in Sure
       else
         amount
       end

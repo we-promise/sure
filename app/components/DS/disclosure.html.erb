@@ -1,7 +1,7 @@
 <%= tag.details class: details_classes, open: open, **details_opts do %>
-  <%= tag.summary class: summary_classes do %>
+  <%= tag.summary class: summary_classes, aria: summary_aria_attrs do %>
     <% if summary_content? %>
-      <% if variant == :default %>
+      <% if variant.in?(%i[default bare]) %>
         <%# `:default` summary is already `flex justify-between`, so
             caller-provided sibling divs get distributed directly.
             Wrapping would collapse them into a single flex child and
@@ -33,7 +33,11 @@
     <% end %>
   <% end %>
 
-  <%= tag.div class: body_class.presence do %>
+  <% if variant == :bare %>
     <%= content %>
+  <% else %>
+    <%= tag.div class: body_class.presence do %>
+      <%= content %>
+    <% end %>
   <% end %>
 <% end %>

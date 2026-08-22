@@ -2,16 +2,20 @@ import { Controller } from "@hotwired/stimulus";
 
 // Connects to data-controller="onboarding"
 export default class extends Controller {
-  static targets = ["nameField", "monikerRadio"]
+  static targets = ["nameField", "monikerRadio", "countryField", "currencyField"]
   static values = {
     householdNameLabel: String,
     householdNamePlaceholder: String,
     groupNameLabel: String,
-    groupNamePlaceholder: String
+    groupNamePlaceholder: String,
+    country: String,
+    countryCurrencies: Object,
+    currencyOverride: Boolean
   }
 
   connect() {
     this.updateNameFieldForCurrentMoniker();
+    this.applyBrowserLocaleDefaults();
   }
 
   setLocale(event) {
@@ -28,6 +32,43 @@ export default class extends Controller {
 
   setTheme(event) {
     document.documentElement.setAttribute("data-theme", event.target.value);
+  }
+
+  applyBrowserLocaleDefaults() {
+    const browserCountry = this.browserCountry();
+
+    if (this.hasCountryFieldTarget && browserCountry && this.countryFieldTarget.value === "US" && this.hasCountryOption(browserCountry)) {
+      this.countryFieldTarget.value = browserCountry;
+    }
+
+    if (this.hasCurrencyFieldTarget && !this.currencyOverrideValue) {
+      const country = this.countryValue || (this.hasCountryFieldTarget ? this.countryFieldTarget.value : null) || browserCountry;
+      const currency = this.currencyForCountry(country);
+
+      if (currency && this.hasCurrencyOption(currency)) {
+        this.currencyFieldTarget.value = currency;
+      }
+    }
+  }
+
+  browserCountry() {
+    try {
+      return new Intl.Locale(navigator.language).maximize().region;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  currencyForCountry(country) {
+    return (this.hasCountryCurrenciesValue ? this.countryCurrenciesValue : {})[country?.toUpperCase()];
+  }
+
+  hasCountryOption(country) {
+    return Array.from(this.countryFieldTarget.options).some((option) => option.value === country);
+  }
+
+  hasCurrencyOption(currency) {
+    return Array.from(this.currencyFieldTarget.options).some((option) => option.value === currency);
   }
 
   updateNameFieldForCurrentMoniker(event = null) {

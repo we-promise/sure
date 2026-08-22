@@ -280,6 +280,46 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     account.update!(raw_payload: original_payload)
   end
 
+  test "redbark item credentials and payloads are encrypted" do
+    skip "No redbark items in fixtures" unless RedbarkItem.any?
+
+    item = RedbarkItem.first
+    original_payload = item.raw_payload
+
+    # Should be able to read
+    assert item.api_key.present? || item.raw_payload.present?
+
+    # Update payload
+    item.update!(raw_payload: { test: "data" })
+    item.reload
+
+    assert_equal({ "test" => "data" }, item.raw_payload)
+
+    # Restore
+    item.update!(raw_payload: original_payload)
+  end
+
+  test "redbark account payloads are encrypted" do
+    skip "No redbark accounts in fixtures" unless RedbarkAccount.any?
+
+    account = RedbarkAccount.first
+    original_payload = account.raw_payload
+
+    # Should be able to read encrypted fields without error
+    account.reload
+    assert_nothing_raised { account.raw_payload }
+    assert_nothing_raised { account.raw_transactions_payload }
+
+    # Update and verify
+    account.update!(raw_payload: { account_test: "value" })
+    account.reload
+
+    assert_equal({ "account_test" => "value" }, account.raw_payload)
+
+    # Restore
+    account.update!(raw_payload: original_payload)
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================

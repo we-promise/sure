@@ -18,37 +18,17 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
 
     expected_balances = [
-      Balance.new(
-        date: 1.day.ago.to_date,
-        balance: 1000,
-        cash_balance: 1000,
-        currency: "USD",
-        start_cash_balance: 500,
-        start_non_cash_balance: 0,
-        cash_inflows: 500,
-        cash_outflows: 0,
-        non_cash_inflows: 0,
-        non_cash_outflows: 0,
-        net_market_flows: 0,
-        cash_adjustments: 0,
-        non_cash_adjustments: 0,
-        flows_factor: 1
+      Balance::BalanceData.new(
+        account: @account, date: 1.day.ago.to_date, balance: 1000, cash_balance: 1000, currency: "USD",
+        start_cash_balance: 500, start_non_cash_balance: 0, cash_inflows: 500,
+        cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
       ),
-      Balance.new(
-        date: Date.current,
-        balance: 1000,
-        cash_balance: 1000,
-        currency: "USD",
-        start_cash_balance: 1000,
-        start_non_cash_balance: 0,
-        cash_inflows: 0,
-        cash_outflows: 0,
-        non_cash_inflows: 0,
-        non_cash_outflows: 0,
-        net_market_flows: 0,
-        cash_adjustments: 0,
-        non_cash_adjustments: 0,
-        flows_factor: 1
+      Balance::BalanceData.new(
+        account: @account, date: Date.current, balance: 1000, cash_balance: 1000, currency: "USD",
+        start_cash_balance: 1000, start_non_cash_balance: 0, cash_inflows: 0,
+        cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
       )
     ]
 
@@ -77,21 +57,11 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
 
     # Calculator returns only the window being recalculated (2.days.ago).
     recalculated = [
-      Balance.new(
-        date: 2.days.ago.to_date,
-        balance: 15000,
-        cash_balance: 15000,
-        currency: "USD",
-        start_cash_balance: 12000,
-        start_non_cash_balance: 0,
-        cash_inflows: 3000,
-        cash_outflows: 0,
-        non_cash_inflows: 0,
-        non_cash_outflows: 0,
-        net_market_flows: 0,
-        cash_adjustments: 0,
-        non_cash_adjustments: 0,
-        flows_factor: 1
+      Balance::BalanceData.new(
+        account: @account, date: 2.days.ago.to_date, balance: 15000, cash_balance: 15000, currency: "USD",
+        start_cash_balance: 12000, start_non_cash_balance: 0, cash_inflows: 3000,
+        cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
       )
     ]
 
@@ -136,7 +106,8 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     preserved_mid = create_balance(account: @account, date: 6.days.ago.to_date, balance: 4000)
 
     recalculated = [
-      Balance.new(
+      Balance::BalanceData.new(
+        account: @account,
         date: 2.days.ago.to_date, balance: 15000, cash_balance: 15000, currency: "USD",
         start_cash_balance: 12000, start_non_cash_balance: 0,
         cash_inflows: 3000, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
@@ -202,53 +173,23 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
 
     # Calculator will return balances for only these dates
     expected_balances = [
-      Balance.new(
-        date: 2.days.ago.to_date,
-        balance: 10000,
-        cash_balance: 10000,
-        currency: "USD",
-        start_cash_balance: 10000,
-        start_non_cash_balance: 0,
-        cash_inflows: 0,
-        cash_outflows: 0,
-        non_cash_inflows: 0,
-        non_cash_outflows: 0,
-        net_market_flows: 0,
-        cash_adjustments: 0,
-        non_cash_adjustments: 0,
-        flows_factor: 1
+      Balance::BalanceData.new(
+        account: @account, date: 2.days.ago.to_date, balance: 10000, cash_balance: 10000, currency: "USD",
+        start_cash_balance: 10000, start_non_cash_balance: 0, cash_inflows: 0,
+        cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
       ),
-      Balance.new(
-        date: 1.day.ago.to_date,
-        balance: 1000,
-        cash_balance: 1000,
-        currency: "USD",
-        start_cash_balance: 10000,
-        start_non_cash_balance: 0,
-        cash_inflows: 0,
-        cash_outflows: 9000,
-        non_cash_inflows: 0,
-        non_cash_outflows: 0,
-        net_market_flows: 0,
-        cash_adjustments: 0,
-        non_cash_adjustments: 0,
-        flows_factor: 1
+      Balance::BalanceData.new(
+        account: @account, date: 1.day.ago.to_date, balance: 1000, cash_balance: 1000, currency: "USD",
+        start_cash_balance: 10000, start_non_cash_balance: 0, cash_inflows: 0,
+        cash_outflows: 9000, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
       ),
-      Balance.new(
-        date: Date.current,
-        balance: 1000,
-        cash_balance: 1000,
-        currency: "USD",
-        start_cash_balance: 1000,
-        start_non_cash_balance: 0,
-        cash_inflows: 0,
-        cash_outflows: 0,
-        non_cash_inflows: 0,
-        non_cash_outflows: 0,
-        net_market_flows: 0,
-        cash_adjustments: 0,
-        non_cash_adjustments: 0,
-        flows_factor: 1
+      Balance::BalanceData.new(
+        account: @account, date: Date.current, balance: 1000, cash_balance: 1000, currency: "USD",
+        start_cash_balance: 1000, start_non_cash_balance: 0, cash_inflows: 0,
+        cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0,
+        net_market_flows: 0, cash_adjustments: 0, non_cash_adjustments: 0, flows_factor: 1
       )
     ]
 
@@ -266,6 +207,59 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
 
     # Verify expected balances were persisted
     assert_balance_fields_persisted(expected_balances)
+  end
+
+  test "reverse materialization persists opening boundary adjustment" do
+    account = families(:empty).accounts.create!(
+      name: "Linked Depository",
+      balance: 1000,
+      cash_balance: 1000,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    opening_date = Date.new(2024, 1, 1)
+    boundary_date = opening_date + 1.day
+    transaction_date = opening_date + 2.days
+    current_anchor_date = opening_date + 3.days
+
+    account.entries.create!(
+      name: "Current Balance",
+      date: current_anchor_date,
+      amount: 1000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+    account.entries.create!(
+      name: "Transaction",
+      date: transaction_date,
+      amount: 200,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    account.entries.create!(
+      name: "Opening Balance",
+      date: opening_date,
+      amount: 1000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    Holding::Materializer.any_instance.expects(:materialize_holdings).returns([]).once
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    opening_balance = account.balances.find_by!(date: opening_date)
+    boundary_balance = account.balances.find_by!(date: boundary_date)
+    transaction_balance = account.balances.find_by!(date: transaction_date)
+
+    assert_equal 1000, opening_balance.end_balance
+    assert_equal 1000, boundary_balance.start_balance
+    assert_equal 1200, boundary_balance.end_balance
+    assert_equal 200, boundary_balance.cash_adjustments
+    assert_equal 0, boundary_balance.cash_inflows
+    assert_equal 0, boundary_balance.cash_outflows
+    assert_equal 1200, transaction_balance.start_balance
+    assert_equal 1000, transaction_balance.end_balance
   end
 
   private

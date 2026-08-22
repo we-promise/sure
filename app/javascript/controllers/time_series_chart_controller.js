@@ -408,11 +408,15 @@ export default class extends Controller {
         </div>
 
         ${
-          datum.trend.value === 0
+          this._extractNumericValue(datum.trend.value) === 0
             ? `<span class="w-20"></span>`
             : `
           <span class="tabular-nums" style="color: ${datum.trend.color};">
-            ${this._extractFormattedValue(datum.trend.value)} (${datum.trend.percent_formatted})
+            ${this._extractFormattedValue(datum.trend.value)}${
+              datum.trend.percent === null
+                ? ""
+                : ` (${datum.trend.percent_formatted})`
+            }
           </span>
         `
         }

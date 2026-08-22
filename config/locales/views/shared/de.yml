@@ -13,8 +13,32 @@ de:
       convert_tab: Mit FX-Kurs konvertieren
       destination_amount: Zielbetrag
       exchange_rate: Wechselkurs
-      exchange_rate_help: Wählen Sie, wie Sie den Betrag eingeben möchten.
+      exchange_rate_help: Wähl, wie du den Betrag eingeben willst.
     syncing_notice:
       syncing: Kontodaten werden synchronisiert...
     trend_change:
       no_change: keine Änderung
+    cancel: Abbrechen
+    custom_confirm:
+      default_body: Das lässt sich nicht rückgängig machen.
+      default_btn_text: Bestätigen
+      default_title: Bist du sicher?
+    family_moniker:
+      group_plural: Gruppen
+      group_singular: Gruppe
+      plural: Familien
+      singular: Familie
+    preview: Vorschau
+    dot_separator: "·"
+    require_admin: Das dürfen nur Admins
+    sync_toast:
+      message: Neue Daten verfügbar
+      refresh: Aktualisieren
+    transaction_tabs:
+      aria: Transaktionstyp
+      expense: Ausgabe
+      income: Einnahme
+      transfer: Überweisung
+  concerns:
+    self_hostable:
+      redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation nun einrichten.

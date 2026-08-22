@@ -2,17 +2,13 @@
 de:
   snaptrade_items:
     default_name: "SnapTrade-Verbindung"
-    create:
-      success: "SnapTrade wurde erfolgreich eingerichtet."
-    update:
-      success: "SnapTrade-Konfiguration wurde erfolgreich aktualisiert."
     destroy:
       success: "SnapTrade-Verbindung wurde zur Löschung vorgemerkt."
     connect:
-      decryption_failed: "SnapTrade-Zugangsdaten konnten nicht gelesen werden. Bitte löschen Sie die Verbindung und legen Sie sie neu an."
+      decryption_failed: Die SnapTrade-Zugangsdaten ließen sich nicht lesen. Lösch die Verbindung und richte sie neu ein.
       connection_failed: "Verbindung zu SnapTrade fehlgeschlagen: %{message}"
     callback:
-      success: "Broker verbunden! Bitte wählen Sie die zu verknüpfenden Konten."
+      success: Broker verbunden! Bitte wähl die zu verknüpfenden Konten.
       no_item: "SnapTrade-Konfiguration nicht gefunden."
     complete_account_setup:
       success:
@@ -31,9 +27,9 @@ de:
       not_found: "Konto oder SnapTrade-Konfiguration nicht gefunden."
       title: "Mit SnapTrade-Konto verknüpfen"
       header: "Bestehendes Konto verknüpfen"
-      subtitle: "Wählen Sie ein SnapTrade-Konto zur Verknüpfung"
+      subtitle: Wähl ein SnapTrade-Konto zur Verknüpfung
       no_accounts: "Keine unverknüpften SnapTrade-Konten verfügbar."
-      connect_hint: "Möglicherweise müssen Sie zuerst einen Broker verbinden."
+      connect_hint: Möglicherweise musst du zuerst einen Broker verbinden.
       settings_link: "Zu den Provider-Einstellungen"
       linking_to: "Verknüpfe mit Konto:"
       balance_label: "Saldo:"
@@ -49,17 +45,14 @@ de:
       success: "Verbindung erfolgreich gelöscht. Ein Platz ist frei."
       failed: "Löschen der Verbindung fehlgeschlagen: %{message}"
       missing_authorization_id: "Autorisierungs-ID fehlt"
-      api_deletion_failed: "Verbindung konnte bei SnapTrade nicht gelöscht werden – Zugangsdaten fehlen. Die Verbindung kann in Ihrem SnapTrade-Konto noch existieren."
-    delete_orphaned_user:
-      success: "Verwaiste Registrierung wurde erfolgreich gelöscht."
-      failed: "Löschen der verwaisten Registrierung fehlgeschlagen."
+      api_deletion_failed: Verbindung konnte bei SnapTrade nicht gelöscht werden – Zugangsdaten fehlen. Die Verbindung kann in deinem SnapTrade-Konto noch existieren.
     setup_accounts:
       title: "SnapTrade-Konten einrichten"
       header: "SnapTrade-Konten einrichten"
-      subtitle: "Wählen Sie die zu verknüpfenden Broker-Konten"
-      syncing: "Ihre Konten werden abgerufen..."
+      subtitle: Wähl die zu verknüpfenden Broker-Konten
+      syncing: Deine Konten werden abgerufen …
       loading: "Konten werden von SnapTrade geladen..."
-      loading_hint: "Klicken Sie auf Aktualisieren, um nach Konten zu suchen."
+      loading_hint: Klick auf Aktualisieren, um nach Konten zu suchen.
       refresh: "Aktualisieren"
       info_title: "SnapTrade-Anlagedaten"
       info_holdings: "Bestände mit aktuellen Preisen und Mengen"
@@ -68,12 +61,20 @@ de:
       info_history: "Bis zu 3 Jahre Buchungshistorie"
       free_tier_note: "SnapTrade Free Tier erlaubt 5 Broker-Verbindungen. Nutzung im SnapTrade-Dashboard prüfen."
       no_accounts_title: "Keine Konten gefunden"
-      no_accounts_message: "Es wurden keine Broker-Konten gefunden. Das kann passieren, wenn Sie die Verbindung abgebrochen haben oder Ihr Broker nicht unterstützt wird."
+      no_accounts_message: Es wurden keine Broker-Konten gefunden. Das kommt vor, wenn du die Verbindung abgebrochen hast oder dein Broker nicht unterstützt wird.
       try_again: "Broker verbinden"
       back_to_settings: "Zurück zu Einstellungen"
       available_accounts: "Verfügbare Konten"
       balance_label: "Saldo:"
       account_number: "Konto:"
+      account_type_label: "Kontotyp"
+      account_types:
+        depository: "Giro- oder Sparkonto"
+        credit_card: "Kreditkarte"
+        investment: "Anlagekonto"
+        crypto: "Krypto-Konto"
+        loan: "Darlehen oder Kreditlinie"
+        other_asset: "Sonstiges Vermögen"
       create_button: "Ausgewählte Konten anlegen"
       cancel_button: "Abbrechen"
       creating: "Konten werden angelegt..."
@@ -83,6 +84,8 @@ de:
       link_button: "Verknüpfen"
       linked_accounts: "Bereits verknüpft"
       linked_to: "Verknüpft mit:"
+      sync_start_date_help: Leer lassen für die gesamte verfügbare Historie
+      sync_start_date_label: 'Transaktionen importieren ab:'
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} Konto muss eingerichtet werden"
@@ -106,27 +109,21 @@ de:
         one: "%{count} weiteres Konto kann eingerichtet werden"
         other: "%{count} weitere Konten können eingerichtet werden"
       no_accounts_title: "Keine Konten gefunden"
-      no_accounts_description: "Verbinden Sie einen Broker, um Ihre Anlagekonten zu importieren."
+      no_accounts_description: Verbinde einen Broker, um deine Anlagekonten zu importieren.
+    oauth_authorize:
+      not_configured: SnapTrade OAuth fehlt. Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET und starte die App neu.
+    oauth_callback:
+      access_denied: Die SnapTrade-Freigabe wurde abgebrochen.
+      failed: Die SnapTrade-Freigabe ließ sich nicht abschließen. Versuch es noch einmal.
+      state_mismatch: Die SnapTrade-Freigabe hat eine Sicherheitsprüfung nicht bestanden. Versuch es noch einmal.
+      success: SnapTrade-Freigabe abgeschlossen.
 
   providers:
     snaptrade:
       name: "SnapTrade"
-      connection_description: "Verbinden Sie Ihren Broker über SnapTrade (25+ Broker unterstützt)"
+      connection_description: Verbinde deinen Broker über SnapTrade (25+ Broker unterstützt)
       description: "SnapTrade verbindet mit 25+ großen Brokern (Fidelity, Vanguard, Schwab, Robinhood usw.) und liefert vollständige Handelshistorie mit Aktivitätslabels und Einstandskosten."
-      setup_title: "Einrichtungsanleitung:"
-      step_1_html: "Konto erstellen unter <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
-      step_2: "Client ID und Consumer Key aus dem Dashboard kopieren"
-      step_3: "Zugangsdaten unten eintragen und auf Speichern klicken"
-      step_4: "Auf die Konten-Seite gehen und „Weiteren Broker verbinden“ nutzen, um Ihre Anlagekonten zu verknüpfen"
       free_tier_warning: "Free Tier enthält 5 Broker-Verbindungen. Weitere erfordern einen kostenpflichtigen SnapTrade-Plan."
-      client_id_label: "Client ID"
-      client_id_placeholder: "SnapTrade Client ID eingeben"
-      client_id_update_placeholder: "Neue Client ID zum Aktualisieren eingeben"
-      consumer_key_label: "Consumer Key"
-      consumer_key_placeholder: "SnapTrade Consumer Key eingeben"
-      consumer_key_update_placeholder: "Neuen Consumer Key zum Aktualisieren eingeben"
-      save_button: "Konfiguration speichern"
-      update_button: "Konfiguration aktualisieren"
       status_connected:
         one: "%{count} Konto von SnapTrade"
         other: "%{count} Konten von SnapTrade"
@@ -138,7 +135,7 @@ de:
       connect_button: "Broker verbinden"
       connected_brokerages: "Verbunden:"
       manage_connections: "Verbindungen verwalten"
-      connection_limit_info: "SnapTrade Free Tier erlaubt 5 Broker-Verbindungen. Löschen Sie ungenutzte Verbindungen, um Plätze freizugeben."
+      connection_limit_info: Der kostenlose SnapTrade-Tarif erlaubt 5 Broker-Verbindungen. Lösch ungenutzte Verbindungen, um Platz zu schaffen.
       loading_connections: "Verbindungen werden geladen..."
       connections_error: "Verbindungen konnten nicht geladen werden: %{message}"
       accounts_count:
@@ -149,17 +146,17 @@ de:
       no_connections: "Keine Broker-Verbindungen gefunden."
       delete_connection: "Löschen"
       delete_connection_title: "Broker-Verbindung löschen?"
-      delete_connection_body: "Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Zum erneuten Sync müssen Sie sich wieder verbinden."
+      delete_connection_body: Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Für einen neuen Abgleich musst du dich erneut verbinden.
       delete_connection_confirm: "Verbindung löschen"
-      orphaned_users_title:
-        one: "%{count} verwaiste Registrierung"
-        other: "%{count} verwaiste Registrierungen"
-      orphaned_users_description: "Das sind frühere SnapTrade-Registrierungen, die Ihre Verbindungsplätze belegen. Löschen Sie sie, um Plätze freizugeben."
-      orphaned_user: "Verwaiste Registrierung"
-      delete_orphaned_user: "Löschen"
-      delete_orphaned_user_title: "Verwaiste Registrierung löschen?"
-      delete_orphaned_user_body: "Diese verwaiste SnapTrade-Registrierung und alle zugehörigen Broker-Verbindungen werden dauerhaft gelöscht, Verbindungsplätze werden frei."
-      delete_orphaned_user_confirm: "Registrierung löschen"
+      manage_at_snaptrade: Verbindungen bei SnapTrade verwalten
+      oauth_connect_button: Mit SnapTrade verbinden
+      oauth_reauthorize_button: Erneut freigeben
+      oauth_setup_step_1_html: Registrier eine OAuth-App unter <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: Trag die Callback-URL dieser App (<code>%{callback_url}</code>) als zulässige Redirect-URI ein
+      oauth_setup_step_3: Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET in deiner Umgebung und starte neu
+      oauth_status_authorized: Bei SnapTrade freigegeben.
+      oauth_status_ready: Gib Sure den Lesezugriff auf deine SnapTrade-Kontodaten frei.
+      oauth_title: SnapTrade OAuth
 
   snaptrade_item:
     sync_status:
