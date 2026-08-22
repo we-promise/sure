@@ -136,6 +136,8 @@ Rails.application.routes.draw do
       get :callback
       get :oauth_authorize
       get :oauth_callback
+      get :oauth_device_authorize
+      post :start_oauth_device_flow
     end
 
     member do
@@ -144,6 +146,7 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :complete_oauth_device_flow
       delete :delete_connection
     end
   end

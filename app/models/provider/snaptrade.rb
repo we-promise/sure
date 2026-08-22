@@ -2,14 +2,32 @@
 #
 # Auth model:
 #   - Instance admin registers an OAuth app on dashboard.snaptrade.com and sets
-#     SNAPTRADE_OAUTH_CLIENT_ID / SNAPTRADE_OAUTH_CLIENT_SECRET.
-#   - Users authorize via authorization-code + PKCE; per-item access/refresh
-#     tokens are stored (encrypted) on SnaptradeItem.
+#     SNAPTRADE_OAUTH_CLIENT_ID (and, for the browser flow, SNAPTRADE_OAUTH_CLIENT_SECRET).
+#   - Users authorize through either grant, and both end at the same place:
+#       * authorization-code + PKCE -- a browser redirect. Needs a confidential
+#         client (client secret) and a registered redirect URI.
+#       * device code (RFC 8628) -- a user code confirmed on SnapTrade. Needs
+#         only the public client id, so a deployment that cannot register a
+#         confidential client still has a working path.
+#     Either way the per-item access/refresh tokens are stored (encrypted) on
+#     SnaptradeItem by #apply_oauth_tokens!.
 #   - Data calls send Authorization: Bearer <access_token>. The SnapTrade user
 #     is implicit in the token; there is no userId/userSecret.
 class Provider::Snaptrade
   class Error < StandardError; end
-  class AuthenticationError < Error; end
+  # `oauth_error` carries the machine-readable `error` code from an OAuth error
+  # response when there was one (RFC 6749 §5.2, RFC 8628 §3.5). The device flow
+  # needs it to tell "the user hasn't approved this yet" apart from a real
+  # failure; the message itself is never safe to show, since it can carry
+  # upstream detail.
+  class AuthenticationError < Error
+    attr_reader :oauth_error
+
+    def initialize(message = nil, oauth_error: nil)
+      super(message)
+      @oauth_error = oauth_error
+    end
+  end
   class ConfigurationError < Error; end
   class ApiError < Error
     attr_reader :status_code, :response_body
@@ -30,6 +48,12 @@ class Provider::Snaptrade
   TOKEN_URL = "https://api.snaptrade.com/oauth/token/".freeze
   REVOKE_URL = "https://api.snaptrade.com/oauth/revoke_token/".freeze
   DASHBOARD_URL = "https://dashboard.snaptrade.com".freeze
+  OAUTH_DISCOVERY_URL = "https://api.snaptrade.com/.well-known/oauth-authorization-server".freeze
+  DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code".freeze
+  # The discovery document is static; cached so device authorization doesn't pay
+  # a blocking round trip for it on every attempt.
+  OAUTH_METADATA_CACHE_KEY = "snaptrade:oauth_authorization_server_metadata".freeze
+  OAUTH_METADATA_CACHE_TTL = 12.hours
   TOKEN_EXPIRY_LEEWAY = 60 # seconds; refresh this long before actual expiry
 
   # Filtered out of get_positions so they never reach raw_holdings_payload:
@@ -40,7 +64,17 @@ class Provider::Snaptrade
   UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
 
   class << self
+    # Some OAuth flow is available. The device flow needs nothing but the public
+    # client id, so this is what gates syncing and the provider panel; only the
+    # browser redirect needs more (see authorization_code_configured?).
     def oauth_configured?
+      oauth_client_id.present?
+    end
+
+    # The authorization-code + PKCE flow additionally needs a confidential
+    # client: this implementation authenticates the token request with the
+    # secret, and the redirect URI has to be registered on the OAuth app.
+    def authorization_code_configured?
       oauth_client_id.present? && oauth_client_secret.present?
     end
 
@@ -60,7 +94,7 @@ class Provider::Snaptrade
     end
 
     def authorize_url(redirect_uri:, state:, code_challenge:, scope: "read")
-      raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
+      raise ConfigurationError, "SnapTrade OAuth client secret is not configured" unless authorization_code_configured?
 
       params = {
         response_type: "code",
@@ -75,16 +109,87 @@ class Provider::Snaptrade
     end
 
     def exchange_code(code:, redirect_uri:, code_verifier:)
-      token_request(
+      raise ConfigurationError, "SnapTrade OAuth client secret is not configured" unless authorization_code_configured?
+
+      params = {
         grant_type: "authorization_code",
         code: code,
         redirect_uri: redirect_uri,
         code_verifier: code_verifier
+      }
+
+      token_request(params)
+    end
+
+    # --- Device flow (RFC 8628) ---
+
+    # Step 1: ask SnapTrade for a device code and the user code to confirm.
+    # Returns the parsed payload: device_code, user_code, verification_uri,
+    # verification_uri_complete, expires_in, interval.
+    def start_device_authorization(scope: "read")
+      raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
+
+      endpoint = oauth_authorization_server_metadata["device_authorization_endpoint"]
+      raise ApiError.new("SnapTrade OAuth metadata missing device_authorization_endpoint") if endpoint.blank?
+
+      # Retried despite being a POST: a lost response means we never learned the
+      # user code, so the device code it created is useless to us and expires on
+      # its own. Nothing has been applied that a retry could duplicate.
+      response = with_retries("POST #{endpoint}") do
+        oauth_connection.post(endpoint) do |request|
+          request.headers["Content-Type"] = "application/x-www-form-urlencoded"
+          request.body = URI.encode_www_form(client_id: oauth_client_id, scope: scope)
+        end
+      end
+
+      payload = parse_json(response.body)
+      return payload if response.success?
+
+      raise ApiError.new(
+        "SnapTrade OAuth device authorization failed: #{oauth_error_summary(payload, response.status)}",
+        status_code: response.status, response_body: response.body
       )
     end
 
+    # Step 2: redeem the device code once the user has confirmed it. Until they
+    # do, SnapTrade answers 400 authorization_pending -- an AuthenticationError
+    # whose oauth_error the caller reads to keep waiting rather than give up.
+    def poll_device_token(device_code:)
+      raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
+      raise ArgumentError, "device_code is required" if device_code.blank?
+
+      token_request(
+        { grant_type: DEVICE_CODE_GRANT, device_code: device_code },
+        token_url: oauth_authorization_server_metadata["token_endpoint"].presence || TOKEN_URL
+      )
+    end
+
+    # Endpoints come from the authorization server's own metadata rather than
+    # being hardcoded, since SnapTrade's OAuth support is pre-release. Cached
+    # because the document is static and device authorization would otherwise
+    # pay for it twice per attempt.
+    def oauth_authorization_server_metadata
+      cached = Rails.cache.read(OAUTH_METADATA_CACHE_KEY)
+      return cached if cached.present?
+
+      response = with_retries("GET #{OAUTH_DISCOVERY_URL}") do
+        oauth_connection.get(OAUTH_DISCOVERY_URL)
+      end
+
+      payload = parse_json(response.body)
+      unless response.success? && payload.is_a?(Hash) && payload.present?
+        raise ApiError.new(
+          "SnapTrade OAuth metadata request failed: #{oauth_error_summary(payload, response.status)}",
+          status_code: response.status, response_body: response.body
+        )
+      end
+
+      Rails.cache.write(OAUTH_METADATA_CACHE_KEY, payload, expires_in: OAUTH_METADATA_CACHE_TTL)
+      payload
+    end
+
     def refresh_tokens(refresh_token:)
-      token_request(grant_type: "refresh_token", refresh_token: refresh_token)
+      token_request({ grant_type: "refresh_token", refresh_token: refresh_token })
     end
 
     # Best-effort revocation (RFC 7009). Returns true on success.
@@ -93,9 +198,9 @@ class Provider::Snaptrade
       raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
 
       response = oauth_connection.post(REVOKE_URL) do |request|
-        request.headers["Authorization"] = basic_auth_header
+        request.headers["Authorization"] = basic_auth_header if confidential_client?
         request.headers["Content-Type"] = "application/x-www-form-urlencoded"
-        request.body = URI.encode_www_form(token: token)
+        request.body = URI.encode_www_form(with_client_credentials({ token: token }))
       end
       response.success?
     rescue Faraday::Error => e
@@ -105,27 +210,30 @@ class Provider::Snaptrade
 
     private
 
-      def token_request(params)
+      def token_request(params, token_url: TOKEN_URL)
         raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
 
-        # Not retried: a token request consumes a single-use authorization code
-        # or rotates the refresh token. If the response is lost after SnapTrade
-        # processed it, replaying the same params would fail with invalid_grant
-        # even though the original request actually succeeded.
-        response = without_retry("POST #{TOKEN_URL}") do
-          oauth_connection.post(TOKEN_URL) do |request|
-            request.headers["Authorization"] = basic_auth_header
+        # Not retried: a token request consumes a single-use authorization or
+        # device code, or rotates the refresh token. If the response is lost
+        # after SnapTrade processed it, replaying the same params would fail
+        # with invalid_grant even though the original request succeeded.
+        response = without_retry("POST #{token_url}") do
+          oauth_connection.post(token_url) do |request|
+            request.headers["Authorization"] = basic_auth_header if confidential_client?
             request.headers["Content-Type"] = "application/x-www-form-urlencoded"
-            request.body = URI.encode_www_form(params)
+            request.body = URI.encode_www_form(with_client_credentials(params))
           end
         end
 
         payload = parse_json(response.body)
         return payload if response.success?
 
-        error = payload["error_description"].presence || payload["error"].presence || "HTTP #{response.status}"
+        error = oauth_error_summary(payload, response.status)
         if (400..499).cover?(response.status)
-          raise AuthenticationError, "SnapTrade OAuth token request failed: #{error}"
+          raise AuthenticationError.new(
+            "SnapTrade OAuth token request failed: #{error}",
+            oauth_error: oauth_error_code(payload)
+          )
         end
 
         raise ApiError.new(
@@ -134,8 +242,32 @@ class Provider::Snaptrade
         )
       end
 
+      # A client secret means the token endpoint authenticates the client with
+      # HTTP Basic. Without one -- a device-flow-only deployment -- the client
+      # is public and identifies itself with client_id in the form body, which
+      # is also what RFC 8628 specifies for the device grant.
+      def confidential_client?
+        oauth_client_secret.present?
+      end
+
+      def with_client_credentials(params)
+        return params if confidential_client?
+
+        params.merge(client_id: oauth_client_id)
+      end
+
       def basic_auth_header
         "Basic #{Base64.strict_encode64("#{oauth_client_id}:#{oauth_client_secret}")}"
+      end
+
+      def oauth_error_summary(payload, status)
+        return "HTTP #{status}" unless payload.is_a?(Hash)
+
+        payload["error_description"].presence || payload["error"].presence || "HTTP #{status}"
+      end
+
+      def oauth_error_code(payload)
+        payload["error"].presence if payload.is_a?(Hash)
       end
 
       def oauth_connection

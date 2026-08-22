@@ -12,6 +12,26 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A deployment with a confidential OAuth client: both the browser redirect and
+  # the device code are available.
+  def with_oauth_app
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = "client-secret"
+    yield
+  ensure
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+  end
+
+  # A deployment that only registered a public client: device code only.
+  def with_device_flow_only
+    Rails.configuration.x.snaptrade.oauth_client_id = "client-id"
+    Rails.configuration.x.snaptrade.oauth_client_secret = nil
+    yield
+  ensure
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+  end
+
   test "connect redirects to portal when successful" do
     portal_url = "https://app.snaptrade.com/portal/test123"
 
@@ -70,6 +90,120 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
     get oauth_authorize_snaptrade_items_url
     assert_redirected_to settings_providers_path
+  end
+
+  test "oauth_authorize refuses when only the public client id is configured" do
+    with_device_flow_only do
+      get oauth_authorize_snaptrade_items_url
+
+      assert_redirected_to settings_providers_path
+      assert_match(/device code/, flash[:alert])
+    end
+  end
+
+  test "oauth_device_authorize offers to start authorization" do
+    Provider::Snaptrade.expects(:start_device_authorization).never
+
+    with_device_flow_only do
+      get oauth_device_authorize_snaptrade_items_url
+
+      assert_response :success
+      assert_select "form[action='#{start_oauth_device_flow_snaptrade_items_path}']"
+    end
+  end
+
+  test "oauth_device_authorize explains what to configure when the client id is missing" do
+    Rails.configuration.x.snaptrade.oauth_client_id = nil
+
+    get oauth_device_authorize_snaptrade_items_url
+
+    assert_response :unprocessable_entity
+    assert_match(/SNAPTRADE_OAUTH_CLIENT_ID/, response.body)
+  end
+
+  test "start_oauth_device_flow shows the code the user confirms on SnapTrade" do
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:start_device_authorization).with(scope: "read").returns({
+        "device_code" => "dev-c0de",
+        "user_code" => "WXYZ-1234",
+        "verification_uri" => "https://app.snaptrade.com/device",
+        "verification_uri_complete" => "https://app.snaptrade.com/device?code=WXYZ-1234",
+        "expires_in" => 600,
+        "interval" => 5
+      })
+
+      post start_oauth_device_flow_snaptrade_items_url, params: { item_id: @snaptrade_item.id }
+
+      assert_response :success
+      assert_match "WXYZ-1234", response.body
+      assert_select "input[name='device_code'][value='dev-c0de']", count: 1
+    end
+  end
+
+  test "complete_oauth_device_flow stores tokens and queues a sync" do
+    item = snaptrade_items(:unauthorized_item)
+    sign_out
+    sign_in @user = users(:empty)
+
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:poll_device_token).with(device_code: "dev-c0de").returns({
+        "access_token" => "device-at", "refresh_token" => "device-rt", "expires_in" => 900,
+        "token_type" => "Bearer", "scope" => "read"
+      })
+
+      assert_difference "Sync.count", 1 do
+        post complete_oauth_device_flow_snaptrade_item_url(item), params: { device_code: "dev-c0de" }
+      end
+
+      assert_redirected_to settings_providers_path
+      assert_equal "device-at", item.reload.oauth_access_token
+      assert item.good?
+    end
+  end
+
+  test "complete_oauth_device_flow resumes account setup when asked to" do
+    with_device_flow_only do
+      Provider::Snaptrade.stubs(:poll_device_token).returns({
+        "access_token" => "device-at", "refresh_token" => "device-rt", "expires_in" => 900
+      })
+
+      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item),
+           params: { device_code: "dev-c0de", return_to: "setup_accounts", accountable_type: "Investment" }
+
+      assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: "Investment")
+    end
+  end
+
+  test "complete_oauth_device_flow keeps the code when the user has not confirmed it yet" do
+    item = snaptrade_items(:unauthorized_item)
+    sign_out
+    sign_in @user = users(:empty)
+
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:poll_device_token).raises(
+        Provider::Snaptrade::AuthenticationError.new("SnapTrade OAuth token request failed: authorization_pending", oauth_error: "authorization_pending")
+      )
+
+      post complete_oauth_device_flow_snaptrade_item_url(item),
+           params: { device_code: "dev-c0de", user_code: "WXYZ-1234", verification_uri: "https://app.snaptrade.com/device" }
+
+      assert_response :unprocessable_entity
+      # Still redeemable, so the page comes back with the same code rather than
+      # sending the user back to the start.
+      assert_select "input[name='device_code'][value='dev-c0de']", count: 1
+      assert_match "WXYZ-1234", response.body
+      assert_nil item.reload.oauth_access_token
+    end
+  end
+
+  test "complete_oauth_device_flow requires a device code" do
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:poll_device_token).never
+
+      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item), params: { device_code: "" }
+
+      assert_response :unprocessable_entity
+    end
   end
 
   test "oauth_callback rejects state mismatch without exchanging the code" do
@@ -193,10 +327,22 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   test "Reconnect starts OAuth authorization instead of adding a brokerage" do
     @snaptrade_item.update!(status: :requires_update)
 
-    get accounts_url
+    with_oauth_app do
+      get accounts_url
 
-    assert_select "a[href='#{oauth_authorize_snaptrade_items_path(item_id: @snaptrade_item.id)}'][data-turbo-frame='_top']", text: /Reconnect/
-    assert_select "a[href='#{connect_snaptrade_item_path(@snaptrade_item)}']", text: /Reconnect/, count: 0
+      assert_select "a[href='#{oauth_authorize_snaptrade_items_path(item_id: @snaptrade_item.id)}'][data-turbo-frame='_top']", text: /Reconnect/
+      assert_select "a[href='#{connect_snaptrade_item_path(@snaptrade_item)}']", text: /Reconnect/, count: 0
+    end
+  end
+
+  test "Reconnect uses the device flow when the deployment has no confidential client" do
+    @snaptrade_item.update!(status: :requires_update)
+
+    with_device_flow_only do
+      get accounts_url
+
+      assert_select "a[href='#{oauth_device_authorize_snaptrade_items_path(item_id: @snaptrade_item.id)}'][data-turbo-frame='drawer']", text: /Reconnect/
+    end
   end
 
   test "select_accounts redirects unregistered users into connect flow" do
@@ -204,13 +350,31 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:empty)
     snaptrade_item = snaptrade_items(:unauthorized_item)
 
-    get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
+    with_oauth_app do
+      get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
 
-    assert_redirected_to oauth_authorize_snaptrade_items_path(
-      item_id: snaptrade_item.id,
-      accountable_type: "Investment",
-      return_to: "setup_accounts"
-    )
+      assert_redirected_to oauth_authorize_snaptrade_items_path(
+        item_id: snaptrade_item.id,
+        accountable_type: "Investment",
+        return_to: "setup_accounts"
+      )
+    end
+  end
+
+  test "select_accounts sends unregistered users to the device flow without a confidential client" do
+    sign_out
+    sign_in @user = users(:empty)
+    snaptrade_item = snaptrade_items(:unauthorized_item)
+
+    with_device_flow_only do
+      get select_accounts_snaptrade_items_url, params: { accountable_type: "Investment", return_to: "setup_accounts" }
+
+      assert_redirected_to oauth_device_authorize_snaptrade_items_path(
+        item_id: snaptrade_item.id,
+        accountable_type: "Investment",
+        return_to: "setup_accounts"
+      )
+    end
   end
 
   test "select_accounts redirects registered users to setup flow" do
@@ -222,11 +386,14 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   test "preload_accounts redirects unregistered users into connect flow" do
     sign_out
     sign_in @user = users(:empty)
-    assert_no_difference "Sync.count" do
-      get preload_accounts_snaptrade_items_url
-    end
 
-    assert_redirected_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_items(:unauthorized_item).id)
+    with_oauth_app do
+      assert_no_difference "Sync.count" do
+        get preload_accounts_snaptrade_items_url
+      end
+
+      assert_redirected_to oauth_authorize_snaptrade_items_path(item_id: snaptrade_items(:unauthorized_item).id)
+    end
   end
 
   test "preload_accounts redirects registered users to setup flow and queues sync" do
