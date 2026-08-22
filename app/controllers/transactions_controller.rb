@@ -5,6 +5,11 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
+  def show
+    super
+    assign_mark_recurring_state
+  end
+
   def new
     prefill_params_from_duplicate!
     super
@@ -112,7 +117,15 @@ class TransactionsController < ApplicationController
   end
 
   def create
-    account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
+    account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
+
+    if account.nil?
+      @entry = Current.family.entries.new(entry_params)
+      @entry.valid?
+      set_new_transaction_form_options
+      render :new, status: :unprocessable_entity
+      return
+    end
 
     return unless require_account_permission!(account)
 
@@ -159,6 +172,8 @@ class TransactionsController < ApplicationController
       # Reload to ensure fresh state for turbo stream rendering
       @entry.reload
 
+      assign_mark_recurring_state
+
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
@@ -179,6 +194,11 @@ class TransactionsController < ApplicationController
               partial: "transactions/notes",
               locals: { entry: @entry, can_annotate: can_annotate_entry? }
             ) if params[:entry]&.key?(:notes) && notes_changed),
+            (turbo_stream.replace(
+              dom_id(@entry, :mark_recurring),
+              partial: "transactions/mark_recurring",
+              locals: { entry: @entry }
+            ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -189,6 +209,7 @@ class TransactionsController < ApplicationController
         end
       end
     else
+      assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
   end
@@ -354,17 +375,9 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(transaction.entry.account)
 
     # Check if a recurring transaction already exists for this pattern.
-    # Amount is included so two distinct recurring payments with the same
-    # payee but different amounts aren't treated as duplicates (matches the
-    # DB uniqueness scope and RecurringTransaction::Identifier's grouping key).
-    existing = Current.family.recurring_transactions.find_by(
-      account_id: transaction.entry.account_id,
-      merchant_id: transaction.merchant_id,
-      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
-      amount: transaction.entry.amount,
-      currency: transaction.entry.currency,
-      manual: true
-    )
+    # The UI disables the button ahead of time using the same lookup, but this
+    # guard remains as the authoritative check (e.g. stale page, direct POST).
+    existing = transaction.existing_manual_recurring_transaction
 
     if existing
       flash[:alert] = t("recurring_transactions.already_exists")
@@ -433,6 +446,23 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # The "Mark as Recurring" block is only ever rendered under these same
+    # conditions (see transactions/show.html.erb), so skip the extra query
+    # entirely when it won't be used — this runs on every show/failed-update
+    # render, including read-only viewers and split-child transactions.
+    def assign_mark_recurring_state
+      return unless can_edit_entry? && !@entry.split_child?
+
+      existing = @entry.transaction.existing_manual_recurring_transaction
+
+      @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
+      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = existing.present?
+      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
+      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+    end
+
     def accessible_transactions
       Current.family.transactions
         .joins(entry: :account)
