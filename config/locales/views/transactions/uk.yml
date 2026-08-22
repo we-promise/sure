@@ -122,7 +122,6 @@ uk:
     mark_recurring_title: Повторювана транзакція
     potential_duplicate_title: Виявлено можливий дублікат
     potential_duplicate_description: Ця очікувана транзакція може бути такою ж, як і опублікована транзакція нижче. Якщо так, об'єднайте їх, щоб уникнути подвійного підрахунку.
-    merge_duplicate: Так, об'єднати їх
     keep_both: Ні, залишити обидві
     split_parent_row:
       split_label: "Розділити"
