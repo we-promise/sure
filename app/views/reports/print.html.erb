@@ -85,7 +85,7 @@
             <% trend = @net_worth_metrics[:trend] %>
             <% unless trend.direction.flat? %>
               <span class="tufte-metric-card-change" style="color: <%= trend.color %>">
-                <%= trend.value.format(signify_positive: true) %>
+                <%= trend.value >= 0 ? "+" : "" %><%= trend.value.format %>
                 <% if trend.percent.finite? %>
                   (<%= trend.percent_formatted %>)
                 <% end %>
