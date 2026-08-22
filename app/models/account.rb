@@ -374,6 +374,29 @@ class Account < ApplicationRecord
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end
 
+    # Self-custody assets are wallets, not exchanges: no trade entry by hand,
+    # and no cash side. The balance is written by the provider sync, which is
+    # the only thing that knows what the chain says.
+    def create_from_onchain_wallet_account(onchain_wallet_account)
+      family = onchain_wallet_account.onchain_wallet_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: onchain_wallet_account.display_name,
+          balance: 0,
+          cash_balance: 0,
+          currency: onchain_wallet_account.currency.presence || family.currency,
+          accountable_type: "Crypto",
+          accountable_attributes: {
+            subtype: "wallet",
+            tax_treatment: "taxable"
+          }
+        },
+        skip_initial_sync: true
+      )
+    end
+
     private
 
       def create_from_crypto_exchange_account(provider_account, family:)

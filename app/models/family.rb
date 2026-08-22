@@ -7,6 +7,7 @@ class Family < ApplicationRecord
   include Trading212Connectable
   include QuestradeConnectable
   include RedbarkConnectable
+  include OnchainWalletConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -291,6 +292,15 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  # Merchant names already associated with this family (via any provider, or a
+  # manually created FamilyMerchant) -- used to recognize a merchant embedded in
+  # noisy provider text (e.g. Enable Banking's remittance lines) without
+  # inventing a new one from scratch. Deliberately excludes recently-unlinked
+  # merchants (unlike available_merchants), since those were explicitly removed.
+  def known_merchant_names
+    (assigned_merchants.pluck(:name) + merchants.pluck(:name)).uniq
+  end
+
   def assigned_merchants_for(user)
     merchant_ids = Transaction.joins(:entry)
       .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
@@ -330,8 +340,12 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
+  # Memoized per user: the layout renders the sidebar for desktop and mobile
+  # (each with three tab panels), so one request asks for the balance sheet
+  # many times; rebuilding it repeats the account/sync/exchange-rate queries.
   def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+    @balance_sheets ||= {}
+    @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
   def income_statement(user: Current.user, accounts: nil)

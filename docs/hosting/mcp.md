@@ -135,23 +135,23 @@ At the time of writing, `tools/list` includes:
 
 | Tool | Description |
 |------|-------------|
-| `get_transactions` | Retrieve transaction history with filtering |
-| `get_accounts` | Get account information and balances |
+| `get_transactions` | Search transactions with filters (exact names or ids), sorting by date or absolute amount, and pagination |
+| `get_recurring_transactions` | Detected and manual recurring transactions (subscriptions, bills, salaries) with expected dates and per-currency totals |
+| `get_accounts` | Accounts with ids and current balances; pass `include_balance_series: true` for a period-bounded history series |
 | `get_holdings` | Query investment holdings |
-| `get_balance_sheet` | Current financial position (assets, liabilities, net worth) |
-| `get_income_statement` | Income and expenses over a period |
-| `get_budget` | Budget status and budget category breakdowns |
+| `get_balance_sheet` | Net worth, assets and liabilities with a configurable history period and interval |
+| `get_income_statement` | Income and expenses for a period, with optional monthly series, prior-period comparison and account filtering |
+| `get_budget` | Budget summary for a month, with optional prior months |
+| `get_merchants` | Merchants with the ids `update_transaction` accepts and the exact names `get_transactions` filters on |
+| `get_tags` | Tags with pagination |
+| `get_categories` | Categories with hierarchy and pagination |
+| `create_goal` | Create a savings goal linked to depository accounts |
+| `create_tag` / `update_tag` | Manage tags |
+| `create_category` / `update_category` | Manage categories |
+| `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `update_budget` | Update budget allocations for a month |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
-| `create_goal` | Create a savings goal linked to depository accounts |
-| `get_tags` | List family tags |
-| `create_tag` | Create a family tag |
-| `update_tag` | Update a family tag |
-| `get_categories` | List family categories |
-| `create_category` | Create a family category |
-| `update_category` | Update a family category |
-| `update_transaction` | Update an existing transaction |
-| `update_budget` | Update a budget category allocation |
 
 These are the same tools used by Sure's built-in AI assistant.
 
@@ -170,6 +170,8 @@ permissions enforced in the web UI.
 | `get_account_statement` | One statement's details and its reconciliation checks against the ledger — present only once someone has entered the statement's opening/closing balances in the web UI, since nothing extracts them from the document. Does not return the file: stored documents are served only to a signed-in browser session |
 | `get_statement_coverage` | Month-by-month statement coverage for an account: `covered`, `missing`, `mismatched`, `ambiguous`, `duplicate`, `not_expected`, each with a reconciliation status |
 | `record_valuation` | Record an account's value on a date, with a required source citation |
+| `get_valuations` | List recorded valuations newest first, including the citation stored in each entry's notes; the read pair for `record_valuation` |
+| `get_insights` | Read the proactive insights feed (spending anomalies, cash-flow warnings, subscription audits and more) without marking anything read |
 
 They exist for agents that maintain a document-backed record of a family's
 wealth over time. See
