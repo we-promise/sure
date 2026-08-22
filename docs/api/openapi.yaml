@@ -3644,6 +3644,12 @@ paths:
                 oneOf:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/MfaRequiredResponse"
+        '403':
+          description: SSO identity removed by an administrator
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:
@@ -3725,7 +3731,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: account creation disabled
+          description: SSO identity removed or account creation disabled
           content:
             application/json:
               schema:

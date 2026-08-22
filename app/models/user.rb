@@ -233,7 +233,57 @@ class User < ApplicationRecord
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
-    update active: false, email: deactivated_email
+    return true unless active?
+
+    transaction do
+      if super_admin?
+        active_super_admins = User.where(role: :super_admin, active: true).lock.to_a
+        if active_super_admins.one?
+          errors.add(:base, :cannot_remove_last_super_admin)
+          raise ActiveRecord::Rollback
+        end
+      end
+
+      update(active: false, email: deactivated_email)
+    end || false
+  end
+
+  # Permanent removal of another user, initiated by a super admin from the
+  # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
+  # (which reassigns owned accounts, or destroys the family when this is its
+  # last member) for the heavy data cleanup, but additionally revokes every
+  # live authentication vector *synchronously* so there is no window in which
+  # the removed user can keep acting or re-authenticate before the async purge
+  # runs. Returns false (with errors populated) when the user cannot be
+  # deactivated, e.g. an admin who still has co-members in their family.
+  def permanently_remove!
+    was_active = active?
+    removed = transaction do
+      identity_label = email
+      raise ActiveRecord::Rollback unless deactivate
+
+      SsoIdentityBlock.block_all!(oidc_identities, identity_label: identity_label)
+      revoke_all_credentials!
+      true
+    end || false
+
+    purge_later if removed && !was_active
+    removed
+  end
+
+  # Destroys every credential/session that can authenticate as this user.
+  # Web sessions and the SSO identity re-auth path (OidcIdentity lookup by
+  # provider+uid) are not gated on #active?, so they must be torn down here for
+  # revocation to be immediate; the async purge would otherwise leave a window.
+  def revoke_all_credentials!
+    Doorkeeper::AccessToken
+      .where(resource_owner_id: id, revoked_at: nil)
+      .update_all(revoked_at: Time.current)
+    sessions.destroy_all
+    api_keys.destroy_all
+    mobile_devices.destroy_all
+    webauthn_credentials.destroy_all
+    oidc_identities.destroy_all
   end
 
   def can_deactivate
