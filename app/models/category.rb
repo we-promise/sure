@@ -5,6 +5,7 @@ class Category < ApplicationRecord
   belongs_to :family
 
   has_many :budget_categories, dependent: :destroy
+  has_many :envelopes, dependent: :nullify
   has_many :subcategories,
          -> { order(:name) },
          class_name: "Category",
