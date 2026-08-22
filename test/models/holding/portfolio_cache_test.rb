@@ -162,4 +162,75 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal "USD", price.currency
     assert_equal BigDecimal("100"), price.price
   end
+
+  test "excludes neutralized manual holdings from holding price sources" do
+    account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Neutralized",
+      balance: 10000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    date = Date.current
+
+    create_trade(@security, account: account, qty: 1, date: date - 5.days, price: 1)
+    Security::Price.destroy_all
+
+    Holding.create!(
+      security: @security,
+      account: account,
+      date: date,
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "USD"
+    )
+
+    Holding.create!(
+      security: @security,
+      account: account,
+      date: date,
+      qty: 0,
+      price: 95,
+      amount: 0,
+      currency: "CAD",
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+
+    cache = Holding::PortfolioCache.new(account, use_holdings: true)
+    price = cache.get_price(@security.id, date)
+
+    assert_equal "USD", price.currency
+    assert_equal BigDecimal("100"), price.price
+  end
+
+  test "includes sold-out calculated holdings as holding price sources" do
+    account = families(:empty).accounts.create!(
+      name: "Sold Out Position",
+      balance: 10000,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    date = Date.current
+
+    create_trade(@security, account: account, qty: 1, date: date - 5.days, price: 1)
+    Security::Price.destroy_all
+    Entry.where("date >= ?", date).delete_all
+
+    Holding.create!(
+      security: @security,
+      account: account,
+      date: date,
+      qty: 0,
+      price: 250,
+      amount: 0,
+      currency: "USD"
+    )
+
+    cache = Holding::PortfolioCache.new(account, use_holdings: true)
+    price = cache.get_price(@security.id, date)
+
+    assert_equal BigDecimal("250"), price.price
+    assert_equal "USD", price.currency
+  end
 end

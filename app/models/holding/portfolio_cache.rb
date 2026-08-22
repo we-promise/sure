@@ -135,9 +135,13 @@ class Holding::PortfolioCache
             )
           end
 
-        # Low priority prices from holdings (if applicable)
+        # Low priority prices from holdings (if applicable).
+        # Skip neutralized manual rows (qty/amount zeroed for cost-basis recovery).
+        # Sold-out calculated rows stay — their prices are still valid market data.
         holding_prices = if use_holdings
-          (holdings_by_security_id[security.id] || []).map do |holding|
+          (holdings_by_security_id[security.id] || [])
+            .reject { |holding| holding.qty.zero? && !holding.calculated? }
+            .map do |holding|
             PriceWithPriority.new(
               price: Security::Price.new(
                 security: security,
