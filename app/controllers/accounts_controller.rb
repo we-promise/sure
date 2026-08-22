@@ -570,16 +570,25 @@ class AccountsController < ApplicationController
       # Binance sync stats
       @binance_sync_stats_map = {}
       @binance_unlinked_count_map = {}
+
+      binance_item_ids = @binance_items.map(&:id)
+      binance_unlinked_counts_by_item_id =
+        if binance_item_ids.any?
+          BinanceAccount.where(binance_item_id: binance_item_ids)
+            .left_joins(:account_provider)
+            .where(account_providers: { id: nil })
+            .group(:binance_item_id)
+            .count
+        else
+          {}
+        end
+
       @binance_items.each do |item|
         latest_sync = item.latest_sync_record
         @binance_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
 
         # Count unlinked accounts
-        count = item.binance_accounts
-          .left_joins(:account_provider)
-          .where(account_providers: { id: nil })
-          .count
-        @binance_unlinked_count_map[item.id] = count
+        @binance_unlinked_count_map[item.id] = binance_unlinked_counts_by_item_id[item.id].to_i
       end
 
       # Questrade sync stats and account counts
