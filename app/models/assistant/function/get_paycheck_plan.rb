@@ -74,7 +74,12 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
     # the plan read more comfortable than it is. Name what was left out and let
     # the assistant caveat the number instead of overstating it.
     def unconfirmed_exclusion
-      count = accessible_series.suggested.count
+      # Spend only. This counted every suggested series including income, and
+      # then asserted that safe-to-spend is an upper bound. An excluded
+      # paycheck pushes it the other way, so a family whose only pending
+      # detection was income was told its headroom was overstated when the
+      # opposite was true.
+      count = accessible_series.suggested.where.not(bill_type: "income").count
       return {} if count.zero?
 
       {
@@ -96,9 +101,15 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
     # balance cannot be read there is no honest number, so the key is null and
     # cash_on_hand says why rather than leaving a figure to be guessed at.
     def safe_after_bills(period)
-      return fmt(period.remaining) unless period.bridge?
+      return period.cash_after_obligations.nil? ? nil : fmt(period.cash_after_obligations) if period.bridge?
 
-      period.cash_after_obligations.nil? ? nil : fmt(period.cash_after_obligations)
+      # A short window has no safe amount. The page prints the shortfall under
+      # its own label and never renders a negative "safe"; the tool emitted
+      # -$6,300.00 as safe_after_bills, which read aloud is not a sentence
+      # anybody means. short and shortfall carry that case already.
+      return nil if period.short?
+
+      fmt(period.remaining)
     end
 
     def serialize_period(period)

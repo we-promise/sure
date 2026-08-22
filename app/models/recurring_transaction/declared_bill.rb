@@ -28,7 +28,11 @@ class RecurringTransaction
       rescue ArgumentError
         nil
       end
-      amount = nil if amount && !amount.finite?
+      # update_bill rejects zero outright, and the schema says minimum 0.01, but
+      # strict mode is off so nothing enforced it here: a zero bill was written
+      # happily, and its cycles can never close because close_worthy? asks for a
+      # positive expected amount, so it sat open and overdue forever.
+      amount = nil if amount && (!amount.finite? || amount.zero?)
       amount = -amount if amount && is_income
 
       recurring = family.recurring_transactions.new(

@@ -46,8 +46,14 @@ class Assistant::FunctionToolCaller
     rescue ActiveRecord::RecordNotFound => e
       Rails.logger.warn("Assistant tool #{function_request.function_name} raised #{e.class}: #{e.message}")
 
+      # The raised message carries the scoped relation's full SQL, so returning
+      # it verbatim handed any caller the access-control schema: the tables, the
+      # owner/share join, the lot. MCP passes this straight through to an
+      # external client, which needs only a guessed UUID to read it. The message
+      # says nothing the caller can act on that the hint does not, and a
+      # not-found is deliberately indistinguishable from a forbidden id.
       {
-        error: e.message,
+        error: "No such record, or it is not one you have access to",
         hint: "That record was not found. List valid options first (for example get_accounts or get_categories) and retry once with an exact match."
       }
     rescue Date::Error, ArgumentError, KeyError => e
