@@ -299,7 +299,7 @@ en:
       needs_attention: Needs attention
       attention_overdue_total: "%{amount} overdue"
       this_month: This month
-      later: Later
+      later: After this month
       paid_this_month: Paid this month
       dormant: Dormant
       kpi_remaining: Remaining this month
