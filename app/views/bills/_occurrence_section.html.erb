@@ -1,4 +1,4 @@
-<%# locals: (title:, occurrences:, tone: :default, date_labels: false, suggestions: {}, meta: nil) %>
+<%# locals: (title:, occurrences:, tone: :default, date_labels: false, suggestions: {}, meta: nil, pay_periods: []) %>
 <% return if occurrences.empty? %>
 
 <%# Two bills can be genuinely indistinguishable on a row -- same merchant,
@@ -29,7 +29,19 @@
       and phone-width in practice. The row has to size itself against the space
       it actually has. %>
   <div class="@container bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+    <% seen_periods = Set.new %>
     <% occurrences.each do |occurrence| %>
+      <%# The marker belongs to the first row of its period, so it lands
+          between groups without the section having to pre-bucket the rows. %>
+      <% period_index = pay_periods.index { |p| occurrence.due_on.between?(p.starts_on, p.ends_on) } %>
+      <% if period_index && seen_periods.add?(period_index) %>
+        <% period = pay_periods[period_index] %>
+        <%= render "bills/pay_period_marker",
+                   period: period,
+                   currency: Current.family.currency,
+                   due_total: occurrences.select { |o| o.due_on.between?(period.starts_on, period.ends_on) }
+                                         .sum { |o| o.resolved_expected_amount.abs } %>
+      <% end %>
       <%= render "bills/occurrence",
                  occurrence: occurrence,
                  date_label: date_labels,

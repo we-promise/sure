@@ -173,7 +173,7 @@
     <% end %>
 
     <div class="rounded-xl bg-container-inset space-y-1 p-1">
-      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true, suggestions: @suggestions_by_occurrence %>
+      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true, suggestions: @suggestions_by_occurrence, pay_periods: @month_pay_periods %>
       <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later, suggestions: @suggestions_by_occurrence %>
       <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant, suggestions: @suggestions_by_occurrence %>
     </div>

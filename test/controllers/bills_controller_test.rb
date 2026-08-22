@@ -1405,7 +1405,73 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       response.body
   end
 
+
+  # The overview groups by calendar month, which is the wrong unit for anyone
+  # paid weekly: four paychecks and four rent payments land in one list. The
+  # markers only earn their place when income actually subdivides the month.
+  test "weekly income marks pay periods inside the month" do
+    declare_scheduled_income(frequency: "weekly", weekday: Date.current.wday)
+    declare_weekly_bill
+
+    get bills_url
+
+    assert_response :success
+    assert_match(/due before next/, response.body,
+      "a weekly paycheck should mark its period inside the month")
+  end
+
+  test "monthly income leaves the month undivided" do
+    declare_scheduled_income(frequency: "monthly", day_of_month: Date.current.day)
+    declare_weekly_bill
+
+    get bills_url
+
+    assert_response :success
+    assert_no_match(/due before next/, response.body,
+      "one paycheck a month does not subdivide the month, so nothing should be marked")
+  end
+
+  test "no declared income leaves the month undivided" do
+    declare_weekly_bill
+
+    get bills_url
+
+    assert_response :success
+    assert_no_match(/due before next/, response.body)
+  end
+
   private
+
+    def declare_scheduled_income(frequency:, weekday: nil, day_of_month: nil)
+      series = @family.recurring_transactions.create!(
+        name: "Payday", account: accounts(:depository), amount: -1200,
+        currency: "USD", status: "active", bill_type: "income", manual: true,
+        dedup_scope: "payday--1200", last_occurrence_date: 1.week.ago.to_date,
+        next_expected_date: Date.current,
+        expected_day_of_month: day_of_month || Date.current.day
+      )
+      series.recurrence_rules.create!(frequency: frequency, interval: 1,
+                                      weekday: weekday, day_of_month: day_of_month)
+      # Occurrences generate on create, before the rule exists, so a series
+      # built rule-last starts out on the fallback monthly cadence.
+      series.recurring_occurrences.destroy_all
+      RecurringTransaction::OccurrenceGenerator.new(series.reload).generate!
+      series
+    end
+
+    def declare_weekly_bill
+      series = @family.recurring_transactions.create!(
+        name: "Rent", account: accounts(:depository), amount: 400,
+        currency: "USD", status: "active", bill_type: "bill", manual: true,
+        dedup_scope: "rent-400", last_occurrence_date: 1.week.ago.to_date,
+        next_expected_date: Date.current, expected_day_of_month: Date.current.day
+      )
+      series.recurrence_rules.create!(frequency: "weekly", interval: 1,
+                                      weekday: Date.current.wday)
+      series.recurring_occurrences.destroy_all
+      RecurringTransaction::OccurrenceGenerator.new(series.reload).generate!
+      series
+    end
 
     # A declared income series anchored to a specific payday, which is what the
     # planner slices periods by.

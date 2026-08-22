@@ -12,6 +12,8 @@ class BillsController < ApplicationController
   STATUS_FILTERS = (PAYMENT_FILTERS + LIFECYCLE_FILTERS).freeze
   # Enough to answer "what happens next" without becoming a second bill list.
   NEXT_UP_LIMIT = 4
+  # Six covers a month of weekly paydays with room for a leading bridge.
+  PAY_PERIOD_LIMIT = 6
   before_action :ensure_recurring_enabled
 
   # The pay-run workspace, built on occurrence rows rather than series
@@ -76,6 +78,8 @@ class BillsController < ApplicationController
                              .sort_by(&:due_on)
 
     compute_kpis(today, month_end)
+
+    @month_pay_periods = month_pay_periods(today, month_end)
 
     @detected_awaiting_review = detected_awaiting_review
     # Fresh detections wait here for confirm/dismiss. Reviewing them is bill
@@ -473,6 +477,27 @@ class BillsController < ApplicationController
       occurrences.each do |occurrence|
         occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
       end
+    end
+
+    # The month is the right container for planning and the wrong unit for
+    # anyone whose income does not arrive monthly. Paid weekly, "this month"
+    # collapses four paychecks and four rent payments into one list.
+    #
+    # These are markers inside the month, not a regrouping of it. Only returned
+    # when income actually subdivides the month: monthly income yields a single
+    # overlapping period and undeclared income yields none, and in both cases
+    # the list renders exactly as it did before.
+    def month_pay_periods(today, month_end)
+      periods = RecurringTransaction::PaycheckPlanner
+                  .new(Current.family, user: Current.user)
+                  .plan(periods_limit: PAY_PERIOD_LIMIT)
+      return [] if periods.blank?
+
+      overlapping = periods.select do |period|
+        period.starts_on <= month_end && period.ends_on >= today
+      end
+
+      overlapping.size > 1 ? overlapping : []
     end
 
     def compute_kpis(today, month_end)

@@ -145,6 +145,9 @@ en:
       # promising the earnings reporting that Reports already owns.
       paycheck: Income plan
       all: All bills
+    pay_period:
+      paid_on: "Paid %{date}"
+      due_before_next: "%{amount} due before next"
     paycheck:
       unconvertible:
         one: "1 obligation is not included, no exchange rate available"
