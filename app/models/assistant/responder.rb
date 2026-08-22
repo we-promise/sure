@@ -1,4 +1,12 @@
 class Assistant::Responder
+  ToolCallLimitError = Class.new(StandardError)
+  EmptyResponseError = Class.new(StandardError)
+  # Rounds, not calls: parallel calls in one round count once. Eight covers a
+  # taxonomy lookup, a target lookup, an action, one hint-corrected retry, a
+  # verification read and a summary, with margin. Override with
+  # ASSISTANT_MAX_TOOL_CALL_ITERATIONS (low-resource hosts may want 2).
+  DEFAULT_MAX_TOOL_CALL_ITERATIONS = 8
+
   def initialize(message:, instructions:, function_tool_caller:, llm:)
     @message = message
     @instructions = instructions
@@ -11,74 +19,91 @@ class Assistant::Responder
   end
 
   def respond(previous_response_id: nil)
-    # Track whether response was handled by streamer
-    response_handled = false
+    response, response_has_text = request_response(previous_response_id: previous_response_id)
+    any_response_has_text = response_has_text
+    in_flight_function_results = []
+    iteration = 0
 
-    # For the first response
-    streamer = proc do |chunk|
-      case chunk.type
-      when "output_text"
-        emit(:output_text, chunk.data)
-      when "response"
-        response = chunk.data
-        response_handled = true
-
-        if response.function_requests.any?
-          handle_follow_up_response(response)
-        else
-          emit(:response, { id: response.id })
-        end
-      end
-    end
-
-    response = get_llm_response(streamer: streamer, previous_response_id: previous_response_id)
-
-    # For synchronous (non-streaming) responses, handle function requests if not already handled by streamer
-    unless response_handled
-      if response && response.function_requests.any?
-        handle_follow_up_response(response)
-      elsif response
-        emit(:response, { id: response.id })
-      end
-    end
-  end
-
-  private
-    attr_reader :message, :instructions, :function_tool_caller, :llm
-
-    def handle_follow_up_response(response)
-      streamer = proc do |chunk|
-        case chunk.type
-        when "output_text"
-          emit(:output_text, chunk.data)
-        when "response"
-          # We do not currently support function executions for a follow-up response (avoid recursive LLM calls that could lead to high spend)
-          emit(:response, { id: chunk.data.id })
-        end
+    while response.function_requests.any?
+      iteration += 1
+      if iteration > max_tool_call_iterations
+        raise ToolCallLimitError,
+              "Assistant exceeded the tool-call limit of #{max_tool_call_iterations} for one response"
       end
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
+      function_results = function_tool_calls.map(&:to_result)
+      in_flight_function_results.concat(function_results)
 
       emit(:response, {
         id: response.id,
         function_tool_calls: function_tool_calls
       })
 
-      # Get follow-up response with tool call results
-      get_llm_response(
-        streamer: streamer,
-        function_results: function_tool_calls.map(&:to_result),
-        previous_response_id: response.id
+      # On the final permitted round the follow-up request forbids further
+      # tool calls via tool_choice, so the model must answer in text with
+      # whatever it has gathered instead of the turn dying in
+      # ToolCallLimitError. The real tool definitions stay in the request —
+      # Anthropic rejects messages containing tool blocks when no tools are
+      # defined, so dropping the tool list is not an option.
+      final_round = iteration == max_tool_call_iterations
+
+      response, response_has_text = request_response(
+        function_results: provider_preserves_response_context? ? function_results : in_flight_function_results.dup,
+        previous_response_id: response.id,
+        tool_choice: final_round ? :none : nil
       )
+      any_response_has_text ||= response_has_text
     end
 
-    def get_llm_response(streamer:, function_results: [], previous_response_id: nil)
+    raise EmptyResponseError, "Assistant returned neither text nor tool calls" unless any_response_has_text
+
+    emit(:response, { id: response.id })
+  end
+
+  private
+    attr_reader :message, :instructions, :function_tool_caller, :llm
+
+    def request_response(function_results: [], previous_response_id: nil, tool_choice: nil)
+      response_has_text = false
+
+      streamer = proc do |chunk|
+        if chunk.type == "output_text" && chunk.data.present?
+          response_has_text = true
+          emit(:output_text, chunk.data)
+        end
+      end
+
+      response = get_llm_response(
+        streamer: streamer,
+        function_results: function_results,
+        previous_response_id: previous_response_id,
+        tool_choice: tool_choice
+      )
+
+      response_has_text ||= response.messages.any? { |response_message| response_message.output_text.present? }
+      [ response, response_has_text ]
+    end
+
+    def provider_preserves_response_context?
+      llm.respond_to?(:supports_responses_endpoint?) && llm.supports_responses_endpoint?
+    end
+
+    def max_tool_call_iterations
+      configured = Integer(ENV.fetch("ASSISTANT_MAX_TOOL_CALL_ITERATIONS", DEFAULT_MAX_TOOL_CALL_ITERATIONS).to_s, 10)
+      configured.positive? ? configured : DEFAULT_MAX_TOOL_CALL_ITERATIONS
+    rescue ArgumentError
+      DEFAULT_MAX_TOOL_CALL_ITERATIONS
+    end
+
+    def get_llm_response(streamer:, function_results: [], previous_response_id: nil, tool_choice: nil)
       response = llm.chat_response(
         message.content,
         model: message.ai_model,
         instructions: instructions,
         functions: function_tool_caller.function_definitions,
         function_results: function_results,
+        tool_choice: tool_choice,
         messages: openai_messages_payload,
         conversation_history: chat_message_records,
         streamer: streamer,

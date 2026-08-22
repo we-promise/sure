@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -372,6 +372,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
   end
 
+  create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "owner_id", null: false
+    t.uuid "viewer_id", null: false
+    t.string "permission", default: "read_only", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["owner_id", "viewer_id"], name: "index_budget_shares_on_owner_id_and_viewer_id", unique: true
+    t.index ["owner_id"], name: "index_budget_shares_on_owner_id"
+    t.index ["viewer_id"], name: "index_budget_shares_on_viewer_id"
+  end
+
   create_table "budgets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "family_id", null: false
     t.date "start_date", null: false
@@ -381,8 +392,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.string "currency", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["family_id", "start_date", "end_date"], name: "index_budgets_on_family_id_and_start_date_and_end_date", unique: true
+    t.uuid "user_id"
+    t.index ["family_id", "start_date", "end_date", "user_id"], name: "index_budgets_personal_unique", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["family_id", "start_date", "end_date"], name: "index_budgets_shared_unique", unique: true, where: "(user_id IS NULL)"
     t.index ["family_id"], name: "index_budgets_on_family_id"
+    t.index ["user_id"], name: "index_budgets_on_user_id"
   end
 
   create_table "categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -394,6 +408,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.uuid "parent_id"
     t.string "classification_unused", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
+    t.datetime "last_used_at"
+    t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
+    t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
@@ -639,6 +656,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.boolean "user_modified", default: false, null: false
     t.boolean "import_locked", default: false, null: false
     t.uuid "parent_entry_id"
+    t.datetime "reconciled_at"
+    t.uuid "reconciled_by_statement_id"
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
@@ -651,6 +670,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
+    t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
+    t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
+    t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -772,6 +794,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.string "default_account_sharing", default: "shared", null: false
     t.string "enabled_currencies", array: true
     t.datetime "last_sync_all_attempted_at"
+    t.boolean "personal_budgets", default: false, null: false
+    t.boolean "household_budget_enabled", default: true, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -1640,6 +1664,49 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.check_constraint "destination_account_id IS NULL OR destination_account_id <> account_id", name: "chk_recurring_txns_transfer_distinct_accounts"
   end
 
+  create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "redbark_item_id", null: false
+    t.string "name", null: false
+    t.string "redbark_account_id", null: false
+    t.string "connection_id"
+    t.string "account_number"
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.boolean "ignored", default: false, null: false
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["redbark_item_id", "redbark_account_id"], name: "index_redbark_accounts_on_item_and_account_id", unique: true
+    t.index ["redbark_item_id"], name: "index_redbark_accounts_on_redbark_item_id"
+  end
+
+  create_table "redbark_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.text "api_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_redbark_items_on_family_id"
+    t.index ["status"], name: "index_redbark_items_on_status"
+  end
+
   create_table "rejected_transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "inflow_transaction_id", null: false
     t.uuid "outflow_transaction_id", null: false
@@ -2017,6 +2084,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_tags_on_family_id"
+    t.index ["family_id", "name"], name: "index_tags_on_family_id_and_name", unique: true
   end
 
   create_table "tool_calls", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2268,6 +2336,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
     t.datetime "sync_start_date"
     t.text "token", null: false
     t.datetime "updated_at", null: false
+    t.boolean "import_all_history", default: false, null: false
     t.index ["family_id", "profile_id"], name: "index_wise_items_on_family_id_and_profile_id", unique: true
     t.index ["family_id"], name: "index_wise_items_on_family_id"
     t.index ["status"], name: "index_wise_items_on_status"
@@ -2294,9 +2363,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
   add_foreign_key "binance_items", "families"
   add_foreign_key "brex_accounts", "brex_items"
   add_foreign_key "brex_items", "families"
-  add_foreign_key "budget_categories", "budgets"
+  add_foreign_key "budget_categories", "budgets", on_delete: :cascade
   add_foreign_key "budget_categories", "categories"
+  add_foreign_key "budget_shares", "users", column: "owner_id"
+  add_foreign_key "budget_shares", "users", column: "viewer_id"
   add_foreign_key "budgets", "families"
+  add_foreign_key "budgets", "users", on_delete: :cascade
   add_foreign_key "categories", "families"
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
@@ -2309,6 +2381,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
   add_foreign_key "debug_log_entries", "users", on_delete: :nullify
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
+  add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
@@ -2370,6 +2443,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_07_19_000002) do
   add_foreign_key "recurring_transactions", "accounts", on_delete: :cascade
   add_foreign_key "recurring_transactions", "families"
   add_foreign_key "recurring_transactions", "merchants"
+  add_foreign_key "redbark_accounts", "redbark_items"
+  add_foreign_key "redbark_items", "families"
   add_foreign_key "rejected_transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "rejected_transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
   add_foreign_key "rule_actions", "rules"

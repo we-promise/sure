@@ -1,0 +1,20 @@
+<%# locals: (entry:) %>
+<div class="flex items-center justify-between gap-2 p-3" id="<%= dom_id(entry, :mark_recurring) %>">
+  <div class="text-sm space-y-1">
+    <h4 class="text-primary"><%= t("transactions.show.mark_recurring_title") %></h4>
+    <p class="<%= @mark_recurring_subtitle_class %>">
+      <%= @mark_recurring_subtitle %>
+    </p>
+  </div>
+  <%= render DS::Button.new(
+    text: t("transactions.show.mark_recurring"),
+    variant: "outline",
+    icon: "repeat",
+    href: @mark_recurring_href,
+    method: :post,
+    frame: "_top",
+    disabled: @mark_recurring_disabled,
+    title: @mark_recurring_title,
+    class: @mark_recurring_button_class
+  ) %>
+</div>

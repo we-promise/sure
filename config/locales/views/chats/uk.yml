@@ -1,0 +1,45 @@
+---
+uk:
+  chats:
+    demo_banner_title: "Демо-режим активний"
+    demo_banner_message: "Ви використовуєте LLM за допомогою кредитів, наданих Cloudflare Workers AI. Результати можуть відрізнятися, оскільки кодова база була протестована на `gpt-4.1`, але ваші токени не використовуються для навчання в іншому місці! 🤖"
+    thinking: "Думаю..."
+    worker_unhealthy_warning: "Відповіді ШІ можуть не надходити зараз — фоновий працівник, схоже, не працює або перевантажений. Перевірте, чи запущено ваш працівник Sidekiq."
+    ai_greeting:
+      greeting: "Привіт, %{name}! Я — ШІ/велика мовна модель, яка може допомогти з вашими фінансами. Я маю доступ до Інтернету та даних вашого облікового запису."
+      there: "там"
+      commands_hint_html: "Ви можете використовувати <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> для доступу до команд"
+      questions_intro: "Ось кілька запитань, які ви можете поставити:"
+      evaluate_portfolio: "Оцінити інвестиційний портфель"
+      spending_insights: "Показати аналітику витрат"
+      unusual_patterns: "Знайти незвичайні закономірності"
+    chat:
+      edit_chat_title: "Редагувати назву чату"
+      delete_chat: "Видалити чат"
+    chat_nav:
+      all_chats: "Всі чати"
+      start_new_chat: "Почати новий чат"
+      edit_chat_title: "Редагувати назву чату"
+      delete_chat: "Видалити чат"
+    error:
+      retry: "Повторити"
+    destroy:
+      notice: "Чат успішно видалено"
+    index:
+      chats: "Чати"
+      new_chat: "Новий чат"
+    update:
+      success: "Чат оновлено"
+    ai_consent:
+      title: "Увімкнути чати зі ШІ"
+      available_description: "Чат зі ШІ може відповідати на фінансові запитання та надавати аналітику на основі ваших даних. Щоб використовувати цю функцію, вам потрібно її явно увімкнути."
+      unavailable_description_html: "Щоб використовувати асистента ШІ, вам потрібно встановити змінну середовища <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> або налаштувати її в налаштуваннях самостійного хостингу вашого екземпляра."
+      enable_button: "Увімкнути чати зі ШІ"
+      disable_note: "Вимкнути в будь-який час. Всі дані, що надсилаються нашим постачальникам LLM, є анонімними."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Міркування асистента"
+    tool_calls:
+      tool_calls: "Виклики інструментів"
+      function: "Функція:"
+      arguments: "Аргументи:"

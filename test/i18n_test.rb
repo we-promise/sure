@@ -1,11 +1,29 @@
 require "i18n/tasks"
+require "pathname"
+require "yaml"
 
 # We're currently skipping some i18n tests to speed up development.  Eventually, we'll make a dedicated
 # project for getting i18n working.  More details on that here:
 # https://github.com/maybe-finance/maybe/issues/1225
 class I18nTest < ActiveSupport::TestCase
+  GERMAN_COVERAGE_GLOBS = [
+    "config/locales/breadcrumbs/*.yml",
+    "config/locales/doorkeeper.*.yml",
+    "config/locales/mailers/**/*.yml",
+    "config/locales/models/**/*.yml",
+    "config/locales/views/**/*.yml"
+  ]
+
   def setup
     @i18n = I18n::Tasks::BaseTask.new
+  end
+
+  def test_german_locale_files_parse
+    german_locale_paths.each do |path|
+      assert_nothing_raised do
+        YAML.load_file(path, aliases: true)
+      end
+    end
   end
 
   def test_no_missing_keys

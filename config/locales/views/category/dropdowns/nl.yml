@@ -8,4 +8,5 @@ nl:
       show:
         clear: Categorie wissen
         no_categories: Geen categorieën gevonden
+        recent: Recent
         search_placeholder: Zoeken

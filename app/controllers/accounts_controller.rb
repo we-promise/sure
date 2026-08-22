@@ -16,6 +16,7 @@ class AccountsController < ApplicationController
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
+    @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
@@ -28,6 +29,7 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
+    @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
 
@@ -56,19 +58,60 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
+    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
     end
 
+    per_page = safe_per_page(stored_per_page_default)
+    store_per_page!(per_page) if params[:per_page].present?
+
     @pagy, @entries = pagy(
       entries,
-      limit: safe_per_page,
+      limit: per_page,
       params: request.query_parameters.except("tab").merge("tab" => "activity")
     )
+
+    # Preload transfer associations only for Transaction entries
+    txn_entryables = @entries.filter_map { |e| e.entryable if e.entryable_type == "Transaction" }
+    ActiveRecord::Associations::Preloader.new(
+      records: txn_entryables,
+      associations: {
+        transfer_as_outflow: { inflow_transaction: { entry: :account } },
+        transfer_as_inflow: { outflow_transaction: { entry: :account } }
+      }
+    ).call
+
     Transaction::ActivitySecurityPreloader.new(@entries).preload
+
+    # The preload and split-parent lookup below are intentionally scoped to the
+    # current page (@entries) — only this page is rendered, so a child entry
+    # whose split parent sits on another page deliberately won't resolve it.
+    transactions = @entries.filter_map { |e| e.entryable if e.transaction? }
+    if transactions.any?
+      ActiveRecord::Associations::Preloader.new(
+        records: transactions,
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant ]
+      ).call
+    end
+
+    trades = @entries.filter_map { |e| e.entryable if e.entryable_type == "Trade" }
+    if trades.any?
+      ActiveRecord::Associations::Preloader.new(
+        records: trades,
+        associations: [ :security ]
+      ).call
+    end
+
+    entry_ids = @entries.map(&:id)
+    @split_parent_entry_ids = if entry_ids.any?
+      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+    else
+      Set.new
+    end
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
   end
@@ -234,6 +277,19 @@ class AccountsController < ApplicationController
       Current.family
     end
 
+    # Shares the "per page" preference with TransactionsController's
+    # prev_transaction_page_params so the page size the user picks on either
+    # the account activity feed or the global transactions page applies to both.
+    def store_per_page!(value)
+      Current.session.update!(
+        prev_transaction_page_params: Current.session.prev_transaction_page_params.merge("per_page" => value)
+      )
+    end
+
+    def stored_per_page_default
+      Current.session.prev_transaction_page_params["per_page"].presence || 10
+    end
+
     def set_account
       @account = Current.user.accessible_accounts.find(params[:id])
     end
@@ -262,6 +318,7 @@ class AccountsController < ApplicationController
         @plaid_items,
         @simplefin_items,
         @lunchflow_items,
+        @redbark_items,
         @akahu_items,
         @up_items,
         @enable_banking_items,
@@ -274,6 +331,7 @@ class AccountsController < ApplicationController
         @indexa_capital_items,
         @sophtron_items,
         @binance_items,
+        @kraken_items,
         @questrade_items,
         @wise_items
       ].flatten.compact
@@ -428,6 +486,13 @@ class AccountsController < ApplicationController
       @sophtron_items.each do |item|
         latest_sync = item.latest_sync_record
         @sophtron_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Redbark sync stats
+      @redbark_sync_stats_map = {}
+      @redbark_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @redbark_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Mercury sync stats

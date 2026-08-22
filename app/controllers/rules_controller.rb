@@ -129,11 +129,56 @@ class RulesController < ApplicationController
   end
 
   def clear_ai_cache
-    ClearAiCacheJob.perform_later(Current.family)
+    enqueue_ai_cache_reset
     redirect_to rules_path, notice: t("rules.clear_ai_cache.success")
   end
 
   private
+    # The reset itself happens in a background job, so an enqueue that never
+    # lands looks exactly like a job that ran and found nothing. Logging the
+    # request separately from the job's own "started" entry tells those apart.
+    def enqueue_ai_cache_reset
+      perform_ai_cache_reset_later
+
+      DebugLogEntry.capture(
+        category: ClearAiCacheJob::DEBUG_CATEGORY,
+        level: "info",
+        message: "AI cache reset requested from the rules page",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user
+      )
+    end
+
+    # Split out so the rescue below covers only the enqueue it reports on.
+    # Anything that runs after the job is safely queued — the request log above,
+    # the redirect — is then structurally incapable of being recorded as an
+    # enqueue failure and retried, without that resting on the internals of
+    # whatever those later steps happen to call.
+    def perform_ai_cache_reset_later
+      attempted_job = nil
+      enqueued = ClearAiCacheJob.perform_later(Current.family) { |job| attempted_job = job }
+
+      # perform_later turns an ActiveJob::EnqueueError — or an enqueue aborted by
+      # a callback — into a false return rather than raising it, so the return
+      # value is the only signal that the reset never reached the queue. The
+      # yielded job carries the underlying error when there was one.
+      return if enqueued
+
+      raise attempted_job&.enqueue_error || ActiveJob::EnqueueError.new("ClearAiCacheJob was not enqueued")
+    rescue => e
+      DebugLogEntry.capture(
+        category: ClearAiCacheJob::DEBUG_CATEGORY,
+        level: "error",
+        message: "AI cache reset could not be enqueued: #{e.class}: #{e.message}",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user,
+        metadata: { error_class: e.class.name, error_message: e.message }
+      )
+      raise
+    end
+
     def set_rule
       @rule = Current.family.rules.find(params[:id])
     end

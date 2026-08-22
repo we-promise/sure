@@ -10,13 +10,14 @@ de:
       success: Binance-Verbindung wurde zur Löschung vorgemerkt.
     setup_accounts:
       title: Binance-Konto importieren
-      subtitle: Wählen Sie die zu verfolgenden Portfolios
-      instructions: Wählen Sie die Binance-Portfolios aus, die Sie importieren möchten. Es werden nur Portfolios mit Salden angezeigt.
+      subtitle: Wähl die zu verfolgenden Portfolios
+      instructions: Wähl die Binance-Portfolios aus, die du importieren willst. Es werden nur Portfolios mit Salden angezeigt.
       no_accounts: Alle Konten wurden bereits importiert.
       accounts_count:
         one: "%{count} Konto verfügbar"
         other: "%{count} Konten verfügbar"
       select_all: Alle auswählen
+      historical_import: Verlaufsimport
       import_selected: Ausgewählte importieren
       cancel: Abbrechen
       creating: Importiere...
@@ -45,15 +46,15 @@ de:
       no_accounts_title: Keine Konten gefunden
       no_accounts_message: Ihr Binance-Portfolio erscheint hier nach der Synchronisierung.
       setup_needed: Konto bereit zum Import
-      setup_description: Wählen Sie die Binance-Portfolios, die Sie verfolgen möchten.
+      setup_description: Wähl die Binance-Portfolios, die du verfolgen willst.
       setup_action: Konto importieren
       import_accounts_menu: Konto importieren
       stale_rate_warning: "Der Saldo ist ein Näherungswert – der genaue Wechselkurs für %{date} war nicht verfügbar. Er wird bei der nächsten Synchronisierung aktualisiert."
     select_existing_account:
       title: Binance-Konto verknüpfen
       no_accounts_found: Keine Binance-Konten gefunden.
-      wait_for_sync: Warten Sie, bis Binance die Synchronisierung abgeschlossen hat
-      check_provider_health: Prüfen Sie, ob Ihre Binance-API-Zugangsdaten gültig sind
+      wait_for_sync: Warte, bis Binance die Synchronisierung abgeschlossen hat
+      check_provider_health: Prüf, ob deine Binance-API-Zugangsdaten gültig sind
       currently_linked_to: "Aktuell verknüpft mit: %{account_name}"
       link: Verknüpfen
       cancel: Abbrechen
@@ -65,7 +66,7 @@ de:
   binance_item:
     syncer:
       checking_credentials: Zugangsdaten werden geprüft...
-      credentials_invalid: Ungültige API-Zugangsdaten. Bitte überprüfen Sie Ihren API-Schlüssel und Ihr Secret.
+      credentials_invalid: Ungültige API-Zugangsdaten. Bitte prüf deinen API-Schlüssel und dein Secret.
       importing_accounts: Konten werden von Binance importiert...
       checking_configuration: Kontokonfiguration wird geprüft...
       accounts_need_setup:

@@ -185,6 +185,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
+      { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
@@ -210,6 +211,7 @@ class Settings::ProvidersController < ApplicationController
       "up"             => "UpItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
+      "redbark"        => "RedbarkItem",
       "enable_banking" => "EnableBankingItem",
       "coinstats"      => "CoinstatsItem",
       "wise"           => "WiseItem",
@@ -236,6 +238,8 @@ class Settings::ProvidersController < ApplicationController
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
         @lunchflow_items = Current.family.lunchflow_items.ordered
+      when "redbark"
+        @redbark_items = Current.family.redbark_items.ordered
       when "enable_banking"
         @enable_banking_items = Current.family.enable_banking_items.ordered
       when "coinstats"
@@ -280,6 +284,7 @@ class Settings::ProvidersController < ApplicationController
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
+      @redbark_items = Current.family.redbark_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
@@ -316,6 +321,7 @@ class Settings::ProvidersController < ApplicationController
         "up"             => @up_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
+        "redbark"        => @redbark_items,
         "enable_banking" => @enable_banking_items,
         "coinstats"      => @coinstats_items,
         "wise"           => @wise_items,

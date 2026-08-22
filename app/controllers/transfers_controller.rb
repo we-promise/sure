@@ -1,16 +1,18 @@
 class TransfersController < ApplicationController
   include StreamExtensions
 
-  before_action :set_transfer, only: %i[show destroy update mark_as_recurring]
+  before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
 
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
+    @tags = Current.family.tags.alphabetically
   end
 
   def show
     @categories = Current.family.categories.alphabetically
+    @tags = Current.family.tags.alphabetically
 
     # Whether the current user can hit `mark_as_recurring`: feature flag on,
     # AND they have write access to BOTH transfer endpoints. Gating the
@@ -40,7 +42,8 @@ class TransfersController < ApplicationController
       amount: transfer_params[:amount].to_d,
       exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
       source_fee_amount: transfer_params[:source_fee_amount],
-      destination_fee_amount: transfer_params[:destination_fee_amount]
+      destination_fee_amount: transfer_params[:destination_fee_amount],
+      tag_ids: transfer_params[:tag_ids]
     ).create
 
     if @transfer.persisted?
@@ -51,17 +54,22 @@ class TransfersController < ApplicationController
       end
     else
       @from_account_id = transfer_params[:from_account_id]
+      @tags = Current.family.tags.alphabetically
       render :new, status: :unprocessable_entity
     end
   rescue Money::ConversionError
     @transfer ||= Transfer.new
-    @transfer.errors.add(:base, "Exchange rate unavailable for selected currencies and date")
+    @transfer.tag_ids = transfer_params[:tag_ids]
+    @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
     set_accounts
+    @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
-    @transfer.errors.add(:date, "is invalid")
+    @transfer.tag_ids = transfer_params[:tag_ids]
+    @transfer.errors.add(:date, t(".date_invalid"))
     set_accounts
+    @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
   end
 
@@ -79,6 +87,25 @@ class TransfersController < ApplicationController
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
       format.turbo_stream
     end
+  end
+
+  def update_tags
+    outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
+
+    return unless require_account_permission!(outflow_account, :annotate, redirect_path: transactions_url)
+    return unless require_account_permission!(inflow_account, :annotate, redirect_path: transactions_url)
+
+    resolved_ids = Current.family.tags.where(id: Array(params[:tag_ids]).reject(&:blank?)).pluck(:id)
+
+    Transfer.transaction do
+      [ @transfer.outflow_transaction, @transfer.inflow_transaction ].each do |transaction|
+        transaction.tag_ids = resolved_ids
+        transaction.lock_attr!(:tag_ids)
+      end
+    end
+
+    render json: { tag_ids: @transfer.outflow_transaction.reload.tag_ids }
   end
 
   def destroy
@@ -163,7 +190,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount)
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, tag_ids: [])
     end
 
     def set_accounts
