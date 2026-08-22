@@ -78,6 +78,7 @@ class TransactionsController < ApplicationController
     # Load projected recurring transactions for next 10 days
     @projected_recurring = Current.family.recurring_transactions
                                   .accessible_by(Current.user)
+                                  .visible
                                   .active
                                   .where("next_expected_date <= ? AND next_expected_date >= ?",
                                          10.days.from_now.to_date,

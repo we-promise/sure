@@ -676,7 +676,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       manual: true,
       expected_amount_min: -95,
       expected_amount_max: -85,
-      expected_amount_avg: -89.99
+      expected_amount_avg: -89.99,
+      dismissed_at: Time.zone.parse("2024-03-01T12:00:00Z")
     )
 
     zip_data = @exporter.generate_export
@@ -695,6 +696,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "-89.99", BigDecimal(recurring_data["data"]["amount"].to_s).to_s("F")
       assert_equal "active", recurring_data["data"]["status"]
       assert_equal true, recurring_data["data"]["manual"]
+      assert_not_nil recurring_data["data"]["dismissed_at"]
       assert_not recurring_data["data"].key?("family_id")
     end
   end

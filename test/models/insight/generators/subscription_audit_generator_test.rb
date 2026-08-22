@@ -21,4 +21,12 @@ class Insight::Generators::SubscriptionAuditGeneratorTest < ActiveSupport::TestC
 
     assert_empty insights
   end
+
+  test "excludes dismissed recurring transactions" do
+    @overdue.dismiss!
+
+    insights = Insight::Generators::SubscriptionAuditGenerator.new(@family).generate
+
+    assert_empty insights
+  end
 end

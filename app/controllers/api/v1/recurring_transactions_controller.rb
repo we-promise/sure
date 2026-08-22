@@ -48,13 +48,16 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   end
 
   def create
-    @recurring_transaction = current_resource_owner.family.recurring_transactions.new(
-      recurring_transaction_create_attributes
-    )
+    attrs = recurring_transaction_create_attributes
+    dismissed_match = find_dismissed_match(attrs)
+
+    @recurring_transaction = dismissed_match || current_resource_owner.family.recurring_transactions.new
+    @recurring_transaction.assign_attributes(attrs)
+    @recurring_transaction.dismissed_at = nil if dismissed_match
     validate_create_write_params(@recurring_transaction)
 
     if @recurring_transaction.errors.empty? && @recurring_transaction.save
-      render :show, status: :created
+      render :show, status: dismissed_match ? :ok : :created
     else
       render json: {
         error: "validation_failed",
@@ -120,7 +123,7 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
   end
 
   def destroy
-    @recurring_transaction.destroy!
+    @recurring_transaction.dismiss!
 
     render json: { message: "Recurring transaction deleted successfully" }, status: :ok
   rescue ActiveRecord::RecordNotFound
@@ -159,11 +162,11 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
     end
 
     def read_recurring_transactions_scope
-      current_resource_owner.family.recurring_transactions.accessible_by(current_resource_owner)
+      current_resource_owner.family.recurring_transactions.accessible_by(current_resource_owner).visible
     end
 
     def write_recurring_transactions_scope
-      scope = current_resource_owner.family.recurring_transactions
+      scope = current_resource_owner.family.recurring_transactions.visible
       writable_account_ids = current_resource_owner.family.accounts.writable_by(current_resource_owner).select(:id)
       scope.where(account_id: writable_account_ids).or(scope.where(account_id: nil))
     end
@@ -176,6 +179,27 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
         query = query.where(account_id: params[:account_id])
       end
       query
+    end
+
+    # A hard delete is no longer possible via the API (destroy dismisses), so
+    # a client recreating the exact pattern it just deleted would otherwise
+    # collide with the dismissed row's unique index slot and get a 409. Find
+    # that row (if any) so create can revive it instead of failing.
+    def find_dismissed_match(attrs)
+      return nil if attrs[:amount].blank? || attrs[:currency].blank?
+
+      scope = current_resource_owner.family.recurring_transactions.dismissed.where(
+        account_id: attrs[:account]&.id,
+        destination_account_id: nil,
+        amount: attrs[:amount],
+        currency: attrs[:currency]
+      )
+
+      if attrs[:merchant].present?
+        scope.find_by(merchant_id: attrs[:merchant].id)
+      elsif attrs[:name].present?
+        scope.find_by(name: attrs[:name], merchant_id: nil)
+      end
     end
 
     def recurring_transaction_create_attributes

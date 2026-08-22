@@ -1694,9 +1694,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.decimal "expected_amount_avg", precision: 19, scale: 4
     t.uuid "account_id"
     t.uuid "destination_account_id"
+    t.datetime "dismissed_at"
     t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
     t.index ["destination_account_id"], name: "index_recurring_transactions_on_destination_account_id"
     t.index ["family_id", "account_id", "destination_account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_pair_merchant", unique: true, where: "((destination_account_id IS NOT NULL) AND (merchant_id IS NOT NULL))"
+    t.index ["family_id", "dismissed_at"], name: "index_recurring_transactions_on_family_id_and_dismissed_at"
     t.index ["family_id", "account_id", "destination_account_id", "name", "amount", "currency"], name: "idx_recurring_txns_pair_name", unique: true, where: "((destination_account_id IS NOT NULL) AND (name IS NOT NULL) AND (merchant_id IS NULL))"
     t.index ["family_id", "account_id", "merchant_id", "amount", "currency"], name: "idx_recurring_txns_acct_merchant", unique: true, where: "((merchant_id IS NOT NULL) AND (destination_account_id IS NULL))"
     t.index ["family_id", "account_id", "name", "amount", "currency"], name: "idx_recurring_txns_acct_name", unique: true, where: "((name IS NOT NULL) AND (merchant_id IS NULL) AND (destination_account_id IS NULL))"

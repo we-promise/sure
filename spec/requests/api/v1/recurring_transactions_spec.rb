@@ -166,6 +166,30 @@ RSpec.describe 'API V1 Recurring Transactions', type: :request do
         run_test!
       end
 
+      response '200', 'recurring transaction revived from a matching dismissed pattern' do
+        schema '$ref' => '#/components/schemas/RecurringTransaction'
+
+        before do
+          recurring_transaction.dismiss!
+        end
+
+        let(:body) do
+          {
+            recurring_transaction: {
+              account_id: account.id,
+              merchant_id: merchant.id,
+              amount: recurring_transaction.amount.to_s,
+              currency: recurring_transaction.currency,
+              expected_day_of_month: 15,
+              last_occurrence_date: '2026-04-15',
+              next_expected_date: '2026-05-15'
+            }
+          }
+        end
+
+        run_test!
+      end
+
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 

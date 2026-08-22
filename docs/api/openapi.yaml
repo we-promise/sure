@@ -5854,6 +5854,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/RecurringTransaction"
+        '200':
+          description: recurring transaction revived from a matching dismissed pattern
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RecurringTransaction"
         '401':
           description: unauthorized
           content:

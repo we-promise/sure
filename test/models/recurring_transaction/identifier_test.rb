@@ -209,6 +209,80 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert recurring.last_occurrence_date >= 2.months.ago.to_date
   end
 
+  test "does not resurrect a dismissed recurring transaction when the pattern is found again" do
+    account = @family.accounts.first
+    merchant = merchants(:amazon)  # Use different merchant to avoid fixture conflicts
+
+    dismissed = @family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 29.99,
+      currency: "USD",
+      expected_day_of_month: 15,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: 1.month.ago.to_date,
+      occurrence_count: 2,
+      status: "active",
+      manual: false,
+      dismissed_at: 1.day.ago
+    )
+
+    # The underlying transactions still form a clean 3-occurrence pattern —
+    # this is exactly the scenario that used to resurrect a deleted row.
+    [ 0, 1, 2 ].each do |months_ago|
+      transaction = Transaction.create!(
+        merchant: merchant,
+        category: categories(:food_and_drink)
+      )
+      account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 14.days,  # Day 15
+        amount: 29.99,
+        currency: "USD",
+        name: "Amazon Purchase",
+        entryable: transaction
+      )
+    end
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      @identifier.identify_recurring_patterns
+    end
+
+    dismissed.reload
+    assert dismissed.dismissed?, "Dismissed recurring transaction must stay dismissed"
+    assert_equal 2, dismissed.occurrence_count, "Dismissed row must not be updated by detection"
+    assert_equal 2.months.ago.to_date, dismissed.last_occurrence_date, "Dismissed row must not be updated by detection"
+    assert_equal 1, @family.recurring_transactions.dismissed.count
+    assert_equal 0, @family.recurring_transactions.visible.count
+  end
+
+  test "does not recalculate variance for a dismissed manual recurring transaction" do
+    account = @family.accounts.first
+    name = "Dismissed Manual Subscription"
+
+    create_name_pattern_entries(account: account, name: name, amount: 50, day: 6)
+
+    dismissed_manual = @family.recurring_transactions.create!(
+      account: account,
+      name: name,
+      amount: 50,
+      currency: "USD",
+      expected_day_of_month: 6,
+      last_occurrence_date: 4.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      occurrence_count: 1,
+      status: "active",
+      manual: true,
+      dismissed_at: 1.day.ago
+    )
+
+    @identifier.identify_recurring_patterns
+
+    dismissed_manual.reload
+    assert dismissed_manual.dismissed?
+    assert_equal 1, dismissed_manual.occurrence_count, "Dismissed manual row must not be recalculated by the variance pass"
+    assert_equal 4.months.ago.to_date, dismissed_manual.last_occurrence_date
+  end
+
   test "identifies name patterns without per-pattern recurring transaction lookups" do
     account = @family.accounts.first
     names = Array.new(4) { |index| "Performance Subscription #{index}" }

@@ -31,4 +31,14 @@ class TooltipComponentPreview < ViewComponent::Preview
       end
     end
   end
+
+  # Demonstrates a custom (non-icon) trigger, e.g. underlined text that
+  # explains itself further on hover/focus.
+  def with_custom_trigger
+    render DS::Tooltip.new(text: "$45.00 – $60.00", as: :span) do |tooltip|
+      tooltip.with_trigger do
+        tag.span("~$52.50", class: "border-b border-dashed border-subdued")
+      end
+    end
+  end
 end
