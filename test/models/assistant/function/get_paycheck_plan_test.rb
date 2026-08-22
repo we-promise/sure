@@ -97,7 +97,87 @@ class Assistant::Function::GetPaycheckPlanTest < ActiveSupport::TestCase
     assert_nil result[:unconfirmed_excluded]
   end
 
+
+  # The assistant answered "Shortfall: $150.00, Safe after bills: -$150.00" for
+  # a window funded entirely from money already in the bank. A bridge earns
+  # nothing, so income minus obligations is a deficit by construction, and the
+  # deficit sat right beside short: false.
+  test "a bridge window reports headroom against cash, not against its zero income" do
+    set_cash(900)
+    declare_future_income
+    declare_bridge_bill(amount: 150)
+
+    bridge = call_tool[:periods].find { |period| period[:bridge] }
+
+    assert_equal false, bridge[:short]
+    assert_equal "$750.00", bridge[:safe_after_bills],
+      "cash minus what is due out of it, never income minus obligations"
+    assert_equal "$900.00", bridge[:cash_on_hand]
+  end
+
+  test "a bridge the cash cannot cover still reports short" do
+    set_cash(100)
+    declare_future_income
+    declare_bridge_bill(amount: 150)
+
+    bridge = call_tool[:periods].find { |period| period[:bridge] }
+
+    assert_equal true, bridge[:short]
+    assert_equal "-$50.00", bridge[:safe_after_bills]
+  end
+
+  test "an unreadable balance omits the figure rather than inventing one" do
+    @family.accounts.update_all(status: "disabled")
+    declare_future_income
+    declare_bridge_bill(amount: 150)
+
+    bridge = call_tool[:periods].find { |period| period[:bridge] }
+
+    assert_equal false, bridge[:short]
+    assert_not bridge.key?(:safe_after_bills),
+      "no balance means no honest headroom figure, so the key goes rather than guessing"
+    assert_not bridge.key?(:cash_on_hand)
+  end
+
   private
+
+    # The shared declare_income pays today, so there is no gap before the next
+    # payday and no bridge window at all. These tests need one.
+    def declare_future_income
+      payday = Date.current + 5
+      series = @family.recurring_transactions.create!(
+        name: "Payday", account: accounts(:depository), amount: -2000,
+        currency: "USD", expected_day_of_month: payday.day, status: "active",
+        bill_type: "income", manual: true, dedup_scope: "future-payday--2000",
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: payday
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: @family, original_due_on: payday, due_on: payday,
+        currency: "USD", expected_amount: 2000, status: "scheduled"
+      )
+      series
+    end
+
+    def set_cash(amount)
+      accounts = @family.accounts.where(accountable_type: "Depository")
+      accounts.update_all(balance: amount / accounts.count.to_d)
+    end
+
+    def declare_bridge_bill(amount:)
+      series = @family.recurring_transactions.create!(
+        name: "Haircut", account: accounts(:depository), amount: amount,
+        currency: "USD", status: "active", bill_type: "bill", manual: true,
+        dedup_scope: "haircut-#{amount}", expected_day_of_month: (Date.current + 1).day,
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current + 1
+      )
+      series.recurring_occurrences.destroy_all
+      series.recurring_occurrences.create!(
+        family: @family, original_due_on: Date.current + 1, due_on: Date.current + 1,
+        currency: "USD", expected_amount: amount, status: "scheduled"
+      )
+      series
+    end
 
     def call_tool(params = {})
       Assistant::Function::GetPaycheckPlan.new(@user).call(params)

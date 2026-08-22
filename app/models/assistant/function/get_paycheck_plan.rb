@@ -87,6 +87,20 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
       }
     end
 
+    # A bridge window earns nothing, so income minus obligations is negative
+    # whenever a bill falls in it. Reporting that as safe_after_bills told the
+    # assistant the user was underwater on a window that is funded from cash
+    # already in the bank, and it read as a deficit next to short: false.
+    #
+    # For a bridge, headroom is cash minus what is due out of it. When the
+    # balance cannot be read there is no honest number, so the key is null and
+    # cash_on_hand says why rather than leaving a figure to be guessed at.
+    def safe_after_bills(period)
+      return fmt(period.remaining) unless period.bridge?
+
+      period.cash_after_obligations.nil? ? nil : fmt(period.cash_after_obligations)
+    end
+
     def serialize_period(period)
       {
         starts_on: period.starts_on.iso8601,
@@ -96,7 +110,8 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
         income_sources: period.income_sources,
         due_total: fmt(period.due_total),
         reserved_total: fmt(period.reserved_total),
-        safe_after_bills: fmt(period.remaining),
+        safe_after_bills: safe_after_bills(period),
+        cash_on_hand: (period.bridge? && period.cash_on_hand.present? ? fmt(period.cash_on_hand) : nil),
         short: period.short?,
         shortfall: period.short? ? fmt(period.shortfall) : nil,
         bills_due: period.items_due.map { |item| serialize_item(item) },
