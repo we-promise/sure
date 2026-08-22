@@ -10,6 +10,16 @@
     So this stays a marker, not a section header. Same card, same rhythm, one
     tinted band naming the paycheck and what it has to carry. %>
 <div class="flex items-center gap-2 px-4 py-2 bg-container-inset">
+<%# A leading window with nothing arriving is not a payday. Labelling it
+    "Paid $0.00" would read as a missed cheque rather than the stretch before
+    the next one, so it says what it is, the same wording the income plan uses. %>
+<% if period.bridge? %>
+  <%= icon "wallet", size: "sm" %>
+
+  <p class="text-xs font-medium text-secondary">
+    <%= t("bills.pay_period.before_next_paycheck") %>
+  </p>
+<% else %>
   <%= icon "arrow-down-circle", size: "sm", color: "success" %>
 
   <p class="text-xs font-medium text-secondary">
@@ -17,6 +27,7 @@
     <span class="text-subdued">&middot;</span>
     <span class="privacy-sensitive"><%= format_money(Money.new(period.income, currency)) %></span>
   </p>
+<% end %>
 
   <% if due_total.positive? %>
     <p class="ml-auto text-xs text-subdued privacy-sensitive shrink-0">

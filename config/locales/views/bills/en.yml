@@ -147,6 +147,7 @@ en:
       all: All bills
     pay_period:
       paid_on: "Paid %{date}"
+      before_next_paycheck: Before your next paycheck
       due_before_next: "%{amount} due before next"
     paycheck:
       unconvertible:
