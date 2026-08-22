@@ -67,6 +67,26 @@ class Security < ApplicationRecord
     kind == "cash"
   end
 
+  # True when this security functions as cash rather than an investment —
+  # synthetic cash securities plus the brokerage settlement / money market
+  # funds enumerated in the simplefin initializer. Investment syncs already
+  # fold these into an account's cash_balance, so callers use this to avoid
+  # presenting the same dollars as both a cash balance and a holding.
+  #
+  # The ticker list and description patterns live under the simplefin config
+  # namespace because that's where the detection was first needed; they aren't
+  # provider-specific.
+  def cash_equivalent?
+    return true if cash?
+
+    simplefin = Rails.configuration.x.simplefin
+    return false if simplefin.blank?
+
+    return true if Array(simplefin.money_market_tickers).include?(ticker.to_s.upcase.strip)
+
+    Array(simplefin.money_market_patterns).any? { |pattern| name.to_s.match?(pattern) }
+  end
+
   # True when this security represents a crypto asset. Today the only signal
   # is the Binance ISO MIC — when we add a second crypto provider, extend
   # this check rather than duplicating the test at every call site.
