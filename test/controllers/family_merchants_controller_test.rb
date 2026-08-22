@@ -61,6 +61,18 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert JSON.parse(response.body)["errors"].present?
   end
 
+  test "renders html (not turbo-stream) for duplicate merchant name when submitted like a Turbo form" do
+    assert_no_difference("FamilyMerchant.count") do
+      post family_merchants_url,
+        params: { family_merchant: { name: @merchant.name } },
+        headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "text/html", response.media_type
+    assert_includes response.body, @merchant.name
+  end
+
   test "enhance enqueues job and redirects" do
     assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
       post enhance_family_merchants_path
