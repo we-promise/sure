@@ -8,9 +8,13 @@ class Assistant::FunctionToolCaller
     @functions = functions
   end
 
-  def fulfill_requests(function_requests)
+  def fulfill_requests(function_requests, conversation_id: nil, user_identifier: nil)
     function_requests.map do |function_request|
-      result = execute(function_request)
+      result = execute(
+        function_request,
+        conversation_id: conversation_id,
+        user_identifier: user_identifier
+      )
 
       ToolCall::Function.from_function_request(function_request, result)
     end
@@ -24,7 +28,7 @@ class Assistant::FunctionToolCaller
     # Tool failures come back as data instead of raising, so one bad call no
     # longer aborts the whole turn. The hint steers the model toward a single
     # corrected retry (the system prompt pairs it with a retry-once rule).
-    def execute(function_request)
+    def execute(function_request, conversation_id: nil, user_identifier: nil)
       fn = find_function(function_request)
 
       if fn.nil?
@@ -35,7 +39,14 @@ class Assistant::FunctionToolCaller
       end
 
       fn_args = JSON.parse(function_request.function_args.presence || "{}")
-      fn.call(fn_args)
+      Provider::SentryAiMonitoring.with_tool_span(
+        function_name: fn.name,
+        description: fn.description,
+        conversation_id: conversation_id,
+        user_identifier: user_identifier
+      ) do
+        fn.call(fn_args)
+      end
     rescue JSON::ParserError
       {
         error: "Arguments were not valid JSON",

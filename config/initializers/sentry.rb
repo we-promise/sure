@@ -13,7 +13,15 @@ if ENV["SENTRY_DSN"].present?
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-    config.traces_sample_rate = 0.25
+    traces_sample_rate = 0.25
+    config.traces_sample_rate = traces_sample_rate
+    config.traces_sampler = lambda do |sampling_context|
+      if sampling_context[:ai_monitoring]
+        1.0
+      else
+        sampling_context[:parent_sampled].nil? ? traces_sample_rate : sampling_context[:parent_sampled]
+      end
+    end
 
     # Set profiles_sample_rate to profile 100%
     # of sampled transactions.

@@ -31,7 +31,11 @@ class Assistant::Responder
               "Assistant exceeded the tool-call limit of #{max_tool_call_iterations} for one response"
       end
 
-      function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
+      function_tool_calls = function_tool_caller.fulfill_requests(
+        response.function_requests,
+        conversation_id: chat_session_id,
+        user_identifier: chat_user_identifier
+      )
       function_results = function_tool_calls.map(&:to_result)
       in_flight_function_results.concat(function_results)
 

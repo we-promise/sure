@@ -69,6 +69,26 @@ void main() {
       expect(sanitized, isNot(contains('message')));
     });
 
+    test('preserves safe gen AI conversation ids', () {
+      final sanitized = TelemetryService.sanitizeData({
+        'gen_ai.conversation.id': '48e35936-82ab-4f1a-beaf-b2fa4273ac5e',
+        'other_id': '48e35936-82ab-4f1a-beaf-b2fa4273ac5e',
+      });
+      final unsafe = TelemetryService.sanitizeData({
+        'gen_ai.conversation.id': 'conversation/with/slash',
+      });
+
+      expect(
+        sanitized,
+        containsPair(
+          'gen_ai.conversation.id',
+          '48e35936-82ab-4f1a-beaf-b2fa4273ac5e',
+        ),
+      );
+      expect(sanitized, containsPair('other_id', '[id]'));
+      expect(unsafe, isNot(contains('gen_ai.conversation.id')));
+    });
+
     test('sanitizes nested telemetry maps without preserving sensitive keys',
         () {
       final sanitized = TelemetryService.sanitizeValue({

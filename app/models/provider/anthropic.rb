@@ -238,7 +238,12 @@ class Provider::Anthropic < Provider
 
       partial_usage_recorded = false
 
-      begin
+      Provider::SentryAiMonitoring.with_chat_span(
+        provider: custom_endpoint? ? "anthropic-compatible" : "anthropic",
+        model: model,
+        conversation_id: session_id,
+        user_identifier: user_identifier
+      ) do |sentry_span|
         parsed, usage =
           if streamer.present?
             stream_chat_response(
@@ -267,9 +272,11 @@ class Provider::Anthropic < Provider
         # anyway so a future change that emits partial usage on success can't
         # silently double-bill — the symptom we chased in the #1984 review.
         record_llm_usage(family: family, model: model, operation: "chat", usage: usage) unless partial_usage_recorded
+        Provider::SentryAiMonitoring.set_usage(sentry_span, usage)
 
         parsed
       rescue => e
+        Provider::SentryAiMonitoring.set_error(sentry_span, e)
         log_langfuse_generation(
           name: "chat_response",
           model: model,

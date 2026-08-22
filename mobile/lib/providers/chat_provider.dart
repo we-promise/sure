@@ -4,6 +4,7 @@ import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/chat_service.dart';
 import '../services/log_service.dart';
+import '../services/telemetry_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
@@ -18,6 +19,7 @@ class ChatProvider with ChangeNotifier {
   Timer? _pollingTimer;
   DateTime? _pollingStartTime;
   bool _isPollingRequestInFlight = false;
+  Object? _assistantResponseSpan;
 
   static const _pollingTimeout = Duration(seconds: 20);
 
@@ -78,7 +80,7 @@ class ChatProvider with ChangeNotifier {
     // Stop any in-progress polling — the server response is the source of truth
     // when explicitly fetching a chat. This prevents a stale poll from
     // overwriting the freshly fetched data and ensures the message filter lifts.
-    _stopPolling();
+    _stopPolling(success: false);
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -112,6 +114,16 @@ class ChatProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     _errorMessage = null;
+    final createSpan = initialMessage == null
+        ? null
+        : TelemetryService.instance.startSpan(
+            'gen_ai.chat',
+            'mobile chat message',
+            data: {
+              'gen_ai.operation.name': 'chat',
+              'gen_ai.system': 'sure-rails-api',
+            },
+          );
     notifyListeners();
 
     try {
@@ -139,6 +151,7 @@ class ChatProvider with ChangeNotifier {
           );
           _currentChat = chat.copyWith(messages: [userMessage]);
           _chats.insert(0, _currentChat!);
+          await TelemetryService.instance.finishSpan(createSpan, success: true);
           _startPolling(accessToken, chat.id);
         } else {
           _currentChat = chat;
@@ -150,6 +163,7 @@ class ChatProvider with ChangeNotifier {
         return _currentChat!;
       } else {
         _errorMessage = result['error'] ?? 'Failed to create chat';
+        await TelemetryService.instance.finishSpan(createSpan, success: false);
         _isLoading = false;
         notifyListeners();
         return null;
@@ -157,6 +171,11 @@ class ChatProvider with ChangeNotifier {
     } catch (e) {
       _log.warning('ChatProvider', 'createChat failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
+      await TelemetryService.instance.finishSpan(
+        createSpan,
+        success: false,
+        throwable: e,
+      );
       _isLoading = false;
       notifyListeners();
       return null;
@@ -182,6 +201,15 @@ class ChatProvider with ChangeNotifier {
   }) async {
     _isSendingMessage = true;
     _errorMessage = null;
+    final sendSpan = TelemetryService.instance.startSpan(
+      'gen_ai.chat',
+      'mobile chat message',
+      data: {
+        'gen_ai.conversation.id': chatId,
+        'gen_ai.operation.name': 'chat',
+        'gen_ai.system': 'sure-rails-api',
+      },
+    );
 
     // Optimistically add the user message so it appears immediately — before
     // the network round-trip completes. This makes the empty-state disappear
@@ -241,6 +269,10 @@ class ChatProvider with ChangeNotifier {
       _errorMessage = 'Something went wrong. Please try again.';
       return false;
     } finally {
+      await TelemetryService.instance.finishSpan(
+        sendSpan,
+        success: _errorMessage == null,
+      );
       _isSendingMessage = false;
       notifyListeners();
     }
@@ -365,6 +397,24 @@ class ChatProvider with ChangeNotifier {
   /// Start polling for new messages (AI responses)
   void _startPolling(String accessToken, String chatId) {
     _pollingTimer?.cancel();
+    unawaited(TelemetryService.instance.finishSpan(
+      _assistantResponseSpan,
+      success: false,
+    ));
+    _assistantResponseSpan = TelemetryService.instance.startSpan(
+      'gen_ai.invoke_agent',
+      'mobile assistant response',
+      data: {
+        'gen_ai.conversation.id': chatId,
+        'gen_ai.operation.name': 'invoke_agent',
+        'gen_ai.agent.name': 'sure-assistant',
+      },
+    );
+    TelemetryService.instance.addBreadcrumb(
+      'gen_ai',
+      'assistant_response_polling_started',
+      data: {'gen_ai.conversation.id': chatId},
+    );
     _lastAssistantContentLength = null;
     _stablePollingCount = 0;
     _isWaitingForResponse = true;
@@ -383,7 +433,7 @@ class ChatProvider with ChangeNotifier {
   }
 
   /// Stop polling
-  void _stopPolling() {
+  void _stopPolling({bool success = true, Object? throwable}) {
     _pollingTimer?.cancel();
     _pollingTimer = null;
     _pollingStartTime = null;
@@ -391,6 +441,12 @@ class ChatProvider with ChangeNotifier {
     _isWaitingForResponse = false;
     _lastAssistantContentLength = null;
     _stablePollingCount = 0;
+    unawaited(TelemetryService.instance.finishSpan(
+      _assistantResponseSpan,
+      success: success,
+      throwable: throwable,
+    ));
+    _assistantResponseSpan = null;
   }
 
   /// Poll for updates
@@ -444,7 +500,7 @@ class ChatProvider with ChangeNotifier {
           if (!shouldUpdate) {
             _currentChat = updatedChat;
           }
-          _stopPolling();
+          _stopPolling(success: false);
           _errorMessage = updatedChat.error;
           notifyListeners();
           return;
@@ -470,6 +526,11 @@ class ChatProvider with ChangeNotifier {
             // stopping prematurely on a brief server-side generation pause.
             _stablePollingCount++;
             if (_stablePollingCount >= 2) {
+              TelemetryService.instance.addBreadcrumb(
+                'gen_ai',
+                'assistant_response_polling_completed',
+                data: {'gen_ai.conversation.id': chatId},
+              );
               _stopPolling();
               _lastAssistantContentLength = null;
               notifyListeners();
@@ -488,7 +549,7 @@ class ChatProvider with ChangeNotifier {
     // Evaluate timeout only after the attempt, and only when no progress was made.
     if (_pollingStartTime != null &&
         DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
-      _stopPolling();
+      _stopPolling(success: false);
       _errorMessage =
           'The assistant took too long to respond. Please try again.';
       notifyListeners();
@@ -498,13 +559,13 @@ class ChatProvider with ChangeNotifier {
   /// Clear current chat
   void clearCurrentChat() {
     _currentChat = null;
-    _stopPolling();
+    _stopPolling(success: false);
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _stopPolling();
+    _stopPolling(success: false);
     super.dispose();
   }
 }
