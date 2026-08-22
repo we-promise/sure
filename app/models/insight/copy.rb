@@ -26,14 +26,29 @@ class Insight::Copy
       nil
     end
 
+    DATE_FACT_KEYS = %i[projected_low_date expected_on].freeze
+
     def facts
       @facts ||= begin
         values = (insight.facts || {}).symbolize_keys
         if insight.period_start && (values.key?(:month) || insight.insight_type == "savings_rate_change")
           values[:month] = I18n.l(insight.period_start, format: "%B")
         end
+        DATE_FACT_KEYS.each do |key|
+          values[key] = self.class.localize_date(values[key]) if values[key]
+        end
         values
       end
+    end
+
+    # Facts persist ISO dates (worker locale is English). Re-localize at render
+    # so a Danish session doesn't keep `2026-09-20` in the sentence.
+    def self.localize_date(value, format: :long)
+      return value if value.blank?
+
+      I18n.l(Date.iso8601(value.to_s), format: format).strip
+    rescue Date::Error, ArgumentError
+      value
     end
 
     def metadata

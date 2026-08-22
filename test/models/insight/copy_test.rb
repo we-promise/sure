@@ -64,7 +64,7 @@ class Insight::CopyTest < ActiveSupport::TestCase
       copy = Insight::Copy.new(insight)
 
       assert_equal "Din kontantsaldo kan blive negativ", copy.title
-      assert_match(/falde til -182.897,86 kr. omkring 2026-09-20/, copy.body)
+      assert_match(/falde til -182.897,86 kr. omkring 20\. september 2026/, copy.body)
     end
   end
 end

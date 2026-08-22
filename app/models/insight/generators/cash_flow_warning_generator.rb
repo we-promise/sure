@@ -52,7 +52,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         template_key: template_key,
         facts: {
           projected_low: format_money(low_point),
-          projected_low_date: I18n.l(low_date),
+          projected_low_date: low_date.iso8601,
           current_balance: format_money(starting_balance),
           horizon_days: HORIZON_DAYS
         },

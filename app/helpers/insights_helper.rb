@@ -72,7 +72,7 @@ module InsightsHelper
     when "spending_anomaly"
       facts["projected_spend"] && [ facts["projected_spend"], t("insights.figures.on_pace") ]
     when "cash_flow_warning"
-      facts["projected_low"] && [ facts["projected_low"], facts["projected_low_date"] ]
+      facts["projected_low"] && [ facts["projected_low"], Insight::Copy.localize_date(facts["projected_low_date"]) ]
     when "subscription_audit"
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"

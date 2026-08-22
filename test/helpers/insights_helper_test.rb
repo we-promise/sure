@@ -111,6 +111,20 @@ class InsightsHelperTest < ActionView::TestCase
     assert_equal "Idle cash · Emergency fund", insight_meta_line(insight)
   end
 
+  test "cash flow key figure localizes an ISO projected date" do
+    insight = build_insight(
+      "cash_flow_warning",
+      facts: { "projected_low" => "-182.897,86 kr.", "projected_low_date" => "2026-09-20" }
+    )
+
+    I18n.with_locale(:da) do
+      figure, caption = insight_key_figure(insight)
+
+      assert_equal "-182.897,86 kr.", figure
+      assert_equal "20. september 2026", caption
+    end
+  end
+
   test "key figure comes from facts and hides for rows without them" do
     with_facts = build_insight("idle_cash", facts: { "balance" => "$28,400.00", "idle_days" => 60 })
     without_facts = build_insight("idle_cash")
