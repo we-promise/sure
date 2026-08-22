@@ -15,6 +15,7 @@ class EnableBankingItem < ApplicationRecord
   validates :country_code, presence: true
   validates :application_id, presence: true
   validates :client_certificate, presence: true, on: :create
+  validate :sync_start_date_within_provider_range
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -34,6 +35,10 @@ class EnableBankingItem < ApplicationRecord
 
   def credentials_configured?
     application_id.present? && client_certificate.present? && country_code.present?
+  end
+
+  def self.minimum_sync_start_date
+    2.years.ago.to_date
   end
 
   def session_valid?
@@ -56,6 +61,15 @@ class EnableBankingItem < ApplicationRecord
     return if psu_type.blank? || aspsp_psu_types.blank?
     unless aspsp_psu_types.include?(psu_type)
       errors.add(:psu_type, "must be one of the ASPSP supported types")
+    end
+  end
+
+  def sync_start_date_within_provider_range
+    return if sync_start_date.blank?
+    return if persisted? && !will_save_change_to_sync_start_date?
+
+    unless sync_start_date.between?(self.class.minimum_sync_start_date, Date.current)
+      errors.add(:sync_start_date, :inclusion)
     end
   end
 

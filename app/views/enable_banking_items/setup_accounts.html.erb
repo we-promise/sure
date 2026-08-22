@@ -58,7 +58,7 @@
               <%= form.date_field :sync_start_date,
                     label: t(".sync_start_date_label"),
                     value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
-                    min: 2.years.ago.to_date,
+                    min: EnableBankingItem.minimum_sync_start_date,
                     max: Date.current,
                     class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
                     help_text: t(".sync_start_date_help") %>
