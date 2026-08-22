@@ -51,6 +51,40 @@ class Insight::CopyTest < ActiveSupport::TestCase
     end
   end
 
+  test "keeps persisted LLM prose when generated in the current locale" do
+    insight = Insight.new(
+      insight_type: "idle_cash",
+      title: "Your emergency fund is sitting still",
+      body: "The 28,400 you parked in Emergency fund has not moved in 60 days.",
+      facts: { "account" => "Emergency fund", "balance" => "$28,400.00", "idle_days" => 60 },
+      metadata: { "locale" => "en" }
+    )
+
+    I18n.with_locale(:en) do
+      copy = Insight::Copy.new(insight)
+
+      assert_equal insight.title, copy.title
+      assert_equal insight.body, copy.body
+    end
+  end
+
+  test "uses down_negative copy when the unrounded rate was negative" do
+    insight = Insight.new(
+      insight_type: "savings_rate_change",
+      title: "Your savings rate dropped in July",
+      body: "stored",
+      facts: { "month" => "July", "current_rate" => "−0.0", "previous_rate" => "5.0", "change_pp" => 5.0 },
+      metadata: { "current_rate" => -0.0, "previous_rate" => 5.0, "current_rate_negative" => true },
+      period_start: Date.new(2026, 7, 1)
+    )
+
+    I18n.with_locale(:en) do
+      copy = Insight::Copy.new(insight)
+
+      assert_match(/spent more than you earned in July/, copy.body)
+    end
+  end
+
   test "renders Danish cash-flow warning from type and metadata" do
     insight = Insight.new(
       insight_type: "cash_flow_warning",

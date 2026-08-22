@@ -27,10 +27,12 @@ class Insight::BodyWriter
     attr_reader :family
 
     def template_body(generated_insight)
-      I18n.t(
-        "insights.templates.#{generated_insight.template_key}",
-        **generated_insight.facts.symbolize_keys
-      )
+      facts = generated_insight.facts.symbolize_keys
+      Insight::Copy::DATE_FACT_KEYS.each do |key|
+        facts[key] = Insight::Copy.localize_date(facts[key]) if facts[key]
+      end
+
+      I18n.t("insights.templates.#{generated_insight.template_key}", **facts)
     end
 
     def llm_body(generated_insight)

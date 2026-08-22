@@ -1,17 +1,23 @@
 # Titles and bodies are persisted as finished prose at generation time (often
-# English, or LLM-written English). Facts + type/metadata are enough to
-# interpolate the i18n templates at render, so a locale switch does not wait
-# for a nightly rewrite.
+# English, or LLM-written English). Re-interpolate the i18n templates only
+# when the viewer's locale differs from generation, so a locale switch does
+# not wait for a nightly rewrite and AI narration stays visible otherwise.
 class Insight::Copy
+  DATE_FACT_KEYS = %i[projected_low_date expected_on].freeze
+
   def initialize(insight)
     @insight = insight
   end
 
   def title
+    return insight.title if generated_in_current_locale?
+
     interpolate(title_key, title_extras) || insight.title
   end
 
   def body
+    return insight.body if generated_in_current_locale?
+
     interpolate(template_key) || insight.body
   end
 
@@ -25,8 +31,6 @@ class Insight::Copy
     rescue I18n::MissingInterpolationArgument
       nil
     end
-
-    DATE_FACT_KEYS = %i[projected_low_date expected_on].freeze
 
     def facts
       @facts ||= begin
@@ -106,6 +110,13 @@ class Insight::Copy
       {}
     end
 
+    def generated_in_current_locale?
+      stored = metadata["locale"].presence
+      return false if stored.blank?
+
+      stored.to_s == I18n.locale.to_s
+    end
+
     def cash_flow_severity
       metadata["negative"] ? "negative" : "low"
     end
@@ -119,8 +130,16 @@ class Insight::Copy
     def savings_template_suffix
       direction = savings_direction
       return unless direction
-      return "savings_rate_change.down_negative" if direction == "down" && metadata["current_rate"].to_f.negative?
+      return "savings_rate_change.down_negative" if direction == "down" && current_rate_negative?
 
       "savings_rate_change.#{direction}"
+    end
+
+    # Generators persist a rounded rate in metadata; a true small negative can
+    # round to -0.0, which is not `#negative?`. Prefer the unrounded flag.
+    def current_rate_negative?
+      return metadata["current_rate_negative"] unless metadata["current_rate_negative"].nil?
+
+      metadata["current_rate"].to_f.negative?
     end
 end

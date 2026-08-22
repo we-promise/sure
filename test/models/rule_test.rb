@@ -138,6 +138,19 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ "Compound conditions cannot be nested" ], rule.errors.full_messages
   end
 
+  test "primary_condition_title downcases the filter label for mid-sentence use" do
+    rule = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "=", value: "Starbucks") ]
+    )
+
+    I18n.with_locale(:en) do
+      assert_equal "If transaction name Equal to Starbucks", rule.primary_condition_title
+    end
+  end
+
   test "displayed_condition falls back to next valid condition when first compound condition is empty" do
     rule = Rule.new(
       family: @family,

@@ -112,7 +112,7 @@ class Rule < ApplicationRecord
 
     I18n.t(
       "rules.primary_condition",
-      filter: condition.filter.label,
+      filter: condition.filter.label.to_s.downcase,
       operator: condition.filter.operator_label(condition.operator),
       value: condition.value_display
     )

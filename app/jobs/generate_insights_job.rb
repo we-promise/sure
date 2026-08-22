@@ -88,6 +88,7 @@ class GenerateInsightsJob < ApplicationJob
         metadata = normalize_json(generated.metadata)
         facts = normalize_json(generated.facts)
         existing = family.insights.find_by(dedup_key: generated.dedup_key)
+        persisted_metadata = metadata.merge("locale" => I18n.locale.to_s)
 
         if existing.nil?
           family.insights.create!(
@@ -96,7 +97,7 @@ class GenerateInsightsJob < ApplicationJob
             status: "active",
             title: generated.title,
             body: writer.write(generated),
-            metadata: metadata,
+            metadata: persisted_metadata,
             facts: facts,
             currency: generated.currency,
             period_start: generated.period_start,
@@ -104,15 +105,16 @@ class GenerateInsightsJob < ApplicationJob
             generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
-        elsif existing.metadata != metadata
+        elsif existing.metadata.except("locale") != metadata
           # The numbers changed materially: refresh the prose and resurface the
           # insight even if the user had read or dismissed the stale version.
+          # `locale` is stamped for render-time copy, not a material signal.
           existing.update!(
             priority: generated.priority,
             status: "active",
             title: generated.title,
             body: writer.write(generated),
-            metadata: metadata,
+            metadata: persisted_metadata,
             facts: facts,
             period_start: generated.period_start,
             period_end: generated.period_end,

@@ -87,6 +87,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal "idle_cash", insight.insight_type
     assert insight.body.present?
     assert_equal 5000.0, insight.metadata["balance"]
+    assert_equal I18n.locale.to_s, insight.metadata["locale"]
   end
 
   test "re-running with unchanged numbers does not duplicate or rewrite" do
