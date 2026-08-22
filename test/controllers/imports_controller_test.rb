@@ -113,6 +113,19 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
   end
 
+  test "summary renders the import outcome for a pdf import" do
+    get summary_import_url(imports(:pdf_with_rows))
+
+    assert_response :success
+    assert_select "dialog"
+  end
+
+  test "summary is not available for non-pdf imports" do
+    get summary_import_url(imports(:transaction))
+
+    assert_response :not_found
+  end
+
   test "uploads pdf document as PdfImport when using DocumentImport option" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])

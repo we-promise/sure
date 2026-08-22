@@ -434,6 +434,7 @@ Rails.application.routes.draw do
       put :revert
       put :apply_template
       post :cancel
+      get :summary
     end
 
     resource :upload, only: %i[show update], module: :import
