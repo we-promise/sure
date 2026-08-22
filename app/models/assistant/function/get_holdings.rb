@@ -66,6 +66,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
       properties: {
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number"
         },
         accounts: {
@@ -102,7 +103,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
       [ value.nil? ? 1 : 0, -(value || 0) ]
     end
 
-    pagy = Pagy.new(count: sorted_holdings.size, page: params["page"] || 1, limit: default_page_size)
+    pagy = Pagy.new(count: sorted_holdings.size, page: resolved_page(params), limit: default_page_size)
     paginated_holdings = sorted_holdings.slice(pagy.offset, pagy.limit) || []
 
     normalized_holdings = paginated_holdings.map do |holding, family_value|

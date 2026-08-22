@@ -9,6 +9,8 @@ class Assistant::Function
     end
   end
 
+  MAX_PAGE_SIZE = 100
+
   def initialize(user)
     @user = user
   end
@@ -109,6 +111,20 @@ class Assistant::Function
 
     def family_tag_names
       @family_tag_names ||= family.tags.pluck(:name)
+    end
+
+    # Shared page-size clamp for paginated tools declaring a page_size param.
+    def resolved_page_size(params)
+      return self.class.default_page_size if params["page_size"].blank?
+
+      params["page_size"].to_i.clamp(1, MAX_PAGE_SIZE)
+    end
+
+    # Pagy raises on zero, negative or non-numeric pages; normalize anything
+    # invalid to the first page instead of failing the call.
+    def resolved_page(params)
+      page = params["page"].to_i
+      page.positive? ? page : 1
     end
 
     def family
