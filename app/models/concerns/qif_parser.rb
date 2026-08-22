@@ -70,26 +70,8 @@ module QifParser
   # every byte in the file is defined in that code page.  Windows-1252 has five
   # undefined byte values (0x81, 0x8D, 0x8F, 0x90, 0x9D); if any are present we
   # fall through to Windows-1250 which covers those slots differently.
-  FALLBACK_ENCODINGS = %w[Windows-1252 Windows-1250].freeze
-
   def self.normalize_encoding(content)
-    return content if content.nil?
-
-    binary = content.b  # Force ASCII-8BIT; never raises on invalid bytes
-
-    utf8_attempt = binary.dup.force_encoding("UTF-8")
-    return utf8_attempt if utf8_attempt.valid_encoding?
-
-    FALLBACK_ENCODINGS.each do |encoding|
-      begin
-        return binary.encode("UTF-8", encoding)
-      rescue Encoding::UndefinedConversionError
-        next
-      end
-    end
-
-    # Last resort: replace any remaining undefined bytes rather than raise
-    binary.encode("UTF-8", "Windows-1252", invalid: :replace, undef: :replace, replace: "")
+    EncodingNormalizer.normalize(content)
   end
 
   # Returns true if the content looks like a valid QIF file.
