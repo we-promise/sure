@@ -210,6 +210,8 @@ class Transaction::Search
       # `.distinct` doesn't work either, since PostgreSQL rejects DISTINCT
       # combined with reverse_chronological's CASE-expression ORDER BY unless
       # that expression is also in the select list (PG::InvalidColumnReference).
+      # `query` is already scoped to the current family, so the subquery
+      # inherits that scoping too.
       # See https://github.com/we-promise/sure/issues/3174
       matching_ids = if include_untagged
         query.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).distinct.select(:id)
