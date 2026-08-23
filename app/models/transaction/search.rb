@@ -213,9 +213,9 @@ class Transaction::Search
       # CASE expression) under PostgreSQL, since DISTINCT requires all ORDER BY expressions to appear in
       # the select list. Deduplicate via a subquery instead so `query`'s own select/order stay untouched.
       matching_transaction_ids = if include_untagged
-        Transaction.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).select(:id)
+        family.transactions.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).select(:id)
       else
-        Transaction.joins(:tags).where(tags: { name: real_tags }).select(:id)
+        family.transactions.joins(:tags).where(tags: { name: real_tags }).select(:id)
       end
       query.where(transactions: { id: matching_transaction_ids })
     end
