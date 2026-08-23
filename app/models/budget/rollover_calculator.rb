@@ -33,6 +33,8 @@ class Budget::RolloverCalculator
     carry = {}
 
     chain(from).each do |budget|
+      budget.income_statement_accounts = household_account_scope if user.nil?
+
       next_carry = {}
       ring_fenced_children = ring_fenced_children_by_parent(budget)
 
@@ -114,6 +116,15 @@ class Budget::RolloverCalculator
       return 0 if amount.nil? || currency != budget_category.currency
 
       amount
+    end
+
+    # The household chain has no owner to scope actuals by, and IncomeStatement
+    # falls back to Current.user when nobody says otherwise -- which would make
+    # the stored carry depend on whichever member loaded the page, each
+    # overwriting the other. Pin it to the whole family so the shared row holds
+    # one number. Personal chains already scope to their owner's accounts.
+    def household_account_scope
+      @household_account_scope ||= family.accounts.included_in_reports
     end
 
     def ring_fenced_children_by_parent(budget)

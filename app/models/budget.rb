@@ -5,6 +5,12 @@ class Budget < ApplicationRecord
 
   attr_accessor :current_user
 
+  # Overrides the account scope `income_statement` would otherwise infer.
+  # Budget::RolloverCalculator sets it on the household chain: the carry it
+  # stores is one shared row, so it must not be computed through whichever
+  # viewer's account access happened to trigger the recompute.
+  attr_writer :income_statement_accounts
+
   belongs_to :family
   belongs_to :user, optional: true
 
@@ -219,6 +225,11 @@ class Budget < ApplicationRecord
           rollover_enabled: source_bc.rollover_enabled
         )
       end
+
+      # Copying the toggle changes what the chain should hold, and this runs
+      # after find_or_bootstrap already recomputed it. Recompute again so the
+      # target doesn't sit on a zero carry until the next page load.
+      Budget::RolloverCalculator.new(family: family, user: user).recompute!
     end
   end
 
@@ -410,6 +421,8 @@ class Budget < ApplicationRecord
     # viewer sees the owner's numbers, and household vs. personal actually
     # differ instead of both reflecting the viewer's full accessible set.
     def income_statement_accounts
+      return @income_statement_accounts if @income_statement_accounts
+
       family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 

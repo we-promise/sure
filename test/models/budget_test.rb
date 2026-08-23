@@ -448,10 +448,17 @@ class BudgetTest < ActiveSupport::TestCase
     target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
     target_budget.copy_from!(source_budget)
 
-    target_bc = target_budget.budget_categories.find_by(category: categories(:food_and_drink))
+    target_bc = target_budget.budget_categories.find_by(category: categories(:food_and_drink)).reload
 
     assert target_bc.rollover_enabled?
-    assert_equal 0, target_bc.reload[:rolled_over_amount]
+    assert_not_equal 250, target_bc[:rolled_over_amount],
+      "the carry is derived from the chain, never copied from the source"
+
+    # copy_from! changes what the chain should hold, so it must leave it
+    # recomputed: running the calculator again has nothing left to do.
+    derived = target_bc[:rolled_over_amount]
+    Budget::RolloverCalculator.new(family: family, user: nil).recompute!
+    assert_equal derived, target_bc.reload[:rolled_over_amount]
   end
 
   test "rollover leaves allocated_spending and available_to_allocate alone" do

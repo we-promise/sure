@@ -450,19 +450,41 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     second = initialized_budget(1.month.ago)
     allocate(second, 100)
 
-    # Stand in for a concurrent request: the calculator loads the chain, and
-    # only then does someone else move the allocation. Its upsert must write
-    # the rollover without carrying the stale 100 back over the new 250.
-    calculator = Budget::RolloverCalculator.new(family: @family, user: nil)
-    calculator.stubs(:ring_fenced_children_by_parent).with do |budget|
-      budget_category_for(second).update_column(:budgeted_spending, 250) if budget.id == second.id
+    # Stand in for a concurrent request: the calculator has already loaded the
+    # chain when someone else moves the allocation, so its in-memory copy is
+    # stale by the time it writes. `budget_category_actual_spending` is a
+    # public seam it goes through on every row, just before the upsert.
+    Budget.any_instance.stubs(:budget_category_actual_spending).with do |_budget_category|
+      budget_category_for(second).update_column(:budgeted_spending, 250)
       true
-    end.returns({})
+    end.returns(30)
 
-    calculator.recompute!
+    Budget::RolloverCalculator.new(family: @family, user: nil).recompute!
 
     assert_equal 70, stored_rollover(second)
     assert_equal 250, budget_category_for(second).budgeted_spending
+  end
+
+  test "the household carry is the same whoever triggers the recompute" do
+    # Owned by josh, so ann's finance accounts don't include it. Before the
+    # account scope was pinned, IncomeStatement fell back to Current.user and
+    # each member's page view overwrote the shared row with their own number.
+    josh_account = create_account(owner: users(:josh), name: "Josh only")
+
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    create_transaction(account: josh_account, date: first.start_date, amount: 30, category: @category)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+
+    Current.stubs(:user).returns(users(:ann))
+    recompute!
+    assert_equal 70, stored_rollover(second)
+
+    Current.stubs(:user).returns(users(:josh))
+    recompute!
+    assert_equal 70, stored_rollover(second)
   end
 
   test "the carry stops at a currency change rather than crossing it" do
