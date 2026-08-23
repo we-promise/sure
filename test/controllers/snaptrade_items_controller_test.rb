@@ -36,6 +36,22 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.snaptrade.oauth_client_secret = original_secret
   end
 
+  DEVICE_AUTHORIZATION = {
+    "device_code" => "dev-c0de",
+    "user_code" => "WXYZ-1234",
+    "verification_uri" => "https://app.snaptrade.com/device",
+    "verification_uri_complete" => "https://app.snaptrade.com/device?code=WXYZ-1234",
+    "expires_in" => 600,
+    "interval" => 5
+  }.freeze
+
+  # The device code is held in the session, so completing a flow means starting
+  # one first -- the same two requests a user makes.
+  def start_device_flow(item, **params)
+    Provider::Snaptrade.stubs(:start_device_authorization).returns(DEVICE_AUTHORIZATION.dup)
+    post start_oauth_device_flow_snaptrade_items_url, params: { item_id: item.id }.merge(params)
+  end
+
   test "connect redirects to portal when successful" do
     portal_url = "https://app.snaptrade.com/portal/test123"
 
@@ -140,7 +156,10 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_match "WXYZ-1234", response.body
-      assert_select "input[name='device_code'][value='dev-c0de']", count: 1
+      # The user code is for the user to read; the device code redeems into
+      # tokens, so it stays in the session and never reaches the page.
+      assert_select "input[name='device_code']", count: 0
+      assert_no_match "dev-c0de", response.body
     end
   end
 
@@ -155,8 +174,10 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
         "token_type" => "Bearer", "scope" => "read"
       })
 
+      start_device_flow(item)
+
       assert_difference "Sync.count", 1 do
-        post complete_oauth_device_flow_snaptrade_item_url(item), params: { device_code: "dev-c0de" }
+        post complete_oauth_device_flow_snaptrade_item_url(item)
       end
 
       assert_redirected_to settings_providers_path
@@ -171,8 +192,9 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
         "access_token" => "device-at", "refresh_token" => "device-rt", "expires_in" => 900
       })
 
+      start_device_flow(@snaptrade_item)
+
       post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item),
-           params: { device_code: "dev-c0de" },
            headers: { "Turbo-Frame" => "drawer" }
 
       # A plain redirect would be followed as a frame navigation and swap in the
@@ -191,8 +213,11 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
         "access_token" => "device-at", "refresh_token" => "device-rt", "expires_in" => 900
       })
 
-      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item),
-           params: { device_code: "dev-c0de", return_to: "setup_accounts", accountable_type: "Investment" }
+      start_device_flow(@snaptrade_item, return_to: "setup_accounts", accountable_type: "Investment")
+
+      # Where to return to was recorded when the flow started, so completion
+      # needs nothing from the form to find its way back.
+      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item)
 
       assert_redirected_to setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: "Investment")
     end
@@ -208,25 +233,77 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
         Provider::Snaptrade::AuthenticationError.new("SnapTrade OAuth token request failed: authorization_pending", oauth_error: "authorization_pending")
       )
 
-      post complete_oauth_device_flow_snaptrade_item_url(item),
-           params: { device_code: "dev-c0de", user_code: "WXYZ-1234", verification_uri: "https://app.snaptrade.com/device" }
+      start_device_flow(item)
+
+      post complete_oauth_device_flow_snaptrade_item_url(item)
 
       assert_response :unprocessable_entity
       # Still redeemable, so the page comes back with the same code rather than
       # sending the user back to the start.
-      assert_select "input[name='device_code'][value='dev-c0de']", count: 1
       assert_match "WXYZ-1234", response.body
+      assert_select "form[action='#{complete_oauth_device_flow_snaptrade_item_path(item)}']"
       assert_nil item.reload.oauth_access_token
     end
   end
 
-  test "complete_oauth_device_flow requires a device code" do
+  test "complete_oauth_device_flow drops a code the server says is spent" do
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:poll_device_token).raises(
+        Provider::Snaptrade::AuthenticationError.new("SnapTrade OAuth token request failed: expired_token", oauth_error: "expired_token")
+      )
+
+      start_device_flow(@snaptrade_item)
+      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item)
+
+      assert_response :unprocessable_entity
+      # Nothing left to retry with, so the page offers a fresh start instead of
+      # a button that can only fail again.
+      assert_no_match "WXYZ-1234", response.body
+      assert_select "form[action='#{start_oauth_device_flow_snaptrade_items_path}']"
+    end
+  end
+
+  test "complete_oauth_device_flow requires a flow started in this session" do
     with_device_flow_only do
       Provider::Snaptrade.expects(:poll_device_token).never
 
-      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item), params: { device_code: "" }
+      post complete_oauth_device_flow_snaptrade_item_url(@snaptrade_item)
 
       assert_response :unprocessable_entity
+    end
+  end
+
+  # The device code is a bearer credential that says nothing about who asked for
+  # it. If the request body could supply one, anyone who came by a code -- from a
+  # log, a shared screen -- could redeem someone else's pending authorization
+  # into an item of their own. Only the session that started the flow can finish
+  # it.
+  test "complete_oauth_device_flow ignores a device code supplied as a parameter" do
+    item = snaptrade_items(:unauthorized_item)
+    sign_out
+    sign_in @user = users(:empty)
+
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:poll_device_token).never
+
+      post complete_oauth_device_flow_snaptrade_item_url(item), params: { device_code: "someone-elses-code" }
+
+      assert_response :unprocessable_entity
+      assert_nil item.reload.oauth_access_token
+    end
+  end
+
+  test "complete_oauth_device_flow will not redeem a code into a different item" do
+    other_item = @user.family.snaptrade_items.create!(name: "Another SnapTrade")
+
+    with_device_flow_only do
+      Provider::Snaptrade.expects(:poll_device_token).never
+
+      start_device_flow(@snaptrade_item)
+      post complete_oauth_device_flow_snaptrade_item_url(other_item)
+
+      assert_response :unprocessable_entity
+      assert_nil other_item.reload.oauth_access_token
     end
   end
 

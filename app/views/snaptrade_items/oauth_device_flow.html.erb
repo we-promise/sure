@@ -43,16 +43,10 @@
                       method: :post,
                       data: { turbo_frame: "drawer" },
                       class: "space-y-3" do %>
-          <%# Carried through so a failed attempt can re-render this page with the %>
-          <%# same still-valid code instead of making the user start over. %>
-          <%= hidden_field_tag :device_code, @device_authorization["device_code"] %>
-          <%= hidden_field_tag :user_code, @device_authorization["user_code"] %>
-          <%= hidden_field_tag :verification_uri, @device_authorization["verification_uri"] %>
-          <%= hidden_field_tag :verification_uri_complete, @device_authorization["verification_uri_complete"] %>
-          <%= hidden_field_tag :expires_in, @device_authorization["expires_in"] %>
-          <%= hidden_field_tag :interval, @device_authorization["interval"] %>
-          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
-          <%= hidden_field_tag :accountable_type, @accountable_type if @accountable_type.present? %>
+          <%# The device code and the flow's context are held in the session, not %>
+          <%# round-tripped through here: the code redeems into tokens on its own, %>
+          <%# so it stays server-side and the redemption stays bound to the family %>
+          <%# and item that started the flow. %>
 
           <div class="flex justify-end gap-2">
             <%= render DS::Link.new(

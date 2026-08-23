@@ -3,6 +3,17 @@ class SnaptradeItemsController < ApplicationController
   # RFC 8628 §3.5: the authorization server is telling us to keep waiting, not
   # that anything went wrong.
   DEVICE_FLOW_PENDING_ERRORS = %w[authorization_pending slow_down].freeze
+  # RFC 8628 §3.5: the two codes that mean this device code will never be
+  # redeemable. Everything else -- a 5xx, a dropped connection -- leaves it
+  # valid, so the user can just try again.
+  DEVICE_FLOW_TERMINAL_ERRORS = %w[expired_token access_denied].freeze
+  # What a pending device authorization needs to survive a retry render: the
+  # code to redeem, plus what the page shows the user. expires_in and interval
+  # are deliberately not kept -- nothing reads them, and the authorization
+  # server is the one that decides when a code is spent.
+  DEVICE_AUTHORIZATION_SESSION_FIELDS = %w[
+    device_code user_code verification_uri verification_uri_complete
+  ].freeze
 
   before_action :set_snaptrade_item, only: [ :show, :destroy, :sync, :connect, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :complete_oauth_device_flow ]
   before_action :require_admin!, only: [ :destroy, :sync, :connect, :callback, :setup_accounts, :complete_account_setup, :connections, :delete_connection, :oauth_authorize, :oauth_callback, :oauth_device_authorize, :start_oauth_device_flow, :complete_oauth_device_flow, :preload_accounts, :select_accounts, :select_existing_account, :link_existing_account ]
@@ -294,6 +305,7 @@ class SnaptradeItemsController < ApplicationController
     end
 
     @device_authorization = @snaptrade_item.start_oauth_device_flow(scope: @oauth_scope)
+    store_pending_device_flow(@device_authorization)
 
     render :oauth_device_flow
   rescue Provider::Snaptrade::Error => e
@@ -307,13 +319,20 @@ class SnaptradeItemsController < ApplicationController
   def complete_oauth_device_flow
     assign_device_flow_context
 
-    if params[:device_code].blank?
+    device_flow = pending_device_flow
+    if device_flow.blank?
       @error_message = t(".device_code_required")
       render :oauth_device_flow, status: :unprocessable_entity
       return
     end
 
-    @snaptrade_item.complete_oauth_device_flow!(device_code: params[:device_code])
+    # The session is what says where this flow came from, so it decides where
+    # it goes back to.
+    @return_to = device_flow[:return_to]
+    @accountable_type = device_flow[:accountable_type]
+
+    @snaptrade_item.complete_oauth_device_flow!(device_code: device_flow[:device_code])
+    session.delete(:snaptrade_device_flow)
     @snaptrade_item.sync_later_with_follow_up
 
     destination = if @return_to == "setup_accounts"
@@ -339,7 +358,15 @@ class SnaptradeItemsController < ApplicationController
     end
 
     @error_message = device_flow_error_message(e)
-    restore_device_authorization_from_params
+
+    if DEVICE_FLOW_TERMINAL_ERRORS.include?(e.try(:oauth_error))
+      # The code is spent. Drop it so the page offers a fresh start rather than
+      # a button that can only fail.
+      session.delete(:snaptrade_device_flow)
+    else
+      restore_device_authorization_from_session
+    end
+
     render :oauth_device_flow, status: :unprocessable_entity
   end
 
@@ -499,18 +526,41 @@ class SnaptradeItemsController < ApplicationController
       "read"
     end
 
+    # A device code redeems into tokens on its own and carries nothing that says
+    # who asked for it, so the client is expected to keep it to itself. Holding
+    # it in the session -- where the redirect flow already keeps its
+    # code_verifier -- keeps it off the wire entirely and binds redemption to
+    # the family and item that started the flow, which is the guarantee `state`
+    # gives the redirect flow. Without that, a code recovered from anywhere
+    # could be redeemed into someone else's item.
+    def store_pending_device_flow(payload)
+      pending = DEVICE_AUTHORIZATION_SESSION_FIELDS.index_with { |field| payload[field] }
+
+      session[:snaptrade_device_flow] = pending.merge(
+        "family_id" => Current.family.id,
+        "item_id" => @snaptrade_item.id,
+        "return_to" => @return_to,
+        "accountable_type" => @accountable_type
+      )
+    end
+
+    def pending_device_flow
+      device_flow = (session[:snaptrade_device_flow] || {}).with_indifferent_access
+
+      return nil if device_flow[:device_code].blank?
+      return nil unless device_flow[:family_id].to_s == Current.family.id.to_s
+      return nil unless device_flow[:item_id].to_s == @snaptrade_item.id.to_s
+
+      device_flow
+    end
+
     # The device code survives a failed attempt: the user code is still valid,
     # so re-rendering the same page lets them finish in SnapTrade and retry
     # without starting over.
-    def restore_device_authorization_from_params
-      @device_authorization = params.permit(
-        :device_code,
-        :user_code,
-        :verification_uri,
-        :verification_uri_complete,
-        :expires_in,
-        :interval
-      ).to_h
+    def restore_device_authorization_from_session
+      device_flow = (session[:snaptrade_device_flow] || {}).with_indifferent_access
+
+      @device_authorization = device_flow.slice(*DEVICE_AUTHORIZATION_SESSION_FIELDS).to_h
     end
 
     def render_device_flow_unconfigured

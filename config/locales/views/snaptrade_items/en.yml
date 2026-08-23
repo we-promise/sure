@@ -43,7 +43,7 @@ en:
       failed: "Unable to start SnapTrade device authorization. Please try again."
     complete_oauth_device_flow:
       success: "SnapTrade authorization complete."
-      device_code_required: "A device code is required to complete authorization."
+      device_code_required: "No SnapTrade device authorization is in progress for this connection. Start it again to get a new code."
       authorization_pending: "SnapTrade hasn't seen your confirmation yet. Approve the code in SnapTrade, then try again."
       expired: "This device code expired. Start the authorization again."
       access_denied: "SnapTrade authorization was declined."
