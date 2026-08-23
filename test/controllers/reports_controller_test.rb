@@ -448,6 +448,12 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{expense_category.id}'] a.flex.items-center"
     assert_select "tr[data-category='category-#{expense_category.id}'].relative", 0
     assert_select "tr[data-category='category-#{expense_category.id}'] a[class*='before:absolute']", 0
+
+    # Amount and percentage cells are each wrapped in their own normal-flow
+    # <a> to the same href, so the full row remains clickable without a
+    # stretched-link overlay spanning the <tr>.
+    assert_select "tr[data-category='category-#{expense_category.id}'] td:nth-child(2) a[href=?]", expense_href
+    assert_select "tr[data-category='category-#{expense_category.id}'] td:nth-child(3) a[href=?]", expense_href
   end
 
   test "index uncategorized category link uses localized name that Search accepts" do

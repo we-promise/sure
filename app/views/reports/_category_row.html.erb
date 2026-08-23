@@ -52,14 +52,29 @@
   </td>
 
   <td class="py-3 px-4 lg:px-6 text-right">
-    <span class="text-sm <%= color_class %> privacy-sensitive">
-      <%= Money.new(item[:total], Current.family.currency).format %>
-    </span>
+    <%
+      amount_content = tag.span(
+        Money.new(item[:total], Current.family.currency).format,
+        class: "text-sm #{color_class} privacy-sensitive"
+      )
+    %>
+    <% if clickable %>
+      <%= link_to amount_content, transactions_href,
+            class: "block", data: { turbo_frame: "_top", turbo_prefetch: false } %>
+    <% else %>
+      <%= amount_content %>
+    <% end %>
   </td>
 
   <td class="py-3 px-4 lg:px-6 text-right">
-    <span class="text-sm text-secondary">
-      <%= percentage %>%
-    </span>
+    <%
+      percentage_content = tag.span("#{percentage}%", class: "text-sm text-secondary")
+    %>
+    <% if clickable %>
+      <%= link_to percentage_content, transactions_href,
+            class: "block", data: { turbo_frame: "_top", turbo_prefetch: false } %>
+    <% else %>
+      <%= percentage_content %>
+    <% end %>
   </td>
 </tr>
