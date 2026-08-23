@@ -133,12 +133,12 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "oauth_device_authorize explains what to configure when the client id is missing" do
-    Rails.configuration.x.snaptrade.oauth_client_id = nil
+    with_snaptrade_oauth(nil, nil) do
+      get oauth_device_authorize_snaptrade_items_url
 
-    get oauth_device_authorize_snaptrade_items_url
-
-    assert_response :unprocessable_entity
-    assert_match(/SNAPTRADE_OAUTH_CLIENT_ID/, response.body)
+      assert_response :unprocessable_entity
+      assert_match(/SNAPTRADE_OAUTH_CLIENT_ID/, response.body)
+    end
   end
 
   test "start_oauth_device_flow shows the code the user confirms on SnapTrade" do

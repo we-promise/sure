@@ -230,15 +230,21 @@ class Provider::Snaptrade
 
     private
 
-      def token_request(params, token_url: token_endpoint)
+      # All three grants share TOKEN_URL. RFC 8628 §3.4 redeems a device code at
+      # the authorization server's token endpoint -- the same one the
+      # authorization code uses -- so there is one endpoint here, not one per
+      # grant, and nothing to keep in sync between issuing a token and
+      # refreshing it. Discovery is consulted only for
+      # device_authorization_endpoint, which has no hardcoded equivalent.
+      def token_request(params)
         raise ConfigurationError, "SnapTrade OAuth is not configured" unless oauth_configured?
 
         # Not retried: a token request consumes a single-use authorization or
         # device code, or rotates the refresh token. If the response is lost
         # after SnapTrade processed it, replaying the same params would fail
         # with invalid_grant even though the original request succeeded.
-        response = without_retry("POST #{token_url}") do
-          oauth_connection.post(token_url) do |request|
+        response = without_retry("POST #{TOKEN_URL}") do
+          oauth_connection.post(TOKEN_URL) do |request|
             request.headers["Authorization"] = basic_auth_header if confidential_client?
             request.headers["Content-Type"] = "application/x-www-form-urlencoded"
             request.body = URI.encode_www_form(with_client_credentials(params))
@@ -260,16 +266,6 @@ class Provider::Snaptrade
           "SnapTrade OAuth token request failed: #{error}",
           status_code: response.status, response_body: response.body
         )
-      end
-
-      # Whatever issued a token has to be what refreshes it, so every token
-      # request resolves the endpoint the same way. Reads the discovery document
-      # only if it is already cached -- deliberately never fetches it here. The
-      # device flow warms that cache immediately before its own token request,
-      # while the browser flow keeps working off the constant it has always
-      # used, with no new network call and no new way for refresh to fail.
-      def token_endpoint
-        Rails.cache.read(OAUTH_METADATA_CACHE_KEY).try(:[], "token_endpoint").presence || TOKEN_URL
       end
 
       # A client secret means the token endpoint authenticates the client with
