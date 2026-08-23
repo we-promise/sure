@@ -3,6 +3,7 @@ require "test_helper"
 module Entries
   class ReconciliationStatusViewTest < ActionView::TestCase
     include EntriesTestHelper
+    include EntriesHelper
 
     setup do
       @account = accounts(:depository)
