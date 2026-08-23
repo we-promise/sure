@@ -230,6 +230,22 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The device code is the whole capability check on complete_oauth_device_flow;
+  # nothing binds it to the family that requested it, the way state does in the
+  # redirect flow. So it must not reach the request log.
+  test "device flow codes are filtered from logs" do
+    parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered_params = parameter_filter.filter(
+      device_code: "dev-c0de",
+      user_code: "WXYZ-1234",
+      verification_uri_complete: "https://app.snaptrade.com/device?code=WXYZ-1234"
+    )
+
+    assert_equal "[FILTERED]", filtered_params[:device_code]
+    assert_equal "[FILTERED]", filtered_params[:user_code]
+    assert_equal "[FILTERED]", filtered_params[:verification_uri_complete]
+  end
+
   test "oauth_callback rejects state mismatch without exchanging the code" do
     Provider::Snaptrade.expects(:exchange_code).never
 
