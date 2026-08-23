@@ -109,6 +109,46 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0.0, @electric_budget_category.reload.budgeted_spending.to_f
   end
 
+  test "toggling rollover persists and recomputes the chain" do
+    previous_budget = Budget.find_or_bootstrap(@family, start_date: 1.month.ago)
+    previous_budget.update!(budgeted_spending: 5000, expected_income: 7000)
+    previous_budget_category = previous_budget.budget_categories.find_by!(category: @parent_category)
+    previous_budget_category.update!(budgeted_spending: 400, rollover_enabled: true)
+
+    create_transaction(
+      date: previous_budget.start_date,
+      account: accounts(:depository),
+      amount: 150,
+      category: @parent_category
+    )
+
+    patch budget_budget_category_path(@budget, @parent_budget_category),
+          params: { budget_category: { budgeted_spending: 500, rollover_enabled: "1" } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert @parent_budget_category.reload.rollover_enabled?
+    assert_equal 250.0, @parent_budget_category[:rolled_over_amount].to_f
+
+    patch budget_budget_category_path(@budget, @parent_budget_category),
+          params: { budget_category: { budgeted_spending: 500, rollover_enabled: "0" } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_not @parent_budget_category.reload.rollover_enabled?
+    assert_equal 0.0, @parent_budget_category[:rolled_over_amount].to_f
+  end
+
+  test "updating an allocation without the toggle leaves rollover off" do
+    patch budget_budget_category_path(@budget, @parent_budget_category),
+          params: { budget_category: { budgeted_spending: 600 } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_not @parent_budget_category.reload.rollover_enabled?
+    assert_equal 600.0, @parent_budget_category.budgeted_spending.to_f
+  end
+
   test "show drilldown excludes BUDGET_EXCLUDED_KINDS transfers from recent transactions" do
     # Issue #1059: a matched depository <-> CC pair becomes
     # (cc_payment outflow + funds_movement inflow). Both kinds are in

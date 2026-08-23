@@ -436,6 +436,43 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 500, target_bc.budgeted_spending
   end
 
+  test "copy_from copies the rollover toggle but not the rolled over amount" do
+    family = families(:dylan_family)
+
+    source_budget = Budget.find_or_bootstrap(family, start_date: 2.months.ago)
+    source_budget.update!(budgeted_spending: 4000, expected_income: 6000)
+    source_bc = source_budget.budget_categories.find_by(category: categories(:food_and_drink))
+    source_bc.update!(budgeted_spending: 500, rollover_enabled: true)
+    source_bc.update_column(:rolled_over_amount, 250)
+
+    target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
+    target_budget.copy_from!(source_budget)
+
+    target_bc = target_budget.budget_categories.find_by(category: categories(:food_and_drink))
+
+    assert target_bc.rollover_enabled?
+    assert_equal 0, target_bc.reload[:rolled_over_amount]
+  end
+
+  test "rollover leaves allocated_spending and available_to_allocate alone" do
+    family = families(:dylan_family)
+
+    budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
+    budget.update!(budgeted_spending: 4000, expected_income: 6000)
+    budget_category = budget.budget_categories.find_by(category: categories(:food_and_drink))
+    budget_category.update!(budgeted_spending: 500, rollover_enabled: true)
+
+    allocated_before = budget.reload.allocated_spending
+    available_before = budget.available_to_allocate
+
+    budget_category.update_column(:rolled_over_amount, 120)
+    budget.reload
+
+    assert_equal allocated_before, budget.allocated_spending
+    assert_equal available_before, budget.available_to_allocate
+    assert_equal 120, budget.total_rolled_over
+  end
+
   test "copy_from skips categories that dont exist in target" do
     family = families(:dylan_family)
 

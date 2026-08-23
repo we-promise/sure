@@ -15,7 +15,8 @@ class Budget < ApplicationRecord
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
-           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income
+           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
+           :total_rolled_over
 
   class << self
     def date_to_param(date)
@@ -74,6 +75,8 @@ class Budget < ApplicationRecord
 
         budget.current_user = user
         budget.sync_budget_categories
+
+        Budget::RolloverCalculator.new(family: family, user: owner).recompute!
 
         budget
       end
@@ -209,7 +212,12 @@ class Budget < ApplicationRecord
         target_bc = target_by_category[source_bc.category_id]
         next unless target_bc
 
-        target_bc.update!(budgeted_spending: source_bc.budgeted_spending)
+        # The toggle is a preference and travels with the copy; the amount
+        # is derived state that only Budget::RolloverCalculator may write.
+        target_bc.update!(
+          budgeted_spending: source_bc.budgeted_spending,
+          rollover_enabled: source_bc.rollover_enabled
+        )
       end
     end
   end
@@ -349,6 +357,15 @@ class Budget < ApplicationRecord
 
   def available_to_allocate
     (budgeted_spending || 0) - allocated_spending
+  end
+
+  # Informational aggregate only -- deliberately kept out of
+  # `allocated_spending` and `available_to_allocate`, which stay a pure
+  # "what did I plan to spend this month" pair. Ring-fenced subcategories
+  # carry their own surplus and their parent's is net of theirs, so summing
+  # every non-inheriting category counts each amount once.
+  def total_rolled_over
+    budget_categories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
   end
 
   def allocations_valid?

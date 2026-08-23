@@ -1,0 +1,142 @@
+# Materializes BudgetCategory#rolled_over_amount for a single budget chain:
+# either a family's household budgets (user nil) or one member's personal
+# budgets. Chains never mix — a personal budget only ever inherits from the
+# same user's earlier personal budgets.
+#
+# The amount rolled into month n depends on month n-1, which depends on
+# n-2. Computed lazily it would walk the whole chain on every budget render,
+# so it is stored instead and recomputed in one forward pass whenever a
+# budget is bootstrapped or an allocation changes.
+class Budget::RolloverCalculator
+  def initialize(family:, user:)
+    @family = family
+    @user = user
+  end
+
+  def recompute!
+    from = first_relevant_budget_date
+    return if from.nil?
+
+    updates = []
+    now = Time.current
+
+    # category_id => [amount, currency]. A budget freezes its currency when
+    # it is created, so a family that switches currency leaves a break in the
+    # chain: the amounts on either side are not the same unit. Carrying the
+    # raw number across would silently reinterpret it, so the carry stops
+    # there and the next month starts from zero.
+    #
+    # A category deleted mid-chain takes its budget_categories rows with it
+    # (Category has_many :budget_categories, dependent: :destroy), so it
+    # simply drops out of `carry` — its history is gone, which is what
+    # deleting a category means.
+    carry = {}
+
+    chain(from).each do |budget|
+      next_carry = {}
+      ring_fenced_children = ring_fenced_children_by_parent(budget)
+
+      budget.budget_categories.each do |budget_category|
+        # Subcategories that share their parent's budget have no allocation
+        # of their own, so there is nothing for them to carry forward.
+        next if budget_category.inherits_parent_budget?
+
+        incoming = incoming_carry(carry, budget_category)
+
+        if budget_category[:rolled_over_amount] != incoming
+          updates << budget_category.attributes.merge(
+            "rolled_over_amount" => incoming,
+            "updated_at" => now
+          )
+        end
+
+        children = ring_fenced_children[budget_category.category_id] || []
+        next_carry[budget_category.category_id] = [
+          leftover_for(budget, budget_category, incoming, children),
+          budget_category.currency
+        ]
+      end
+
+      carry = next_carry
+    end
+
+    # The full attribute set is what makes the INSERT branch legal
+    # (budget_id, category_id and currency are NOT NULL), but only the two
+    # rollover columns may be written on conflict: a concurrent request that
+    # changed an allocation between our read and this write must not have it
+    # clobbered by the stale value we loaded.
+    if updates.any?
+      BudgetCategory.upsert_all(updates, unique_by: :id, update_only: %w[rolled_over_amount updated_at])
+    end
+  end
+
+  private
+    attr_reader :family, :user
+
+    # Earliest month this chain has anything to say about: rollover switched
+    # on, or an amount left behind by a toggle that was switched off and
+    # still needs clearing. nil -- the common case, families that never
+    # turned rollover on -- costs one query and does nothing.
+    def first_relevant_budget_date
+      initialized_budgets
+        .joins("INNER JOIN budget_categories ON budget_categories.budget_id = budgets.id")
+        .where("budget_categories.rollover_enabled OR budget_categories.rolled_over_amount <> 0")
+        .minimum(:start_date)
+    end
+
+    # Walking back to `oldest_valid_budget_date` every time would read an
+    # income statement per month for nothing: months before the first one
+    # that uses rollover cannot change any stored amount. Start one
+    # initialized month earlier than `from`, which is where its carry comes
+    # from.
+    def chain(from)
+      seed = initialized_budgets.where("start_date < ?", from).maximum(:start_date)
+
+      initialized_budgets
+        .where("start_date >= ?", seed || from)
+        .order(:start_date)
+        .includes(budget_categories: :category)
+    end
+
+    # Only initialized budgets take part: a month the user never set up is a
+    # gap in the chain, not a month budgeted at zero, so the carry crosses it
+    # untouched (same semantics as Budget#most_recent_initialized_budget).
+    def initialized_budgets
+      family.budgets
+        .where(user_id: user&.id)
+        .where.not(budgeted_spending: nil)
+    end
+
+    def incoming_carry(carry, budget_category)
+      return 0 unless budget_category.rollover_enabled?
+
+      amount, currency = carry[budget_category.category_id]
+      return 0 if amount.nil? || currency != budget_category.currency
+
+      amount
+    end
+
+    def ring_fenced_children_by_parent(budget)
+      budget.budget_categories
+        .select { |bc| bc.subcategory? && !bc.inherits_parent_budget? }
+        .group_by { |bc| bc.category.parent_id }
+    end
+
+    # max(0, budgeted + rolled_over − actual): v1 only carries a surplus, a
+    # negative balance stops at the month it happened in.
+    def leftover_for(budget, budget_category, incoming, ring_fenced_children)
+      budgeted = (budget_category[:budgeted_spending] || 0) + incoming
+      actual = budget.budget_category_actual_spending(budget_category)
+
+      # A parent's allocation already contains its ring-fenced subcategories'
+      # allocations, and its actual spending already contains their spending.
+      # Those subcategories carry their own surplus forward, so take them out
+      # here rather than rolling the same money over twice.
+      ring_fenced_children.each do |child|
+        budgeted -= (child[:budgeted_spending] || 0)
+        actual -= budget.budget_category_actual_spending(child)
+      end
+
+      [ budgeted - actual, 0 ].max
+    end
+end

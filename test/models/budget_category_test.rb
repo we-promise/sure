@@ -272,3 +272,334 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     end
   end
 end
+
+class BudgetCategoryRolloverTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
+  setup do
+    @family = families(:empty)
+    @category = @family.categories.create!(name: "Vacations", color: "#6172F3")
+    @account = create_account(owner: nil)
+  end
+
+  test "carries a surplus into the next month" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+
+    recompute!
+
+    assert_equal 0, stored_rollover(first)
+    assert_equal 70, stored_rollover(second)
+    assert_equal 170, budget_category_for(second).available_to_spend
+  end
+
+  test "an overspent month rolls over nothing rather than a negative" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(150, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+
+    recompute!
+
+    assert_equal 0, stored_rollover(second)
+    assert_equal 100, budget_category_for(second).available_to_spend
+  end
+
+  test "a category without the toggle never accumulates a rollover" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100, rollover: false)
+
+    recompute!
+
+    assert_equal 0, stored_rollover(second)
+    assert_equal 100, budget_category_for(second).available_to_spend
+  end
+
+  test "a subcategory inheriting its parent's budget is excluded" do
+    subcategory = @family.categories.create!(name: "Flights", parent: @category, color: "#6172F3")
+
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    first.budget_categories.find_by!(category: subcategory).update!(budgeted_spending: 0, rollover_enabled: true)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    second_subcategory = second.budget_categories.find_by!(category: subcategory)
+    second_subcategory.update!(budgeted_spending: 0, rollover_enabled: true)
+
+    recompute!
+
+    assert_equal 0, second_subcategory.reload[:rolled_over_amount]
+    assert_equal 0, second_subcategory.rolled_over_amount
+  end
+
+  test "a parent's rollover excludes what its ring-fenced subcategories carry themselves" do
+    subcategory = @family.categories.create!(name: "Hotels", parent: @category, color: "#6172F3")
+
+    first = initialized_budget(2.months.ago)
+    allocate(first, 300)
+    first.budget_categories.find_by!(category: subcategory).update!(budgeted_spending: 100, rollover_enabled: true)
+    spend(20, budget: first, category: subcategory)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 300)
+    second_subcategory = second.budget_categories.find_by!(category: subcategory)
+    second_subcategory.update!(budgeted_spending: 100, rollover_enabled: true)
+
+    recompute!
+
+    # Subcategory keeps its own 100 - 20 = 80; the parent only carries the
+    # 300 - 100 = 200 shared pool it never spent from.
+    assert_equal 80, second_subcategory.reload[:rolled_over_amount]
+    assert_equal 200, stored_rollover(second)
+  end
+
+  test "accumulates across three consecutive months" do
+    first = initialized_budget(3.months.ago)
+    allocate(first, 50)
+
+    second = initialized_budget(2.months.ago)
+    allocate(second, 50)
+
+    third = initialized_budget(1.month.ago)
+    allocate(third, 50)
+
+    recompute!
+
+    assert_equal 0, stored_rollover(first)
+    assert_equal 50, stored_rollover(second)
+    assert_equal 100, stored_rollover(third)
+    assert_equal 150, budget_category_for(third).available_to_spend
+  end
+
+  test "a gap month does not reset the chain" do
+    first = initialized_budget(3.months.ago)
+    allocate(first, 100)
+    spend(20, budget: first)
+
+    # Bootstrapped but never initialized: a month the user skipped, not a
+    # month budgeted at zero.
+    Budget.find_or_bootstrap(@family, start_date: 2.months.ago)
+
+    third = initialized_budget(1.month.ago)
+    allocate(third, 100)
+
+    recompute!
+
+    assert_equal 80, stored_rollover(third)
+  end
+
+  test "one member's personal chain does not contaminate another's" do
+    @family.update!(personal_budgets: true)
+    josh = users(:josh)
+    ann = users(:ann)
+    josh_account = create_account(owner: josh, name: "Josh Checking")
+
+    josh_first = initialized_budget(2.months.ago, user: josh)
+    allocate(josh_first, 100)
+    create_transaction(account: josh_account, date: josh_first.start_date, amount: 30, category: @category)
+
+    ann_first = initialized_budget(2.months.ago, user: ann)
+    allocate(ann_first, 40)
+
+    josh_second = initialized_budget(1.month.ago, user: josh)
+    allocate(josh_second, 100)
+
+    ann_second = initialized_budget(1.month.ago, user: ann)
+    allocate(ann_second, 40)
+
+    recompute!(user: josh)
+    recompute!(user: ann)
+
+    assert_equal 70, stored_rollover(josh_second)
+    assert_equal 40, stored_rollover(ann_second)
+  end
+
+  test "flipping the toggle off clears the stored amount" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    second_category = allocate(second, 100)
+
+    recompute!
+    assert_equal 70, stored_rollover(second)
+
+    second_category.update!(rollover_enabled: false)
+    recompute!
+
+    assert_equal 0, stored_rollover(second)
+  end
+
+  test "recompute does not clobber an allocation changed underneath it" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+
+    # Stand in for a concurrent request: the calculator loads the chain, and
+    # only then does someone else move the allocation. Its upsert must write
+    # the rollover without carrying the stale 100 back over the new 250.
+    calculator = Budget::RolloverCalculator.new(family: @family, user: nil)
+    calculator.stubs(:ring_fenced_children_by_parent).with do |budget|
+      budget_category_for(second).update_column(:budgeted_spending, 250) if budget.id == second.id
+      true
+    end.returns({})
+
+    calculator.recompute!
+
+    assert_equal 70, stored_rollover(second)
+    assert_equal 250, budget_category_for(second).budgeted_spending
+  end
+
+  test "the carry stops at a currency change rather than crossing it" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+
+    @family.update!(currency: "EUR")
+    second = initialized_budget(1.month.ago)
+    assert_equal "EUR", second.currency
+    allocate(second, 100)
+
+    recompute!
+
+    assert_equal 0, stored_rollover(second)
+  end
+
+  test "deleting a category removes it from every month of the chain" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+
+    recompute!
+    assert_equal 70, stored_rollover(second)
+
+    assert_difference "BudgetCategory.count", -2 do
+      @category.destroy!
+    end
+
+    # Nothing to chain any more, and recomputing must not resurrect it.
+    assert_nothing_raised { recompute! }
+    assert_empty BudgetCategory.where(category_id: @category.id)
+  end
+
+  test "consumption is measured against the allocation plus the carry" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(50, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    spend(30, budget: second)
+
+    recompute!
+
+    # 30 spent out of 100 allocated + 50 carried.
+    assert_equal 50, stored_rollover(second)
+    assert_in_delta 20.0, budget_category_for(second).percent_of_budget_spent, 0.01
+  end
+
+  test "a category funded only by the carry is not flagged as unbudgeted" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(50, budget: first)
+
+    # Nothing allocated this month -- the envelope lives entirely off what
+    # it carried. The zero-budget guards must look at 0 + 50, not at 0.
+    second = initialized_budget(1.month.ago)
+    allocate(second, 0)
+    spend(20, budget: second)
+
+    recompute!
+    budget_category = budget_category_for(second)
+
+    assert_equal 50, stored_rollover(second)
+    assert_in_delta 40.0, budget_category.percent_of_budget_spent, 0.01
+    assert_equal 30, budget_category.available_to_spend
+
+    assert budget_category.budgeted?
+    assert_not budget_category.over_budget?
+    assert_not budget_category.unbudgeted_with_spending?
+    assert_not budget_category.any_over_budget?
+    assert budget_category.on_track?
+  end
+
+  test "an inheriting subcategory measures itself against its parent's carry" do
+    subcategory = @family.categories.create!(name: "Flights", parent: @category, color: "#6172F3")
+
+    first = initialized_budget(2.months.ago)
+    allocate(first, 200)
+    spend(50, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 200)
+    second_subcategory = second.budget_categories.find_by!(category: subcategory)
+    second_subcategory.update!(budgeted_spending: 0)
+    spend(40, budget: second, category: subcategory)
+
+    recompute!
+
+    assert_equal 150, stored_rollover(second)
+    assert second_subcategory.reload.inherits_parent_budget?
+
+    # 40 spent against the parent's 200 allocated + 150 carried.
+    assert_in_delta 11.43, second_subcategory.percent_of_budget_spent, 0.01
+    assert second_subcategory.budgeted?
+  end
+
+  private
+    def create_account(owner:, name: "Rollover Checking")
+      @family.accounts.create!(
+        accountable: Depository.new,
+        name: name,
+        currency: "USD",
+        balance: 10_000,
+        status: "active",
+        owner: owner
+      )
+    end
+
+    def initialized_budget(date, user: nil)
+      Budget.find_or_bootstrap(@family, start_date: date, user: user).tap do |budget|
+        budget.update!(budgeted_spending: 5_000, expected_income: 7_000)
+      end
+    end
+
+    def allocate(budget, amount, rollover: true)
+      budget.budget_categories.find_by!(category: @category).tap do |budget_category|
+        budget_category.update!(budgeted_spending: amount, rollover_enabled: rollover)
+      end
+    end
+
+    def spend(amount, budget:, category: @category)
+      create_transaction(account: @account, date: budget.start_date, amount: amount, category: category)
+    end
+
+    def recompute!(user: nil)
+      Budget::RolloverCalculator.new(family: @family, user: user).recompute!
+    end
+
+    def budget_category_for(budget)
+      BudgetCategory.find_by!(budget_id: budget.id, category: @category)
+    end
+
+    def stored_rollover(budget)
+      budget_category_for(budget)[:rolled_over_amount]
+    end
+end
