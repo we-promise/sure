@@ -45,10 +45,13 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     open_onchain_panel
 
     # The provider panel opens in the drawer frame.
-    assert_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
     assert_text I18n.t("onchain_wallet_items.price_provider_warning.title")
 
     click_on I18n.t("settings.providers.onchain_wallet_panel.add_wallet")
+
+    # The read-only reassurance lives where the address is pasted, not as a
+    # permanent banner on the settings page.
+    assert_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
 
     # The linking modal opens on top of the drawer.
     assert_text I18n.t("onchain_wallet_items.new_wallet.title")
@@ -89,7 +92,9 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     assert_text I18n.t("onchain_wallet_items.manage.title")
     assert_text OnchainTestHelper::FAKE_ADDRESS
 
-    # Review tokens reopens the selection with the address untouched.
+    # The per-address actions live in a menu, as repeated row actions do
+    # everywhere else in this app.
+    find("[aria-haspopup='menu']", match: :first).click
     click_on I18n.t("onchain_wallet_items.manage.review_tokens")
     assert_text I18n.t("onchain_wallet_items.review_tokens.title")
     assert_no_selector "input[name='new_address']"
