@@ -4,6 +4,31 @@ module AccountsHelper
     render "accounts/summary_card", title: title, content: content
   end
 
+  # The accounts a viewer may actually see, out of a collection a provider card
+  # was about to render whole.
+  #
+  # A provider item is surfaced on the accounts page as soon as ONE of its
+  # accounts is accessible (AccountsController#visible_provider_items), but the
+  # cards then hand their entire item to accounts/index/_account_groups. A
+  # member shared into one account of a connection would otherwise read the
+  # names, balances and group totals of the ones nobody shared with them.
+  #
+  # The manual list already applies this rule upstream, through
+  # `where(id: @accessible_account_ids)`, and applies it to everyone: an admin
+  # does not see a member's unshared account there either. This keeps the
+  # provider cards to the same rule, in the one place they all render through.
+  def accounts_visible_to_viewer(accounts)
+    ids = viewer_accessible_account_ids
+    accounts.select { |account| ids.include?(account.id) }
+  end
+
+  # Reuses the list the accounts index already loaded; falls back to a query for
+  # any other caller, once per request.
+  def viewer_accessible_account_ids
+    @viewer_accessible_account_ids ||=
+      (@accessible_account_ids || Current.user&.accessible_accounts&.pluck(:id) || []).to_set
+  end
+
   def sync_path_for(account)
     # Always use the account sync path, which handles syncing all providers
     sync_account_path(account)

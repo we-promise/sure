@@ -37,11 +37,11 @@ class AccountsController < ApplicationController
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
-    # so the card is told which of them this viewer may actually see. nil is the
-    # admin case, which visible_provider_items already lets through whole.
-    allowed_ids = Current.user&.admin? ? nil : @accessible_account_ids
+    # so the card is told which of them this viewer may actually see. No admin
+    # exemption: the manual list above does not grant one either, and the card's
+    # address count has to agree with what the card actually renders.
     @onchain_wallet_cards = @onchain_wallet_items.to_h do |item|
-      visible = item.accounts_visible_to(allowed_ids)
+      visible = item.accounts_visible_to(@accessible_account_ids)
       [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
     end
 

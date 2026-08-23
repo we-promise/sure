@@ -14,6 +14,41 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
 
+  # This action rebuilds the accounts-page partials for a Turbo Stream, and it
+  # recomputes @manual_accounts as `Current.family.accounts.visible_manual` —
+  # without the `where(id: @accessible_account_ids)` the index applies. It is
+  # admin-only, and the index refuses an admin a member's unshared account, so
+  # the stream should refuse it too. The shared partial is what holds it there.
+  test "the relink stream does not return a member's unshared account" do
+    admin = users(:family_admin)
+
+    theirs = accounts(:investment)
+    theirs.update!(owner: admin)
+    theirs.account_shares.destroy_all
+    theirs.account_providers.destroy_all
+    theirs.update!(plaid_account_id: nil)
+
+    members_own = accounts(:credit_card)
+    members_own.update!(owner: users(:family_member))
+    members_own.account_shares.destroy_all
+
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: @simplefin_item,
+      account_id: "sfa-relink",
+      name: "SimpleFIN Checking",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 100
+    )
+
+    post link_existing_account_simplefin_items_path,
+         params: { account_id: theirs.id, simplefin_account_id: simplefin_account.id },
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_not_includes response.body, members_own.name,
+      "the stream rebuilt the accounts list and handed back an account nobody shared with this admin"
+  end
+
   test "should destroy simplefin item" do
     assert_difference("SimplefinItem.count", 0) do # doesn't actually delete immediately
       delete simplefin_item_url(@simplefin_item)

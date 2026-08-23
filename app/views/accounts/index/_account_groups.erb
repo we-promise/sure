@@ -1,5 +1,11 @@
 <%# locals: (accounts:) %>
 
+<%# A provider card is surfaced as soon as ONE of its accounts is accessible,
+    and every card hands its whole item to this partial — so this is the single
+    place that can hold all of them to the accounts the viewer may actually
+    see. Filtering here also keeps the group counts and totals honest. %>
+<% accounts = accounts_visible_to_viewer(accounts) %>
+
 <% if accounts.any? %>
   <% ActiveRecord::Associations::Preloader.new(
        records: accounts,
