@@ -7,6 +7,7 @@ class Family < ApplicationRecord
   include Trading212Connectable
   include QuestradeConnectable
   include RedbarkConnectable
+  include OnchainWalletConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -289,6 +290,15 @@ class Family < ApplicationRecord
       .pluck(:merchant_id)
     family_merchant_ids = merchants.pluck(:id)
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+  end
+
+  # Merchant names already associated with this family (via any provider, or a
+  # manually created FamilyMerchant) -- used to recognize a merchant embedded in
+  # noisy provider text (e.g. Enable Banking's remittance lines) without
+  # inventing a new one from scratch. Deliberately excludes recently-unlinked
+  # merchants (unlike available_merchants), since those were explicitly removed.
+  def known_merchant_names
+    (assigned_merchants.pluck(:name) + merchants.pluck(:name)).uniq
   end
 
   def assigned_merchants_for(user)
