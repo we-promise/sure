@@ -140,6 +140,8 @@ en:
     transaction:
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
+      reconciled: Reconciled
+      reconciled_tooltip: Matched to a bank statement
       linked_with_provider: Linked with %{provider}
       activity_type_tooltip: Investment activity type
       possible_duplicate: Duplicate?

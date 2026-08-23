@@ -1,0 +1,53 @@
+<%# locals: (entry:) %>
+<%# Surfaces Entry#reconciliation_state in the transaction drawer.
+    Cleared is shown here (detail only) — not on ledger rows — to avoid
+    badge noise on provider-synced accounts. See #3119. %>
+<%= turbo_frame_tag dom_id(entry, :reconciliation) do %>
+  <% state = entry.reconciliation_state %>
+  <% statement = entry.reconciled_by_statement %>
+  <div class="shadow-border-xs bg-container rounded-xl mb-3 text-xs text-secondary">
+    <div class="flex items-center justify-between gap-2 px-3 py-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <%= icon entry_reconciliation_icon(state), size: "sm", color: entry_reconciliation_icon_color(state) %>
+        <span class="font-medium uppercase text-primary"><%= t("entries.reconciliation.title") %></span>
+      </div>
+      <%= render DS::Pill.new(
+            label: t("entries.reconciliation.states.#{state}"),
+            tone: entry_reconciliation_pill_tone(state),
+            marker: false,
+            icon: entry_reconciliation_icon(state),
+            title: t("entries.reconciliation.tooltips.#{state}")
+          ) %>
+    </div>
+    <div class="px-3 pb-3 space-y-2">
+      <p class="text-sm text-secondary">
+        <%= t("entries.reconciliation.descriptions.#{state}") %>
+      </p>
+
+      <% if entry.reconciled? %>
+        <dl class="space-y-2 bg-surface-inset rounded-lg px-3 py-2">
+          <div class="flex items-center justify-between gap-2 text-sm">
+            <dt class="text-secondary shrink-0"><%= t("entries.reconciliation.statement_label") %></dt>
+            <dd class="text-primary text-right min-w-0">
+              <% if statement.present? %>
+                <%= link_to entry_reconciliation_statement_label(statement),
+                      account_statement_path(statement),
+                      class: "text-primary hover:text-primary-hover underline underline-offset-2 truncate inline-block max-w-full",
+                      data: { turbo_frame: "_top" },
+                      title: statement.filename %>
+              <% else %>
+                <span class="text-secondary"><%= t("entries.reconciliation.no_statement") %></span>
+              <% end %>
+            </dd>
+          </div>
+          <% if entry.reconciled_at.present? %>
+            <div class="flex items-center justify-between gap-2 text-sm">
+              <dt class="text-secondary shrink-0"><%= t("entries.reconciliation.reconciled_on_label") %></dt>
+              <dd class="text-primary"><%= l(entry.reconciled_at.to_date, format: :long) %></dd>
+            </div>
+          <% end %>
+        </dl>
+      <% end %>
+    </div>
+  </div>
+<% end %>
