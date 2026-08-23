@@ -121,16 +121,36 @@ class Budget < ApplicationRecord
     categories_to_remove = existing_budget_category_ids - current_category_ids
 
     # Create missing categories
+    inherited_rollover = inherited_rollover_flags(categories_to_add)
+
     categories_to_add.each do |category_id|
       budget_categories.create!(
         category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
-        currency: family.currency
+        currency: family.currency,
+        rollover_enabled: inherited_rollover.fetch(category_id, false)
       )
     end
 
     # Remove old categories
     budget_categories.where(category_id: categories_to_remove).destroy_all if categories_to_remove.any?
+  end
+
+  # Rollover is a standing choice about an envelope, not about one month: a
+  # user who switches it on for Vacations expects it to keep going, and a
+  # month bootstrapped with the flag off would silently break the chain. New
+  # rows therefore inherit it from the last initialized budget of the same
+  # owner -- the same chain the carry itself walks. Turning it off on a given
+  # month still overrides it from there on.
+  def inherited_rollover_flags(category_ids)
+    return {} if category_ids.empty?
+
+    source = most_recent_initialized_budget
+    return {} unless source
+
+    source.budget_categories
+      .where(category_id: category_ids, rollover_enabled: true)
+      .each_with_object({}) { |bc, flags| flags[bc.category_id] = true }
   end
 
   def uncategorized_budget_category

@@ -76,8 +76,8 @@ en:
       rolled_over: "+%{amount} rolled over"
     budget_category_form:
       monthly_average: "%{amount}/m avg"
-      rollover_label: Roll over
-      rollover_title: Bring this category's unspent amount from last month into this one
+      rollover_label: Rollover
+      rollover_title: Keep this category's unspent money from one month to the next
       shared_placeholder: Shared
       shared_title: Leave empty to share parent's budget
     confirm_button:

@@ -585,6 +585,57 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert second_subcategory.budgeted?
   end
 
+  test "the carry survives a month the user merely opens" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    # The user does nothing but open the next month. Bootstrapping created
+    # its rows; without inheritance they'd default the toggle off and drop
+    # the carry on the floor.
+    second = initialized_budget(1.month.ago)
+    second_category = budget_category_for(second)
+    assert second_category.rollover_enabled?, "a new month inherits the standing rollover choice"
+
+    second_category.update!(budgeted_spending: 100)
+    recompute!
+
+    assert_equal 70, stored_rollover(second)
+  end
+
+  test "turning the toggle off overrides the inherited choice from there on" do
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100, rollover: false)
+    recompute!
+
+    assert_equal 0, stored_rollover(second)
+
+    third = initialized_budget(0.months.ago)
+    assert_not budget_category_for(third).rollover_enabled?,
+      "the later month inherits the off state, not the older on state"
+  end
+
+  test "one member's rollover choice does not leak into another's budget" do
+    @family.update!(personal_budgets: true)
+    josh = users(:josh)
+    ann = users(:ann)
+
+    josh_first = initialized_budget(2.months.ago, user: josh)
+    josh_first.budget_categories.find_by!(category: @category).update!(budgeted_spending: 100, rollover_enabled: true)
+
+    # Categories are family-wide, budgets are not: Ann's new month must not
+    # pick up Josh's choice.
+    ann_second = initialized_budget(1.month.ago, user: ann)
+    josh_second = initialized_budget(1.month.ago, user: josh)
+
+    assert josh_second.budget_categories.find_by!(category: @category).rollover_enabled?
+    assert_not ann_second.budget_categories.find_by!(category: @category).rollover_enabled?
+  end
+
   private
     def create_account(owner:, name: "Rollover Checking")
       @family.accounts.create!(
