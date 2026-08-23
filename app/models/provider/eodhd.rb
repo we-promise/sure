@@ -221,9 +221,9 @@ class Provider::Eodhd < Provider
         raise InvalidSecurityPriceError, "Unexpected response format from EOD API"
       end
 
-      # Prefer the stable exchange→currency map over the 24h search cache.
-      # Cache is only a fallback for exchanges not yet listed in EXCHANGE_CURRENCY.
-      # Also accept a raw EODHD exchange code as MIC (legacy Warsaw rows stored "WAR").
+      # Prefer the per-security currency cached from search (handles USD LSE
+      # listings, etc.), then fall back to the exchange default map — including
+      # legacy rows that still store the raw EODHD code as MIC (e.g. "WAR").
       currency = currency_for(exchange_operating_mic: exchange_operating_mic, symbol: symbol)
 
       parsed.map do |resp|
@@ -283,10 +283,11 @@ class Provider::Eodhd < Provider
 
     def currency_for(exchange_operating_mic:, symbol:)
       eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic]
+      cache_key = "eodhd:currency:#{symbol.to_s.upcase}:#{exchange_operating_mic}"
 
-      EXCHANGE_CURRENCY[eodhd_exchange] ||
-        EXCHANGE_CURRENCY[exchange_operating_mic] ||
-        Rails.cache.read("eodhd:currency:#{symbol.to_s.upcase}:#{exchange_operating_mic}")
+      Rails.cache.read(cache_key) ||
+        EXCHANGE_CURRENCY[eodhd_exchange] ||
+        EXCHANGE_CURRENCY[exchange_operating_mic]
     end
 
     # Cache key for tracking daily API usage

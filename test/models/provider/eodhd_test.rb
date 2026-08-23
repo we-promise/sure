@@ -169,4 +169,29 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert result.success?
     assert_equal "PLN", result.data.first.currency
   end
+
+  test "fetch_security_prices prefers cached per-security currency over exchange default" do
+    # LSE venue default is GBP, but this listing is USD-denominated in search results.
+    Rails.cache.write("eodhd:currency:BABA:XLON", "USD", expires_in: 24.hours)
+
+    eod_body = [ { "date" => "2026-08-21", "close" => 85.5 } ].to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(eod_body)
+
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.fetch_security_prices(
+      symbol: "BABA",
+      exchange_operating_mic: "XLON",
+      start_date: Date.new(2026, 8, 21),
+      end_date: Date.new(2026, 8, 21)
+    )
+
+    assert result.success?
+    assert_equal "USD", result.data.first.currency
+  end
 end
