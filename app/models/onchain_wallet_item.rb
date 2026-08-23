@@ -129,6 +129,32 @@ class OnchainWalletItem < ApplicationRecord
     onchain_wallet_accounts.for_wallet(chain, address).exists?
   end
 
+  # The accounts a viewer may see on this item, and how many addresses those
+  # cover. An item is surfaced on the accounts page as soon as ONE of its
+  # accounts is accessible, so a card rendering them all would show a
+  # partially-authorised member the names and balances of accounts nobody
+  # shared with them. Passing nil means "no restriction", which is what an
+  # admin gets.
+  #
+  # Both read the preloaded associations rather than opening new relations: the
+  # accounts page renders one card per item, and a scope here would cost a
+  # query per row.
+  def accounts_visible_to(allowed_account_ids)
+    return accounts.to_a if allowed_account_ids.nil?
+
+    accounts.select { |account| allowed_account_ids.include?(account.id) }
+  end
+
+  def address_count_for(visible_accounts)
+    visible_ids = visible_accounts.map(&:id).to_set
+
+    onchain_wallet_accounts
+      .select { |row| visible_ids.include?(row.account_provider&.account_id) }
+      .map { |row| [ row.chain, row.wallet_address ] }
+      .uniq
+      .size
+  end
+
   def institution_display_name
     institution_name.presence || name
   end
