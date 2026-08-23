@@ -187,4 +187,28 @@ class SecurityTest < ActiveSupport::TestCase
       sec.logo_url
     )
   end
+
+  test "cash_equivalent? is true for synthetic cash securities" do
+    account = accounts(:investment)
+
+    assert Security.cash_for(account).cash_equivalent?
+  end
+
+  test "cash_equivalent? is true for known money market tickers" do
+    sec = Security.create!(ticker: "SPAXX", name: "Some Sweep Fund")
+
+    assert sec.cash_equivalent?
+  end
+
+  test "cash_equivalent? is true when the name matches a money market pattern" do
+    sec = Security.create!(ticker: "ZZTEST", name: "Example Federal Money Market Fund")
+
+    assert sec.cash_equivalent?
+  end
+
+  test "cash_equivalent? is false for ordinary securities" do
+    sec = Security.create!(ticker: "ZZEQTY", name: "Example Total Stock Market ETF")
+
+    assert_not sec.cash_equivalent?
+  end
 end

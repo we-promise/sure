@@ -550,4 +550,49 @@ class AccountTest < ActiveSupport::TestCase
     outflow_transaction.reload
     assert_equal "standard", outflow_transaction.kind
   end
+
+  # Investment syncs fold money market / settlement funds into cash_balance, but
+  # providers also send those funds as holdings. Without this the holdings table
+  # renders both a "Brokerage cash" row and the fund itself.
+  test "cash_balance_outside_holdings excludes cash already listed as a money market holding" do
+    account = accounts(:investment)
+    sweep = Security.create!(ticker: "SPAXX", name: "Some Sweep Fund")
+
+    Holding.create!(
+      account: account, security: sweep, date: Date.current,
+      qty: 5000, price: 1, amount: account.cash_balance, currency: account.currency
+    )
+
+    assert_equal 0, account.cash_balance_outside_holdings
+  end
+
+  test "cash_balance_outside_holdings keeps cash with no matching holding" do
+    account = accounts(:investment)
+
+    assert_equal account.cash_balance, account.cash_balance_outside_holdings
+  end
+
+  test "cash_balance_outside_holdings returns only the uncovered remainder" do
+    account = accounts(:investment)
+    sweep = Security.create!(ticker: "SPAXX", name: "Some Sweep Fund")
+
+    Holding.create!(
+      account: account, security: sweep, date: Date.current,
+      qty: 2000, price: 1, amount: 2000, currency: account.currency
+    )
+
+    assert_equal account.cash_balance - 2000, account.cash_balance_outside_holdings
+  end
+
+  test "cash_balance_outside_holdings never goes negative" do
+    account = accounts(:investment)
+    sweep = Security.create!(ticker: "SPAXX", name: "Some Sweep Fund")
+
+    Holding.create!(
+      account: account, security: sweep, date: Date.current,
+      qty: 9999, price: 1, amount: account.cash_balance + 1000, currency: account.currency
+    )
+
+    assert_equal 0, account.cash_balance_outside_holdings
+  end
 end

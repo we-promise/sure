@@ -560,6 +560,19 @@ class Account < ApplicationRecord
     end
   end
 
+  # Cash that isn't already represented by one of this account's holdings.
+  #
+  # Investment syncs treat money market / settlement funds as cash when
+  # deriving cash_balance (see SimplefinAccount::Investments::BalanceCalculator),
+  # but the provider also sends those funds as holdings. Rendering both a
+  # "Brokerage cash" row and the fund itself lists the same dollars twice and
+  # pushes the weight column past 100%.
+  def cash_balance_outside_holdings
+    held_cash = current_holdings.sum { |h| h.security.cash_equivalent? ? h.amount.to_d : 0 }
+
+    [ cash_balance.to_d - held_cash, 0 ].max
+  end
+
   def latest_provider_holdings_snapshot_date
     holdings.where.not(account_provider_id: nil).maximum(:date)
   end

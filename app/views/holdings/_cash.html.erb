@@ -1,5 +1,8 @@
-<%# locals: (account:) %>
+<%# locals: (account:, amount: nil) %>
 
+<%# `amount` is the cash not already shown as a holding row; see
+    Account#cash_balance_outside_holdings. Falls back to the full cash balance. %>
+<% cash = (amount || account.cash_balance).to_d %>
 <% currency = Money::Currency.new(account.currency) %>
 
 <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4">
@@ -18,7 +21,7 @@
   </div>
 
   <div class="col-span-2 flex justify-end items-center gap-2">
-    <% cash_weight = account.balance.zero? ? 0 : account.cash_balance / account.balance * 100 %>
+    <% cash_weight = account.balance.zero? ? 0 : cash / account.balance * 100 %>
 
     <%= render "shared/progress_circle", progress: cash_weight %>
     <%= tag.p number_to_percentage(cash_weight, precision: 1) %>
@@ -29,7 +32,7 @@
   </div>
 
   <div class="col-span-2 text-right">
-    <%= tag.p format_money(account.cash_balance_money), class: "privacy-sensitive" %>
+    <%= tag.p format_money(Money.new(cash, account.currency)), class: "privacy-sensitive" %>
   </div>
 
   <div class="col-span-2 text-right">
