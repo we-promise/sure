@@ -11,7 +11,7 @@
 %>
 
 <tr data-category="category-<%= item[:category_id] %>"
-    class="text-secondary text-sm <%= show_border ? "table-divider" : "" %>">
+    class="text-secondary text-sm group/category-row <%= show_border ? "table-divider" : "" %>">
   <td colspan="2" class="py-3 px-4 lg:px-6 <%= is_sub ? "pl-7 lg:pl-9" : "" %>">
     <%
       row_content = capture do
@@ -44,7 +44,7 @@
         (see #3093 investigation). %>
     <% if clickable %>
       <%= link_to row_content, transactions_href,
-            class: "flex items-center gap-2 group/category-row",
+            class: "flex items-center gap-2",
             data: { turbo_frame: "_top", turbo_prefetch: false } %>
     <% else %>
       <%= tag.div row_content, class: "flex items-center gap-2" %>
