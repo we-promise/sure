@@ -640,6 +640,37 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert_equal 100, budget_category_for(third).available_to_spend
   end
 
+  test "the chain is locked before anything is written, and per chain" do
+    @family.update!(personal_budgets: true)
+    josh = users(:josh)
+
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+
+    household_sql = capture_sql { recompute! }
+
+    lock = household_sql.index { |sql| sql.include?("pg_advisory_xact_lock") }
+    write = household_sql.index { |sql| sql.include?("INSERT INTO \"budget_categories\"") }
+
+    assert lock, "the chain must be locked before its derived carry is written"
+    assert write, "expected this recompute to write"
+    assert lock < write, "the lock has to be taken before the read-then-write, not after"
+
+    # A different chain must not queue behind this one: the key names the
+    # (family, owner) pair, so household and personal recomputes are free to
+    # run at the same time.
+    josh_first = initialized_budget(2.months.ago, user: josh)
+    josh_first.budget_categories.find_by!(category: @category).update!(budgeted_spending: 100, rollover_enabled: true)
+    josh_sql = capture_sql { recompute!(user: josh) }
+
+    assert_not_equal household_sql[lock],
+                     josh_sql.find { |sql| sql.include?("pg_advisory_xact_lock") },
+                     "each chain gets its own lock key"
+  end
+
   test "one member's rollover choice does not leak into another's budget" do
     @family.update!(personal_budgets: true)
     josh = users(:josh)
@@ -658,6 +689,18 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
   end
 
   private
+    def capture_sql
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*args|
+        payload = args.last
+        statements << payload[:sql] unless payload[:name].to_s =~ /SCHEMA|TRANSACTION/
+      end
+      yield
+      statements
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
     def create_account(owner:, name: "Rollover Checking")
       @family.accounts.create!(
         accountable: Depository.new,

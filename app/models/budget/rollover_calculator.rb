@@ -8,79 +8,113 @@
 # so it is stored instead and recomputed in one forward pass whenever a
 # budget is bootstrapped or an allocation changes.
 class Budget::RolloverCalculator
+  # Arbitrary namespace so the advisory lock below cannot collide with any
+  # other pg_advisory_lock user in the application.
+  LOCK_NAMESPACE = 1_920_231_276
+
   def initialize(family:, user:)
     @family = family
     @user = user
   end
 
+  # The read-then-write below is not atomic on its own: two overlapping
+  # recomputes for the same chain can both load it, and the one that started
+  # first can land its now-stale carry on top of the other's. `update_only`
+  # keeps that from touching allocations, but rolled_over_amount is the very
+  # column this writes, so nothing else protects it. A transaction-scoped
+  # advisory lock keyed on the chain serializes them.
+  #
+  # Taken after the cheap guard, so families that never enabled rollover pay
+  # one query and never contend, and re-read under the lock because the chain
+  # may have changed while we waited for it.
   def recompute!
-    from = first_relevant_budget_date
-    return if from.nil?
+    return if first_relevant_budget_date.nil?
 
-    updates = []
-    now = Time.current
-
-    # category_id => [amount, currency]. A budget freezes its currency when
-    # it is created, so a family that switches currency leaves a break in the
-    # chain: the amounts on either side are not the same unit. Carrying the
-    # raw number across would silently reinterpret it, so the carry stops
-    # there and the next month starts from zero.
-    #
-    # A category deleted mid-chain takes its budget_categories rows with it
-    # (Category has_many :budget_categories, dependent: :destroy), so it
-    # simply drops out of `carry` — its history is gone, which is what
-    # deleting a category means.
-    carry = {}
-
-    chain(from).each do |budget|
-      budget.income_statement_accounts = household_account_scope if user.nil?
-
-      next_carry = {}
-      ring_fenced_children = ring_fenced_children_by_parent(budget)
-
-      budget.budget_categories.each do |budget_category|
-        # Subcategories that share their parent's budget have no allocation
-        # of their own, so there is nothing for them to carry forward.
-        next if budget_category.inherits_parent_budget?
-
-        incoming = incoming_carry(carry, budget_category)
-
-        if budget_category[:rolled_over_amount] != incoming
-          updates << budget_category.attributes.merge(
-            "rolled_over_amount" => incoming,
-            "updated_at" => now
-          )
-        end
-
-        # Switching the toggle off has to stop the money in both directions.
-        # Gating only what a month receives would let an opted-out month hand
-        # its whole allocation to the next one that opts back in, so the
-        # surplus a user meant to forfeit would reappear a month later.
-        outgoing = if budget_category.rollover_enabled?
-          children = ring_fenced_children[budget_category.category_id] || []
-          leftover_for(budget, budget_category, incoming, children)
-        else
-          0
-        end
-
-        next_carry[budget_category.category_id] = [ outgoing, budget_category.currency ]
-      end
-
-      carry = next_carry
-    end
-
-    # The full attribute set is what makes the INSERT branch legal
-    # (budget_id, category_id and currency are NOT NULL), but only the two
-    # rollover columns may be written on conflict: a concurrent request that
-    # changed an allocation between our read and this write must not have it
-    # clobbered by the stale value we loaded.
-    if updates.any?
-      BudgetCategory.upsert_all(updates, unique_by: :id, update_only: %w[rolled_over_amount updated_at])
+    BudgetCategory.transaction do
+      lock_chain!
+      from = first_relevant_budget_date
+      recompute_chain!(from) if from
     end
   end
 
   private
     attr_reader :family, :user
+
+    def lock_chain!
+      BudgetCategory.connection.execute(
+        BudgetCategory.sanitize_sql_array(
+          [ "SELECT pg_advisory_xact_lock(?, hashtext(?))", LOCK_NAMESPACE, chain_key ]
+        )
+      )
+    end
+
+    def chain_key
+      "budget_rollover:#{family.id}:#{user&.id}"
+    end
+
+    def recompute_chain!(from)
+      updates = []
+      now = Time.current
+
+      # category_id => [amount, currency]. A budget freezes its currency when
+      # it is created, so a family that switches currency leaves a break in the
+      # chain: the amounts on either side are not the same unit. Carrying the
+      # raw number across would silently reinterpret it, so the carry stops
+      # there and the next month starts from zero.
+      #
+      # A category deleted mid-chain takes its budget_categories rows with it
+      # (Category has_many :budget_categories, dependent: :destroy), so it
+      # simply drops out of `carry` — its history is gone, which is what
+      # deleting a category means.
+      carry = {}
+
+      chain(from).each do |budget|
+        budget.income_statement_accounts = household_account_scope if user.nil?
+
+        next_carry = {}
+        ring_fenced_children = ring_fenced_children_by_parent(budget)
+
+        budget.budget_categories.each do |budget_category|
+          # Subcategories that share their parent's budget have no allocation
+          # of their own, so there is nothing for them to carry forward.
+          next if budget_category.inherits_parent_budget?
+
+          incoming = incoming_carry(carry, budget_category)
+
+          if budget_category[:rolled_over_amount] != incoming
+            updates << budget_category.attributes.merge(
+              "rolled_over_amount" => incoming,
+              "updated_at" => now
+            )
+          end
+
+          # Switching the toggle off has to stop the money in both directions.
+          # Gating only what a month receives would let an opted-out month hand
+          # its whole allocation to the next one that opts back in, so the
+          # surplus a user meant to forfeit would reappear a month later.
+          outgoing = if budget_category.rollover_enabled?
+            children = ring_fenced_children[budget_category.category_id] || []
+            leftover_for(budget, budget_category, incoming, children)
+          else
+            0
+          end
+
+          next_carry[budget_category.category_id] = [ outgoing, budget_category.currency ]
+        end
+
+        carry = next_carry
+      end
+
+      # The full attribute set is what makes the INSERT branch legal
+      # (budget_id, category_id and currency are NOT NULL), but only the two
+      # rollover columns may be written on conflict: a concurrent request that
+      # changed an allocation between our read and this write must not have it
+      # clobbered by the stale value we loaded.
+      if updates.any?
+        BudgetCategory.upsert_all(updates, unique_by: :id, update_only: %w[rolled_over_amount updated_at])
+      end
+    end
+
 
     # Earliest month this chain has anything to say about: rollover switched
     # on, or an amount left behind by a toggle that was switched off and
