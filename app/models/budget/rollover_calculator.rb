@@ -52,11 +52,18 @@ class Budget::RolloverCalculator
           )
         end
 
-        children = ring_fenced_children[budget_category.category_id] || []
-        next_carry[budget_category.category_id] = [
-          leftover_for(budget, budget_category, incoming, children),
-          budget_category.currency
-        ]
+        # Switching the toggle off has to stop the money in both directions.
+        # Gating only what a month receives would let an opted-out month hand
+        # its whole allocation to the next one that opts back in, so the
+        # surplus a user meant to forfeit would reappear a month later.
+        outgoing = if budget_category.rollover_enabled?
+          children = ring_fenced_children[budget_category.category_id] || []
+          leftover_for(budget, budget_category, incoming, children)
+        else
+          0
+        end
+
+        next_carry[budget_category.category_id] = [ outgoing, budget_category.currency ]
       end
 
       carry = next_carry

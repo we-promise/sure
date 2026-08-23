@@ -619,6 +619,27 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
       "the later month inherits the off state, not the older on state"
   end
 
+  test "opting out of a month forfeits its surplus even if a later month opts back in" do
+    first = initialized_budget(3.months.ago)
+    allocate(first, 100)
+    spend(30, budget: first)
+
+    # The user deliberately switches the envelope off for this month.
+    second = initialized_budget(2.months.ago)
+    allocate(second, 100, rollover: false)
+
+    # ...and switches it back on the month after. The 100 they gave up must
+    # not come back: an opted-out month neither receives nor sends.
+    third = initialized_budget(1.month.ago)
+    allocate(third, 100)
+
+    recompute!
+
+    assert_equal 0, stored_rollover(second)
+    assert_equal 0, stored_rollover(third)
+    assert_equal 100, budget_category_for(third).available_to_spend
+  end
+
   test "one member's rollover choice does not leak into another's budget" do
     @family.update!(personal_budgets: true)
     josh = users(:josh)
