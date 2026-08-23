@@ -682,6 +682,8 @@ components:
           type: boolean
         inherits_parent_budget:
           type: boolean
+        rollover_enabled:
+          type: boolean
         budgeted_spending:
           type: string
         budgeted_spending_cents:
@@ -741,6 +743,8 @@ components:
           type: boolean
         inherits_parent_budget:
           type: boolean
+        rollover_enabled:
+          type: boolean
         budgeted_spending:
           type: string
         budgeted_spending_cents:
@@ -748,6 +752,10 @@ components:
         display_budgeted_spending:
           type: string
         display_budgeted_spending_cents:
+          type: integer
+        rolled_over_amount:
+          type: string
+        rolled_over_amount_cents:
           type: integer
         actual_spending:
           type: string

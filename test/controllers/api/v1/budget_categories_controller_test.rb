@@ -62,6 +62,12 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_not budget_category.key?("actual_spending_cents")
     assert_not budget_category.key?("available_to_spend")
     assert_not budget_category.key?("available_to_spend_cents")
+
+    # The toggle is stored state, so it travels with the summary; the carry
+    # is a derived amount and stays with the others.
+    assert_equal false, budget_category["rollover_enabled"]
+    assert_not budget_category.key?("rolled_over_amount")
+    assert_not budget_category.key?("rolled_over_amount_cents")
   end
 
   test "shows a budget category" do
@@ -75,6 +81,37 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_kind_of Integer, response_data["budgeted_spending_cents"]
     assert_kind_of Integer, response_data["actual_spending_cents"]
     assert_kind_of Integer, response_data["available_to_spend_cents"]
+  end
+
+  test "show exposes the carry that makes available_to_spend exceed the allocation" do
+    previous_budget = @family.budgets.create!(
+      start_date: 6.months.ago.beginning_of_month.to_date,
+      end_date: 6.months.ago.end_of_month.to_date,
+      budgeted_spending: 3000,
+      expected_income: 5000,
+      currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: @category,
+      budgeted_spending: 200,
+      currency: "USD",
+      rollover_enabled: true
+    )
+    @budget_category.update!(rollover_enabled: true)
+    Budget::RolloverCalculator.new(family: @family, user: nil).recompute!
+
+    get api_v1_budget_category_url(@budget_category), headers: api_headers(@api_key)
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+
+    assert_equal true, response_data["rollover_enabled"]
+    assert_equal 20_000, response_data["rolled_over_amount_cents"]
+
+    # Without the field a client sees 700 available against a 500 allocation
+    # and has nothing to account for the difference.
+    assert_equal 50_000, response_data["budgeted_spending_cents"]
+    assert_equal 70_000, response_data["available_to_spend_cents"]
   end
 
   test "returns not found for another family's budget category" do
