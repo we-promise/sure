@@ -40,7 +40,8 @@ class Provider::Eodhd < Provider
     "XBOM" => "BSE",
     "XNSE" => "NSE",
     "XWAR" => "WAR",
-    # Legacy: search previously persisted the raw EODHD code when unmapped.
+    # Still accept legacy rows / inputs that store the raw EODHD code as MIC.
+    # Persistence always canonicalizes WAR → XWAR via Security::MIC_ALIASES.
     "WAR" => "WAR",
     "EUFUND" => "EUFUND"
   }.freeze
@@ -282,10 +283,17 @@ class Provider::Eodhd < Provider
     end
 
     def currency_for(exchange_operating_mic:, symbol:)
-      eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic]
-      cache_key = "eodhd:currency:#{symbol.to_s.upcase}:#{exchange_operating_mic}"
+      # Accept legacy raw EODHD codes (e.g. WAR) and ISO MICs (XWAR).
+      # Use ::Security — bare Security here is Provider::SecurityConcept::Security.
+      eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic] ||
+        MIC_TO_EODHD_EXCHANGE[::Security.canonical_exchange_operating_mic(exchange_operating_mic)]
+      symbol_key = symbol.to_s.upcase
+      cache_keys = [
+        "eodhd:currency:#{symbol_key}:#{exchange_operating_mic}",
+        "eodhd:currency:#{symbol_key}:#{::Security.canonical_exchange_operating_mic(exchange_operating_mic)}"
+      ].uniq
 
-      Rails.cache.read(cache_key) ||
+      cache_keys.lazy.map { |key| Rails.cache.read(key) }.find(&:present?) ||
         EXCHANGE_CURRENCY[eodhd_exchange] ||
         EXCHANGE_CURRENCY[exchange_operating_mic]
     end

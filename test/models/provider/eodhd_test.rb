@@ -172,7 +172,8 @@ class Provider::EodhdTest < ActiveSupport::TestCase
 
   test "fetch_security_prices prefers cached per-security currency over exchange default" do
     # LSE venue default is GBP, but this listing is USD-denominated in search results.
-    Rails.cache.write("eodhd:currency:BABA:XLON", "USD", expires_in: 24.hours)
+    # Test env uses null_store, so stub the cache read the provider would see after search.
+    Rails.cache.stubs(:read).with("eodhd:currency:BABA:XLON").returns("USD")
 
     eod_body = [ { "date" => "2026-08-21", "close" => 85.5 } ].to_json
 
