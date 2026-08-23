@@ -242,11 +242,16 @@ class OnchainWalletAccount::Processor
           currency: currency,
           date: date,
           # Named here because the shared helper says "Buy 0.5 shares of
-          # CRYPTO:BTC" — "shares" is not a thing a wallet holds.
-          name: trade_name(quantity),
+          # CRYPTO:BTC" — "shares" is not a thing a wallet holds. The wording is
+          # the same one an unpriced movement already carries, so a transfer
+          # does not change its name the day a price turns up for it.
+          name: movement_name(quantity),
           external_id: external_id,
           source: SOURCE,
-          activity_label: quantity.positive? ? "Buy" : "Sell"
+          # A trade is the shape this ledger needs to carry quantity and cost
+          # basis, but the event is a transfer: coins arriving at an address are
+          # not a purchase, and nothing here knows whether they were ever bought.
+          activity_label: "Transfer"
         )
       end
     end
@@ -309,10 +314,6 @@ class OnchainWalletAccount::Processor
       end
 
       true
-    end
-
-    def trade_name(quantity)
-      translated_name("onchain_wallet_item.trade.#{quantity.positive? ? "buy" : "sell"}", quantity)
     end
 
     def movement_name(quantity)

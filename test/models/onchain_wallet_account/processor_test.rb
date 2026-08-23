@@ -87,7 +87,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, @account.reload.balance
   end
 
-  test "materializes an inbound movement as a Buy trade when that day's price is known" do
+  test "materializes an inbound movement as a priced transfer when that day's price is known" do
     date = 3.days.ago.to_date
     price_asset_at(date, 50)
     store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
@@ -99,14 +99,16 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.5"), entry.entryable.qty
     assert_equal 50, entry.entryable.price
     assert_equal(-75, entry.amount)
-    assert_equal "Buy", entry.entryable.investment_activity_label
+    # A trade is the shape this ledger needs to carry quantity and cost basis,
+    # but coins arriving at an address were not bought here — and the name is
+    # the one the movement already had before a price existed for it, so it does
+    # not change the day one turns up.
+    assert_equal "Transfer", entry.entryable.investment_activity_label
     assert_not entry.excluded
-    # The shared helper would call this "Buy 1.5 shares of CRYPTO:FAKE"; a wallet
-    # does not hold shares.
-    assert_equal "Buy 1.5 FAKE", entry.name
+    assert_equal "Received 1.5 FAKE", entry.name
   end
 
-  test "materializes an outbound movement as a Sell trade" do
+  test "materializes an outbound movement as a priced transfer out" do
     date = 3.days.ago.to_date
     price_asset_at(date, 50)
     store_movements(fake_movement(external_id: "tx2", amount: "-1", timestamp: date))
@@ -116,8 +118,8 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     entry = @account.entries.find_by(external_id: "onchain_#{@onchain_account.id}_tx2")
     assert_equal(-1, entry.entryable.qty)
     assert_equal 50, entry.amount
-    assert_equal "Sell", entry.entryable.investment_activity_label
-    assert_equal "Sell 1.0 FAKE", entry.name
+    assert_equal "Transfer", entry.entryable.investment_activity_label
+    assert_equal "Sent 1.0 FAKE", entry.name
   end
 
   test "materializes a display-only excluded entry when that day's price is unknown" do
