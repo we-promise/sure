@@ -128,6 +128,19 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
     assert_not OnchainWalletAccount.exists?(onchain_account.id)
   end
 
+  test "a linked account takes its icon from the asset it tracks" do
+    Setting.brand_fetch_client_id = "test-client"
+    onchain_account = create_onchain_wallet_account(item: @item)
+    account = accounts(:investment)
+    onchain_account.ensure_account_provider!(account)
+
+    # There is no institution behind a wallet and nothing attaches a file, so
+    # without this the accounts page shows a tracked asset with no icon at all.
+    assert_includes account.reload.logo_url.to_s, "/crypto/#{onchain_account.symbol}/"
+  ensure
+    Setting.brand_fetch_client_id = nil
+  end
+
   test "a native row and token rows coexist for one address" do
     create_onchain_wallet_account(item: @item)
     create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))
