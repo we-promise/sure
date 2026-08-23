@@ -1016,7 +1016,11 @@ end
     # appears in the generated SQL -- match the COUNT query it produces instead.
     assert_empty queries.select { |q| q =~ /SELECT COUNT/i && q =~ /category_id.*IS NULL/i },
       "second request with unchanged data should reuse the cached uncategorized count"
-    assert_empty queries.grep(/recurring_transactions/i),
+    # Building the cache key itself still runs small COUNT/MAX queries against
+    # recurring_transactions (Family#recurring_transactions_version and
+    # #recurring_transaction_merchants_version), so match the projection query
+    # the cached block itself would run instead of the whole table name.
+    assert_empty queries.grep(/next_expected_date/i),
       "second request with unchanged data should reuse the cached projected recurring lookup"
   ensure
     Rails.cache = original_cache
@@ -1146,6 +1150,30 @@ end
     get transactions_url
     assert_match(/Netflix Renamed/, response.body,
       "renaming the merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a provider merchant update immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # Recurring detection copies transaction.merchant_id, which can point at a
+    # shared ProviderMerchant (not just a family-owned FamilyMerchant) -- e.g.
+    # ProviderMerchant::Enhancer updates these after the recurring row exists.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Merchant Original", source: "enable_banking")
+    recurring = recurring_transactions(:netflix_subscription)
+    recurring.update!(merchant: provider_merchant, name: nil)
+
+    get transactions_url
+    assert_match(/Provider Merchant Original/, response.body,
+      "the recurring transaction should render with the provider merchant's original name")
+
+    provider_merchant.update!(name: "Provider Merchant Renamed")
+
+    get transactions_url
+    assert_match(/Provider Merchant Renamed/, response.body,
+      "updating the provider merchant must not leave a stale cached projected-recurring list")
   ensure
     Rails.cache = original_cache
   end

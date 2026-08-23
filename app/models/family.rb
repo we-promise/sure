@@ -523,11 +523,22 @@ class Family < ApplicationRecord
     "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
   end
 
-  # Used for invalidating caches that render merchant name/logo (e.g. the
-  # transactions index's projected recurring list), since editing or
-  # deleting a FamilyMerchant doesn't touch `recurring_transactions`.
-  def merchants_version
-    "#{merchants.count}-#{merchants.maximum(:updated_at)&.to_f}"
+  # Used for invalidating caches that render merchant name/logo for recurring
+  # transactions (e.g. the transactions index's projected recurring list).
+  # Recurring detection copies `transaction.merchant_id` (see
+  # RecurringTransaction::Identifier), which can point at either a
+  # family-owned FamilyMerchant or a shared ProviderMerchant -- editing either
+  # (e.g. a manual rename, or ProviderMerchant::Enhancer updating a shared
+  # provider merchant's name/logo) doesn't touch `recurring_transactions`.
+  # Scoped to only the merchants actually referenced by this family's
+  # recurring transactions, rather than all family merchants, so unrelated
+  # merchant edits don't bust the cache unnecessarily.
+  def recurring_transaction_merchants_version
+    merchant_ids = recurring_transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
+    return "0-" if merchant_ids.empty?
+
+    scope = Merchant.where(id: merchant_ids)
+    "#{scope.count}-#{scope.maximum(:updated_at)&.to_f}"
   end
 
   def self_hoster?

@@ -467,13 +467,14 @@ class TransactionsController < ApplicationController
     # date-dependent and would otherwise return a stale window on a cache hit
     # from an earlier day.
     #
-    # Includes Family#merchants_version because the cached records are
-    # preloaded with :merchant and rendered with its name/logo, but editing
-    # or deleting a FamilyMerchant doesn't touch `recurring_transactions`.
+    # Includes Family#recurring_transaction_merchants_version because the
+    # cached records are preloaded with :merchant and rendered with its
+    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
+    # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
-      "transactions_projected_recurring/v4/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
-        "#{Current.family.merchants_version}/#{Current.account_share_version}"
+        "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
 
     # The "Mark as Recurring" block is only ever rendered under these same
