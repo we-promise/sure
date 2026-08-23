@@ -87,8 +87,7 @@ class SessionsController < ApplicationController
           flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
           redirect_to root_path
         else
-          flash.now[:alert] = t(".account_deactivated")
-          render :new, status: :unprocessable_entity
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
         end
       end
     else

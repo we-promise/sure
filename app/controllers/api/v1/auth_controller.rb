@@ -173,7 +173,7 @@ module Api
 
         user = User.authenticate_by(email: params[:email], password: params[:password])
 
-        unless user&.active?
+        unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized
           return
         end

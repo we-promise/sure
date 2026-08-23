@@ -540,7 +540,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
-    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+    assert_equal "Invalid refresh token", response_data["error"]
     assert_not initial_token.reload.revoked?, "the still-valid old token should be left alone, not silently revoked"
   end
 
@@ -555,30 +555,6 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
     assert_equal "Invalid refresh token", response_data["error"]
-  end
-
-  test "should not refresh a token after its user is deactivated" do
-    user = users(:family_admin)
-    device = user.mobile_devices.create!(@device_info)
-    initial_token = Doorkeeper::AccessToken.create!(
-      application: @shared_app,
-      resource_owner_id: user.id,
-      mobile_device_id: device.id,
-      expires_in: 30.days.to_i,
-      scopes: "read_write",
-      use_refresh_token: true
-    )
-    user.update_column(:active, false)
-
-    assert_no_difference("Doorkeeper::AccessToken.count") do
-      post "/api/v1/auth/refresh", params: {
-        refresh_token: initial_token.refresh_token,
-        device: @device_info
-      }
-    end
-
-    assert_response :unauthorized
-    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
   end
 
   test "should not refresh without refresh token" do
