@@ -79,10 +79,13 @@ pub fn base_candidates(normalized: &str) -> Vec<String> {
         .map(|depth| format!("{origin}{}", segments[..depth].iter().map(|s| format!("/{s}")).collect::<String>()))
         .collect();
     if candidates.len() > MAX_BASE_CANDIDATES {
-        // Drop from the middle: the origin is the likeliest answer of them all.
-        let origin_only = candidates.pop().expect("candidates is never empty");
-        candidates.truncate(MAX_BASE_CANDIDATES - 1);
-        candidates.push(origin_only);
+        // Keep the address as typed, then the SHALLOWEST bases. A mount point is
+        // shallow (`/sure`) and a pasted deep link is not, so dropping from the
+        // deep middle keeps both readings; dropping from the shallow end would
+        // discard the mount the link sits under.
+        let shallowest = candidates.split_off(candidates.len() - (MAX_BASE_CANDIDATES - 1));
+        candidates.truncate(1);
+        candidates.extend(shallowest);
     }
     candidates
 }

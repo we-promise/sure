@@ -82,6 +82,20 @@ fn caps_candidates_but_always_keeps_the_origin() {
     assert_eq!(candidates.last().unwrap(), "https://s.example.com");
 }
 
+// The cap drops from the deep middle, never from the shallow end: a mount point
+// is shallow, so a deep link pasted from a mounted server must still probe it.
+#[test]
+fn capping_keeps_the_shallow_mount_a_deep_link_sits_under() {
+    let candidates = base_candidates("https://s.example.com/sure/transactions/123/edit");
+    assert_eq!(candidates.len(), MAX_BASE_CANDIDATES);
+    assert!(
+        candidates.contains(&"https://s.example.com/sure".to_string()),
+        "the mount base was dropped: {candidates:?}"
+    );
+    assert_eq!(candidates[0], "https://s.example.com/sure/transactions/123/edit");
+    assert_eq!(candidates.last().unwrap(), "https://s.example.com");
+}
+
 #[test]
 fn only_200_is_healthy() {
     assert!(is_healthy_status(200));
