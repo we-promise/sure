@@ -32,8 +32,10 @@ pub struct ServerEntry {
     pub label: String,
 }
 
-/// How many bases `check_server` will probe; each one costs an HTTP round trip.
-pub const MAX_BASE_CANDIDATES: usize = 4;
+/// Deepest mount path discovery supports, in path segments — a proxy mount is
+/// one or two deep in practice. Bounds the probing when the address is a link
+/// pasted from inside the app; a base typed exactly is probed at any depth.
+pub const MAX_MOUNT_DEPTH: usize = 3;
 
 fn split_base(input: &str) -> Result<(String, String), ServerError> {
     let trimmed = input.trim();
@@ -69,24 +71,25 @@ pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
 /// Bases to try for a normalized URL, most specific first and always ending at
 /// the origin. A prefix-mounted server and a pasted deep link are the same
 /// shape, so the server decides: the first candidate whose `/up` answers wins.
+///
+/// The address as typed comes first, so a base entered exactly is probed however
+/// deep it is. The rest are every mount depth up to `MAX_MOUNT_DEPTH`, which is
+/// what makes the walk finite for a link pasted from inside the app.
 pub fn base_candidates(normalized: &str) -> Vec<String> {
     let Ok((origin, path)) = split_base(normalized) else {
         return vec![normalized.to_string()];
     };
     let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
-    let mut candidates: Vec<String> = (0..=segments.len())
-        .rev()
-        .map(|depth| format!("{origin}{}", segments[..depth].iter().map(|s| format!("/{s}")).collect::<String>()))
-        .collect();
-    if candidates.len() > MAX_BASE_CANDIDATES {
-        // Keep the address as typed, then the SHALLOWEST bases. A mount point is
-        // shallow (`/sure`) and a pasted deep link is not, so dropping from the
-        // deep middle keeps both readings; dropping from the shallow end would
-        // discard the mount the link sits under.
-        let shallowest = candidates.split_off(candidates.len() - (MAX_BASE_CANDIDATES - 1));
-        candidates.truncate(1);
-        candidates.extend(shallowest);
-    }
+    let base_at = |depth: usize| {
+        format!("{origin}{}", segments[..depth].iter().map(|s| format!("/{s}")).collect::<String>())
+    };
+    let mut candidates = vec![base_at(segments.len())];
+    candidates.extend(
+        (0..=segments.len().min(MAX_MOUNT_DEPTH))
+            .rev()
+            .filter(|&depth| depth != segments.len()) // already first
+            .map(base_at),
+    );
     candidates
 }
 
