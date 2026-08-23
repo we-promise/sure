@@ -1,8 +1,6 @@
 class Merchant < ApplicationRecord
   TYPES = %w[FamilyMerchant ProviderMerchant].freeze
 
-  NO_MERCHANT_COLOR = "#737373"
-
   # Merchant name key for i18n
   NO_MERCHANT_NAME_KEY = "models.merchant.no_merchant"
 
@@ -22,7 +20,7 @@ class Merchant < ApplicationRecord
 
   class << self
     def no_merchant
-      new(name: I18n.t(NO_MERCHANT_NAME_KEY), color: NO_MERCHANT_COLOR)
+      new(name: I18n.t(NO_MERCHANT_NAME_KEY))
     end
 
     # Helper to get the localized name for "No merchant"
