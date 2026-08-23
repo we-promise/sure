@@ -62,12 +62,15 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     refute_equal "funds_movement", inflow_entry.entryable.kind
 
     # ...and matching did not stop at the skip: the non-conflicting candidate was
-    # still created and both its entries marked.
+    # still created, pending confirmation (auto-matches no longer touch `kind`
+    # until Transfer#confirm! is called).
     good_in.reload
     good_out.reload
-    assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
-    assert_equal "funds_movement", good_in.entryable.kind
-    assert_equal "cc_payment", good_out.entryable.kind
+    good_transfer = Transfer.find_by(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
+    assert good_transfer
+    assert good_transfer.pending?
+    refute_equal "funds_movement", good_in.entryable.kind
+    refute_equal "cc_payment", good_out.entryable.kind
   end
 
   test "a :taken on one column from a different pairing is skipped, not marked" do
