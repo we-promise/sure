@@ -5,6 +5,8 @@ set -euo pipefail
 export ENV=""
 export BASH_ENV=""
 
+CODEX_ENV_MARKER="tmp/codex-env"
+
 echo "Installing PostgreSQL and dependencies..."
 apt-get update -qq
 apt-get install -yqq wget unzip libyaml-dev build-essential curl git libssl-dev libreadline-dev zlib1g-dev xz-utils ca-certificates libpq-dev vim redis-server postgresql libvips libvips-dev ffmpeg
@@ -50,6 +52,9 @@ if [ "$CURRENT_RUBY" != "$RUBY_VERSION" ]; then
   # Ignore Gemfile changes for this session
   git update-index --assume-unchanged Gemfile Gemfile.lock
 fi
+
+mkdir -p "$(dirname "$CODEX_ENV_MARKER")"
+touch "$CODEX_ENV_MARKER"
 
 echo "Environment setup completed successfully!"
 echo "PostgreSQL and Redis are now running."
