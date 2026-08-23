@@ -39,6 +39,9 @@ class Provider::Eodhd < Provider
     "XKRX" => "KS",
     "XBOM" => "BSE",
     "XNSE" => "NSE",
+    "XWAR" => "WAR",
+    # Legacy: search previously persisted the raw EODHD code when unmapped.
+    "WAR" => "WAR",
     "EUFUND" => "EUFUND"
   }.freeze
 
@@ -49,7 +52,7 @@ class Provider::Eodhd < Provider
     "TSE" => "XTKS", "MI" => "XMIL", "MC" => "XMAD",
     "OL" => "XOSL", "HE" => "XHEL", "CO" => "XCSE",
     "ST" => "XSTO", "KS" => "XKRX", "BSE" => "XBOM",
-    "NSE" => "XNSE"
+    "NSE" => "XNSE", "WAR" => "XWAR"
   }.freeze
 
   EODHD_COUNTRY_TO_CODE = {
@@ -58,7 +61,7 @@ class Provider::Eodhd < Provider
     "Japan" => "JP", "Australia" => "AU", "Hong Kong" => "HK",
     "Italy" => "IT", "Spain" => "ES", "Norway" => "NO",
     "Finland" => "FI", "Denmark" => "DK", "Sweden" => "SE",
-    "South Korea" => "KR", "India" => "IN"
+    "South Korea" => "KR", "India" => "IN", "Poland" => "PL"
   }.freeze
 
   EXCHANGE_CURRENCY = {
@@ -68,6 +71,7 @@ class Provider::Eodhd < Provider
     "OL" => "NOK", "HE" => "EUR", "CO" => "DKK",
     "ST" => "SEK", "KS" => "KRW", "BSE" => "INR",
     "NSE" => "INR",
+    "WAR" => "PLN",
     "EUFUND" => "EUR"
   }.freeze
 
@@ -217,10 +221,10 @@ class Provider::Eodhd < Provider
         raise InvalidSecurityPriceError, "Unexpected response format from EOD API"
       end
 
-      # Prefer cached currency from search results; fall back to hardcoded map
-      cache_key = "eodhd:currency:#{symbol.upcase}:#{exchange_operating_mic}"
-      eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic]
-      currency = Rails.cache.read(cache_key) || EXCHANGE_CURRENCY[eodhd_exchange]
+      # Prefer the stable exchange→currency map over the 24h search cache.
+      # Cache is only a fallback for exchanges not yet listed in EXCHANGE_CURRENCY.
+      # Also accept a raw EODHD exchange code as MIC (legacy Warsaw rows stored "WAR").
+      currency = currency_for(exchange_operating_mic: exchange_operating_mic, symbol: symbol)
 
       parsed.map do |resp|
         price = resp.dig("close")
@@ -275,6 +279,14 @@ class Provider::Eodhd < Provider
       else
         "#{symbol}.US"
       end
+    end
+
+    def currency_for(exchange_operating_mic:, symbol:)
+      eodhd_exchange = MIC_TO_EODHD_EXCHANGE[exchange_operating_mic]
+
+      EXCHANGE_CURRENCY[eodhd_exchange] ||
+        EXCHANGE_CURRENCY[exchange_operating_mic] ||
+        Rails.cache.read("eodhd:currency:#{symbol.to_s.upcase}:#{exchange_operating_mic}")
     end
 
     # Cache key for tracking daily API usage

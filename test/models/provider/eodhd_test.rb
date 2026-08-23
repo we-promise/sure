@@ -79,4 +79,94 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     ticker = @provider.send(:eodhd_symbol, "AAPL", "XNYS")
     assert_equal "AAPL.US", ticker
   end
+
+  test "maps Warsaw exchange WAR to ISO MIC XWAR with PLN" do
+    warsaw_body = [
+      {
+        "Code" => "KTY",
+        "Name" => "Grupa Kety SA",
+        "Exchange" => "WAR",
+        "Country" => "Poland",
+        "Currency" => "PLN"
+      }
+    ].to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(warsaw_body)
+
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.search_securities("KTY")
+
+    assert result.success?
+    security = result.data.first
+    assert_equal "KTY", security.symbol
+    assert_equal "XWAR", security.exchange_operating_mic
+    assert_equal "PL", security.country_code
+    assert_equal "PLN", security.currency
+  end
+
+  test "eodhd_symbol builds Warsaw ticker from XWAR MIC" do
+    assert_equal "KTY.WAR", @provider.send(:eodhd_symbol, "KTY", "XWAR")
+  end
+
+  test "eodhd_symbol builds Warsaw ticker from legacy WAR MIC" do
+    assert_equal "KTY.WAR", @provider.send(:eodhd_symbol, "KTY", "WAR")
+  end
+
+  test "fetch_security_prices uses PLN for XWAR without currency cache" do
+    Rails.cache.clear
+
+    eod_body = [
+      { "date" => "2026-08-21", "close" => 1213.0 },
+      { "date" => "2026-08-22", "close" => 1227.0 }
+    ].to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(eod_body)
+
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.fetch_security_prices(
+      symbol: "KTY",
+      exchange_operating_mic: "XWAR",
+      start_date: Date.new(2026, 8, 21),
+      end_date: Date.new(2026, 8, 22)
+    )
+
+    assert result.success?
+    assert_equal 2, result.data.length
+    assert result.data.all? { |price| price.currency == "PLN" }
+    assert_equal [ 1213.0, 1227.0 ], result.data.map { |price| price.price.to_f }
+  end
+
+  test "fetch_security_prices uses PLN for legacy WAR MIC without cache" do
+    Rails.cache.clear
+
+    eod_body = [ { "date" => "2026-08-21", "close" => 1213.0 } ].to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(eod_body)
+
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.fetch_security_prices(
+      symbol: "KTY",
+      exchange_operating_mic: "WAR",
+      start_date: Date.new(2026, 8, 21),
+      end_date: Date.new(2026, 8, 21)
+    )
+
+    assert result.success?
+    assert_equal "PLN", result.data.first.currency
+  end
 end
