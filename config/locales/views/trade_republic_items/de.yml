@@ -37,6 +37,9 @@ de:
     setup_accounts:
       page_title: "Trade-Republic-Konto einrichten"
       subtitle: "Verknüpfe dein Trade-Republic-Investmentkonto."
+      available_accounts:
+        account_type_investment: "Investment-Portfolio"
+        account_type_cash: "Cash-Konto"
       buttons:
         refresh: "Aktualisieren"
         cancel: "Abbrechen"
