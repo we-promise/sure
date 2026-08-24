@@ -10,7 +10,8 @@ class AiHealth
   OPENAI_COMPATIBLE_PROVIDER_DOMAINS = {
     openrouter: %w[openrouter.ai],
     together: %w[together.ai together.xyz],
-    kilo: %w[kilo.ai]
+    kilo: %w[kilo.ai],
+    cloudflare: %w[api.cloudflare.com gateway.ai.cloudflare.com]
   }.freeze
 
   attr_reader :selected_llm_provider, :effective_llm_provider, :llm_model,

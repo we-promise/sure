@@ -29,6 +29,8 @@ class AiHealthTest < ActiveSupport::TestCase
       "https://openrouter.ai/api/v1" => :openrouter,
       "https://api.together.ai/v1" => :together,
       "https://api.kilo.ai/api/gateway" => :kilo,
+      "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1" => :cloudflare,
+      "https://gateway.ai.cloudflare.com/v1/account-id/gateway-id/compat" => :cloudflare,
       "https://models.example.test/v1" => :custom_openai_compatible
     }.each do |endpoint, provider|
       with_openai_endpoint(endpoint) do |health|

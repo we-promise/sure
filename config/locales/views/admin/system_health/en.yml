@@ -91,6 +91,7 @@ en:
             openrouter: OpenRouter
             together: Together
             kilo: Kilo
+            cloudflare: Cloudflare
             custom_openai_compatible: Custom endpoint
           adapters:
             openai: OpenAI hosted vector store
