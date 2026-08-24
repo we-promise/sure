@@ -99,6 +99,36 @@ class Security::WarsawPriceCurrencyBackfillTest < ActiveSupport::TestCase
     assert_operator result.accounts_queued_for_sync, :>=, 1
   end
 
+  test "requeues account sync on retry when orphaned USD prices have null security_id" do
+    account = accounts(:investment)
+    Security::Price.create!(security: @security, date: Date.new(2026, 8, 21), price: 1213, currency: "PLN")
+    Holding.create!(
+      account: account,
+      security: @security,
+      date: Date.new(2026, 8, 21),
+      qty: 1,
+      price: 1213,
+      amount: 1213,
+      currency: "PLN"
+    )
+
+    orphaned_usd = Security::Price.new(
+      date: Date.new(2026, 8, 20),
+      price: 99,
+      currency: "USD",
+      security_id: nil
+    )
+    orphaned_usd.save!(validate: false)
+
+    Account.any_instance.expects(:sync_later).at_least_once
+
+    result = Security::WarsawPriceCurrencyBackfill.new(dry_run: false, sync_accounts: true).call
+
+    assert_equal 0, result.prices_relabeled
+    assert_operator result.accounts_queued_for_sync, :>=, 1
+    assert_nil orphaned_usd.reload.security_id
+  end
+
   test "skips MIC upgrade when both WAR and XWAR securities already exist" do
     canonical = Security.create!(ticker: "PZU", exchange_operating_mic: "XWAR", country_code: "PL")
     legacy = Security.new(ticker: "PZU", exchange_operating_mic: "WAR", country_code: "PL")
