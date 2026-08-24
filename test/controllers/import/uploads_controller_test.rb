@@ -47,6 +47,17 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
 
+  test "trade import account select excludes linked accounts without reconciliation" do
+    linked = accounts(:connected)
+    trade_import = imports(:trade)
+
+    get import_upload_url(trade_import)
+
+    assert_response :success
+    assert_select 'select[name="import[account_id]"] option[value=?]', linked.id, count: 0
+    assert_select 'select[name="import[account_id]"] option', text: accounts(:investment).name
+  end
+
   test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when uploading Sure import file (#3010)" do
     configured_limit = 2.megabytes
     SureImport.stubs(:max_ndjson_size).returns(configured_limit)

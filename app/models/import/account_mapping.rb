@@ -9,14 +9,28 @@ class Import::AccountMapping < Import::Mapping
       unique_values.index_with { |value| accounts[value] }
     end
 
-    # Linked (provider-managed) accounts are valid CSV targets so users can
-    # backfill history after connecting. When Current.user is set, restrict to
-    # accounts they can write; otherwise fall back to the family (e.g. jobs).
+    # Writable accounts the current user may target for this import.
+    # Linked (provider-managed) accounts are only offered for import types that
+    # reconcile against provider-synced rows (TransactionImport). TradeImport
+    # inserts unconditionally and would duplicate Plaid/Questrade trades.
     def importable_accounts(import)
-      scope = import.family.accounts
-      return scope unless Current.user
+      account_scope(
+        family: import.family,
+        user: Current.user,
+        allow_linked: allows_linked_account_targets?(import)
+      )
+    end
 
-      scope.writable_by(Current.user)
+    def account_scope(family:, user: nil, allow_linked: false)
+      scope = family.accounts
+      scope = scope.writable_by(user) if user
+      return scope if allow_linked
+
+      scope.where(id: family.accounts.manual.select(:id))
+    end
+
+    def allows_linked_account_targets?(import)
+      import.is_a?(TransactionImport)
     end
   end
 

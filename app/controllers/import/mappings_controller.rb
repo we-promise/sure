@@ -25,7 +25,7 @@ class Import::MappingsController < ApplicationController
       return nil unless mappable_class.present?
 
       if mappable_class == Account
-        Current.family.accounts.writable_by(Current.user).find_by(id: mapping_params[:mappable_id])
+        Import::AccountMapping.importable_accounts(@import).find_by(id: mapping_params[:mappable_id])
       else
         mappable_class.find_by(id: mapping_params[:mappable_id], family: Current.family)
       end

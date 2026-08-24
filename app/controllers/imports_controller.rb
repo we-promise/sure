@@ -98,7 +98,11 @@ class ImportsController < ApplicationController
     type = params.dig(:import, :type).to_s
     type = "TransactionImport" unless Import::TYPES.include?(type)
 
-    account = Current.family.accounts.writable_by(Current.user).find_by(id: params.dig(:import, :account_id))
+    account = Import::AccountMapping.account_scope(
+      family: Current.family,
+      user: Current.user,
+      allow_linked: type == "TransactionImport"
+    ).find_by(id: params.dig(:import, :account_id))
     import = Current.family.imports.create!(
       type: type,
       account: account,
