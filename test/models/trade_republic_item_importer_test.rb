@@ -95,8 +95,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "evt_old" ], account.reload.raw_timeline_payload.map { |event| event["id"] }
 
     @item.update!(newest_event_id: "evt_missing")
-    account.update!(raw_timeline_payload: [])
-    provider.expects(:sync).with { |args| args[:known_newest_event_id].nil? }.returns(client_result(
+    provider.expects(:sync).with { |args| args[:known_newest_event_id] == "evt_missing" }.returns(client_result(
       "status" => "ok",
       "session_txt" => "# refreshed cookies",
       "account" => { "brokerage_account_id" => "DE4444", "currency" => "EUR" },
@@ -108,7 +107,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     ))
 
     TradeRepublicItem::Importer.new(@item, provider: provider).import
-    assert_equal [ "evt_recovered" ], account.reload.raw_timeline_payload.map { |event| event["id"] }
+    assert_equal %w[evt_old evt_recovered], account.reload.raw_timeline_payload.map { |event| event["id"] }
   end
 
   test "session expiry marks item requires_update and preserves stored payloads" do

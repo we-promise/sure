@@ -1,4 +1,5 @@
 class TradeRepublicItem::Importer
+  MAX_TIMELINE_EVENTS = 5_000
   # Fetches the latest Trade Republic state through the provider client and
   # stores normalized raw payloads on the item's accounts.
   #
@@ -158,7 +159,8 @@ class TradeRepublicItem::Importer
       # dropping the actual event payload. Force one full timeline fetch in
       # that state so historical data can be recovered instead of remaining
       # permanently invisible.
-      return if trade_republic_item.trade_republic_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
+      portfolio_accounts = trade_republic_item.trade_republic_accounts.select(&:portfolio?)
+      return if portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
 
       trade_republic_item.newest_event_id
     end
@@ -172,7 +174,7 @@ class TradeRepublicItem::Importer
         key = event[:id].presence || event
         events_by_id[key] = event
       end
-      events_by_id.values
+      events_by_id.values.sort_by { |event| event[:timestamp].to_s }.last(MAX_TIMELINE_EVENTS)
     end
 
     # Exact decimal math: cash + Σ(quantity × price). Positions lacking a

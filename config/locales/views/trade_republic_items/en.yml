@@ -29,13 +29,29 @@ en:
       data_quality:
         title: Data quality and sync details
         repair: Repair imported data
-        positions: "%{count} positions"
-        unpriced: "%{count} without current price"
-        events: "%{count} activities"
-        unknown: "%{count} unknown activities"
-        expenses: "%{count} expenses in the last 30 days (%{amount})"
+        positions:
+          one: "%{count} position"
+          other: "%{count} positions"
+        unpriced:
+          one: "%{count} without current price"
+          other: "%{count} without current price"
+        events:
+          one: "%{count} activity"
+          other: "%{count} activities"
+        unknown:
+          one: "%{count} unknown activity"
+          other: "%{count} unknown activities"
+        expenses:
+          one: "%{count} expense in the last 30 days (%{amount})"
+          other: "%{count} expenses in the last 30 days (%{amount})"
         reconciliation: "%{matched}/%{total} account balances reconciled"
         sync_history: Recent syncs
+        sync_status:
+          completed: Completed
+          failed: Failed
+          pending: Pending
+          syncing: Syncing
+          stale: Stale
     setup_accounts:
       page_title: Set Up Trade Republic Account
       dialog_title: Set Up Your Trade Republic Account
@@ -113,6 +129,14 @@ en:
       not_configured: Trade Republic is not configured.
       pin_required: Enter your Trade Republic PIN to start a new login.
       verification_required: "Login started. Confirm it via %{method}, then press Confirm login."
+    initiate_qr_login:
+      not_configured: Trade Republic is not configured.
+    poll_login:
+      no_pending_login: No login is currently pending. Start a new login first.
+      login_expired: The login request expired. Please start again.
+    poll_qr_login:
+      no_pending_login: No QR login is pending.
+      success: Trade Republic connected successfully.
     complete_login:
       no_pending_login: No login is currently pending. Start a new login first.
       approval_pending: Not confirmed yet. Approve the login in the Trade Republic app, then try again.

@@ -677,11 +677,14 @@ class Provider::TradeRepublicClient
         event["id"].presence || event.slice("timestamp", "eventType", "title", "subtitle", "detail")
       end
       newest_event = events.max_by { |event| event["timestamp"].to_s }
+      details_incomplete = (transaction_events.any? && transaction_cursor.nil?) ||
+        (activity_events.any? && activity_cursor.nil?)
       timeline_complete = transaction_complete != false && activity_complete != false &&
+        !details_incomplete &&
         (transaction_warnings + activity_warnings).none? { |warning| warning.start_with?("detail fetch failed") }
       [
         events,
-        newest_event&.dig("id") || transaction_cursor || activity_cursor,
+        details_incomplete ? nil : (newest_event&.dig("id") || transaction_cursor || activity_cursor),
         transaction_warnings + activity_warnings,
         timeline_complete
       ]

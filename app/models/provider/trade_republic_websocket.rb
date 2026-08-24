@@ -19,10 +19,13 @@ class Provider::TradeRepublicWebsocket
 
   def connect
     tcp = Socket.tcp(HOST, 443, connect_timeout: @timeout)
-    @socket = OpenSSL::SSL::SSLSocket.new(tcp)
+    context = OpenSSL::SSL::SSLContext.new
+    context.set_params
+    @socket = OpenSSL::SSL::SSLSocket.new(tcp, context)
     @socket.hostname = HOST
     @socket.sync_close = true
     Timeout.timeout(@timeout, Timeout::Error) { @socket.connect }
+    @socket.post_connection_check(HOST)
 
     adapter = SocketAdapter.new(@socket)
     @driver = WebSocket::Driver.client(adapter)

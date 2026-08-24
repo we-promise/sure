@@ -121,7 +121,7 @@
                     <%= link_form.select :account_id,
                           options_for_select(@linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: number_to_currency(a.balance, unit: Money::Currency.new(a.currency.presence || Current.family.currency).symbol)), a.id ] }),
                           { prompt: t(".link_existing.select_prompt") },
-                          class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0" %>
+                          { class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0", required: true } %>
                     <%= render DS::Button.new(
                       text: t(".buttons.link"),
                       variant: "secondary",

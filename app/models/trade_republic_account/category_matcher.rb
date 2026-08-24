@@ -3,7 +3,7 @@ class TradeRepublicAccount::CategoryMatcher
     "Groceries" => %w[aldi aldi-süd lidl rewe edeka kaufland marktkauf supermarkt nahkauf netto penny tesco grocery],
     "Restaurants & Dining" => %w[restaurant mcdonald burger king lieferando wolt uber eats cafe café bakery bäckerei],
     "Transportation" => %w[tankstelle shell aral esso uber taxi deutsche bahn db bahn bolt],
-    "Subscriptions" => %w[netflix spotify apple.com amazon prime adobe openai cursor],
+    "Subscriptions" => [ "netflix", "spotify", "apple.com", "amazon prime", "adobe", "openai", "cursor" ],
     "Fees & Charges" => %w[gebühr fee atm],
     "Shopping" => %w[amazon zalando ebay ikea media markt saturn]
   }.freeze

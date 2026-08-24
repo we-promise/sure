@@ -9,14 +9,14 @@ class TradeRepublicAccount::HoldingsProcessor
     return unless account.present?
 
     positions = Array(@trade_republic_account.raw_positions_payload)
-    processed = positions.filter_map do |position|
+    processed_count = positions.count do |position|
       process_position(position.with_indifferent_access)
     end
 
     # A validated, complete snapshot is authoritative. Reconcile only after
     # every position was imported successfully; partial provider data must
     # preserve existing holdings.
-    if @trade_republic_account.holdings_snapshot_complete? && processed.size == positions.size
+    if @trade_republic_account.holdings_snapshot_complete? && processed_count == positions.size
       reconcile_stale_holdings!(positions)
     end
   end

@@ -1,7 +1,9 @@
 ---
 en:
   holdings:
-    positions: positions
+    positions:
+      one: "%{count} position"
+      other: "%{count} positions"
     cash:
       brokerage_cash: Brokerage cash
     destroy:

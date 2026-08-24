@@ -118,7 +118,7 @@
             <div class="border-t border-secondary pt-2 space-y-1">
               <p class="text-xs font-medium text-primary"><%= t(".data_quality.sync_history") %></p>
               <% recent_syncs.each do |recent_sync| %>
-                <p class="text-xs text-secondary"><%= l(recent_sync.created_at, format: :short) %> · <%= recent_sync.status %></p>
+                <p class="text-xs text-secondary"><%= l(recent_sync.created_at, format: :short) %> · <%= t(".data_quality.sync_status.#{recent_sync.status}", default: recent_sync.status.to_s.humanize) %></p>
               <% end %>
             </div>
           <% end %>

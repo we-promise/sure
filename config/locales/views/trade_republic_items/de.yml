@@ -27,13 +27,29 @@ de:
       data_quality:
         title: "Datenqualität und Sync-Details"
         repair: "Importdaten reparieren"
-        positions: "%{count} Positionen"
-        unpriced: "%{count} ohne aktuellen Kurs"
-        events: "%{count} Aktivitäten"
-        unknown: "%{count} unbekannte Aktivitäten"
-        expenses: "%{count} Ausgaben in den letzten 30 Tagen (%{amount})"
+        positions:
+          one: "%{count} Position"
+          other: "%{count} Positionen"
+        unpriced:
+          one: "%{count} ohne aktuellen Kurs"
+          other: "%{count} ohne aktuellen Kurs"
+        events:
+          one: "%{count} Aktivität"
+          other: "%{count} Aktivitäten"
+        unknown:
+          one: "%{count} unbekannte Aktivität"
+          other: "%{count} unbekannte Aktivitäten"
+        expenses:
+          one: "%{count} Ausgabe in den letzten 30 Tagen (%{amount})"
+          other: "%{count} Ausgaben in den letzten 30 Tagen (%{amount})"
         reconciliation: "%{matched}/%{total} Kontostände abgeglichen"
         sync_history: "Letzte Syncs"
+        sync_status:
+          completed: Abgeschlossen
+          failed: Fehlgeschlagen
+          pending: Ausstehend
+          syncing: Wird synchronisiert
+          stale: Veraltet
     setup_accounts:
       page_title: "Trade-Republic-Konto einrichten"
       subtitle: "Verknüpfe dein Trade-Republic-Investmentkonto."
@@ -63,6 +79,14 @@ de:
     initiate_login:
       pin_required: "Gib deine Trade-Republic-PIN ein, um eine neue Anmeldung zu starten."
       verification_required: "Anmeldung gestartet. Bestätige sie über %{method} und klicke anschließend auf Anmeldung bestätigen."
+    initiate_qr_login:
+      not_configured: "Trade Republic ist nicht konfiguriert."
+    poll_login:
+      no_pending_login: "Es ist keine Anmeldung ausstehend. Starte zuerst eine neue Anmeldung."
+      login_expired: "Die Anmeldeanfrage ist abgelaufen. Bitte starte sie erneut."
+    poll_qr_login:
+      no_pending_login: "Es ist keine QR-Anmeldung ausstehend."
+      success: "Trade Republic wurde erfolgreich verbunden."
     complete_login:
       approval_pending: "Noch nicht bestätigt. Bestätige die Anmeldung in der Trade-Republic-App und versuche es danach erneut."
       still_pending: "Noch nicht bestätigt. Bestätige die Anmeldung in der Trade-Republic-App und versuche es danach erneut."

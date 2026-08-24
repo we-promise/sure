@@ -1,7 +1,9 @@
 ---
 de:
   holdings:
-    positions: Positionen
+    positions:
+      one: "%{count} Position"
+      other: "%{count} Positionen"
     cash:
       brokerage_cash: Depotguthaben
     destroy:

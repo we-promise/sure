@@ -76,9 +76,13 @@ class Provider::TradeRepublicSession
         request.body = JSON.generate(body)
       end
 
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
-        http.open_timeout = timeout_seconds
-        http.read_timeout = timeout_seconds
+      response = Net::HTTP.start(
+        uri.host,
+        uri.port,
+        use_ssl: uri.scheme == "https",
+        open_timeout: timeout_seconds,
+        read_timeout: timeout_seconds
+      ) do |http|
         http.request(request)
       end
       update_cookies(response)
@@ -98,6 +102,9 @@ class Provider::TradeRepublicSession
     rescue Net::HTTPClientException
       # Authentication endpoints may be called before a session exists.
       @session_expires_at = 290.seconds.from_now
+    rescue Net::HTTPFatalError, Net::HTTPRetriableError => e
+      raise Provider::TradeRepublicClient::TransientProviderError,
+        "Trade Republic session refresh failed: #{e.class}"
     end
 
     def update_cookies(response)

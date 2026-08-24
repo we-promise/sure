@@ -163,7 +163,7 @@ class TradeRepublicItemsController < ApplicationController
 
   def initiate_qr_login
     provider = @trade_republic_item.trade_republic_provider
-    raise Provider::TradeRepublicClient::ConfigurationError, "Trade Republic is not configured" unless provider
+    raise Provider::TradeRepublicClient::ConfigurationError, t(".not_configured") unless provider
 
     invalidate_authentication!
     result = provider.initiate_qr_login
@@ -178,7 +178,7 @@ class TradeRepublicItemsController < ApplicationController
   def poll_qr_login
     provider = @trade_republic_item.trade_republic_provider
     pending = @trade_republic_item.pending_login_state
-    raise Provider::TradeRepublicClient::InvalidChallenge, "No QR login is pending" if provider.blank? || pending.blank?
+    raise Provider::TradeRepublicClient::InvalidChallenge, t(".no_pending_login") if provider.blank? || pending.blank?
 
     result = provider.poll_qr_login(pending_login_b64: pending)
     if result.data["status"] == "pending"

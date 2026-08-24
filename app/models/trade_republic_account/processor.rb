@@ -8,9 +8,11 @@ class TradeRepublicAccount::Processor
   def process
     return unless account.present?
 
-    update_account_balance!
-    TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account).process
-    TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account).process
+    ActiveRecord::Base.transaction do
+      update_account_balance!
+      TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account).process
+      TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account).process
+    end
 
     account.broadcast_sync_complete
   end

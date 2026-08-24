@@ -7,6 +7,7 @@ export default class extends Controller {
     pollUrl: String,
     cancelUrl: String,
     returnUrl: String,
+    autoPoll: { type: Boolean, default: false },
     loadingText: String,
     instructionText: String,
     successText: String,
@@ -23,7 +24,7 @@ export default class extends Controller {
     this.stopped = false;
     this.pollRequest = null;
     this.retryCount = 0;
-    if (this.element.dataset.autoPoll === "true") {
+    if (this.autoPollValue) {
       this.polling = true;
       this.startedAt = Date.now();
       this.panelTarget.hidden = false;

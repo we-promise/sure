@@ -72,7 +72,7 @@
 
     <% if trade_republic_item.pending_login_state.blank? || qr_login_pending %>
       <div class="space-y-3" data-controller="trade-republic-qr"
-         data-auto-poll="<%= qr_login_active ? "true" : "false" %>"
+         data-trade-republic-qr-auto-poll-value="<%= qr_login_active %>"
          data-trade-republic-qr-initiate-url-value="<%= initiate_qr_login_trade_republic_item_path(trade_republic_item) %>"
          data-trade-republic-qr-poll-url-value="<%= poll_qr_login_trade_republic_item_path(trade_republic_item) %>"
          data-trade-republic-qr-cancel-url-value="<%= cancel_qr_login_trade_republic_item_path(trade_republic_item) %>"

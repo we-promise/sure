@@ -15,7 +15,11 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     trade_count = 0
     transaction_count = 0
-    split_accounts = @trade_republic_account.trade_republic_item.trade_republic_accounts.where(kind: "cash").exists?
+    split_accounts = @trade_republic_account.trade_republic_item
+      .trade_republic_accounts
+      .where(kind: "cash")
+      .joins(:account_provider)
+      .exists?
 
     Array(@trade_republic_account.raw_timeline_payload).each do |event|
       next unless event.is_a?(Hash)

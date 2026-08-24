@@ -17,7 +17,7 @@
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @available_trade_republic_accounts.each do |tr_account| %>
               <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
-                <%= radio_button_tag :trade_republic_account_id, tr_account.id, false %>
+                <%= radio_button_tag :trade_republic_account_id, tr_account.id, false, required: true %>
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= tr_account.name.presence || tr_account.trade_republic_account_id %></span>
                   <span class="text-xs text-secondary">

@@ -61,8 +61,8 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
   test "merges transaction and activity timelines without duplicate events" do
     responses = {
-      "timelineTransactions" => [ [ { "id" => "cash-1", "timestamp" => "2026-08-02" } ], "cash-1", [] ],
-      "timelineActivityLog" => [ [ { "id" => "cash-1", "timestamp" => "2026-08-02" }, { "id" => "trade-1", "timestamp" => "2026-08-03" } ], "trade-1", [] ]
+      "timelineTransactions" => [ [ { "id" => "cash-1", "timestamp" => "2026-08-02" } ], "cash-1", [], true ],
+      "timelineActivityLog" => [ [ { "id" => "cash-1", "timestamp" => "2026-08-02" }, { "id" => "trade-1", "timestamp" => "2026-08-03" } ], "trade-1", [], true ]
     }
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
       responses.fetch(topic)
@@ -73,6 +73,23 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal %w[cash-1 trade-1], events.map { |event| event["id"] }
     assert_equal "trade-1", newest_id
     assert_empty warnings
+  end
+
+  test "does not advance the cursor when timeline details are incomplete" do
+    @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
+      if topic == "timelineTransactions"
+        [ [ { "id" => "event-1", "timestamp" => "2026-08-02" } ], nil, [], true ]
+      else
+        [ [], nil, [], true ]
+      end
+    end
+
+    events, newest_id, warnings, complete = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
+
+    assert_equal [ "event-1" ], events.map { |event| event["id"] }
+    assert_nil newest_id
+    assert_empty warnings
+    refute complete
   end
 
   test "recognizes QR login pending state" do
