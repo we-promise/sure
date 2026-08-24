@@ -7,11 +7,11 @@ class AddLastLoginAtAndSessionsCountToUsers < ActiveRecord::Migration[7.2]
     reversible do |dir|
       dir.up do
         say_with_time "Backfilling last_login_at and sessions_count" do
-          User.find_each do |user|
-            last_login = Session.where(user_id: user.id).maximum(:created_at)
-            session_cnt = Session.where(user_id: user.id).count
-            user.update_columns(last_login_at: last_login, sessions_count: session_cnt)
-          end
+          execute <<-SQL
+            UPDATE users
+            SET last_login_at = (SELECT MAX(created_at) FROM sessions WHERE user_id = users.id),
+                sessions_count = (SELECT COUNT(*) FROM sessions WHERE user_id = users.id);
+          SQL
         end
       end
     end
