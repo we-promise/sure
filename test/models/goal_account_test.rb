@@ -57,9 +57,8 @@ class GoalAccountTest < ActiveSupport::TestCase
     assert ga.valid?, ga.errors.full_messages.to_sentence
   end
 
-  # The guard tracks Goal.pooled_allocations_for, which excludes archived goals
-  # from the backing math. Money held by an archived goal is not claimed, so it
-  # must not block a live one.
+  # The guard tracks Goal.pooled_allocations_for through Goal::RELEASED_STATES.
+  # Money an archived goal held is not claimed, so it must not block a live one.
   test "an archived goal's whole-account link does not block a new one" do
     other = goals(:vacation_italy)
     other.goal_accounts.create!(account: @account)
@@ -70,16 +69,18 @@ class GoalAccountTest < ActiveSupport::TestCase
     assert ga.valid?, ga.errors.full_messages.to_sentence
   end
 
-  # A completed goal still holds its money and still feeds the pool, so unlike
-  # an archived one it does claim the balance.
-  test "a completed goal's whole-account link still blocks a new one" do
+  # Inverted by Lot B1: a completed goal has released its earmark, so like an
+  # archived one it no longer claims the balance. Refusing a new link because
+  # of a finished goal whose money has already been handed back would be
+  # inexplicable — the account genuinely is free again.
+  test "a completed goal's whole-account link no longer blocks a new one" do
     other = goals(:vacation_italy)
     other.goal_accounts.create!(account: @account)
     other.complete!
 
     ga = GoalAccount.new(goal: @goal, account: @account, allocated_amount: nil)
 
-    assert_not ga.valid?
+    assert ga.valid?, ga.errors.full_messages.to_sentence
   end
 
   test "another family's whole-account link on its own account is irrelevant" do

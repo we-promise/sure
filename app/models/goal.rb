@@ -4,16 +4,6 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
-  # States in which a goal has let go of its money: `Goal.pooled_allocations_for`
-  # leaves it out of the backing math, so its links reserve nothing and the
-  # account it pointed at is free again.
-  #
-  # Read by three places that must agree — the shared pool, GoalAccount's
-  # exclusivity check, and the restore guard below. Keeping them on one constant
-  # is what stops the double-counting hole from reopening the day this set
-  # grows: adding a state here makes every one of them release together.
-  RELEASED_STATES = %w[archived].freeze
-
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
@@ -54,6 +44,30 @@ class Goal < ApplicationRecord
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
   FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
 
+  # States in which a goal has let go of the money it was holding, and so
+  # drops out of the shared pool. `completed` belongs here: reaching a goal
+  # is the moment its earmark stops competing with its siblings on the same
+  # account — that is what "done" means for money.
+  #
+  # `paused` is deliberately absent. Pausing means "I have stopped feeding
+  # this", not "I have released it"; a paused goal keeps its reservation.
+  #
+  # ⚠️ Four places filter on this and must agree, or free_to_earmark will
+  # contradict the pool: here, Account#goal_earmarked_total,
+  # GoalAccount#whole_account_link_must_be_exclusive (through
+  # Goal#whole_account_conflicts_on), and the restore guard
+  # #restore_must_not_recreate_whole_account_conflict, which reads the same
+  # method. Adding a state here makes all of them release together.
+  RELEASED_STATES = %w[archived completed].freeze
+
+  # A one-off goal is reached once and then closed; a maintained one is a
+  # floor to hold (see Lot B3, which gives this column its behavior). Nothing
+  # branches on it yet beyond these predicates — the column exists now so the
+  # lifecycle written here does not have to be retrofitted later.
+  KINDS = %w[one_off maintained].freeze
+
+  validates :kind, inclusion: { in: KINDS }
+
   # Display order for active (non-completed/non-archived) goals: behind
   # first, then on-track, then open-ended. Paused sorts after all of these.
   ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
@@ -63,7 +77,7 @@ class Goal < ApplicationRecord
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
   }
 
-  # Family-wide map of non-archived goal earmarks, grouped by account_id:
+  # Family-wide map of live goal earmarks, grouped by account_id:
   # { account_id => [{ goal_id:, allocated_amount: }, ...] }. The controller
   # assigns this to each goal on index (goal.pooled_allocations = ...) so the
   # shared-pool backing math runs ONE query for the whole page instead of one
@@ -250,6 +264,17 @@ class Goal < ApplicationRecord
 
     event :complete do
       transitions from: [ :active, :paused ], to: :completed
+
+      # Freeze what the goal actually reached. Modification 1 stops a
+      # completed goal from reserving anything, but its amount would still be
+      # recomputed from the live balance — so spending the money would walk
+      # the finished goal back down and rewrite its own history. Read after
+      # the transition, when reset_state_dependent_caches! has just cleared
+      # the memos: the goal never counted itself in others_fixed, so the
+      # figure is the same on both sides of the state change.
+      after do
+        update_columns(completed_amount: current_balance, completed_at: Time.current)
+      end
     end
 
     event :archive do
@@ -258,10 +283,14 @@ class Goal < ApplicationRecord
 
     event :unarchive do
       transitions from: :archived, to: :active
+
+      after { thaw_completed_amount! }
     end
 
     event :reopen do
       transitions from: :completed, to: :active
+
+      after { thaw_completed_amount! }
     end
   end
 
@@ -274,6 +303,13 @@ class Goal < ApplicationRecord
   # direct DB writes, account-currency edits outside goal validation, or
   # future code that bypasses the validation chain.
   def current_balance
+    # A closed goal reports what it reached, not what its accounts hold now.
+    # The guard is `present?`, never `completed?`: `archive` accepts a goal
+    # straight from active or paused, so an archived goal that was never
+    # completed has no frozen amount and keeps the live calculation. Both
+    # shapes coexist in the database.
+    return completed_amount.to_d if completed_amount.present?
+
     @current_balance ||= begin
       matching = linked_accounts.select { |a| a.currency == currency }
       if matching.size != linked_accounts.size
@@ -297,6 +333,14 @@ class Goal < ApplicationRecord
 
   def contributions_basis?
     progress_basis == "contributions"
+  end
+
+  def one_off?
+    kind == "one_off"
+  end
+
+  def maintained?
+    kind == "maintained"
   end
 
   # Market value of the goal's backing (balance basis), regardless of the
@@ -746,10 +790,19 @@ class Goal < ApplicationRecord
     # display_status / projection_summary memos; without this the same
     # instance keeps returning the pre-transition value if a controller
     # calls archive! / pause! and then renders without reload.
+    # Reopening or unarchiving hands the goal back to the live calculation:
+    # it is being funded again, so a figure frozen at an earlier close would
+    # misreport it from here on.
+    def thaw_completed_amount!
+      update_columns(completed_amount: nil, completed_at: nil)
+    end
+
     def reset_state_dependent_caches!
-      # current_balance now depends on the goal's own archived state (an
-      # archived goal is excluded from the shared pool), so the balance-derived
-      # memos must be cleared on a transition too, not just the status memos.
+      # current_balance depends on the goal's own state — a goal in any of
+      # RELEASED_STATES is excluded from the shared pool, and a completed one
+      # reads its frozen amount instead of its accounts — so the
+      # balance-derived memos must be cleared on a transition too, not just
+      # the status memos.
       %i[
         @display_status @projection_summary
         @current_balance @current_balance_money

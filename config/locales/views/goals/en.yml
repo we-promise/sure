@@ -165,11 +165,11 @@ en:
         body: "Current pace %{avg}/mo · required %{required}/mo to hit your target."
         adjust_target_cta: Adjust target instead
       confirm_complete_title: Mark this goal complete?
-      confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
+      confirm_complete_body: The money earmarked for it is released for your other goals on the same account. It leaves the Ongoing list, and you can still archive or restore it later.
       confirm_complete_body_short: "You're at %{progress}%, %{saved} of %{target}. Marking complete records this as your achievement instead of the original target. Continue, or close this and adjust the target instead?"
       confirm_complete_cta: Mark complete
       confirm_archive_title: Archive this goal?
-      confirm_archive_body: Archived goals disappear from the main list. You can restore them later.
+      confirm_archive_body: Archived goals disappear from the main list. You can restore them later. Archiving does not record what you reached — mark the goal complete first if you want that kept.
       confirm_archive_cta: Archive
       confirm_delete_title: Delete this goal?
       confirm_delete_body: "%{name} and its pledge history are removed for good. Your linked accounts, balances and transactions are not affected. To keep it as a record instead, archive it."
@@ -184,6 +184,10 @@ en:
         restore_cta: Restore goal
       celebration:
         heading: Goal reached. Nice work.
+        body_reached: "You've hit your target at %{saved} of %{target}. It is not closed yet — the money is still earmarked for it."
+        close_cta: Close this goal
+        close_hint: Closing releases the earmarked money for your other goals on the same account. Do this once you have actually spent it.
+        frozen: "Reached on %{date} · %{amount}"
         body: "Goal closed at %{saved} of %{target}. Keep it as a record, or archive it now."
         archive_cta: Archive goal
       inactive:

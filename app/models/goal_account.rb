@@ -29,8 +29,11 @@ class GoalAccount < ApplicationRecord
     #
     # The conflict lookup itself lives on Goal (`whole_account_conflicts_on`),
     # scoped to Goal::RELEASED_STATES — exactly the set
-    # Goal.pooled_allocations_for feeds into the backing math. Sharing one
-    # method with the restore guard is what keeps this door and that one from
+    # Goal.pooled_allocations_for feeds into the backing math. A completed goal
+    # has released its earmark, so it no longer blocks a new whole-balance
+    # link: refusing one because of a finished goal whose money has already
+    # been handed back would be inexplicable to the user. Sharing one method
+    # with the restore guard is what keeps this door and that one from
     # disagreeing about which goals still hold their money.
     def whole_account_link_must_be_exclusive
       return unless whole_account?
