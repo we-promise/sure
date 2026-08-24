@@ -187,7 +187,7 @@ services:
   # not a preload list. Start Ollama, then pull each model once. The ollama
   # volume below keeps the downloaded models across container restarts:
   #
-  # docker compose -f compose.example.ai.yml --profile local-ai up -d ollama
+  # docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
   # docker compose -f compose.example.ai.yml exec ollama ollama pull deepseek-r1:8b
   # docker compose -f compose.example.ai.yml exec ollama ollama pull llama3.1:8b
   # docker compose -f compose.example.ai.yml exec ollama ollama pull mxbai-embed-large
@@ -204,6 +204,12 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
     networks:
       - sure_net
     # Recommended: Enable GPU support

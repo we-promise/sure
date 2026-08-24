@@ -1342,8 +1342,26 @@ and an embedding model through `EMBEDDING_URI_BASE`. Make sure
 If you are using Ollama (as in `compose.example.ai.yml`), pull the embedding model:
 
 ```bash
+docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
 docker compose exec ollama ollama pull mxbai-embed-large
 ```
+
+> [!WARNING]
+> Do not change `EMBEDDING_MODEL` for an existing pgvector index without
+> rebuilding it. Vectors created by different models are not comparable, even
+> when they have the same dimensions. Back up the database and the source
+> documents, then remove the existing documents from Sure. If the new model has
+> different dimensions, drop the now-empty chunks table so Sure can recreate it
+> with the new vector size:
+>
+> ```bash
+> docker compose -f compose.example.ai.yml exec web bin/rails runner \
+>   'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+> ```
+>
+> Change the embedding settings and restart Sure. Confirm that **System health
+> → AI status** reports the new model and dimensions, then upload the source
+> documents again. This recreates every embedding with only the new model.
 
 ##### Qdrant (Self-Hosted)
 
