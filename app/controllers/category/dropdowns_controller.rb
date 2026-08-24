@@ -18,6 +18,6 @@ class Category::DropdownsController < ApplicationController
     end
 
     def categories_scope
-      Current.family.categories.alphabetically
+      Current.family.categories.includes(:parent).alphabetically
     end
 end
