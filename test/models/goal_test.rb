@@ -14,6 +14,40 @@ class GoalTest < ActiveSupport::TestCase
     assert @goal.valid?
   end
 
+  # Two whole-account links on ONE account each claim the entire balance, so
+  # the account is counted twice. The pro-rata haircut in backing_share_for
+  # only scales FIXED earmarks: `others_fixed` sums allocated_amount, and an
+  # unallocated link contributes nil.to_d == 0, so the two links never see
+  # each other. GoalAccount now refuses to create this state (see
+  # GoalAccountTest), but rows that predate the guard still read this way —
+  # this test pins the behaviour those rows get, and is the reason the guard
+  # exists.
+  test "two grandfathered whole-account links each claim the full balance" do
+    livret = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "Livret A", currency: "USD", balance: 6_000
+    )
+    precaution = @family.goals.create!(
+      name: "Precaution", target_amount: 5_000, currency: "USD",
+      goal_accounts: [ GoalAccount.new(account: livret) ]
+    )
+    # Built with a fixed earmark so the new guard lets it through, then
+    # forced to NULL behind the validation's back — exactly the shape of a
+    # row written before the guard shipped.
+    vacances = @family.goals.create!(
+      name: "Vacances", target_amount: 5_000, currency: "USD",
+      goal_accounts: [ GoalAccount.new(account: livret, allocated_amount: 1) ]
+    )
+    vacances.goal_accounts.first.update_column(:allocated_amount, nil)
+
+    assert_equal 6_000, precaution.reload.current_balance.to_i
+    assert_equal 6_000, vacances.reload.current_balance.to_i
+    assert_equal 12_000, precaution.current_balance.to_i + vacances.current_balance.to_i,
+                 "6 000 of balance backing 12 000 of goals — the double count B7 guards against"
+    assert_equal 100, precaution.progress_percent.to_i
+    assert_equal 100, vacances.progress_percent.to_i
+  end
+
   # The confirm dialog assigns `body` to innerHTML, so an unescaped goal name
   # would execute when a family member opens the delete confirmation.
   test "deletion_confirm escapes the goal name in the dialog body" do
