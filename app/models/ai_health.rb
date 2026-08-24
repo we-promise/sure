@@ -7,6 +7,11 @@ require "uri"
 class AiHealth
   OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1".freeze
   ANTHROPIC_DEFAULT_ENDPOINT = "https://api.anthropic.com".freeze
+  OPENAI_COMPATIBLE_PROVIDER_DOMAINS = {
+    openrouter: %w[openrouter.ai],
+    together: %w[together.ai together.xyz],
+    kilo: %w[kilo.ai]
+  }.freeze
 
   attr_reader :selected_llm_provider, :effective_llm_provider, :llm_model,
               :llm_endpoint, :llm_request_timeout, :openai_endpoint, :vector_store_adapter,
@@ -42,7 +47,11 @@ class AiHealth
   end
 
   def llm_fallback?
-    effective_llm_provider.present? && effective_llm_provider != selected_llm_provider
+    @effective_llm_protocol.present? && @effective_llm_protocol != @selected_llm_protocol
+  end
+
+  def openai_compatible_endpoint?
+    @openai_custom_endpoint
   end
 
   def pdf_processing_supported?
@@ -97,13 +106,16 @@ class AiHealth
 
   private
     def load_llm_status
-      @selected_llm_provider = normalized_llm_provider(Setting.llm_provider)
+      @selected_llm_protocol = normalized_llm_provider(Setting.llm_provider)
+      @openai_custom_endpoint = openai_uri_base.present? && !hosted_openai_endpoint?(openai_uri_base)
+      @selected_llm_provider = selected_provider_name(@selected_llm_protocol)
       @openai_credentials_configured = safely(false) { Provider::Openai.configured? }
       @anthropic_credentials_configured = safely(false) { Provider::Anthropic.configured? }
       @llm_provider = safely(nil) { Provider::Registry.preferred_llm_provider }
-      @effective_llm_provider = provider_name(@llm_provider)
+      @effective_llm_protocol = protocol_name(@llm_provider)
+      @effective_llm_provider = effective_provider_name(@effective_llm_protocol)
 
-      provider_for_details = effective_llm_provider || selected_llm_provider
+      provider_for_details = @effective_llm_protocol || @selected_llm_protocol
       @llm_model = effective_model(provider_for_details)
       @llm_endpoint = endpoint(provider_for_details)
       @llm_request_timeout = request_timeout(provider_for_details)
@@ -111,10 +123,9 @@ class AiHealth
         @llm_provider&.supports_pdf_processing?(model: llm_model)
       end
 
-      @openai_custom_endpoint = openai_uri_base.present? && !hosted_openai_endpoint?(openai_uri_base)
       @openai_endpoint = redact_endpoint(openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT)
-      @llm_access_token = access_token(effective_llm_provider)
-      @llm_raw_endpoint = raw_endpoint(effective_llm_provider).presence || default_endpoint(effective_llm_provider)
+      @llm_access_token = access_token(@effective_llm_protocol)
+      @llm_raw_endpoint = raw_endpoint(@effective_llm_protocol).presence || default_endpoint(@effective_llm_protocol)
     end
 
     def load_vector_store_status
@@ -143,7 +154,7 @@ class AiHealth
       probe = Probe.new(force: @force_probes)
       if llm_configured?
         @llm_probe = probe.llm(
-          provider: effective_llm_provider,
+          provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,
           model: llm_model
@@ -190,11 +201,41 @@ class AiHealth
       value.to_s == "anthropic" ? :anthropic : :openai
     end
 
-    def provider_name(provider)
+    def protocol_name(provider)
       case provider
       when Provider::Openai then :openai
       when Provider::Anthropic then :anthropic
       end
+    end
+
+    def selected_provider_name(protocol)
+      protocol == :openai && @openai_custom_endpoint ? :openai_compatible : protocol
+    end
+
+    def effective_provider_name(protocol)
+      return protocol unless protocol == :openai
+      return :openai unless @openai_custom_endpoint
+
+      openai_compatible_provider_name(openai_uri_base)
+    end
+
+    def openai_compatible_provider_name(value)
+      uri = URI.parse(value.to_s)
+      host = uri.host.to_s.downcase
+
+      return :ollama if ollama_endpoint?(uri, host)
+
+      OPENAI_COMPATIBLE_PROVIDER_DOMAINS.each do |provider, domains|
+        return provider if domains.any? { |domain| host == domain || host.end_with?(".#{domain}") }
+      end
+
+      :custom_openai_compatible
+    rescue URI::InvalidURIError
+      :custom_openai_compatible
+    end
+
+    def ollama_endpoint?(uri, host)
+      uri.port == 11_434 || host == "ollama" || host.end_with?(".ollama")
     end
 
     def effective_model(provider)

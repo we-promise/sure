@@ -71,6 +71,7 @@ en:
             pdf_processing: PDF processing
             request_timeout: Request timeout
             openai_credentials: OpenAI credentials
+            openai_compatible_credentials: OpenAI-compatible API credentials
             anthropic_credentials: Anthropic credentials
             adapter: Adapter
             adapter_available: Adapter available
@@ -84,7 +85,13 @@ en:
             failure_reason: Failure reason
           providers:
             openai: OpenAI
+            openai_compatible: OpenAI-compatible
             anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            custom_openai_compatible: Custom endpoint
           adapters:
             openai: OpenAI hosted vector store
             pgvector: pgvector

@@ -1398,6 +1398,11 @@ live checks against the effective configuration:
   returned vector must match `EMBEDDING_DIMENSIONS`. The test vector is not
   stored.
 
+When `OPENAI_URI_BASE` points outside OpenAI's hosted API, the page labels the
+selected provider **OpenAI-compatible** and identifies a known effective
+provider from the endpoint (for example Ollama, OpenRouter, Together, or Kilo).
+Unrecognized services are shown as **Custom endpoint**.
+
 Results are cached for 60 seconds by default. **Run checks again** bypasses the
 cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
 timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed

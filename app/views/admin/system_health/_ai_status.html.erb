@@ -77,11 +77,11 @@
     <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
       <div>
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.selected_provider") %></dt>
-        <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.ai.providers.#{ai_health.selected_llm_provider}") %></dd>
+        <dd class="mt-1 font-medium text-primary" data-testid="selected-llm-provider"><%= t("admin.system_health.show.ai.providers.#{ai_health.selected_llm_provider}") %></dd>
       </div>
       <div>
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.effective_provider") %></dt>
-        <dd class="mt-1 font-medium text-primary">
+        <dd class="mt-1 font-medium text-primary" data-testid="effective-llm-provider">
           <% if ai_health.effective_llm_provider %>
             <%= t("admin.system_health.show.ai.providers.#{ai_health.effective_llm_provider}") %>
             <% if ai_health.llm_fallback? %>
@@ -111,7 +111,9 @@
         <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.llm_request_timeout) %></dd>
       </div>
       <div>
-        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.openai_credentials") %></dt>
+        <dt class="text-secondary">
+          <%= t("admin.system_health.show.ai.labels.#{ai_health.openai_compatible_endpoint? ? :openai_compatible_credentials : :openai_credentials}") %>
+        </dt>
         <dd class="mt-1 font-medium text-primary">
           <%= t("admin.system_health.show.ai.values.#{ai_health.openai_credentials_configured? ? :configured : :not_configured}") %>
         </dd>

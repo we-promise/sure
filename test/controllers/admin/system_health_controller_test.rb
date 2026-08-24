@@ -90,6 +90,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "button[role='tab'][aria-selected='true']", text: "AI status"
     assert_match(/LLM and PDF processing/, response.body)
+    assert_select "[data-testid='selected-llm-provider']", text: "OpenAI"
+    assert_select "[data-testid='effective-llm-provider']", text: "OpenAI"
     assert_match(/gpt-4\.1/, response.body)
     assert_match(%r{https://api\.openai\.com/v1}, response.body)
     assert_match(/OpenAI hosted vector store/, response.body)
@@ -138,6 +140,9 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
+    assert_select "[data-testid='selected-llm-provider']", text: "OpenAI-compatible"
+    assert_select "[data-testid='effective-llm-provider']", text: "Ollama"
+    assert_match(/OpenAI-compatible API credentials/, response.body)
     assert_match(%r{http://ollama:11434/v1}, response.body)
     assert_match(%r{did not pass the /v1/vector_stores liveness check}, response.body)
     assert_match(/use pgvector with a separate embeddings endpoint/, response.body)
