@@ -4,14 +4,24 @@ class Import::AccountMapping < Import::Mapping
   class << self
     def mappables_by_key(import)
       unique_values = import.rows.map(&:account).uniq
-      accounts = import.family.accounts.where(name: unique_values).index_by(&:name)
+      accounts = importable_accounts(import).where(name: unique_values).index_by(&:name)
 
       unique_values.index_with { |value| accounts[value] }
+    end
+
+    # Linked (provider-managed) accounts are valid CSV targets so users can
+    # backfill history after connecting. When Current.user is set, restrict to
+    # accounts they can write; otherwise fall back to the family (e.g. jobs).
+    def importable_accounts(import)
+      scope = import.family.accounts
+      return scope unless Current.user
+
+      scope.writable_by(Current.user)
     end
   end
 
   def selectable_values
-    family_accounts = import.family.accounts.manual.alphabetically.map { |account| [ account.name, account.id ] }
+    family_accounts = self.class.importable_accounts(import).visible.alphabetically.map { |account| [ account.name, account.id ] }
 
     unless key.blank?
       family_accounts.unshift [ "Add as new account", CREATE_NEW_KEY ]
