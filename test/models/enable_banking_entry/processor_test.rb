@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
   setup do
@@ -208,6 +209,130 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_includes entry.notes, "Détail comptable interne"
   end
 
+  test "imports transaction with real merchant name instead of generic POS terminal line (issue #2935)" do
+    tx = {
+      entry_reference: "ref_pos_2935",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "45.13", currency: "EUR" },
+      creditor: { name: "" },
+      debtor: nil,
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114"
+      ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_pos_2935")
+    assert_equal "BILLA DANKT 0007114", entry.name
+    assert_includes entry.notes, "POS          45,13 AT  D6   31.07. 10:27"
+  end
+
+  test "uses the family's known merchant name instead of the raw remittance line when it matches, and assigns the merchant" do
+    @family.merchants.create!(name: "Billa")
+
+    tx = {
+      entry_reference: "ref_known_merchant",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "45.13", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114"
+      ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_known_merchant")
+
+    assert_equal "Billa", entry.name
+    assert_equal "Billa", entry.transaction.merchant&.name
+  end
+
+  test "matches known merchants regardless of retailer chain" do
+    %w[Bipa Spar Hofer Lidl Penny].each do |chain_name|
+      @family.merchants.create!(name: chain_name)
+    end
+
+    [
+      [ "bipa", "BIPA DANKT 0001234", "Bipa" ],
+      [ "spar", "SPAR DANKT 0005678", "Spar" ],
+      [ "hofer", "HOFER DANKT 0009876", "Hofer" ],
+      [ "lidl", "LIDL DANKT 0004321", "Lidl" ],
+      [ "penny", "DANKE 0009999 PENNY", "Penny" ]
+    ].each do |ref_suffix, raw_line, expected_name|
+      tx = {
+        entry_reference: "ref_known_#{ref_suffix}",
+        transaction_id: nil,
+        booking_date: Date.current.to_s,
+        transaction_amount: { amount: "12.34", currency: "EUR" },
+        creditor: { name: "" },
+        bank_transaction_code: nil,
+        credit_debit_indicator: "DBIT",
+        remittance_information: [
+          "POS          12,34 AT  D6   01.01. 09:00",
+          raw_line
+        ],
+        status: "BOOK"
+      }
+
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+      entry = @account.entries.find_by!(external_id: "enable_banking_ref_known_#{ref_suffix}")
+
+      assert_equal expected_name, entry.name, "expected #{raw_line.inspect} to resolve to #{expected_name.inspect}"
+    end
+  end
+
+  test "does not match a known merchant name shorter than the minimum match length" do
+    @family.merchants.create!(name: "IT")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "NAME IT 1234" ]
+    )
+
+    # No known merchant match attempted ("IT" is below MIN_KNOWN_MERCHANT_MATCH_LENGTH),
+    # so the line passes through unchanged.
+    assert_equal "NAME IT 1234", name
+  end
+
+  test "prefers the longest matching known merchant name when multiple match" do
+    @family.merchants.create!(name: "Billa")
+    @family.merchants.create!(name: "Billa Corso")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "Billa Corso 0001234" ]
+    )
+
+    assert_equal "Billa Corso", name
+  end
+
+  test "escapes regex metacharacters in a known merchant name so matching never raises" do
+    @family.merchants.create!(name: "A+B (Café)")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "A+B (Café) 0001234" ]
+    )
+
+    assert_equal "A+B (Café)", name
+  end
+
   test "stores exchange_rate in extra when present" do
     tx = {
       entry_reference: "ref_fx",
@@ -282,11 +407,22 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   def build_processor(data)
-    EnableBankingEntry::Processor.new(data, enable_banking_account: Object.new)
+    # A minimal stand-in that responds to current_account (real EnableBankingAccount
+    # always does) so `account`/`known_merchant_names` resolve safely to nil/[] instead
+    # of raising -- these unit-level tests aren't wired to a real family, so they always
+    # exercise the "no known merchant" fallback path.
+    EnableBankingEntry::Processor.new(data, enable_banking_account: OpenStruct.new(current_account: nil))
   end
 
   def build_name(data)
     build_processor(data).send(:name)
+  end
+
+  # Unlike build_name/build_processor, wires up the real @enable_banking_account
+  # (and thus the real @family) so known-merchant matching has something to match
+  # against -- used by tests that create FamilyMerchant records via @family first.
+  def build_name_with_family(data)
+    EnableBankingEntry::Processor.new(data, enable_banking_account: @enable_banking_account).send(:name)
   end
 
   test "skips technical card counterparty and falls back to remittance_information" do
@@ -429,6 +565,100 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     assert_nil processor.send(:merchant)
+  end
+
+  # --- technical remittance line skip (issue #2935) ---
+
+  test "skips generic POS terminal line and uses real merchant from remittance_information" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114"
+      ]
+    )
+
+    assert_equal "BILLA DANKT 0007114", name
+  end
+
+  test "skips generic ATM terminal line and uses real merchant from remittance_information" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "ATM          50,00 AT  D6   31.07. 10:27",
+        "SPARKASSE EISENSTADT 7000"
+      ]
+    )
+
+    assert_equal "SPARKASSE EISENSTADT 7000", name
+  end
+
+  test "does not treat a POS/ATM-prefixed line as technical when it lacks a trailing date+time (merchant embedded in the same line)" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS 45,13 BILLA DANKT 0007114",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "POS 45,13 BILLA DANKT 0007114", name
+  end
+
+  test "does not treat a legitimate line as technical just because it ends with a date+time stamp" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "Invoice paid 31.07. 10:27",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "Invoice paid 31.07. 10:27", name
+  end
+
+  test "strips SumUp payment processor prefix from the merchant line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS         130,00 AT  D6   21.07. 14:20",
+        "SUMUP  *HERR DR. EISENSTADT 7000"
+      ]
+    )
+
+    assert_equal "HERR DR. EISENSTADT 7000", name
+  end
+
+  test "falls back to the technical line when remittance_information has no descriptive line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "POS          45,13 AT  D6   31.07. 10:27" ]
+    )
+
+    assert_equal "POS          45,13 AT  D6   31.07. 10:27", name
+  end
+
+  test "does not treat a merchant-like line starting with POS/ATM as technical" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "POS Café Wien" ]
+    )
+
+    assert_equal "POS Café Wien", name
   end
 
   test "converts unix timestamp date using family timezone not UTC" do

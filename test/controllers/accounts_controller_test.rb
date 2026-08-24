@@ -2,6 +2,7 @@ require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include OnchainTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -19,6 +20,55 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "##{dom_id(kraken_item)}"
+  end
+
+  test "index renders on-chain wallet items" do
+    register_fake_chain!
+    item = create_onchain_wallet_item(family: @user.family)
+    onchain_account = create_onchain_wallet_account(item: item)
+    onchain_account.ensure_account_provider!(accounts(:investment))
+
+    get accounts_url
+
+    assert_response :success
+    # Without this the wallet is invisible here: its accounts carry a provider
+    # link, so Account.manual excludes them, and no provider section claimed them.
+    assert_select "##{dom_id(item, :accounts_index)}"
+  ensure
+    unregister_fake_chain!
+  end
+
+  test "index does not leak wallet accounts a member was never given" do
+    register_fake_chain!
+    admin = users(:family_admin)
+    member = users(:family_member)
+    item = create_onchain_wallet_item(family: admin.family)
+
+    shared = accounts(:investment)
+    unshared = accounts(:credit_card)
+    [ shared, unshared ].each_with_index do |account, index|
+      account.update!(owner: admin)
+      account.account_shares.destroy_all
+      row = create_onchain_wallet_account(
+        item: item,
+        address: "#{OnchainTestHelper::FAKE_ADDRESS}#{index}"
+      )
+      row.ensure_account_provider!(account)
+    end
+    shared.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item, :accounts_index)}"
+    # The item is surfaced as soon as ONE of its accounts is accessible, so
+    # rendering them all would hand a partially-authorised member the names and
+    # balances of accounts nobody shared with them.
+    assert_includes response.body, shared.name
+    assert_not_includes response.body, unshared.name
+  ensure
+    unregister_fake_chain!
   end
 
   test "should get show" do
@@ -169,6 +219,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
+  end
+
+  test "account activity keeps excluded entries visible so they can be restored" do
+    trade_entry = entries(:trade)
+    trade_entry.update!(excluded: true)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)}"
   end
 
   test "renders investment account with gains chart view" do

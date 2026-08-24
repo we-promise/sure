@@ -79,12 +79,12 @@ class Security < ApplicationRecord
   # doesn't end in a supported quote.
   def crypto_base_asset
     return nil unless crypto?
-    Provider::BinancePublic::QUOTE_TO_CURRENCY.each_value do |suffix|
-      next unless ticker.end_with?(suffix)
-      base = ticker.delete_suffix(suffix)
-      return base unless base.empty?
-    end
-    nil
+
+    # Delegated rather than parsed here: this stripped a fiat suffix only, so it
+    # answered nil for the "CRYPTO:BTC" form the holdings processors store — the
+    # form every crypto integration writes — and those securities carried no
+    # logo at all. The provider already parses every shape it accepts.
+    Provider::BinancePublic.parse_ticker(ticker)&.dig(:base)
   end
 
   # Single source of truth for which logo URL the UI should render.

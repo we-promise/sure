@@ -187,4 +187,25 @@ class SecurityTest < ActiveSupport::TestCase
       sec.logo_url
     )
   end
+
+  # Every crypto integration stores the prefixed form — the on-chain wallets,
+  # Kraken, CoinStats and Binance all write "CRYPTO:BTC" — and this answered nil
+  # for all of them, so none of their securities carried a logo.
+  test "resolves the base asset from a prefixed crypto ticker" do
+    security = Security.new(ticker: "CRYPTO:BTC", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+
+    assert_equal "BTC", security.crypto_base_asset
+  end
+
+  test "still resolves the pair form the search results produce" do
+    security = Security.new(ticker: "BTCUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+
+    assert_equal "BTC", security.crypto_base_asset
+  end
+
+  test "a non-crypto security has no base asset" do
+    security = Security.new(ticker: "AAPL", exchange_operating_mic: "XNAS")
+
+    assert_nil security.crypto_base_asset
+  end
 end
