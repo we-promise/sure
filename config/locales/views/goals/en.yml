@@ -183,6 +183,8 @@ en:
         body: Restore it to continue contributing, or leave it as a record.
         restore_cta: Restore goal
       celebration:
+        heading_reserve: Reserve intact
+        body_reserve: "Your reserve is at its full level, %{saved} of %{target}. Nothing to do — it stays earmarked."
         heading: Goal reached. Nice work.
         body_reached: "You've hit your target at %{saved} of %{target}. It is not closed yet — the money is still earmarked for it."
         close_cta: Close this goal
@@ -209,6 +211,8 @@ en:
       completed: Completed
       archived: Archived
     status:
+      funded: Reserve intact
+      depleted: Needs topping up
       on_track: On track
       behind: Behind
       reached: Reached
@@ -241,6 +245,8 @@ en:
       pace_no_target: "%{avg}/mo avg"
       footer_paused: Paused
       footer_archived: Archived
+      footer_reserve_intact: Reserve intact
+      footer_reserve_short: "%{amount} to top up"
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: Open
@@ -254,6 +260,13 @@ en:
         one: Last pledge matched 1 day ago
         other: "Last pledge matched %{count} days ago"
     form:
+      kinds:
+        one_off:
+          hint: Save toward something, then close it when you spend it.
+          label: One-off goal
+        maintained:
+          hint: A level to keep, like an emergency fund. Never closed.
+          label: Reserve to maintain
       create: Create goal
       save: Save changes
       suggested_with_date: "Save {monthly}/mo across {accounts} to hit it on time."

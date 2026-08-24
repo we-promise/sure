@@ -14,8 +14,8 @@ class Goals::CardComponent < ApplicationComponent
   # live in that primitive — see #1899).
   def ring_tone
     case goal.status
-    when :reached, :on_track then :success
-    when :behind then :warning
+    when :reached, :on_track, :funded then :success
+    when :behind, :depleted then :warning
     else :neutral
     end
   end
@@ -83,6 +83,13 @@ class Goals::CardComponent < ApplicationComponent
       I18n.t("goals.goal_card.footer_archived")
     elsif goal.paused?
       I18n.t("goals.goal_card.footer_paused")
+    # A reserve has no deadline and no pace, so none of the one-off lines
+    # below apply: what it owes is the shortfall, and that is exactly
+    # remaining_amount.
+    elsif goal.maintained?
+      goal.status == :funded ?
+        I18n.t("goals.goal_card.footer_reserve_intact") :
+        I18n.t("goals.goal_card.footer_reserve_short", amount: goal.remaining_amount_money.format(precision: 0))
     elsif goal.completed? || goal.status == :reached
       I18n.t("goals.goal_card.footer_reached")
     elsif goal.status == :behind && goal.monthly_target_amount
@@ -102,6 +109,6 @@ class Goals::CardComponent < ApplicationComponent
   end
 
   def footer_has_money?
-    goal.status == :behind && goal.monthly_target_amount
+    (goal.status == :behind && goal.monthly_target_amount) || goal.status == :depleted
   end
 end

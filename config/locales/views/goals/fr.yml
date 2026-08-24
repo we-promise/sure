@@ -30,6 +30,13 @@ fr:
     errors:
       not_found: Cet objectif n'a pas pu être trouvé. Il a peut-être été supprimé.
     form:
+      kinds:
+        maintained:
+          hint: Un niveau à tenir, comme une épargne de précaution. Jamais clôturée.
+          label: Réserve à maintenir
+        one_off:
+          hint: Épargner pour quelque chose, puis clôturer une fois la dépense faite.
+          label: Objectif ponctuel
       create: Créer l'objectif
       errors:
         accounts_required: Sélectionnez au moins un compte de financement.
@@ -76,6 +83,8 @@ fr:
       footer_no_deadline: Ouvert
       footer_no_pledges: Aucune promesse rapprochée
       footer_paused: En pause
+      footer_reserve_intact: Réserve constituée
+      footer_reserve_short: "%{amount} à recompléter"
       footer_reached: Objectif atteint
       left: restant
       n_accounts: "%{first} +%{count}"
@@ -168,6 +177,8 @@ fr:
         body: Rythme actuel %{avg}/mois · requis %{required}/mois pour atteindre votre objectif.
         title: Épargnez %{amount}/mois de plus pour rattraper le retard
       celebration:
+        body_reserve: "Votre réserve est à son niveau, %{saved} sur %{target}. Rien à faire — elle reste affectée."
+        heading_reserve: Réserve constituée
         body_reached: "Vous avez atteint votre cible, à %{saved} sur %{target}. Il n'est pas encore clôturé — l'argent lui reste affecté."
         close_cta: Clôturer cet objectif
         close_hint: La clôture libère l'argent affecté au profit de vos autres objectifs sur le même compte. À faire une fois la dépense réellement effectuée.
@@ -269,6 +280,8 @@ fr:
       completed: Terminé
       paused: En pause
     status:
+      depleted: À recompléter
+      funded: Réserve constituée
       archived: Archivé
       behind: En retard
       completed: Terminé

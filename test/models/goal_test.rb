@@ -598,6 +598,85 @@ class GoalTest < ActiveSupport::TestCase
     assert_not @goal.valid?
   end
 
+  # --- Lot B3a: reserves to maintain ---
+
+  test "a reserve is funded at its floor and depleted below it" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    assert_equal :funded, goal.status
+
+    goal.linked_accounts.first.update!(balance: 4_500)
+    assert_equal :depleted, Goal.find(goal.id).status
+  end
+
+  # `complete` releases the earmark. For a reserve that is the opposite of the
+  # point, so the transition is refused outright rather than hidden in the UI.
+  test "a reserve cannot be completed" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+
+    assert_not goal.may_complete?
+    assert_raises(AASM::InvalidTransition) { goal.complete! }
+    assert_equal "active", goal.reload.state
+    assert_nil goal.completed_amount
+  end
+
+  test "a one_off goal at its target can still be completed" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    goal.update!(kind: "one_off")
+
+    assert goal.may_complete?
+  end
+
+  # monthly_target_amount and pace both derive from target_date, which a
+  # reserve does not have — "save X/month to catch up" would be advice about
+  # a deadline that does not exist.
+  test "a depleted reserve is never behind pace" do
+    goal = reserve_goal(balance: 1_000, target: 6_000)
+
+    assert_equal :depleted, goal.status
+    assert_not goal.behind_pace?
+  end
+
+  # ACTIVE_DISPLAY_STATUS_RANK falls back to 4 for anything unranked, so a
+  # missing :depleted entry would sort a drained reserve dead last.
+  # Named so the alphabetical tie-break works AGAINST the reserve: only the
+  # rank can put it first. Unranked, :depleted would fall back to 4 and land
+  # behind the open-ended goal's 2.
+  test "a depleted reserve sorts ahead of a goal that needs nothing" do
+    drained = reserve_goal(balance: 100, target: 6_000, name: "Zzz drained")
+    open_ended = @family.goals.create!(
+      name: "Aaa open ended", target_amount: 1_000, currency: "USD"
+    ) do |g|
+      g.goal_accounts.build(account: Account.create!(
+        family: @family, accountable: Depository.new,
+        name: "Open Ended Pot", currency: "USD", balance: 900
+      ))
+    end
+
+    sorted = Goal.active_display_sort([ open_ended, drained ])
+
+    assert_equal :depleted, drained.status
+    assert_equal :no_target_date, open_ended.status
+    assert_equal drained.id, sorted.first.id,
+                 "a reserve below its floor must not sort below a goal that needs nothing"
+  end
+
+  # The reserve keeps reserving: a withdrawal creates a shortfall, it does not
+  # release the earmark the way completing a one-off does.
+  test "a withdrawal leaves a reserve's earmark in place" do
+    goal = reserve_goal(balance: 6_000, target: 6_000, allocated: 6_000)
+    account = goal.linked_accounts.first
+
+    assert_equal BigDecimal("6000"), account.goal_earmarked_total
+
+    account.update!(balance: 4_000)
+    account.reload
+
+    assert_equal BigDecimal("6000"), account.goal_earmarked_total,
+                 "a reserve holds its earmark whatever the balance does"
+    assert_equal :depleted, Goal.find(goal.id).status
+    assert_equal BigDecimal("2000"), Goal.find(goal.id).remaining_amount.to_d
+  end
+
   test "account free_to_earmark subtracts non-archived fixed earmarks" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Headroom Savings", currency: "USD", balance: 5_000)
     @family.goals.create!(name: "Earmarker", target_amount: 10_000, currency: "USD") do |g|
@@ -887,6 +966,16 @@ class GoalTest < ActiveSupport::TestCase
     def whole_account_goal(name, account)
       @family.goals.create!(name: name, target_amount: 5_000, currency: "USD") do |goal|
         goal.goal_accounts.build(account: account)
+      end
+    end
+
+    def reserve_goal(balance:, target:, allocated: nil, name: "Emergency reserve")
+      account = Account.create!(
+        family: @family, accountable: Depository.new,
+        name: "#{name} Pot", currency: "USD", balance: balance
+      )
+      @family.goals.create!(name: name, target_amount: target, currency: "USD", kind: "maintained") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: allocated)
       end
     end
 end

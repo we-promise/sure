@@ -418,6 +418,46 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
   end
 
+
+  # --- Lot B3a: reserves ---
+
+  test "create accepts the maintained kind" do
+    account = unclaimed_account("Reserve Pot")
+
+    assert_difference -> { Goal.count }, 1 do
+      post goals_url, params: {
+        goal: { name: "Emergency", target_amount: "6000", color: "#4da568", kind: "maintained", account_ids: [ account.id ] }
+      }
+    end
+
+    assert Goal.order(created_at: :desc).first.maintained?
+  end
+
+  # The AASM guard refuses the transition; the controller must report that
+  # rather than claim success or blow up.
+  test "completing a reserve is refused at the controller too" do
+    goal = fully_funded_goal
+    goal.update_column(:kind, "maintained")
+
+    patch complete_goal_url(goal)
+
+    assert_redirected_to goal_path(goal)
+    assert_match(/./, flash[:alert].to_s)
+    assert_equal "active", goal.reload.state
+  end
+
+  test "a funded reserve reads as intact, with nothing to do" do
+    goal = fully_funded_goal
+    goal.update_column(:kind, "maintained")
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.celebration.heading_reserve"), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.archive_cta"))}/, response.body)
+  end
+
   private
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.

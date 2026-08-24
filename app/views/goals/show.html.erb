@@ -141,7 +141,7 @@
       <% unless @goal.completed? %>
         <p class="text-xs text-subdued tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
       <% end %>
-      <% unless @goal.completed? || @goal.status == :reached || @goal.paused? || @goal.archived? %>
+      <% unless @goal.completed? || @goal.status == :reached || @goal.status == :funded || @goal.paused? || @goal.archived? %>
         <%# Single Record pledge entry point on the page. Pre-filled with the
             catch-up delta when behind so accepting once funds the gap. %>
         <% prefill_amount = @goal.status == :behind && @goal.catch_up_delta_money.amount.positive? ? @goal.catch_up_delta_money.amount.to_f : nil %>
@@ -170,10 +170,13 @@
           <%= t(".inactive.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %>
         </p>
       </div>
-    <% elsif @goal.completed? || @goal.status == :reached %>
+    <%# :funded joins the two one-off cases here — a reserve at its floor has
+        no projection worth drawing either. It reads differently though: it is
+        a steady state, not a finish line. %>
+    <% elsif @goal.completed? || @goal.status == :reached || @goal.status == :funded %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
         <div class="w-16 h-16 rounded-full bg-success/10 inline-flex items-center justify-center text-success mb-3">
-          <%= icon("party-popper", size: "2xl", color: "success") %>
+          <%= icon(@goal.maintained? ? "shield-check" : "party-popper", size: "2xl", color: "success") %>
         </div>
         <%# Two situations reach this panel and they are not the same thing.
             A `completed` goal is closed: its earmark has been released and
@@ -183,9 +186,11 @@
             the only action, which is the gesture that does NOT release
             anything. Closing is what does. %>
         <% closed = @goal.completed? %>
-        <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
+        <h2 class="text-lg font-semibold text-primary">
+          <%= @goal.maintained? ? t(".celebration.heading_reserve") : t(".celebration.heading") %>
+        </h2>
         <p class="text-sm text-secondary mt-1 max-w-md privacy-sensitive">
-          <%= t(closed ? ".celebration.body" : ".celebration.body_reached",
+          <%= t(@goal.maintained? ? ".celebration.body_reserve" : (closed ? ".celebration.body" : ".celebration.body_reached"),
                 saved: @goal.current_balance_money.format(precision: 0),
                 target: @goal.target_amount_money.format(precision: 0)) %>
         </p>
@@ -198,7 +203,10 @@
         <% end %>
         <%# A maintained reserve at 100% is in its normal state, not waiting
             to be closed — Lot B3 forbids `complete` for them outright. %>
-        <% if !closed && @goal.one_off? && @goal.may_complete? %>
+        <% if @goal.maintained? %>
+          <%# A reserve at its floor has nothing to close: offering to release
+              the money would be offering to undo the thing it exists for. %>
+        <% elsif !closed && @goal.one_off? && @goal.may_complete? %>
           <div class="mt-4">
             <%= render DS::Button.new(
               text: t(".celebration.close_cta"),

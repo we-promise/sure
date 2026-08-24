@@ -82,16 +82,23 @@ class Goal < ApplicationRecord
   RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
-  # floor to hold (see Lot B3, which gives this column its behavior). Nothing
-  # branches on it yet beyond these predicates — the column exists now so the
-  # lifecycle written here does not have to be retrofitted later.
+  # floor to hold — an emergency fund is not an achievement to file away, it
+  # is a level to keep. The two differ in what 100% means, whether `complete`
+  # is even allowed, and how they sort.
   KINDS = %w[one_off maintained].freeze
 
   validates :kind, inclusion: { in: KINDS }
 
-  # Display order for active (non-completed/non-archived) goals: behind
-  # first, then on-track, then open-ended. Paused sorts after all of these.
-  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
+  # Display order for active (non-completed/non-archived) goals: whatever
+  # needs money first, then on-track, then open-ended, then the reserves that
+  # are already whole. Paused sorts after all of these.
+  #
+  # `depleted` shares rank 0 with `behind`: a reserve below its floor is the
+  # same kind of "this needs attention" as a goal off pace. `active_display_sort`
+  # falls back to 4 for anything unranked, so omitting these two would bury a
+  # drained emergency fund at the very bottom of the list — the exact opposite
+  # of what it means.
+  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, depleted: 0, on_track: 1, no_target_date: 2, funded: 3 }.freeze
 
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
   scope :active_first, lambda {
@@ -283,8 +290,11 @@ class Goal < ApplicationRecord
       transitions from: :paused, to: :active
     end
 
+    # Guarded to one_off: completing releases the earmark, and releasing the
+    # money is the opposite of what a reserve is for. A maintained goal at
+    # 100% is simply whole; there is nothing to close.
     event :complete do
-      transitions from: [ :active, :paused ], to: :completed
+      transitions from: [ :active, :paused ], to: :completed, guard: :one_off?
     end
 
     event :archive do
@@ -533,6 +543,10 @@ class Goal < ApplicationRecord
   def status
     return @status if defined?(@status)
 
+    # A reserve is never "reached": sitting at its floor is its steady state,
+    # not an achievement to file away. It is either whole or short.
+    return @status = (remaining_amount.to_d.zero? ? :funded : :depleted) if maintained?
+
     @status = if completed? || remaining_amount.to_d.zero?
       :reached
     elsif target_date.nil?
@@ -548,8 +562,13 @@ class Goal < ApplicationRecord
   # are excluded even when their raw status computes :behind — pausing stops
   # the pace clock on purpose, so surfacing them as behind (or summing them
   # into "needs this month") would nag the user about a goal they shelved.
+  #
+  # Maintained reserves are excluded for a different reason: they have no
+  # pace at all. monthly_target_amount and pace both derive from target_date,
+  # which a reserve does not have, so "save X/month to catch up" would be
+  # advice about a deadline that does not exist.
   def behind_pace?
-    !paused? && status == :behind
+    !paused? && !maintained? && status == :behind
   end
 
   # Date of the most-recently-matched pledge's underlying entry. Used by the
