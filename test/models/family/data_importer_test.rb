@@ -1636,6 +1636,45 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Candidate outflow", rejected_transfer.outflow_transaction.entry.name
   end
 
+  test "skips rejected transfers with missing transactions under strict import" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" }
+      },
+      {
+        type: "Account",
+        data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" }
+      },
+      {
+        type: "Transaction",
+        data: { id: "rejected-outflow", account_id: "checking", date: "2024-01-20", amount: "25.00", name: "Candidate outflow", currency: "USD", kind: "standard" }
+      },
+      {
+        type: "Transaction",
+        data: { id: "rejected-inflow", account_id: "savings", date: "2024-01-20", amount: "-25.00", name: "Candidate inflow", currency: "USD", kind: "standard" }
+      },
+      {
+        type: "RejectedTransfer",
+        data: { id: "rejected-valid", inflow_transaction_id: "rejected-inflow", outflow_transaction_id: "rejected-outflow" }
+      },
+      {
+        type: "RejectedTransfer",
+        data: { id: "rejected-orphan", inflow_transaction_id: "rejected-inflow", outflow_transaction_id: "missing-outflow" }
+      }
+    ])
+
+    result = nil
+    assert_difference -> { RejectedTransfer.count }, 1 do
+      result = Family::DataImporter.new(@family, ndjson, import_session: session).import!
+    end
+
+    assert_equal 1, result[:summary].dig("rejected_transfers", "created")
+    assert_equal 1, result[:summary].dig("rejected_transfers", "skipped")
+  end
+
   test "imports duplicate transfer decisions idempotently with unknown status fallback" do
     ndjson = build_ndjson([
       {
@@ -1840,6 +1879,47 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     category = @family.categories.find_by(name: "Coffee")
     assert_not_nil category
     assert_equal category.id, action.value
+  end
+
+  test "imports transaction_tag rule condition by remapping the tag name to an id" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Flag Reimbursable",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            {
+              condition_type: "transaction_tag",
+              operator: "=",
+              value: "Reimbursable"
+            }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_name",
+              value: "Reimbursable expense"
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by(name: "Flag Reimbursable")
+    assert_not_nil rule
+
+    condition = rule.conditions.first
+    assert_equal "transaction_tag", condition.condition_type
+
+    # The tag should be created and the condition value remapped to its id
+    tag = @family.tags.find_by(name: "Reimbursable")
+    assert_not_nil tag
+    assert_equal tag.id, condition.value
   end
 
   test "session rule reimport only replaces current family conditions and actions" do

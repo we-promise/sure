@@ -93,9 +93,20 @@ class GoalsController < ApplicationController
       return
     end
 
+    # Assign first, sync the links, then persist once. Saving the attributes
+    # up front ran `must_have_at_least_one_linked_account` against the goal's
+    # OLD links, so a goal orphaned by account deletion (Account has_many
+    # :goal_accounts, dependent: :destroy) could never be edited back to
+    # health: the save raised before the submitted accounts were attached.
+    # One save over the fully-assembled goal validates what the user actually
+    # submitted.
     Goal.transaction do
-      @goal.update!(goal_update_params)
-      sync_linked_accounts!(@goal, accounts, submitted_allocations) if accounts_supplied
+      @goal.assign_attributes(goal_update_params)
+      if accounts_supplied
+        sync_linked_accounts!(@goal, accounts, submitted_allocations)
+      else
+        @goal.save!
+      end
     end
 
     flash[:notice] = t(".success")
@@ -111,12 +122,13 @@ class GoalsController < ApplicationController
     render :edit, status: :unprocessable_entity
   end
 
+  # Deletable from any state. Destroying a goal cascades only to its own
+  # goal_accounts / goal_pledges — and GoalPledge#clear_matched_transaction_extra
+  # unstamps the pledge id it wrote onto a matched transaction. No account,
+  # balance, entry or transaction is removed, so the archive-first gate this
+  # used to enforce bought no safety; it only hid the action behind a two-step
+  # flow no other Sure resource requires.
   def destroy
-    unless @goal.archived?
-      redirect_to goal_path(@goal), alert: t(".archive_first")
-      return
-    end
-
     @goal.destroy!
     redirect_to goals_path, notice: t(".success")
   end
@@ -289,16 +301,27 @@ class GoalsController < ApplicationController
     end
 
     def perform_transition!(event)
-      if @goal.aasm.may_fire_event?(event)
-        @goal.public_send("#{event}!")
-        respond_to do |format|
-          format.html { redirect_to goal_path(@goal), notice: t(".success") }
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.action(:redirect, goal_path(@goal))
-          end
-        end
-      else
+      unless @goal.aasm.may_fire_event?(event)
         redirect_to goal_path(@goal), alert: t(".invalid_transition")
+        return
+      end
+
+      # AASM's bang event returns false — it does NOT raise — when the save
+      # that persists the new state fails validation. The return value used to
+      # be discarded, so an invalid goal (e.g. orphaned by account deletion)
+      # flashed "Goal archived." while the state never moved. Surface the
+      # validation error instead of claiming success.
+      unless @goal.public_send("#{event}!")
+        redirect_to goal_path(@goal),
+                    alert: @goal.errors.full_messages.to_sentence.presence || t(".invalid_transition")
+        return
+      end
+
+      respond_to do |format|
+        format.html { redirect_to goal_path(@goal), notice: t(".success") }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.action(:redirect, goal_path(@goal))
+        end
       end
     end
 end

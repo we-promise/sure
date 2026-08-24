@@ -56,6 +56,10 @@ class PagesController < ApplicationController
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
 
     @money_flow_accounts = income_statement.eligible_accounts
+    # TransactionsController's default (account_ids absent) scopes to this
+    # broader set, not @money_flow_accounts, so the view needs it to know
+    # when the drill-down links can safely omit account_ids.
+    @money_flow_accessible_account_ids = Current.user.accessible_accounts.pluck(:id).map(&:to_s)
     @money_flow_month = money_flow_month_param
     @money_flow_account_ids = money_flow_account_ids_param
     @money_flow_data = build_money_flow_data(income_statement, @money_flow_month, @money_flow_account_ids)
@@ -78,6 +82,7 @@ class PagesController < ApplicationController
   end
 
   def changelog
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.changelog"), nil ] ]
     @release_notes = github_provider.fetch_latest_release_notes
 
     # Fallback if no release notes are available
@@ -95,6 +100,7 @@ class PagesController < ApplicationController
   end
 
   def feedback
+    @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.feedback"), nil ] ]
     render layout: "settings"
   end
 
@@ -155,7 +161,7 @@ class PagesController < ApplicationController
           title: "pages.dashboard.money_flow.title",
           partial: "pages/dashboard/money_flow",
           layout: section_layout("money_flow"),
-          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, col_span: section_layout("money_flow")[:col_span] },
+          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, accessible_account_ids: @money_flow_accessible_account_ids, col_span: section_layout("money_flow")[:col_span] },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -471,6 +477,12 @@ class PagesController < ApplicationController
         {
           date: month_start,
           label: I18n.l(month_start, format: :short_month_year),
+          # Fallback for the axis when the full label does not fit its band.
+          # `short_month_year` is only short in some locales — "Mar 2026" in
+          # English, but "Mar de 2026" in ca/es/pt, which is wide enough to
+          # collide with its neighbours on a phone. The bar chart measures the
+          # rendered labels and drops to this when they overlap.
+          short_label: I18n.l(month_start, format: "%b"),
           income: totals.income_money.amount.to_f.round(2),
           expense: totals.expense_money.amount.to_f.round(2),
           highlighted: month_start == selected_month,

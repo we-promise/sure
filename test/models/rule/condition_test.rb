@@ -56,6 +56,25 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_equal 3, filtered.count
   end
 
+  test "applies transaction_amount not equal operator using absolute values" do
+    create_transaction(date: Date.current, account: @account, amount: -100, name: "Rule test transaction negative 100")
+    scope = @account.transactions
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_amount",
+      operator: "!=",
+      value: "100"
+    )
+
+    scope = condition.prepare(scope)
+
+    filtered = condition.apply(scope)
+    # Absolute amounts: 100, -100, 200, 50, 10, 1000 — exclude both ±100
+    assert_equal 4, filtered.count
+    assert_not filtered.any? { |txn| txn.entry.amount.abs == 100 }
+  end
+
   test "applies transaction_merchant condition" do
     scope = @rule_scope
 
@@ -164,6 +183,105 @@ class Rule::ConditionTest < ActiveSupport::TestCase
 
     assert_equal 4, filtered.count
     assert filtered.all? { |t| t.category_id.nil? }
+  end
+
+  test "applies transaction_tag condition" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    tagged = @account.transactions.first
+    tagged.tags << tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "=",
+      value: tag.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    assert_equal 1, filtered.count
+    assert_equal tagged.id, filtered.first.id
+  end
+
+  test "applies is_null condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    @account.transactions.first.tags << tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "is_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # The 4 transactions without any tag
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.tags.include?(tag) }
+  end
+
+  test "compound AND of two transaction_tag conditions matches transactions having both tags" do
+    scope = @rule_scope
+
+    tag_a = @family.tags.create!(name: "Reimbursable")
+    tag_b = @family.tags.create!(name: "Business")
+
+    both = @account.transactions.first
+    both.tags << [ tag_a, tag_b ]
+
+    only_a = @account.transactions.second
+    only_a.tags << tag_a
+
+    parent_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "compound",
+      operator: "and",
+      sub_conditions: [
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_a.id),
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_b.id)
+      ]
+    )
+
+    scope = parent_condition.prepare(scope)
+    filtered = parent_condition.apply(scope)
+
+    # Only the transaction carrying BOTH tags matches (a single joined alias could not)
+    assert_equal 1, filtered.count
+    assert_equal both.id, filtered.first.id
+  end
+
+  test "compound OR of transaction_tag conditions does not duplicate multi-tagged transactions" do
+    scope = @rule_scope
+
+    tag_a = @family.tags.create!(name: "Reimbursable")
+    tag_b = @family.tags.create!(name: "Business")
+
+    multi = @account.transactions.first
+    multi.tags << [ tag_a, tag_b ]
+
+    parent_condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "compound",
+      operator: "or",
+      sub_conditions: [
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_a.id),
+        Rule::Condition.new(condition_type: "transaction_tag", operator: "=", value: tag_b.id)
+      ]
+    )
+
+    scope = parent_condition.prepare(scope)
+    filtered = parent_condition.apply(scope)
+
+    # Matches both OR branches but must be returned exactly once (no join fan-out)
+    assert_equal 1, filtered.count
+    assert_equal [ multi.id ], filtered.map(&:id)
   end
 
   test "applies is_null condition for transaction_merchant" do

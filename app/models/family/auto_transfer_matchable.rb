@@ -43,14 +43,10 @@ module Family::AutoTransferMatchable
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
-        begin
-          Transfer.find_or_create_by!(
-            inflow_transaction_id: match.inflow_transaction_id,
-            outflow_transaction_id: match.outflow_transaction_id,
-          )
-        rescue ActiveRecord::RecordNotUnique
-          # Another concurrent job created the transfer; safe to ignore
-        end
+        # Skip this candidate when the transfer for this exact pair was not created
+        # (a concurrent sync claimed one of the transactions for a different pairing);
+        # marking it matched here would leave a transaction matched with no Transfer.
+        next unless find_or_create_transfer!(match)
 
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
@@ -80,6 +76,45 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # Create the transfer for a matched candidate, tolerating a concurrent sync
+    # that already inserted the same pair.
+    #
+    # The insert runs in its own savepoint (requires_new: true). On PostgreSQL a
+    # failed statement aborts the entire surrounding transaction, so rescuing a
+    # RecordNotUnique raised by find_or_create_by! is not enough on its own: the
+    # next write would fail with PG::InFailedSqlTransaction and the remaining
+    # candidates would be silently dropped. Isolating the insert in a savepoint
+    # rolls back only the failed statement, leaving the outer transaction healthy.
+    def find_or_create_transfer!(match)
+      Transfer.transaction(requires_new: true) do
+        Transfer.find_or_create_by!(
+          inflow_transaction_id: match.inflow_transaction_id,
+          outflow_transaction_id: match.outflow_transaction_id,
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique
+      # The composite unique index rejected the insert because this exact
+      # (inflow, outflow) pair was committed concurrently between our find and our
+      # insert. Return that committed row; if it is somehow absent, return nil so the
+      # caller skips rather than marking a transaction with no Transfer behind it.
+      existing_transfer(match)
+    rescue ActiveRecord::RecordInvalid => e
+      # The same race surfaces through the per-column uniqueness validation. Re-raise
+      # anything that is not a :taken on the transfer's transaction ids...
+      raise unless %i[inflow_transaction_id outflow_transaction_id].any? { |attr| e.record.errors.of_kind?(attr, :taken) }
+      # ...and even for :taken, only accept it once the exact (inflow, outflow) row is
+      # confirmed present; otherwise the :taken came from a different pairing.
+      existing_transfer(match)
+    end
+
+    # The committed transfer for this exact candidate pair, or nil if none exists.
+    def existing_transfer(match)
+      Transfer.find_by(
+        inflow_transaction_id: match.inflow_transaction_id,
+        outflow_transaction_id: match.outflow_transaction_id,
+      )
+    end
+
     def coerce_transfer_match_date_window!(value)
       Integer(value)
     rescue ArgumentError, TypeError

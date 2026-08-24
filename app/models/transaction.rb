@@ -144,6 +144,16 @@ class Transaction < ApplicationRecord
     update!(category: category)
   end
 
+  # Marks a category as recently used. Called explicitly from the manual
+  # category-assignment controllers (picker, edit form, categorization
+  # wizard, create-and-assign) after a successful save — not wired to a
+  # blanket after_save callback because rule and import auto-assignment
+  # also go through `category_id=`, and those shouldn't count as a "recent"
+  # pick. See Category.recently_used_for.
+  def record_category_usage!
+    category.touch(:last_used_at) if saved_change_to_category_id? && category.present?
+  end
+
   def pending?
     extra_data = extra.is_a?(Hash) ? extra : {}
     PENDING_PROVIDERS.any? do |provider|
@@ -176,6 +186,20 @@ class Transaction < ApplicationRecord
 
   def has_potential_duplicate?
     potential_posted_match_data.present? && !potential_duplicate_dismissed?
+  end
+
+  # Manual recurring transactions are unique per (family, account, merchant/name, amount, currency)
+  # — see the partial unique indexes on recurring_transactions. Used to guard "mark as recurring"
+  # so the UI can disable the action ahead of time instead of failing after a POST.
+  def existing_manual_recurring_transaction
+    entry.account.family.recurring_transactions.find_by(
+      account_id: entry.account_id,
+      merchant_id: merchant_id,
+      name: merchant_id.present? ? nil : entry.name,
+      amount: entry.amount,
+      currency: entry.currency,
+      manual: true
+    )
   end
 
   def potential_duplicate_entry

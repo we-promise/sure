@@ -377,6 +377,47 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "history budget subtracts the real instructions estimate when given" do
+    Setting.stubs(:llm_max_response_tokens).returns(nil)
+
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => "8192",
+      "LLM_MAX_RESPONSE_TOKENS" => nil,
+      "LLM_SYSTEM_PROMPT_RESERVE" => nil,
+      "LLM_MAX_HISTORY_TOKENS" => nil
+    ) do
+      subject = Provider::Openai.new("test-token")
+      instructions = "a" * 4000
+      estimate = Assistant::TokenEstimator.estimate(instructions)
+
+      assert_equal 8192 - 512 - estimate, subject.max_history_tokens(instructions: instructions)
+      # Without instructions the flat reserve still applies
+      assert_equal 8192 - 512 - 256, subject.max_history_tokens
+    end
+  end
+
+  test "response cap is only sent when explicitly configured" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      subject = Provider::Openai.new("test-token")
+
+      assert_nil subject.explicit_max_response_tokens
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(768)
+      subject = Provider::Openai.new("test-token")
+
+      assert_equal 768, subject.explicit_max_response_tokens
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "900") do
+      subject = Provider::Openai.new("test-token")
+
+      assert_equal 900, subject.explicit_max_response_tokens
+    end
+  end
+
   test "budget readers fall back to Setting when ENV unset" do
     with_env_overrides(
       "LLM_CONTEXT_WINDOW" => nil,

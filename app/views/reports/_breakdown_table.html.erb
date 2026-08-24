@@ -1,5 +1,5 @@
 <%# Renders a breakdown table for income or expense groups %>
-<%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction %>
+<%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction, start_date, end_date %>
 
 <%
   color_class = type == :income ? "text-success" : "text-primary"
@@ -38,6 +38,8 @@
             total: total,
             color_class: color_class,
             level: :category,
+            start_date: start_date,
+            end_date: end_date,
             show_border: idx < groups.size - 1 || group[:subcategories].present? %>
           <%# Render subcategories if present %>
           <% if group[:subcategories].present? && group[:subcategories].any? %>
@@ -47,6 +49,8 @@
                 total: total,
                 color_class: color_class,
                 level: :subcategory,
+                start_date: start_date,
+                end_date: end_date,
                 show_border: sub_idx < group[:subcategories].size - 1 %>
             <% end %>
           <% end %>

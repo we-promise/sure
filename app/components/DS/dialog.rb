@@ -40,11 +40,23 @@ class DS::Dialog < DesignSystemComponent
   attr_reader :variant, :auto_open, :reload_on_close, :width, :disable_frame, :content_class, :disable_click_outside, :opts, :responsive, :scrollable, :heading_level, :title_id
 
   VARIANTS = %w[modal drawer].freeze
+  # `expanded` is the "give this cramped thing the whole screen" shape used by
+  # expand-on-hover affordances (the dashboard cashflow chart, the debug log
+  # table). It keeps a sliver of viewport margin — unlike `full` — and caps out
+  # so wide tables and charts don't stretch unreadably on ultrawide displays.
+  #
+  # The 96vw only applies from `lg`, where `dialog_inner_classes` drops the
+  # `mx-3` gutter. Below that, a viewport-relative width is the wrong tool:
+  # `vw` counts the scrollbar but the dialog's own box does not, so 96vw + the
+  # 24px gutter overflows a phone by ~11px per side (measured 320–390px), and
+  # flex-shrink cannot absorb it once nowrap content raises the panel's
+  # min-content width. Below `lg` the base `w-full` + `mx-3` already fits.
   WIDTHS = {
     sm: "lg:max-w-[300px]",
     md: "lg:max-w-[550px]",
     lg: "lg:max-w-[700px]",
-    full: "lg:max-w-full"
+    full: "lg:max-w-full",
+    expanded: "lg:!w-[96vw] max-w-[1650px]"
   }.freeze
   VALID_HEADING_LEVELS = (1..6).freeze
 

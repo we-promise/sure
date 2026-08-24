@@ -1,14 +1,8 @@
 # Pipelock configuration for Docker Compose
 # See https://github.com/luckyPipewrench/pipelock for full options.
 #
-# Recent additions through 2.8: default-on flight recorder receipts, safe-by-
-# default receipt verification, request-policy scoring, request-body prompt-
-# injection blocking, SPIFFE-strict inbound mediation envelopes, scanner
-# attribution on MCP block receipts, wedge-detection health watchdog,
-# learn-and-lock behavioural contracts, trusted domains, redirect profiles,
-# MCP `defer` authorization, `pipelock explain`, `pipelock keys status`,
-# `pipelock support bundle`, verified `pipelock update`, and `pipelock doctor`
-# checks for inert exemptions.
+# This file is validated in CI with Pipelock 3.4.0. See the release changelog
+# for the full control surface and upgrade notes.
 # Run `pipelock assess init --config <file>` to create an assessment workspace.
 # Run `pipelock audit score --config <file>` for a security posture score (0-100).
 # Run `pipelock doctor` to verify configured protections are actually enforceable.
@@ -78,8 +72,9 @@ tool_chain_detection:
   window_size: 20
   max_gap: 3
 
-# Request body scanning (pipelock 2.5+): detect prompt-injection payloads in
-# outbound request bodies (JSON, form-encoded, raw text, WebSocket frames).
+# Request body scanning covers cleartext HTTP, reverse-proxy, and WebSocket
+# bodies. It cannot inspect encrypted HTTPS tunnel bodies unless TLS
+# interception is separately configured and its CA trusted by the client.
 # In enforce mode, prompt-injection findings hard-block non-provider
 # destinations even when action is "warn". Trusted provider hosts (OpenAI,
 # Anthropic, etc.) remain exempt via the response_scanning exemption list.

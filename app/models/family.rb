@@ -7,6 +7,7 @@ class Family < ApplicationRecord
   include Trading212Connectable
   include QuestradeConnectable
   include RedbarkConnectable
+  include OnchainWalletConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -144,11 +145,35 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
+  validates :personal_budgets, inclusion: { in: [ true, false ] }
+  validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validate :timezone_must_be_a_known_zone, if: :timezone_changed?
 
   before_validation :normalize_enabled_currencies!
 
   def primary_currency_code
-    normalize_currency_code(currency) || "USD"
+    self.class.normalize_currency_code(currency) || "USD"
+  end
+
+  def default_currency_for_country
+    self.class.default_currency_for_country(country)
+  end
+
+  def self.default_currency_for_country(country)
+    country_currency = ISO3166::Country.new(country.to_s.upcase)&.currency_code
+    normalize_currency_code(country_currency) || "USD"
+  end
+
+  def self.default_currency_by_country
+    LanguagesHelper::COUNTRY_MAPPING.keys.index_with { |country| default_currency_for_country(country) }
+  end
+
+  def self.normalize_currency_code(value)
+    return if value.blank?
+
+    Money::Currency.new(value).iso_code
+  rescue Money::Currency::UnknownCurrencyError, ArgumentError
+    nil
   end
 
   def custom_enabled_currencies?
@@ -267,6 +292,15 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  # Merchant names already associated with this family (via any provider, or a
+  # manually created FamilyMerchant) -- used to recognize a merchant embedded in
+  # noisy provider text (e.g. Enable Banking's remittance lines) without
+  # inventing a new one from scratch. Deliberately excludes recently-unlinked
+  # merchants (unlike available_merchants), since those were explicitly removed.
+  def known_merchant_names
+    (assigned_merchants.pluck(:name) + merchants.pluck(:name)).uniq
+  end
+
   def assigned_merchants_for(user)
     merchant_ids = Transaction.joins(:entry)
       .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
@@ -306,12 +340,16 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
+  # Memoized per user: the layout renders the sidebar for desktop and mobile
+  # (each with three tab panels), so one request asks for the balance sheet
+  # many times; rebuilding it repeats the account/sync/exchange-rate queries.
   def balance_sheet(user: Current.user)
-    BalanceSheet.new(self, user: user)
+    @balance_sheets ||= {}
+    @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
   end
 
-  def income_statement(user: Current.user)
-    IncomeStatement.new(self, user: user)
+  def income_statement(user: Current.user, accounts: nil)
+    IncomeStatement.new(self, user: user, accounts: accounts)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
@@ -488,14 +526,30 @@ class Family < ApplicationRecord
     end
 
     def normalize_currency_codes(values)
-      Array(values).filter_map { |value| normalize_currency_code(value) }.uniq
+      Array(values).filter_map { |value| self.class.normalize_currency_code(value) }.uniq
     end
 
-    def normalize_currency_code(value)
-      return if value.blank?
+    # Not a plain `inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }`
+    # on purpose: the settings form submits `tz.tzinfo.identifier` (e.g.
+    # "America/New_York"), not `tz.name` (e.g. "Eastern Time (US & Canada)")
+    # -- see LanguagesHelper#timezone_options. For every zone Rails ships,
+    # those two differ, so an inclusion check against `.name` would reject
+    # every legitimate value the form actually submits. `ActiveSupport::TimeZone[]`
+    # resolves both forms, and is the same lookup `Localize#resolved_timezone`
+    # uses at request time, so "valid at save time" and "valid when rendering"
+    # can't drift apart.
+    #
+    # Only runs when timezone is actually being changed (see the `if:` on the
+    # `validate` call above). A family that already has a stale value from
+    # before this validation existed (the exact case in #390) must still be
+    # able to save unrelated changes -- e.g. a settings update, or any
+    # background job touching the record -- without being blocked by a field
+    # nobody is currently trying to set. That value still can't crash a
+    # request either way, since Localize#resolved_timezone falls back safely
+    # regardless of whether this validation ever ran.
+    def timezone_must_be_a_known_zone
+      return if timezone.blank?
 
-      Money::Currency.new(value).iso_code
-    rescue Money::Currency::UnknownCurrencyError, ArgumentError
-      nil
+      errors.add(:timezone, :invalid) if ActiveSupport::TimeZone[timezone].blank?
     end
 end
