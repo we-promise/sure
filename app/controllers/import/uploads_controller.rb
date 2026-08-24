@@ -2,6 +2,7 @@ class Import::UploadsController < ApplicationController
   layout "imports"
 
   before_action :set_import
+  before_action :set_account_options, only: %i[show update]
 
   def show
   end
@@ -64,6 +65,12 @@ class Import::UploadsController < ApplicationController
 
     def set_import
       @import = Current.family.imports.find(params[:import_id])
+    end
+
+    def set_account_options
+      writable_accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically
+      @qif_account_options = writable_accounts.pluck(:name, :id)
+      @csv_account_options = Import::AccountMapping.importable_accounts(@import).visible.alphabetically.pluck(:name, :id)
     end
 
     def handle_qif_upload
