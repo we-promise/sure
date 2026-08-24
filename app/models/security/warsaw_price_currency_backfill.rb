@@ -84,24 +84,31 @@ class Security::WarsawPriceCurrencyBackfill
     end
 
     def fix_prices_for!(security)
-      relabeled = 0
-      deleted = 0
+      pln_dates = security.prices.where(currency: TO_CURRENCY).pluck(:date).to_set
+      usd_prices = security.prices.where(currency: FROM_CURRENCY)
+      usd_rows = usd_prices.pluck(:id, :date)
 
-      security.prices.where(currency: FROM_CURRENCY).find_each do |price|
-        pln_exists = security.prices.where(date: price.date, currency: TO_CURRENCY).exists?
-
-        if pln_exists
-          price.destroy! unless dry_run
-          deleted += 1
+      to_delete_ids = []
+      to_relabel_ids = []
+      usd_rows.each do |id, date|
+        if pln_dates.include?(date)
+          to_delete_ids << id
         else
-          unless dry_run
-            price.update_columns(currency: TO_CURRENCY, updated_at: Time.current)
-          end
-          relabeled += 1
+          to_relabel_ids << id
         end
       end
 
-      [ relabeled, deleted ]
+      unless dry_run
+        Security::Price.where(id: to_delete_ids).delete_all if to_delete_ids.any?
+        if to_relabel_ids.any?
+          Security::Price.where(id: to_relabel_ids).update_all(
+            currency: TO_CURRENCY,
+            updated_at: Time.current
+          )
+        end
+      end
+
+      [ to_relabel_ids.size, to_delete_ids.size ]
     end
 
     def enqueue_account_syncs!(security_ids)
