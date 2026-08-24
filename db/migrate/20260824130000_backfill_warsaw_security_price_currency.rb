@@ -5,7 +5,10 @@ class BackfillWarsawSecurityPriceCurrency < ActiveRecord::Migration[7.2]
 
   def up
     say_with_time "Backfilling Warsaw security_prices USD → PLN (and WAR → XWAR MICs)" do
-      result = Security::WarsawPriceCurrencyBackfill.new(dry_run: false, sync_accounts: true).call
+      result = Security::WarsawPriceCurrencyBackfill.new(
+        dry_run: false,
+        sync_accounts: !Rails.env.test?
+      ).call
       say(
         "scanned=#{result.securities_scanned} " \
         "mics=#{result.mics_canonicalized} " \
