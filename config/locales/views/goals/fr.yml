@@ -30,6 +30,9 @@ fr:
     errors:
       not_found: Cet objectif n'a pas pu être trouvé. Il a peut-être été supprimé.
     form:
+      target_modes:
+        fixed: Un montant fixe
+        months_of_expenses: Un nombre de mois de dépenses
       kinds:
         maintained:
           hint: Un niveau à tenir, comme une épargne de précaution. Jamais clôturée.
@@ -47,6 +50,9 @@ fr:
         prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
         whole_balance: Ce compte financera le solde restant après les autres affectations.
       fields:
+        target_mode: Comment le seuil est fixé
+        target_months: Mois de dépenses
+        target_months_hint: Recalculé le 1er de chaque mois à partir de vos dépenses mensuelles médianes.
         color: Couleur
         earmark_for: Affecter un montant pour %{account}
         earmark_hint: Laissez le montant vide pour dédier la totalité du solde de ce compte.

@@ -107,7 +107,19 @@ class Goal < ApplicationRecord
   # is even allowed, and how they sort.
   KINDS = %w[one_off maintained].freeze
 
+  # How a reserve's floor is expressed. "6 months of expenses" is a moving
+  # number — what covers six months in January is not what covers six months
+  # in December — so RefreshMaintainedGoalTargetsJob rewrites `target_amount`
+  # monthly. `target_amount` stays the single source of truth on purpose:
+  # every aggregate that reads it (remaining_amount, progress_percent,
+  # Goal.summary_for, the ring, the card) keeps working untouched, where an
+  # effective_target_amount would have to be threaded through all of them.
+  TARGET_MODES = %w[fixed months_of_expenses].freeze
+
   validates :kind, inclusion: { in: KINDS }
+  validates :target_mode, inclusion: { in: TARGET_MODES }
+  validates :target_months, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :months_target_requires_a_reserve
 
   # Display order for active (non-completed/non-archived) goals: whatever
   # needs money first, then on-track, then open-ended, then the reserves that
@@ -400,6 +412,30 @@ class Goal < ApplicationRecord
 
   def maintained?
     kind == "maintained"
+  end
+
+  def months_of_expenses_target?
+    target_mode == "months_of_expenses"
+  end
+
+  # Recomputes this reserve's floor from the family's median monthly spend.
+  # Returns the new amount when it wrote one, nil when it deliberately did
+  # not — a family with no spending history yet, or a figure that would
+  # violate the `target_amount > 0` check constraint. Leaving the previous
+  # target standing is the safe failure: it is a number the user has been
+  # saving against, where zero would silently declare the reserve complete.
+  def refresh_target_from_expenses!
+    return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
+
+    median = IncomeStatement.new(family).median_expense(interval: "month").to_d
+    return nil unless median.positive?
+
+    computed = (median * target_months).round(2)
+    return nil unless computed.positive?
+    return nil if computed == target_amount.to_d
+
+    update!(target_amount: computed)
+    computed
   end
 
   # Market value of the goal's backing (balance basis), regardless of the
@@ -1014,6 +1050,23 @@ class Goal < ApplicationRecord
       attrs[:consumed_amount] = 0 if completed_amount.present?
 
       update_columns(**attrs)
+    end
+
+
+    # target_months only means something for a reserve on the months basis.
+    # Allowing it elsewhere would leave a number nothing reads, which the
+    # refresh job would then look at and skip for reasons no one could see.
+    def months_target_requires_a_reserve
+      return if target_mode == "fixed" && target_months.blank?
+      return if months_of_expenses_target? && maintained? && target_months.present?
+
+      if months_of_expenses_target? && !maintained?
+        errors.add(:target_mode, :months_requires_maintained)
+      elsif months_of_expenses_target?
+        errors.add(:target_months, :blank)
+      else
+        errors.add(:target_months, :only_with_months_mode)
+      end
     end
 
     # Cleared after every AASM transition. The state column drives the

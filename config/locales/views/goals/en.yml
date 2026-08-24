@@ -291,6 +291,9 @@ en:
         one: Last pledge matched 1 day ago
         other: "Last pledge matched %{count} days ago"
     form:
+      target_modes:
+        fixed: A fixed amount
+        months_of_expenses: A number of months of expenses
       kinds:
         one_off:
           hint: Save toward something, then close it when you spend it.
@@ -311,6 +314,9 @@ en:
         prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
         whole_balance: This account will fund whatever is left after the other earmarks.
       fields:
+        target_mode: How the floor is set
+        target_months: Months of expenses
+        target_months_hint: Recomputed on the 1st of each month from your median monthly spending.
         name: Name
         name_placeholder: Emergency fund, House down payment…
         target_amount: Target amount

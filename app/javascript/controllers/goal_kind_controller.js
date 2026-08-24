@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // due on a date. Hiding the target-date field keeps a stale value from being
 // submitted and driving a pace the goal does not have.
 export default class extends Controller {
-  static targets = ["radio", "dateField"]
+  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField"]
 
   connect() {
     this.refresh()
@@ -12,18 +12,31 @@ export default class extends Controller {
 
   refresh() {
     const maintained = this.radioTargets.some((radio) => radio.checked && radio.value === "maintained")
-    this.dateFieldTargets.forEach((field) => field.classList.toggle("hidden", maintained))
-    if (maintained) {
-      this.dateFieldTargets.forEach((field) => {
-        const input = field.querySelector("input")
-        if (!input) return
 
-        input.value = ""
-        // Assigning `value` fires nothing, so the pace suggestion bound to
-        // this input's action kept showing a monthly figure derived from a
-        // deadline the goal no longer has.
-        input.dispatchEvent(new Event("input", { bubbles: true }))
-      })
-    }
+    this.dateFieldTargets.forEach((field) => field.classList.toggle("hidden", maintained))
+    if (maintained) this.#clearInputs(this.dateFieldTargets)
+
+    // The target mode is a reserve's business only; a one-off is always a
+    // fixed amount. Reset it on the way out so a one-off cannot be saved
+    // carrying a months mode nothing would ever refresh.
+    this.modeFieldTargets.forEach((field) => field.classList.toggle("hidden", !maintained))
+    if (!maintained && this.hasModeSelectTarget) this.modeSelectTarget.value = "fixed"
+
+    const months = maintained && this.hasModeSelectTarget && this.modeSelectTarget.value === "months_of_expenses"
+    this.monthsFieldTargets.forEach((field) => field.classList.toggle("hidden", !months))
+    if (!months) this.#clearInputs(this.monthsFieldTargets)
+  }
+
+  #clearInputs(fields) {
+    fields.forEach((field) => {
+      const input = field.querySelector("input")
+      if (!input) return
+
+      input.value = ""
+      // Assigning `value` fires nothing, so the pace suggestion bound to this
+      // input's action kept showing a monthly figure derived from a deadline
+      // the goal no longer has.
+      input.dispatchEvent(new Event("input", { bubbles: true }))
+    })
   }
 }

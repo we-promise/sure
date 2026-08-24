@@ -677,6 +677,60 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2000"), Goal.find(goal.id).remaining_amount.to_d
   end
 
+  # --- Lot B3b: a floor expressed in months of expenses ---
+
+  test "months mode is only for a reserve, and needs a number of months" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+
+    goal.target_mode = "months_of_expenses"
+    assert_not goal.valid?, "months mode without target_months must be refused"
+
+    goal.target_months = 6
+    assert goal.valid?, goal.errors.full_messages.to_sentence
+
+    goal.kind = "one_off"
+    assert_not goal.valid?, "a one-off goal has no months-of-expenses floor"
+  end
+
+  test "target_months without months mode is refused" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    goal.target_months = 6
+
+    assert_not goal.valid?
+  end
+
+  # target_amount stays the source of truth — the aggregates that read it must
+  # keep working with no knowledge of the mode.
+  test "refreshing the floor moves every figure that reads target_amount" do
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!
+
+    refreshed = Goal.find(goal.id)
+    assert_equal BigDecimal("3000"), refreshed.target_amount.to_d
+    assert_equal :funded, refreshed.status
+    assert_equal 100, refreshed.progress_percent
+  end
+
+  test "a zero median leaves the floor untouched" do
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
+
+    assert_nil goal.refresh_target_from_expenses!
+    assert_equal BigDecimal("1000"), goal.reload.target_amount.to_d
+  end
+
+  test "a fixed reserve ignores the refresh entirely" do
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+
+    assert_nil goal.refresh_target_from_expenses!
+    assert_equal BigDecimal("1000"), goal.reload.target_amount.to_d
+  end
+
   test "account free_to_earmark subtracts non-archived fixed earmarks" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Headroom Savings", currency: "USD", balance: 5_000)
     @family.goals.create!(name: "Earmarker", target_amount: 10_000, currency: "USD") do |g|
