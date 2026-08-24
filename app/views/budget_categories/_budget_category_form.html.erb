@@ -11,7 +11,25 @@
     <p class="text-secondary privacy-sensitive"><%= t("budget_categories.budget_category_form.monthly_average", amount: budget_category.median_monthly_expense_money.format(precision: 0)) %></p>
   </div>
 
-  <div class="ml-auto">
+  <div class="ml-auto flex items-center gap-1.5">
+    <%# Outside the allocation form on purpose: a button inside it would
+        submit the amount field on click. Hidden for an envelope with nothing
+        to give — an inheriting subcategory, or one left at zero. %>
+    <% if budget_category[:budgeted_spending].to_d.positive? %>
+      <button type="button"
+              class="text-subdued hover:text-primary p-1 rounded-md focus-ring"
+              title="<%= t("budget_categories.move.button_title") %>"
+              aria-label="<%= t("budget_categories.move.button_title") %>"
+              data-action="budget-move#open"
+              data-budget-move-from-id-param="<%= budget_category.id %>"
+              data-budget-move-from-name-param="<%= budget_category.category.display_name %>"
+              data-budget-move-category-id-param="<%= budget_category.category_id %>"
+              data-budget-move-parent-id-param="<%= budget_category.category.parent_id %>"
+              data-budget-move-available-param="<%= budget_category.budgeted_spending_money.format %>">
+        <%= icon("arrow-left-right", size: "sm") %>
+      </button>
+    <% end %>
+
     <%= form_with model: [budget_category.budget, budget_category], url: budget_budget_category_path(budget_category.budget, budget_category, **budget_owner_query), data: { controller: "auto-submit-form preserve-focus" } do |f| %>
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-1.5" title="<%= t("budget_categories.budget_category_form.rollover_title") %>">

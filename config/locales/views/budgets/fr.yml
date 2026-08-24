@@ -19,6 +19,23 @@ fr:
     index:
       description: Ajustez les budgets des catégories pour fixer des limites de dépenses. Les fonds non alloués seront automatiquement attribués comme non classés.
       title: Modifiez vos budgets de catégorie
+    move:
+      amount_label: Montant
+      available: "%{amount} disponible"
+      button_title: Déplacer de l'argent depuis cette catégorie
+      cancel: Annuler
+      dialog_title: Déplacer de l'argent
+      errors:
+        different_budgets: Les deux catégories doivent appartenir au même budget.
+        insufficient_funds: C'est plus que ce que cette catégorie a alloué.
+        non_positive_amount: Indiquez un montant supérieur à zéro.
+        parent_child: L'argent ne peut pas circuler entre une catégorie et sa propre sous-catégorie — ajustez directement la sous-catégorie.
+        same_category: Choisissez une autre catégorie de destination.
+        uncategorized: "« Non classé » n'est pas une vraie enveloppe : l'argent ne peut ni y entrer ni en sortir."
+      from_label: Depuis
+      submit: Déplacer
+      success: Argent déplacé.
+      to_label: Vers
     no_categories:
       new_category: Nouvelle catégorie
       no_categories_message: Vous n'avez pas encore créé ou attribué de catégories de dépenses à vos transactions.

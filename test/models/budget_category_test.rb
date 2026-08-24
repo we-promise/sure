@@ -271,6 +271,146 @@ class BudgetCategoryTest < ActiveSupport::TestCase
       assert_equal 14, suggestion[:days_remaining]
     end
   end
+
+  # --- move_allocation! (Lot A2) ---
+
+  test "moving money between two top-level envelopes conserves the total" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 200, currency: "USD")
+    before = @budget.reload.allocated_spending
+
+    BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: 50)
+
+    assert_equal 950, @parent_budget_category.reload.budgeted_spending
+    assert_equal 250, destination.reload.budgeted_spending
+    assert_equal before, @budget.reload.allocated_spending, "allocated_spending must be invariant"
+  end
+
+  test "moving the whole allocation is allowed, moving one cent more is not" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+
+    assert_raises(BudgetCategory::InvalidMove) do
+      BudgetCategory.move_allocation!(from: destination, to: @parent_budget_category, amount: 0.01)
+    end
+
+    BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: 1000)
+    assert_equal 0, @parent_budget_category.reload.budgeted_spending
+    assert_equal 1000, destination.reload.budgeted_spending
+  end
+
+  test "an amount larger than the source allocation is refused" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+
+    error = assert_raises(BudgetCategory::InvalidMove) do
+      BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: 1001)
+    end
+
+    assert_equal :insufficient_funds, error.reason
+    assert_equal 1000, @parent_budget_category.reload.budgeted_spending
+  end
+
+  test "a zero or negative amount is refused" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+
+    [ 0, -50 ].each do |amount|
+      error = assert_raises(BudgetCategory::InvalidMove) do
+        BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: amount)
+      end
+      assert_equal :non_positive_amount, error.reason
+    end
+  end
+
+  test "categories from two different budgets cannot exchange money" do
+    other_budget = Budget.create!(
+      family: @family,
+      start_date: @budget.start_date - 1.month,
+      end_date: @budget.start_date - 1.day,
+      currency: @budget.currency
+    )
+    foreign_category = Category.create!(name: "Test Foreign #{Time.now.to_f}", family: @family, color: "#e99537")
+    foreign = BudgetCategory.create!(budget: other_budget, category: foreign_category, budgeted_spending: 100, currency: other_budget.currency)
+
+    error = assert_raises(BudgetCategory::InvalidMove) do
+      BudgetCategory.move_allocation!(from: @parent_budget_category, to: foreign, amount: 10)
+    end
+
+    assert_equal :different_budgets, error.reason
+  end
+
+  test "a category cannot move money to itself" do
+    error = assert_raises(BudgetCategory::InvalidMove) do
+      BudgetCategory.move_allocation!(from: @parent_budget_category, to: @parent_budget_category, amount: 10)
+    end
+
+    assert_equal :same_category, error.reason
+  end
+
+  # sync_parent_budgeted_spending! rebuilds a parent from its children, so a
+  # parent <-> child move would be re-derived away.
+  test "money cannot move between a parent and its own subcategory, in either direction" do
+    [ [ @parent_budget_category, @subcategory_with_limit_bc ],
+      [ @subcategory_with_limit_bc, @parent_budget_category ] ].each do |from, to|
+      error = assert_raises(BudgetCategory::InvalidMove) do
+        BudgetCategory.move_allocation!(from: from, to: to, amount: 50)
+      end
+      assert_equal :parent_child, error.reason
+    end
+  end
+
+  test "Uncategorized can neither give nor receive" do
+    [ [ BudgetCategory.uncategorized, @parent_budget_category ],
+      [ @parent_budget_category, BudgetCategory.uncategorized ] ].each do |from, to|
+      error = assert_raises(BudgetCategory::InvalidMove) do
+        BudgetCategory.move_allocation!(from: from, to: to, amount: 10)
+      end
+      assert_equal :uncategorized, error.reason
+    end
+  end
+
+  # A subcategory's allocation is folded into its parent's, so moving money
+  # out of one must pull the parent down by the same amount and leave the
+  # budget total untouched.
+  test "a move out of a subcategory keeps its parent consistent" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+    before = @budget.reload.allocated_spending
+
+    BudgetCategory.move_allocation!(from: @subcategory_with_limit_bc, to: destination, amount: 100)
+
+    assert_equal 200, @subcategory_with_limit_bc.reload.budgeted_spending
+    assert_equal 100, destination.reload.budgeted_spending
+    assert_equal 900, @parent_budget_category.reload.budgeted_spending,
+                 "the parent must absorb its subcategory's decrease"
+    assert_equal before, @budget.reload.allocated_spending, "allocated_spending must be invariant"
+  end
+
+  test "a move between two subcategories of the same parent leaves the parent alone" do
+    before_parent = @parent_budget_category.reload.budgeted_spending
+    before_total = @budget.reload.allocated_spending
+    @subcategory_inheriting_bc.update_budgeted_spending!(100)
+
+    BudgetCategory.move_allocation!(from: @subcategory_with_limit_bc, to: @subcategory_inheriting_bc, amount: 50)
+
+    assert_equal 250, @subcategory_with_limit_bc.reload.budgeted_spending
+    assert_equal 150, @subcategory_inheriting_bc.reload.budgeted_spending
+    assert_equal before_parent + 100, @parent_budget_category.reload.budgeted_spending
+    assert_equal before_total + 100, @budget.reload.allocated_spending
+  end
+
+  # The rollover chain is the caller's job, never the move's: taking the
+  # calculator's advisory lock while these row locks are held would invert
+  # the lock order and deadlock two concurrent moves.
+  test "move_allocation! does not recompute the rollover chain itself" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+
+    Budget::RolloverCalculator.any_instance.expects(:recompute!).never
+
+    BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: 10)
+  end
 end
 
 class BudgetCategoryRolloverTest < ActiveSupport::TestCase
