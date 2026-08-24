@@ -183,7 +183,14 @@ services:
     networks:
       - sure_net
 
-  # Note: You still have to download models manually using the ollama CLI or via Open WebUI
+  # Ollama's OLLAMA_MODELS setting controls the model storage directory; it is
+  # not a preload list. Start Ollama, then pull each model once. The ollama
+  # volume below keeps the downloaded models across container restarts:
+  #
+  # docker compose -f compose.example.ai.yml --profile local-ai up -d ollama
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull deepseek-r1:8b
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull llama3.1:8b
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull mxbai-embed-large
   ollama:
     profiles:
       - local-ai
@@ -197,7 +204,6 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
-      - OLLAMA_MODELS=deepseek-r1:8b,llama3.1:8b,mxbai-embed-large # Pre-load model on startup, you can change this to your preferred model
     networks:
       - sure_net
     # Recommended: Enable GPU support
