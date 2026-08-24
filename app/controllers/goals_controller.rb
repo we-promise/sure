@@ -47,6 +47,7 @@ class GoalsController < ApplicationController
     )
     @linkable_accounts = linkable_accounts_for_new
     @currently_linked_account_ids = []
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
@@ -79,11 +80,13 @@ class GoalsController < ApplicationController
     # the same built records — so the user was left staring at an error telling
     # them to enter an amount, on a form whose accounts had silently cleared.
     @currently_linked_account_ids = @goal.goal_accounts.map { |ga| ga.account_id.to_s }
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     render :new, status: :unprocessable_entity
   end
 
   def edit
     @linkable_accounts = linkable_accounts_for_new
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
   end
 
@@ -95,6 +98,7 @@ class GoalsController < ApplicationController
     if accounts_supplied && accounts.empty?
       @goal.errors.add(:base, :at_least_one_linked_account_required)
       @linkable_accounts = linkable_accounts_for_new
+      @pooled_allocations = Goal.pooled_allocations_for(Current.family)
       @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
       render :edit, status: :unprocessable_entity
       return
@@ -125,6 +129,7 @@ class GoalsController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid
     @linkable_accounts = linkable_accounts_for_new
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
     render :edit, status: :unprocessable_entity
   end

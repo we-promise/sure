@@ -280,6 +280,10 @@ en:
         name_required: Give your goal a name.
         amount_required: Set a target above zero.
         accounts_required: Pick at least one funding account.
+      earmark:
+        headroom: "{left} left to earmark on this account."
+        prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
+        whole_balance: This account will fund whatever is left after the other earmarks.
       fields:
         name: Name
         name_placeholder: Emergency fund, House down payment…
