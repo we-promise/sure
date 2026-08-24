@@ -3,7 +3,7 @@ it:
   insights:
     index:
       title: Insight
-      subtitle: Cosa accade nelle tue finanze, aggiornato ogni notte.
+      subtitle: Scopri cosa succede alle tue finanze, con aggiornamenti notturni.
       refresh: Cerca nuovi insight
       empty:
         title: Ancora nessun insight
