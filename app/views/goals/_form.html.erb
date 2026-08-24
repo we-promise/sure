@@ -1,6 +1,10 @@
 <%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: []) %>
 
-<div data-controller="goal-form"
+<%# goal-kind lives on this wrapper, not on the kind selector: its
+     dateField target is a sibling of the radios, and a controller only sees
+     targets inside its own element. Scoped to the selector, dateFieldTargets
+     came back empty and picking "Reserve to maintain" never hid the date. %>
+<div data-controller="goal-form goal-kind"
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
@@ -18,7 +22,7 @@
         no deadline — target_date is hidden rather than disabled so it cannot
         be submitted with a value that would then drive a pace the goal does
         not have. %>
-    <div class="grid grid-cols-2 gap-2" data-controller="goal-kind">
+    <div class="grid grid-cols-2 gap-2">
       <% Goal::KINDS.each do |kind| %>
         <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
           <%= f.radio_button :kind, kind,

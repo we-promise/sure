@@ -941,6 +941,50 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil Goal.where(id: goal.id).pick(:completed_amount)
   end
 
+  # --- Review follow-ups on the reserves lot ---
+
+  test "a released goal cannot be turned into a reserve without reopening" do
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: standoff_account)
+    end
+    goal.complete!
+
+    goal.reload.kind = "maintained"
+
+    assert_not goal.valid?
+    assert_includes goal.errors[:kind], "Reopen this goal before turning it into a reserve."
+  end
+
+  test "reopening first lets the conversion through" do
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: standoff_account)
+    end
+    goal.complete!
+    goal.reload.reopen!
+
+    assert goal.reload.update(kind: "maintained"), goal.errors.full_messages.to_sentence
+  end
+
+  # The form hides the date for a reserve, so one can only arrive through a
+  # conversion or a crafted request. Either way it must not survive: a stored
+  # deadline would drive a pace the reserve does not have.
+  test "a reserve drops any target date it is given" do
+    goal = reserve_goal(balance: 3_000, target: 6_000)
+
+    assert goal.update(target_date: 6.months.from_now.to_date), goal.errors.full_messages.to_sentence
+    assert_nil goal.reload.target_date
+  end
+
+  test "converting a dated goal into a reserve clears its deadline" do
+    goal = @family.goals.create!(
+      name: "Trip", target_amount: 5_000, currency: "USD", target_date: 6.months.from_now.to_date
+    ) { |g| g.goal_accounts.build(account: standoff_account) }
+
+    goal.update!(kind: "maintained")
+
+    assert_nil goal.reload.target_date
+  end
+
   private
 
     # Its own account, so the shared-pool haircut does not make the frozen

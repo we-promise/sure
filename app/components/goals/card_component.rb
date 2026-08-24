@@ -67,6 +67,10 @@ class Goals::CardComponent < ApplicationComponent
   end
 
   def pace_line
+    # A reserve has no deadline, so `pace_money` has nothing to compare
+    # against — printing "saving X/mo" next to a floor the user is simply
+    # holding reads as progress toward something it is not.
+    return nil if goal.maintained?
     return nil if goal.archived? || goal.paused? || goal.completed? || goal.status == :reached
 
     avg = goal.pace_money.format(precision: 0)

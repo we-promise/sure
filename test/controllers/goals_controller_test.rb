@@ -458,6 +458,28 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.archive_cta"))}/, response.body)
   end
 
+  # A reserve has no deadline and no pace benchmark, so it can never land in
+  # the on-track numerator. Leaving it in the denominator made a family with
+  # one reserve read "0 of 1 on track" for a goal working exactly as intended.
+  test "a reserve stays out of the on-track denominator" do
+    @user.family.goals.where.not(state: "archived").find_each(&:archive!)
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Reserve Pot", currency: @user.family.currency, balance: 1_000
+    )
+    @user.family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @user.family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    get goals_url
+
+    assert_response :success
+    # The tile prints "<on track> of <tracked total>". The reserve must not
+    # appear in the denominator: before this, the page read "0 of 1".
+    assert_no_match(/0 of 1/, response.body)
+    assert_match(/0 of 0/, response.body)
+  end
+
   private
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.

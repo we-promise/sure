@@ -41,6 +41,12 @@ class Goal < ApplicationRecord
   validate :linked_accounts_must_belong_to_family
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
+  validate :kind_locked_while_released
+  # A reserve has no deadline. Normalising here rather than rejecting: the form
+  # hides the field for a reserve, so a date can only arrive from a conversion
+  # or a crafted request — refusing would show an error about a field the user
+  # cannot see.
+  before_validation :clear_target_date_for_maintained
 
   # Autosave validates each link separately, so each would otherwise take its
   # own account lock in association order. Two goals saving links on the same
@@ -944,6 +950,21 @@ class Goal < ApplicationRecord
       return if foreign.empty?
 
       errors.add(:linked_accounts, :must_belong_to_family)
+    end
+
+    # Switching a released goal to `maintained` would leave a reserve sitting in
+    # `completed` — a state that has HANDED BACK its earmark — while the show
+    # page promises its money stays reserved. The conversion has to go through
+    # an active state, where `complete` is already refused for a reserve.
+    def kind_locked_while_released
+      return unless persisted? && will_save_change_to_kind?
+      return unless state.in?(RELEASED_STATES)
+
+      errors.add(:kind, :locked_while_released)
+    end
+
+    def clear_target_date_for_maintained
+      self.target_date = nil if maintained?
     end
 
     def currency_locked_once_linked

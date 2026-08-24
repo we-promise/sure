@@ -104,6 +104,9 @@ en:
       unarchive: Restore
       reopen: Reopen goal
       delete: Delete
+      reserve_shortfall:
+        heading: Reserve below its level
+        body: "You are holding %{saved} of %{target}. Add %{missing} to bring it back to its floor."
       record_pledge_cta: Record pledge
       pledge_just_transferred: Log a transfer you made
       pledge_just_saved: Log money you set aside

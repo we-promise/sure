@@ -177,7 +177,7 @@ fr:
         body: Rythme actuel %{avg}/mois · requis %{required}/mois pour atteindre votre objectif.
         title: Épargnez %{amount}/mois de plus pour rattraper le retard
       celebration:
-        body_reserve: "Votre réserve est à son niveau, %{saved} sur %{target}. Rien à faire — elle reste affectée."
+        body_reserve: "Votre réserve a atteint son niveau cible, %{saved} sur %{target}. Rien à faire — elle reste affectée."
         heading_reserve: Réserve constituée
         body_reached: "Vous avez atteint votre cible, à %{saved} sur %{target}. Il n'est pas encore clôturé — l'argent lui reste affecté."
         close_cta: Clôturer cet objectif
@@ -258,6 +258,9 @@ fr:
         tooltip_projected: 'Projeté : %{amount}'
         tooltip_saved: 'Épargné : %{amount}'
         tooltip_target_relation: "%{percent}% de la cible de %{target}"
+      reserve_shortfall:
+        heading: Réserve sous son niveau
+        body: "Vous détenez %{saved} sur %{target}. Complétez de %{missing} pour la ramener à son niveau."
       record_pledge_cta: Enregistrer une promesse
       reopen: Réouvrir l'objectif
       resume: Reprendre

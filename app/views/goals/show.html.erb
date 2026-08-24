@@ -249,6 +249,23 @@
           ) %>
         </div>
       </div>
+    <%# A depleted reserve, caught before the projection card below. Its
+        summary, its catch-up line and its colour are all built from a pace
+        against a deadline — a reserve has neither. What it needs is the one
+        number the projection cannot show: how much is missing from the floor. %>
+    <% elsif @goal.maintained? %>
+      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+        <div class="w-16 h-16 rounded-full bg-warning/10 inline-flex items-center justify-center text-warning mb-3">
+          <%= icon("shield-alert", size: "2xl", color: "warning") %>
+        </div>
+        <h2 class="text-lg font-semibold text-primary"><%= t(".reserve_shortfall.heading") %></h2>
+        <p class="text-sm text-secondary mt-1 max-w-md tabular-nums privacy-sensitive">
+          <%= t(".reserve_shortfall.body",
+                saved: @goal.current_balance_money.format(precision: 0),
+                target: @goal.target_amount_money.format(precision: 0),
+                missing: @goal.remaining_amount_money.format(precision: 0)) %>
+        </p>
+      </div>
     <% else %>
       <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
         <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">

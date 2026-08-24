@@ -283,10 +283,15 @@ class GoalsController < ApplicationController
       #   fund, etc.) has no required monthly pace, so "on track" is
       #   undefined. Counting it would penalise the user for having
       #   open-ended goals — they'd never improve the ratio.
+      # - maintained → a reserve has no deadline and no pace benchmark at
+      #   all. Its statuses are `funded`/`depleted`, which match none of the
+      #   exclusions above, so without this it would land in the denominator
+      #   and never in the numerator: a family with one reserve read
+      #   "0 of 1 on track" for a goal that is working exactly as intended.
       # When this hits zero the tile swaps to a celebration / empty
       # state in the view.
       tracked_total = active_goals.count do |g|
-        !g.paused? && g.status != :reached && g.status != :no_target_date
+        !g.paused? && !g.maintained? && g.status != :reached && g.status != :no_target_date
       end
 
       {
