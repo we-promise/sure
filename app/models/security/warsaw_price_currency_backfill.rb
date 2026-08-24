@@ -1,0 +1,119 @@
+# Relabels mis-tagged Warsaw (XWAR / legacy WAR) security_prices from USD → PLN.
+#
+# Before Provider::Eodhd mapped Warsaw, search-cache expiry caused PLN closes to be
+# persisted as USD (#3128). Numeric prices stay the same; only the currency label
+# is corrected. When a PLN row already exists for the same (security, date), the
+# USD duplicate is deleted to satisfy the unique index.
+#
+# Optionally upgrades legacy WAR MICs to XWAR and schedules account syncs so
+# calculated holdings revalue with the corrected FX.
+class Security::WarsawPriceCurrencyBackfill
+  WARSAW_MICS = %w[XWAR WAR].freeze
+  FROM_CURRENCY = "USD"
+  TO_CURRENCY = "PLN"
+
+  Result = Data.define(
+    :securities_scanned,
+    :mics_canonicalized,
+    :prices_relabeled,
+    :prices_deleted,
+    :accounts_queued_for_sync,
+    :dry_run
+  )
+
+  def initialize(dry_run: false, sync_accounts: true)
+    @dry_run = dry_run
+    @sync_accounts = sync_accounts
+  end
+
+  def call
+    securities_scanned = 0
+    mics_canonicalized = 0
+    prices_relabeled = 0
+    prices_deleted = 0
+    touched_security_ids = []
+
+    warsaw_securities.find_each do |security|
+      securities_scanned += 1
+
+      if canonicalize_mic!(security)
+        mics_canonicalized += 1
+      end
+
+      relabeled, deleted = fix_prices_for!(security)
+      prices_relabeled += relabeled
+      prices_deleted += deleted
+      touched_security_ids << security.id if relabeled.positive? || deleted.positive?
+    end
+
+    accounts_queued = enqueue_account_syncs!(touched_security_ids.uniq)
+
+    Result.new(
+      securities_scanned: securities_scanned,
+      mics_canonicalized: mics_canonicalized,
+      prices_relabeled: prices_relabeled,
+      prices_deleted: prices_deleted,
+      accounts_queued_for_sync: accounts_queued,
+      dry_run: dry_run
+    )
+  end
+
+  private
+    attr_reader :dry_run, :sync_accounts
+
+    def warsaw_securities
+      Security.where("UPPER(exchange_operating_mic) IN (?)", WARSAW_MICS)
+    end
+
+    def canonicalize_mic!(security)
+      return false unless security.exchange_operating_mic.to_s.upcase == "WAR"
+
+      existing_canonical = Security
+        .where("UPPER(ticker) = ?", security.ticker.to_s.upcase)
+        .where("UPPER(exchange_operating_mic) = ?", "XWAR")
+        .where.not(id: security.id)
+        .first
+
+      return false if existing_canonical # leave merge to securities:deduplicate
+
+      unless dry_run
+        security.update_columns(exchange_operating_mic: "XWAR", updated_at: Time.current)
+      end
+
+      true
+    end
+
+    def fix_prices_for!(security)
+      relabeled = 0
+      deleted = 0
+
+      security.prices.where(currency: FROM_CURRENCY).find_each do |price|
+        pln_exists = security.prices.where(date: price.date, currency: TO_CURRENCY).exists?
+
+        if pln_exists
+          price.destroy! unless dry_run
+          deleted += 1
+        else
+          unless dry_run
+            price.update_columns(currency: TO_CURRENCY, updated_at: Time.current)
+          end
+          relabeled += 1
+        end
+      end
+
+      [ relabeled, deleted ]
+    end
+
+    def enqueue_account_syncs!(security_ids)
+      return 0 if security_ids.empty? || !sync_accounts
+
+      account_ids = Holding.where(security_id: security_ids).distinct.pluck(:account_id)
+      return 0 if account_ids.empty?
+
+      unless dry_run
+        Account.where(id: account_ids).find_each(&:sync_later)
+      end
+
+      account_ids.size
+    end
+end
