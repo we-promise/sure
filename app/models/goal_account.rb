@@ -27,11 +27,11 @@ class GoalAccount < ApplicationRecord
     # The invariant "shares never sum past the balance" is therefore enforced
     # at the door instead of in the math.
     #
-    # Scoped to the family's non-archived goals: exactly the set
-    # Goal.pooled_allocations_for feeds into the backing math. A `completed`
-    # goal still holds its money and still counts here — keeping the two in
-    # step matters more than the state name, so if the pool's scope moves,
-    # this must move with it.
+    # The conflict lookup itself lives on Goal (`whole_account_conflicts_on`),
+    # scoped to Goal::RELEASED_STATES — exactly the set
+    # Goal.pooled_allocations_for feeds into the backing math. Sharing one
+    # method with the restore guard is what keeps this door and that one from
+    # disagreeing about which goals still hold their money.
     def whole_account_link_must_be_exclusive
       return unless whole_account?
       return if account_id.nil? || goal.nil?
@@ -41,12 +41,7 @@ class GoalAccount < ApplicationRecord
       # goal that merely holds a legacy overlap impossible to rename.
       return unless new_record? || will_save_change_to_allocated_amount?
 
-      conflict = GoalAccount.joins(:goal)
-                            .where(account_id: account_id, allocated_amount: nil)
-                            .where(goals: { family_id: goal.family_id })
-                            .where.not(goals: { state: "archived" })
-      conflict = conflict.where.not(goal_id: goal_id) if goal_id
-      other = conflict.first
+      other = goal.whole_account_conflicts_on(account_id).first
       return if other.nil?
 
       errors.add(:base, :account_already_fully_earmarked, goal_name: other.goal.name)
