@@ -1309,7 +1309,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 Use PostgreSQL's pgvector extension for fully local document search. All data stays on your infrastructure.
 
 **Requirements:**
-- Use the `pgvector/pgvector:pg16` Docker image instead of `postgres:16` (drop-in replacement)
+- Use the `pgvector/pgvector:pg16-trixie` Docker image instead of `postgres:16` (drop-in replacement)
 - An embedding model served via an OpenAI-compatible `/v1/embeddings` endpoint (e.g. Ollama with `nomic-embed-text`)
 - Run the migration with `VECTOR_STORE_PROVIDER=pgvector` to create the `vector_store_chunks` table
 
@@ -1324,6 +1324,21 @@ EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not
 EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
 ```
 
+Sure enables the `vector` extension when it first provisions the chunks table,
+provided the database user has permission. If the AI status page reports that
+the extension is available but not enabled and automatic provisioning cannot
+enable it, connect as the PostgreSQL superuser and run:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+The LLM and embedding endpoints are independent. A common fully local setup is
+an OpenAI-compatible chat model through `OPENAI_URI_BASE`, pgvector for storage,
+and an embedding model through `EMBEDDING_URI_BASE`. Make sure
+`EMBEDDING_DIMENSIONS` matches the selected embedding model (for example,
+`mxbai-embed-large` uses 1024 dimensions).
+
 If you are using Ollama (as in `compose.example.ai.yml`), pull the embedding model:
 
 ```bash
@@ -1333,7 +1348,7 @@ docker compose exec ollama ollama pull nomic-embed-text
 ##### Qdrant (Self-Hosted)
 
 > [!CAUTION]
-> Only `OpenAI` has been implemented!
+> Qdrant is not implemented yet. Use OpenAI or pgvector for document search.
 
 Use a dedicated Qdrant vector database:
 
@@ -1369,7 +1384,27 @@ volumes:
 
 #### Verifying the Configuration
 
-You can check whether a vector store is properly configured from the Rails console:
+Super admins can open **System health → AI status** at
+`/admin/system_health?tab=ai`. Opening that URL runs bounded, non-destructive
+live checks against the effective configuration:
+
+- OpenAI-compatible and Anthropic providers must return the configured model
+  from their models API.
+- The hosted OpenAI vector-store adapter must answer a list request without
+  creating or changing a store.
+- The pgvector adapter must have its extension enabled, its chunks table
+  present, and successfully execute a query.
+- A pgvector embedding endpoint must create one short test embedding, and the
+  returned vector must match `EMBEDDING_DIMENSIONS`. The test vector is not
+  stored.
+
+Results are cached for 60 seconds by default. **Run checks again** bypasses the
+cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
+timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
+checks are written as system-wide entries in **Settings → Debug logs** and to
+`Rails.logger`; endpoints are redacted and credentials are never included.
+
+You can also check the adapter from the Rails console:
 
 ```ruby
 VectorStore.configured?          # => true / false
@@ -1386,7 +1421,8 @@ The following file extensions are supported for document upload and search:
 #### Privacy Notes
 
 - **OpenAI backend:** Document content is sent to OpenAI's API for indexing and search. The same privacy considerations as the AI chat apply.
-- **Pgvector / Qdrant backends:** All data stays on your infrastructure. No external API calls are made for document search.
+- **Pgvector backend:** Stored chunks stay in PostgreSQL. Text is still sent to the configured embedding endpoint, which may be local or remote.
+- **Qdrant backend:** The adapter is currently scaffolded and cannot upload or search documents.
 
 ### Multi-Model Setup
 
@@ -1432,4 +1468,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** March 2026
+**Last Updated:** August 2026

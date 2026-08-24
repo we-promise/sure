@@ -1,0 +1,276 @@
+# frozen_string_literal: true
+
+require "uri"
+
+# Snapshot of AI configuration and bounded, non-destructive liveness checks for
+# operators diagnosing chat, PDF import, and document-search failures.
+class AiHealth
+  OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1".freeze
+  ANTHROPIC_DEFAULT_ENDPOINT = "https://api.anthropic.com".freeze
+  DEFAULT_EMBEDDING_MODEL = "nomic-embed-text".freeze
+  DEFAULT_EMBEDDING_DIMENSIONS = 1024
+
+  attr_reader :selected_llm_provider, :effective_llm_provider, :llm_model,
+              :llm_endpoint, :llm_request_timeout, :openai_endpoint, :vector_store_adapter,
+              :embedding_endpoint, :embedding_model, :embedding_dimensions,
+              :pgvector_extension_available, :pgvector_extension_enabled,
+              :pgvector_table_available, :qdrant_endpoint, :llm_probe,
+              :vector_store_probe, :embedding_probe
+
+  def initialize(run_probes: true, force_probes: false)
+    @run_probes = run_probes
+    @force_probes = force_probes
+    load_llm_status
+    load_vector_store_status
+    load_probes
+  end
+
+  def openai_credentials_configured?
+    @openai_credentials_configured
+  end
+
+  def anthropic_credentials_configured?
+    @anthropic_credentials_configured
+  end
+
+  def llm_configured?
+    @llm_provider.present?
+  end
+
+  def llm_status
+    return :not_configured unless llm_configured?
+
+    llm_probe.status
+  end
+
+  def llm_fallback?
+    effective_llm_provider.present? && effective_llm_provider != selected_llm_provider
+  end
+
+  def pdf_processing_supported?
+    @pdf_processing_supported == true
+  end
+
+  def pdf_processing_status
+    return :unavailable unless llm_configured?
+
+    pdf_processing_supported? ? :supported : :unsupported
+  end
+
+  def vector_store_configured?
+    @vector_store_configured
+  end
+
+  def vector_store_status
+    return :missing if vector_store_adapter.nil?
+    return :scaffolded if vector_store_adapter == :qdrant
+    return :not_checked unless run_probes?
+    return :failing if vector_store_probe.failing?
+    return :not_configured unless vector_store_configured?
+    return :failing unless vector_store_probe.passing?
+    return :failing if vector_store_adapter == :pgvector && !embedding_probe.passing?
+
+    :passing
+  end
+
+  def openai_vector_store_uses_custom_endpoint?
+    vector_store_adapter == :openai && @openai_custom_endpoint
+  end
+
+  def last_checked_at
+    [ llm_probe, vector_store_probe, embedding_probe ].filter_map(&:checked_at).max
+  end
+
+  def self.redact_endpoint(value)
+    return if value.blank?
+
+    uri = URI.parse(value.to_s)
+    uri.user = nil if uri.respond_to?(:user=)
+    uri.password = nil if uri.respond_to?(:password=)
+    uri.query = nil if uri.respond_to?(:query=)
+    uri.fragment = nil if uri.respond_to?(:fragment=)
+    uri.to_s
+  rescue URI::InvalidURIError
+    value.to_s
+         .sub(%r{\A([^:]+://)[^/@]+@}, "\\1")
+         .split(/[?#]/, 2)
+         .first
+  end
+
+  private
+    def load_llm_status
+      @selected_llm_provider = normalized_llm_provider(Setting.llm_provider)
+      @openai_credentials_configured = safely(false) { Provider::Openai.configured? }
+      @anthropic_credentials_configured = safely(false) { Provider::Anthropic.configured? }
+      @llm_provider = safely(nil) { Provider::Registry.preferred_llm_provider }
+      @effective_llm_provider = provider_name(@llm_provider)
+
+      provider_for_details = effective_llm_provider || selected_llm_provider
+      @llm_model = effective_model(provider_for_details)
+      @llm_endpoint = endpoint(provider_for_details)
+      @llm_request_timeout = request_timeout(provider_for_details)
+      @pdf_processing_supported = safely(false) do
+        @llm_provider&.supports_pdf_processing?(model: llm_model)
+      end
+
+      @openai_custom_endpoint = openai_uri_base.present? && !hosted_openai_endpoint?(openai_uri_base)
+      @openai_endpoint = redact_endpoint(openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT)
+      @llm_access_token = access_token(effective_llm_provider)
+      @llm_raw_endpoint = raw_endpoint(effective_llm_provider).presence || default_endpoint(effective_llm_provider)
+    end
+
+    def load_vector_store_status
+      @vector_store_adapter = safely(nil) { VectorStore::Registry.adapter_name }
+      @vector_store_configured = safely(false) { VectorStore.configured? }
+
+      case vector_store_adapter
+      when :pgvector
+        load_pgvector_status
+        @embedding_model = ENV.fetch("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+        @embedding_dimensions = ENV.fetch("EMBEDDING_DIMENSIONS", DEFAULT_EMBEDDING_DIMENSIONS).to_i
+        @embedding_endpoint = redact_endpoint(
+          ENV["EMBEDDING_URI_BASE"].presence || ENV["OPENAI_URI_BASE"].presence || OPENAI_DEFAULT_ENDPOINT
+        )
+        @embedding_raw_endpoint = ENV["EMBEDDING_URI_BASE"].presence ||
+                                  ENV["OPENAI_URI_BASE"].presence ||
+                                  OPENAI_DEFAULT_ENDPOINT
+        @embedding_access_token = ENV["EMBEDDING_ACCESS_TOKEN"].presence ||
+                                  ENV["OPENAI_ACCESS_TOKEN"].presence ||
+                                  Setting.openai_access_token
+      when :qdrant
+        @qdrant_endpoint = redact_endpoint(ENV.fetch("QDRANT_URL", "http://localhost:6333"))
+      end
+    end
+
+    def load_probes
+      @llm_probe = llm_configured? ? Probe.not_checked : Probe.not_configured
+      @vector_store_probe = vector_store_adapter.present? ? Probe.not_checked : Probe.not_configured
+      @embedding_probe = vector_store_adapter == :pgvector ? Probe.not_checked : Probe.not_configured
+      return unless run_probes?
+
+      probe = Probe.new(force: @force_probes)
+      if llm_configured?
+        @llm_probe = probe.llm(
+          provider: effective_llm_provider,
+          endpoint: @llm_raw_endpoint,
+          access_token: @llm_access_token,
+          model: llm_model
+        )
+      end
+
+      case vector_store_adapter
+      when :openai
+        if vector_store_configured?
+          @vector_store_probe = probe.openai_vector_store(
+            endpoint: openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT,
+            access_token: openai_access_token
+          )
+        end
+      when :pgvector
+        @vector_store_probe = probe.pgvector
+        @embedding_probe = probe.embedding(
+          endpoint: @embedding_raw_endpoint,
+          access_token: @embedding_access_token,
+          model: embedding_model,
+          dimensions: embedding_dimensions
+        )
+      end
+    end
+
+    def run_probes?
+      @run_probes
+    end
+
+    def load_pgvector_status
+      connection = ActiveRecord::Base.connection
+      @pgvector_table_available = connection.table_exists?(VectorStore::Pgvector::TABLE_NAME)
+      @pgvector_extension_enabled = connection.extension_enabled?("vector")
+      @pgvector_extension_available = @pgvector_extension_enabled || connection.select_value(
+        "SELECT 1 FROM pg_available_extensions WHERE name = 'vector' LIMIT 1"
+      ).present?
+    rescue StandardError
+      @pgvector_table_available = false
+      @pgvector_extension_enabled = false
+      @pgvector_extension_available = false
+    end
+
+    def normalized_llm_provider(value)
+      value.to_s == "anthropic" ? :anthropic : :openai
+    end
+
+    def provider_name(provider)
+      case provider
+      when Provider::Openai then :openai
+      when Provider::Anthropic then :anthropic
+      end
+    end
+
+    def effective_model(provider)
+      case provider
+      when :anthropic then Provider::Anthropic.effective_model
+      else Provider::Openai.effective_model
+      end
+    end
+
+    def endpoint(provider)
+      value = raw_endpoint(provider)
+      redact_endpoint(value.presence || default_endpoint(provider))
+    end
+
+    def default_endpoint(provider)
+      provider == :anthropic ? ANTHROPIC_DEFAULT_ENDPOINT : OPENAI_DEFAULT_ENDPOINT
+    end
+
+    def raw_endpoint(provider)
+      provider == :anthropic ? anthropic_base_url : openai_uri_base
+    end
+
+    def access_token(provider)
+      if provider == :anthropic
+        ENV["ANTHROPIC_ACCESS_TOKEN"].presence ||
+          ENV["ANTHROPIC_API_KEY"].presence ||
+          Setting.anthropic_access_token
+      else
+        openai_access_token
+      end
+    end
+
+    def openai_access_token
+      ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
+    end
+
+    def request_timeout(provider)
+      if provider == :anthropic
+        ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
+      else
+        ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+      end
+    end
+
+    def openai_uri_base
+      ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
+    end
+
+    def anthropic_base_url
+      ENV["ANTHROPIC_BASE_URL"].presence || Setting.anthropic_base_url
+    end
+
+    def hosted_openai_endpoint?(value)
+      uri = URI.parse(value.to_s)
+      normalized_path = uri.path.to_s.sub(%r{/+\z}, "")
+
+      uri.scheme == "https" && uri.host == "api.openai.com" && uri.port == 443 && normalized_path.in?([ "", "/v1" ])
+    rescue URI::InvalidURIError
+      false
+    end
+
+    def redact_endpoint(value)
+      self.class.redact_endpoint(value)
+    end
+
+    def safely(fallback)
+      yield
+    rescue StandardError
+      fallback
+    end
+end
