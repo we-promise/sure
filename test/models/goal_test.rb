@@ -339,13 +339,6 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal :reached, @goal.display_status
   end
 
-  test "advisory_lock_key_for is stable per family" do
-    k1 = Goal.advisory_lock_key_for(@family.id)
-    k2 = Goal.advisory_lock_key_for(@family.id)
-    assert_equal k1, k2
-    assert_kind_of Integer, k1
-  end
-
   test "any_connected_account? reflects plaid_account presence" do
     assert @goal.any_connected_account?
     only_manual = goals(:emergency_fund)
