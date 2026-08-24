@@ -30,6 +30,12 @@
         "properties": {
           "CFBundleDisplayName": "Sure Insights",
           "UILaunchScreen": {},
+          "UISupportedInterfaceOrientations": [
+            "UIInterfaceOrientationPortrait",
+            "UIInterfaceOrientationPortraitUpsideDown",
+            "UIInterfaceOrientationLandscapeLeft",
+            "UIInterfaceOrientationLandscapeRight"
+          ],
           "UIBackgroundModes": [
             "remote-notification"
           ]
