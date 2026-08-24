@@ -129,4 +129,46 @@ class GoalAccountTest < ActiveSupport::TestCase
 
     assert_not ga.valid?
   end
+
+  # Moving a whole-account link is a fresh claim on wherever it lands. It is
+  # neither new nor allocation-dirty, so the two original predicates let it
+  # through onto an account nobody had checked.
+  test "moving a whole-account link onto a contested account is refused" do
+    contested = Account.create!(
+      family: families(:dylan_family), accountable: Depository.new,
+      name: "Contested", currency: "USD", balance: 4_000
+    )
+    goals(:vacation_italy).goal_accounts.create!(account: contested)
+    mine = @goal.goal_accounts.create!(account: @account, allocated_amount: nil)
+
+    mine.account = contested
+
+    assert_not mine.valid?
+    assert_includes mine.errors.full_messages.to_sentence, goals(:vacation_italy).name
+  end
+
+  test "moving a whole-account link onto a free account is allowed" do
+    free = Account.create!(
+      family: families(:dylan_family), accountable: Depository.new,
+      name: "Free", currency: "USD", balance: 4_000
+    )
+    mine = @goal.goal_accounts.create!(account: @account, allocated_amount: nil)
+
+    mine.account = free
+
+    assert mine.valid?, mine.errors.full_messages.to_sentence
+  end
+
+  # The bound still has to let a row that is merely along for the ride pass:
+  # autosave revalidates every loaded child on goal.save.
+  test "a legacy overlap still does not block an unrelated edit after the widening" do
+    other = goals(:vacation_italy)
+    other.goal_accounts.create!(account: @account)
+    legacy = @goal.goal_accounts.create!(account: @account, allocated_amount: 1)
+    legacy.update_column(:allocated_amount, nil)
+
+    @goal.reload.name = "Renamed again"
+
+    assert @goal.save, @goal.errors.full_messages.to_sentence
+  end
 end

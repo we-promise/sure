@@ -39,7 +39,17 @@ class GoalAccount < ApplicationRecord
       # validation stay readable and editable: autosave revalidates every
       # loaded goal_account on goal.save, and blocking there would make a
       # goal that merely holds a legacy overlap impossible to rename.
-      return unless new_record? || will_save_change_to_allocated_amount?
+      #
+      # "Written now" has to include moving the link, not just re-pricing it.
+      # A whole-account row whose account_id or goal_id changes is neither new
+      # nor allocation-dirty, so on those two predicates alone it would land on
+      # an account nobody checked — the same hole as a restore, through a
+      # different door. Widening the bound rather than dropping it: the reason
+      # above still holds for every row that is merely along for the ride.
+      return unless new_record? ||
+                    will_save_change_to_allocated_amount? ||
+                    will_save_change_to_account_id? ||
+                    will_save_change_to_goal_id?
 
       other = goal.whole_account_conflicts_on(account_id).first
       return if other.nil?
