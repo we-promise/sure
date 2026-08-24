@@ -50,7 +50,7 @@ class Security::WarsawPriceCurrencyBackfillTest < ActiveSupport::TestCase
   end
 
   test "does not touch non-Warsaw securities" do
-    other = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS", country_code: "US")
+    other = Security.create!(ticker: "ZZZZ", exchange_operating_mic: "XNAS", country_code: "US")
     usd = Security::Price.create!(security: other, date: Date.new(2026, 8, 21), price: 200, currency: "USD")
 
     Security::WarsawPriceCurrencyBackfill.new(dry_run: false, sync_accounts: false).call

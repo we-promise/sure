@@ -133,11 +133,11 @@ class Security::WarsawPriceCurrencyBackfill
     # "touched", so also requeue holdings for Warsaw securities that no longer
     # have mis-tagged USD prices.
     def security_ids_for_account_sync(touched_security_ids)
-      corrected_without_usd = warsaw_securities
-        .joins(:holdings)
-        .where.not(id: Security::Price.where(currency: FROM_CURRENCY).select(:security_id))
+      corrected_without_usd = Holding
+        .where(security_id: warsaw_securities.select(:id))
+        .where.not(security_id: Security::Price.where(currency: FROM_CURRENCY).select(:security_id))
         .distinct
-        .pluck(:id)
+        .pluck(:security_id)
 
       (touched_security_ids + corrected_without_usd).uniq
     end
