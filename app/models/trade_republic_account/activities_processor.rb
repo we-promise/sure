@@ -15,11 +15,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     trade_count = 0
     transaction_count = 0
-    split_accounts = @trade_republic_account.trade_republic_item
-      .trade_republic_accounts
-      .where(kind: "cash")
-      .joins(:account_provider)
-      .exists?
+    split_accounts = linked_cash_account_present?
 
     Array(@trade_republic_account.raw_timeline_payload).each do |event|
       next unless event.is_a?(Hash)
@@ -216,7 +212,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def reconcile_split_portfolio_transactions!
-      return unless @trade_republic_account.portfolio?
+      return unless @trade_republic_account.portfolio? && linked_cash_account_present?
       cash_account = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "cash")
       return unless cash_account
 
@@ -242,6 +238,13 @@ class TradeRepublicAccount::ActivitiesProcessor
         account: account,
         metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
       )
+    end
+
+    def linked_cash_account_present?
+      @trade_republic_account.trade_republic_item.trade_republic_accounts
+        .where(kind: "cash")
+        .joins(:account_provider)
+        .exists?
     end
 
     def record_unknown_event(event)

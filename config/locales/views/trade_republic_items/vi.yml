@@ -25,9 +25,35 @@ vi:
       data_quality:
         title: "Chất lượng dữ liệu và chi tiết đồng bộ"
         repair: "Sửa dữ liệu đã nhập"
+        positions:
+          one: "%{count} position"
+          other: "%{count} positions"
+        unpriced:
+          one: "%{count} without current price"
+          other: "%{count} without current price"
+        events:
+          one: "%{count} activity"
+          other: "%{count} activities"
+        unknown:
+          one: "%{count} unknown activity"
+          other: "%{count} unknown activities"
+        expenses:
+          one: "%{count} expense in the last 30 days (%{amount})"
+          other: "%{count} expenses in the last 30 days (%{amount})"
+        reconciliation: "%{matched}/%{total} account balances reconciled"
+        sync_history: Recent syncs
+        sync_status:
+          completed: Completed
+          failed: Failed
+          pending: Pending
+          syncing: Syncing
+          stale: Stale
     setup_accounts:
       page_title: "Thiết lập tài khoản Trade Republic"
       subtitle: "Liên kết tài khoản đầu tư Trade Republic."
+      available_accounts:
+        account_type_investment: "Investment portfolio"
+        account_type_cash: "Cash account"
       buttons:
         refresh: "Làm mới"
         cancel: "Hủy"
@@ -58,4 +84,11 @@ vi:
       not_found: "Không tìm thấy tài khoản hoặc cấu hình Trade Republic."
       success: "Đã liên kết tài khoản với Trade Republic."
     complete_account_setup:
-     none_selected: "Chưa chọn tài khoản nào."
+      success:
+        one: "Successfully created %{count} Trade Republic account."
+        other: "Successfully created %{count} Trade Republic accounts."
+      none_created: "No accounts were created."
+      partial_failure:
+        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+      none_selected: "Chưa chọn tài khoản nào."

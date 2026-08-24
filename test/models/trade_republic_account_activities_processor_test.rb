@@ -214,13 +214,20 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
   end
 
   test "split portfolio processing removes only cash events present in the cash snapshot" do
-    @item.trade_republic_accounts.create!(
+    cash_account = @item.trade_republic_accounts.create!(
       name: "Cash",
       kind: "cash",
       trade_republic_account_id: "cash:DEPROC1",
       currency: "EUR",
       raw_timeline_payload: [ { "id" => "cash_evt" } ]
     )
+    cash_account.ensure_account_provider!(@family.accounts.create!(
+      name: "Trade Republic Cash Test",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    ))
     adapter = Account::ProviderImportAdapter.new(@account)
     adapter.import_transaction(
       external_id: "trade_republic_event_cash_evt",
@@ -243,6 +250,28 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     assert_not Entry.exists?(external_id: "trade_republic_event_cash_evt")
     assert Entry.exists?(external_id: "trade_republic_event_unknown_evt")
+  end
+
+  test "split portfolio reconciliation does not remove cash events for an unlinked cash account" do
+    @item.trade_republic_accounts.create!(
+      name: "Cash",
+      kind: "cash",
+      trade_republic_account_id: "cash:DEPROC1",
+      currency: "EUR",
+      raw_timeline_payload: [ { "id" => "cash_evt" } ]
+    )
+    Account::ProviderImportAdapter.new(@account).import_transaction(
+      external_id: "trade_republic_event_cash_evt",
+      amount: BigDecimal("-25.00"),
+      currency: "EUR",
+      date: Date.current,
+      name: "Cash payment",
+      source: "trade_republic"
+    )
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    assert Entry.exists?(external_id: "trade_republic_event_cash_evt")
   end
 
   private

@@ -15,7 +15,7 @@ hu:
       syncing: "Szinkronizálás"
       requires_update: "Újrahitelesítés szükséges"
       error: "Hiba"
-      synced: "Szinkronizálva: %{time} éve. %{summary}."
+      synced: "Szinkronizálva: %{time}. %{summary}."
       setup_accounts: "Fiókok beállítása"
       delete: "Törlés"
       accounts_need_setup: "A fiókot be kell állítani"
@@ -58,4 +58,11 @@ hu:
       not_found: "A fiók vagy a Trade Republic konfiguráció nem található."
       success: "A fiók sikeresen összekapcsolva a Trade Republic szolgáltatással."
     complete_account_setup:
-     none_selected: "Nem választottál ki fiókot."
+      success:
+        one: "Successfully created %{count} Trade Republic account."
+        other: "Successfully created %{count} Trade Republic accounts."
+      none_created: "No accounts were created."
+      partial_failure:
+        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+      none_selected: "Nem választottál ki fiókot."

@@ -735,6 +735,7 @@ class Provider::TradeRepublicClient
     def resolve_details(websocket, items, newest_event_id, warnings)
       events = []
       details_fetched = 0
+      details_skipped = false
       items.each do |item|
         detail = nil
         category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
@@ -751,6 +752,8 @@ class Provider::TradeRepublicClient
           rescue Error
             warnings << "detail fetch failed for event #{item["id"]}"
           end
+        elsif DETAIL_CATEGORIES.include?(category.to_s)
+          details_skipped = true
         end
         amount = item.dig("amount", "value")
         event_detail = {
@@ -763,7 +766,7 @@ class Provider::TradeRepublicClient
         events << item.slice("id", "timestamp", "title", "subtitle", "eventType")
           .merge("category" => category, "detail" => detail.presence)
       end
-      newest_event_id = nil if events.any? { |event| DETAIL_CATEGORIES.include?(event["category"]) && event["detail"].nil? }
+      newest_event_id = nil if details_skipped || events.any? { |event| DETAIL_CATEGORIES.include?(event["category"]) && event["detail"].nil? }
       [ events, newest_event_id, warnings ]
     end
 

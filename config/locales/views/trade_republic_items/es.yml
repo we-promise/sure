@@ -25,9 +25,35 @@ es:
       data_quality:
         title: "Calidad de los datos y detalles de sincronización"
         repair: "Reparar datos importados"
+        positions:
+          one: "%{count} position"
+          other: "%{count} positions"
+        unpriced:
+          one: "%{count} without current price"
+          other: "%{count} without current price"
+        events:
+          one: "%{count} activity"
+          other: "%{count} activities"
+        unknown:
+          one: "%{count} unknown activity"
+          other: "%{count} unknown activities"
+        expenses:
+          one: "%{count} expense in the last 30 days (%{amount})"
+          other: "%{count} expenses in the last 30 days (%{amount})"
+        reconciliation: "%{matched}/%{total} account balances reconciled"
+        sync_history: Recent syncs
+        sync_status:
+          completed: Completed
+          failed: Failed
+          pending: Pending
+          syncing: Syncing
+          stale: Stale
     setup_accounts:
       page_title: "Configurar cuenta de Trade Republic"
       subtitle: "Vincula tu cuenta de inversión de Trade Republic."
+      available_accounts:
+        account_type_investment: "Investment portfolio"
+        account_type_cash: "Cash account"
       buttons:
         refresh: "Actualizar"
         cancel: "Cancelar"
@@ -58,4 +84,11 @@ es:
       not_found: "No se ha encontrado la cuenta o configuración de Trade Republic."
       success: "Cuenta vinculada correctamente a Trade Republic."
     complete_account_setup:
-     none_selected: "No se ha seleccionado ninguna cuenta."
+      success:
+        one: "Successfully created %{count} Trade Republic account."
+        other: "Successfully created %{count} Trade Republic accounts."
+      none_created: "No accounts were created."
+      partial_failure:
+        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+      none_selected: "No se ha seleccionado ninguna cuenta."

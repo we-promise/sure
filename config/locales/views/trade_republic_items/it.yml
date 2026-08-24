@@ -58,4 +58,11 @@ it:
       not_found: "Conto o configurazione Trade Republic non trovati."
       success: "Conto collegato correttamente a Trade Republic."
     complete_account_setup:
-     none_selected: "Nessun conto selezionato."
+      success:
+        one: "Successfully created %{count} Trade Republic account."
+        other: "Successfully created %{count} Trade Republic accounts."
+      none_created: "No accounts were created."
+      partial_failure:
+        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+      none_selected: "Nessun conto selezionato."

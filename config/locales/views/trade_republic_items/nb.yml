@@ -58,4 +58,11 @@ nb:
       not_found: "Fant ikke konto eller Trade Republic-konfigurasjon."
       success: "Kontoen ble koblet til Trade Republic."
     complete_account_setup:
-     none_selected: "Ingen kontoer ble valgt."
+      success:
+        one: "Successfully created %{count} Trade Republic account."
+        other: "Successfully created %{count} Trade Republic accounts."
+      none_created: "No accounts were created."
+      partial_failure:
+        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+      none_selected: "Ingen kontoer ble valgt."

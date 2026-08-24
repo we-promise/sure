@@ -25,9 +25,35 @@ zh-TW:
       data_quality:
         title: "資料品質與同步詳細資料"
         repair: "修復匯入的資料"
+        positions:
+          one: "%{count} position"
+          other: "%{count} positions"
+        unpriced:
+          one: "%{count} without current price"
+          other: "%{count} without current price"
+        events:
+          one: "%{count} activity"
+          other: "%{count} activities"
+        unknown:
+          one: "%{count} unknown activity"
+          other: "%{count} unknown activities"
+        expenses:
+          one: "%{count} expense in the last 30 days (%{amount})"
+          other: "%{count} expenses in the last 30 days (%{amount})"
+        reconciliation: "%{matched}/%{total} account balances reconciled"
+        sync_history: Recent syncs
+        sync_status:
+          completed: Completed
+          failed: Failed
+          pending: Pending
+          syncing: Syncing
+          stale: Stale
     setup_accounts:
       page_title: "設定 Trade Republic 帳戶"
       subtitle: "連結您的 Trade Republic 投資帳戶。"
+      available_accounts:
+        account_type_investment: "Investment portfolio"
+        account_type_cash: "Cash account"
       buttons:
         refresh: "重新整理"
         cancel: "取消"
@@ -58,4 +84,11 @@ zh-TW:
       not_found: "找不到帳戶或 Trade Republic 設定。"
       success: "已成功連結至 Trade Republic 帳戶。"
     complete_account_setup:
-     none_selected: "未選取任何帳戶。"
+      success:
+        one: "Successfully created %{count} Trade Republic account."
+        other: "Successfully created %{count} Trade Republic accounts."
+      none_created: "No accounts were created."
+      partial_failure:
+        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+      none_selected: "未選取任何帳戶。"
