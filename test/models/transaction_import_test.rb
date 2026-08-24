@@ -318,6 +318,51 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert account.entries.exists?(date: Date.new(2024, 1, 2), name: "Older History", import_locked: true)
   end
 
+  test "blank-name CSV rows do not skip unrelated provider-synced transactions" do
+    account = accounts(:connected)
+    assert account.linked?
+
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      external_id: "enablebanking_txn_blank_name",
+      source: "enable_banking",
+      entryable: Transaction.new
+    )
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 1,
+                      -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    existing_entry.reload
+    assert_equal "enablebanking_txn_blank_name", existing_entry.external_id
+    assert_nil existing_entry.import_id
+    assert_not existing_entry.import_locked?
+    assert account.entries.exists?(date: Date.new(2024, 1, 1), amount: 100, import_locked: true, external_id: nil)
+  end
+
   test "imports all identical transactions from CSV even when one exists in database" do
     account = accounts(:depository)
 

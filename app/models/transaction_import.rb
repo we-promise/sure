@@ -34,9 +34,9 @@ class TransactionImport < Import
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
         # This ensures identical rows within the CSV are all imported as separate transactions
         #
-        # include_provider_entries: true so CSV backfills into already-linked
-        # accounts (e.g. Enable Banking's ~90-day window) do not recreate rows
-        # that already arrived via sync. Mirror PDF statement reconciliation.
+        # include_provider_entries only when the CSV row has a name: without it,
+        # date+amount would match unrelated provider rows. Named rows still skip
+        # already-synced overlap (e.g. Enable Banking's ~90-day window).
         adapter = Account::ProviderImportAdapter.new(mapped_account)
         duplicate_entry = adapter.find_duplicate_transaction(
           date: row.date_iso,
@@ -44,7 +44,7 @@ class TransactionImport < Import
           currency: effective_currency,
           name: row.name,
           exclude_entry_ids: claimed_entry_ids,
-          include_provider_entries: true
+          include_provider_entries: row.name.present?
         )
 
         if duplicate_entry
