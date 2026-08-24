@@ -36,14 +36,15 @@ class Security::WarsawPriceCurrencyBackfill
     warsaw_securities.find_each do |security|
       securities_scanned += 1
 
-      if canonicalize_mic!(security)
-        mics_canonicalized += 1
-      end
+      mic_changed = canonicalize_mic!(security)
+      mics_canonicalized += 1 if mic_changed
 
       relabeled, deleted = fix_prices_for!(security)
       prices_relabeled += relabeled
       prices_deleted += deleted
-      touched_security_ids << security.id if relabeled.positive? || deleted.positive?
+      if mic_changed || relabeled.positive? || deleted.positive?
+        touched_security_ids << security.id
+      end
     end
 
     accounts_queued = enqueue_account_syncs!(touched_security_ids.uniq)
@@ -111,8 +112,11 @@ class Security::WarsawPriceCurrencyBackfill
       [ to_relabel_ids.size, to_delete_ids.size ]
     end
 
-    def enqueue_account_syncs!(security_ids)
-      return 0 if security_ids.empty? || !sync_accounts
+    def enqueue_account_syncs!(touched_security_ids)
+      return 0 unless sync_accounts
+
+      security_ids = security_ids_for_account_sync(touched_security_ids)
+      return 0 if security_ids.empty?
 
       account_ids = Holding.where(security_id: security_ids).distinct.pluck(:account_id)
       return 0 if account_ids.empty?
@@ -122,5 +126,19 @@ class Security::WarsawPriceCurrencyBackfill
       end
 
       account_ids.size
+    end
+
+    # Without a DDL transaction, a failed migration may relabel prices and then
+    # abort before sync. On retry those rows are already PLN and won't look
+    # "touched", so also requeue holdings for Warsaw securities that no longer
+    # have mis-tagged USD prices.
+    def security_ids_for_account_sync(touched_security_ids)
+      corrected_without_usd = warsaw_securities
+        .joins(:holdings)
+        .where.not(id: Security::Price.where(currency: FROM_CURRENCY).select(:security_id))
+        .distinct
+        .pluck(:id)
+
+      (touched_security_ids + corrected_without_usd).uniq
     end
 end

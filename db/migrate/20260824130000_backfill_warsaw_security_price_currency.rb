@@ -22,7 +22,7 @@ class BackfillWarsawSecurityPriceCurrency < ActiveRecord::Migration[7.2]
   end
 
   def down
-    # Irreversible: cannot distinguish corrected PLN rows from prices that were
-    # always correctly stored as PLN.
+    raise ActiveRecord::IrreversibleMigration,
+      "Cannot distinguish corrected PLN rows from prices that were always PLN"
   end
 end
