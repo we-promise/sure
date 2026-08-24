@@ -237,7 +237,7 @@
                               <% unless user.id == Current.user.id || (user.super_admin? && user.active? && @active_super_admin_count <= 1) %>
                                 <div class="border-t border-primary pt-3">
                                   <%= render DS::Button.new(
-                                        text: t(".table.remove"),
+                                        text: t(".remove"),
                                         href: deletion_admin_user_path(user),
                                         method: :get,
                                         frame: "modal",
