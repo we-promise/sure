@@ -42,6 +42,21 @@ class Rule::ActionExecutor::SetAsTransferOrPaymentTest < ActiveSupport::TestCase
     assert_equal "emi_installment", installment_entry.reload.transaction.kind
   end
 
+  test "skips an emi_fee transaction instead of raising" do
+    entry = create_transaction(date: Date.current, account: @source_account, amount: 1200, name: "Laptop")
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 50)
+    fee_entry = plan.processing_fee_entry
+
+    result = nil
+    assert_nothing_raised do
+      result = action.apply(Transaction.where(id: fee_entry.transaction.id))
+    end
+
+    assert_equal 0, result
+    assert_equal "emi_fee", fee_entry.reload.transaction.kind
+    refute fee_entry.transaction.transfer?
+  end
+
   test "still converts an ordinary transaction to a transfer as before" do
     entry = create_transaction(date: Date.current, account: @source_account, amount: 500, name: "Rent")
 

@@ -3,7 +3,7 @@ class EmiPlansController < ApplicationController
   before_action :require_emi_write_permission!, only: %i[create destroy]
 
   def new
-    unless @entry.transaction.emi_convertible?
+    unless @entry.transaction? && @entry.transaction.emi_convertible?
       redirect_back_or_to transactions_path, alert: t("emi_plans.new.not_convertible")
       return
     end
@@ -12,7 +12,7 @@ class EmiPlansController < ApplicationController
   end
 
   def create
-    unless @entry.transaction.emi_convertible?
+    unless @entry.transaction? && @entry.transaction.emi_convertible?
       redirect_back_or_to transactions_path, alert: t("emi_plans.new.not_convertible")
       return
     end

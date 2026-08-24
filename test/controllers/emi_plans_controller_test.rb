@@ -25,6 +25,20 @@ class EmiPlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("emi_plans.new.not_convertible"), flash[:alert]
   end
 
+  test "new derives the processing fee input step from currency precision" do
+    get new_transaction_emi_plan_path(@entry)
+    assert_response :success
+    assert_select "input[name='emi_plan[processing_fee]'][step='0.01']"
+  end
+
+  test "new uses a whole-number step for zero-precision currencies" do
+    jpy_entry = create_transaction(amount: 12000, name: "Camera", currency: "JPY", account: accounts(:depository))
+
+    get new_transaction_emi_plan_path(jpy_entry)
+    assert_response :success
+    assert_select "input[name='emi_plan[processing_fee]'][step='1.0']"
+  end
+
   test "create with valid params builds the plan and installments" do
     assert_difference "Entry.count", 12 do
       post transaction_emi_plan_path(@entry), params: {

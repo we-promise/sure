@@ -255,6 +255,16 @@ class EmiPlan < ApplicationRecord
   # plain, unconverted transaction again.
   def foreclose!
     Entry.transaction do
+      lock!
+      # Re-check under the lock: if a concurrent request already foreclosed
+      # (or otherwise settled) this plan while we were waiting on the lock,
+      # there's nothing left to do here. Without this, two concurrent
+      # foreclosure requests could both load the same future installments,
+      # compute the same outstanding principal, and each try to create the
+      # tenure_months + 1 settlement entry -- the second either raises on
+      # the unique index or duplicates work off a stale read.
+      return unless active?
+
       had_posted_installments = posted_installments.exists?
       future_installments = installment_entries.where("entries.date > ?", Date.current).to_a
 

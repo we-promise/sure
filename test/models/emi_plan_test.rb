@@ -130,6 +130,27 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_equal Date.current, settlement.date
   end
 
+  test "foreclose! is a safe no-op when called again on an already-foreclosed plan" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
+
+    plan.foreclose!
+    assert_equal "foreclosed", plan.reload.status
+    settlement_count_after_first = plan.installment_entries.count
+
+    # Simulates a second concurrent request reaching foreclose! after the
+    # first has already committed (e.g. two requests that both passed the
+    # controller's `active?` check before either acquired the row lock).
+    # The re-check under the lock should short-circuit rather than
+    # recompute outstanding principal and create a duplicate settlement
+    # entry / raise on the unique index.
+    assert_nothing_raised do
+      plan.foreclose!
+    end
+
+    assert_equal "foreclosed", plan.reload.status
+    assert_equal settlement_count_after_first, plan.installment_entries.count
+  end
+
   test "total_payable matches the original schedule while the plan is active" do
     plan = EmiPlan.build!(entry: @entry, interest_rate: 10, tenure_months: 6, processing_fee: 25)
 

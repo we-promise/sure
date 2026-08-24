@@ -20,7 +20,13 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
       # Transaction#update! and raise past
       # cannot_change_kind_of_active_emi_entry mid-batch, which would halt
       # every other transaction in this rule run.
-      next false if entry.emi_purchase? || entry.emi_installment?
+      #
+      # emi_fee entries are only linked to their plan via
+      # EmiPlan#processing_fee_entry (not emi_plan_id like installments), so
+      # Transaction#cannot_change_kind_of_active_emi_entry can't catch this
+      # path -- skip them explicitly via emi_linked? (covers purchase,
+      # installment, and fee) rather than relying on that guard.
+      next false if entry.emi_linked?
 
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)
