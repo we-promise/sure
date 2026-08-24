@@ -255,7 +255,58 @@ class Provider::BinancePublic < Provider
     end
   end
 
+  # Maps a user-visible ticker to the Binance pair symbol, base asset, and
+  # display currency. Accepts:
+  #   - "BTCUSD"/"ETHEUR" — fiat suffix from search_securities output
+  #   - "CRYPTO:BTCUSD" — prefixed form stored by holdings processors
+  #   - "CRYPTO:SOL"/"SOL" — bare base asset; defaults to the USDT pair (USD)
+  #   - "CRYPTO:USDT"/"USDT" — USD-pegged stablecoin; binance_pair is nil and
+  #     callers short-circuit to a synthetic 1.0 USD price
+  # Returns nil only when the input is empty after stripping the prefix.
+  def self.parse_ticker(ticker)
+    raw = ticker.to_s.upcase
+    prefixed = raw.start_with?(CRYPTO_PREFIX)
+    ticker_up = raw.delete_prefix(CRYPTO_PREFIX)
+    return nil if ticker_up.empty?
+
+    if USD_STABLECOINS.include?(ticker_up)
+      return { binance_pair: nil, base: ticker_up, display_currency: "USD", stablecoin: true }
+    end
+
+    SUPPORTED_QUOTES.each do |quote|
+      display_currency = QUOTE_TO_CURRENCY[quote]
+      next unless ticker_up.end_with?(display_currency)
+
+      # Strip the quote plus any separator so the canonical "BTC-USD" form
+      # yields "BTC" (not "BTC-") and builds a valid "BTCUSDT" pair.
+      base = ticker_up.delete_suffix(display_currency).sub(QUOTE_SEPARATOR, "")
+      next if base.empty?
+
+      # "{stablecoin}USD" form (e.g. "USDTUSD" produced by search_securities)
+      # routes to synthetic 1.0 USD pricing — there is no Binance self-pair.
+      if display_currency == "USD" && USD_STABLECOINS.include?(base)
+        return { binance_pair: nil, base: base, display_currency: "USD", stablecoin: true }
+      end
+
+      return { binance_pair: "#{base}#{quote}", base: base, display_currency: display_currency }
+    end
+
+    # No fiat suffix matched. Only treat the input as a bare base asset when
+    # it arrived with the CRYPTO: prefix from a holdings processor — that
+    # tells us it really is a single coin symbol (SOL, TRUMP, KAITO), not a
+    # malformed pair like "BTCBNB" or "BTCGBP" that we want to reject.
+    return nil unless prefixed
+
+    { binance_pair: "#{ticker_up}USDT", base: ticker_up, display_currency: "USD" }
+  end
+
   private
+
+    # The instance form its own methods and tests use; the parsing itself is
+    # a class method so callers outside this provider can reach it.
+    def parse_ticker(ticker)
+      self.class.parse_ticker(ticker)
+    end
     # Synthetic search hit for a USD-pegged stablecoin. Binance has no self-pair
     # (USDTUSDT etc. don't exist), so we manufacture a result instead of letting
     # the resolver fall back to an offline CRYPTO:* row. The downstream price
@@ -313,50 +364,6 @@ class Provider::BinancePublic < Provider
       end
     end
 
-    # Maps a user-visible ticker to the Binance pair symbol, base asset, and
-    # display currency. Accepts:
-    #   - "BTCUSD"/"ETHEUR" — fiat suffix from search_securities output
-    #   - "CRYPTO:BTCUSD" — prefixed form stored by holdings processors
-    #   - "CRYPTO:SOL"/"SOL" — bare base asset; defaults to the USDT pair (USD)
-    #   - "CRYPTO:USDT"/"USDT" — USD-pegged stablecoin; binance_pair is nil and
-    #     callers short-circuit to a synthetic 1.0 USD price
-    # Returns nil only when the input is empty after stripping the prefix.
-    def parse_ticker(ticker)
-      raw = ticker.to_s.upcase
-      prefixed = raw.start_with?(CRYPTO_PREFIX)
-      ticker_up = raw.delete_prefix(CRYPTO_PREFIX)
-      return nil if ticker_up.empty?
-
-      if USD_STABLECOINS.include?(ticker_up)
-        return { binance_pair: nil, base: ticker_up, display_currency: "USD", stablecoin: true }
-      end
-
-      SUPPORTED_QUOTES.each do |quote|
-        display_currency = QUOTE_TO_CURRENCY[quote]
-        next unless ticker_up.end_with?(display_currency)
-
-        # Strip the quote plus any separator so the canonical "BTC-USD" form
-        # yields "BTC" (not "BTC-") and builds a valid "BTCUSDT" pair.
-        base = ticker_up.delete_suffix(display_currency).sub(QUOTE_SEPARATOR, "")
-        next if base.empty?
-
-        # "{stablecoin}USD" form (e.g. "USDTUSD" produced by search_securities)
-        # routes to synthetic 1.0 USD pricing — there is no Binance self-pair.
-        if display_currency == "USD" && USD_STABLECOINS.include?(base)
-          return { binance_pair: nil, base: base, display_currency: "USD", stablecoin: true }
-        end
-
-        return { binance_pair: "#{base}#{quote}", base: base, display_currency: display_currency }
-      end
-
-      # No fiat suffix matched. Only treat the input as a bare base asset when
-      # it arrived with the CRYPTO: prefix from a holdings processor — that
-      # tells us it really is a single coin symbol (SOL, TRUMP, KAITO), not a
-      # malformed pair like "BTCBNB" or "BTCGBP" that we want to reject.
-      return nil unless prefixed
-
-      { binance_pair: "#{ticker_up}USDT", base: ticker_up, display_currency: "USD" }
-    end
 
     # Cached for 24h — exchangeInfo returns the full symbol universe (thousands
     # of rows, weight 10) and rarely changes.
