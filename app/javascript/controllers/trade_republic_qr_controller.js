@@ -15,8 +15,8 @@ export default class extends Controller {
     interval: { type: Number, default: 1000 },
     timeout: { type: Number, default: 120000 },
     maxRetryDelay: { type: Number, default: 8000 },
-    loginText: { type: String, default: "Mit QR-Code einloggen" },
-    cancelText: { type: String, default: "QR-Login abbrechen" },
+    loginText: String,
+    cancelText: String,
   };
 
   connect() {
@@ -56,7 +56,7 @@ export default class extends Controller {
     try {
       const response = await fetch(this.initiateUrlValue, {
         method: "POST",
-        headers: this.headers(),
+        headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
         credentials: "same-origin",
         body: this.body(),
       });
@@ -88,7 +88,8 @@ export default class extends Controller {
       const result = await this.jsonResponse(response);
       if (!response.ok) {
         const error = new Error(result.error || "QR login failed");
-        error.retryable = result.retryable === true || this.retryableStatus(response.status);
+        error.retryable =
+          result.retryable === true || this.retryableStatus(response.status);
         throw error;
       }
 
@@ -150,7 +151,9 @@ export default class extends Controller {
     try {
       return await response.json();
     } catch {
-      const error = new Error(`QR login returned invalid JSON: ${response.status}`);
+      const error = new Error(
+        `QR login returned invalid JSON: ${response.status}`,
+      );
       error.retryable = this.retryableStatus(response.status);
       throw error;
     }
@@ -193,9 +196,7 @@ export default class extends Controller {
       if (!response.ok)
         throw new Error(`QR login cancellation failed: ${response.status}`);
 
-      const result = await response.json();
-      const panel = document.getElementById("trade-republic-providers-panel");
-      if (panel && result.html) panel.outerHTML = result.html;
+      Turbo.renderStreamMessage(await response.text());
     } catch (error) {
       this.stopped = false;
       console.warn("[Trade Republic] QR login cancellation failed", error);
@@ -213,7 +214,7 @@ export default class extends Controller {
     if (!expiresAt) return this.intervalValue;
 
     const remaining = Date.parse(expiresAt) - Date.now();
-    return remaining <= 1500 ? 100 : this.intervalValue;
+    return remaining > 0 && remaining <= 1500 ? 100 : this.intervalValue;
   }
 
   setButtonLabel(label) {

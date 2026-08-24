@@ -116,7 +116,7 @@ class TradeRepublicItemsController < ApplicationController
     else
       ActiveRecord::Base.transaction do
         @trade_republic_item.update!(
-          session_blob: result.data["session_txt"],
+          session_blob: result.data.fetch("session_txt"),
           pending_login_state: nil,
           status: :good
         )
@@ -150,7 +150,7 @@ class TradeRepublicItemsController < ApplicationController
       @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
       render_login_panel
     else
-      @trade_republic_item.update!(session_blob: result.data["session_txt"], pending_login_state: nil, status: :good)
+      @trade_republic_item.update!(session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good)
       @trade_republic_item.sync_later unless @trade_republic_item.syncing?
       render_login_panel(success: true)
     end
@@ -206,14 +206,16 @@ class TradeRepublicItemsController < ApplicationController
 
   def cancel_qr_login
     @trade_republic_item.update!(pending_login_state: nil, status: :requires_update)
-    render json: {
-      status: "cancelled",
-      html: render_to_string(
-        partial: "settings/providers/trade_republic_panel",
-        formats: [ :html ],
-        locals: { trade_republic_item: @trade_republic_item }
-      )
-    }
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "trade-republic-providers-panel",
+          partial: "settings/providers/trade_republic_panel",
+          locals: { trade_republic_item: @trade_republic_item }
+        )
+      end
+      format.json { render json: { status: "cancelled" } }
+    end
   end
 
   def update

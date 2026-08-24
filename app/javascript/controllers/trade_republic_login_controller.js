@@ -61,7 +61,9 @@ export default class extends Controller {
     } finally {
       this.polling = false;
       if (!this.stopped && Date.now() - this.startedAt < this.timeoutValue) {
-        this.schedulePoll(this.retryCount > 0 ? this.retryDelay() : this.intervalValue);
+        this.schedulePoll(
+          this.retryCount > 0 ? this.retryDelay() : this.intervalValue,
+        );
       }
     }
   }

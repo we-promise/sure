@@ -19,3 +19,14 @@ pending_setup_account:
   cash_balance: 0.0000
   raw_positions_payload: []
   raw_timeline_payload: []
+
+cash_account:
+  trade_republic_item: configured_item
+  name: "Trade Republic Cash"
+  kind: cash
+  trade_republic_account_id: "CASH-DE1234"
+  currency: EUR
+  current_balance: 500.0000
+  cash_balance: 500.0000
+  raw_positions_payload: []
+  raw_timeline_payload: []
