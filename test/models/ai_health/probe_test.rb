@@ -48,6 +48,13 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   test "failed LLM probe writes a system-wide debug entry and Rails log without secrets" do
     models = stub(list: { "data" => [ { "id" => "another-model" } ] })
     @probe.stubs(:openai_client).returns(stub(models: models))
+    endpoint = URI::HTTP.build(
+      userinfo: "operator:uri-secret",
+      host: "ollama",
+      port: 11_434,
+      path: "/v1",
+      query: "api_key=query-secret"
+    ).to_s
     Rails.logger.expects(:error).with do |message|
       message.include?("AI health llm liveness probe failed") &&
         !message.include?("secret-token") &&
@@ -58,7 +65,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_difference -> { DebugLogEntry.where(category: "ai_health").count }, 1 do
       @result = @probe.llm(
         provider: :openai,
-        endpoint: "http://operator:uri-secret@ollama:11434/v1?api_key=query-secret",
+        endpoint: endpoint,
         access_token: "secret-token",
         model: "missing-model"
       )

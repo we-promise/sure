@@ -119,7 +119,15 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
     with_ai_environment(
       "OPENAI_ACCESS_TOKEN" => "local-token",
-      "OPENAI_URI_BASE" => "http://operator:uri-secret@ollama:11434/v1?api_key=query-secret",
+      "OPENAI_URI_BASE" => credentialed_url(
+        scheme: "http",
+        host: "ollama",
+        port: 11_434,
+        path: "/v1",
+        user: "operator",
+        password: "uri-secret",
+        query: "api_key=query-secret"
+      ),
       "OPENAI_MODEL" => "qwen3:8b"
     ) do
       AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(
@@ -185,7 +193,14 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
     with_ai_environment(
       "VECTOR_STORE_PROVIDER" => "qdrant",
-      "QDRANT_URL" => "https://admin:qdrant-secret@qdrant.example.test:6333?api_key=query-secret",
+      "QDRANT_URL" => credentialed_url(
+        scheme: "https",
+        host: "qdrant.example.test",
+        port: 6333,
+        user: "admin",
+        password: "qdrant-secret",
+        query: "api_key=query-secret"
+      ),
       "QDRANT_API_KEY" => "header-secret"
     ) do
       get admin_system_health_url(tab: "ai")
@@ -199,6 +214,17 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def credentialed_url(scheme:, host:, port:, user:, password:, path: nil, query: nil)
+      URI::Generic.build(
+        scheme: scheme,
+        userinfo: "#{user}:#{password}",
+        host: host,
+        port: port,
+        path: path,
+        query: query
+      ).to_s
+    end
+
     def probe_result(status, failure_code: nil, http_status: nil)
       AiHealth::Probe::Result.new(
         status: status,
