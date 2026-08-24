@@ -1,5 +1,5 @@
 {
-  "name": "Sure",
+  "name": "Sure Insights",
   "options": {
     "deploymentTarget": {
       "iOS": "18.0"
@@ -11,7 +11,7 @@
     }
   },
   "targets": {
-    "Sure": {
+    "Sure Insights": {
       "type": "application",
       "platform": "iOS",
       "sources": [
@@ -19,7 +19,7 @@
       ],
       "settings": {
         "base": {
-          "PRODUCT_BUNDLE_IDENTIFIER": "app.bitrig.new.81790e0e362141ce8bc1315a7a361749",
+          "PRODUCT_BUNDLE_IDENTIFIER": "am.sure.insights",
           "TARGETED_DEVICE_FAMILY": "1,2",
           "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
           "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor"
@@ -28,7 +28,7 @@
       "info": {
         "path": "bitrig/App/Info.plist",
         "properties": {
-          "CFBundleDisplayName": "Sure",
+          "CFBundleDisplayName": "Sure Insights",
           "UILaunchScreen": {},
           "UIBackgroundModes": [
             "remote-notification"
