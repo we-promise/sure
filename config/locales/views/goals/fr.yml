@@ -272,6 +272,7 @@ fr:
         saved: Épargné
         to_go: "%{amount} restant(s)"
       status_callout:
+        depleted: "il manque %{amount} — complétez pour ramener la réserve à son niveau"
         behind: épargnez %{amount}/mois de plus pour rattraper le retard
         behind_covered: les promesses en attente comblent le retard
         no_target_date: définissez une date cible pour projeter une date de fin

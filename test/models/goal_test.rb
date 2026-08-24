@@ -985,6 +985,20 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil goal.reload.target_date
   end
 
+  test "a drained reserve gets a status callout telling it what is missing" do
+    goal = reserve_goal(balance: 4_000, target: 6_000)
+
+    assert_equal :depleted, goal.status
+    assert_includes goal.status_callout_context.to_s, "2,000"
+  end
+
+  test "a reserve at its level has no callout to make" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+
+    assert_equal :funded, goal.status
+    assert_nil goal.status_callout_context
+  end
+
   private
 
     # Its own account, so the shared-pool haircut does not make the frozen

@@ -681,6 +681,11 @@ class Goal < ApplicationRecord
       end
     when :no_target_date
       I18n.t("goals.show.status_callout.no_target_date")
+    when :depleted
+      # A drained reserve had no callout at all: the one status that most
+      # deserves a line of explanation was the one that said nothing.
+      I18n.t("goals.show.status_callout.depleted",
+             amount: remaining_amount_money.format(precision: 0))
     end
   end
 

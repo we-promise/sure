@@ -120,6 +120,7 @@ en:
       funding_last_30d: last 30d
       funding_last_90d: last 90d
       status_callout:
+        depleted: "%{amount} short of its level — top it up to bring the reserve back"
         behind: "save %{amount}/mo more to catch up"
         behind_covered: "pending pledges close the gap"
         on_track: "reaches goal around %{date}"
