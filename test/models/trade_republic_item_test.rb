@@ -36,6 +36,7 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     )
 
     assert_predicate item, :valid?
+    assert_predicate item, :credentials_configured?
   end
 
   test "PIN is transient and is not a persisted attribute" do

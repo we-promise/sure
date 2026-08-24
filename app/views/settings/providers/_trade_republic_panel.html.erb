@@ -38,27 +38,33 @@
     <% if trade_republic_item.pending_login_state.blank? %>
       <% if session_configured %>
         <div class="flex flex-wrap justify-end gap-2">
-        <%= button_to initiate_login_trade_republic_item_path(trade_republic_item),
-                      method: :post,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary" do %>
-          <%= icon "log-in", size: "sm" %>
-          <%= t(".connect") %>
-        <% end %>
+        <%= render DS::Button.new(
+              text: t(".connect"),
+              variant: :outline,
+              size: :sm,
+              icon: "log-in",
+              href: initiate_login_trade_republic_item_path(trade_republic_item),
+              method: :post
+            ) %>
 
-        <%= button_to sync_trade_republic_item_path(trade_republic_item),
-                      method: :post,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                      disabled: trade_republic_item.syncing? do %>
-          <%= icon "refresh-cw", size: "sm" %>
-          <%= t(".sync") %>
-        <% end %>
+        <%= render DS::Button.new(
+              text: t(".sync"),
+              variant: :outline,
+              size: :sm,
+              icon: "refresh-cw",
+              href: sync_trade_republic_item_path(trade_republic_item),
+              method: :post,
+              disabled: trade_republic_item.syncing?
+            ) %>
 
-        <%= button_to trade_republic_item_path(trade_republic_item),
-                      method: :delete,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                      data: { turbo_confirm: t(".disconnect_confirm") } do %>
-          <%= icon "trash-2", size: "sm" %>
-        <% end %>
+        <%= render DS::Button.new(
+              variant: :outline_destructive,
+              size: :sm,
+              icon: "trash-2",
+              href: trade_republic_item_path(trade_republic_item),
+              method: :delete,
+              confirm: t(".disconnect_confirm")
+            ) %>
         </div>
       <% end %>
 
@@ -77,13 +83,17 @@
          data-trade-republic-qr-error-text-value="<%= t(".qr_error") %>"
          data-trade-republic-qr-login-text-value="<%= t(".qr_login") %>"
          data-trade-republic-qr-cancel-text-value="<%= t(".qr_cancel") %>">
-      <button type="button"
-              data-trade-republic-qr-target="button"
-              data-action="trade-republic-qr#toggle"
-              class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary">
-        <%= icon "qr-code", size: "sm" %>
-        <span data-trade-republic-qr-target="label"><%= qr_login_active ? t(".qr_cancel") : t(".qr_login") %></span>
-      </button>
+      <%= render DS::Button.new(
+            text: qr_login_active ? t(".qr_cancel") : t(".qr_login"),
+            variant: :outline,
+            size: :sm,
+            icon: "qr-code",
+            type: "button",
+            data: {
+              action: "trade-republic-qr#toggle",
+              trade_republic_qr_target: "button"
+            }
+          ) %>
 
       <div data-trade-republic-qr-target="panel" <%= "hidden" unless qr_login_active %> class="rounded-lg border border-secondary bg-container-inset p-4 space-y-3">
         <p data-trade-republic-qr-target="status" class="text-sm text-secondary"></p>
@@ -114,12 +124,14 @@
     <% elsif trade_republic_item.login_stage == "waiting_for_approval" %>
       <%= render DS::Alert.new(message: t(".push_login_notice"), variant: :info) %>
       <div class="flex flex-wrap justify-end gap-2">
-        <%= button_to poll_login_trade_republic_item_path(trade_republic_item),
-                      method: :post,
-                      class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary" do %>
-          <%= icon "refresh-cw", size: "sm" %>
-          <%= t(".check_login_status") %>
-        <% end %>
+        <%= render DS::Button.new(
+              text: t(".check_login_status"),
+              variant: :outline,
+              size: :sm,
+              icon: "refresh-cw",
+              href: poll_login_trade_republic_item_path(trade_republic_item),
+              method: :post
+            ) %>
       </div>
     <% end %>
   <% end %>

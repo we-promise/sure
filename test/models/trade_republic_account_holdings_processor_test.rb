@@ -85,6 +85,17 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_not_nil @account.holdings.find_by(external_id: "trade_republic_position_DEHOLD1_US0378331005_#{Date.current}")
   end
 
+  test "complete snapshot preserves holdings from previous dates" do
+    import_position(isin: "US5933661043", quantity: "2", price: "100")
+    historical_holding = @account.holdings.find_by!(external_id: "trade_republic_position_DEHOLD1_US5933661043_#{Date.current}")
+    historical_holding.update!(external_id: "trade_republic_position_DEHOLD1_US5933661043_#{Date.yesterday}")
+
+    @tr_account.update!(holdings_snapshot_complete: true, raw_positions_payload: [])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    assert @account.holdings.exists?(external_id: "trade_republic_position_DEHOLD1_US5933661043_#{Date.yesterday}")
+  end
+
   test "incomplete snapshot preserves stale Trade Republic holdings" do
     import_position(isin: "US5933661043", quantity: "2", price: "100")
     @tr_account.update!(holdings_snapshot_complete: false)

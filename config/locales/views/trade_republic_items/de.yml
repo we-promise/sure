@@ -33,6 +33,9 @@ de:
     sync:
       errors:
         phone_number_missing: Die Telefonnummer für Trade Republic fehlt.
+        reauthentication_required: Die Trade-Republic-Sitzung fehlt oder ist abgelaufen. Verbinde den Account unter Einstellungen > Anbieter erneut.
+    repair:
+      scheduled: Die Reparatur der Trade-Republic-Daten wurde eingeplant.
     setup_accounts:
       available_accounts:
         account_type_investment: Investment-Portfolio

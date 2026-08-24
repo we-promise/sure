@@ -83,6 +83,8 @@ en:
           other: "%{count} Trade Republic accounts need setup..."
         processing_activity: Processing positions and activity...
         calculating_balances: Calculating balances...
+    repair:
+      scheduled: Trade Republic data repair scheduled.
     sync_status:
       no_accounts: No Trade Republic account discovered yet
       all_linked:

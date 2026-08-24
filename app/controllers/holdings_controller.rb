@@ -160,7 +160,11 @@ class HoldingsController < ApplicationController
         positions = values.fetch(category, [])
         {
           count: positions.size,
-          value: positions.sum { |position| position["quantity"].to_d * position["price"].to_d }
+          value: positions.sum do |position|
+            quantity = position["quantity"].presence&.to_d || BigDecimal("0")
+            price = position["price"].presence&.to_d || BigDecimal("0")
+            quantity * price
+          end
         }
       end
     end

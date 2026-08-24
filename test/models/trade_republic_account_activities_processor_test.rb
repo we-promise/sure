@@ -91,6 +91,20 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Withdrawal", entry.transaction.investment_activity_label
   end
 
+  test "dividend maps to Dividend with negative amount" do
+    import_event({
+      id: "evt_dividend",
+      timestamp: "2026-08-01T10:00:00Z",
+      category: "DIVIDEND",
+      detail: { amount: "25.50", currency: "EUR" }
+    })
+
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_dividend")
+    assert_not_nil entry
+    assert_equal BigDecimal("-25.50"), entry.amount
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
   test "card events keep a card-specific activity label" do
     import_event({
       id: "evt_card_payment",

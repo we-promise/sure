@@ -275,7 +275,7 @@ class TradeRepublicItemsController < ApplicationController
 
   def repair
     TradeRepublicRepairJob.perform_later(@trade_republic_item)
-    redirect_back_or_to accounts_path, notice: "Trade Republic data repair scheduled", status: :see_other
+    redirect_back_or_to accounts_path, notice: t("trade_republic_items.repair.scheduled"), status: :see_other
   end
 
   def select_accounts

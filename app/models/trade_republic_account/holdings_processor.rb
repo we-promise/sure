@@ -88,7 +88,7 @@ class TradeRepublicAccount::HoldingsProcessor
         isin.present? ? "#{prefix}#{isin}_#{Date.current}" : nil
       end
       holdings = account.holdings.where(account_provider_id: provider_id)
-        .where("external_id LIKE ?", "#{prefix}%")
+        .where("external_id LIKE ?", "#{prefix}%#{Date.current}")
       holdings = holdings.where.not(external_id: current_ids) if current_ids.any?
       holdings.destroy_all
     end

@@ -73,7 +73,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       when CATEGORY_INTEREST
         import_cash_movement(event, detail, external_id, date, label: "Interest", sign: -1) ? :transaction : nil
       when CATEGORY_DIVIDEND
-        import_cash_movement(event, detail, external_id, date, label: "Dividend", sign: 1) ? :transaction : nil
+        import_cash_movement(event, detail, external_id, date, label: "Dividend", sign: -1) ? :transaction : nil
       else
         record_unknown_event(event)
         nil

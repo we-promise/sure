@@ -7,7 +7,8 @@ class TradeRepublicSessionTest < ActiveSupport::TestCase
     payload = JSON.parse(Base64.strict_decode64(headers.fetch("X-TR-Device-Info")))
 
     assert_equal "Chrome", payload.fetch("browser")
-    assert_equal "151.0.0.0", payload.fetch("browserVersion")
+    expected_browser_version = Provider::TradeRepublicSession::USER_AGENT[/Chrome\/([\d.]+)/, 1]
+    assert_equal expected_browser_version, payload.fetch("browserVersion")
     assert_equal "Desktop", payload.fetch("device")
     assert_equal "desktop", payload.fetch("deviceType")
     assert payload.fetch("stableDeviceId").match?(/\A[0-9a-f]{128}\z/)

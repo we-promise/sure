@@ -38,7 +38,7 @@ class TradeRepublicItem < ApplicationRecord
   end
 
   def credentials_configured?
-    phone_number.present?
+    phone_number.present? || session_configured?
   end
 
   def session_configured?
