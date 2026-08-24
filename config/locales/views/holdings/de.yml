@@ -1,6 +1,7 @@
 ---
 de:
   holdings:
+    positions: Positionen
     cash:
       brokerage_cash: Depotguthaben
     destroy:

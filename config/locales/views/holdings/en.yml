@@ -1,6 +1,7 @@
 ---
 en:
   holdings:
+    positions: positions
     cash:
       brokerage_cash: Brokerage cash
     destroy:

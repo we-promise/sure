@@ -370,6 +370,25 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_trade_republic_account(trade_republic_account)
+      family = trade_republic_account.trade_republic_item.family
+      is_cash = trade_republic_account.cash?
+
+      attributes = {
+        family: family,
+        name: trade_republic_account.name.presence || (is_cash ? "Trade Republic Cash" : "Trade Republic Portfolio"),
+        balance: 0,
+        cash_balance: 0,
+        currency: trade_republic_account.currency.presence || family.currency,
+        accountable_type: is_cash ? "Depository" : "Investment",
+        accountable_attributes: {
+          subtype: is_cash ? "checking" : "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     def create_from_kraken_account(kraken_account)
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
     end

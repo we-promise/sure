@@ -1,0 +1,39 @@
+de:
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: Brokerage
+      private_markets: Private Markets
+      interest_products: Zinsprodukte
+      crypto_wallet: Krypto-Wallet
+    trade_republic_item:
+      data_quality:
+        title: Datenqualität und Sync-Details
+        repair: Importdaten reparieren
+        positions: "%{count} Positionen"
+        unpriced: "%{count} ohne aktuellen Kurs"
+        events: "%{count} Aktivitäten"
+        unknown: "%{count} unbekannte Aktivitäten"
+        expenses: "%{count} Ausgaben in den letzten 30 Tagen (%{amount})"
+        reconciliation: "%{matched}/%{total} Kontostände abgeglichen"
+        sync_history: Letzte Syncs
+    complete_login:
+      approval_pending: Noch nicht bestätigt. Bestätige die Anmeldung in der Trade-Republic-App und versuche es danach erneut.
+    initiate_login:
+      pin_required: Gib deine Trade-Republic-PIN ein, um eine neue Anmeldung zu starten.
+    update:
+      pin_required: Gib deine Trade-Republic-PIN ein, um die Verbindung erneut zu authentifizieren.
+    link_existing_account:
+      processing_failed: Das Konto wurde verknüpft, aber die erste Datenverarbeitung ist fehlgeschlagen. Ein Sync wurde geplant; prüfe das Debug-Log, falls die Daten unvollständig bleiben.
+    complete_account_setup:
+      partial_failure:
+        one: Ein ausgewähltes Trade-Republic-Konto konnte nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut.
+        other: "%{count} ausgewählte Trade-Republic-Konten konnten nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
+    destroy:
+      unlink_failed: Trade Republic konnte nicht vollständig getrennt werden. Die Verbindung bleibt für einen sicheren erneuten Versuch erhalten.
+    sync:
+      errors:
+        phone_number_missing: Die Telefonnummer für Trade Republic fehlt.
+    setup_accounts:
+      available_accounts:
+        account_type_investment: Investment-Portfolio
+        account_type_cash: Cash-Konto
