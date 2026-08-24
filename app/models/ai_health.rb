@@ -7,8 +7,6 @@ require "uri"
 class AiHealth
   OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1".freeze
   ANTHROPIC_DEFAULT_ENDPOINT = "https://api.anthropic.com".freeze
-  DEFAULT_EMBEDDING_MODEL = "nomic-embed-text".freeze
-  DEFAULT_EMBEDDING_DIMENSIONS = 1024
 
   attr_reader :selected_llm_provider, :effective_llm_provider, :llm_model,
               :llm_endpoint, :llm_request_timeout, :openai_endpoint, :vector_store_adapter,
@@ -126,17 +124,11 @@ class AiHealth
       case vector_store_adapter
       when :pgvector
         load_pgvector_status
-        @embedding_model = ENV.fetch("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
-        @embedding_dimensions = ENV.fetch("EMBEDDING_DIMENSIONS", DEFAULT_EMBEDDING_DIMENSIONS).to_i
-        @embedding_endpoint = redact_endpoint(
-          ENV["EMBEDDING_URI_BASE"].presence || ENV["OPENAI_URI_BASE"].presence || OPENAI_DEFAULT_ENDPOINT
-        )
-        @embedding_raw_endpoint = ENV["EMBEDDING_URI_BASE"].presence ||
-                                  ENV["OPENAI_URI_BASE"].presence ||
-                                  OPENAI_DEFAULT_ENDPOINT
-        @embedding_access_token = ENV["EMBEDDING_ACCESS_TOKEN"].presence ||
-                                  ENV["OPENAI_ACCESS_TOKEN"].presence ||
-                                  Setting.openai_access_token
+        @embedding_model = VectorStore.embedding_model
+        @embedding_dimensions = VectorStore.embedding_dimensions
+        @embedding_raw_endpoint = VectorStore.embedding_uri_base
+        @embedding_endpoint = redact_endpoint(@embedding_raw_endpoint)
+        @embedding_access_token = VectorStore.embedding_access_token
       when :qdrant
         @qdrant_endpoint = redact_endpoint(ENV.fetch("QDRANT_URL", "http://localhost:6333"))
       end

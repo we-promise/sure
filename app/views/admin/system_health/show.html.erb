@@ -3,6 +3,7 @@
 <%= render DS::Tabs.new(
   active_tab: params[:tab].presence_in(%w[background_jobs ai]) || "background_jobs",
   url_param_key: "tab",
+  navigate_on_change: true,
   testid: "system-health-tabs"
 ) do |tabs| %>
   <% tabs.with_nav do |nav| %>

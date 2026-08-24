@@ -42,6 +42,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sidekiq status/, response.body)
     assert_match(/Healthy/, response.body)
     assert_select "button[role='tab']", text: "AI status"
+    assert_select "[data-ds--tabs-navigate-on-change-value='true']"
   end
 
   test "renders degraded state with reason when Sidekiq is unhealthy" do
@@ -153,6 +154,13 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
     connection.stubs(:extension_enabled?).with("vector").returns(true)
     ActiveRecord::Base.stubs(:connection).returns(connection)
+    VectorStore.expects(:embedding_access_token).returns("runtime-embedding-token")
+    AiHealth::Probe.any_instance.expects(:embedding).with(
+      endpoint: "http://ollama:11434/v1",
+      access_token: "runtime-embedding-token",
+      model: "mxbai-embed-large",
+      dimensions: 1024
+    ).returns(probe_result(:passing))
 
     with_ai_environment(
       "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
