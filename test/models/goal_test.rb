@@ -714,13 +714,61 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 100, refreshed.progress_percent
   end
 
+  # A family with no spending history computes a floor of zero, which would
+  # both break the target_amount > 0 constraint and read as "your reserve is
+  # complete". The figure the user has been saving against stands.
   test "a zero median leaves the floor untouched" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
     goal = reserve_goal(balance: 3_000, target: 1_000)
     goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+
     IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
 
     assert_nil goal.refresh_target_from_expenses!
-    assert_equal BigDecimal("1000"), goal.reload.target_amount.to_d
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+  end
+
+  # A reserve created in months mode must be right immediately: waiting for
+  # the 1st would make the feature's first impression its least convincing.
+  test "creating a months-mode reserve computes its floor straight away" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    account = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "Fresh Reserve Pot", currency: "USD", balance: 100
+    )
+
+    goal = @family.goals.create!(
+      name: "Fresh reserve", target_amount: 1, currency: "USD",
+      kind: "maintained", target_mode: "months_of_expenses", target_months: 6
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+  end
+
+  test "changing the number of months recomputes the floor at once" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+
+    goal.update!(target_months: 3)
+    assert_equal BigDecimal("1500"), goal.reload.target_amount.to_d
+  end
+
+  # The monthly job owns the cadence: an unrelated edit must not quietly move
+  # a financial figure the user has been saving against.
+  test "renaming a months-mode reserve leaves its floor alone" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+
+    IncomeStatement.any_instance.unstub(:median_expense)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("900"))
+    goal.update!(name: "Renamed reserve")
+
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d,
+                 "only the job, or a change of months, may move the floor"
   end
 
   test "a fixed reserve ignores the refresh entirely" do

@@ -82,11 +82,18 @@ class RefreshMaintainedGoalTargetsJobTest < ActiveJob::TestCase
       )
     end
 
+    # `target` is the figure the reserve STARTS from, so it is written past
+    # the before_save that computes a months-mode floor on creation — these
+    # tests are about what the job does to an existing target, not about
+    # where that target came from.
     def reserve(months:, target:, mode: "months_of_expenses", name: "Emergency")
-      @family.goals.create!(
+      goal = @family.goals.create!(
         name: name, target_amount: target, currency: "USD",
         kind: "maintained", target_mode: mode, target_months: months
       ) { |g| g.goal_accounts.build(account: account_for(name)) }
+
+      goal.update_column(:target_amount, target)
+      goal.reload
     end
 
     def stub_median(amount)

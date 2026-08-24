@@ -34,6 +34,14 @@ class Goal < ApplicationRecord
   # before_save (not before_validation) so it only mutates on persistence, not
   # on every valid? call — a goal can be inspected without its basis flipping.
   before_save :default_progress_basis_for_investment
+  # A reserve measured in months is derived, not typed: computing it only in
+  # the monthly job would leave a brand-new one wrong until the 1st, so the
+  # feature's first impression would be its least convincing moment. Fired on
+  # creation and whenever the inputs change — never on an unrelated save, so
+  # the job keeps owning the monthly cadence and renaming a goal cannot
+  # silently move a financial figure.
+  before_save :apply_months_of_expenses_target,
+              if: -> { months_of_expenses_target? && (new_record? || will_save_change_to_target_months? || will_save_change_to_target_mode?) }
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -425,18 +433,36 @@ class Goal < ApplicationRecord
   # target standing is the safe failure: it is a number the user has been
   # saving against, where zero would silently declare the reserve complete.
   def refresh_target_from_expenses!
-    return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
-
-    median = IncomeStatement.new(family).median_expense(interval: "month").to_d
-    return nil unless median.positive?
-
-    computed = (median * target_months).round(2)
-    return nil unless computed.positive?
-    return nil if computed == target_amount.to_d
+    computed = months_of_expenses_amount
+    return nil if computed.nil? || computed == target_amount.to_d
 
     update!(target_amount: computed)
     computed
   end
+
+  private
+    # The floor this reserve should hold, or nil when it cannot be computed.
+    #
+    # ⚠️ The account scope is passed EXPLICITLY, and that is the whole point
+    # of this method. IncomeStatement's constructor does `user || Current.user`
+    # and narrows to that user's accounts, so calling it bare gives a
+    # family-wide figure only by accident — when no user happens to be
+    # current, i.e. from a background job. `target_amount` is shared by the
+    # whole family: derived from a viewer's slice of the accounts it would
+    # change depending on who last triggered it. The rollover chain hit
+    # exactly this and had to be pinned the same way.
+    def months_of_expenses_amount
+      return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
+
+      statement = IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
+      median = statement.median_expense(interval: "month").to_d
+      return nil unless median.positive?
+
+      computed = (median * target_months).round(2)
+      computed.positive? ? computed : nil
+    end
+
+  public
 
   # Market value of the goal's backing (balance basis), regardless of the
   # progress basis — the "what it's worth today" figure shown next to
@@ -1056,6 +1082,14 @@ class Goal < ApplicationRecord
     # target_months only means something for a reserve on the months basis.
     # Allowing it elsewhere would leave a number nothing reads, which the
     # refresh job would then look at and skip for reasons no one could see.
+    # Leaves whatever the user typed when the median cannot be computed: the
+    # presence + positivity validations still apply, so a family with no
+    # spending history is asked for a figure rather than blocked.
+    def apply_months_of_expenses_target
+      computed = months_of_expenses_amount
+      self.target_amount = computed if computed
+    end
+
     def months_target_requires_a_reserve
       return if target_mode == "fixed" && target_months.blank?
       return if months_of_expenses_target? && maintained? && target_months.present?
