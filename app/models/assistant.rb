@@ -68,6 +68,7 @@ module Assistant
 
     def mcp_function_classes(user = nil)
       function_classes(user) + [
+        Function::GetAccountTypes,
         Function::GetTransfers,
         Function::GetGoals,
         Function::CreateAccount,

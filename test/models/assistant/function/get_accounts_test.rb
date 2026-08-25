@@ -30,6 +30,13 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     end
   end
 
+  test "returns the current account subtype" do
+    result = @fn.call
+
+    account = result[:accounts].find { |item| item[:id] == accounts(:depository).id }
+    assert_equal accounts(:depository).subtype, account[:subtype]
+  end
+
   test "excludes hidden accounts" do
     hidden = @family.accounts.visible.first
     hidden.update!(status: "disabled")

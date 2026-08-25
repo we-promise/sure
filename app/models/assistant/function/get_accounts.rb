@@ -59,6 +59,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
           balance_formatted: account.balance_money.format,
           classification: account.classification,
           type: account.accountable_type,
+          subtype: account.subtype,
           start_date: account.start_date,
           is_linked: account.linked?,
           provider: account.provider_name,

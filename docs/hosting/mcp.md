@@ -139,6 +139,7 @@ At the time of writing, `tools/list` includes:
 | `get_transactions` | Search transactions with filters (exact names or ids), sorting by date or absolute amount, and pagination |
 | `get_recurring_transactions` | Detected and manual recurring transactions (subscriptions, bills, salaries) with expected dates and per-currency totals |
 | `get_accounts` | Accounts with ids and current balances; pass `include_balance_series: true` for a period-bounded history series |
+| `get_account_types` | Account types and the valid subtype values accepted by `create_account` |
 | `get_holdings` | Query investment holdings |
 | `get_balance_sheet` | Net worth, assets and liabilities with a configurable history period and interval |
 | `get_income_statement` | Income and expenses for a period, with optional monthly series, prior-period comparison and account filtering |
@@ -160,7 +161,7 @@ At the time of writing, `tools/list` includes:
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
-`get_accounts`, `get_goals`, `get_transfers`, and the other list tools return the stable IDs needed by follow-up actions. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
+`get_accounts`, `get_goals`, `get_transfers`, and the other list tools return the stable IDs needed by follow-up actions. `get_accounts` includes each account's current type and subtype; call `get_account_types` before `create_account` to discover valid subtype values. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
 
 Destructive MCP-only tools are not automatically exposed to Sure's built-in
 assistant.

@@ -3,7 +3,7 @@ class Assistant::Function::CreateAccount < Assistant::Function
     def name = "create_account"
 
     def description
-      "Creates a manual Sure account and returns the account id for transaction and transfer tools."
+      "Creates a manual Sure account and returns its id. Call get_account_types first to discover valid type and subtype values."
     end
   end
 
@@ -15,7 +15,7 @@ class Assistant::Function::CreateAccount < Assistant::Function
       properties: {
         name: { type: "string", description: "Account name" },
         account_type: { type: "string", enum: Accountable::TYPES, description: "Sure account type" },
-        subtype: { type: "string", description: "Optional subtype supported by the account type" },
+        subtype: { type: "string", description: "Optional subtype value from get_account_types for the selected account_type" },
         balance: { type: "number", description: "Current account balance in major currency units" },
         currency: { type: "string", description: "ISO 4217 currency code" },
         opening_balance_date: { type: "string", format: "date", description: "Opening balance date in YYYY-MM-DD format" },
@@ -30,8 +30,14 @@ class Assistant::Function::CreateAccount < Assistant::Function
     return error("invalid_account_type", "account_type must be one of: #{Accountable::TYPES.join(", ")}.") unless accountable_class
 
     subtype = params["subtype"].presence
-    if subtype && (!accountable_class.const_defined?(:SUBTYPES) || !accountable_class::SUBTYPES.key?(subtype))
-      return error("invalid_subtype", "subtype is not valid for #{accountable_class.name}.")
+    allowed_subtypes = accountable_class.const_defined?(:SUBTYPES) ? accountable_class::SUBTYPES.keys : []
+    if subtype && !allowed_subtypes.include?(subtype)
+      message = if allowed_subtypes.any?
+        "subtype must be one of: #{allowed_subtypes.join(", ")} for #{accountable_class.name}."
+      else
+        "#{accountable_class.name} does not support subtypes."
+      end
+      return error("invalid_subtype", message)
     end
 
     opening_balance_date = params["opening_balance_date"].present? ? Date.iso8601(params["opening_balance_date"].to_s) : Date.current

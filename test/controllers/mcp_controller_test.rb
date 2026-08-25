@@ -314,6 +314,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_transactions"
       assert_includes tool_names, "get_recurring_transactions"
       assert_includes tool_names, "get_accounts"
+      assert_includes tool_names, "get_account_types"
       assert_includes tool_names, "get_holdings"
       assert_includes tool_names, "get_merchants"
       assert_includes tool_names, "get_balance_sheet"
@@ -332,7 +333,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         update_budget
       ]
       assert_empty expected_action_tools - tool_names
-      assert_equal 33, tools.size
+      assert_equal 34, tools.size
       assert_includes Assistant.mcp_function_classes(@user), Assistant::Function::DeleteTransaction
       assert_not_includes Assistant.function_classes, Assistant::Function::DeleteTransaction
 
@@ -343,6 +344,21 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         assert tool["inputSchema"].present?, "Tool #{tool['name']} missing inputSchema"
         assert_equal "object", tool["inputSchema"]["type"]
       end
+    end
+  end
+
+  test "tools/call returns discoverable account subtype values" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "get_account_types",
+        arguments: {}
+      }).to_json, headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(JSON.parse(response.body).dig("result", "content", 0, "text"))
+      depository = result["account_types"].find { |item| item["type"] == "Depository" }
+
+      assert_equal Depository::SUBTYPES.keys, depository["subtypes"]
     end
   end
 

@@ -30,6 +30,26 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
     end
   end
 
+  test "directs clients to subtype discovery and lists allowed values on rejection" do
+    function = Assistant::Function::CreateAccount.new(@user)
+    schema = function.params_schema
+
+    assert_includes function.description, "get_account_types"
+    assert_includes schema.dig(:properties, :subtype, :description), "get_account_types"
+
+    result = function.call(
+      "name" => "Invalid subtype",
+      "account_type" => "Depository",
+      "subtype" => "brokerage",
+      "balance" => 0,
+      "currency" => "USD"
+    )
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_subtype", result[:error]
+    Depository::SUBTYPES.each_key { |subtype| assert_includes result[:message], subtype }
+  end
+
   test "updates a writable manual account" do
     account = accounts(:depository)
     function = Assistant::Function::UpdateAccount.new(@user)
