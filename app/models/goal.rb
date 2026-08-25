@@ -91,8 +91,11 @@ class Goal < ApplicationRecord
     # Bound rather than interpolated. The key is a digest of an id and could
     # not carry a payload, but a hand-built SQL string in a model is the shape
     # a reader has to stop and verify — and Brakeman flags it, correctly.
+    # Projected through a subquery so the result set is an integer, not the
+    # `void` the lock function returns — which the adapter cannot type and
+    # logs a warning about on every acquisition.
     connection.exec_query(
-      "SELECT pg_advisory_xact_lock($1)",
+      "SELECT 1 FROM (SELECT pg_advisory_xact_lock($1)) locked",
       "Goal Whole-Account Claim Lock",
       [ ActiveRecord::Relation::QueryAttribute.new(
           "key", whole_account_claim_lock_key(account_id), ActiveRecord::Type::BigInteger.new
