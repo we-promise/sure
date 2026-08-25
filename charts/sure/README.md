@@ -642,10 +642,10 @@ hpa:
 
 [Pipelock](https://github.com/luckyPipewrench/pipelock) is an optional security proxy that scans AI agent traffic for secret exfiltration, prompt injection, tool poisoning, and SSRF. It runs as a separate Deployment with two listeners:
 
-- **Forward proxy** (port 8888): Scans outbound HTTPS from Faraday-based AI clients. Auto-injected via `HTTPS_PROXY` env vars when enabled.
+- **Forward proxy** (port 8888): Applies destination, SSRF, rate, budget, CONNECT-header DLP, and receipt controls to HTTPS tunnels from clients that honor the proxy variables. The chart doesn't configure TLS interception, so encrypted bodies stay opaque.
 - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
 
-Recent Pipelock releases add default-on flight recorder receipts, safe-by-default receipt verification, MCP `defer` authorization, request-policy scoring, request-body prompt-injection blocking, SPIFFE-strict inbound mediation envelopes, scanner attribution on MCP block receipts, trusted domain allowlisting, MCP tool redirect profiles, learn-and-lock behavioural contracts, the wedge-detection health watchdog, `pipelock explain`, `pipelock keys status`, `pipelock support bundle`, verified `pipelock update`, and `pipelock doctor` checks for inert exemptions. Browser Shield, process sandboxing, request policy, redaction, and attack assessment are available via `extraConfig` and CLI. See the [Pipelock changelog](https://github.com/luckyPipewrench/pipelock/releases) for details.
+The chart pins Pipelock 3.4.0 by tag and multi-architecture image digest. Read the [Pipelock release notes](https://github.com/luckyPipewrench/pipelock/releases/tag/v3.4.0) before overriding that pin.
 
 ### Enabling Pipelock
 
@@ -653,7 +653,7 @@ Recent Pipelock releases add default-on flight recorder receipts, safe-by-defaul
 pipelock:
   enabled: true
   image:
-    tag: "2.8.0"
+    tag: "3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c"
   mode: balanced   # strict, balanced, or audit
 ```
 
@@ -688,9 +688,9 @@ pipelock:
         reason: "Route fetch calls through audited proxy"
 ```
 
-### Request body scanning (pipelock 2.5+)
+### Request body scanning
 
-Pipelock 2.5 added prompt-injection detection on outbound request bodies (JSON, form-encoded, raw text, WebSocket frames). When enabled, findings hard-block non-provider destinations even when `action: warn`; trusted provider hosts (OpenAI, Anthropic, etc.) remain exempt through the response-scanning exemption list.
+Request body scanning covers cleartext HTTP, reverse-proxy, and WebSocket bodies. It can't inspect encrypted HTTPS tunnel bodies unless you configure TLS interception and install Pipelock's CA in the client container.
 
 ```yaml
 pipelock:
@@ -730,7 +730,7 @@ kubectl create secret generic sure-pipelock-receipts \
   --from-file=flight-recorder-signing.key=./flight-recorder-signing.key
 ```
 
-If you do not have the `pipelock` binary installed, generate the key with the image instead: `docker run --rm -v "$PWD:/out" ghcr.io/luckypipewrench/pipelock:2.8.0 signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
+If you don't have the `pipelock` binary installed, generate the key with the pinned image instead: `docker run --rm -v "$PWD:/out" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
 
 Then mount persistent evidence storage and the key:
 
@@ -866,16 +866,16 @@ pipelock:
 
 These are appended verbatim to `pipelock.yaml`. Do not duplicate keys already rendered by the chart.
 
-### Requiring Pipelock for external assistants
+### Pipelock requirement for external assistants
 
-To enforce that Pipelock is enabled whenever the external AI assistant feature is active:
+The chart rejects an external AI assistant deployment without Pipelock by default:
 
 ```yaml
 pipelock:
   requireForExternalAssistant: true
 ```
 
-This causes `helm template` / `helm install` to fail if `rails.externalAssistant.enabled=true` and `pipelock.enabled=false`. Note: this only guards the `externalAssistant` path. Direct MCP access via `MCP_API_TOKEN` is configured through env vars and not detectable from Helm values.
+`helm template` and `helm install` fail when `rails.externalAssistant.enabled=true` and `pipelock.enabled=false`. Set `requireForExternalAssistant: false` only when you accept direct external-assistant traffic. This guard can't detect direct MCP access configured through `MCP_API_TOKEN`.
 
 ## Security Notes
 

@@ -29,6 +29,6 @@
 <div class="rounded-lg border px-3 py-2 text-sm flex items-center gap-2 text-primary <%= variant_classes %>">
   <span class="shrink-0"><%= icon(icon_glyph, size: "sm", color: icon_color) %></span>
   <span class="font-medium"><%= label %></span>
-  <span class="opacity-60">·</span>
+  <span class="opacity-60" aria-hidden="true"><%= t("shared.dot_separator") %></span>
   <span class="opacity-90 <%= "privacy-sensitive" if goal.status == :behind %>"><%= context %></span>
 </div>

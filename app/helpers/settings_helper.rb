@@ -78,6 +78,9 @@ module SettingsHelper
     when "mercury"
       return { status: :off } unless @mercury_items&.any?
       sync_based_summary(key)
+    when "redbark"
+      return { status: :off } unless @redbark_items&.any?
+      sync_based_summary(key)
     when "brex"
       return { status: :off } unless @brex_items&.any?
       sync_based_summary(key)
@@ -90,13 +93,13 @@ module SettingsHelper
     when "kraken"
       return { status: :off } unless @kraken_items&.any?
       sync_based_summary(key)
+    when "onchain_wallet"
+      return { status: :off } unless @onchain_wallet_items&.any?
+      sync_based_summary(key)
     when "snaptrade"
-      configured_item = @snaptrade_items&.find { |item| item.credentials_configured? || item.oauth_configured? }
+      configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item
 
-      unless configured_item.user_registered?
-        return { status: :warn, meta: t("settings.providers.meta.registration_needed") }
-      end
       sync_based_summary(key)
     when "ibkr"
       return { status: :off } unless @ibkr_items&.any?

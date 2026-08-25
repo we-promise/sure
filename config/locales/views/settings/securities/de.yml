@@ -8,3 +8,24 @@ de:
         enable_mfa: 2FA aktivieren
         mfa_description: Füge deinem Konto eine zusätzliche Sicherheitsebene hinzu indem du beim Anmelden einen Code aus deiner Authenticator-App eingibst
         mfa_title: Zwei-Faktor-Authentifizierung
+        mfa_disabled_description: Schalte 2FA ein, um dein Konto zusätzlich abzusichern.
+        mfa_disabled_status_html: Zwei-Faktor-Authentifizierung ist <span class="font-medium text-red-600">inaktiv</span>
+        mfa_enabled_description: Dein Konto ist zusätzlich abgesichert.
+        mfa_enabled_status_html: Zwei-Faktor-Authentifizierung ist <span class="font-medium text-green-600">aktiv</span>
+        webauthn_add: Passkey oder Sicherheitsschlüssel hinzufügen
+        webauthn_added: Hinzugefügt am %{date}
+        webauthn_description: Nutz einen Passkey, Touch ID, Windows Hello oder einen Hardware-Sicherheitsschlüssel als zweiten Faktor beim Anmelden.
+        webauthn_empty: Es sind noch keine Passkeys oder Sicherheitsschlüssel hinterlegt.
+        webauthn_last_used: Zuletzt genutzt vor %{time_ago}
+        webauthn_name_label: Name des Schlüssels
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey usw.
+        webauthn_remove: Entfernen
+        webauthn_remove_confirm: Diesen Passkey oder Sicherheitsschlüssel wirklich entfernen?
+        webauthn_remove_confirm_body: Du musst ihn neu registrieren, bevor er sich wieder zum Anmelden nutzen lässt.
+        webauthn_title: Passkeys und Sicherheitsschlüssel
+        webauthn_unsupported: Dieser Browser unterstützt keine Passkeys oder Sicherheitsschlüssel.
+  webauthn_credentials:
+    default_name: Sicherheitsschlüssel
+    failure: Dieser Passkey oder Sicherheitsschlüssel ließ sich nicht speichern. Versuch es noch einmal.
+    mfa_required: Aktivier die Zwei-Faktor-Authentifizierung, bevor du einen Passkey oder Sicherheitsschlüssel hinzufügst.
+    success: Passkey oder Sicherheitsschlüssel entfernt.

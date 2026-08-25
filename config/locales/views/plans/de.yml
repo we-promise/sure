@@ -1,0 +1,36 @@
+---
+de:
+  plans:
+    show:
+      title: Plan
+      subtitle: "Entscheide, wohin dein Geld geht: was du ausgibst und was du sparst."
+    budget_card:
+      title: Dieser Monat
+      edit_budget: Budget bearbeiten
+      of_total: von %{total}
+      days_left:
+        one: Noch 1 Tag
+        other: Noch %{count} Tage
+      percent_used: "%{percent} % genutzt"
+      top_categories: Top-Kategorien
+      view_budget: Ganzes Budget ansehen
+      empty_body: Setz ein Monatsziel für Ausgaben und Limits je Kategorie, dann siehst du, wie dieser Monat läuft.
+      set_up: Budget für diesen Monat anlegen
+    goals_card:
+      title: Deine Ziele
+      new_goal: Neues Ziel
+      active_count:
+        one: 1 aktiv
+        other: "%{count} aktiv"
+      of_targets: von %{total} über alle Ziele
+      behind_count:
+        one: 1 hinter Plan
+        other: "%{count} hinter Plan"
+      pending_count:
+        one: 1 offene Zusage
+        other: "%{count} offene Zusagen"
+      all_on_pace: Alles im Plan
+      active_goals: Aktive Ziele
+      pending_marker: offen
+      runway: "%{months} Mon. Reichweite · %{pace}/Mon."
+      all_goals: Alle Ziele

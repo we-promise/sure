@@ -35,6 +35,8 @@ class User < ApplicationRecord
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
+  has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
+  has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   MFA_BACKUP_CODE_COUNT = 8
@@ -56,6 +58,16 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, with: ->(value) { value.strip.presence }
 
   enum :role, { guest: "guest", member: "member", admin: "admin", super_admin: "super_admin" }, validate: true
+
+  # SQL counterpart to #preview_features_enabled?, for callers that filter
+  # users (or their families) in one query instead of loading and iterating.
+  # The `@>` containment operator uses index_users_on_preferences (GIN) and
+  # matches only a JSON boolean true, so it agrees with that predicate's
+  # strict `== true` — a stray "yes" enables neither.
+  scope :with_preview_features, -> {
+    where("preferences @> ?", { preview_features_enabled: true }.to_json)
+  }
+
   attribute :ui_layout, :string
   enum :ui_layout, { dashboard: "dashboard", intro: "intro" }, validate: true, prefix: true
 
@@ -64,9 +76,26 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
+  end
+
+  class << self
+    def human_attribute_name(attribute, options = {})
+      locale = options[:locale] || I18n.locale
+      moniker = I18n.with_locale(locale) do
+        Current.family&.moniker_label || I18n.t("shared.family_moniker.singular", default: "Family")
+      end
+
+      options = {
+        moniker: moniker
+      }.merge(options)
+
+      super(attribute, options)
+    end
   end
 
   has_one_attached :profile_image, dependent: :purge_later do |attachable|
@@ -127,6 +156,12 @@ class User < ApplicationRecord
 
   def finance_accounts
     family.accounts.included_in_finances_for(self)
+  end
+
+  # Other family members who have granted this user access to their personal
+  # budget (see BudgetShare). Used to build the budget owner switcher.
+  def budget_owners_shared_with_me
+    User.where(id: budget_shares_received.select(:owner_id))
   end
 
   def display_name
@@ -198,7 +233,57 @@ class User < ApplicationRecord
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
-    update active: false, email: deactivated_email
+    return true unless active?
+
+    transaction do
+      if super_admin?
+        active_super_admins = User.where(role: :super_admin, active: true).lock.to_a
+        if active_super_admins.one?
+          errors.add(:base, :cannot_remove_last_super_admin)
+          raise ActiveRecord::Rollback
+        end
+      end
+
+      update(active: false, email: deactivated_email)
+    end || false
+  end
+
+  # Permanent removal of another user, initiated by a super admin from the
+  # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
+  # (which reassigns owned accounts, or destroys the family when this is its
+  # last member) for the heavy data cleanup, but additionally revokes every
+  # live authentication vector *synchronously* so there is no window in which
+  # the removed user can keep acting or re-authenticate before the async purge
+  # runs. Returns false (with errors populated) when the user cannot be
+  # deactivated, e.g. an admin who still has co-members in their family.
+  def permanently_remove!
+    was_active = active?
+    removed = transaction do
+      identity_label = email
+      raise ActiveRecord::Rollback unless deactivate
+
+      SsoIdentityBlock.block_all!(oidc_identities, identity_label: identity_label)
+      revoke_all_credentials!
+      true
+    end || false
+
+    purge_later if removed && !was_active
+    removed
+  end
+
+  # Destroys every credential/session that can authenticate as this user.
+  # Web sessions and the SSO identity re-auth path (OidcIdentity lookup by
+  # provider+uid) are not gated on #active?, so they must be torn down here for
+  # revocation to be immediate; the async purge would otherwise leave a window.
+  def revoke_all_credentials!
+    Doorkeeper::AccessToken
+      .where(resource_owner_id: id, revoked_at: nil)
+      .update_all(revoked_at: Time.current)
+    sessions.destroy_all
+    api_keys.destroy_all
+    mobile_devices.destroy_all
+    webauthn_credentials.destroy_all
+    oidc_identities.destroy_all
   end
 
   def can_deactivate
@@ -375,10 +460,6 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
@@ -393,24 +474,6 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
-  end
-
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
   end
 
   private

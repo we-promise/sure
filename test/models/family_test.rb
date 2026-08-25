@@ -187,12 +187,49 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_equal before_destroy, family.reload.entries_cache_version
   end
 
+  test "default currency comes from country ISO data" do
+    assert_equal "CAD", Family.default_currency_for_country("CA")
+    assert_equal "EUR", Family.default_currency_for_country("DE")
+    assert_equal "BRL", Family.default_currency_for_country("BR")
+    assert_equal "USD", Family.default_currency_for_country("unknown")
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 
     new_merchant = family.merchants.create!(name: "New Test Merchant")
 
     assert_includes family.available_merchants, new_merchant
+  end
+
+  test "known_merchant_names includes assigned and family-owned merchant names, deduplicates matching names, and excludes recently-unlinked merchants" do
+    family = families(:dylan_family)
+
+    provider_merchant = ProviderMerchant.create!(name: "Known Provider Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    # Same name as the assigned provider merchant, but a distinct record -- proves
+    # the result is deduplicated by name value, not just by record identity.
+    family.merchants.create!(name: "Known Provider Merchant")
+
+    unassigned_family_merchant = family.merchants.create!(name: "Unassigned Family Merchant")
+
+    # Assign then unlink a merchant -- available_merchants deliberately keeps
+    # recently-unlinked merchants around (so the UI can offer a quick undo);
+    # known_merchant_names must NOT, since it's used to auto-match/auto-assign new
+    # transactions and re-surfacing a deliberately-removed association would undo
+    # the user's action silently.
+    unlinked_merchant = ProviderMerchant.create!(name: "Recently Unlinked Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: unlinked_merchant)
+    unlinked_merchant.unlink_from_family(family)
+    transactions(:one).update!(merchant: provider_merchant)
+
+    names = family.known_merchant_names
+
+    assert_equal 1, names.count("Known Provider Merchant")
+    assert_includes names, unassigned_family_merchant.name
+    assert_not_includes names, "Recently Unlinked Merchant"
+    assert_includes family.available_merchants.map(&:name), "Recently Unlinked Merchant"
   end
 
   test "enabled currencies always include the base currency" do
@@ -334,4 +371,87 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal count_after_first, AccountShare.where(user: newcomer).count,
       "re-running must not create duplicate shares"
   end
+
+  # Preview access is per-user, but jobs that act on family-scoped data have no
+  # Current.user. One opted-in member enables the family.
+  test "preview_features_enabled? is true when any member has opted in" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+
+    assert_not family.reload.preview_features_enabled?
+
+    set_preview_features(family.users.first, true)
+
+    assert family.reload.preview_features_enabled?
+  end
+
+  test "with_preview_features scope agrees with the predicate" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+
+    assert_not_includes Family.with_preview_features, family.reload
+
+    set_preview_features(family.users.first, true)
+
+    assert_includes Family.with_preview_features, family.reload
+  end
+
+  # The family rollup is a jsonb containment match; the UI gates on
+  # User#preview_features_enabled?'s strict `== true`. If containment were the
+  # looser of the two, the nightly job would generate for families whose UI
+  # still hides the feature — so assert the user-level predicate agrees.
+  test "with_preview_features ignores truthy non-boolean values" do
+    family = families(:dylan_family)
+    family.users.each { |user| set_preview_features(user, false) }
+    set_preview_features(family.users.first, "yes")
+
+    assert_not family.users.first.reload.preview_features_enabled?,
+      "the per-user predicate the UI reads must reject a non-boolean"
+    assert_not family.reload.preview_features_enabled?
+    assert_not_includes Family.with_preview_features, family
+  end
+
+  test "rejects a timezone ActiveSupport::TimeZone doesn't recognize" do
+    family = families(:dylan_family)
+    family.timezone = "Invalid/Timezone"
+
+    assert_not family.valid?
+    assert_includes family.errors[:timezone], "is invalid"
+  end
+
+  test "accepts a timezone identifier, the form the settings dropdown actually submits" do
+    family = families(:dylan_family)
+    # LanguagesHelper#timezone_options submits tz.tzinfo.identifier (e.g.
+    # "America/New_York"), not tz.name (e.g. "Eastern Time (US & Canada)") --
+    # these differ for every zone Rails ships, so this is the case that
+    # actually matters, not just the display name.
+    family.timezone = "America/New_York"
+
+    assert family.valid?
+  end
+
+  test "allows a blank timezone" do
+    family = families(:dylan_family)
+    family.timezone = nil
+
+    assert family.valid?
+  end
+
+  test "does not re-validate an existing invalid timezone when saving unrelated changes" do
+    family = families(:dylan_family)
+    # Bypasses validations, simulating data that predates this validation --
+    # e.g. the exact #390 scenario (a stale/renamed IANA zone already sitting
+    # in the DB).
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    family.name = "Updated name, timezone untouched"
+
+    assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
+    assert family.save
+  end
+
+  private
+    def set_preview_features(user, enabled)
+      user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
+    end
 end

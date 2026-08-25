@@ -352,8 +352,49 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_trading212_account(trading212_account)
+      family = trading212_account.trading212_item.family
+
+      attributes = {
+        family: family,
+        name: trading212_account.name.presence || "Trading 212",
+        balance: 0,
+        cash_balance: 0,
+        currency: trading212_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     def create_from_kraken_account(kraken_account)
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
+    end
+
+    # Self-custody assets are wallets, not exchanges: no trade entry by hand,
+    # and no cash side. The balance is written by the provider sync, which is
+    # the only thing that knows what the chain says.
+    def create_from_onchain_wallet_account(onchain_wallet_account)
+      family = onchain_wallet_account.onchain_wallet_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: onchain_wallet_account.display_name,
+          balance: 0,
+          cash_balance: 0,
+          currency: onchain_wallet_account.currency.presence || family.currency,
+          accountable_type: "Crypto",
+          accountable_attributes: {
+            subtype: "wallet",
+            tax_treatment: "taxable"
+          }
+        },
+        skip_initial_sync: true
+      )
     end
 
     private
@@ -428,26 +469,6 @@ class Account < ApplicationRecord
     # brokerage is usually a market move, not a deposit, and would false-match a
     # pledge. They resolve on transfer (cash-inflow) entries only.
     manual? && !investment? ? "manual_save" : "transfer"
-  end
-
-  # Total fixed earmark this account currently has reserved across every
-  # non-archived goal (unallocated/whole-balance links reserve no fixed
-  # slice). Mirrors Budget#allocated_spending.
-  def goal_earmarked_total
-    GoalAccount.joins(:goal)
-               .where(account_id: id)
-               .where.not(allocated_amount: nil)
-               .where.not(goals: { state: "archived" })
-               .sum(:allocated_amount)
-               .to_d
-  end
-
-  # Headroom left to earmark toward goals before fixed allocations exceed the
-  # balance. Negative means the account is over-earmarked. Intended to back a
-  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
-  # Budget#available_to_allocate.
-  def free_to_earmark
-    balance.to_d - goal_earmarked_total
   end
 
   # Total fixed earmark this account currently has reserved across every

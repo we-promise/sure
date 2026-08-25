@@ -15,3 +15,15 @@ de:
       unauthorized: Du bist nicht berechtigt, diese Aktion auszuführen.
     reset_with_sample_data:
       success: Dein Konto wurde zurückgesetzt, und Beispieldaten werden vorbereitet. In Kürze wirst du Demodaten sehen.
+    roles:
+      admin: Admin
+      member: Mitglied
+      super_admin: Super-Admin
+    user_menu:
+      aria_label: Kontomenü öffnen
+      changelog: Änderungen
+      contact: Kontakt
+      feedback: Feedback
+      log_out: Abmelden
+      settings: Einstellungen
+      version: Version

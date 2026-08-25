@@ -3,9 +3,17 @@
 # the LLM (when configured) only writes the `body` prose from pre-computed
 # numbers, so rows are safe to render verbatim.
 #
-# Status semantics: `read` and `dismissed` are user actions; `expired` is the
+# Status semantics: `read` and `acknowledged` are user actions; `expired` is the
 # system's — set when a signal stops being generated (the condition cleared).
-# A returning condition reactivates an expired row but never a dismissed one.
+#
+# "Acknowledged" rather than "dismissed" because that is what the state has
+# always actually meant. GenerateInsightsJob resurfaces a row whose bucketed
+# metadata changes materially even if the user acknowledged the stale version,
+# and 6 of 8 generators scope `dedup_key` to a month, so acknowledging July's
+# budget card says nothing about August's. The contract is: acknowledgement
+# covers the numbers you saw; new numbers are a new insight. The DB value stays
+# `"dismissed"` (and the `dismissed_at` column keeps its name) so this needed no
+# migration — only the vocabulary the code and the UI speak was wrong.
 class Insight < ApplicationRecord
   belongs_to :family
 
@@ -20,7 +28,11 @@ class Insight < ApplicationRecord
     budget_on_track
   ].freeze
 
-  enum :status, { active: "active", read: "read", dismissed: "dismissed", expired: "expired" }
+  # How many the dashboard widget shows. Shared so PagesController (first render)
+  # and InsightsController (re-render after acknowledging) can't drift apart.
+  FEED_LIMIT = 3
+
+  enum :status, { active: "active", read: "read", acknowledged: "dismissed", expired: "expired" }
   enum :priority, { high: "high", medium: "medium", low: "low" }, prefix: true
 
   validates :insight_type, presence: true, inclusion: { in: TYPES }
@@ -29,7 +41,7 @@ class Insight < ApplicationRecord
   # instead of ActiveRecord::RecordNotUnique; races still hit the index.
   validates :dedup_key, uniqueness: { scope: :family_id }
 
-  # Everything the user hasn't dismissed; what the feed renders.
+  # Everything the user hasn't acknowledged; what the feed renders.
   scope :visible, -> { where(status: [ :active, :read ]) }
   scope :ordered, -> {
     order(Arel.sql("CASE insights.priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END"))
@@ -42,13 +54,19 @@ class Insight < ApplicationRecord
     update!(status: :read, read_at: Time.current)
   end
 
-  def dismiss!
-    update!(status: :dismissed, dismissed_at: Time.current)
+  def acknowledge!
+    update!(status: :acknowledged, dismissed_at: Time.current)
   end
 
-  # Undoes a dismissal without re-badging the insight as new — the user has
-  # obviously seen it, so it returns as read.
-  def undismiss!
+  # Undoes an acknowledgement without re-badging the insight as new — the user
+  # has obviously seen it, so it returns as read. Guarded to only reverse an
+  # actual acknowledgement: a stale/replayed undo (e.g. an old toast link
+  # clicked after GenerateInsightsJob has since expired or resurrected this
+  # insight) would otherwise force it back to :read from whatever state it's
+  # really in, including bringing an :expired insight back into view.
+  def unacknowledge!
+    return unless acknowledged?
+
     update!(status: :read, dismissed_at: nil, read_at: read_at || Time.current)
   end
 end

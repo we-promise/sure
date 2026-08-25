@@ -4,7 +4,11 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static classes = ["navBtnActive", "navBtnInactive"];
   static targets = ["panel", "navBtn"];
-  static values = { sessionKey: String, urlParamKey: String };
+  static values = {
+    sessionKey: String,
+    urlParamKey: String,
+    navigateOnChange: Boolean,
+  };
 
   show(e) {
     const btn = e.target.closest("button");
@@ -37,6 +41,12 @@ export default class extends Controller {
     if (this.urlParamKeyValue) {
       const url = new URL(window.location.href);
       url.searchParams.set(this.urlParamKeyValue, selectedTabId);
+
+      if (this.navigateOnChangeValue) {
+        window.location.assign(url.toString());
+        return;
+      }
+
       window.history.replaceState({}, "", url);
     }
 

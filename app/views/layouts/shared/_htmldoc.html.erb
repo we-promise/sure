@@ -1,3 +1,4 @@
+<%# locals: (sidebar_aware: false) %>
 <!DOCTYPE html>
 
 <% theme = Current.user&.theme || "system" %>
@@ -13,19 +14,10 @@
     <%= yield :head %>
   </head>
 
-  <body class="h-[var(--app-height)] overflow-hidden antialiased">
+  <body class="h-[var(--app-height)] overflow-hidden antialiased"<% if sidebar_aware %> data-controller="notification-tray"<% end %>>
     <% if Rails.env.development? %>
       <button hidden data-controller="hotkey" data-hotkey="t t /" data-action="theme#toggle"></button>
     <% end %>
-
-    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]">
-      <div id="notification-tray" class="space-y-1 w-full">
-        <%= render_flash_notifications %>
-
-        <div id="sync-toast"></div>
-        <div id="cta"></div>
-      </div>
-    </div>
 
     <% if Current.family %>
       <%= turbo_stream_from Current.family %>
@@ -37,9 +29,44 @@
     <%# Custom overrides for browser's confirm API  %>
     <%= render "layouts/shared/confirm_dialog" %>
 
-    <%= render "impersonation_sessions/super_admin_bar" if Current.true_user&.super_admin? && show_super_admin_bar? %>
-    <%= render "impersonation_sessions/approval_bar" if Current.true_user&.impersonated_support_sessions&.initiated&.any? %>
+    <% super_admin_bar_visible = Current.true_user&.super_admin? && show_super_admin_bar? %>
+    <% approval_bar_visible = Current.true_user&.impersonated_support_sessions&.initiated&.any? %>
+
+    <%= render "impersonation_sessions/super_admin_bar" if super_admin_bar_visible %>
+    <%= render "impersonation_sessions/approval_bar" if approval_bar_visible %>
+
+    <%# Only surface the Sidekiq nudge to operators who can act on it. The
+        Redis round-trip and banner render are both skipped for non-super-admins
+        and for managed-mode deployments — `current_sidekiq_health` returns
+        nil in those cases. %>
+    <% if Current.user&.super_admin? && current_sidekiq_health && !current_sidekiq_health.healthy? %>
+      <%# Stack below any sticky impersonation bars instead of hard-coding
+          80px (`top-20`). Each bar is ~60px tall (`py-4` + content), so
+          adjust the fixed offset based on how many are visible. %>
+      <% banner_top_class = if super_admin_bar_visible && approval_bar_visible
+                             "top-36"
+                           elsif super_admin_bar_visible || approval_bar_visible
+                             "top-20"
+                           else
+                             "top-4"
+                           end %>
+      <div class="fixed z-40 <%= banner_top_class %> left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+        <%= render "shared/sidekiq_health_banner", health: current_sidekiq_health %>
+      </div>
+    <% end %>
 
     <%= yield %>
+
+    <%# `left-1/2 -translate-x-1/2` centers on the viewport by default, correct
+        for every single-column layout. Layouts with a persistent sidebar
+        (settings, application) pass sidebar_aware: true, which wires up
+        notification_tray_controller.js to override `left` with the actual
+        content pane's center instead — see that controller for why a
+        ResizeObserver beats hand-rolled sidebar-width math, and for why it
+        also has to guard that inline style against turbo_refreshes_with's
+        morph reconciliation. %>
+    <div class="fixed z-50 top-6 md:top-4 left-1/2 -translate-x-1/2 w-full md:w-80 px-4 md:px-0 mx-auto md:mx-0 md:right-auto pt-[env(safe-area-inset-top)]"<% if sidebar_aware %> data-notification-tray-target="tray" data-action="turbo:before-morph-attribute->notification-tray#preserveStyle"<% end %>>
+      <%= render "layouts/shared/notification_tray" %>
+    </div>
   </body>
 </html>

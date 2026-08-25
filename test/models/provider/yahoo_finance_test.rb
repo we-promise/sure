@@ -745,6 +745,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_nil @provider.send(:map_exchange_mic, "")
   end
 
+  test "map_exchange_mic returns XIDX for JKT" do
+    assert_equal "XIDX", @provider.send(:map_exchange_mic, "JKT")
+    assert_equal "XIDX", @provider.send(:map_exchange_mic, "jkt")
+  end
+
   test "map_security_type returns correct types" do
     assert_equal "common stock", @provider.send(:map_security_type, "equity")
     assert_equal "etf", @provider.send(:map_security_type, "etf")
@@ -823,6 +828,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "IN", @provider.send(:map_country_code, "MUMBAI")
   end
 
+  test "map_country_code returns ID for Indonesian exchanges" do
+    assert_equal "ID", @provider.send(:map_country_code, "JAKARTA")
+    assert_equal "ID", @provider.send(:map_country_code, "IDX")
+  end
+
   # ================================
   #   normalize_symbol Tests
   # ================================
@@ -831,11 +841,13 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE", "XNSE")
     assert_equal "INFY.NS",     @provider.send(:normalize_symbol, "INFY", "XNSE")
     assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325", "XBOM")
+    assert_equal "BBCA.JK",     @provider.send(:normalize_symbol, "BBCA", "XIDX")
   end
 
   test "normalize_symbol does not double-suffix already suffixed symbols" do
     assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE.NS", "XNSE")
     assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325.BO", "XBOM")
+    assert_equal "BBCA.JK",     @provider.send(:normalize_symbol, "BBCA.JK", "XIDX")
   end
 
   test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
@@ -856,6 +868,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "default_currency_for_exchange returns configured currency for known Yahoo exchange names" do
     assert_equal "INR", @provider.send(:default_currency_for_exchange, "NSE")
     assert_equal "INR", @provider.send(:default_currency_for_exchange, "BSE")
+    assert_equal "IDR", @provider.send(:default_currency_for_exchange, "JKT")
   end
 
   test "default_currency_for_exchange returns nil for unknown exchanges" do
