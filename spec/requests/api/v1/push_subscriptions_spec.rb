@@ -36,7 +36,7 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
       end
 
 
-      response "422", "invalid subscription" do
+      response "422", "invalid or conflicting subscription" do
         schema "$ref" => "#/components/schemas/ErrorResponse"
         let(:subscription) { { token: "ab" * 32, environment: "staging", platform: "ios" } }
 

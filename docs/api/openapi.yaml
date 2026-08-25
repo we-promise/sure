@@ -4617,7 +4617,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/PushSubscription"
         '422':
-          description: invalid subscription
+          description: invalid or conflicting subscription
           content:
             application/json:
               schema:

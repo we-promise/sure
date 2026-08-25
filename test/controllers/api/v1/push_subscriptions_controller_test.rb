@@ -109,6 +109,18 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "sandbox", subscription.environment
   end
 
+  test "returns a controlled response when concurrent token registration conflicts" do
+    PushSubscription.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique)
+
+    post api_v1_push_subscriptions_url,
+         params: { token: @token, environment: "sandbox", platform: "ios" },
+         headers: @headers,
+         as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_error", response.parsed_body["error"]
+  end
+
   test "removes the current user's token" do
     subscription = @user.push_subscriptions.create!(
       token: @token,

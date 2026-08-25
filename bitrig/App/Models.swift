@@ -55,6 +55,7 @@ struct SureAccount: Codable, Identifiable, Sendable {
 
 struct AccountCollection: Codable, Sendable {
   var accounts: [SureAccount]
+  var pagination: SurePagination?
 }
 
 struct SureBudget: Codable, Identifiable, Sendable {
@@ -78,6 +79,7 @@ struct SureBudget: Codable, Identifiable, Sendable {
 
 struct BudgetCollection: Codable, Sendable {
   var budgets: [SureBudget]
+  var pagination: SurePagination?
 }
 
 struct SureInsight: Codable, Identifiable, Sendable, Equatable {
@@ -129,6 +131,7 @@ struct SureChat: Codable, Identifiable, Sendable, Hashable {
 
 struct ChatCollection: Codable, Sendable {
   var chats: [SureChat]
+  var pagination: SurePagination?
 }
 
 struct SurePagination: Codable, Sendable {

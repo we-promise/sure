@@ -99,18 +99,26 @@ final class SureStore {
     isLoading = true
     errorMessage = nil
     async let balanceRequest: BalanceSheet = client.get("api/v1/balance_sheet")
-    async let accountsRequest: AccountCollection = client.get("api/v1/accounts?per_page=100")
-    async let budgetsRequest: BudgetCollection = client.get("api/v1/budgets?per_page=100")
+    async let accountsRequest = loadAllPages(
+      path: "api/v1/accounts",
+      collection: AccountCollection.self,
+      items: \.accounts
+    )
+    async let budgetsRequest = loadAllPages(
+      path: "api/v1/budgets",
+      collection: BudgetCollection.self,
+      items: \.budgets
+    )
     do {
-      let (balance, accountCollection, budgetCollection) = try await (
+      let (balance, loadedAccounts, loadedBudgets) = try await (
         balanceRequest,
         accountsRequest,
         budgetsRequest
       )
       guard sessionGeneration == generation else { return }
       balanceSheet = balance
-      accounts = accountCollection.accounts
-      budgets = budgetCollection.budgets
+      accounts = loadedAccounts
+      budgets = loadedBudgets
     } catch {
       guard sessionGeneration == generation else { return }
       errorMessage = error.localizedDescription
@@ -119,9 +127,13 @@ final class SureStore {
     }
 
     do {
-      let chatCollection: ChatCollection = try await client.get("api/v1/chats")
+      let loadedChats = try await loadAllPages(
+        path: "api/v1/chats",
+        collection: ChatCollection.self,
+        items: \.chats
+      )
       guard sessionGeneration == generation else { return }
-      chats = chatCollection.chats
+      chats = loadedChats
     } catch let error as SureAPIError {
       guard sessionGeneration == generation else { return }
       if case .server(status: 403, message: _) = error {
@@ -136,8 +148,12 @@ final class SureStore {
 
     await loadInsights()
     guard sessionGeneration == generation else { return }
-    if let token = UserDefaults.standard.string(forKey: "sure.apnsDeviceToken") {
-      await registerPushToken(token)
+    if UserDefaults.standard.bool(forKey: "sure.insightNotifications") {
+      if let token = UserDefaults.standard.string(forKey: "sure.apnsDeviceToken") {
+        await registerPushToken(token)
+      }
+    } else {
+      await unregisterPushToken()
     }
     guard sessionGeneration == generation else { return }
     isLoading = false
@@ -218,14 +234,18 @@ final class SureStore {
         selectedChat = detail.chat
         messages = detail.messages.sorted { $0.createdAt < $1.createdAt }
       }
-      await pollForAssistantResponse(
+      try await pollForAssistantResponse(
         sessionGeneration: generation,
         chatGeneration: conversationGeneration
       )
       guard sessionGeneration == generation, chatGeneration == conversationGeneration else { return }
-      let collection: ChatCollection = try await client.get("api/v1/chats")
+      let loadedChats = try await loadAllPages(
+        path: "api/v1/chats",
+        collection: ChatCollection.self,
+        items: \.chats
+      )
       guard sessionGeneration == generation, chatGeneration == conversationGeneration else { return }
-      chats = collection.chats
+      chats = loadedChats
     } catch {
       guard sessionGeneration == generation, chatGeneration == conversationGeneration else { return }
       errorMessage = error.localizedDescription
@@ -284,17 +304,23 @@ final class SureStore {
     }
   }
 
-  private func pollForAssistantResponse(sessionGeneration: Int, chatGeneration: Int) async {
+  private func pollForAssistantResponse(sessionGeneration: Int, chatGeneration: Int) async throws {
     guard let chat = selectedChat else { return }
     let previousAssistantIDs = Set(messages.filter { !$0.isUser }.map(\.id))
-    for _ in 0..<30 {
-      try? await Task.sleep(for: .seconds(2))
+    let retryDelays = [3, 5, 8, 13, 21, 34]
+    for delay in retryDelays {
+      try await Task.sleep(for: .seconds(delay))
       guard self.sessionGeneration == sessionGeneration,
             self.chatGeneration == chatGeneration,
             !Task.isCancelled else { return }
       let detail: ChatDetail
       do {
         detail = try await loadLatestChatDetail(chatID: chat.id)
+      } catch let error as SureAPIError {
+        if case .server(status: 429, message: _) = error {
+          throw error
+        }
+        continue
       } catch {
         continue
       }
@@ -307,6 +333,23 @@ final class SureStore {
     }
     guard self.sessionGeneration == sessionGeneration, self.chatGeneration == chatGeneration else { return }
     errorMessage = "The assistant is still working. Pull to refresh this conversation in a moment."
+  }
+
+  private func loadAllPages<Collection: Decodable & Sendable, Item: Sendable>(
+    path: String,
+    collection: Collection.Type,
+    items: KeyPath<Collection, [Item]>
+  ) async throws -> [Item] where Collection: PaginatedCollection {
+    let firstPage = try await client.get("\(path)?page=1&per_page=100", as: collection)
+    var allItems = firstPage[keyPath: items]
+    let totalPages = firstPage.pagination?.totalPages ?? 1
+    guard totalPages > 1 else { return allItems }
+
+    for page in 2...totalPages {
+      let nextPage = try await client.get("\(path)?page=\(page)&per_page=100", as: collection)
+      allItems.append(contentsOf: nextPage[keyPath: items])
+    }
+    return allItems
   }
 
   private func loadLatestChatDetail(chatID: String) async throws -> ChatDetail {
@@ -375,6 +418,14 @@ enum SureTab: Hashable {
   case budgets
   case assistant
 }
+
+protocol PaginatedCollection {
+  var pagination: SurePagination? { get }
+}
+
+extension AccountCollection: PaginatedCollection {}
+extension BudgetCollection: PaginatedCollection {}
+extension ChatCollection: PaginatedCollection {}
 
 struct NewChatRequest: Codable, Sendable {
   var title: String
