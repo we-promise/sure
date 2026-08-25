@@ -13,7 +13,6 @@ final class SureStore {
   var accounts: [SureAccount] = []
   var budgets: [SureBudget] = []
   var insights: [SureInsight] = []
-  var insightSource = SureInsightSource.server
   var chats: [SureChat] = []
   var selectedChat: SureChat?
   var messages: [SureMessage] = []
@@ -90,7 +89,6 @@ final class SureStore {
     accounts = []
     budgets = []
     insights = []
-    insightSource = .server
     chats = []
     selectedChat = nil
     messages = []
@@ -167,15 +165,12 @@ final class SureStore {
       let collection: InsightCollection = try await client.get("api/v1/insights")
       guard sessionGeneration == generation else { return }
       insights = collection.insights
-      insightSource = .server
     } catch let error as SureAPIError {
       guard sessionGeneration == generation else { return }
       if case .server(status: 404, message: _) = error {
         insights = makeLocalInsights()
-        insightSource = .sample
       } else if case .server(status: 403, message: _) = error {
         insights = []
-        insightSource = .server
       } else {
         errorMessage = error.localizedDescription
       }
@@ -422,11 +417,6 @@ enum SureTab: Hashable {
   case accounts
   case budgets
   case assistant
-}
-
-enum SureInsightSource {
-  case server
-  case sample
 }
 
 protocol PaginatedCollection {

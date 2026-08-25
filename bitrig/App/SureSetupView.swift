@@ -11,12 +11,9 @@ struct SureSetupView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           VStack(alignment: .leading, spacing: 10) {
-            Image("SureLogomark")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 96, height: 87)
-              .padding(.vertical, 8)
-              .frame(maxWidth: .infinity)
+            Image(systemName: "circle.hexagongrid.fill")
+              .font(.system(size: 52))
+              .foregroundStyle(.tint)
               .accessibilityHidden(true)
             Text("Your finances, made clear")
               .font(.largeTitle.bold())
@@ -76,13 +73,14 @@ struct SureSetupView: View {
             }
             .foregroundStyle(.white)
             .padding()
-            .background(Color.sureMint, in: .rect(cornerRadius: 16))
+            .background(Color.sureIndigo, in: .rect(cornerRadius: 16))
           }
           .disabled(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isLoading)
         }
         .frame(maxWidth: 620, alignment: .leading)
         .padding(24)
       }
+      .navigationTitle("Sure")
     }
   }
 }

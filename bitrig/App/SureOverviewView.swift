@@ -14,12 +14,12 @@ struct SureOverviewView: View {
                 Label("AI insights", systemImage: "sparkles")
                   .font(.title2.bold())
                 Spacer()
-                Text(store.insightSource == .sample ? "SAMPLE" : "LIVE")
+                Text("LIVE")
                   .font(.caption2.bold())
-                  .foregroundStyle(insightBadgeColor)
+                  .foregroundStyle(Color.sureMint)
                   .padding(.horizontal, 8)
                   .padding(.vertical, 4)
-                  .background(insightBadgeColor.opacity(0.12), in: .capsule)
+                  .background(Color.sureMint.opacity(0.12), in: .capsule)
               }
               Text("Proactive signals from your latest Sure data")
                 .font(.subheadline)
@@ -81,10 +81,6 @@ struct SureOverviewView: View {
         }
       }
     }
-  }
-
-  private var insightBadgeColor: Color {
-    store.insightSource == .sample ? .orange : Color.sureMint
   }
 }
 

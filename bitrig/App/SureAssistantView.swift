@@ -68,7 +68,7 @@ struct SureAssistantView: View {
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           Picker("Conversation", selection: chatSelection) {
-            Text("Conversations").tag(Optional<String>.none)
+            Text("New conversation").tag(Optional<String>.none)
             ForEach(store.chats) { chat in
               Text(chat.title).tag(Optional(chat.id))
             }

@@ -71,7 +71,5 @@ extension Notification.Name {
 
 extension Color {
   static var sureIndigo: Color { Color(red: 0.29, green: 0.25, blue: 0.85) }
-  static var sureMint: Color {
-    Color(red: 98.0 / 255.0, green: 164.0 / 255.0, blue: 70.0 / 255.0)
-  }
+  static var sureMint: Color { Color(red: 0.22, green: 0.73, blue: 0.58) }
 }
