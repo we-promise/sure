@@ -39,7 +39,7 @@ class Balance::ChartSeriesBuilder
     values = gains_query_data.map do |datum|
       Series::Value.new(
         date: datum.date,
-        date_formatted: I18n.l(datum.date, format: :long),
+        date_formatted: Series.format_date(datum.date),
         value: Money.new(datum.end_gains, currency),
         trend: Trend.new(
           current: Money.new(datum.end_gains, currency),
@@ -79,7 +79,7 @@ class Balance::ChartSeriesBuilder
 
         Series::Value.new(
           date: datum.date,
-          date_formatted: I18n.l(datum.date, format: :long),
+          date_formatted: Series.format_date(datum.date),
           value: Money.new(datum.send(column), currency),
           trend: Trend.new(
             current: Money.new(datum.send(column), currency),
