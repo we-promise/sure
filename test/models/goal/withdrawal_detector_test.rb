@@ -88,6 +88,44 @@ class Goal::WithdrawalDetectorTest < ActiveSupport::TestCase
     assert_includes detect(limit: 3).map(&:id), older.id
   end
 
+  # --- Review follow-ups ---
+
+  # A released goal has handed its accounts back, so a later outflow on one of
+  # them is not evidence about this goal. Offering it invites the user to write
+  # spending into a history that is already closed.
+  test "says nothing once the goal has been released" do
+    entry = outflow(1_200)
+    assert_equal [ entry.id ], detect.map(&:id)
+
+    @goal.complete!
+
+    assert_empty detect
+  end
+
+  test "says nothing for an archived goal" do
+    outflow(1_200)
+    @goal.archive!
+
+    assert_empty detect
+  end
+
+  # A provisional charge can still be reversed, or replaced by its posted form.
+  # Attributing one leaves the goal consumed for a transaction that no longer
+  # exists, while the posted twin arrives unstamped and is offered all over.
+  test "ignores an outflow the provider has not posted yet" do
+    entry = outflow(1_200)
+    entry.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+
+    assert_empty detect
+  end
+
+  test "still surfaces an outflow the provider has posted" do
+    entry = outflow(1_200)
+    entry.entryable.update!(extra: { "simplefin" => { "pending" => false } })
+
+    assert_equal [ entry.id ], detect.map(&:id)
+  end
+
   private
     def detect(limit: 3)
       Goal::WithdrawalDetector.new(@goal).unattributed_outflows(limit: limit)

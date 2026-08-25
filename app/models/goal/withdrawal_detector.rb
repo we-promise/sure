@@ -37,6 +37,11 @@ class Goal::WithdrawalDetector
   # refilled rather than spent, and its shortfall already says so on its own.
   def unattributed_outflows(limit: 3)
     return Entry.none unless goal.one_off?
+    # A released goal has handed its accounts back, so an outflow on one of
+    # them is no longer evidence about this goal — offering it would invite the
+    # user to write spending into a history that is closed. `consume!` refuses
+    # these too; the panel simply should not ask in the first place.
+    return Entry.none unless goal.active?
     return Entry.none if accounts.empty?
 
     candidates.limit(limit)
@@ -60,6 +65,15 @@ class Goal::WithdrawalDetector
         # attribute the user's deposits as spending.
         .where("entries.amount >= ?", MIN_AMOUNT)
         .where("transactions.extra -> 'goal' ->> 'consumed_goal_id' IS NULL")
+        # A provisional charge can still be reversed or replaced by its posted
+        # form. Attributing one leaves the goal consumed for a transaction that
+        # no longer exists, while the posted twin arrives unstamped and gets
+        # offered all over again.
+        #
+        # `pending_providers_sql` is built to be appended to an existing WHERE,
+        # so it leads with AND; the rest of its clauses chain correctly once
+        # that first one is dropped.
+        .where(Transaction.pending_providers_sql("transactions").sub(/\AAND /, ""))
         .order(date: :desc, id: :desc)
     end
 end

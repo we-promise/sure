@@ -28,11 +28,17 @@
           <span class="text-sm text-primary tabular-nums privacy-sensitive">
             <%= Money.new(entry.amount, entry.currency).format(precision: 0) %>
           </span>
-          <%= button_to t(".attribute"),
-                        consume_goal_path(goal),
-                        method: :post,
-                        params: { transaction_id: entry.entryable_id },
-                        class: "btn btn--secondary btn--sm" %>
+          <%# DS::Button, not a bare button_to with raw btn classes: the same
+              primitive the consumption dialog uses, so the two ways of
+              recording a spend do not look like two different features. %>
+          <%= render DS::Button.new(
+                text: t(".attribute"),
+                href: consume_goal_path(goal),
+                method: :post,
+                params: { transaction_id: entry.entryable_id },
+                variant: :secondary,
+                size: :sm
+              ) %>
         </div>
       </li>
     <% end %>

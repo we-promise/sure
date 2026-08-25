@@ -990,7 +990,16 @@ class Goal < ApplicationRecord
     # have the reopened goal claim credit for money spent on something it has
     # already been closed for.
     def thaw_completed_amount!
-      update_columns(completed_amount: nil, completed_at: nil, consumed_amount: 0)
+      attrs = { completed_amount: nil, completed_at: nil }
+
+      # Only a goal that actually closed a lifecycle starts over. A goal
+      # archived straight from active never froze a figure, so unarchiving it
+      # is picking the same goal back up rather than restarting it — wiping
+      # what it had recorded as spent would delete history nothing replaced,
+      # and drop its progress for no reason the user can see.
+      attrs[:consumed_amount] = 0 if completed_amount.present?
+
+      update_columns(**attrs)
     end
 
     # Cleared after every AASM transition. The state column drives the
