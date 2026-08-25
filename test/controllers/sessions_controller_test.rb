@@ -72,6 +72,18 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "does not issue a session when user is deleted before row locking" do
+    @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
+    User.stubs(:authenticate_by).returns(@user)
+
+    assert_no_difference("Session.count") do
+      post sessions_url, params: { email: @user.email, password: user_password_test }
+    end
+
+    assert_redirected_to new_session_url
+    assert cookies[:session_token].blank?
+  end
+
   test "fails to sign in with bad password" do
     post sessions_url, params: { email: @user.email, password: "bad" }
     assert_response :unprocessable_entity
@@ -186,6 +198,27 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: @user.id)
+  end
+
+  test "rejects an SSO identity that an administrator permanently removed" do
+    oidc_identity = oidc_identities(:bob_google)
+    SsoIdentityBlock.block_all!(OidcIdentity.where(id: oidc_identity.id), identity_label: @user.email)
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      get "/auth/openid_connect/callback"
+    end
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal "removed_identity", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
   end
 
   test "redirects to MFA when user has MFA and uses OIDC" do
@@ -762,6 +795,36 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_no_difference -> { oidc_identity.user.sessions.count } do
       post desktop_sso_exchange_path, params: { code: code, code_verifier: "an-attacker-guess" }
+    end
+    assert_redirected_to new_session_path
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "desktop SSO exchange refuses a code minted before the user was removed" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    verifier = SecureRandom.hex(32)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+    oidc_identity = oidc_identities(:bob_google)
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    setup_omniauth_mock(provider: oidc_identity.provider, uid: oidc_identity.uid, email: @user.email, name: "Bob Dylan")
+
+    get "/auth/desktop/openid_connect", params: { code_challenge: challenge }
+    get "/auth/openid_connect/callback"
+    code = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)["code"]
+    assert code.present?
+
+    # The removal lands after the code was minted. Nothing revoked the session
+    # this exchange is about to create, because it does not exist yet.
+    oidc_identity.user.update_column(:active, false)
+
+    assert_no_difference -> { oidc_identity.user.sessions.count } do
+      post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier }
     end
     assert_redirected_to new_session_path
   ensure

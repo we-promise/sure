@@ -15,13 +15,9 @@ zh-CN:
       submit: 创建转账
       to: 转入账户
       transfer: 转账
-      calculate_rate_tab: 计算外汇汇率
-      convert_tab: 按外汇汇率换算
       destination_amount: 目标金额
       destination_amount_display: 目标金额：%{amount}
-      exchange_rate: 汇率
       exchange_rate_display: 汇率：%{rate}
-      exchange_rate_help: 选择转账金额的输入方式。
       source_amount: 来源金额
     new:
       title: 新建转账

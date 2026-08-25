@@ -24,6 +24,16 @@
             country_options,
             { label: t(".country") },
             { data: { auto_submit_form_target: "auto" } } %>
+        <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+<%= settings_section title: t(".budget_title"), subtitle: t(".budget_subtitle") do %>
+  <div>
+    <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+      <%= form.hidden_field :redirect_to, value: "preferences" %>
+      <%= form.fields_for :family do |family_form| %>
         <%= family_form.select :month_start_day,
             (1..28).map { |day| [localized_ordinal(day), day] },
             { label: t(".month_start_day"), hint: t(".month_start_day_hint") },
@@ -31,10 +41,67 @@
         <% if @user.family.uses_custom_month_start? %>
           <%= render DS::Alert.new(message: t(".month_start_day_warning"), variant: :warning) %>
         <% end %>
-        <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
+        <% if Current.user.admin? && preview_features_enabled? %>
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <p class="text-sm flex items-center gap-1.5">
+                <%= t(".personal_budgets") %>
+                <%= render DS::Pill.new(label: t("shared.preview"), size: :sm) %>
+              </p>
+              <p class="text-secondary text-sm"><%= t(".personal_budgets_hint") %></p>
+            </div>
+            <%= family_form.toggle :personal_budgets,
+                data: { auto_submit_form_target: "auto" } %>
+          </div>
+
+          <% if @user.family.personal_budgets? %>
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <p class="text-sm"><%= t(".household_budget_enabled") %></p>
+                <p class="text-secondary text-sm"><%= t(".household_budget_enabled_hint") %></p>
+              </div>
+              <%= family_form.toggle :household_budget_enabled,
+                  data: { auto_submit_form_target: "auto" } %>
+            </div>
+          <% end %>
+        <% end %>
       <% end %>
     <% end %>
   </div>
+<% end %>
+<% if @user.family.personal_budgets? && preview_features_enabled? %>
+  <%= settings_section title: t(".budget_sharing_title"), subtitle: t(".budget_sharing_subtitle") do %>
+    <% if @family_members.any? %>
+      <%= styled_form_with url: settings_budget_shares_path, method: :patch, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+        <div class="bg-container-inset rounded-xl p-1">
+          <% @family_members.each_with_index do |member, index| %>
+            <% share = @budget_shares[member.id] %>
+            <% select_id = "budget_share_permission_#{member.id}" %>
+            <input type="hidden" name="budget_shares[members][<%= index %>][viewer_id]" value="<%= member.id %>">
+            <div class="flex items-center justify-between gap-3 bg-container p-4 shadow-border-xs rounded-lg mt-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 shrink-0 rounded-full bg-surface-inset flex items-center justify-center text-xs font-medium text-secondary">
+                  <%= member.initials %>
+                </div>
+                <span class="text-sm text-primary truncate"><%= member.display_name %></span>
+              </div>
+              <label for="<%= select_id %>" class="sr-only"><%= t(".budget_sharing_permission_label", name: member.display_name) %></label>
+              <select id="<%= select_id %>" name="budget_shares[members][<%= index %>][permission]" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary" data-auto-submit-form-target="auto">
+                <option value="" <%= "selected" if share.nil? %>><%= t(".budget_sharing_permissions.none") %></option>
+                <% BudgetShare::PERMISSIONS.each do |perm| %>
+                  <option value="<%= perm %>" <%= "selected" if share&.permission == perm %>>
+                    <%= t(".budget_sharing_permissions.#{perm}") %>
+                  </option>
+                <% end %>
+              </select>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".budget_sharing_no_members", moniker: family_moniker_downcase) %></p>
+    <% end %>
+  <% end %>
 <% end %>
 <% if Current.user.admin? %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
@@ -60,14 +127,14 @@
             <% if additional_preview_currencies.any? %>
               <div class="mt-2 flex flex-wrap gap-2">
                 <% additional_preview_currencies.each do |currency| %>
-                  <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-primary">
-                    <%= currency.iso_code %>
-                  </span>
+                  <%= render DS::Pill.new(label: currency.iso_code, tone: :neutral, marker: false) %>
                 <% end %>
                 <% if additional_currency_count > additional_preview_currencies.count %>
-                  <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-secondary">
-                    <%= t(".currencies_more", count: additional_currency_count - additional_preview_currencies.count) %>
-                  </span>
+                  <%= render DS::Pill.new(
+                        label: t(".currencies_more", count: additional_currency_count - additional_preview_currencies.count),
+                        tone: :neutral,
+                        marker: false
+                      ) %>
                 <% end %>
               </div>
             <% else %>
@@ -160,9 +227,7 @@
                           <div class="flex items-center gap-2">
                             <span class="text-sm font-medium text-primary"><%= currency.iso_code %></span>
                             <% if base_currency %>
-                              <span class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-secondary">
-                                <%= t(".base_currency_badge") %>
-                              </span>
+                              <%= render DS::Pill.new(label: t(".base_currency_badge"), tone: :neutral, marker: false) %>
                             <% end %>
                           </div>
                           <p class="mt-0.5 text-sm text-secondary"><%= currency.name %></p>

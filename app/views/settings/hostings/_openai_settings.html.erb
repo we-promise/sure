@@ -95,5 +95,19 @@
                           data: { "auto-submit-form-target": "auto" } %>
     <p class="text-xs text-secondary mt-1"><%= t(".max_items_per_call_help") %></p>
   </div>
+
+  <div class="pt-4 border-t border-secondary">
+    <h3 class="font-medium mb-1"><%= t(".ai_response_timeout_heading") %></h3>
+    <p class="text-xs text-secondary mb-3"><%= t(".ai_response_timeout_description") %></p>
+
+    <%= form.number_field :ai_response_timeout,
+                          label: t(".ai_response_timeout_label"),
+                          placeholder: Chat::DEFAULT_RESPONSE_TIMEOUT.to_i.to_s,
+                          value: Setting.ai_response_timeout,
+                          min: Chat::MIN_RESPONSE_TIMEOUT.to_i,
+                          disabled: ENV["AI_RESPONSE_TIMEOUT"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".ai_response_timeout_help") %></p>
+  </div>
   <% end %>
 </div>

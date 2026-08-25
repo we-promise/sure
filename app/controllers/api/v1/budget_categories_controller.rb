@@ -39,8 +39,13 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
     def budget_categories_scope
       BudgetCategory
         .joins(:budget, :category)
-        .where(budgets: { family_id: current_resource_owner.family_id })
+        .where(budgets: { family_id: current_resource_owner.family_id, user_id: visible_owner_ids })
         .includes({ budget: { budget_categories: { category: :parent } } }, category: :parent)
+    end
+
+    def visible_owner_ids
+      shared_with_me = BudgetShare.where(viewer_id: current_resource_owner.id).pluck(:owner_id)
+      [ nil, current_resource_owner.id, *shared_with_me ]
     end
 
     def apply_filters(query)

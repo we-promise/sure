@@ -165,12 +165,49 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "default currency comes from country ISO data" do
+    assert_equal "CAD", Family.default_currency_for_country("CA")
+    assert_equal "EUR", Family.default_currency_for_country("DE")
+    assert_equal "BRL", Family.default_currency_for_country("BR")
+    assert_equal "USD", Family.default_currency_for_country("unknown")
+  end
+
   test "available_merchants includes family merchants without transactions" do
     family = families(:dylan_family)
 
     new_merchant = family.merchants.create!(name: "New Test Merchant")
 
     assert_includes family.available_merchants, new_merchant
+  end
+
+  test "known_merchant_names includes assigned and family-owned merchant names, deduplicates matching names, and excludes recently-unlinked merchants" do
+    family = families(:dylan_family)
+
+    provider_merchant = ProviderMerchant.create!(name: "Known Provider Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    # Same name as the assigned provider merchant, but a distinct record -- proves
+    # the result is deduplicated by name value, not just by record identity.
+    family.merchants.create!(name: "Known Provider Merchant")
+
+    unassigned_family_merchant = family.merchants.create!(name: "Unassigned Family Merchant")
+
+    # Assign then unlink a merchant -- available_merchants deliberately keeps
+    # recently-unlinked merchants around (so the UI can offer a quick undo);
+    # known_merchant_names must NOT, since it's used to auto-match/auto-assign new
+    # transactions and re-surfacing a deliberately-removed association would undo
+    # the user's action silently.
+    unlinked_merchant = ProviderMerchant.create!(name: "Recently Unlinked Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: unlinked_merchant)
+    unlinked_merchant.unlink_from_family(family)
+    transactions(:one).update!(merchant: provider_merchant)
+
+    names = family.known_merchant_names
+
+    assert_equal 1, names.count("Known Provider Merchant")
+    assert_includes names, unassigned_family_merchant.name
+    assert_not_includes names, "Recently Unlinked Merchant"
+    assert_includes family.available_merchants.map(&:name), "Recently Unlinked Merchant"
   end
 
   test "enabled currencies always include the base currency" do

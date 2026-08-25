@@ -3,8 +3,8 @@
     text: t(".confirm"),
     variant: "primary",
     full_width: true,
-    href: budget_path(budget),
+    href: budget_path(budget, **budget_owner_query),
     method: :get,
-    disabled: !budget.allocations_valid?
+    disabled: !budget.initialized? || budget.available_to_allocate.negative?
   ) %>
 </div>

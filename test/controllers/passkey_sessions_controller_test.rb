@@ -25,6 +25,16 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     assert_operator @stored_credential.sign_count, :>, 0
   end
 
+  test "rejects passkey authentication when session creation fails" do
+    PasskeySessionsController.any_instance.stubs(:create_session_for).returns(false)
+
+    post passkey_session_path, params: { credential: passkey_assertion }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("passkey_sessions.invalid_credential"), JSON.parse(response.body).fetch("error")
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
   # The pending invitation lives in the Rack session, and complete_sign_in reads
   # it immediately after creating the session. Anything that clears the session
   # in between — a reset_session added to "fix" session fixation, say — drops the

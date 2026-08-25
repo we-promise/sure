@@ -45,10 +45,6 @@ class Goal < ApplicationRecord
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
   }
 
-  def self.advisory_lock_key_for(family_id)
-    Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
-  end
-
   # Family-wide map of non-archived goal earmarks, grouped by account_id:
   # { account_id => [{ goal_id:, allocated_amount: }, ...] }. The controller
   # assigns this to each goal on index (goal.pooled_allocations = ...) so the
@@ -474,6 +470,27 @@ class Goal < ApplicationRecord
         [ account.id, palette[i % palette.size] ]
       end
     end
+  end
+
+  # Confirm dialog for deleting this goal, shared by the show-page kebab and
+  # the index card kebab so the two can't drift. Spelled out rather than using
+  # CustomConfirm.for_resource_deletion, whose generic "This is not reversible"
+  # reads scarier than a goal delete is: only the goal, its account links and
+  # its pledge history go — the accounts, balances and transactions behind it
+  # are untouched.
+  def deletion_confirm
+    CustomConfirm.new(
+      destructive: true,
+      high_severity: true,
+      title: I18n.t("goals.show.confirm_delete_title"),
+      # Escaped: the dialog assigns `body` to innerHTML (so bodies like the
+      # accounts' confirm_body_html can carry <p>), so a goal named
+      # "<img src=x onerror=…>" would otherwise run when a family member opens
+      # the confirmation. Only `body` needs this — the dialog sets its title and
+      # button label with textContent.
+      body: I18n.t("goals.show.confirm_delete_body", name: ERB::Util.html_escape(name)),
+      btn_text: I18n.t("goals.show.confirm_delete_cta")
+    )
   end
 
   # Single-line state summary rendered between the header and the ring on
