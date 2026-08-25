@@ -254,8 +254,17 @@ class Goal < ApplicationRecord
 
   # Display order shared by the goals index and the Plan hub: behind first,
   # then on-track, then open-ended, paused last, name as tie-breaker.
+  # Paused sorts last, behind every ranked status and the unranked fallback.
+  # It used to share rank 3 with :funded, so a paused goal whose name sorted
+  # first jumped ahead of a reserve that was whole — the list claiming the
+  # paused one wanted attention more.
+  PAUSED_DISPLAY_RANK = 5
+
   def self.active_display_sort(goals)
-    goals.sort_by { |goal| [ goal.paused? ? 3 : ACTIVE_DISPLAY_STATUS_RANK.fetch(goal.status, 4), goal.name.downcase ] }
+    goals.sort_by do |goal|
+      rank = goal.paused? ? PAUSED_DISPLAY_RANK : ACTIVE_DISPLAY_STATUS_RANK.fetch(goal.status, 4)
+      [ rank, goal.name.downcase ]
+    end
   end
 
   # Active goals ready to render outside the goals index (e.g. the Plan hub).

@@ -159,7 +159,7 @@
     </div>
 
     <% if @goal.archived? || @goal.paused? %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+      <%= render DS::Card.new(class: "flex flex-col items-center justify-center text-center") do %>
         <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
           <%= icon(@goal.archived? ? "archive" : "pause", size: "2xl") %>
         </div>
@@ -169,12 +169,12 @@
         <p class="text-sm text-secondary mt-1 max-w-md tabular-nums privacy-sensitive">
           <%= t(".inactive.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %>
         </p>
-      </div>
+      <% end %>
     <%# :funded joins the two one-off cases here — a reserve at its floor has
         no projection worth drawing either. It reads differently though: it is
         a steady state, not a finish line. %>
     <% elsif @goal.completed? || @goal.status == :reached || @goal.status == :funded %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+      <%= render DS::Card.new(class: "flex flex-col items-center justify-center text-center") do %>
         <div class="w-16 h-16 rounded-full bg-success/10 inline-flex items-center justify-center text-success mb-3">
           <%= icon(@goal.maintained? ? "shield-check" : "party-popper", size: "2xl", color: "success") %>
         </div>
@@ -228,9 +228,9 @@
             ) %>
           </div>
         <% end %>
-      </div>
+      <% end %>
     <% elsif @goal.maintained? %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+      <%= render DS::Card.new(class: "flex flex-col items-center justify-center text-center") do %>
         <div class="w-16 h-16 rounded-full bg-warning/10 inline-flex items-center justify-center text-warning mb-3">
           <%= icon("shield-alert", size: "2xl", color: "warning") %>
         </div>
@@ -241,11 +241,11 @@
                 target: @goal.target_amount_money.format(precision: 0),
                 missing: @goal.remaining_amount_money.format(precision: 0)) %>
         </p>
-      </div>
+      <% end %>
     <% elsif @goal.current_balance.to_d.zero? && @goal.pace.to_d.zero? %>
       <%# No movement yet on the linked account: render an inline "make your first transfer"
           CTA card instead of a flat-at-$0 chart that looks broken. %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
+      <%= render DS::Card.new(class: "flex flex-col items-center justify-center text-center") do %>
         <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
           <%= icon("piggy-bank", size: "2xl") %>
         </div>
@@ -261,7 +261,7 @@
             frame: :modal
           ) %>
         </div>
-      </div>
+      <% end %>
     <%# Every depleted reserve, caught BEFORE the zero-balance branch below and
         not after: a brand-new reserve at zero is still a reserve short of its
         floor, and the shortfall panel says exactly that where the generic
@@ -273,7 +273,7 @@
         against a deadline — a reserve has neither. What it needs is the one
         number the projection cannot show: how much is missing from the floor. %>
     <% else %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
+      <%= render DS::Card.new(class: "flex flex-col") do %>
         <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           <div class="min-w-0">
             <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
@@ -323,20 +323,20 @@
                        class: "font-medium text-primary underline-offset-2 hover:underline" %>
           </div>
         <% end %>
-      </div>
+      <% end %>
     <% end %>
   </section>
 
   <% if @goal.linked_accounts.any? %>
-    <section class="bg-container rounded-xl shadow-border-xs p-5">
+    <%= render DS::Card.new do %>
       <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal) %>
-    </section>
+    <% end %>
   <% end %>
 
   <% if @goal.notes.present? %>
-    <section class="bg-container rounded-xl shadow-border-xs p-5">
+    <%= render DS::Card.new do %>
       <h2 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h2>
       <p class="text-sm text-secondary whitespace-pre-line"><%= @goal.notes %></p>
-    </section>
+    <% end %>
   <% end %>
 </div>

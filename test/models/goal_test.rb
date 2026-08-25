@@ -1053,4 +1053,24 @@ class GoalTest < ActiveSupport::TestCase
         g.goal_accounts.build(account: account, allocated_amount: allocated)
       end
     end
+
+    # :funded and paused both used to rank 3, so a paused goal whose name sorted
+    # first jumped ahead of a reserve that was whole.
+    test "a paused goal sorts behind a funded reserve whatever its name" do
+      pot = ->(name) {
+        Account.create!(family: @family, accountable: Depository.new, name: name,
+                        currency: @family.currency, balance: 2_000)
+      }
+      reserve = @family.goals.create!(
+        name: "Zeta reserve", target_amount: 1_000, currency: @family.currency, kind: "maintained"
+      ) { |g| g.goal_accounts.build(account: pot.call("Zeta pot"), allocated_amount: 1_000) }
+      paused = @family.goals.create!(
+        name: "Alpha goal", target_amount: 1_000, currency: @family.currency
+      ) { |g| g.goal_accounts.build(account: pot.call("Alpha pot"), allocated_amount: 1_000) }
+      paused.pause!
+
+      sorted = Goal.active_display_sort([ paused, reserve ])
+
+      assert_equal [ reserve.id, paused.id ], sorted.map(&:id)
+    end
 end
