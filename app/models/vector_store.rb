@@ -17,11 +17,11 @@ module VectorStore
   end
 
   def self.embedding_model
-    ENV.fetch("EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+    ENV["EMBEDDING_MODEL"].presence || DEFAULT_EMBEDDING_MODEL
   end
 
   def self.embedding_dimensions
-    ENV.fetch("EMBEDDING_DIMENSIONS", DEFAULT_EMBEDDING_DIMENSIONS).to_i
+    ENV["EMBEDDING_DIMENSIONS"].presence&.to_i&.nonzero? || DEFAULT_EMBEDDING_DIMENSIONS
   end
 
   def self.embedding_uri_base

@@ -4660,6 +4660,12 @@ paths:
       responses:
         '204':
           description: token unregistered
+        '404':
+          description: token not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/family_exports":
     get:
       summary: Lists family exports

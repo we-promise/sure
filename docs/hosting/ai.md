@@ -1343,7 +1343,7 @@ If you are using Ollama (as in `compose.example.ai.yml`), pull the embedding mod
 
 ```bash
 docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
-docker compose exec ollama ollama pull mxbai-embed-large
+docker compose -f compose.example.ai.yml exec ollama ollama pull mxbai-embed-large
 ```
 
 > [!WARNING]

@@ -48,7 +48,9 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
 
   test "removes tokens rejected as unregistered" do
     response = stub(ok?: false, status: "410", body: { "reason" => "Unregistered" })
-    Apns::Client.any_instance.stubs(:deliver).returns(response)
+    client = mock
+    Apns::Client.stubs(:new).returns(client)
+    client.stubs(:deliver).returns(response)
 
     assert_difference "PushSubscription.count", -1 do
       DeliverInsightNotificationJob.perform_now(

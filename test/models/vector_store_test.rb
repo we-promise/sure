@@ -13,6 +13,16 @@ class VectorStoreTest < ActiveSupport::TestCase
     end
   end
 
+  test "blank embedding configuration falls back to defaults" do
+    ClimateControl.modify(EMBEDDING_ENVIRONMENT.merge(
+      "EMBEDDING_MODEL" => "",
+      "EMBEDDING_DIMENSIONS" => ""
+    )) do
+      assert_equal "mxbai-embed-large", VectorStore.embedding_model
+      assert_equal 1024, VectorStore.embedding_dimensions
+    end
+  end
+
   test "embedding credentials match runtime environment precedence" do
     ClimateControl.modify(EMBEDDING_ENVIRONMENT.merge(
       "EMBEDDING_ACCESS_TOKEN" => "embedding-token",

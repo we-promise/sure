@@ -41,8 +41,9 @@ struct SureSettingsView: View {
 
           Button(role: .destructive) {
             Task {
-              await store.disconnect()
-              dismiss()
+              if await store.disconnect() {
+                dismiss()
+              }
             }
           } label: {
             Label("Disconnect this device", systemImage: "rectangle.portrait.and.arrow.right")
@@ -81,8 +82,11 @@ struct SureSettingsView: View {
         notificationStatus = error.localizedDescription
       }
     } else {
-      await store.unregisterPushToken()
-      notificationStatus = "Notifications are disabled for this device."
+      if await store.unregisterPushToken() {
+        notificationStatus = "Notifications are disabled for this device."
+      } else {
+        notificationStatus = store.errorMessage ?? "Couldn’t disable notifications. Try again."
+      }
     }
   }
 
