@@ -88,14 +88,29 @@ class AccountsHelperTest < ActionView::TestCase
   # The whole point: with no viewer the card must not come back empty, because
   # an empty provider card reads as "your accounts are gone" rather than "this
   # is waiting on a refresh".
-  test "the groups partial says it is updating rather than showing nothing" do
+  test "the groups partial asks for the rows back rather than showing nothing" do
     Current.session = nil
 
     render partial: "accounts/index/account_groups", locals: { accounts: [ @owned, @someone_elses ] }
 
     assert_includes rendered, "account-groups-awaiting-refresh"
+    assert_includes rendered, account_groups_frame_id([ @owned.id, @someone_elses.id ])
+    assert_includes rendered, "/accounts/groups"
     assert_not_includes rendered, @someone_elses.name
     assert_not_includes rendered, @owned.name
+  end
+
+  # Both sides derive the id from what was REQUESTED. Keying it on the filtered
+  # result would give the reply a different id from the frame waiting for it,
+  # and the rows would never land.
+  test "the frame id does not depend on the order the accounts arrive in" do
+    assert_equal account_groups_frame_id([ @owned.id, @someone_elses.id ]),
+                 account_groups_frame_id([ @someone_elses.id, @owned.id ])
+  end
+
+  test "the frame id distinguishes different sets of accounts" do
+    assert_not_equal account_groups_frame_id([ @owned.id ]),
+                     account_groups_frame_id([ @owned.id, @someone_elses.id ])
   end
 
   # An empty injected list is still a viewer: one who may see nothing. Read as

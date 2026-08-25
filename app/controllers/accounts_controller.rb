@@ -146,6 +146,37 @@ class AccountsController < ApplicationController
     redirect_to account_path(@account)
   end
 
+  # Fills the frame a background broadcast leaves in a provider card. The
+  # broadcast runs in a job with no `Current.user`, so it cannot decide which of
+  # the card's accounts a given reader may see; this is the reader asking for
+  # them back on their own authenticated request.
+  #
+  # The ids arrive from the frame's own src, so they are a request rather than
+  # an authorisation: everything is resolved through `accessible_accounts`, and
+  # an id for an account the reader may not see simply does not come back.
+  MAX_GROUP_ACCOUNTS = 500
+
+  def groups
+    @requested_account_ids = params[:ids].to_s.split(",").map(&:strip).reject(&:blank?).uniq
+    @groups_accounts =
+      if @requested_account_ids.empty? || @requested_account_ids.size > MAX_GROUP_ACCOUNTS
+        []
+      else
+        Current.user.accessible_accounts
+               .where(id: @requested_account_ids)
+               .with_attached_logo
+               .includes(:accountable, :account_providers)
+               .order(:name)
+               .to_a
+      end
+
+    # The partial scopes to the viewer on its own; this is the list it is
+    # allowed to consider, injected the same way the index injects it.
+    @accessible_account_ids = @groups_accounts.map(&:id)
+
+    render layout: false
+  end
+
   def sparkline
     etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
 

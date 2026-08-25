@@ -18,9 +18,21 @@
 <% if viewer_present_for_account_scoping? %>
   <% accounts = accounts_visible_to_viewer(accounts) %>
 <% else %>
-  <div class="px-4 py-3 text-sm text-secondary" data-testid="account-groups-awaiting-refresh">
-    <%= t("accounts.index.account_groups.awaiting_refresh") %>
-  </div>
+  <%# Fetched back rather than merely deferred to the sync toast. The toast
+      waits while a modal or a form is open — which is exactly when a card that
+      had gone blank stayed blank — and this frame does not: the reader's own
+      browser asks for the rows on its own authenticated request, so the server
+      answers with `Current.user` in hand and the filtering above applies
+      normally. %>
+  <% requested_ids = accounts.map(&:id) %>
+  <%= turbo_frame_tag account_groups_frame_id(requested_ids),
+                      src: groups_accounts_path(ids: requested_ids.join(",")),
+                      loading: "eager",
+                      data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+    <div class="px-4 py-3 text-sm text-secondary" data-testid="account-groups-awaiting-refresh">
+      <%= t("accounts.index.account_groups.awaiting_refresh") %>
+    </div>
+  <% end %>
   <% accounts = [] %>
 <% end %>
 

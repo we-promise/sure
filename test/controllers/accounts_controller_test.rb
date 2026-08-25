@@ -9,6 +9,51 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  # The frame a background broadcast leaves behind, filled on the reader's own
+  # authenticated request. The ids in its src are a request, not an
+  # authorisation: everything resolves through `accessible_accounts`.
+  test "groups renders only the accounts the requester may see" do
+    mine = @account
+    theirs = accounts(:credit_card)
+    theirs.account_shares.destroy_all
+    theirs.update!(owner: users(:family_member))
+
+    get groups_accounts_url(ids: [ mine.id, theirs.id ].join(","))
+
+    assert_response :success
+    assert_includes response.body, mine.name
+    assert_not_includes response.body, theirs.name
+  end
+
+  # Without a matching frame id the reply lands nowhere, so the id is derived
+  # from what was asked for rather than from what came back.
+  test "groups answers in the frame the card is waiting on" do
+    other = accounts(:credit_card)
+    requested = [ @account.id, other.id ]
+
+    get groups_accounts_url(ids: requested.join(","))
+
+    assert_response :success
+    assert_includes response.body,
+                    "account_groups_#{Digest::SHA1.hexdigest(requested.map(&:to_s).sort.join(","))}"
+  end
+
+  test "groups ignores an account from another family" do
+    other_family = Family.create!(name: "Elsewhere", currency: "USD", locale: "en", country: "US", timezone: "UTC")
+    outsider = Account.create!(family: other_family, accountable: Depository.new,
+                               name: "Somebody Else Savings", currency: "USD", balance: 100)
+
+    get groups_accounts_url(ids: outsider.id)
+
+    assert_response :success
+    assert_not_includes response.body, outsider.name
+  end
+
+  test "groups answers an empty request without failing" do
+    get groups_accounts_url(ids: "")
+
+    assert_response :success
+  end
   test "should get index" do
     get accounts_url
     assert_response :success

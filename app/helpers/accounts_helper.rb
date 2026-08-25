@@ -22,6 +22,18 @@ module AccountsHelper
     accounts.select { |account| ids.include?(account.id) }
   end
 
+  # Stable id for the frame a background broadcast leaves in a provider card,
+  # and for the response that fills it. Derived from the accounts the card was
+  # asked to show — sorted, so the two sides agree whatever order they arrive
+  # in, and hashed rather than listed so the id stays a fixed length.
+  #
+  # Built from what was REQUESTED, never from what the viewer turns out to be
+  # allowed: the response is filtered, so keying on the filtered set would give
+  # the reply a different id from the frame waiting for it.
+  def account_groups_frame_id(account_ids)
+    "account_groups_#{Digest::SHA1.hexdigest(Array(account_ids).map(&:to_s).sort.join(","))}"
+  end
+
   # Whether there is a viewer to scope to at all. A background broadcast renders
   # these partials with `Current.user` nil, and "no accessible accounts" and
   # "no viewer" are different answers that the empty-set fallback below
