@@ -84,9 +84,31 @@ class Goal < ApplicationRecord
   # by goal alone is not enough for a link that is CHANGING goals: its persisted
   # row still carries the old goal_id, so the query hands it back and the link
   # conflicts with itself.
+  # A whole-account claim is exclusive per account, and the check that enforces
+  # it is a read. Callers take this first so the read and the write that
+  # follows are one step as far as any other request is concerned.
+  def self.lock_whole_account_claims!(account_id)
+    connection.execute("SELECT pg_advisory_xact_lock(#{whole_account_claim_lock_key(account_id)})")
+  end
+
+  def self.whole_account_claim_lock_key(account_id)
+    Digest::SHA1.hexdigest("goal_accounts:whole_account:#{account_id}").to_i(16) % (2**63)
+  end
+
   def whole_account_conflicts_on(account_ids, excluding_link_id: nil)
     ids = Array(account_ids).compact
     return GoalAccount.none if ids.empty?
+
+    # Serialised before the read, because what follows is a check-then-write:
+    # two requests can both find no conflict and both commit a whole-account
+    # claim, recreating exactly the double-count this exists to prevent. A
+    # transaction-scoped advisory lock rather than a row lock — the conflicting
+    # write may be an INSERT, so there is no row to lock — and it is released
+    # when the enclosing transaction ends, whichever way it ends.
+    #
+    # Locked in id order so two goals claiming the same pair of accounts in
+    # opposite orders cannot deadlock against each other.
+    ids.sort.each { |account_id| self.class.lock_whole_account_claims!(account_id) }
 
     scope = GoalAccount.joins(:goal)
                        .where(account_id: ids, allocated_amount: nil)

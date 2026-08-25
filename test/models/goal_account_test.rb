@@ -186,4 +186,28 @@ class GoalAccountTest < ActiveSupport::TestCase
 
     assert link.valid?, link.errors.full_messages.to_sentence
   end
+
+  # The exclusivity validation is a read followed by a write, so on its own two
+  # requests can both find no conflict and both commit a whole-account claim —
+  # the double-count the validation exists to prevent, recreated by timing.
+  #
+  # This asserts the lock is taken before the read, and taken in id order so
+  # two goals claiming the same pair of accounts in opposite orders cannot
+  # deadlock. That the lock then serialises is PostgreSQL's guarantee, not
+  # something a transactional test on one connection can demonstrate.
+  test "the account is claimed before the conflict check reads it" do
+    goal = goals(:vacation_italy)
+    ids = [ accounts(:credit_card).id, accounts(:depository).id ]
+
+    Goal.expects(:lock_whole_account_claims!).with(ids.min).once
+    Goal.expects(:lock_whole_account_claims!).with(ids.max).once
+
+    goal.whole_account_conflicts_on(ids.sort.reverse).to_a
+  end
+
+  test "no account is claimed when there is nothing to check" do
+    Goal.expects(:lock_whole_account_claims!).never
+
+    goals(:vacation_italy).whole_account_conflicts_on([]).to_a
+  end
 end
