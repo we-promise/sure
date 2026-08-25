@@ -7,6 +7,9 @@
 # the importer stored on it.
 class OnchainWalletAccount::Processor
   SOURCE = "onchain_wallet"
+  # The label this processor writes on every movement. Named so the repair
+  # below and the import above cannot drift apart.
+  TRANSFER_LABEL = "Transfer"
 
   attr_reader :onchain_wallet_account
 
@@ -43,13 +46,15 @@ class OnchainWalletAccount::Processor
   def repair_display_only_movements
     return 0 unless account
 
+    relabelled = relabel_legacy_trades
+
     candidates = display_only_entries
-    return 0 if candidates.empty?
+    return relabelled if candidates.empty?
 
     security = resolve_security
-    return 0 if security.nil?
+    return relabelled if security.nil?
 
-    candidates.count { |entry| upgrade_to_trade(entry, security) }
+    relabelled + candidates.count { |entry| upgrade_to_trade(entry, security) }
   end
 
   private
@@ -251,7 +256,7 @@ class OnchainWalletAccount::Processor
           # A trade is the shape this ledger needs to carry quantity and cost
           # basis, but the event is a transfer: coins arriving at an address are
           # not a purchase, and nothing here knows whether they were ever bought.
-          activity_label: "Transfer"
+          activity_label: TRANSFER_LABEL
         )
       end
     end
@@ -287,6 +292,37 @@ class OnchainWalletAccount::Processor
 
     # The zero-amount, excluded entries this processor writes for unpriced
     # movements, identified by the external_id prefix it gave them.
+    # Movements imported before transfers were called transfers still carry a
+    # `Buy` or `Sell` label and a "Buy 0.5 shares of CRYPTO:BTC" name. Nothing
+    # rewrites them on an ordinary sync: `perform_sync` returns early when no
+    # address changed on chain, and the repair above only ever looked at
+    # display-only `Transaction` rows. Left alone they would keep the old
+    # wording for as long as the wallet sits still — which for a cold address
+    # is the whole point of it.
+    #
+    # Scoped to this processor's own external_id prefix and to `source:
+    # SOURCE`, so a trade the user entered by hand is never touched.
+    def relabel_legacy_trades
+      entries = account.entries
+                       .where(source: SOURCE, entryable_type: "Trade")
+                       .where("external_id LIKE ?", "#{holding_external_id}_%")
+                       .includes(:entryable)
+                       .to_a
+      return 0 if entries.empty?
+
+      entries.count do |entry|
+        trade = entry.entryable
+        expected_name = movement_name(trade.qty.to_d)
+        next false if trade.investment_activity_label == TRANSFER_LABEL && entry.name == expected_name
+
+        Entry.transaction do
+          trade.update!(investment_activity_label: TRANSFER_LABEL)
+          entry.update!(name: expected_name)
+        end
+        true
+      end
+    end
+
     def display_only_entries
       account.entries
         .where(source: SOURCE, entryable_type: "Transaction", excluded: true, amount: 0)

@@ -129,6 +129,10 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
   end
 
   test "a linked account takes its icon from the asset it tracks" do
+    # Saved rather than assumed nil: `Setting` is application-wide, and an
+    # `ensure` that hard-codes nil erases whatever the suite had configured,
+    # leaving every later test's behaviour dependent on run order.
+    previous_client_id = Setting.brand_fetch_client_id
     Setting.brand_fetch_client_id = "test-client"
     onchain_account = create_onchain_wallet_account(item: @item)
     account = accounts(:investment)
@@ -138,7 +142,7 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
     # without this the accounts page shows a tracked asset with no icon at all.
     assert_includes account.reload.logo_url.to_s, "/crypto/#{onchain_account.symbol}/"
   ensure
-    Setting.brand_fetch_client_id = nil
+    Setting.brand_fetch_client_id = previous_client_id
   end
 
   test "a native row and token rows coexist for one address" do

@@ -275,7 +275,53 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Transaction", onchain_entry("tx1").entryable_type
   end
 
-  test "the repair costs one query and no writes when there is nothing to upgrade" do
+  # Movements imported before transfers were called transfers keep their `Buy`
+  # label and their "Buy 1.5 shares of ..." name. Nothing rewrote them: an
+  # ordinary sync returns early when no address changed on chain, and the
+  # repair only ever looked at display-only Transaction rows — so a cold
+  # wallet would show the old wording indefinitely.
+  test "the repair relabels a trade imported before transfers were named" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 40)
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    entry = onchain_entry("tx1")
+    entry.entryable.update!(investment_activity_label: "Buy")
+    entry.update!(name: "Buy 1.5 shares of CRYPTO:FAKE")
+
+    assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+
+    repaired = onchain_entry("tx1")
+    assert_equal "Transfer", repaired.entryable.investment_activity_label
+    assert_no_match(/shares/, repaired.name)
+  end
+
+  # Idempotent, so a wallet that syncs nightly does not rewrite the same rows
+  # forever — and the "no writes" test above stays honest.
+  test "the repair leaves an already-correct trade alone" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 40)
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+  end
+
+  # A trade the user entered by hand is not this processor's to rename.
+  test "the repair does not touch a trade it did not import" do
+    manual = @account.entries.create!(
+      name: "Bought some elsewhere", date: 2.days.ago.to_date, amount: -50, currency: "USD",
+      entryable: Trade.new(security: security, qty: 1, price: 50, currency: "USD",
+                           investment_activity_label: "Buy")
+    )
+
+    OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+
+    assert_equal "Buy", manual.reload.entryable.investment_activity_label
+    assert_equal "Bought some elsewhere", manual.name
+  end
+  test "the repair writes nothing when there is nothing to upgrade" do
     price_asset_at(Date.current, 100)
     OnchainWalletAccount::Processor.new(@onchain_account).process
 
