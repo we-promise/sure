@@ -687,6 +687,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
+    t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
     t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
@@ -698,9 +699,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
-    t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
-    t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
+    t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "emi_installment_number IS NULL OR emi_installment_number > 0", name: "chk_entries_emi_installment_number_positive"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
     t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying, 'cleared'::character varying, 'reconciled'::character varying]::text[])", name: "chk_entries_reconciled_status"
@@ -1534,23 +1534,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
   end
 
   create_table "onchain_wallet_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "onchain_wallet_item_id", null: false
-    t.string "chain", null: false
-    t.string "wallet_address", null: false
     t.string "asset_kind", null: false
+    t.string "chain", null: false
+    t.string "content_hash"
     t.string "contract_address"
-    t.string "symbol", null: false
-    t.string "name"
-    t.integer "decimals", default: 0, null: false
-    t.decimal "quantity", precision: 32, scale: 18, default: "0.0", null: false
+    t.datetime "created_at", null: false
     t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
-    t.string "content_hash"
-    t.jsonb "raw_payload"
-    t.jsonb "raw_movements_payload"
+    t.integer "decimals", default: 0, null: false
     t.jsonb "extra", default: {}, null: false
-    t.datetime "created_at", null: false
+    t.string "name"
+    t.uuid "onchain_wallet_item_id", null: false
+    t.decimal "quantity", precision: 32, scale: 18, default: "0.0", null: false
+    t.jsonb "raw_movements_payload"
+    t.jsonb "raw_payload"
+    t.string "symbol", null: false
     t.datetime "updated_at", null: false
+    t.string "wallet_address", null: false
     t.index ["onchain_wallet_item_id", "chain", "wallet_address", "contract_address"], name: "index_onchain_wallet_accounts_unique_erc20", unique: true, where: "((asset_kind)::text = 'erc20'::text)"
     t.index ["onchain_wallet_item_id", "chain", "wallet_address", "contract_address"], name: "index_onchain_wallet_accounts_unique_spl", unique: true, where: "((asset_kind)::text = 'spl'::text)"
     t.index ["onchain_wallet_item_id", "chain", "wallet_address"], name: "index_onchain_wallet_accounts_on_item_and_address"
@@ -1561,17 +1561,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
   end
 
   create_table "onchain_wallet_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "family_id", null: false
-    t.string "name"
-    t.string "institution_name"
-    t.string "institution_domain"
-    t.string "institution_url"
-    t.string "institution_color"
-    t.string "status", default: "good", null: false
-    t.boolean "scheduled_for_deletion", default: false, null: false
-    t.datetime "sync_start_date"
-    t.text "etherscan_api_key"
     t.datetime "created_at", null: false
+    t.text "etherscan_api_key"
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_onchain_wallet_items_on_family_id"
     t.index ["status"], name: "index_onchain_wallet_items_on_status"
