@@ -23,12 +23,31 @@ en:
     select_accounts:
       not_configured: "SnapTrade is not configured."
     oauth_authorize:
-      not_configured: "SnapTrade OAuth is not configured. Set SNAPTRADE_OAUTH_CLIENT_ID and SNAPTRADE_OAUTH_CLIENT_SECRET, restart the app, then try again."
+      not_configured: "The SnapTrade browser authorization needs SNAPTRADE_OAUTH_CLIENT_SECRET as well as SNAPTRADE_OAUTH_CLIENT_ID. Set it and restart, or authorize with a device code instead."
     oauth_callback:
       success: "SnapTrade authorization complete."
       access_denied: "SnapTrade authorization was cancelled."
       state_mismatch: "SnapTrade authorization failed a security check. Please try again."
       failed: "Unable to complete SnapTrade authorization. Please try again."
+    oauth_device_flow:
+      title: "Connect SnapTrade"
+      subtitle: "Authorize Sure for SnapTrade with a device code."
+      instructions: "Open SnapTrade, confirm this device code, then come back here to finish."
+      code_label: "Device code"
+      open_snaptrade: "Open SnapTrade"
+      start_button: "Start authorization"
+      complete_button: "I've authorized SnapTrade"
+      cancel_button: "Cancel"
+      missing_client_id: "SnapTrade OAuth is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
+    start_oauth_device_flow:
+      failed: "Unable to start SnapTrade device authorization. Please try again."
+    complete_oauth_device_flow:
+      success: "SnapTrade authorization complete."
+      device_code_required: "No SnapTrade device authorization is in progress for this connection. Start it again to get a new code."
+      authorization_pending: "SnapTrade hasn't seen your confirmation yet. Approve the code in SnapTrade, then try again."
+      expired: "This device code expired. Start the authorization again."
+      access_denied: "SnapTrade authorization was declined."
+      failed: "Unable to complete SnapTrade device authorization. Please try again."
     select_existing_account:
       not_found: "Account or SnapTrade configuration not found."
       title: "Link to SnapTrade Account"
@@ -123,13 +142,15 @@ en:
       connection_description: "Connect to your brokerage via SnapTrade (25+ brokers supported)"
       description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
       oauth_setup_step_1_html: "Register an OAuth app at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>"
-      oauth_setup_step_2_html: "Add this app's callback URL (<code>%{callback_url}</code>) as a registered redirect URI"
-      oauth_setup_step_3: "Set SNAPTRADE_OAUTH_CLIENT_ID and SNAPTRADE_OAUTH_CLIENT_SECRET in your environment and restart"
+      oauth_setup_step_2_html: "For the browser flow only: add this app's callback URL (<code>%{callback_url}</code>) as a registered redirect URI"
+      oauth_setup_step_3: "Set SNAPTRADE_OAUTH_CLIENT_ID in your environment and restart. That alone enables the device code flow; add SNAPTRADE_OAUTH_CLIENT_SECRET for the browser flow too"
       free_tier_warning: "SnapTrade's free tier covers 20 brokerage connections."
       oauth_title: "SnapTrade OAuth"
       oauth_status_ready: "Authorize Sure to read your SnapTrade account data."
+      oauth_status_ready_device: "Authorize Sure with a device code to read your SnapTrade account data."
       oauth_status_authorized: "Authorized with SnapTrade."
       oauth_connect_button: "Connect with SnapTrade"
+      oauth_device_button: "Use a device code"
       oauth_reauthorize_button: "Reauthorize"
       status_connected:
         one: "%{count} account from SnapTrade"

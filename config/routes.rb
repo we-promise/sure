@@ -157,6 +157,8 @@ Rails.application.routes.draw do
       get :callback
       get :oauth_authorize
       get :oauth_callback
+      get :oauth_device_authorize
+      post :start_oauth_device_flow
     end
 
     member do
@@ -165,6 +167,7 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :complete_oauth_device_flow
       delete :delete_connection
     end
   end
@@ -669,6 +672,8 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
+      resources :insights, only: [ :index ]
+      resources :push_subscriptions, only: [ :create, :destroy ]
       resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create", as: :sync_job
       resources :syncs, only: [ :index, :show ] do

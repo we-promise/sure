@@ -1,6 +1,9 @@
 ---
 fr:
   insights:
+    notification:
+      title: Nouvelle analyse financière
+      body: Ouvrez Sure pour consulter votre dernière analyse par IA.
     actions:
       budget: Voir le budget
       cash_flow_warning: Vérifier les transactions récurrentes

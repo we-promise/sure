@@ -45,10 +45,6 @@ class Goal < ApplicationRecord
     order(Arel.sql("CASE state WHEN 'active' THEN 0 WHEN 'paused' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END"))
   }
 
-  def self.advisory_lock_key_for(family_id)
-    Digest::SHA1.hexdigest("goals:family:#{family_id}").to_i(16) % (2**63)
-  end
-
   # Family-wide map of non-archived goal earmarks, grouped by account_id:
   # { account_id => [{ goal_id:, allocated_amount: }, ...] }. The controller
   # assigns this to each goal on index (goal.pooled_allocations = ...) so the

@@ -301,6 +301,72 @@ components:
             "$ref": "#/components/schemas/ChatSummary"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Insight:
+      type: object
+      required:
+      - id
+      - type
+      - title
+      - body
+      - priority
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        priority:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        status:
+          type: string
+          enum:
+          - active
+          - read
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+    InsightCollection:
+      type: object
+      required:
+      - insights
+      properties:
+        insights:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Insight"
+    PushSubscription:
+      type: object
+      required:
+      - id
+      - environment
+      - platform
+      - last_registered_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        platform:
+          type: string
+          enum:
+          - ios
+        last_registered_at:
+          type: string
+          format: date-time
     RetryResponse:
       type: object
       required:
@@ -1005,6 +1071,23 @@ components:
         updated_at:
           type: string
           format: date-time
+    MerchantImportResult:
+      type: object
+      required:
+      - imported
+      - skipped
+      - merchants
+      properties:
+        imported:
+          type: integer
+          description: Number of merchants successfully created
+        skipped:
+          type: integer
+          description: Number of rows skipped (duplicates or invalid)
+        merchants:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MerchantDetail"
     Tag:
       type: object
       required:
@@ -1441,6 +1524,8 @@ components:
         source:
           type: string
           nullable: true
+        user_modified:
+          type: boolean
         classification:
           type: string
         account:
@@ -1564,6 +1649,20 @@ components:
           - liability_payment
           - loan_payment
         notes:
+          type: string
+          nullable: true
+        source_fee_amount:
+          type: string
+          nullable: true
+          description: Fee charged to the source account
+        source_fee_currency:
+          type: string
+          nullable: true
+        destination_fee_amount:
+          type: string
+          nullable: true
+          description: Fee deducted from the destination account
+        destination_fee_currency:
           type: string
           nullable: true
         inflow_transaction:
@@ -4484,6 +4583,85 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/insights":
+    get:
+      summary: List proactive insights
+      tags:
+      - Insights
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: insights listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/InsightCollection"
+        '403':
+          description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/push_subscriptions":
+    post:
+      summary: Register an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: token registered
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/PushSubscription"
+        '422':
+          description: invalid or conflicting subscription
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              - environment
+              - platform
+              properties:
+                token:
+                  type: string
+                environment:
+                  type: string
+                  enum:
+                  - sandbox
+                  - production
+                platform:
+                  type: string
+                  enum:
+                  - ios
+        required: true
+  "/api/v1/push_subscriptions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Unregister an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '204':
+          description: token unregistered
   "/api/v1/family_exports":
     get:
       summary: Lists family exports
@@ -5729,6 +5907,45 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/MerchantDetail"
+    post:
+      summary: Import merchants from CSV
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: merchants imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantImportResult"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing file or invalid CSV
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+        required: true
+        description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
     parameters:
     - name: id
@@ -7380,6 +7597,10 @@ paths:
                       type: string
                       description: Optional source namespace for external_id. Requires
                         external_id and defaults to api when external_id is provided
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
                     tag_ids:
                       type: array
                       items:
