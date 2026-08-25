@@ -15,43 +15,80 @@ class Valuation::Name
     end
   end
 
+  def translation_key
+    case valuation_kind
+    when "opening_anchor"
+      opening_anchor_translation_key
+    when "current_anchor"
+      current_anchor_translation_key
+    else
+      reconciliation_translation_key
+    end
+  end
+
   private
     attr_reader :valuation_kind, :accountable_type
 
     def opening_anchor_name
       case accountable_type
       when "Property", "Vehicle"
-        I18n.t("valuations.names.original_purchase_price")
+        "Original purchase price"
       when "Loan"
-        I18n.t("valuations.names.original_principal")
+        "Original principal"
       when "Investment", "Crypto", "OtherAsset"
-        I18n.t("valuations.names.opening_account_value")
+        "Opening account value"
       else
-        I18n.t("valuations.names.opening_balance")
+        "Opening balance"
       end
     end
 
     def current_anchor_name
       case accountable_type
       when "Property", "Vehicle"
-        I18n.t("valuations.names.current_market_value")
+        "Current market value"
       when "Loan"
-        I18n.t("valuations.names.current_loan_balance")
+        "Current loan balance"
       when "Investment", "Crypto", "OtherAsset"
-        I18n.t("valuations.names.current_account_value")
+        "Current account value"
       else
-        I18n.t("valuations.names.current_balance")
+        "Current balance"
       end
     end
 
     def recon_name
       case accountable_type
       when "Property", "Investment", "Vehicle", "Crypto", "OtherAsset"
-        I18n.t("valuations.names.manual_value_update")
+        "Manual value update"
       when "Loan"
-        I18n.t("valuations.names.manual_principal_update")
+        "Manual principal update"
       else
-        I18n.t("valuations.names.manual_balance_update")
+        "Manual balance update"
+      end
+    end
+
+    def opening_anchor_translation_key
+      case accountable_type
+      when "Property", "Vehicle" then :original_purchase_price
+      when "Loan" then :original_principal
+      when "Investment", "Crypto", "OtherAsset" then :opening_account_value
+      else :opening_balance
+      end
+    end
+
+    def current_anchor_translation_key
+      case accountable_type
+      when "Property", "Vehicle" then :current_market_value
+      when "Loan" then :current_loan_balance
+      when "Investment", "Crypto", "OtherAsset" then :current_account_value
+      else :current_balance
+      end
+    end
+
+    def reconciliation_translation_key
+      case accountable_type
+      when "Property", "Investment", "Vehicle", "Crypto", "OtherAsset" then :manual_value_update
+      when "Loan" then :manual_principal_update
+      else :manual_balance_update
       end
     end
 end

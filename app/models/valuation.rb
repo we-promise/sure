@@ -20,4 +20,11 @@ class Valuation < ApplicationRecord
       Valuation::Name.new("current_anchor", accountable_type).to_s
     end
   end
+
+  def display_name(entry)
+    name = Valuation::Name.new(kind, entry.account.accountable_type)
+    return entry.name unless entry.name == name.to_s
+
+    I18n.t("valuations.names.#{name.translation_key}")
+  end
 end
