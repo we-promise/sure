@@ -784,6 +784,38 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "active", goal.reload.state
   end
 
+  # Once a goal is closed, `current_balance` returns the frozen amount and stops
+  # tracking its accounts. Spending them afterwards used to send the projection
+  # ratio past 1 — a frozen amount over a live 100 scaled every historical point
+  # by the difference, drawing a chart that never happened.
+  #
+  # The series is stubbed at its collaborator rather than built from Balance
+  # rows: ChartSeriesBuilder returns zeros for a fixture account here, and a
+  # series of zeros multiplies to zero whatever the ratio, so the assertion
+  # would pass without proving anything.
+  test "the projection never scales the saved series past the accounts it came from" do
+    goal = @family.goals.create!(name: "Closed trip", target_amount: 4_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: @depository, allocated_amount: 4_000)
+    end
+    goal.complete!
+    @depository.update!(balance: 100)
+
+    historical = OpenStruct.new(date: Date.current, value: Money.new(5_000, "USD"))
+    Balance::ChartSeriesBuilder.any_instance
+                               .stubs(:balance_series)
+                               .returns(OpenStruct.new(values: [ historical ]))
+
+    payload = Goal.find(goal.id).projection_payload
+
+    # The series is the WHOLE linked-account history, scaled to this goal's
+    # share of it. A share cannot exceed the whole, so no point may come out
+    # above the historical figure it was scaled from — whatever the frozen
+    # amount says. Unclamped this rendered 5,000 x 33.
+    assert_not_empty payload[:saved_series], "empty series would make this assertion vacuous"
+    assert_operator payload[:saved_series].first[:value].to_d, :<=, 5_000,
+                    "a saved point outran the history it was scaled from"
+  end
+
   private
     # A fresh account: the fixtures deliberately carry three goals holding
     # whole-account links on `depository`, a legacy overlap the exclusivity

@@ -462,7 +462,14 @@ class Goal < ApplicationRecord
     whole_total = linked_accounts.select { |a| a.currency == currency }.sum { |a| a.balance.to_d }
     # 0 when the linked-account total is non-positive: current_balance is forced
     # to 0 there, so the saved series must end at 0 too (no stray non-zero tail).
+    #
+    # Capped at 1 because `current_balance` no longer tracks the accounts once a
+    # goal is closed: it returns the amount frozen at completion. Spend those
+    # accounts afterwards and the ratio runs away — a frozen 4,000 over a live
+    # 100 scales every historical point by fifty, drawing a chart that never
+    # happened. The goal's share of its accounts cannot exceed all of them.
     backing_ratio = whole_total.positive? ? (current_balance.to_d / whole_total) : 0.to_d
+    backing_ratio = 1.to_d if backing_ratio > 1
     saved_series = series_values.map { |v| { date: v.date.to_s, value: (v.value.amount.to_d * backing_ratio).to_f } }
 
     earliest = series_values.first&.date || created_at.to_date
