@@ -127,7 +127,8 @@ class GenerateInsightsJob < ApplicationJob
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(status: "active", facts: facts, generated_at: Time.current, read_at: nil)
+          existing.update!(title: generated.title, status: "active", facts: facts,
+                           generated_at: Time.current, read_at: nil)
           existing
         else
           # Same signal, same numbers: don't rewrite the body (avoids an LLM

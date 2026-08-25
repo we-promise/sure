@@ -172,6 +172,20 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal original_body, insight.body, "a rename is not worth an LLM rewrite"
     assert insight.read?, "a rename is not a reason to nag the user again"
   end
+  test "a reactivated insight also picks up a renamed subject" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.update!(status: "expired")
+
+    stub_generated([ generated_insight(title: "Idle cash in Holiday Fund") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert insight.active?
+    assert_equal "Idle cash in Holiday Fund", insight.title
+  end
   test "acknowledged insight stays acknowledged when numbers are unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
