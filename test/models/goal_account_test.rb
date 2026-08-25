@@ -171,4 +171,19 @@ class GoalAccountTest < ActiveSupport::TestCase
 
     assert @goal.save, @goal.errors.full_messages.to_sentence
   end
+
+  # A link changing owner still carries its OLD goal_id in the database, so
+  # excluding by goal alone handed the moving row back as its own conflict.
+  test "moving a whole-account link to another goal is not blocked by itself" do
+    destination_goal = goals(:emergency_fund) == @goal ? goals(:vacation_italy) : goals(:emergency_fund)
+    solo = Account.create!(
+      family: families(:dylan_family), accountable: Depository.new,
+      name: "Solo #{SecureRandom.hex(4)}", currency: "USD", balance: 2_000
+    )
+    link = @goal.goal_accounts.create!(account: solo, allocated_amount: nil)
+
+    link.goal = destination_goal
+
+    assert link.valid?, link.errors.full_messages.to_sentence
+  end
 end

@@ -80,7 +80,11 @@ class Goal < ApplicationRecord
   # account being written) and by the restore guard (which asks about every
   # account this goal claims in full). One query, one scope: the two cannot
   # drift into disagreeing about what "already claimed" means.
-  def whole_account_conflicts_on(account_ids)
+  # `excluding_link_id` is the row being written, when there is one. Excluding
+  # by goal alone is not enough for a link that is CHANGING goals: its persisted
+  # row still carries the old goal_id, so the query hands it back and the link
+  # conflicts with itself.
+  def whole_account_conflicts_on(account_ids, excluding_link_id: nil)
     ids = Array(account_ids).compact
     return GoalAccount.none if ids.empty?
 
@@ -89,7 +93,9 @@ class Goal < ApplicationRecord
                        .where(goals: { family_id: family_id })
                        .where.not(goals: { state: RELEASED_STATES })
 
-    persisted? ? scope.where.not(goal_id: id) : scope
+    scope = scope.where.not(goal_id: id) if persisted?
+    scope = scope.where.not(id: excluding_link_id) if excluding_link_id
+    scope
   end
 
   attr_writer :pooled_allocations

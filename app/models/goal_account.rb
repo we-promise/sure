@@ -51,7 +51,7 @@ class GoalAccount < ApplicationRecord
                     will_save_change_to_account_id? ||
                     will_save_change_to_goal_id?
 
-      other = goal.whole_account_conflicts_on(account_id).first
+      other = goal.whole_account_conflicts_on(account_id, excluding_link_id: id).first
       return if other.nil?
 
       errors.add(:base, :account_already_fully_earmarked, goal_name: other.goal.name)
