@@ -7,14 +7,10 @@ ru:
       success: Перевод удалён
     form:
       amount: Сумма
-      calculate_rate_tab: Рассчитать курс валют
-      convert_tab: Конвертировать по курсу валют
       date: Дата
       destination_amount: Сумма на счёт назначения
       destination_amount_display: 'Сумма на счёт назначения: %{amount}'
-      exchange_rate: Курс валют
       exchange_rate_display: 'Курс валют: %{rate}'
-      exchange_rate_help: Выберите, как ввести сумму перевода.
       expense: Расход
       from: Откуда
       income: Доход

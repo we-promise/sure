@@ -17,5 +17,10 @@ pt-BR:
       exchange_rate_help: Escolha como inserir o valor.
     syncing_notice:
       syncing: Sincronizando dados das contas...
+    family_moniker:
+      group_plural: Grupos
+      group_singular: Grupo
+      plural: Famílias
+      singular: Família
     trend_change:
       no_change: "sem alteração"

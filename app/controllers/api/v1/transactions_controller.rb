@@ -99,9 +99,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
-      @entry.sync_account_later
       @entry.lock_saved_attributes!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.mark_user_modified! if user_modified_requested?
+      @entry.sync_account_later
 
       @transaction = @entry.transaction
       render :show, status: :created
@@ -310,8 +311,18 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :user_modified, tag_ids: []
       )
+    end
+
+    # An API client can opt a transaction it creates into the same
+    # sync-protection a manual edit gets (Entry#protected_from_sync?) -
+    # useful for a client that owns its own writes into an account also
+    # linked to a bank-sync provider (Plaid/SimpleFin/etc.), so the next
+    # sync only links its external_id to the entry instead of overwriting
+    # the category/name the client already set.
+    def user_modified_requested?
+      ActiveModel::Type::Boolean.new.cast(transaction_params[:user_modified])
     end
 
     def account_id_param
