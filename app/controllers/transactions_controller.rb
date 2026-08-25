@@ -73,16 +73,21 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
-    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
+    @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
+      Current.accessible_entries.uncategorized_transactions.count
+    end
 
     # Load projected recurring transactions for next 10 days
-    @projected_recurring = Current.family.recurring_transactions
-                                  .accessible_by(Current.user)
-                                  .active
-                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
-                                         10.days.from_now.to_date,
-                                         Date.current)
-                                  .includes(:merchant)
+    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+      Current.family.recurring_transactions
+                    .accessible_by(Current.user)
+                    .active
+                    .where("next_expected_date <= ? AND next_expected_date >= ?",
+                           10.days.from_now.to_date,
+                           Date.current)
+                    .includes(:merchant)
+                    .to_a
+    end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
@@ -446,6 +451,32 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # Scoped by user (not just family) because Current.accessible_entries is
+    # user-scoped for family sharing (see Current#accessible_entries).
+    #
+    # Includes Family#accounts_status_version because `uncategorized_transactions`
+    # filters on account status (draft/active), and toggling an account's
+    # active status (AccountsController#toggle_active) doesn't touch `entries`
+    # or `AccountShare`, so it wouldn't otherwise bust this cache.
+    def uncategorized_count_cache_key
+      "transactions_uncategorized_count/v3/#{Current.family.id}/#{Current.user.id}/" \
+        "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
+    end
+
+    # Scoped additionally by Date.current since the "next 10 days" window is
+    # date-dependent and would otherwise return a stale window on a cache hit
+    # from an earlier day.
+    #
+    # Includes Family#recurring_transaction_merchants_version because the
+    # cached records are preloaded with :merchant and rendered with its
+    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
+    # doesn't touch `recurring_transactions`.
+    def projected_recurring_cache_key
+      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
+        "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
+    end
+
     # The "Mark as Recurring" block is only ever rendered under these same
     # conditions (see transactions/show.html.erb), so skip the extra query
     # entirely when it won't be used — this runs on every show/failed-update
