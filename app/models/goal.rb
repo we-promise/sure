@@ -88,7 +88,16 @@ class Goal < ApplicationRecord
   # it is a read. Callers take this first so the read and the write that
   # follows are one step as far as any other request is concerned.
   def self.lock_whole_account_claims!(account_id)
-    connection.execute("SELECT pg_advisory_xact_lock(#{whole_account_claim_lock_key(account_id)})")
+    # Bound rather than interpolated. The key is a digest of an id and could
+    # not carry a payload, but a hand-built SQL string in a model is the shape
+    # a reader has to stop and verify — and Brakeman flags it, correctly.
+    connection.exec_query(
+      "SELECT pg_advisory_xact_lock($1)",
+      "Goal Whole-Account Claim Lock",
+      [ ActiveRecord::Relation::QueryAttribute.new(
+          "key", whole_account_claim_lock_key(account_id), ActiveRecord::Type::BigInteger.new
+        ) ]
+    )
   end
 
   def self.whole_account_claim_lock_key(account_id)
