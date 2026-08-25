@@ -454,7 +454,12 @@ class Goal < ApplicationRecord
       update!(consumed_amount: consumed_amount.to_d + amount)
     end
 
-    reload_after_consumption
+    # `reload` refreshes the columns and leaves the memos standing. Consuming
+    # moves the same balance-derived figures a transition does — and shrinks a
+    # link's allocation, so the pooled-allocation memo goes with them.
+    reload
+    reset_state_dependent_caches!
+    self
   end
 
   def remaining_amount_money
@@ -956,17 +961,6 @@ class Goal < ApplicationRecord
     # that had already read its progress kept reporting the figures from before
     # the spend. Same list `reset_state_dependent_caches!` clears on an AASM
     # transition, and for the same reason.
-    def reload_after_consumption
-      %i[
-        @current_balance @current_balance_money
-        @remaining_amount @remaining_amount_money
-        @progress_percent @monthly_target_amount
-        @pace @pace_money @status @display_status @projection_summary
-      ].each { |ivar| remove_instance_variable(ivar) if instance_variable_defined?(ivar) }
-
-      reload
-    end
-
     def consumption_link_for(account)
       links = goal_accounts.to_a
       raise ConsumptionRefused.new(:no_linked_account) if links.empty?
