@@ -39,8 +39,12 @@ class PillComponentPreview < ViewComponent::Preview
   # @!endgroup
 
   # @!group Status badges (marker: false, semantic tones)
+  # Badge mode is dot-less by default — tone + label carry the signal. Opt the
+  # dot back in with show_dot: true only where it's genuinely additive (live /
+  # temporal status, or a single sparse pill). status_active below shows the
+  # opt-in; status_pending / status_archived show the clean default.
   def status_active
-    render DS::Pill.new(label: "Active", tone: :success, marker: false)
+    render DS::Pill.new(label: "Active", tone: :success, marker: false, show_dot: true)
   end
 
   def status_pending
@@ -65,4 +69,19 @@ class PillComponentPreview < ViewComponent::Preview
     render DS::Pill.new(label: "Past due", tone: :error, marker: false, size: :md)
   end
   # @!endgroup
+
+  # The categories/_badge recipe: user-chosen hex via custom_color, icon at
+  # "sm", and truncate so the label ellipsizes inside a tight min-w-0 column.
+  # @display container_classes max-w-[140px]
+  def category_badge_truncating
+    render DS::Pill.new(
+      label: "Subscriptions & Memberships",
+      custom_color: "#7c3aed",
+      icon: "credit-card",
+      icon_size: "sm",
+      marker: false,
+      size: :md,
+      truncate: true
+    )
+  end
 end

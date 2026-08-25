@@ -116,6 +116,20 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "reset status returns family data counts" do
+    import_session = @user.family.import_sessions.create!(expected_chunks: 1)
+    import_session.imports.create!(
+      family: @user.family,
+      type: "SureImport",
+      sequence: 1,
+      checksum: "a" * 64
+    )
+    import_session.source_mappings.create!(
+      family: @user.family,
+      source_type: "Category",
+      source_id: "source-category-1",
+      target: @user.family.categories.first
+    )
+
     get "/api/v1/users/reset/status", headers: api_headers(@read_only_api_key)
 
     assert_response :ok
@@ -124,6 +138,8 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_includes %w[complete data_remaining], body["status"]
     assert_equal body["counts"].values.sum.zero?, body["reset_complete"]
     assert_equal expected_reset_count_keys.sort, body["counts"].keys.sort
+    assert_equal 1, body["counts"]["import_sessions"]
+    assert_equal 1, body["counts"]["import_source_mappings"]
   end
 
   test "reset status ignores the follow-up family sync after reset" do

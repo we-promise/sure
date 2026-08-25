@@ -1,6 +1,9 @@
 ---
 en:
   budgets:
+    switcher:
+      aria_label: "Switch budget"
+      household: "Household"
     budget_donut:
       spent: "Spent"
       new_budget: "New budget"
@@ -48,6 +51,7 @@ en:
         title: Over Budget
       filter:
         all: All
+        aria_label: Filter budget categories
         on_track: On Track
         over_budget: Over Budget
       tabs:

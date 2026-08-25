@@ -50,7 +50,8 @@ module Admin
       authorize @sso_provider
 
       # Auto-update redirect_uri if name changed
-      params_hash = processed_params.to_h
+      params_hash = processed_params.to_h.with_indifferent_access
+      params_hash.delete(:client_secret) if params_hash[:client_secret].blank?
       if params_hash[:name].present? && params_hash[:name] != @sso_provider.name
         params_hash[:redirect_uri] = "#{request.base_url}/auth/#{params_hash[:name]}/callback"
       end

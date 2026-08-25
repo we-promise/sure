@@ -178,6 +178,49 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
     assert_equal content_hash, external_id_hash, "Importer content hash should match processor's MD5 hash"
   end
 
+  test "refreshes a stored transaction when it flips from pending to posted" do
+    # Same Lunchflow transaction ID, first returned as pending then as posted.
+    pending_version = {
+      "id" => "txn_456",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -42.00,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "AMAZON",
+      "description" => "Order",
+      "isPending" => true
+    }
+    posted_version = pending_version.merge("isPending" => false)
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+
+    # First sync stores the pending version
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ pending_version ], count: 1 })
+
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size
+    assert_equal true, payload.first.with_indifferent_access[:isPending]
+
+    # Second sync returns the same transaction, now posted
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ posted_version ], count: 1 })
+
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size, "must not duplicate the transaction on status change"
+    assert_equal false, payload.first.with_indifferent_access[:isPending],
+      "stored snapshot must refresh so the pending→posted transition reaches the processor"
+  end
+
   test "transactions with IDs are not affected by content hash logic" do
     # Transaction with a proper ID
     transaction_with_id = {
@@ -214,5 +257,43 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
     result = importer.send(:fetch_and_store_transactions, @lunchflow_account)
     assert result[:success]
     assert_equal 1, @lunchflow_account.reload.raw_transactions_payload.size
+  end
+
+  test "preserves identical blank-ID transactions that arrive in the same response" do
+    # Two legitimately distinct but identical purchases (e.g. the same coffee bought
+    # twice). Lunchflow returns blank IDs, so they share a content hash — but both are
+    # real and must survive so LunchflowEntry::Processor can suffix the collision.
+    # Regression: the previous key-Hash merge collapsed the pair into one, dropping a
+    # real transaction before processing.
+    duplicate = {
+      "id" => "",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -3.50,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "CAFE",
+      "description" => "Flat white",
+      "isPending" => true
+    }
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ duplicate.dup, duplicate.dup ], count: 2 })
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+
+    # First sync: both identical rows must be stored, not collapsed into one.
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    assert_equal 2, @lunchflow_account.reload.raw_transactions_payload.size,
+      "both same-response blank-ID collisions must be preserved"
+
+    # Second sync returns the same pair: matched one-for-one, so still two, not four.
+    importer.send(:fetch_and_store_transactions, @lunchflow_account)
+    assert_equal 2, @lunchflow_account.reload.raw_transactions_payload.size,
+      "re-syncing the same pair must not accumulate duplicates"
   end
 end

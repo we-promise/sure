@@ -2,7 +2,7 @@
 
 <% type = params[:type] || "buy" %>
 
-<%= styled_form_with url: trades_path(account_id: account&.id), scope: :model, data: { controller: "trade-form" } do |form| %>
+<%= styled_form_with url: trades_path(account_id: account&.id), scope: :model, data: { controller: "trade-form", trade_type: type } do |form| %>
   <div class="space-y-4">
     <% if model.errors.any? %>
       <%= render "shared/form_errors", model: model %>

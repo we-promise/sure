@@ -1,0 +1,17 @@
+---
+zh-TW:
+  pdf_import_mailer:
+    next_steps:
+      greeting: '%{name} 您好，'
+      intro: 我們已經分析完您上傳到 %{product} 的 PDF 文件。
+      document_type_label: 文件類型
+      summary_label: AI 摘要
+      transactions_note: 這份文件看起來含有交易資料，您現在就可以擷取並檢視。
+      document_stored_note: 這份文件已經保存下來供您參考，日後在 AI 對話中也可以拿來提供背景資訊。
+      next_steps_label: 接下來呢？
+      next_steps_intro: 您有幾個選擇：
+      option_extract_transactions: 從這份對帳單擷取交易
+      option_keep_reference: 保留這份文件，供日後 AI 對話參考
+      option_delete: 如果不再需要，就刪除這筆匯入
+      view_import_button: 查看匯入詳情
+      footer_note: 這是一封自動寄送的訊息，請不要直接回覆這封郵件。

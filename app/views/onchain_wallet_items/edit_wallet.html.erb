@@ -1,0 +1,40 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", chain: Onchain::Chains.find!(@chain).label)) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <% if @error_message.present? %>
+        <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+      <% end %>
+
+      <%= render DS::Alert.new(variant: :info, message: t(".history_preserved")) %>
+
+      <%= styled_form_with url: change_address_onchain_wallet_item_path(@onchain_wallet_item),
+                           method: :patch,
+                           data: { turbo_frame: "modal" },
+                           class: "space-y-4" do |form| %>
+        <%= hidden_field_tag :chain, @chain %>
+        <%= hidden_field_tag :address, @address %>
+
+        <div>
+          <p class="text-sm text-secondary"><%= t(".current_address") %></p>
+          <p class="text-sm text-primary break-all"><%= @address %></p>
+        </div>
+
+        <%= form.text_field :new_address,
+                            label: t(".new_address_label"),
+                            placeholder: t(".new_address_placeholder"),
+                            required: true %>
+
+        <div class="flex justify-end gap-2">
+          <%= render DS::Link.new(
+                text: t(".cancel"),
+                variant: "secondary",
+                href: manage_onchain_wallet_item_path(@onchain_wallet_item)
+              ) %>
+          <%= form.submit t(".save") %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

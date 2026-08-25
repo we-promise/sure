@@ -62,16 +62,27 @@ class Api::V1::TradesController < Api::V1::BaseController
       model.lock_saved_attributes!
       model.mark_user_modified!
       model.sync_account_later
-      @trade = model.trade
+
+      if model.entryable.is_a?(Transaction)
+        @transaction = model.entryable
+        render template: "api/v1/transactions/show", status: :created
+      else
+        @trade = model.trade
+        apply_trade_create_options!
+        return if performed?
+        @entry = @trade.entry
+        render :show, status: :created
+      end
+    elsif model.is_a?(Transfer)
+      @transfer = model
+      render template: "api/v1/transfers/show", status: :created
     else
       @trade = model
+      apply_trade_create_options!
+      return if performed?
+      @entry = @trade.entry
+      render :show, status: :created
     end
-
-    apply_trade_create_options!
-    return if performed?
-
-    @entry = @trade.entry
-    render :show, status: :created
   rescue ActiveRecord::RecordNotFound => e
     message = (e.model == "Account") ? "Account not found" : "Security not found"
     render json: { error: "not_found", message: message }, status: :not_found
@@ -146,7 +157,8 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id
+        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :fee, :type, :amount, :transfer_account_id
       )
     end
 
@@ -202,11 +214,70 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     def build_create_form_params(account)
       type = params.dig(:trade, :type).to_s.downcase
-      unless %w[buy sell].include?(type)
-        render_validation_error("Type must be buy or sell", [ "type must be 'buy' or 'sell'" ])
+      unless %w[buy sell dividend deposit withdrawal interest].include?(type)
+        render_validation_error("Invalid type", [ "type must be 'buy', 'sell', 'dividend', 'deposit', 'withdrawal', or 'interest'" ])
         return nil
       end
 
+      case type
+      when "deposit", "withdrawal"
+        unless trade_params[:amount].present?
+          render_validation_error("Amount is required", [ "amount must be present for deposit/withdrawal" ])
+          return nil
+        end
+
+        unless trade_params[:date].present?
+          render_validation_error("Date is required", [ "date must be present" ])
+          return nil
+        end
+
+        {
+          account: account,
+          date: trade_params[:date],
+          amount: parse_positive_amount!(trade_params[:amount], context: "deposit/withdrawal"),
+          currency: trade_params[:currency].presence || account.currency,
+          type: type,
+          transfer_account_id: trade_params[:transfer_account_id]
+        }.compact
+
+      when "interest"
+        unless trade_params[:date].present?
+          render_validation_error("Date is required", [ "date must be present" ])
+          return nil
+        end
+
+        unless trade_params[:amount].present?
+          render_validation_error("Amount is required", [ "amount must be present" ])
+          return nil
+        end
+
+        ticker_value = nil
+        manual_ticker_value = nil
+        if trade_params[:ticker].present?
+          ticker_value = trade_params[:ticker]
+        elsif trade_params[:manual_ticker].present?
+          manual_ticker_value = trade_params[:manual_ticker]
+        end
+
+        {
+          account: account,
+          date: trade_params[:date],
+          amount: parse_positive_amount!(trade_params[:amount], context: "interest"),
+          currency: trade_params[:currency].presence || account.currency,
+          type: type,
+          ticker: ticker_value,
+          manual_ticker: manual_ticker_value
+        }.compact
+
+      when "dividend"
+        build_dividend_params(account)
+
+      else
+        build_investment_trade_params(account)
+      end
+    end
+
+    def build_investment_trade_params(account)
       ticker_value = nil
       manual_ticker_value = nil
 
@@ -245,8 +316,46 @@ class Api::V1::TradesController < Api::V1::BaseController
         date: trade_params[:date],
         qty: qty,
         price: price,
+        fee: trade_params[:fee].to_d,
         currency: trade_params[:currency].presence || account.currency,
-        type: type,
+        type: trade_params[:type].to_s.downcase,
+        ticker: ticker_value,
+        manual_ticker: manual_ticker_value
+      }.compact
+    end
+
+    def build_dividend_params(account)
+      ticker_value = nil
+      manual_ticker_value = nil
+
+      unless trade_params[:date].present?
+        render_validation_error("Date is required", [ "date must be present" ])
+        return nil
+      end
+
+      if trade_params[:security_id].present?
+        security = Security.find(trade_params[:security_id])
+        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+      elsif trade_params[:ticker].present?
+        ticker_value = trade_params[:ticker]
+      elsif trade_params[:manual_ticker].present?
+        manual_ticker_value = trade_params[:manual_ticker]
+      else
+        render_validation_error("Security identifier required", [ "Provide security_id, ticker, or manual_ticker" ])
+        return nil
+      end
+
+      unless trade_params[:amount].present?
+        render_validation_error("Amount is required", [ "amount must be present for dividend" ])
+        return nil
+      end
+
+      {
+        account: account,
+        date: trade_params[:date],
+        amount: parse_positive_amount!(trade_params[:amount], context: "dividend"),
+        currency: trade_params[:currency].presence || account.currency,
+        type: "dividend",
         ticker: ticker_value,
         manual_ticker: manual_ticker_value
       }.compact
@@ -296,10 +405,21 @@ class Api::V1::TradesController < Api::V1::BaseController
       }, status: :internal_server_error
     end
 
+    def parse_positive_amount!(raw, context:)
+      value_raw = raw.to_s.strip
+      return render_validation_error("Amount is required", [ "amount must be present for #{context}" ]) if value_raw.blank?
+
+      value = value_raw.to_d
+      non_numeric = value.zero? && value_raw !~ /\A0(\.0*)?\z/
+      return render_validation_error("Amount must be a valid number", [ "amount must be a valid positive number" ]) if non_numeric || value <= 0
+
+      value
+         end
+
     def safe_page_param
       page = params[:page].to_i
       page > 0 ? page : 1
-    end
+   end
 
     def safe_per_page_param
       per_page = params[:per_page].to_i

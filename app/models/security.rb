@@ -79,23 +79,28 @@ class Security < ApplicationRecord
   # doesn't end in a supported quote.
   def crypto_base_asset
     return nil unless crypto?
-    Provider::BinancePublic::QUOTE_TO_CURRENCY.each_value do |suffix|
-      next unless ticker.end_with?(suffix)
-      base = ticker.delete_suffix(suffix)
-      return base unless base.empty?
-    end
-    nil
+
+    # Delegated rather than parsed here: this stripped a fiat suffix only, so it
+    # answered nil for the "CRYPTO:BTC" form the holdings processors store — the
+    # form every crypto integration writes — and those securities carried no
+    # logo at all. The provider already parses every shape it accepts.
+    Provider::BinancePublic.parse_ticker(ticker)&.dig(:base)
   end
 
-  # Single source of truth for which logo URL the UI should render. Crypto
-  # and stocks share the same shape: prefer a freshly computed Brandfetch
-  # URL (honors current client_id + size) and fall back to any stored
-  # logo_url for the provider-returns-its-own-URL case (e.g. Tiingo S3).
+  # Single source of truth for which logo URL the UI should render.
+  # - Crypto keeps its dedicated Brandfetch-crypto shape.
+  # - When a website domain is known, Brandfetch (consistent client_id + size)
+  #   wins, falling back to any stored logo_url.
+  # - With no domain, a stored provider logo (e.g. T-Invest's CDN for MOEX
+  #   instruments) is authoritative and beats the ticker-only Brandfetch
+  #   lettermark placeholder.
   def display_logo_url
     if crypto?
       self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
-    else
+    elsif website_url.present?
       brandfetch_icon_url.presence || logo_url.presence
+    else
+      logo_url.presence || brandfetch_icon_url.presence
     end
   end
 

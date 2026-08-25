@@ -3,25 +3,48 @@
     {
       "warning_type": "Redirect",
       "warning_code": 18,
-      "fingerprint": "556f2fdd1f091ed50811cb2cce28dd2b987cd0a2eed4d19bea138c8c083a3a5d",
+      "fingerprint": "6d0cf62d5751106cd05dd3b4622beacaba9bdf91aaf798c2003a2a65e6bb903c",
       "check_name": "Redirect",
       "message": "Possible unprotected redirect",
       "file": "app/controllers/snaptrade_items_controller.rb",
-      "line": 125,
+      "line": 36,
       "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
-      "code": "redirect_to(Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id)), :allow_other_host => true)",
+      "code": "redirect_to(Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id, :return_to => params[:return_to], :accountable_type => params[:accountable_type])), :allow_other_host => true)",
       "render_path": null,
       "location": {
         "type": "method",
         "class": "SnaptradeItemsController",
         "method": "connect"
       },
-      "user_input": "Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id))",
+      "user_input": "Current.family.snaptrade_items.find(params[:id]).connection_portal_url(:redirect_url => callback_snaptrade_items_url(:item_id => Current.family.snaptrade_items.find(params[:id]).id, :return_to => params[:return_to], :accountable_type => params[:accountable_type]))",
       "confidence": "Weak",
       "cwe_id": [
         601
       ],
-      "note": "Intentional redirect to SnapTrade's external OAuth portal for brokerage connection"
+      "note": "Intentional redirect to SnapTrade's external OAuth portal for brokerage connection. return_to/accountable_type are only used to route the user back to setup_accounts after the portal callback and are echoed verbatim, not used to build the redirect target itself."
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
+      "fingerprint": "fc14dec97ce908f7483a8eb1f3aa6ea38f4369b8f9fe656e089c91a91c01a125",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/snaptrade_items_controller.rb",
+      "line": 201,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(Provider::Snaptrade.authorize_url(:redirect_uri => oauth_callback_snaptrade_items_url, :state => SecureRandom.hex(32), :code_challenge => Provider::Snaptrade.generate_pkce[:challenge]), :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "SnaptradeItemsController",
+        "method": "oauth_authorize"
+      },
+      "user_input": "Provider::Snaptrade.authorize_url(:redirect_uri => oauth_callback_snaptrade_items_url, :state => SecureRandom.hex(32), :code_challenge => Provider::Snaptrade.generate_pkce[:challenge])",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "Intentional redirect to SnapTrade's external OAuth authorize endpoint. URL is built entirely from Provider::Snaptrade::AUTHORIZE_URL (hardcoded constant), server-side oauth_client_id config, the internal oauth_callback_snaptrade_items_url named route, and locally generated SecureRandom state/PKCE values -- no request params are interpolated into the redirect target."
     },
     {
       "warning_type": "Redirect",
@@ -49,13 +72,13 @@
     {
       "warning_type": "Mass Assignment",
       "warning_code": 105,
-      "fingerprint": "d770e95392c6c69b364dcc0c99faa1c8f4f0cceb085bcc55630213d0b7b8b87f",
+      "fingerprint": "81c63f2c375da309440b9308df3ae9d1fcbada7043a26919898b08f3a38b29f6",
       "check_name": "PermitAttributes",
       "message": "Potentially dangerous key allowed for mass assignment",
       "file": "app/controllers/api/v1/trades_controller.rb",
-      "line": 165,
+      "line": 159,
       "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
-      "code": "params.require(:trade).permit(:account_id, :date, :qty, :price, :currency, :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id)",
+      "code": "params.require(:trade).permit(:account_id, :date, :qty, :price, :currency, :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id, :fee, :type, :amount, :transfer_account_id)",
       "render_path": null,
       "location": {
         "type": "method",
@@ -67,7 +90,7 @@
       "cwe_id": [
         915
       ],
-      "note": "account_id and security_id validated in create/update: account via family.accounts.find and supports_trades?, security via resolve_security"
+      "note": "account_id validated in create action (line 42: family.accounts.visible.find ensures family membership; lines 44-48: supports_trades? check); security_id validated via Security.find (line 290); transfer_account_id validated in Transfer::Creator where family.accounts.find scopes both source and destination accounts to the family (app/models/transfer/creator.rb lines 4-5); type validated in build_create_form_params against allowed values: buy, sell, dividend, deposit, withdrawal, interest (line 217)"
     },
     {
       "warning_type": "Mass Assignment",
@@ -118,13 +141,13 @@
     {
       "warning_type": "Dangerous Eval",
       "warning_code": 13,
-      "fingerprint": "c154514a0f86341473e4abf35e77721495b326c7855e4967d284b4942371819c",
+      "fingerprint": "ad8e31fe9321feba741d551654a6fb0c0c7cfe8abee81822e6143404817bff5b",
       "check_name": "Evaluation",
       "message": "Dynamic string evaluated as code",
       "file": "app/helpers/styled_form_builder.rb",
-      "line": 5,
+      "line": 10,
       "link": "https://brakemanscanner.org/docs/warning_types/dangerous_eval/",
-      "code": "class_eval(\"      def #{selector}(method, options = {})\\n        form_options = options.slice(:label, :label_tooltip, :inline, :container_class, :required)\\n        html_options = options.except(:label, :label_tooltip, :inline, :container_class)\\n\\n        build_field(method, form_options, html_options) do |merged_options|\\n          super(method, merged_options)\\n        end\\n      end\\n\", \"app/helpers/styled_form_builder.rb\", (5 + 1))",
+      "code": "class_eval(\"      def #{selector}(method, options = {})\\n        form_options = options.slice(:label, :label_tooltip, :inline, :container_class, :required)\\n        html_options = options.except(:label, :label_tooltip, :inline, :container_class)\\n\\n        build_field(method, form_options, html_options) do |merged_options|\\n          super(method, merged_options)\\n        end\\n      end\\n\", \"app/helpers/styled_form_builder.rb\", (10 + 1))",
       "render_path": null,
       "location": {
         "type": "method",

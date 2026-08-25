@@ -24,6 +24,16 @@
 
     <%= yield form %>
 
+    <% if account.persisted? && account.supports_category_matcher? %>
+      <div class="flex items-center justify-between gap-3 py-2">
+        <div class="space-y-1">
+          <p class="text-sm text-primary"><%= t(".enable_category_matcher_label") %></p>
+          <p class="text-secondary text-sm"><%= t(".enable_category_matcher_hint") %></p>
+        </div>
+        <%= form.toggle :enable_category_matcher %>
+      </div>
+    <% end %>
+
     <details class="group">
       <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
         <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
@@ -43,6 +53,11 @@
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
             rows: 4 %>
+
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm"><%= t(".exclude_from_reports") %></span>
+          <%= form.toggle :exclude_from_reports %>
+        </div>
       </div>
     </details>
   </div>

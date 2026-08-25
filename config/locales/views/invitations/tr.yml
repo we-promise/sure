@@ -1,7 +1,16 @@
 ---
 tr:
   invitations:
+    accept_choice:
+      create_account: Yeni hesap oluştur
+      joined_household: Haneye katıldınız.
+      message: "%{inviter} sizi %{role} olarak katılmaya davet etti."
+      sign_in_existing: Zaten bir hesabım var
+      title: "%{family} hanesine katıl"
     create:
+      existing_user_added: Kullanıcı hanenize eklendi.
+      existing_user_has_family_data: Bu kullanıcının zaten hesapları olan bir hanesi
+        var. Sizinkine katılmadan önce bu hesapları kaldırması veya devretmesi gerekiyor.
       failure: Davetiye gönderilemedi
       success: Davetiye başarıyla gönderildi
     destroy:
@@ -12,8 +21,10 @@ tr:
       email_label: E-posta Adresi
       email_placeholder: E-posta adresi girin
       role_admin: Yönetici
+      role_guest: Misafir
       role_label: Rol
       role_member: Üye
       submit: Davet Gönder
-      subtitle: "%{product_name}'de aile hesabınıza katılmaları için bir davetiye gönderin"
+      subtitle: "%{product_name}'de %{moniker} hesabınıza katılmaları için bir davetiye
+        gönderin"
       title: Birini Davet Et

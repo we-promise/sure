@@ -160,6 +160,19 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "https://example.com/aapl.png", sec.display_logo_url
   end
 
+  test "display_logo_url for non-crypto with no website prefers stored logo over brandfetch lettermark" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.new(
+      ticker: "SBER",
+      exchange_operating_mic: "MISX",
+      logo_url: "https://invest-brands.cdn-tinkoff.ru/SBERx160.png"
+    )
+
+    assert_equal "https://invest-brands.cdn-tinkoff.ru/SBERx160.png", sec.display_logo_url
+  end
+
   test "before_save writes the /crypto/{base} URL to logo_url for new crypto securities" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
@@ -173,5 +186,26 @@ class SecurityTest < ActiveSupport::TestCase
       "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
       sec.logo_url
     )
+  end
+
+  # Every crypto integration stores the prefixed form — the on-chain wallets,
+  # Kraken, CoinStats and Binance all write "CRYPTO:BTC" — and this answered nil
+  # for all of them, so none of their securities carried a logo.
+  test "resolves the base asset from a prefixed crypto ticker" do
+    security = Security.new(ticker: "CRYPTO:BTC", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+
+    assert_equal "BTC", security.crypto_base_asset
+  end
+
+  test "still resolves the pair form the search results produce" do
+    security = Security.new(ticker: "BTCUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+
+    assert_equal "BTC", security.crypto_base_asset
+  end
+
+  test "a non-crypto security has no base asset" do
+    security = Security.new(ticker: "AAPL", exchange_operating_mic: "XNAS")
+
+    assert_nil security.crypto_base_asset
   end
 end

@@ -2,12 +2,26 @@
 # Handles authentication and requests to the CoinStats OpenAPI.
 class Provider::Coinstats < Provider
   include HTTParty
+  include Provider::RateLimitable
   extend SslConfigurable
 
   # Subclass so errors caught in this provider are raised as Provider::Coinstats::Error
   Error = Class.new(Provider::Error)
+  class RateLimitError < Error
+    attr_reader :retry_after
+
+    def initialize(message, details: nil, retry_after: nil)
+      super(message, details: details)
+      @retry_after = retry_after
+    end
+  end
 
   BASE_URL = "https://openapiv1.coinstats.app"
+  PROVIDER_ENV_PREFIX = "COINSTATS"
+  MIN_REQUEST_INTERVAL = 0.5
+  MAX_RETRIES = 2
+  INITIAL_RETRY_DELAY = 1
+  MAX_RETRY_DELAY = 10
 
   headers "User-Agent" => "Sure Finance CoinStats Client (https://github.com/we-promise/sure)"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
@@ -322,12 +336,14 @@ class Provider::Coinstats < Provider
   # @return [Provider::Response] Response with DeFi position data
   def get_wallet_defi(address:, connection_id:)
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/wallet/defi",
-        headers: auth_headers,
-        query: { address: address, connectionId: connection_id }
-      )
-      handle_response(res)
+      with_retries("GET /wallet/defi") do
+        res = self.class.get(
+          "#{BASE_URL}/wallet/defi",
+          headers: auth_headers,
+          query: { address: address, connectionId: connection_id }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /wallet/defi failed: #{e.class}: #{e.message}"
@@ -343,12 +359,14 @@ class Provider::Coinstats < Provider
     return with_provider_response { [] } if wallets.blank?
 
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/wallet/balances",
-        headers: auth_headers,
-        query: { wallets: wallets }
-      )
-      handle_response(res)
+      with_retries("GET /wallet/balances") do
+        res = self.class.get(
+          "#{BASE_URL}/wallet/balances",
+          headers: auth_headers,
+          query: { wallets: wallets }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /wallet/balances failed: #{e.class}: #{e.message}"
@@ -385,12 +403,14 @@ class Provider::Coinstats < Provider
     return with_provider_response { [] } if wallets.blank?
 
     with_provider_response do
-      res = self.class.get(
-        "#{BASE_URL}/wallet/transactions",
-        headers: auth_headers,
-        query: { wallets: wallets }
-      )
-      handle_response(res)
+      with_retries("GET /wallet/transactions") do
+        res = self.class.get(
+          "#{BASE_URL}/wallet/transactions",
+          headers: auth_headers,
+          query: { wallets: wallets }
+        )
+        handle_response(res)
+      end
     end
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
     Rails.logger.error "CoinStats API: GET /wallet/transactions failed: #{e.class}: #{e.message}"
@@ -429,11 +449,47 @@ class Provider::Coinstats < Provider
 
   private
 
+    def default_error_transformer(error)
+      return error if error.is_a?(Error)
+
+      super
+    end
+
     def auth_headers
       {
         "X-API-KEY" => api_key,
         "Accept" => "application/json"
       }
+    end
+
+    def with_retries(operation_name, max_retries: MAX_RETRIES)
+      retries = 0
+
+      begin
+        throttle_request
+        yield
+      rescue RateLimitError => e
+        retries += 1
+
+        if retries <= max_retries
+          delay = e.retry_after.presence || calculate_retry_delay(retries)
+          Rails.logger.warn(
+            "CoinStats API: #{operation_name} rate limited " \
+            "(attempt #{retries}/#{max_retries}). Retrying in #{delay}s..."
+          )
+          sleep(delay) if delay.to_f.positive?
+          retry
+        end
+
+        Rails.logger.error "CoinStats API: #{operation_name} rate limited after #{max_retries} retries"
+        raise
+      end
+    end
+
+    def calculate_retry_delay(retry_count)
+      base_delay = INITIAL_RETRY_DELAY * (2 ** (retry_count - 1))
+      jitter = base_delay * rand * 0.25
+      [ base_delay + jitter, MAX_RETRY_DELAY ].min
     end
 
     # The CoinStats API uses standard HTTP status codes to indicate the success or failure of requests.
@@ -454,12 +510,15 @@ class Provider::Coinstats < Provider
       when 404
         log_api_error(response, "Not Found")
         raise_api_error(response, fallback: "CoinStats: Resource not found")
+      when 406
+        log_api_error(response, "Not Acceptable")
+        raise_api_error(response, fallback: "CoinStats: Credits limit reached")
       when 409
         log_api_error(response, "Conflict")
         raise_api_error(response, fallback: "CoinStats: Resource conflict")
       when 429
         log_api_error(response, "Too Many Requests")
-        raise_api_error(response, fallback: "CoinStats: Rate limit exceeded, try again later")
+        raise_api_error(response, fallback: "CoinStats: Rate limit exceeded, try again later", error_class: RateLimitError)
       when 500
         log_api_error(response, "Internal Server Error")
         raise_api_error(response, fallback: "CoinStats: Server error, try again later")
@@ -476,14 +535,19 @@ class Provider::Coinstats < Provider
       Rails.logger.error "CoinStats API: #{response.code} #{error_type} - #{response.body}"
     end
 
-    def raise_api_error(response, fallback:)
+    def raise_api_error(response, fallback:, error_class: Error)
       error_payload = parse_error_payload(response.body)
       message = error_payload[:message].presence || fallback
       request_id = error_payload[:request_id].presence
+      retry_after = retry_after_seconds(response)
 
       message = "#{message} (requestId: #{request_id})" if request_id.present?
 
-      raise Error.new(message, details: error_payload.compact.presence)
+      if error_class == RateLimitError
+        raise error_class.new(message, details: error_payload.compact.presence, retry_after: retry_after)
+      end
+
+      raise error_class.new(message, details: error_payload.compact.presence)
     end
 
     def parse_error_payload(body)
@@ -497,5 +561,14 @@ class Provider::Coinstats < Provider
       }
     rescue JSON::ParserError
       {}
+    end
+
+    def retry_after_seconds(response)
+      retry_after = response.headers["Retry-After"] || response.headers["retry-after"]
+      return nil if retry_after.blank?
+
+      Integer(retry_after)
+    rescue ArgumentError, NoMethodError
+      nil
     end
 end

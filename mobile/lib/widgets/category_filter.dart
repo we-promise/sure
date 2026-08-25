@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/category.dart' as models;
 
 class CategoryFilter extends StatelessWidget {
@@ -15,6 +16,7 @@ class CategoryFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (availableCategories.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -32,7 +34,7 @@ class CategoryFilter extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
-              label: const Text('All'),
+              label: Text(l.commonAll),
               selected: isAllSelected,
               onSelected: (_) {
                 onSelectionChanged({});

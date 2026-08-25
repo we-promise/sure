@@ -1,0 +1,121 @@
+---
+uk:
+  account_statements:
+    account_tab:
+      coverage_title: "Покриття виписок"
+      coverage_description: "Історичні місяці, підтверджені завантаженими виписками та перевірками балансу."
+      coverage_range: "%{start} - %{end}"
+      empty: "До цього рахунку ще не прив'язано жодної виписки."
+      open_inbox: "Вхідні"
+      statements_title: "Виписки"
+      year_label: "Рік покриття"
+    balance:
+      unknown: "Невідомо"
+    coverage:
+      status:
+        ambiguous: "Неоднозначний"
+        covered: "Покрито"
+        duplicate: "Дублікат"
+        mismatched: "Невідповідність"
+        missing: "Відсутній"
+        not_expected: "Не очікується"
+    create:
+      duplicates:
+        one: "1 дублікат виписки було пропущено."
+        few: "%{count} дублікати виписок було пропущено."
+        many: "%{count} дублікатів виписок було пропущено."
+        other: "%{count} дублікатів виписок було пропущено."
+      invalid_file_type: "Завантажте виписку у форматі PDF, CSV або XLSX у межах допустимого розміру."
+      no_files: "Виберіть принаймні один файл виписки."
+      success:
+        one: "1 виписку завантажено."
+        few: "%{count} виписки завантажено."
+        many: "%{count} виписок завантажено."
+        other: "%{count} виписок завантажено."
+    destroy:
+      failure: "Не вдалося видалити виписку."
+      success: "Виписку видалено."
+    form:
+      account_upload: "Завантажити виписку"
+      files_hint: "PDF, CSV або XLSX. Максимум %{max_size}MB на файл."
+      files_label: "Файли виписок"
+      inbox_upload: "Завантажити"
+    index:
+      account_label: "Рахунок"
+      confidence: "%{confidence} збіг"
+      empty_linked: "Ще немає прив'язаних виписок."
+      empty_unmatched: "Вхідні для незіставлених виписок порожні."
+      leave_unmatched: "Залишити незіставленим"
+      linked_title: "Прив'язані виписки"
+      no_suggestion: "Немає пропозицій"
+      storage_used: "Використано сховище"
+      title: "Сховище виписок"
+      unmatched_title: "Незіставлені вхідні"
+      upload_description: "Завантажте виписки до вхідних або виберіть рахунок для негайної прив'язки."
+      upload_title: "Завантажити виписки"
+    link:
+      no_account: "Виберіть рахунок перед прив'язкою цієї виписки."
+      success: "Виписку прив'язано до %{account}."
+    period:
+      unknown: "Період невідомий"
+    reconciliation:
+      checks:
+        closing_balance: "Кінцевий баланс"
+        opening_balance: "Початковий баланс"
+        period_movement: "Рух за період"
+        unknown_check: "Невідома перевірка"
+      matched: "Збігається"
+      mismatched: "Не збігається"
+      unavailable: "Не перевірено"
+    reject:
+      success: "Збіг виписки відхилено."
+    show:
+      account_label: "Рахунок"
+      account_last4_hint: "Останні чотири цифри рахунку"
+      account_name_hint: "Підказка щодо назви рахунку"
+      closing_balance: "Кінцевий баланс"
+      currency: "Валюта"
+      delete: "Видалити"
+      difference: "Різниця"
+      download: "Завантажити"
+      institution_name_hint: "Підказка щодо назви установи"
+      ledger_amount: "Книга Sure"
+      linked_to: "Прив'язано до %{account}."
+      linking_title: "Прив'язка рахунку"
+      link_suggestion: "Пропозиція прив'язки"
+      metadata_title: "Метадані виписки"
+      no_suggestion: "Пропозицій щодо рахунку ще немає."
+      opening_balance: "Початковий баланс"
+      period_end_on: "Кінець періоду"
+      period_start_on: "Початок періоду"
+      reconciliation_title: "Звірка"
+      reconciliation_unavailable: "Додайте період виписки та початковий або кінцевий баланс, а потім переконайтеся, що Sure має історію балансу за ці дати."
+      reject: "Відхилити"
+      save: "Зберегти виписку"
+      statement_amount: "Виписка"
+      suggested_account: "Запропонований рахунок: %{account} (%{confidence} впевненості)."
+      title: "Виписка"
+      unlink: "Відв'язати"
+      unmatched_account: "Незіставлені вхідні"
+      unknown_value: "Невідомо"
+    status:
+      linked: "Прив'язано"
+      rejected: "Відхилено"
+      unmatched: "Незіставлено"
+    table:
+      account: "Рахунок"
+      actions: "Дії"
+      download: "Завантажити"
+      edit: "Редагувати"
+      file: "Файл"
+      link_suggestion: "Пропозиція прив'язки"
+      period: "Період"
+      reconciliation: "Звірка"
+      reject: "Відхилити пропозицію"
+      suggestion: "Пропозиція"
+      unlink: "Відв'язати"
+      view: "Переглянути"
+    unlink:
+      success: "Виписку переміщено назад до незіставлених вхідних."
+    update:
+      success: "Виписку оновлено."

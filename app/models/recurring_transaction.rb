@@ -138,6 +138,21 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
+  # A candidate amount only counts as "the same fluctuating payment" as the
+  # anchor amount if it's within this ratio (2x = may double or halve).
+  # Anchored on the target amount (not pairwise) so unrelated charges can't
+  # chain together, and expressed as a ratio (not a %-of-target-with-floor)
+  # so it's scale-invariant and handles negative (expense) amounts correctly
+  # via the signed min/max bounds below.
+  AMOUNT_VARIANCE_RATIO = 2
+
+  def self.amount_within_variance_band?(candidate_amount, anchor_amount, ratio: AMOUNT_VARIANCE_RATIO)
+    return candidate_amount == anchor_amount if anchor_amount.zero?
+
+    low, high = [ anchor_amount / ratio, anchor_amount * ratio ].minmax
+    candidate_amount.between?(low, high)
+  end
+
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
   def self.create_from_transaction(transaction, date_variance: 2)
@@ -152,6 +167,7 @@ class RecurringTransaction < ApplicationRecord
       name: transaction.merchant_id.present? ? nil : entry.name,
       currency: entry.currency,
       expected_day: expected_day,
+      amount: entry.amount,
       lookback_months: 6,
       account: entry.account
     )
@@ -194,8 +210,9 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction entries for variance calculation
-  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
+  def self.find_matching_transaction_entries(family:, merchant_id:, name:, currency:, expected_day:, amount:, lookback_months: 6, account: nil)
     lookback_date = lookback_months.months.ago.to_date
+    amount_low, amount_high = [ amount / AMOUNT_VARIANCE_RATIO, amount * AMOUNT_VARIANCE_RATIO ].minmax
 
     entries = (account.present? ? account.entries : family.entries)
       .where(entryable_type: "Transaction")
@@ -204,6 +221,11 @@ class RecurringTransaction < ApplicationRecord
       .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
              [ expected_day - 2, 1 ].max,
              [ expected_day + 2, 31 ].min)
+      # Only entries whose amount is within the variance band of the target
+      # amount count as "the same fluctuating payment" — otherwise unrelated
+      # charges that happen to share a merchant/day get averaged together
+      # (see issue #2936 follow-up).
+      .where("entries.amount BETWEEN ? AND ?", amount_low, amount_high)
       .order(date: :desc)
 
     # Filter by merchant or name
@@ -219,13 +241,14 @@ class RecurringTransaction < ApplicationRecord
   end
 
   # Find matching transaction amounts for variance calculation
-  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, lookback_months: 6, account: nil)
+  def self.find_matching_transaction_amounts(family:, merchant_id:, name:, currency:, expected_day:, amount:, lookback_months: 6, account: nil)
     matching_entries = find_matching_transaction_entries(
       family: family,
       merchant_id: merchant_id,
       name: name,
       currency: currency,
       expected_day: expected_day,
+      amount: amount,
       lookback_months: lookback_months,
       account: account
     )
@@ -260,29 +283,15 @@ class RecurringTransaction < ApplicationRecord
 
   # Find matching transactions for this recurring pattern
   def matching_transactions
-    # For manual recurring with amount variance, match within range
-    # For automatic recurring, match exact amount
-    base = account.present? ? account.entries : family.entries
+    # Recurring transfers can't be matched by single-account name/amount —
+    # future occurrences carry arbitrary names — so match the Transfer pair.
+    return transfer_matching_transactions if transfer?
 
-    entries = if manual? && has_amount_variance?
-      base
-        .where(entryable_type: "Transaction")
-        .where(currency: currency)
-        .where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
-        .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-               [ expected_day_of_month - 2, 1 ].max,
-               [ expected_day_of_month + 2, 31 ].min)
-        .order(date: :desc)
-    else
-      base
-        .where(entryable_type: "Transaction")
-        .where(currency: currency)
-        .where("entries.amount = ?", amount)
-        .where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
-               [ expected_day_of_month - 2, 1 ].max,
-               [ expected_day_of_month + 2, 31 ].min)
-        .order(date: :desc)
-    end
+    # Amount/cadence-scoped Transaction entries on this account (or family).
+    base = account.present? ? account.entries : family.entries
+    entries = day_of_month_scope(
+      amount_window_scope(base.where(entryable_type: "Transaction").where(currency: currency))
+    ).order(date: :desc)
 
     # Filter by merchant or name
     if merchant_id.present?
@@ -401,6 +410,47 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
+    # Issue #1590: a recurring transfer's future occurrences rarely share the
+    # seed's name (user free-text, importer wording, the auto-matcher's
+    # "Transfer to ..."), so name-based matching returns [] and the Cleaner
+    # would wrongly inactivate a still-active transfer. Match the Transfer
+    # *pair* instead — an outflow on the source account paired with an inflow
+    # on the destination account, within the usual amount/cadence window — and
+    # return the outflow entries (the occurrence-date carrier, consistent with
+    # create_from_transfer).
+    def transfer_matching_transactions
+      return Entry.none unless account && destination_account
+
+      outflow_entries = day_of_month_scope(
+        amount_window_scope(account.entries.where(entryable_type: "Transaction").where(currency: currency))
+      ).order(date: :desc)
+
+      paired_outflow_transaction_ids = Transfer
+        .where(outflow_transaction_id: outflow_entries.select(:entryable_id))
+        .where(inflow_transaction_id:
+          destination_account.entries.where(entryable_type: "Transaction").select(:entryable_id))
+        .pluck(:outflow_transaction_id)
+
+      outflow_entries.where(entryable_id: paired_outflow_transaction_ids)
+    end
+
+    # Transaction entries whose amount fits the pattern: exact, or within the
+    # configured variance band for manual recurring rows.
+    def amount_window_scope(relation)
+      if manual? && has_amount_variance?
+        relation.where("entries.amount BETWEEN ? AND ?", expected_amount_min, expected_amount_max)
+      else
+        relation.where("entries.amount = ?", amount)
+      end
+    end
+
+    # Entries whose day-of-month lands within ±2 days of the expected day.
+    def day_of_month_scope(relation)
+      relation.where("EXTRACT(DAY FROM entries.date) BETWEEN ? AND ?",
+                     [ expected_day_of_month - 2, 1 ].max,
+                     [ expected_day_of_month + 2, 31 ].min)
+    end
+
     def monetizable_currency
       currency
     end

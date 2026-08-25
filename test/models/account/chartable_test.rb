@@ -44,6 +44,26 @@ class Account::ChartableTest < ActiveSupport::TestCase
     memoized_series2_holdings_view = account.balance_series(period: Period.last_90_days, view: :holdings_balance)
   end
 
+  test "supports gains view and rejects unknown views" do
+    account = accounts(:investment)
+
+    test_series = Series.new(
+      start_date: Period.last_30_days.start_date,
+      end_date: Period.last_30_days.end_date,
+      interval: "1 day",
+      values: [],
+      favorable_direction: account.favorable_direction
+    )
+
+    builder = mock
+    Balance::ChartSeriesBuilder.expects(:new).returns(builder)
+    builder.expects(:gains_series).returns(test_series)
+
+    assert_equal test_series, account.balance_series(view: :gains)
+
+    assert_raises(ArgumentError) { account.balance_series(view: :bogus) }
+  end
+
   test "trims placeholder history for linked investment accounts without trades" do
     account = accounts(:investment)
     account.entries.destroy_all

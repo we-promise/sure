@@ -62,7 +62,7 @@ class OidcIdentity < ApplicationRecord
     return unless role_mapping.present?
 
     # Check roles in order of precedence (highest to lowest)
-    %w[super_admin admin member].each do |role|
+    %w[super_admin admin member guest].each do |role|
       mapped_groups = role_mapping[role] || role_mapping[role.to_sym] || []
       mapped_groups = Array(mapped_groups)
 
@@ -78,22 +78,28 @@ class OidcIdentity < ApplicationRecord
 
   # Extract and store relevant info from OmniAuth auth hash
   def self.create_from_omniauth(auth, user)
-    # Extract issuer from OIDC auth response if available
-    issuer = auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss")
+    SsoIdentityBlock.with_identity_lock(provider: auth.provider, uid: auth.uid) do
+      if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
+        raise SsoIdentityBlock::BlockedIdentity
+      end
 
-    create!(
-      user: user,
-      provider: auth.provider,
-      uid: auth.uid,
-      issuer: issuer,
-      info: {
-        email: auth.info&.email,
-        name: auth.info&.name,
-        first_name: auth.info&.first_name,
-        last_name: auth.info&.last_name
-      },
-      last_authenticated_at: Time.current
-    )
+      # Extract issuer from OIDC auth response if available
+      issuer = auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss")
+
+      create!(
+        user: user,
+        provider: auth.provider,
+        uid: auth.uid,
+        issuer: issuer,
+        info: {
+          email: auth.info&.email,
+          name: auth.info&.name,
+          first_name: auth.info&.first_name,
+          last_name: auth.info&.last_name
+        },
+        last_authenticated_at: Time.current
+      )
+    end
   end
 
   # Find the configured provider for this identity

@@ -18,22 +18,13 @@ class SnaptradeItem::Importer
     @sync = sync
   end
 
-  class CredentialsError < StandardError; end
-
   def import
     Rails.logger.info "SnaptradeItem::Importer - Starting import for item #{snaptrade_item.id}"
 
-    credentials = snaptrade_item.snaptrade_credentials
-    unless credentials
-      raise CredentialsError, "No SnapTrade credentials configured for item #{snaptrade_item.id}"
-    end
-
     # Step 1: Fetch and store all accounts
-    import_accounts(credentials)
+    import_accounts
 
     # Step 2: For LINKED accounts only, fetch holdings and activities
-    # Unlinked accounts just need basic info (name, balance) for the setup modal
-    # Query directly to avoid any association caching issues
     linked_accounts = SnaptradeAccount
       .where(snaptrade_item_id: snaptrade_item.id)
       .joins(:account_provider)
@@ -41,11 +32,9 @@ class SnaptradeItem::Importer
     Rails.logger.info "SnaptradeItem::Importer - Found #{linked_accounts.count} linked accounts to process"
 
     linked_accounts.each do |snaptrade_account|
-      Rails.logger.info "SnaptradeItem::Importer - Processing linked account #{snaptrade_account.id} (#{snaptrade_account.snaptrade_account_id})"
-      import_account_data(snaptrade_account, credentials)
+      import_account_data(snaptrade_account)
     end
 
-    # Update raw payload on the item
     snaptrade_item.upsert_snaptrade_snapshot!(stats)
   rescue Provider::Snaptrade::AuthenticationError => e
     snaptrade_item.update!(status: :requires_update)
@@ -58,13 +47,9 @@ class SnaptradeItem::Importer
     # get_account_activities returns a paginated object with .data accessor
     # This handles both paginated responses and plain arrays
     def extract_activities_from_response(response)
-      if response.respond_to?(:data)
-        # Paginated response (e.g., SnapTrade::PaginatedUniversalActivity)
-        Rails.logger.info "SnaptradeItem::Importer - Paginated response, extracting .data (#{response.data&.size || 0} items)"
-        response.data || []
+      if response.is_a?(Hash)
+        response["data"] || []
       elsif response.is_a?(Array)
-        # Direct array response
-        Rails.logger.info "SnaptradeItem::Importer - Array response (#{response.size} items)"
         response
       else
         Rails.logger.warn "SnaptradeItem::Importer - Unexpected response type: #{response.class}"
@@ -82,13 +67,10 @@ class SnaptradeItem::Importer
       sync.update_columns(sync_stats: merged)
     end
 
-    def import_accounts(credentials)
+    def import_accounts
       Rails.logger.info "SnaptradeItem::Importer - Fetching accounts"
 
-      accounts_data = snaptrade_provider.list_accounts(
-        user_id: credentials[:user_id],
-        user_secret: credentials[:user_secret]
-      )
+      accounts_data = snaptrade_provider.list_accounts
 
       stats["api_requests"] = stats.fetch("api_requests", 0) + 1
       stats["total_accounts"] = accounts_data.size
@@ -98,8 +80,8 @@ class SnaptradeItem::Importer
 
       accounts_data.each do |account_data|
         begin
-          import_account(account_data, credentials)
-          upstream_account_ids << account_data.id.to_s if account_data.id
+          import_account(account_data)
+          upstream_account_ids << account_data["id"].to_s if account_data["id"]
         rescue => e
           Rails.logger.error "SnaptradeItem::Importer - Failed to import account: #{e.message}"
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
@@ -113,28 +95,24 @@ class SnaptradeItem::Importer
       prune_removed_accounts(upstream_account_ids)
     end
 
-    def import_account(account_data, credentials)
+    def import_account(account_data)
       # Find or create the SnaptradeAccount by SnapTrade's account ID
-      snaptrade_account_id = account_data.id.to_s
+      snaptrade_account_id = account_data["id"].to_s
       return if snaptrade_account_id.blank?
 
       snaptrade_account = snaptrade_item.snaptrade_accounts.find_or_initialize_by(
         snaptrade_account_id: snaptrade_account_id
       )
 
-      # Update from API data - pass raw SDK object, model handles conversion
+      # Update from API data - pass raw hash, model handles conversion
       snaptrade_account.upsert_from_snaptrade!(account_data)
 
       # Fetch and store balances
       begin
-        balances = snaptrade_provider.get_balances(
-          user_id: credentials[:user_id],
-          user_secret: credentials[:user_secret],
-          account_id: snaptrade_account_id
-        )
+        balances = snaptrade_provider.get_balances(account_id: snaptrade_account_id)
         stats["api_requests"] = stats.fetch("api_requests", 0) + 1
 
-        # Pass raw SDK objects - model handles conversion
+        # Pass raw hashes - model handles conversion
         snaptrade_account.upsert_balances!(balances)
       rescue => e
         Rails.logger.warn "SnaptradeItem::Importer - Failed to fetch balances for account #{snaptrade_account_id}: #{e.message}"
@@ -143,26 +121,22 @@ class SnaptradeItem::Importer
       stats["accounts_imported"] = stats.fetch("accounts_imported", 0) + 1
     end
 
-    def import_account_data(snaptrade_account, credentials)
+    def import_account_data(snaptrade_account)
       snaptrade_account_id = snaptrade_account.snaptrade_account_id
       return if snaptrade_account_id.blank?
 
       # Import holdings
-      import_holdings(snaptrade_account, credentials)
+      import_holdings(snaptrade_account)
 
       # Import activities (chunked for history)
-      import_activities(snaptrade_account, credentials)
+      import_activities(snaptrade_account)
     end
 
-    def import_holdings(snaptrade_account, credentials)
+    def import_holdings(snaptrade_account)
       Rails.logger.info "SnaptradeItem::Importer - Fetching holdings for account #{snaptrade_account.id} (#{snaptrade_account.snaptrade_account_id})"
 
       begin
-        holdings = snaptrade_provider.get_positions(
-          user_id: credentials[:user_id],
-          user_secret: credentials[:user_secret],
-          account_id: snaptrade_account.snaptrade_account_id
-        )
+        holdings = snaptrade_provider.get_positions(account_id: snaptrade_account.snaptrade_account_id)
         stats["api_requests"] = stats.fetch("api_requests", 0) + 1
 
         Rails.logger.info "SnaptradeItem::Importer - Got #{holdings.size} holdings from API"
@@ -190,7 +164,7 @@ class SnaptradeItem::Importer
       end
     end
 
-    def import_activities(snaptrade_account, credentials)
+    def import_activities(snaptrade_account)
       Rails.logger.info "SnaptradeItem::Importer - Fetching activities for account #{snaptrade_account.id} (#{snaptrade_account.snaptrade_account_id})"
 
       # Determine date range for fetching activities
@@ -213,7 +187,7 @@ class SnaptradeItem::Importer
         # Respect user's sync_start_date floor
         start_date = [ start_date, user_sync_start ].compact.max
         Rails.logger.info "SnaptradeItem::Importer - Incremental activities fetch from #{start_date} (existing: #{existing_count})"
-        fetch_all_activities(snaptrade_account, credentials, start_date: start_date)
+        fetch_all_activities(snaptrade_account, start_date: start_date)
       else
         # Full history - use user's sync_start_date if set, otherwise first_transaction_date
         # Default to MAX_ACTIVITY_CHUNKS years ago to match chunk size
@@ -222,7 +196,7 @@ class SnaptradeItem::Importer
         Rails.logger.info "SnaptradeItem::Importer - Full history fetch from #{start_date} (user_sync_start: #{user_sync_start || 'none'}, first_tx_date: #{first_tx_date || 'unknown'}, existing: #{existing_count})"
 
         # Try to fetch activities synchronously first
-        fetched_count = fetch_all_activities(snaptrade_account, credentials, start_date: start_date)
+        fetched_count = fetch_all_activities(snaptrade_account, start_date: start_date)
 
         if fetched_count == 0 && existing_count == 0
           # On fresh connection, SnapTrade may need time to sync data from brokerage
@@ -278,7 +252,7 @@ class SnaptradeItem::Importer
 
     # Fetch all activities using per-account endpoint with proper date range
     # Uses get_account_activities which returns paginated data for the specific account
-    def fetch_all_activities(snaptrade_account, credentials, start_date:, end_date: nil)
+    def fetch_all_activities(snaptrade_account, start_date:, end_date: nil)
       # Ensure dates are proper Date objects (not strings or other types)
       start_date = ensure_date(start_date) || 5.years.ago.to_date
       end_date = ensure_date(end_date) || Date.current
@@ -289,8 +263,6 @@ class SnaptradeItem::Importer
       begin
         # Use get_account_activities (per-account endpoint) for better results
         response = snaptrade_provider.get_account_activities(
-          user_id: credentials[:user_id],
-          user_secret: credentials[:user_secret],
           account_id: snaptrade_account.snaptrade_account_id,
           start_date: start_date,
           end_date: end_date
@@ -309,7 +281,7 @@ class SnaptradeItem::Importer
         if activities_data.size < 10 && (end_date - start_date).to_i > 365
           Rails.logger.info "SnaptradeItem::Importer - Few results from per-account endpoint, trying cross-account endpoint"
           cross_account_activities = fetch_via_cross_account_endpoint(
-            snaptrade_account, credentials, start_date: start_date, end_date: end_date
+            snaptrade_account, start_date: start_date, end_date: end_date
           )
 
           if cross_account_activities.size > activities_data.size
@@ -337,10 +309,8 @@ class SnaptradeItem::Importer
     end
 
     # Fallback: try the cross-account endpoint which may work better for some brokerages
-    def fetch_via_cross_account_endpoint(snaptrade_account, credentials, start_date:, end_date:)
+    def fetch_via_cross_account_endpoint(snaptrade_account, start_date:, end_date:)
       activities = snaptrade_provider.get_activities(
-        user_id: credentials[:user_id],
-        user_secret: credentials[:user_secret],
         start_date: start_date,
         end_date: end_date,
         accounts: snaptrade_account.snaptrade_account_id

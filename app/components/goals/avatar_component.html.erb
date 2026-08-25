@@ -1,0 +1,10 @@
+<span class="goal-avatar inline-flex items-center justify-center font-semibold <%= box_classes %> <%= text_classes %> <%= radius_classes %>"
+      style="--avatar-color: <%= color %>;"
+      aria-hidden="true"
+      data-testid="goal-avatar">
+  <% if icon_name.present? %>
+    <%= helpers.icon(icon_name, size: icon_size, color: "current") %>
+  <% else %>
+    <%= initial %>
+  <% end %>
+</span>

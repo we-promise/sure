@@ -30,31 +30,41 @@ module Enrichable
       none
     end
 
-    def clear_ai_cache(family)
+    # Clears AI-sourced enrichments for every record of this type in the family.
+    # Returns the number of cache entries actually removed, not the number of
+    # records visited, so callers can report a figure that means something.
+    #
+    # A single bad record would otherwise abort the sweep and throw away the
+    # tally of everything already cleared, so callers may pass a block to handle
+    # per-record failures and keep going.
+    def clear_ai_cache(family, &on_record_error)
       count = 0
       family_scope(family).find_each do |record|
-        record.clear_ai_cache
-        count += 1
+        count += record.clear_ai_cache
+      rescue => e
+        raise unless on_record_error
+
+        on_record_error.call(record, e)
       end
       count
     end
   end
 
   # Convenience method for a single attribute
-  def enrich_attribute(attr, value, source:, metadata: {})
-    enrich_attributes({ attr => value }, source:, metadata:)
+  def enrich_attribute(attr, value, source:, metadata: {}, ignore_locks: false)
+    enrich_attributes({ attr => value }, source:, metadata:, ignore_locks:)
   end
 
   # Enriches and logs all attributes that:
-  # - Are not locked
+  # - Are not locked (unless ignore_locks: true, e.g. an explicit rule re-apply)
   # - Are not ignored
   # - Have changed value from the last saved value
   # Returns true if any attributes were actually changed, false otherwise
-  def enrich_attributes(attrs, source:, metadata: {})
+  def enrich_attributes(attrs, source:, metadata: {}, ignore_locks: false)
     # Track current values before modification for virtual attributes (like tag_ids)
     current_values = {}
     enrichable_attrs = Array(attrs).reject do |attr_key, attr_value|
-      if locked?(attr_key) || ignored_enrichable_attributes.include?(attr_key)
+      if (locked?(attr_key) && !ignore_locks) || ignored_enrichable_attributes.include?(attr_key)
         true
       else
         # For virtual attributes (like tag_ids), use the getter method
@@ -142,7 +152,10 @@ module Enrichable
     end
   end
 
+  # Returns the number of AI cache entries removed from this record.
   def clear_ai_cache
+    removed_count = 0
+
     ActiveRecord::Base.transaction do
       ai_enrichments = data_enrichments.where(source: "ai")
 
@@ -161,8 +174,10 @@ module Enrichable
       end
 
       # Delete AI enrichment records
-      ai_enrichments.delete_all
+      removed_count = ai_enrichments.delete_all
     end
+
+    removed_count
   end
 
   private

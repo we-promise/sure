@@ -193,6 +193,40 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".text-center.py-8.text-subdued", { text: /No spending data/, count: 0 }, "Should not show 'No spending data' message when transactions exist"
   end
 
+  test "index avoids residual category lazy loads" do
+    account = accounts(:depository)
+
+    4.times do |idx|
+      parent = @family.categories.create!(
+        name: "Reports Parent #{idx}",
+        color: "#000000",
+        lucide_icon: "folder"
+      )
+      child = @family.categories.create!(
+        name: "Reports Child #{idx}",
+        color: "#111111",
+        lucide_icon: "folder",
+        parent: parent
+      )
+      entry = account.entries.create!(
+        name: "Reports transaction #{idx}",
+        date: Date.current,
+        amount: 10 + idx,
+        currency: "USD",
+        entryable: Transaction.new(
+          category: child,
+          kind: "standard"
+        )
+      )
+      assert entry.persisted?
+    end
+
+    queries = capture_sql_queries { get reports_path(period_type: :monthly) }
+
+    assert_response :ok
+    assert_empty queries.grep(/SELECT "categories"\.\* FROM "categories" WHERE "categories"\."id" = \$1 LIMIT \$2/)
+  end
+
   test "export transactions with API key authentication" do
     # Use an active API key with read permissions
     api_key = api_keys(:active_key)
@@ -211,6 +245,79 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_equal "text/csv", @response.media_type
     assert_match /Category/, @response.body
+  end
+
+  test "export transactions with API key does not inherit web session impersonation" do
+    support_user = users(:sure_support_staff)
+    support_user.api_keys.active.destroy_all
+    token_value = ApiKey.generate_secure_key
+    export_credential = support_user.api_keys.build(
+      name: "Support Export Credential",
+      scopes: [ "read" ],
+      source: "web"
+    )
+    export_credential.key = token_value
+    export_credential.save!
+
+    impersonation_session = impersonation_sessions(:in_progress)
+    impersonated_user = impersonation_session.impersonated
+    leaked_category = impersonated_user.family.categories.create!(
+      name: "Impersonated Export Leak Probe"
+    )
+    impersonated_account = impersonated_user.finance_accounts.first
+    assert_not_nil impersonated_account, "Test setup failed: impersonated user has no finance account"
+
+    create_transaction(
+      account: impersonated_account,
+      name: "Impersonated export leak probe",
+      date: Date.current,
+      amount: 123.45,
+      category: leaked_category
+    )
+
+    support_user.sessions.destroy_all
+    support_user.sessions.create!(
+      user_agent: "Browser session",
+      ip_address: "127.0.0.1",
+      active_impersonator_session: impersonation_session
+    )
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      start_date: Date.current.beginning_of_year,
+      end_date: Date.current,
+      api_key: token_value
+    )
+
+    assert_response :ok
+    assert_equal "text/csv", @response.media_type
+    assert_no_match /Impersonated Export Leak Probe/, @response.body
+  end
+
+  test "export transactions with API key rejects deactivated user" do
+    user = users(:family_admin)
+    user.api_keys.active.destroy_all
+    token_value = ApiKey.generate_secure_key
+    export_access = user.api_keys.build(
+      name: "Inactive User Export Credential",
+      scopes: [ "read" ],
+      source: "web"
+    )
+    export_access.key = token_value
+    export_access.save!
+    user.update_column(:active, false)
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      api_key: token_value
+    )
+
+    assert_response :unauthorized
+    assert_match /Invalid or expired API key/, @response.body
+  ensure
+    user&.update_column(:active, true)
   end
 
   test "export transactions with invalid API key" do
@@ -239,6 +346,40 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok, "Export should work with session auth. Response: #{@response.body}"
     assert_equal "text/csv", @response.media_type
+  end
+
+  test "export transactions excludes tax-advantaged account transactions" do
+    taxable_category = @family.categories.create!(name: "Export Taxable Income", color: "#111111")
+    retirement_category = @family.categories.create!(name: "Export Retirement Income", color: "#222222")
+    taxable_account = @family.accounts.create!(
+      owner: @user,
+      name: "Export Taxable Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    retirement_account = @family.accounts.create!(
+      owner: @user,
+      name: "Export 401k",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "401k")
+    )
+
+    create_transaction(account: taxable_account, name: "Taxable export dividend", amount: -100, category: taxable_category)
+    create_transaction(account: retirement_account, name: "401k export dividend", amount: -200, category: retirement_category)
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    assert_equal "text/csv", @response.media_type
+    assert_match /Export Taxable Income/, @response.body
+    assert_no_match /Export Retirement Income/, @response.body
   end
 
   test "export transactions swaps dates when end_date is before start_date" do
@@ -277,6 +418,90 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # Subcategories
     assert_select "tr[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
+  end
+
+  test "index links income and expense categories to filtered transactions" do
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+    expense_category = @family.categories.create!(name: "Reports Clickable Groceries", color: "#ABCDEF")
+    income_category = @family.categories.create!(name: "Reports Clickable Salary", color: "#FEDCBA")
+    account = @family.accounts.first
+
+    create_transaction(account: account, name: "Groceries", amount: 42, category: expense_category, date: Date.current)
+    create_transaction(account: account, name: "Salary", amount: -100, category: income_category, date: Date.current)
+    create_transaction(account: account, name: "Uncategorized cash", amount: 25, date: Date.current)
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    expense_href = transactions_path(q: { categories: [ expense_category.name ], start_date: start_date, end_date: end_date })
+    income_href = transactions_path(q: { categories: [ income_category.name ], start_date: start_date, end_date: end_date })
+    uncategorized_href = transactions_path(q: { categories: [ Category.uncategorized.name ], start_date: start_date, end_date: end_date })
+
+    assert_select "tr[data-category='category-#{expense_category.id}'] a[href=?]", expense_href, text: expense_category.name
+    assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
+
+    # Full-row hit target via stretched ::before (mirrors dashboard outflows)
+    assert_select "tr.relative.group\\/category-row[data-category='category-#{expense_category.id}'] a[class*='before:absolute'][class*='before:inset-0']"
+  end
+
+  test "index uncategorized category link uses localized name that Search accepts" do
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+    account = @family.accounts.first
+    create_transaction(account: account, name: "Uncategorized cash", amount: 25, date: Date.current)
+
+    @user.update!(locale: "zh-CN")
+    localized_name = I18n.with_locale(:"zh-CN") { Category.uncategorized.name }
+    assert_includes Category.all_uncategorized_names, localized_name
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    href = transactions_path(q: { categories: [ localized_name ], start_date: start_date, end_date: end_date })
+    assert_select "tr[data-category='category-uncategorized'] a[href=?]", href, text: localized_name
+  end
+
+  test "index excludes tax-advantaged account transactions from activity breakdown" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+
+    taxable_category = @family.categories.create!(name: "Reports Taxable Income", color: "#111111")
+    retirement_category = @family.categories.create!(name: "Reports Retirement Income", color: "#222222")
+    taxable_account = @family.accounts.create!(
+      owner: @user,
+      name: "Reports Taxable Brokerage",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    retirement_account = @family.accounts.create!(
+      owner: @user,
+      name: "Reports 401k",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "401k")
+    )
+
+    create_transaction(account: taxable_account, name: "Taxable dividend", amount: -100, category: taxable_category)
+    create_transaction(account: retirement_account, name: "401k dividend", amount: -200, category: retirement_category)
+    create_trade(securities(:aapl), account: taxable_account, qty: 1, date: Date.current, price: 100)
+    create_trade(securities(:aapl), account: retirement_account, qty: 1, date: Date.current, price: 200)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-#{taxable_category.id}']", text: /Reports Taxable Income/
+    assert_select "tr[data-category='category-#{retirement_category.id}']", count: 0
+
+    other_investments_rows = css_select("tr[data-category='category-other_investments']")
+    assert_operator other_investments_rows.size, :>=, 1
+    other_investments_rows.each do |row|
+      assert_match(/#{Regexp.escape(Category.other_investments.name)}/, row.text)
+      assert_equal 0, row.css("a").size
+    end
+    assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_rows.first.text)
+    assert_match(/\$100\.00/, other_investments_rows.first.text)
   end
 
   test "monthly period navigation shows previous month link" do

@@ -83,7 +83,9 @@
     <%= form.password_field :client_secret,
         label: t("admin.sso_providers.form.client_secret_label"),
         placeholder: sso_provider.persisted? ? t("admin.sso_providers.form.client_secret_placeholder_existing") : t("admin.sso_providers.form.client_secret_placeholder_new"),
-        required: !sso_provider.persisted? %>
+        required: !sso_provider.persisted?,
+        autocomplete: "new-password",
+        value: nil %>
     <% if sso_provider.persisted? %>
       <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.client_secret_help_existing") %></p>
     <% end %>
@@ -190,14 +192,18 @@
   <div class="border-t border-primary pt-4 space-y-4">
     <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.provisioning_title") %></h3>
 
-    <%= form.select "settings[default_role]",
-        options_for_select([
-          [t("admin.sso_providers.form.role_guest", default: "Guest"), "guest"],
-          [t("admin.sso_providers.form.role_member"), "member"],
-          [t("admin.sso_providers.form.role_admin"), "admin"],
-          [t("admin.sso_providers.form.role_super_admin"), "super_admin"]
-        ], sso_provider.settings&.dig("default_role").to_s.presence || "member"),
-        { label: t("admin.sso_providers.form.default_role_label"), include_blank: false } %>
+    <div class="form-field">
+      <%= label_tag "sso_provider_settings_default_role", t("admin.sso_providers.form.default_role_label"), class: "form-field__label" %>
+      <%= select_tag "sso_provider[settings][default_role]",
+          options_for_select([
+            [t("admin.sso_providers.form.role_guest", default: "Guest"), "guest"],
+            [t("admin.sso_providers.form.role_member"), "member"],
+            [t("admin.sso_providers.form.role_admin"), "admin"],
+            [t("admin.sso_providers.form.role_super_admin"), "super_admin"]
+          ], sso_provider.settings&.dig("default_role").to_s.presence || "member"),
+          id: "sso_provider_settings_default_role",
+          class: "form-field__input" %>
+    </div>
     <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.default_role_help") %></p>
 
     <details class="mt-4">
@@ -249,22 +255,29 @@
     <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.advanced_title") %></h3>
 
     <div>
-      <%= form.text_field "settings[scopes]",
-          label: t("admin.sso_providers.form.scopes_label"),
-          value: sso_provider.settings&.dig("scopes"),
-          placeholder: "openid email profile groups" %>
+      <%= label_tag "sso_provider_settings_scopes", t("admin.sso_providers.form.scopes_label"), class: "form-field__label" %>
+      <%= text_field_tag "sso_provider[settings][scopes]",
+          sso_provider.settings&.dig("scopes"),
+          id: "sso_provider_settings_scopes",
+          class: "form-field__input",
+          placeholder: "openid email profile groups",
+          autocomplete: "off" %>
       <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.scopes_help") %></p>
     </div>
 
-    <%= form.select "settings[prompt]",
-        options_for_select([
-          [t("admin.sso_providers.form.prompt_default"), ""],
-          [t("admin.sso_providers.form.prompt_login"), "login"],
-          [t("admin.sso_providers.form.prompt_consent"), "consent"],
-          [t("admin.sso_providers.form.prompt_select_account"), "select_account"],
-          [t("admin.sso_providers.form.prompt_none"), "none"]
-        ], sso_provider.settings&.dig("prompt")),
-        { label: t("admin.sso_providers.form.prompt_label"), include_blank: false } %>
+    <div class="form-field">
+      <%= label_tag "sso_provider_settings_prompt", t("admin.sso_providers.form.prompt_label"), class: "form-field__label" %>
+      <%= select_tag "sso_provider[settings][prompt]",
+          options_for_select([
+            [t("admin.sso_providers.form.prompt_default"), ""],
+            [t("admin.sso_providers.form.prompt_login"), "login"],
+            [t("admin.sso_providers.form.prompt_consent"), "consent"],
+            [t("admin.sso_providers.form.prompt_select_account"), "select_account"],
+            [t("admin.sso_providers.form.prompt_none"), "none"]
+          ], sso_provider.settings&.dig("prompt")),
+          id: "sso_provider_settings_prompt",
+          class: "form-field__input" %>
+    </div>
     <p class="text-xs text-secondary -mt-2"><%= t("admin.sso_providers.form.prompt_help") %></p>
   </div>
 

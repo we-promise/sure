@@ -6,5 +6,5 @@ fr:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: Vous ne pouvez pas vendre %{sell_qty} actions de %{ticker} car
-                vous n'en détenez que %{current_qty}
+              invalid_sell_quantity: Vous ne pouvez pas vendre %{sell_qty} actions
+                de %{ticker} car vous n'en détenez que %{current_qty}

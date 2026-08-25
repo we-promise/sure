@@ -9,31 +9,32 @@
         <% end %>
       </div>
       <div class="flex flex-row gap-2 items-baseline">
-        <%= tag.p view_balance_money.format, class: "text-primary text-3xl font-medium truncate privacy-sensitive" %>
+        <%= tag.p view_balance_display, class: "text-primary text-3xl font-medium truncate privacy-sensitive" %>
 
-        <% if converted_balance_money %>
-          <%= tag.p converted_balance_money.format, class: "text-sm font-medium text-secondary privacy-sensitive" %>
+        <% if converted_balance_display %>
+          <%= tag.p converted_balance_display, class: "text-sm font-medium text-secondary privacy-sensitive" %>
         <% end %>
       </div>
     </div>
 
-    <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
-      <div class="flex items-center gap-2">
-        <% if account.supports_trades? %>
+    <div class="flex items-center gap-2">
+      <% if account.supports_trades? %>
+        <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
           <%= form.select :chart_view,
-            [[t(".views.total_value"), "balance"], [t(".views.holdings"), "holdings_balance"], [t(".views.cash"), "cash_balance"]],
+            [[t("UI.account.chart.views.total_value"), "balance"], [t("UI.account.chart.views.holdings"), "holdings_balance"], [t("UI.account.chart.views.cash"), "cash_balance"], [t("UI.account.chart.views.gains"), "gains"]],
             { selected: view },
             class: "bg-container border border-secondary rounded-lg text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0",
+            autocomplete: "off",
             data: { "auto-submit-form-target": "auto" } %>
         <% end %>
+      <% end %>
 
-        <%= form.select :period,
-                    Period.as_options,
-                    { selected: period.key },
-                    data: { "auto-submit-form-target": "auto" },
-                    class: "bg-container border border-secondary rounded-lg px-3 py-2 text-sm pr-7 cursor-pointer text-primary focus:outline-hidden focus:ring-0" %>
-      </div>
-    <% end %>
+      <%= render UI::PeriodPicker.new(
+        selected: period,
+        url: account_path(account),
+        extra_params: account.supports_trades? ? { chart_view: view } : {}
+      ) %>
+    </div>
   </div>
 
   <%= turbo_frame_tag dom_id(@account, :chart_details) do %>
@@ -50,7 +51,7 @@
         data-time-series-chart-data-value="<%= series.to_json %>"></div>
       <% else %>
         <div class="w-full h-full flex items-center justify-center">
-          <p class="text-secondary text-sm"><%= t(".no_data_available") %></p>
+          <p class="text-secondary text-sm"><%= t("UI.account.chart.no_data_available") %></p>
         </div>
       <% end %>
     </div>

@@ -153,7 +153,7 @@ jobs:
         working-directory: mobile
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
         env:
-          APP_BUNDLE_ID: am.sure.mobile
+          APP_BUNDLE_ID: ${{ vars.IOS_APP_BUNDLE_ID || 'am.sure.mobile' }}
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
           IOS_DISTRIBUTION_CERT_NAME: ${{ secrets.IOS_DISTRIBUTION_CERT_NAME }}
@@ -173,14 +173,16 @@ jobs:
           path = Path("ios/Runner.xcodeproj/project.pbxproj")
           text = path.read_text()
 
+          app_bundle_id = os.environ["APP_BUNDLE_ID"]
           team = os.environ["IOS_TEAM_ID"]
           profile = os.environ["PROFILE_NAME"]
           identity = os.environ["IOS_DISTRIBUTION_CERT_NAME"]
 
           def patch_block(match):
               block = match.group(0)
-              if "PRODUCT_BUNDLE_IDENTIFIER = am.sure.mobile;" not in block:
+              if "PRODUCT_BUNDLE_IDENTIFIER =" not in block:
                   return block
+              block = re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = .*?;', f'PRODUCT_BUNDLE_IDENTIFIER = {app_bundle_id};', block)
               if "CODE_SIGN_STYLE = Manual;" not in block:
                   block = block.replace("CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";", "CURRENT_PROJECT_VERSION = \"$(FLUTTER_BUILD_NUMBER)\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;")
               if '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";' not in block:

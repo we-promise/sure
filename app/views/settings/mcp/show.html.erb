@@ -1,0 +1,79 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<div class="space-y-4">
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="space-y-4">
+      <div class="space-y-1">
+        <h3 class="text-sm font-medium text-primary"><%= t(".connect_title") %></h3>
+        <p class="text-sm text-secondary"><%= t(".connect_subtitle") %></p>
+      </div>
+
+      <div class="bg-surface-inset rounded-lg p-3" data-controller="clipboard" data-clipboard-copied-text-value="<%= t(".copied") %>">
+        <div class="flex items-center justify-between gap-3">
+          <code class="font-mono text-sm text-primary break-all" data-clipboard-target="source"><%= @mcp_url %></code>
+          <%= render DS::Button.new(
+            text: t(".copy_url"),
+            variant: :ghost,
+            icon: "copy",
+            size: :sm,
+            data: { action: "clipboard#copy" }
+          ) %>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <h4 class="text-sm font-medium text-primary"><%= t(".how_to_connect_title") %></h4>
+        <ol class="space-y-2 text-sm text-secondary">
+          <li class="flex items-start gap-2">
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-surface-inset text-primary text-xs font-medium flex items-center justify-center mt-0.5">1</span>
+            <span><%= t(".step_1") %></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-surface-inset text-primary text-xs font-medium flex items-center justify-center mt-0.5">2</span>
+            <span><%= t(".step_2") %></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-surface-inset text-primary text-xs font-medium flex items-center justify-center mt-0.5">3</span>
+            <span><%= t(".step_3") %></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-surface-inset text-primary text-xs font-medium flex items-center justify-center mt-0.5">4</span>
+            <span><%= t(".step_4") %></span>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <% if @connected_tokens.any? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <div class="space-y-3">
+        <div class="space-y-1">
+          <h3 class="text-sm font-medium text-primary"><%= t(".connected_title") %></h3>
+          <p class="text-sm text-secondary"><%= t(".connected_subtitle") %></p>
+        </div>
+        <ul class="space-y-2">
+          <% @connected_tokens.each do |token| %>
+            <li class="flex items-center justify-between gap-3 p-3 bg-surface-inset rounded-lg">
+              <div class="flex items-center gap-3">
+                <%= render DS::FilledIcon.new(icon: "plug", size: "md", rounded: true) %>
+                <div class="text-sm space-y-0.5">
+                  <p class="font-medium text-primary"><%= token.application&.name || t(".unknown_client") %></p>
+                  <p class="text-secondary"><%= t(".connected_ago", time: time_ago_in_words(token.created_at)) %></p>
+                </div>
+              </div>
+              <%= render DS::Button.new(
+                text: t(".revoke"),
+                href: revoke_token_settings_mcp_path(token_id: token.id),
+                method: :delete,
+                variant: :ghost,
+                size: :sm,
+                data: { turbo_confirm: t(".revoke_confirm") }
+              ) %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+  <% end %>
+</div>

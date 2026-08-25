@@ -1,0 +1,36 @@
+---
+zh-TW:
+  plans:
+    show:
+      title: 規劃
+      subtitle: 決定您的錢要花在哪裡，又要存下多少。
+    budget_card:
+      title: 本月
+      edit_budget: 編輯預算
+      of_total: ／%{total}
+      days_left:
+        one: 剩餘 1 天
+        other: 剩餘 %{count} 天
+      percent_used: 已使用 %{percent}%
+      top_categories: 主要分類
+      view_budget: 查看完整預算
+      empty_body: 設定每月支出目標與各分類上限，就能看到本月的進度。
+      set_up: 設定本月預算
+    goals_card:
+      title: 您的目標
+      new_goal: 新增目標
+      active_count:
+        one: 1 個進行中
+        other: '%{count} 個進行中'
+      of_targets: ／所有目標共 %{total}
+      behind_count:
+        one: 1 個進度落後
+        other: '%{count} 個進度落後'
+      pending_count:
+        one: 1 筆待確認投入
+        other: '%{count} 筆待確認投入'
+      all_on_pace: 全部進度正常
+      active_goals: 進行中的目標
+      pending_marker: 待確認
+      runway: 可支撐 %{months} 個月 · 每月 %{pace}
+      all_goals: 所有目標

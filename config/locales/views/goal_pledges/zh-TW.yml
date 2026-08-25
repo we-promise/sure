@@ -1,0 +1,20 @@
+---
+zh-TW:
+  goal_pledges:
+    new:
+      helper_transfer: Sure 會在您連結的帳戶中尋找相符的存入款項。投入紀錄會保持待確認狀態 7 天，Sure 一旦找到就會自動確認。
+      helper_manual: Sure 會在您下次手動編輯餘額時記錄這筆並確認這次投入。
+      amount_label: 金額
+      account_label: 存入帳戶
+      submit: 記錄投入
+      preview_zero: 目前已存 {current}，目標 {target}。
+      preview_nonzero: 可達到 {percent}%，目標 {target} 中的 {newTotal}。
+      preview_reached: 會達到您 {target} 的目標，目標達成。
+    create:
+      success: 投入已記錄。Sure 會在下次同步時確認。
+    renew:
+      success: 待確認期限已延長 7 天。
+      not_open: 只有未完成的投入紀錄才能延長。
+    destroy:
+      success: 投入紀錄已取消。
+      not_open: 只有未完成的投入紀錄才能取消。

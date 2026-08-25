@@ -1,0 +1,313 @@
+---
+es:
+  sophtron_items:
+    defaults:
+      name: Conexión de Sophtron
+    new:
+      title: Conectar Sophtron
+      user_id: ID de usuario
+      user_id_placeholder: pega tu ID de usuario de Sophtron
+      access_key: Clave de acceso
+      access_key_placeholder: pega tu clave de acceso de Sophtron
+      connect: Conectar
+      cancel: Cancelar
+    create:
+      success: Conexión de Sophtron creada correctamente
+    destroy:
+      success: Conexión de Sophtron eliminada
+    update:
+      success: ¡Conexión de Sophtron actualizada correctamente! Tus cuentas se están reconectando.
+      errors:
+        blank_user_id: Introduce un ID de usuario de Sophtron.
+        invalid_user_id: ID de usuario no válido. Comprueba que has copiado el ID de usuario completo de Sophtron.
+        user_id_compromised: El ID de usuario puede estar comprometido, caducado o ya usado. Crea uno nuevo.
+        blank_access_key: Introduce una clave de acceso de Sophtron.
+        invalid_access_key: Clave de acceso no válida. Comprueba que has copiado la clave de acceso completa de Sophtron.
+        access_key_compromised: La clave de acceso puede estar comprometida, caducada o ya usada. Crea una nueva.
+        update_failed: "No se pudo actualizar la conexión: %{message}"
+        unexpected: Se ha producido un error inesperado. Inténtalo de nuevo o ponte en contacto con el soporte.
+    edit:
+      user_id:
+        label: "ID de usuario de Sophtron:"
+        placeholder: "Pega aquí tu ID de usuario de Sophtron..."
+        help_text: "El ID de usuario debe ser una cadena larga que empieza por letras y números"
+      access_key:
+        label: "Clave de acceso de Sophtron:"
+        placeholder: "Pega aquí tu clave de acceso de Sophtron..."
+        help_text: "La clave de acceso debe ser una cadena larga que empieza por letras y números"
+    index:
+      title: Conexiones de Sophtron
+    loading:
+      loading_message: Cargando cuentas de Sophtron...
+      loading_title: Cargando
+    link_accounts:
+      all_already_linked:
+        one: "La cuenta seleccionada (%{names}) ya está vinculada"
+        other: "Las %{count} cuentas seleccionadas ya están vinculadas: %{names}"
+      api_error: "Error de conexión con la API"
+      invalid_account_names:
+        one: "No se puede vincular una cuenta con el nombre en blanco"
+        other: "No se pueden vincular %{count} cuentas con los nombres en blanco"
+      link_failed: No se pudieron vincular las cuentas
+      no_accounts_selected: Selecciona al menos una cuenta
+      partial_invalid: "Se vincularon %{created_count} cuenta(s) correctamente, %{already_linked_count} ya estaban vinculadas, %{invalid_count} cuenta(s) tenían nombres no válidos"
+      partial_success: "Se vincularon %{created_count} cuenta(s) correctamente. %{already_linked_count} cuenta(s) ya estaban vinculadas: %{already_linked_names}"
+      success:
+        one: "Se ha vinculado %{count} cuenta correctamente"
+        other: "Se han vinculado %{count} cuentas correctamente"
+      no_credentials_configured: "Configura primero tu ID de usuario y tu clave de acceso de la API de Sophtron en los Ajustes del proveedor."
+      no_accounts_found: No se han encontrado cuentas. Comprueba la configuración de tu clave de API.
+      no_access_key: La clave de acceso de Sophtron no está configurada. Configúrala en los Ajustes.
+      no_user_id: El ID de usuario de Sophtron no está configurado. Configúralo en los Ajustes.
+      no_institution_connected: Conecta primero una entidad bancaria con Sophtron.
+    connect:
+      cancel: Cancelar
+      captcha: Captcha
+      connect: Conectar
+      institution_search_label: Entidad
+      institution_search_placeholder: Buscar por nombre del banco
+      no_institutions: No se han encontrado entidades coincidentes.
+      password: Contraseña
+      search: Buscar
+      search_too_short: Introduce al menos dos caracteres para buscar.
+      title: Conectar entidad de Sophtron
+      username: Nombre de usuario
+    connect_institution:
+      api_error: "La conexión con Sophtron ha fallado: %{message}"
+      missing_parameters: Selecciona una entidad e introduce las credenciales de acceso de tu banco.
+    connection_status:
+      api_error: "Error de conexión con la API: %{message}"
+      attempt: "Intento %{attempt} de %{max}"
+      check_again: Volver a comprobar
+      failed: Sophtron no pudo completar esta conexión con la entidad.
+      failed_timeout: Sophtron agotó el tiempo de espera mientras la entidad completaba el acceso.
+      timeout: Sophtron no terminó de conectarse en el tiempo previsto. Puedes volver a comprobarlo o intentar reconectar más tarde.
+      title: Conectando con Sophtron
+      waiting: Sophtron todavía se está conectando con tu entidad.
+    mfa:
+      captcha: Texto del captcha
+      captcha_alt: Captcha de Sophtron
+      phone_confirmed: He confirmado por teléfono
+      submit: Enviar
+      title: Verificación de Sophtron
+      token: Código de verificación
+    submit_mfa:
+      api_error: "La verificación ha fallado: %{message}"
+      invalid_security_answers: Faltan las respuestas de seguridad o son demasiado largas.
+      unknown_challenge: Paso de verificación de Sophtron desconocido.
+    sophtron_item:
+      accounts_need_setup: Las cuentas necesitan configuración
+      automatic_sync: Usar sincronización automática
+      delete: Eliminar conexión
+      deletion_in_progress: eliminación en curso...
+      error: Error
+      no_accounts_description: Esta conexión aún no tiene cuentas vinculadas.
+      no_accounts_title: Sin cuentas
+      manual_sync: Sincronización manual
+      manual_sync_action: Requerir sincronización manual
+      manual_sync_action_for: "Requerir sincronización manual para %{institution}"
+      automatic_sync_for: "Usar sincronización automática para %{institution}"
+      setup_action: Configurar nuevas cuentas
+      setup_description: "%{linked} de %{total} cuentas vinculadas. Elige los tipos de cuenta para tus cuentas de Sophtron recién importadas."
+      setup_needed: Nuevas cuentas listas para configurar
+      status: "Sincronizado hace %{timestamp}"
+      status_never: Nunca sincronizado
+      status_with_summary: "Sincronizado hace %{timestamp} • %{summary}"
+      sync_now: Sincronizar ahora
+      syncing: Sincronizando...
+      total: Total
+      unlinked: Sin vincular
+    preload_accounts:
+      preload_accounts: precargar cuentas
+      api_error: "Error de conexión con la API"
+      unexpected_error: "Se ha producido un error inesperado"
+      no_credentials_configured: "Configura primero tu ID de usuario y tu clave de acceso de la API de Sophtron en los Ajustes del proveedor."
+      no_accounts_found: No se han encontrado cuentas. Comprueba la configuración de tu clave de API.
+      no_access_key: La clave de acceso de Sophtron no está configurada. Configúrala en los Ajustes.
+      no_user_id: El ID de usuario de Sophtron no está configurado. Configúralo en los Ajustes.
+    select_accounts:
+      accounts_selected: cuentas seleccionadas
+      api_error: "Error de conexión con la API"
+      unexpected_error: "Se ha producido un error inesperado"
+      cancel: Cancelar
+      configure_name_in_sophtron: "No se puede importar: configura el nombre de la cuenta en Sophtron"
+      description: Selecciona las cuentas que quieres vincular a tu cuenta de %{product_name}.
+      link_accounts: Vincular cuentas seleccionadas
+      no_accounts_found: No se han encontrado cuentas. Comprueba la configuración de tu clave de API.
+      no_access_key: La clave de acceso de Sophtron no está configurada. Configúrala en los Ajustes.
+      no_user_id: El ID de usuario de Sophtron no está configurado. Configúralo en los Ajustes.
+      no_credentials_configured: "Configura primero tu ID de usuario y tu clave de acceso de la API de Sophtron en los Ajustes del proveedor."
+      no_institution_connected: Conecta primero una entidad bancaria con Sophtron.
+      no_name_placeholder: "(Sin nombre)"
+      title: Seleccionar cuentas de Sophtron
+    select_existing_account:
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor
+      all_accounts_already_linked: Todas las cuentas de Sophtron ya están vinculadas
+      api_error: "Error de conexión con la API"
+      cancel: Cancelar
+      configure_name_in_sophtron: "No se puede importar: configura el nombre de la cuenta en Sophtron"
+      description: Selecciona una cuenta de Sophtron para vincularla a esta cuenta. Las transacciones se sincronizarán y se eliminarán los duplicados automáticamente.
+      link_account: Vincular cuenta
+      no_account_specified: No se ha especificado ninguna cuenta
+      no_accounts_found: No se han encontrado cuentas de Sophtron. Comprueba la configuración de tu clave de API.
+      no_access_key: La clave de acceso de Sophtron no está configurada. Configúrala en los Ajustes.
+      no_user_id: El ID de usuario de Sophtron no está configurado. Configúralo en los Ajustes.
+      no_institution_connected: Conecta primero una entidad bancaria con Sophtron.
+      no_name_placeholder: "(Sin nombre)"
+      title: "Vincular %{account_name} con Sophtron"
+      unexpected_error: "Se ha producido un error inesperado"
+    link_existing_account:
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor
+      api_error: "Error de conexión con la API"
+      unexpected_error: "Se ha producido un error inesperado"
+      invalid_account_name: No se puede vincular una cuenta con el nombre en blanco
+      sophtron_account_already_linked: Esta cuenta de Sophtron ya está vinculada a otra cuenta
+      sophtron_account_not_found: No se ha encontrado la cuenta de Sophtron
+      missing_parameters: Faltan parámetros obligatorios
+      no_institution_connected: Conecta primero una entidad bancaria con Sophtron.
+      success: "%{account_name} vinculada correctamente con Sophtron"
+    setup_accounts:
+      account_type_label: "Tipo de cuenta:"
+      all_accounts_linked: "Todas tus cuentas de Sophtron ya se han configurado."
+      api_error: "Error de conexión con la API"
+      unexpected_error: "Se ha producido un error inesperado"
+      fetch_failed: "No se pudieron obtener las cuentas"
+      no_accounts_to_setup: "No hay cuentas para configurar"
+      no_access_key: "La clave de acceso de Sophtron no está configurada. Comprueba los ajustes de tu conexión."
+      no_user_id: "El ID de usuario de Sophtron no está configurado. Comprueba los ajustes de tu conexión."
+      no_institution_connected: "La entidad de Sophtron aún no está conectada."
+      account_types:
+        skip: Omitir esta cuenta
+        depository: Cuenta corriente o de ahorros
+        credit_card: Tarjeta de crédito
+        investment: Cuenta de inversión
+        loan: Préstamo o hipoteca
+        other_asset: Otro activo
+      subtype_labels:
+        depository: "Subtipo de cuenta:"
+        credit_card: ""
+        investment: "Tipo de inversión:"
+        loan: "Tipo de préstamo:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Las tarjetas de crédito se configurarán automáticamente como cuentas de tarjeta de crédito."
+        other_asset: "No se necesitan opciones adicionales para Otros activos."
+      balance: Saldo
+      cancel: Cancelar
+      choose_account_type: "Elige el tipo de cuenta correcto para cada cuenta de Sophtron:"
+      create_accounts: Crear cuentas
+      creating_accounts: Creando cuentas...
+      historical_data_range: "Rango de datos históricos:"
+      subtitle: Elige los tipos de cuenta correctos para tus cuentas importadas
+      sync_start_date_help: Selecciona hasta qué fecha quieres sincronizar el historial de transacciones. Hay un máximo de 3 años de historial disponible.
+      sync_start_date_label: "Empezar a sincronizar transacciones desde:"
+      title: Configura tus cuentas de Sophtron
+    complete_account_setup:
+      all_skipped: "Se omitieron todas las cuentas. No se ha creado ninguna cuenta."
+      creation_failed: "No se pudieron crear las cuentas"
+      api_error: "Error de conexión con la API"
+      unexpected_error: "Se ha producido un error inesperado"
+      no_accounts: "No hay cuentas para configurar."
+      success: "Se han creado %{count} cuenta(s) correctamente."
+    sync:
+      already_running: Ya hay una sincronización manual de Sophtron en curso.
+      api_error: "La sincronización manual de Sophtron ha fallado: %{message}"
+      failed: La sincronización manual de Sophtron ha fallado
+      no_linked_accounts: Esta entidad de Sophtron no tiene cuentas vinculadas para sincronizar.
+      processing_failed: La sincronización manual de Sophtron no pudo procesar las transacciones actualizadas.
+      success: Sincronización iniciada
+    toggle_manual_sync:
+      success_disabled: La entidad de Sophtron se sincronizará automáticamente.
+      success_enabled: La entidad de Sophtron ahora requiere sincronización manual.
+    manual_sync_complete:
+      close: Cerrar
+      description: Los saldos de las cuentas terminarán de actualizarse en segundo plano.
+      message: Las transacciones se descargaron tras la verificación de Sophtron.
+      title: Sincronización de Sophtron iniciada
+    sophtron_setup_required:
+      title: Configuración de Sophtron necesaria
+      message: >
+        Para completar la configuración de tu conexión de Sophtron, ve a la página de Ajustes del proveedor y sigue las instrucciones para autorizar y configurar tu conexión de Sophtron.
+      go_to_provider_settings: Ir a los Ajustes del proveedor
+      heading: "ID de usuario y clave de acceso no configurados"
+      description: "Antes de poder vincular cuentas de Sophtron, debes configurar tu ID de usuario y tu clave de acceso de Sophtron."
+      setup_steps_title: "Pasos de configuración:"
+      step_1_html: "Ve a <strong>Ajustes → Proveedores de sincronización bancaria</strong>"
+      step_2_html: "Busca la sección <strong>Sophtron</strong>"
+      step_3_html: "Introduce tu ID de usuario y tu clave de acceso de Sophtron"
+      step_4: "Vuelve aquí para vincular tus cuentas"
+    api_error:
+      title: "Error de conexión con Sophtron"
+      unable_to_connect: "No se puede conectar con Sophtron"
+      institution_unable_to_connect: "No se puede conectar con la entidad"
+      common_issues_title: "Problemas habituales:"
+      incorrect_user_id: "ID de usuario incorrecto: Verifica tu ID de usuario en los Ajustes del proveedor"
+      invalid_access_key: "Clave de acceso no válida: Comprueba tu clave de acceso en los Ajustes del proveedor"
+      expired_credentials: "Credenciales caducadas: Genera un nuevo ID de usuario y una nueva clave de acceso en Sophtron"
+      network_issue: "Problema de red: Comprueba tu conexión a internet"
+      service_down: "Servicio no disponible: La API de Sophtron puede estar temporalmente no disponible"
+      bad_credentials: "Credenciales bancarias: Comprueba que el nombre de usuario y la contraseña sean correctos"
+      verification_code: "Código de verificación: Asegúrate de introducir el código más reciente antes de que caduque"
+      institution_timeout: "Tiempo de espera de la entidad agotado: La página de acceso del banco no terminó a tiempo"
+      unsupported_mfa: "Compatibilidad con MFA: Es posible que Sophtron no admita el flujo de verificación actual de esta entidad"
+      check_provider_settings: "Comprobar los Ajustes del proveedor"
+      try_again: "Volver a intentar la conexión"
+    select_option: "Seleccionar %{type}"
+    subtype: "subtipo"
+    type: "tipo"
+    sophtron_panel:
+      setup_instructions_title: "Instrucciones de configuración:"
+      setup_instructions:
+        step_1_html: 'Visita <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> para obtener tus credenciales de API'
+        step_2: "Copia tu ID de usuario y tu clave de acceso desde los ajustes de tu cuenta de Sophtron"
+        step_3: "Pega las credenciales abajo y haz clic en Guardar; Sure creará o reutilizará tu ID de cliente de Sophtron automáticamente"
+      field_descriptions_title: "Descripciones de los campos:"
+      field_descriptions:
+        user_id_html: "<strong>ID de usuario:</strong> Tu credencial de ID de usuario de Sophtron"
+        access_key_html: "<strong>Clave de acceso:</strong> Tu credencial de clave de acceso de Sophtron"
+        base_url_html: "<strong>URL base:</strong> La URL del endpoint de la API de Sophtron, normalmente https://api.sophtron.com/api"
+      fields:
+        user_id:
+          label: "ID de usuario"
+          placeholder_new: "Pega tu ID de usuario de Sophtron"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Clave de acceso"
+          placeholder_new: "Pega tu clave de acceso de Sophtron"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "URL base"
+          placeholder: "https://api.sophtron.com/api"
+      save: "Guardar configuración"
+      update: "Actualizar configuración"
+    syncer:
+      manual_sync_required: "Para esta entidad se requiere una sincronización manual de Sophtron; esas cuentas se omiten durante la sincronización automática."
+      importing_accounts: "Importando cuentas desde Sophtron..."
+      checking_account_configuration: "Comprobando la configuración de la cuenta..."
+      accounts_need_setup: "%{count} cuenta(s) necesitan configuración"
+      processing_transactions: "Procesando transacciones de las cuentas vinculadas..."
+      calculating_balances: "Calculando saldos de las cuentas vinculadas..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "Transacción desconocida"
+    render_connection_timeout:
+      timeout: "Se ha agotado el tiempo de conexión. Inténtalo de nuevo."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "No se puede vincular %{count} cuenta con el nombre en blanco"
+        other: "No se pueden vincular %{count} cuentas con los nombres en blanco"
+      partial_invalid: "Se vincularon %{created_count} cuenta(s). %{already_linked_count} ya estaban vinculadas, %{invalid_count} tenían nombres no válidos."
+      partial_success: "Se vincularon %{created_count} cuenta(s). %{already_linked_count} cuenta(s) ya estaban vinculadas."
+      success:
+        one: "Se ha vinculado %{count} cuenta correctamente."
+        other: "Se han vinculado %{count} cuentas correctamente."
+      all_already_linked:
+        one: "La cuenta seleccionada ya está vinculada"
+        other: "Las %{count} cuentas seleccionadas ya están vinculadas"
+      link_failed: "No se pudieron vincular las cuentas"
+    start_manual_sync:
+      already_running: "Ya hay una sincronización en curso."
+      no_linked_accounts: "No hay cuentas vinculadas disponibles para sincronizar."
+      api_error: "Error de la API: %{message}"
+    start_manual_sync_for_account:
+      failed: "No se pudo sincronizar la cuenta"

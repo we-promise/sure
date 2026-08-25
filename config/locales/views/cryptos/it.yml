@@ -1,0 +1,20 @@
+---
+it:
+  cryptos:
+    edit:
+      edit: Modifica %{account}
+    form:
+      subtype_label: Tipo di conto
+      subtype_prompt: Seleziona tipo di conto
+      subtype_none: Nessuno
+      tax_treatment_label: Trattamento fiscale
+      tax_treatment_hint: La maggior parte delle criptovalute è detenuta in conti imponibili. Seleziona un'opzione diversa se detenuta in un conto a vantaggio fiscale.
+    new:
+      title: Inserisci il saldo del conto
+    subtypes:
+      wallet:
+        short: Portafoglio
+        long: Portafoglio Crypto
+      exchange:
+        short: Exchange
+        long: Exchange Crypto
