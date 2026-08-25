@@ -210,4 +210,33 @@ class GoalAccountTest < ActiveSupport::TestCase
 
     goals(:vacation_italy).whole_account_conflicts_on([]).to_a
   end
+
+  # Autosave validates each link separately, so without a set-wide lock each
+  # would take its own in association order — and two goals saving links on the
+  # same two accounts in opposite orders would hold one lock each and wait on
+  # the other.
+  test "saving a goal claims every account it touches, in id order" do
+    family = families(:dylan_family)
+    # Ids fixed rather than generated: the whole assertion is about ordering,
+    # and random UUIDs would make it pass half the time on association order
+    # alone.
+    low = Account.create!(id: "00000000-0000-4000-8000-000000000001", family: family,
+                          accountable: Depository.new, name: "Pot A",
+                          currency: family.currency, balance: 1_000)
+    high = Account.create!(id: "ffffffff-0000-4000-8000-000000000002", family: family,
+                           accountable: Depository.new, name: "Pot B",
+                           currency: family.currency, balance: 1_000)
+
+    seen = []
+    Goal.stubs(:lock_whole_account_claims!).with { |id| seen << id; true }
+
+    # Built high-id first, so association order and id order disagree.
+    family.goals.create!(name: "Two pots", target_amount: 2_000, currency: family.currency) do |g|
+      g.goal_accounts.build(account: high)
+      g.goal_accounts.build(account: low)
+    end
+
+    assert_equal [ low.id, high.id ], seen.uniq,
+                 "locked in association order rather than id order"
+  end
 end

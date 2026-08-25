@@ -42,6 +42,13 @@ class Goal < ApplicationRecord
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
 
+  # Autosave validates each link separately, so each would otherwise take its
+  # own account lock in association order. Two goals saving links on the same
+  # two accounts in opposite orders would then hold one lock each and wait on
+  # the other. Taking the whole set here, sorted, before any child validates,
+  # is what makes the order the same for everyone.
+  before_validation :lock_whole_account_claims_in_order
+
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
@@ -119,7 +126,10 @@ class Goal < ApplicationRecord
     # when the enclosing transaction ends, whichever way it ends.
     #
     # Locked in id order so two goals claiming the same pair of accounts in
-    # opposite orders cannot deadlock against each other.
+    # opposite orders cannot deadlock against each other. Saving a goal takes
+    # the whole set up front (see `lock_whole_account_claims_in_order`); this
+    # covers a link saved on its own, and re-taking a lock the transaction
+    # already holds costs nothing.
     ids.sort.each { |account_id| self.class.lock_whole_account_claims!(account_id) }
 
     scope = GoalAccount.joins(:goal)
@@ -870,6 +880,12 @@ class Goal < ApplicationRecord
 
     # Accounts this goal claims in full. Read from the loaded association so it
     # is correct for a goal whose links were built but not yet saved.
+    def lock_whole_account_claims_in_order
+      ids = own_whole_account_ids
+      ids |= goal_accounts.filter_map { |ga| ga.account_id if ga.will_save_change_to_allocated_amount? }
+      ids.compact.uniq.sort.each { |account_id| self.class.lock_whole_account_claims!(account_id) }
+    end
+
     def own_whole_account_ids
       goal_accounts
         .reject(&:marked_for_destruction?)
