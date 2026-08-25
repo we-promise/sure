@@ -352,6 +352,7 @@ Rails.application.routes.draw do
       delete :clear_cache, on: :collection
       delete :disconnect_external_assistant, on: :collection
     end
+    resource :chancen, only: %i[show update]
     resource :payment, only: :show
     resource :security, only: :show
     resources :webauthn_credentials, only: %i[create destroy] do

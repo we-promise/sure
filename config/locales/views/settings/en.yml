@@ -328,6 +328,7 @@ en:
       ai_prompts_label: AI Prompts
       background_jobs_label: Background jobs
       api_key_label: API Keys
+      chancen_label: Chancen
       payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback

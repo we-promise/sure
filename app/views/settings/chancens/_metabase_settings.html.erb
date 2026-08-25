@@ -1,0 +1,80 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["METABASE_URL"].present? && ENV["METABASE_API_KEY"].present? && ENV["METABASE_STUDENT_QUESTION_ID"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_chancen_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :metabase_url,
+                        label: t(".url_label"),
+                        placeholder: t(".url_placeholder"),
+                        value: ENV.fetch("METABASE_URL", Setting.metabase_url),
+                        autocomplete: "off",
+                        autocapitalize: "none",
+                        spellcheck: "false",
+                        inputmode: "url",
+                        disabled: ENV["METABASE_URL"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_chancen_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.password_field :metabase_api_key,
+                            label: t(".api_key_label"),
+                            placeholder: t(".api_key_placeholder"),
+                            value: (Setting.metabase_api_key.present? ? "********" : nil),
+                            autocomplete: "off",
+                            autocapitalize: "none",
+                            spellcheck: "false",
+                            disabled: ENV["METABASE_API_KEY"].present?,
+                            data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_chancen_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :metabase_student_question_id,
+                        label: t(".question_id_label"),
+                        placeholder: t(".question_id_placeholder"),
+                        value: ENV.fetch("METABASE_STUDENT_QUESTION_ID", Setting.metabase_student_question_id),
+                        autocomplete: "off",
+                        disabled: ENV["METABASE_STUDENT_QUESTION_ID"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_chancen_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.text_field :metabase_email_param,
+                        label: t(".email_param_label"),
+                        placeholder: t(".email_param_placeholder"),
+                        value: ENV.fetch("METABASE_EMAIL_PARAM", Setting.metabase_email_param),
+                        autocomplete: "off",
+                        autocapitalize: "none",
+                        disabled: ENV["METABASE_EMAIL_PARAM"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+</div>

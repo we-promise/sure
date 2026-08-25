@@ -32,6 +32,13 @@ class Setting < RailsSettings::Base
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
   field :external_assistant_agent_id, type: :string
+
+  # Metabase student data (Chancen ISA warehouse)
+  field :metabase_url, type: :string, default: ENV["METABASE_URL"]
+  field :metabase_api_key, type: :string, default: ENV["METABASE_API_KEY"]
+  field :metabase_student_question_id, type: :string, default: ENV["METABASE_STUDENT_QUESTION_ID"]
+  field :metabase_email_param, type: :string, default: ENV.fetch("METABASE_EMAIL_PARAM", "email")
+
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
@@ -91,6 +98,7 @@ class Setting < RailsSettings::Base
       openai_access_token
       anthropic_access_token
       external_assistant_token
+      metabase_api_key
     ].freeze
 
     ENCRYPTED_FIELDS.each do |field_name|

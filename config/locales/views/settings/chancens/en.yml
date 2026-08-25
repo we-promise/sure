@@ -1,0 +1,23 @@
+---
+en:
+  settings:
+    chancens:
+      show:
+        title: Chancen
+        metabase: Metabase
+      update:
+        success: Chancen settings updated
+      ensure_super_admin:
+        not_authorized: You are not authorized to view Chancen settings
+      metabase_settings:
+        title: Metabase Student Data
+        description: Connect to the Chancen ISA warehouse via Metabase to power the My Account screen.
+        env_configured_message: Configured via environment variable.
+        url_label: Metabase URL
+        url_placeholder: "https://metabase.example.com"
+        api_key_label: API Key
+        api_key_placeholder: Enter API key
+        question_id_label: Student Question ID
+        question_id_placeholder: "1329"
+        email_param_label: Email Template Tag
+        email_param_placeholder: email
