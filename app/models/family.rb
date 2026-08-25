@@ -496,48 +496,6 @@ class Family < ApplicationRecord
     "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
   end
 
-  # Used for invalidating caches keyed on entries (e.g. the transactions
-  # index's uncategorized count). Unlike #entries_cache_version, includes
-  # .count so a hard-deleted entry busts the cache even when it didn't hold
-  # the current max updated_at, and uses full-precision timestamps so two
-  # updates within the same second still produce distinct versions.
-  def entries_version
-    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
-  end
-
-  # Used for invalidating caches keyed on recurring transactions (e.g. the
-  # transactions index's projected recurring list). See #entries_version for
-  # why .count is included alongside the timestamp.
-  def recurring_transactions_version
-    "#{recurring_transactions.count}-#{recurring_transactions.maximum(:updated_at)&.to_f}"
-  end
-
-  # Used for invalidating caches whose results depend on which accounts are
-  # active/draft vs. disabled (e.g. AccountsController#toggle_active changes
-  # nothing on entries, but changes which entries `uncategorized_transactions`
-  # considers accessible).
-  def accounts_status_version
-    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
-  end
-
-  # Used for invalidating caches that render merchant name/logo for recurring
-  # transactions (e.g. the transactions index's projected recurring list).
-  # Recurring detection copies `transaction.merchant_id` (see
-  # RecurringTransaction::Identifier), which can point at either a
-  # family-owned FamilyMerchant or a shared ProviderMerchant -- editing either
-  # (e.g. a manual rename, or ProviderMerchant::Enhancer updating a shared
-  # provider merchant's name/logo) doesn't touch `recurring_transactions`.
-  # Scoped to only the merchants actually referenced by this family's
-  # recurring transactions, rather than all family merchants, so unrelated
-  # merchant edits don't bust the cache unnecessarily.
-  def recurring_transaction_merchants_version
-    merchant_ids = recurring_transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
-    return "0-" if merchant_ids.empty?
-
-    scope = Merchant.where(id: merchant_ids)
-    "#{scope.count}-#{scope.maximum(:updated_at)&.to_f}"
-  end
-
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
   end

@@ -8,7 +8,17 @@ class VectorStoreTest < ActiveSupport::TestCase
 
   test "embedding defaults use a matching model and vector width" do
     ClimateControl.modify(EMBEDDING_ENVIRONMENT) do
-      assert_equal "mxbai-embed-large", VectorStore.embedding_model
+      assert_equal "nomic-embed-text", VectorStore.embedding_model
+      assert_equal 1024, VectorStore.embedding_dimensions
+    end
+  end
+
+  test "blank embedding configuration falls back to defaults" do
+    ClimateControl.modify(EMBEDDING_ENVIRONMENT.merge(
+      "EMBEDDING_MODEL" => "",
+      "EMBEDDING_DIMENSIONS" => ""
+    )) do
+      assert_equal "nomic-embed-text", VectorStore.embedding_model
       assert_equal 1024, VectorStore.embedding_dimensions
     end
   end

@@ -77,9 +77,8 @@ final class SureStore {
   func disconnect() async {
     sessionGeneration &+= 1
     chatGeneration &+= 1
-    await unregisterPushToken()
+    guard await unregisterPushToken() else { return }
     KeychainStore.deleteAPIKey()
-    UserDefaults.standard.removeObject(forKey: "sure.pushSubscriptionID")
     UserDefaults.standard.set(false, forKey: "sure.insightNotifications")
     isConfigured = false
     isLoading = false
@@ -153,7 +152,7 @@ final class SureStore {
         await registerPushToken(token)
       }
     } else {
-      await unregisterPushToken()
+      _ = await unregisterPushToken()
     }
     guard sessionGeneration == generation else { return }
     isLoading = false
@@ -283,24 +282,27 @@ final class SureStore {
     }
   }
 
-  func unregisterPushToken() async {
+  func unregisterPushToken() async -> Bool {
     guard isConfigured,
-          let id = UserDefaults.standard.string(forKey: "sure.pushSubscriptionID") else { return }
+          let id = UserDefaults.standard.string(forKey: "sure.pushSubscriptionID") else { return true }
     let generation = sessionGeneration
     do {
       try await client.delete("api/v1/push_subscriptions/\(id)")
-      guard sessionGeneration == generation else { return }
+      guard sessionGeneration == generation else { return false }
       UserDefaults.standard.removeObject(forKey: "sure.pushSubscriptionID")
+      return true
     } catch let error as SureAPIError {
-      guard sessionGeneration == generation else { return }
+      guard sessionGeneration == generation else { return false }
       if case .server(status: 404, message: _) = error {
         UserDefaults.standard.removeObject(forKey: "sure.pushSubscriptionID")
-        return
+        return true
       }
       errorMessage = error.localizedDescription
+      return false
     } catch {
-      guard sessionGeneration == generation else { return }
+      guard sessionGeneration == generation else { return false }
       errorMessage = error.localizedDescription
+      return false
     }
   }
 

@@ -65,6 +65,13 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
       response "204", "token unregistered" do
         run_test!
       end
+
+      response "404", "token not found" do
+        schema "$ref" => "#/components/schemas/ErrorResponse"
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
     end
   end
 end
