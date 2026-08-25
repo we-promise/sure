@@ -928,13 +928,6 @@ class Goal < ApplicationRecord
       @pooled_pace ||= self.class.pace_for(family)
     end
 
-    # Cleared after every AASM transition. The state column drives the
-    # display_status / projection_summary memos; without this the same
-    # instance keeps returning the pre-transition value if a controller
-    # calls archive! / pause! and then renders without reload.
-    # Reopening or unarchiving hands the goal back to the live calculation:
-    # it is being funded again, so a figure frozen at an earlier close would
-    # misreport it from here on.
     def apply_state_change_side_effects
       previous_state, next_state = saved_change_to_state
 
@@ -954,13 +947,6 @@ class Goal < ApplicationRecord
       end
     end
 
-    # Reopening restarts the goal, so what was spent under its previous life
-    # goes with the frozen figure. Leaving it would have the reopened goal
-    # claim credit for money spent on something it has already been closed for.
-    # `reload` refreshes columns and leaves every memo standing, so an instance
-    # that had already read its progress kept reporting the figures from before
-    # the spend. Same list `reset_state_dependent_caches!` clears on an AASM
-    # transition, and for the same reason.
     def consumption_link_for(account)
       links = goal_accounts.to_a
       raise ConsumptionRefused.new(:no_linked_account) if links.empty?
@@ -974,10 +960,20 @@ class Goal < ApplicationRecord
         raise(ConsumptionRefused.new(:account_not_linked))
     end
 
+    # Reopening or unarchiving hands the goal back to the live calculation: it
+    # is being funded again, so a figure frozen at an earlier close would
+    # misreport it from here on. Reopening restarts the goal, so what was spent
+    # under its previous life goes with the frozen figure — leaving it would
+    # have the reopened goal claim credit for money spent on something it has
+    # already been closed for.
     def thaw_completed_amount!
       update_columns(completed_amount: nil, completed_at: nil, consumed_amount: 0)
     end
 
+    # Cleared after every AASM transition. The state column drives the
+    # display_status / projection_summary memos; without this the same instance
+    # keeps returning the pre-transition value if a controller calls archive! /
+    # pause! and then renders without reload.
     def reset_state_dependent_caches!
       # current_balance depends on the goal's own state — a goal in any of
       # RELEASED_STATES is excluded from the shared pool, and a completed one
