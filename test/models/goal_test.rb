@@ -816,7 +816,64 @@ class GoalTest < ActiveSupport::TestCase
                     "a saved point outran the history it was scaled from"
   end
 
+
+  # AASM runs an event's `after` hook on the non-bang form too, which does not
+  # save. The completion snapshot used to be written there, so `complete` left
+  # the row `active` in the database carrying a frozen amount and a completion
+  # date — a goal still being funded that everything keying off
+  # `completed_amount.present?` read as closed.
+  test "complete without the bang stamps nothing" do
+    goal = completable_goal
+
+    goal.complete
+
+    row = Goal.where(id: goal.id).pick(:state, :completed_amount, :completed_at)
+    assert_equal "active", row[0]
+    assert_nil row[1]
+    assert_nil row[2]
+  end
+
+  test "complete! freezes the amount alongside the state it belongs to" do
+    goal = completable_goal
+
+    goal.complete!
+
+    row = Goal.where(id: goal.id).pick(:state, :completed_amount, :completed_at)
+    assert_equal "completed", row[0]
+    assert_equal 4_000, row[1].to_d
+    assert_not_nil row[2]
+  end
+
+  test "reopening without the bang thaws nothing" do
+    goal = completable_goal
+    goal.complete!
+
+    goal.reopen
+
+    assert_equal 4_000, Goal.where(id: goal.id).pick(:completed_amount).to_d
+  end
+
+  test "reopen! hands the goal back to the live calculation" do
+    goal = completable_goal
+    goal.complete!
+
+    goal.reopen!
+
+    assert_nil Goal.where(id: goal.id).pick(:completed_amount)
+  end
+
   private
+
+    # Its own account, so the shared-pool haircut does not make the frozen
+    # figure depend on what the fixtures happen to claim.
+    def completable_goal
+      account = Account.create!(family: @family, accountable: Depository.new,
+                                name: "Close pot #{SecureRandom.hex(3)}",
+                                currency: @family.currency, balance: 4_000)
+      @family.goals.create!(name: "Trip", target_amount: 4_000, currency: @family.currency) do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 4_000)
+      end
+    end
     # A fresh account: the fixtures deliberately carry three goals holding
     # whole-account links on `depository`, a legacy overlap the exclusivity
     # rule tolerates but which would muddy every assertion here.

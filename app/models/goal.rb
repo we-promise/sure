@@ -39,6 +39,17 @@ class Goal < ApplicationRecord
   # is what makes the order the same for everyone.
   before_validation :lock_whole_account_claims_in_order
 
+  # AASM's event `after` hooks run on the non-bang form too, which does not
+  # save. `goal.complete` therefore left the row `active` in the database
+  # while stamping it with a completion snapshot — a goal still being funded,
+  # carrying a frozen amount and a completion date. Everything downstream that
+  # keys off `completed_amount.present?` then read it as closed.
+  #
+  # Hung off the persisted change instead, so the side effects and the state
+  # they belong to are the same fact. Still inside the save transaction, so a
+  # later failure takes both back.
+  after_save :apply_state_change_side_effects, if: :saved_change_to_state?
+
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
@@ -264,17 +275,6 @@ class Goal < ApplicationRecord
 
     event :complete do
       transitions from: [ :active, :paused ], to: :completed
-
-      # Freeze what the goal actually reached. Modification 1 stops a
-      # completed goal from reserving anything, but its amount would still be
-      # recomputed from the live balance — so spending the money would walk
-      # the finished goal back down and rewrite its own history. Read after
-      # the transition, when reset_state_dependent_caches! has just cleared
-      # the memos: the goal never counted itself in others_fixed, so the
-      # figure is the same on both sides of the state change.
-      after do
-        update_columns(completed_amount: current_balance, completed_at: Time.current)
-      end
     end
 
     event :archive do
@@ -283,14 +283,10 @@ class Goal < ApplicationRecord
 
     event :unarchive do
       transitions from: :archived, to: :active
-
-      after { thaw_completed_amount! }
     end
 
     event :reopen do
       transitions from: :completed, to: :active
-
-      after { thaw_completed_amount! }
     end
   end
 
@@ -800,6 +796,25 @@ class Goal < ApplicationRecord
     # Reopening or unarchiving hands the goal back to the live calculation:
     # it is being funded again, so a figure frozen at an earlier close would
     # misreport it from here on.
+    def apply_state_change_side_effects
+      previous_state, next_state = saved_change_to_state
+
+      # The memos were cleared at transition time, but anything that read the
+      # goal between then and the save will have refilled them from the old
+      # state. Cleared again so `current_balance` below is the closing figure.
+      reset_state_dependent_caches!
+
+      if next_state == "completed"
+        # Freeze what the goal actually reached. A completed goal reserves
+        # nothing, but its amount would still be recomputed from the live
+        # balance — so spending the money would walk the finished goal back
+        # down and rewrite its own history.
+        update_columns(completed_amount: current_balance, completed_at: Time.current)
+      elsif previous_state.in?(RELEASED_STATES) && !next_state.in?(RELEASED_STATES)
+        thaw_completed_amount!
+      end
+    end
+
     def thaw_completed_amount!
       update_columns(completed_amount: nil, completed_at: nil)
     end
