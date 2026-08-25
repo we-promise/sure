@@ -184,7 +184,13 @@ fr:
         account_not_linked: Ce compte ne finance pas cet objectif.
         not_active: Cet objectif n'est plus actif, rien ne peut y être enregistré.
         exceeds_earmark: C'est plus que ce que ce compte a affecté à l'objectif.
+        transaction_already_claimed: Cette sortie a déjà été attribuée.
+        transaction_not_found: Cette sortie n'est plus disponible.
         no_linked_account: Cet objectif n'a plus de compte de financement.
+    unattributed_outflows:
+      heading: De l'argent est sorti de ces comptes
+      body: Si une partie a servi à %{goal}, dites-le et elle cessera de compter comme un retard.
+      attribute: C'était ça
     show:
       archive: Archiver
       archived_banner:

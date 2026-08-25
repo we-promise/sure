@@ -95,6 +95,10 @@
     <%= render "pending_pledge_banner", pledge: pledge %>
   <% end %>
 
+  <% if @unattributed_outflows.any? %>
+    <%= render "unattributed_outflows", goal: @goal, outflows: @unattributed_outflows %>
+  <% end %>
+
   <% if @goal.paused? %>
     <%= render DS::Alert.new(variant: "info", title: t("goals.show.paused_banner.title")) do %>
       <p class="text-secondary"><%= t("goals.show.paused_banner.body") %></p>

@@ -575,6 +575,43 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, goal.reload.consumed_amount
   end
 
+  # --- Lot B5: attributing an outflow the app spotted ---
+
+  test "the goal page offers an outflow nothing has claimed" do
+    goal, entry = goal_with_outflow
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.unattributed_outflows.heading"), response.body
+    assert_match entry.name, response.body
+  end
+
+  test "attributing an outflow takes its amount and stops offering it" do
+    goal, entry = goal_with_outflow
+
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+
+    assert_redirected_to goal_url(goal)
+    assert_equal entry.amount.to_d, goal.reload.consumed_amount
+
+    get goal_url(goal)
+    assert_no_match I18n.t("goals.unattributed_outflows.heading"), response.body
+  end
+
+  # The stamp is what makes this idempotent: replaying the same attribution
+  # must not credit the goal twice for one spend.
+  test "the same outflow cannot be attributed twice" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    recorded = goal.reload.consumed_amount
+
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+
+    assert_equal recorded, goal.reload.consumed_amount
+    assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
+  end
+
   private
 
     # A private account of another member, linked to the goal under test.
@@ -589,6 +626,21 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       )
       @goal.goal_accounts.create!(account: account, allocated_amount: 500)
       account
+    end
+
+    def goal_with_outflow
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Trip Pot #{SecureRandom.hex(4)}", currency: @user.family.currency, balance: 5_000
+      )
+      goal = @user.family.goals.create!(
+        name: "Trip", target_amount: 5_000, currency: @user.family.currency
+      ) { |g| g.goal_accounts.build(account: account, allocated_amount: 5_000) }
+      entry = account.entries.create!(
+        name: "Flights", date: Date.current, amount: 1_200,
+        currency: account.currency, entryable: Transaction.new
+      )
+      [ goal, entry ]
     end
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.

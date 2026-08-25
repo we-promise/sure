@@ -415,7 +415,12 @@ class Goal < ApplicationRecord
   # `account:` may be omitted only when the goal has one link. With several,
   # guessing would silently pick a side; the caller has to say which pot the
   # money came out of.
-  def consume!(amount, account: nil)
+  # `transaction:` anchors the record on the outflow it came from. Without one
+  # this is a bare declaration and nothing stops it being made twice; with one,
+  # the transaction is stamped and a second attempt on the same outflow is
+  # refused. Same `extra["goal"]` namespace the pledges already write into, so
+  # the two halves of a goal's money — in and out — are stamped alike.
+  def consume!(amount, account: nil, transaction: nil)
     amount = amount.to_d
     raise ConsumptionRefused.new(:non_positive) unless amount.positive?
     # A reserve is not consumed, it is drawn down and refilled. Spending from
@@ -436,6 +441,7 @@ class Goal < ApplicationRecord
       raise ConsumptionRefused.new(:exceeds_target) if consumed_amount.to_d + amount > target_amount.to_d
 
       link.lock!
+      stamp_consumption!(transaction) if transaction
 
       # A whole-account link reserves no fixed slice, so there is nothing to
       # shrink — it already takes only what the account has left.
@@ -944,6 +950,23 @@ class Goal < ApplicationRecord
         update_columns(completed_amount: current_balance, completed_at: Time.current)
       elsif previous_state.in?(RELEASED_STATES) && !next_state.in?(RELEASED_STATES)
         thaw_completed_amount!
+      end
+    end
+
+    # Claims the outflow for this goal, refusing one already claimed. Inside
+    # the caller's transaction, so a refusal here rolls the consumption back
+    # rather than leaving the goal credited for a spend it did not record.
+    def stamp_consumption!(txn)
+      txn.with_lock do
+        claimed_by = txn.extra&.dig("goal", "consumed_goal_id")
+        if claimed_by.present? && claimed_by != id
+          raise ConsumptionRefused.new(:transaction_already_claimed)
+        end
+        raise ConsumptionRefused.new(:transaction_already_claimed) if claimed_by == id
+
+        extra = txn.extra || {}
+        extra["goal"] = (extra["goal"] || {}).merge("consumed_goal_id" => id)
+        txn.update!(extra: extra)
       end
     end
 
