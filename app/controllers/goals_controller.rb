@@ -165,8 +165,10 @@ class GoalsController < ApplicationController
   end
 
   def record_consumption
-    @goal.consume!(params[:amount], account: consumption_account)
-    redirect_to goal_path(@goal), notice: t("goals.consume.success", amount: params[:amount])
+    amount = params[:amount].to_d
+    @goal.consume!(amount, account: consumption_account)
+    redirect_to goal_path(@goal),
+                notice: t("goals.consume.success", amount: Money.new(amount, @goal.currency).format)
   rescue Goal::ConsumptionRefused => e
     redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
   rescue ActiveRecord::RecordInvalid => e
@@ -333,7 +335,11 @@ class GoalsController < ApplicationController
     def consumption_account
       return nil if params[:account_id].blank?
 
-      Current.family.accounts.find_by(id: params[:account_id]) ||
+      # The VIEWER's accessible accounts, not the family's. `Current.family`
+      # resolves private accounts the requester cannot see, so a family member
+      # could name one and have its earmark reduced — learning it exists, and
+      # by how much, from the figures that moved.
+      Current.user.accessible_accounts.find_by(id: params[:account_id]) ||
         raise(Goal::ConsumptionRefused.new(:account_not_linked))
     end
 

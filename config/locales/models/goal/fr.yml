@@ -20,6 +20,9 @@ fr:
               whole_account_conflict_on_restore: "Impossible de restaurer cet objectif : « %{account_name} » est désormais entièrement affecté à « %{goal_name} ». Indiquez d'abord un montant sur l'un des deux."
             kind:
               locked_while_released: Rouvrez cet objectif avant d'en faire une réserve.
+              locked_once_consumed: Cet objectif a déjà enregistré des dépenses, il ne peut pas devenir une réserve.
+            target_amount:
+              below_consumed: Impossible de fixer une cible inférieure à ce que cet objectif a déjà enregistré comme dépensé.
             currency:
               locked_after_linked: Impossible de modifier la devise après que l'objectif a été lié à des comptes.
             linked_accounts:

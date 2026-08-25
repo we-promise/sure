@@ -134,6 +134,76 @@ class GoalConsumptionTest < ActiveSupport::TestCase
     assert_equal 0, reloaded.remaining_amount
   end
 
+  # --- Review follow-ups ---
+
+  # Clamping released only what the link held while `consumed_amount` took the
+  # full figure, so the two sides silently disagreed: money counted as spent
+  # that was never released, and still reserved against every sibling.
+  test "consuming more than the chosen link holds is refused, not clamped" do
+    goal = goal_with(earmark: 3_000, balance: 6_000, target: 9_000)
+    second = fresh_account(6_000)
+    goal.goal_accounts.create!(account: second, allocated_amount: 1_000)
+
+    error = assert_raises(Goal::ConsumptionRefused) { goal.consume!(2_000, account: second) }
+
+    assert_equal :exceeds_earmark, error.reason
+    assert_equal 0, goal.reload.consumed_amount
+    assert_equal 1_000, goal.goal_accounts.find_by(account_id: second.id).reload.allocated_amount
+  end
+
+  # A dialog left open in another tab, or a client posting directly.
+  test "a goal that is no longer active records nothing" do
+    goal = goal_with(earmark: 5_000, balance: 5_000, target: 5_000)
+    goal.complete!
+
+    error = assert_raises(Goal::ConsumptionRefused) { goal.reload.consume!(1_000) }
+
+    assert_equal :not_active, error.reason
+    assert_equal 0, goal.reload.consumed_amount
+  end
+
+  # A reserve refuses consumption, so a converted goal would carry a figure
+  # counting toward progress on an object whose model says spending is a
+  # shortfall to refill. The two readings cannot both be true.
+  test "a goal that has recorded a spend cannot become a reserve" do
+    goal = goal_with(earmark: 5_000, balance: 5_000, target: 5_000)
+    goal.consume!(1_000)
+
+    goal.kind = "maintained"
+
+    assert_not goal.valid?
+    assert_includes goal.errors[:kind],
+                    "This goal has already recorded money as spent, so it cannot become a reserve."
+  end
+
+  # The consumed total was only checked while consuming, leaving the ordinary
+  # edit form free to lower the target underneath it.
+  test "the target cannot be lowered below what was already spent" do
+    goal = goal_with(earmark: 5_000, balance: 5_000, target: 5_000)
+    goal.consume!(3_000)
+
+    assert_not goal.update(target_amount: 2_000)
+    assert_equal 5_000, goal.reload.target_amount
+  end
+
+  # `reload` refreshes columns and leaves memos standing, so an instance that
+  # had already read its backing kept reporting the figure from before the
+  # spend — while progress, which nets the two, looked unchanged and hid it.
+  #
+  # Progress holding at 50% is not the bug, it is the feature: the earmark
+  # shrinks by exactly what consumption grows by, so spending the money does
+  # not move the bar. The backing underneath it does move, and must say so.
+  test "the figures an instance already read are refreshed by consuming" do
+    goal = goal_with(earmark: 5_000, balance: 5_000, target: 10_000)
+    assert_equal 5_000, goal.current_balance.to_d
+    assert_equal 50, goal.progress_percent
+
+    goal.consume!(2_000)
+
+    assert_equal 3_000, goal.current_balance.to_d, "the memo survived the spend"
+    assert_equal 50, goal.progress_percent, "and progress is preserved, which is the point"
+  end
+
   private
     def fresh_account(balance)
       Account.create!(

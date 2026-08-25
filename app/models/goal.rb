@@ -42,6 +42,8 @@ class Goal < ApplicationRecord
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
   validate :kind_locked_while_released
+  validate :kind_locked_once_consumed
+  validate :target_must_cover_what_was_consumed
   # A reserve has no deadline. Normalising here rather than rejecting: the form
   # hides the field for a reserve, so a date can only arrive from a conversion
   # or a crafted request — refusing would show an error about a field the user
@@ -421,23 +423,38 @@ class Goal < ApplicationRecord
     # on its own; recording it as consumption would erase exactly the signal
     # the reserve exists to give.
     raise ConsumptionRefused.new(:maintained) if maintained?
-    raise ConsumptionRefused.new(:exceeds_target) if consumed_amount.to_d + amount > target_amount.to_d
 
     link = consumption_link_for(account)
 
-    transaction do
+    # The GOAL is locked, not just the link. `consumed_amount` lives here, and
+    # two concurrent requests locking only their own links would both read the
+    # same old value, both pass the target check, and both add to it — the
+    # goal ending up consumed past its target with neither request at fault.
+    # The checks below therefore run under the lock, on freshly read values.
+    with_lock do
+      raise ConsumptionRefused.new(:not_active) unless active?
+      raise ConsumptionRefused.new(:exceeds_target) if consumed_amount.to_d + amount > target_amount.to_d
+
       link.lock!
 
       # A whole-account link reserves no fixed slice, so there is nothing to
       # shrink — it already takes only what the account has left.
       if link.allocated_amount.present?
-        link.update!(allocated_amount: [ link.allocated_amount.to_d - amount, 0 ].max)
+        # Refused rather than clamped. Clamping released only what the link
+        # held while `consumed_amount` took the full figure, so the two sides
+        # silently disagreed: money counted as spent that was never released,
+        # and still reserved against every sibling goal on the account.
+        if amount > link.allocated_amount.to_d
+          raise ConsumptionRefused.new(:exceeds_earmark)
+        end
+
+        link.update!(allocated_amount: link.allocated_amount.to_d - amount)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
     end
 
-    reload
+    reload_after_consumption
   end
 
   def remaining_amount_money
@@ -932,6 +949,24 @@ class Goal < ApplicationRecord
       end
     end
 
+    # Reopening restarts the goal, so what was spent under its previous life
+    # goes with the frozen figure. Leaving it would have the reopened goal
+    # claim credit for money spent on something it has already been closed for.
+    # `reload` refreshes columns and leaves every memo standing, so an instance
+    # that had already read its progress kept reporting the figures from before
+    # the spend. Same list `reset_state_dependent_caches!` clears on an AASM
+    # transition, and for the same reason.
+    def reload_after_consumption
+      %i[
+        @current_balance @current_balance_money
+        @remaining_amount @remaining_amount_money
+        @progress_percent @monthly_target_amount
+        @pace @pace_money @status @display_status @projection_summary
+      ].each { |ivar| remove_instance_variable(ivar) if instance_variable_defined?(ivar) }
+
+      reload
+    end
+
     def consumption_link_for(account)
       links = goal_accounts.to_a
       raise ConsumptionRefused.new(:no_linked_account) if links.empty?
@@ -1051,6 +1086,28 @@ class Goal < ApplicationRecord
     # `completed` — a state that has HANDED BACK its earmark — while the show
     # page promises its money stays reserved. The conversion has to go through
     # an active state, where `complete` is already refused for a reserve.
+    # A reserve refuses consumption, so letting a goal that has already recorded
+    # some become one leaves that figure stranded: it still counts toward
+    # progress, on an object whose whole model says spending is a shortfall to
+    # refill rather than a job done. The two readings cannot both be true.
+    def kind_locked_once_consumed
+      return unless will_save_change_to_kind?
+      return unless maintained?
+      return unless consumed_amount.to_d.positive?
+
+      errors.add(:kind, :locked_once_consumed)
+    end
+
+    # The consumed total is checked while consuming, which left the ordinary
+    # edit form free to lower the target underneath it — a goal reporting more
+    # spent than it ever set out to save.
+    def target_must_cover_what_was_consumed
+      return unless target_amount.present? && consumed_amount.to_d.positive?
+      return if target_amount.to_d >= consumed_amount.to_d
+
+      errors.add(:target_amount, :below_consumed)
+    end
+
     def kind_locked_while_released
       return unless persisted? && will_save_change_to_kind?
       # The PERSISTED state, not the one in memory. A single update can set

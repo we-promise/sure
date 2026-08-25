@@ -182,6 +182,8 @@ fr:
         exceeds_target: C'est plus que ce que cet objectif visait à épargner.
         account_required: Cet objectif est financé par plusieurs comptes — indiquez celui d'où vient l'argent.
         account_not_linked: Ce compte ne finance pas cet objectif.
+        not_active: Cet objectif n'est plus actif, rien ne peut y être enregistré.
+        exceeds_earmark: C'est plus que ce que ce compte a affecté à l'objectif.
         no_linked_account: Cet objectif n'a plus de compte de financement.
     show:
       archive: Archiver
@@ -216,6 +218,7 @@ fr:
       confirm_complete_title: Marquer cet objectif comme terminé ?
       delete: Supprimer
       edit: Modifier
+      consume: J'ai utilisé une partie de cet argent
       empty:
         body: Effectuez un virement sur votre compte lié. Sure le détectera lors de la prochaine synchronisation. Ou mettez à jour manuellement le solde du compte.
         heading: Aucun dépôt pour l'instant

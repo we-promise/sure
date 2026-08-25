@@ -24,12 +24,15 @@
       <%# Only asked when there is a choice to make. With one link the model
           takes it on its own, and a select of one is a question with no answer. %>
       <% if @goal.linked_accounts.size > 1 %>
-        <div class="space-y-1">
-          <%= label_tag :account_id, t(".account_label"), class: "text-sm text-secondary" %>
-          <%= select_tag :account_id,
-                         options_from_collection_for_select(@goal.linked_accounts, :id, :name),
-                         class: "form-field__input w-full" %>
-        </div>
+        <%# DS::Select, not a bare select_tag: the design system already has the
+            primitive and hand-rolling an input shape is how a page stops
+            matching the rest of the app. %>
+        <%= render DS::Select.new(
+              form: f,
+              method: :account_id,
+              items: @goal.linked_accounts.map { |account| { label: account.name, value: account.id } },
+              label: t(".account_label")
+            ) %>
       <% end %>
 
       <p class="text-xs text-secondary"><%= t(".earmark_note") %></p>

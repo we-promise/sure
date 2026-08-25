@@ -111,6 +111,8 @@ en:
         exceeds_target: That is more than this goal ever set out to save.
         account_required: This goal is funded by several accounts — say which one the money came out of.
         account_not_linked: That account does not fund this goal.
+        not_active: This goal is no longer active, so nothing can be recorded against it.
+        exceeds_earmark: That is more than this account has earmarked for the goal.
         no_linked_account: This goal has no funding account left.
     show:
       edit: Edit
