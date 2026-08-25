@@ -1,6 +1,14 @@
 require "test_helper"
 
 class Valuation::NameTest < ActiveSupport::TestCase
+  test "localizes manual value updates" do
+    I18n.with_locale(:fr) do
+      name = Valuation::Name.new("reconciliation", "Investment")
+
+      assert_equal "Mise à jour manuelle de la valeur", name.to_s
+    end
+  end
+
   # Opening anchor tests
   test "generates opening anchor name for Property" do
     name = Valuation::Name.new("opening_anchor", "Property")

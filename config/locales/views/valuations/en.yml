@@ -1,6 +1,18 @@
 ---
 en:
   valuations:
+    names:
+      current_account_value: Current account value
+      current_balance: Current balance
+      current_loan_balance: Current loan balance
+      current_market_value: Current market value
+      manual_balance_update: Manual balance update
+      manual_principal_update: Manual principal update
+      manual_value_update: Manual value update
+      opening_account_value: Opening account value
+      opening_balance: Opening balance
+      original_principal: Original principal
+      original_purchase_price: Original purchase price
     confirmation_contents:
       this_will: "This will %{action_verb} the account value on"
       to_colon: "to:"

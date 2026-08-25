@@ -21,6 +21,10 @@ class Series
   )
 
   class << self
+    def format_date(date)
+      I18n.l(date, format: Current.family&.date_format.presence || :long)
+    end
+
     def from_raw_values(values, interval: "1 day")
       raise ArgumentError, "Must be an array of at least 2 values" unless values.size >= 2
       raise ArgumentError, "Must have date and value properties" unless values.all? { |value| value.has_key?(:date) && value.has_key?(:value) }
@@ -36,7 +40,7 @@ class Series
         values: [ nil, *ordered ].each_cons(2).map do |prev_value, curr_value|
           Value.new(
             date: curr_value[:date],
-            date_formatted: I18n.l(curr_value[:date], format: :long),
+            date_formatted: format_date(curr_value[:date]),
             value: curr_value[:value],
             trend: Trend.new(
               current: curr_value[:value],
