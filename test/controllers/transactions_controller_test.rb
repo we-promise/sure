@@ -1000,7 +1000,33 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
-  test "index uncategorized_count reflects new transactions immediately" do
+  test "index caches uncategorized_count and projected_recurring across requests" do
+    # Test environment uses null_store; swap in a memory store so the cache
+    # actually persists between the two requests below.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    assert_response :success
+
+    queries = capture_sql_queries { get transactions_url }
+    assert_response :success
+
+    # uncategorized_transactions is a scope (joins/wheres), so its name never
+    # appears in the generated SQL -- match the COUNT query it produces instead.
+    assert_empty queries.select { |q| q =~ /SELECT COUNT/i && q =~ /category_id.*IS NULL/i },
+      "second request with unchanged data should reuse the cached uncategorized count"
+    # Building the cache key itself still runs small COUNT/MAX queries against
+    # recurring_transactions (Family#recurring_transactions_version and
+    # #recurring_transaction_merchants_version), so match the projection query
+    # the cached block itself would run instead of the whole table name.
+    assert_empty queries.grep(/next_expected_date/i),
+      "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects new transactions immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1025,7 +1051,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index uncategorized_count reflects categorizing a transaction immediately" do
+  test "index uncategorized_count cache reflects categorizing a transaction immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1051,7 +1077,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index uncategorized_count reflects revoked account-share access" do
+  test "index uncategorized_count cache is invalidated when account-share access is revoked" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1082,7 +1108,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index projected_recurring reflects revoked account-share access" do
+  test "index projected_recurring cache is invalidated when account-share access is revoked" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1108,7 +1134,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index projected_recurring reflects a merchant rename immediately" do
+  test "index projected_recurring cache reflects a merchant rename immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1128,7 +1154,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index projected_recurring reflects a provider merchant update immediately" do
+  test "index projected_recurring cache reflects a provider merchant update immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1152,7 +1178,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index uncategorized_count reflects deleting an uncategorized transaction immediately" do
+  test "index uncategorized_count cache reflects deleting an uncategorized transaction immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1178,7 +1204,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index uncategorized_count reflects disabling an account immediately" do
+  test "index uncategorized_count cache reflects disabling an account immediately" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 
@@ -1206,7 +1232,7 @@ end
     Rails.cache = original_cache
   end
 
-  test "index uncategorized_count is scoped per user, not just per family" do
+  test "index uncategorized_count cache is scoped per user, not just per family" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
 

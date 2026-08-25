@@ -1310,7 +1310,7 @@ Use PostgreSQL's pgvector extension for fully local document search. All data st
 
 **Requirements:**
 - Use the `pgvector/pgvector:pg16-trixie` Docker image instead of `postgres:16` (drop-in replacement)
-- An embedding model served via an OpenAI-compatible `/v1/embeddings` endpoint (e.g. Ollama with `nomic-embed-text`)
+- An embedding model served via an OpenAI-compatible `/v1/embeddings` endpoint (e.g. Ollama with `mxbai-embed-large`)
 - Run the migration with `VECTOR_STORE_PROVIDER=pgvector` to create the `vector_store_chunks` table
 
 ```bash
@@ -1318,7 +1318,7 @@ Use PostgreSQL's pgvector extension for fully local document search. All data st
 VECTOR_STORE_PROVIDER=pgvector
 
 # Embedding model configuration
-EMBEDDING_MODEL=nomic-embed-text           # Default: nomic-embed-text
+EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
 EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
 EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
@@ -1335,16 +1335,15 @@ CREATE EXTENSION vector;
 
 The LLM and embedding endpoints are independent. A common fully local setup is
 an OpenAI-compatible chat model through `OPENAI_URI_BASE`, pgvector for storage,
-and an embedding model through `EMBEDDING_URI_BASE`. The default model remains
-`nomic-embed-text` and the default index width remains 1024 for compatibility
-with existing installations. Override `EMBEDDING_DIMENSIONS` if your embedding
-endpoint returns a different vector width.
+and an embedding model through `EMBEDDING_URI_BASE`. Make sure
+`EMBEDDING_DIMENSIONS` matches the selected embedding model (for example,
+`mxbai-embed-large` uses 1024 dimensions).
 
 If you are using Ollama (as in `compose.example.ai.yml`), pull the embedding model:
 
 ```bash
 docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
-docker compose -f compose.example.ai.yml exec ollama ollama pull nomic-embed-text
+docker compose exec ollama ollama pull mxbai-embed-large
 ```
 
 > [!WARNING]

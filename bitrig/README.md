@@ -1,4 +1,4 @@
-# Sure Insights for iOS and iPadOS
+# Sure for iOS and iPadOS
 
 This SwiftUI client connects directly to a Sure instance with `X-Api-Key` authentication.
 

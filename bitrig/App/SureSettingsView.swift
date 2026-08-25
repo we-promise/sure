@@ -81,7 +81,7 @@ struct SureSettingsView: View {
         notificationStatus = error.localizedDescription
       }
     } else {
-      _ = await store.unregisterPushToken()
+      await store.unregisterPushToken()
       notificationStatus = "Notifications are disabled for this device."
     }
   }
