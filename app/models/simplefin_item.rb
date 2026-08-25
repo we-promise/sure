@@ -7,6 +7,12 @@ class SimplefinItem < ApplicationRecord
   # Virtual attribute for the setup token form field
   attr_accessor :setup_token
 
+  # Transient, in-memory only. Set by SimplefinItem::Importer#perform_account_discovery
+  # to the set of account_ids returned by the current sync's unbounded discovery call.
+  # Used by #repair_stale_linkages to verify a "stale" linked account is actually absent
+  # upstream, rather than trusting a name match alone. Never persisted.
+  attr_accessor :upstream_account_ids
+
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :access_url, deterministic: true
@@ -138,15 +144,38 @@ class SimplefinItem < ApplicationRecord
 
     return if unlinked_with_data.empty?
 
+    # Without a current picture of what the provider actually returned this sync, a
+    # name match alone cannot distinguish a genuinely stale account (re-added institution,
+    # new account_id) from two distinct upstream accounts that merely share a display name.
+    # Refuse to act rather than risk hijacking a live linkage. See GH issue #2852.
+    if upstream_account_ids.nil?
+      Rails.logger.warn "SimplefinItem#repair_stale_linkages - upstream_account_ids unavailable, skipping repair to avoid hijacking a live linkage"
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Skipped stale-linkage repair: upstream_account_ids unavailable",
+        source: self.class.name,
+        provider_key: "simplefin",
+        family: family,
+        metadata: { simplefin_item_id: id, unlinked_with_data_count: unlinked_with_data.count }
+      )
+      return
+    end
+
     # For each unlinked account with data, try to find a matching linked account
     unlinked_with_data.each do |new_sfa|
-      # Find linked SimplefinAccount with same name (case-insensitive).
+      # Find linked SimplefinAccount with same name (case-insensitive) that is ALSO
+      # actually absent from the current upstream response. A name match alone is not
+      # enough: two distinct upstream accounts can legitimately share a display name.
       stale_matches = linked.select do |old_sfa|
-        old_sfa.name.to_s.downcase.strip == new_sfa.name.to_s.downcase.strip
+        old_sfa.name.to_s.downcase.strip == new_sfa.name.to_s.downcase.strip &&
+          old_sfa.account_id.present? &&
+          upstream_account_ids.exclude?(old_sfa.account_id.to_s)
       end
 
       if stale_matches.size > 1
-        Rails.logger.warn "SimplefinItem#repair_stale_linkages - Multiple linked accounts match '#{new_sfa.name}': #{stale_matches.map(&:id).join(', ')}. Using first match."
+        Rails.logger.warn "SimplefinItem#repair_stale_linkages - Multiple stale linked accounts match '#{new_sfa.name}': #{stale_matches.map(&:id).join(', ')}. Ambiguous, skipping repair."
+        next
       end
 
       stale_match = stale_matches.first

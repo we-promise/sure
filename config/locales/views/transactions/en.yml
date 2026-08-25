@@ -32,6 +32,9 @@ en:
       category: Category
       category_label: Category
       category_prompt: Select a Category
+      category_search_placeholder: Search categories
+      create_category: 'Create "%{name}"'
+      create_category_error: Could not create category
       date: Date
       description: Description
       description_placeholder: Describe transaction
@@ -124,7 +127,6 @@ en:
     mark_recurring_title: Recurring Transaction
     potential_duplicate_title: Possible duplicate detected
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
-    merge_duplicate: Yes, merge them
     keep_both: No, keep both
     split_parent_row:
       split_label: "Split"

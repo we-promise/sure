@@ -19,6 +19,91 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "concurrent unique-index race does not abort the surrounding transaction" do
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow_id = inflow_entry.entryable_id
+
+    # A separate matched pair whose transfer already exists, standing in for the
+    # row a concurrent sync committed first. Colliding with its unique index gives
+    # us a genuine failing INSERT (not a synthetic raise) -- only that aborts the
+    # PostgreSQL transaction, so only that reproduces the bug.
+    rival_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 250)
+    rival_in = create_transaction(date: Date.current, account: @credit_card, amount: -250)
+    rival = Transfer.create!(inflow_transaction_id: rival_in.entryable_id, outflow_transaction_id: rival_out.entryable_id)
+
+    # A second, non-conflicting candidate: matching must CONTINUE past the skipped
+    # collision and still create this transfer.
+    good_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 700)
+    good_in = create_transaction(date: Date.current, account: @credit_card, amount: -700)
+
+    original = Transfer.method(:find_or_create_by!)
+    Transfer.singleton_class.send(:define_method, :find_or_create_by!) do |attributes|
+      if attributes[:inflow_transaction_id] == inflow_id
+        insert!({ inflow_transaction_id: rival.inflow_transaction_id, outflow_transaction_id: rival.outflow_transaction_id })
+      else
+        original.call(attributes)
+      end
+    end
+
+    begin
+      assert_nothing_raised { @family.auto_match_transfers! }
+    ensure
+      Transfer.singleton_class.send(:remove_method, :find_or_create_by!)
+    end
+
+    inflow_entry.reload
+    outflow_entry.reload
+
+    # The collision was with a DIFFERENT pair (the rival), so no Transfer exists for
+    # THIS pair: the match is skipped, not marked. The savepoint kept the surrounding
+    # transaction healthy (no abort asserted above).
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_id, outflow_transaction_id: outflow_entry.entryable_id)
+    refute_equal "funds_movement", inflow_entry.entryable.kind
+
+    # ...and matching did not stop at the skip: the non-conflicting candidate was
+    # still created and both its entries marked.
+    good_in.reload
+    good_out.reload
+    assert Transfer.exists?(inflow_transaction_id: good_in.entryable_id, outflow_transaction_id: good_out.entryable_id)
+    assert_equal "funds_movement", good_in.entryable.kind
+    assert_equal "cc_payment", good_out.entryable.kind
+  end
+
+  test "a :taken on one column from a different pairing is skipped, not marked" do
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    # A concurrent sync matched this inflow to a DIFFERENT outflow, so the per-column
+    # uniqueness validation raises :taken on inflow_transaction_id -- but no Transfer
+    # exists for THIS (inflow, outflow) pair.
+    invalid = Transfer.new(inflow_transaction_id: inflow_entry.entryable_id, outflow_transaction_id: outflow_entry.entryable_id)
+    invalid.errors.add(:inflow_transaction_id, :taken)
+    Transfer.stubs(:find_or_create_by!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    assert_nothing_raised { @family.auto_match_transfers! }
+
+    inflow_entry.reload
+    outflow_entry.reload
+
+    # No Transfer was created for this pair, so neither transaction may be marked.
+    assert_nil Transfer.find_by(inflow_transaction_id: inflow_entry.entryable_id, outflow_transaction_id: outflow_entry.entryable_id)
+    refute_equal "funds_movement", inflow_entry.entryable.kind
+    refute_equal "cc_payment", outflow_entry.entryable.kind
+  end
+
+  test "non-uniqueness validation failure during matching is not swallowed" do
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    # A genuine (non-race) validation failure must surface, not be skipped silently.
+    invalid = Transfer.new
+    invalid.errors.add(:base, :different_accounts)
+    Transfer.stubs(:find_or_create_by!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    assert_raises(ActiveRecord::RecordInvalid) { @family.auto_match_transfers! }
+  end
+
   test "auto-matches multi-currency transfers" do
     load_exchange_prices
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
