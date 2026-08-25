@@ -332,6 +332,31 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/without a deadline/i, response.body)
   end
 
+  # The form reads its ticks from a separate local, not from the built links,
+  # so a failed create rendered every account unchecked while the amounts the
+  # user typed survived — an error telling them to enter an amount, on a form
+  # whose accounts had silently cleared.
+  test "a rejected creation keeps the accounts the user ticked" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Contested Pot", currency: @user.family.currency, balance: 3_000
+    )
+    holder = @user.family.goals.create!(name: "Holder", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert holder.persisted?
+
+    post goals_url, params: {
+      goal: {
+        name: "Second claim", target_amount: 5_000,
+        account_ids: [ account.id ], allocations: { account.id.to_s => "" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='goal[account_ids][]'][value=?][checked]", account.id
+  end
+
   private
     # A fundable account no goal fixture claims. The fixtures link
     # @depository and @connected as whole-balance earmarks, and GoalAccount
