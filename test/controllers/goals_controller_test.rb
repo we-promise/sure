@@ -141,6 +141,22 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 500, link.reload.allocated_amount
   end
 
+  # The outflow panel is the third door onto a private backing account: it
+  # would list its transactions, naming the account, its spending and roughly
+  # its size to someone with no access to it.
+  test "the outflow panel does not surface a spend on an account the viewer cannot see" do
+    private_account = private_linked_account
+    private_account.entries.create!(
+      name: "Private Spend", date: Date.current, amount: 400,
+      currency: private_account.currency, entryable: Transaction.new
+    )
+
+    get goal_url(@goal)
+
+    assert_response :success
+    assert_no_match(/Private Spend/, response.body)
+  end
+
   test "create rejects a same-family account not shared with the current user" do
     private_account = Account.create!(
       family: @user.family,
