@@ -74,6 +74,10 @@ class Goals::LifecyclePanelComponent < ApplicationComponent
   # --- projection ---
 
 
+  # The chart draws its projection line with these same two variables
+  # (`goal_projection_chart_controller.js`), so the legend swatch has to use
+  # them too rather than the semantic border tokens — a legend whose colour
+  # does not match its line is worse than the markup it would save.
   def projection_color
     goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)"
   end

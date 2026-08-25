@@ -110,19 +110,24 @@
           </p>
         <% end %>
       </div>
-      <div class="flex items-center flex-wrap gap-x-5 gap-y-1 text-[11px] text-secondary sm:gap-x-3 sm:shrink-0">
+      <%# Swatches are bordered spans rather than inline SVG. The projection one
+          keeps the chart's own colour variables in an inline style rather than
+          taking `border-success` / `border-warning`: a legend that does not
+          match the line it describes is worse than the markup it saves, and
+          the chart hard-codes green-600 / yellow-600. %>
+      <div class="flex items-center flex-wrap gap-x-5 gap-y-1 text-xs text-secondary sm:gap-x-3 sm:shrink-0">
         <span class="inline-flex items-center gap-1.5">
-          <svg width="18" height="6" class="text-primary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" /></svg>
+          <span class="inline-block w-5 border-t-2 border-current text-primary" aria-hidden="true"></span>
           <%= t("goals.show.projection.legend_saved") %>
         </span>
         <% if show_projection_legend? %>
           <span class="inline-flex items-center gap-1.5">
-            <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="<%= projection_color %>" stroke-width="2" stroke-dasharray="3 3" /></svg>
+            <span class="inline-block w-5 border-t-2 border-dashed" style="border-color: <%= projection_color %>" aria-hidden="true"></span>
             <%= t("goals.show.projection.legend_projection") %>
           </span>
           <% if show_required_legend? %>
             <span class="inline-flex items-center gap-1.5">
-              <svg width="18" height="6" class="text-secondary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="2 4" opacity="0.5" /></svg>
+              <span class="inline-block w-5 border-t-2 border-dotted border-current text-secondary opacity-50" aria-hidden="true"></span>
               <%= t("goals.show.projection.legend_required") %>
             </span>
           <% end %>

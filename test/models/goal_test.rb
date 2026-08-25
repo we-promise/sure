@@ -1016,6 +1016,39 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal frozen, goal.reload.completed_amount
   end
 
+
+  # A reserve holds a level: there is no finish line to project toward and no
+  # target to have "hit". It does not reach the projection panel today, but
+  # this method reads as the single source of truth for that subtitle.
+  test "a reserve is never told it has hit a target" do
+    reserve = @family.goals.create!(
+      name: "Precaution", target_amount: 1_000, currency: @family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: attention_pot(1_000), allocated_amount: 1_000) }
+
+    assert_equal :funded, reserve.status
+    assert_equal I18n.t("goals.show.projection.reserve"), reserve.projection_summary
+  end
+
+  # `needs_attention?` names the pair once. Three places were spelling it out
+  # and the Plan card had already fallen behind, leaving a depleted reserve
+  # with an amber pill beside a neutral progress bar.
+  test "a depleted reserve wants attention just as a goal off its pace does" do
+    reserve = @family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: attention_pot(1_000), allocated_amount: 1_000) }
+
+    assert_equal :depleted, reserve.status
+    assert reserve.needs_attention?
+  end
+
+  test "a funded reserve wants nothing" do
+    reserve = @family.goals.create!(
+      name: "Precaution", target_amount: 1_000, currency: @family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: attention_pot(1_000), allocated_amount: 1_000) }
+
+    assert_not reserve.needs_attention?
+  end
+
   private
 
     # Its own account, so the shared-pool haircut does not make the frozen
@@ -1027,6 +1060,12 @@ class GoalTest < ActiveSupport::TestCase
       @family.goals.create!(name: "Trip", target_amount: 4_000, currency: @family.currency) do |g|
         g.goal_accounts.build(account: account, allocated_amount: 4_000)
       end
+    end
+
+    def attention_pot(balance)
+      Account.create!(family: @family, accountable: Depository.new,
+                      name: "Pot #{SecureRandom.hex(3)}",
+                      currency: @family.currency, balance: balance)
     end
     # A fresh account: the fixtures deliberately carry three goals holding
     # whole-account links on `depository`, a legacy overlap the exclusivity

@@ -732,11 +732,25 @@ class Goal < ApplicationRecord
   # Single source of truth for the projection-chart subtitle / chart-aria
   # description. Used to live inline in show.html.erb as a 17-line if/elsif
   # chain. Returns an `html_safe` string when it picks the `_html` variant.
+  # The two statuses that mean "this one wants looking at": a goal off its
+  # pace, and a reserve below its floor. Named once because three places were
+  # spelling the pair out and one of them had already fallen behind.
+  def needs_attention?
+    status.in?(%i[behind depleted])
+  end
+
   def projection_summary
     return @projection_summary if defined?(@projection_summary)
 
     @projection_summary =
-      if completed? || progress_percent >= 100
+      if maintained?
+        # A reserve holds a level; there is no finish line to project toward
+        # and no target to have "hit". It never reaches the projection panel
+        # today — the shortfall and celebration panels catch it first — but
+        # this method reads as the single source of truth for that subtitle,
+        # so it should not hand a caller a one-off's wording.
+        I18n.t("goals.show.projection.reserve")
+      elsif completed? || progress_percent >= 100
         I18n.t("goals.show.projection.reached")
       elsif target_date.nil?
         I18n.t("goals.show.projection.no_target_date")

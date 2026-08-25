@@ -253,6 +253,7 @@ fr:
         no_pace: Aucun dépôt pour le moment. Ajoutez de l'argent sur un compte lié pour démarrer la projection.
         no_target_date: Aucune date cible définie. Définissez-en une pour projeter la fin.
         on_track_html: Au rythme actuel, vous atteindrez cet objectif vers le <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        reserve: "Une réserve maintient un niveau : il n'y a pas d'échéance à projeter."
         reached: Vous avez atteint l'objectif. Aucune projection nécessaire.
         today_marker: Aujourd'hui
         tooltip_projected: 'Projeté : %{amount}'

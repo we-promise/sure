@@ -15,8 +15,7 @@ class Goals::CardComponent < ApplicationComponent
   def ring_tone
     case goal.status
     when :reached, :on_track, :funded then :success
-    when :behind, :depleted then :warning
-    else :neutral
+    else goal.needs_attention? ? :warning : :neutral
     end
   end
 
@@ -113,6 +112,6 @@ class Goals::CardComponent < ApplicationComponent
   end
 
   def footer_has_money?
-    (goal.status == :behind && goal.monthly_target_amount) || goal.status == :depleted
+    (goal.status == :behind && goal.monthly_target_amount.present?) || goal.status == :depleted
   end
 end

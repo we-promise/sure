@@ -154,6 +154,7 @@ en:
         legend_saved: Saved
         legend_projection: Projection
         legend_required: Required
+        reserve: "A reserve holds a level, so there is no finish line to project."
         reached: You've hit the target. No projection needed.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
