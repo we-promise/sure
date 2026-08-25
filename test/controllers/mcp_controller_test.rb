@@ -283,7 +283,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "initialize rejects unsupported protocol versions" do
+  test "initialize negotiates unsupported protocol versions to the default version" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: "2099-01-01" }, id: 24).to_json,
            headers: mcp_headers(@token)
@@ -291,8 +291,8 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_response :ok
       body = JSON.parse(response.body)
       assert_equal 24, body["id"]
-      assert_equal(-32600, body["error"]["code"])
-      assert_includes body["error"]["message"], "2099-01-01"
+      assert_equal MCP_PROTOCOL_VERSION, body.dig("result", "protocolVersion")
+      assert_equal MCP_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
     end
   end
 
@@ -361,11 +361,24 @@ class McpControllerTest < ActionDispatch::IntegrationTest
              "Mcp-Session-Id" => SecureRandom.uuid
            )
 
-      assert_response :ok
+      assert_response :not_found
       body = JSON.parse(response.body)
       assert_equal 25, body["id"]
       assert_equal(-32600, body["error"]["code"])
       assert_includes body["error"]["message"], "Invalid MCP session id"
+    end
+  end
+
+  test "tools/list rejects unsupported MCP protocol version headers" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 26).to_json,
+           headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => "2099-01-01")
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 26, body["id"]
+      assert_equal(-32600, body["error"]["code"])
+      assert_includes body["error"]["message"], "2099-01-01"
     end
   end
 

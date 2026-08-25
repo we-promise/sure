@@ -55,7 +55,7 @@ class McpController < ApplicationController
 
       case method
       when "initialize"
-        handle_initialize(request_id, params)
+        handle_initialize(params)
       when "tools/list"
         handle_tools_list
       when "tools/call"
@@ -66,10 +66,8 @@ class McpController < ApplicationController
       end
     end
 
-    def handle_initialize(request_id, params)
-      @mcp_protocol_version = negotiated_protocol_version(request_id, params)
-      return unless @mcp_protocol_version
-
+    def handle_initialize(params)
+      @mcp_protocol_version = negotiated_protocol_version(params)
       @mcp_session_id = SecureRandom.uuid
       Rails.cache.write(mcp_session_cache_key(@mcp_session_id), mcp_user.id, expires_in: MCP_SESSION_TTL)
 
@@ -179,7 +177,12 @@ class McpController < ApplicationController
       @mcp_protocol_version = mcp_request_header("Mcp-Protocol-Version").presence || PROTOCOL_VERSION
 
       unless SUPPORTED_PROTOCOL_VERSIONS.include?(@mcp_protocol_version)
-        render_jsonrpc_error(request_id, -32600, "Unsupported MCP protocol version: #{@mcp_protocol_version}")
+        render_jsonrpc_error(
+          request_id,
+          -32600,
+          t("mcp.errors.unsupported_protocol_version", version: @mcp_protocol_version),
+          status: :bad_request
+        )
         return false
       end
 
@@ -187,7 +190,7 @@ class McpController < ApplicationController
       return true unless session_id
 
       unless Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
-        render_jsonrpc_error(request_id, -32600, "Invalid MCP session id")
+        render_jsonrpc_error(request_id, -32600, t("mcp.errors.invalid_session_id"), status: :not_found)
         return false
       end
 
@@ -195,12 +198,11 @@ class McpController < ApplicationController
       true
     end
 
-    def negotiated_protocol_version(request_id, params)
+    def negotiated_protocol_version(params)
       requested_version = params&.dig("protocolVersion").presence || PROTOCOL_VERSION
       return requested_version if SUPPORTED_PROTOCOL_VERSIONS.include?(requested_version)
 
-      render_jsonrpc_error(request_id, -32600, "Unsupported MCP protocol version: #{requested_version}")
-      nil
+      PROTOCOL_VERSION
     end
 
     def mcp_session_cache_key(session_id)
@@ -219,12 +221,15 @@ class McpController < ApplicationController
       render json: { error: "unauthorized" }, status: :unauthorized
     end
 
-    def render_jsonrpc_error(id, code, message)
+    def render_jsonrpc_error(id, code, message, status: :ok, data: nil)
+      error = { code: code, message: message }
+      error[:data] = data if data
+
       render json: {
         jsonrpc: "2.0",
         id: id,
-        error: { code: code, message: message }
-      }
+        error: error
+      }, status: status
     end
 
     def set_mcp_response_headers
