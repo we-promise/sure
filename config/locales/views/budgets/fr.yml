@@ -42,6 +42,13 @@ fr:
       no_categories_message: Vous n'avez pas encore créé ou attribué de catégories de dépenses à vos transactions.
       oops: Oups !
       use_defaults: Utiliser les valeurs par défaut (recommandé)
+    available_cash:
+      heading: Trésorerie disponible
+      subtitle: À côté du plan ci-dessus, pas dedans.
+      available: Disponible en cash
+      earmarked: Déjà fléché vers des objectifs
+      free: Réellement libre
+      goals_link: Voir les objectifs
     show:
       budgeted: Budgétisé
       category: Catégorie

@@ -358,6 +358,20 @@ class Goal < ApplicationRecord
   # This goal's backing from a single linked account — the earmarked slice, or
   # the whole-balance remainder when the link is unallocated — as Money. Used
   # by the funding breakdown so the per-account rows reconcile with the ring.
+  # This goal's backing drawn from a specific set of accounts, in its own
+  # currency. Used by the budget to ask "how much of THESE accounts is already
+  # spoken for" without counting a link held on an account outside the set.
+  #
+  # Goes through the same `backing_share_for` as everything else, so a
+  # whole-account link is counted for the remainder it actually claims rather
+  # than the zero its nil allocation would suggest.
+  def backing_within(account_ids)
+    ids = Array(account_ids).to_set
+    linked_accounts
+      .select { |account| account.currency == currency && ids.include?(account.id) }
+      .sum { |account| account_amount_for(account) }
+  end
+
   def account_backing(account)
     Money.new(account_amount_for(account), currency)
   end
