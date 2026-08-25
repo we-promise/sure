@@ -1524,6 +1524,8 @@ components:
         source:
           type: string
           nullable: true
+        user_modified:
+          type: boolean
         classification:
           type: string
         account:
@@ -7595,6 +7597,10 @@ paths:
                       type: string
                       description: Optional source namespace for external_id. Requires
                         external_id and defaults to api when external_id is provided
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
                     tag_ids:
                       type: array
                       items:
