@@ -10,6 +10,8 @@ class DeliverInsightNotificationJob < ApplicationJob
     return unless Apns::Client.configured?
 
     insight.family.users.includes(:push_subscriptions).find_each do |user|
+      next unless user.preview_features_enabled?
+
       user.push_subscriptions.recent.find_each do |subscription|
         perform_later(insight_id: insight.id, push_subscription_id: subscription.id)
       end
@@ -21,12 +23,14 @@ class DeliverInsightNotificationJob < ApplicationJob
     subscription = PushSubscription.find(push_subscription_id)
     return unless subscription.user.family_id == insight.family_id
 
-    response = Apns::Client.new(environment: subscription.environment).deliver(
-      token: subscription.token,
-      title: "New financial insight",
-      body: "Open Sure to review your latest AI insight.",
-      insight_id: insight.id
-    )
+    response = I18n.with_locale(insight.family.locale) do
+      Apns::Client.new(environment: subscription.environment).deliver(
+        token: subscription.token,
+        title: I18n.t("insights.notification.title"),
+        body: I18n.t("insights.notification.body"),
+        insight_id: insight.id
+      )
+    end
     return if response.ok?
 
     if invalid_token_response?(response)

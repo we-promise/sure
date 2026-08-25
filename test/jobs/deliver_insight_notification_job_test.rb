@@ -28,6 +28,24 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     )
   end
 
+  test "localizes notifications using the family locale" do
+    @insight.family.update!(locale: "de")
+    response = stub(ok?: true)
+    client = mock
+    Apns::Client.stubs(:new).returns(client)
+    client.expects(:deliver).with(
+      token: @subscription.token,
+      title: "Neue Finanzanalyse",
+      body: "Öffne Sure, um deine neueste KI-Analyse anzusehen.",
+      insight_id: @insight.id
+    ).returns(response)
+
+    DeliverInsightNotificationJob.perform_now(
+      insight_id: @insight.id,
+      push_subscription_id: @subscription.id
+    )
+  end
+
   test "removes tokens rejected as unregistered" do
     response = stub(ok?: false, status: "410", body: { "reason" => "Unregistered" })
     Apns::Client.any_instance.stubs(:deliver).returns(response)

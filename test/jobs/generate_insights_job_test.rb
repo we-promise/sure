@@ -90,8 +90,16 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
   end
 
   test "enqueues notifications for newly created insights" do
-    subscription = @family.users.first.push_subscriptions.create!(
+    opted_in_user, opted_out_user = @family.users.to_a
+    set_preview_features(opted_out_user, false)
+    subscription = opted_in_user.push_subscriptions.create!(
       token: "ab" * 32,
+      environment: "sandbox",
+      platform: "ios",
+      last_registered_at: Time.current
+    )
+    opted_out_user.push_subscriptions.create!(
+      token: "cd" * 32,
       environment: "sandbox",
       platform: "ios",
       last_registered_at: Time.current
@@ -99,15 +107,17 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     Apns::Client.stubs(:configured?).returns(true)
     stub_generated([ generated_insight ])
 
-    assert_enqueued_with(
-      job: DeliverInsightNotificationJob,
-      args: ->(args) {
-        args.one? &&
-          args.first[:insight_id].present? &&
-          args.first[:push_subscription_id] == subscription.id
-      }
-    ) do
-      GenerateInsightsJob.perform_now(family_id: @family.id)
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
+      assert_enqueued_with(
+        job: DeliverInsightNotificationJob,
+        args: ->(args) {
+          args.one? &&
+            args.first[:insight_id].present? &&
+            args.first[:push_subscription_id] == subscription.id
+        }
+      ) do
+        GenerateInsightsJob.perform_now(family_id: @family.id)
+      end
     end
   end
 
