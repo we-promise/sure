@@ -11,9 +11,10 @@ struct SureSetupView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
           VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: "circle.hexagongrid.fill")
-              .font(.system(size: 52))
-              .foregroundStyle(.tint)
+            Image("SureLogomark")
+              .resizable()
+              .scaledToFit()
+              .frame(width: 72, height: 66)
               .accessibilityHidden(true)
             Text("Your finances, made clear")
               .font(.largeTitle.bold())
@@ -73,7 +74,7 @@ struct SureSetupView: View {
             }
             .foregroundStyle(.white)
             .padding()
-            .background(Color.sureIndigo, in: .rect(cornerRadius: 16))
+            .background(Color.sureMint, in: .rect(cornerRadius: 16))
           }
           .disabled(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isLoading)
         }
