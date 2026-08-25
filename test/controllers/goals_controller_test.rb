@@ -480,6 +480,25 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/0 of 0/, response.body)
   end
 
+  # A brand-new reserve is depleted with a zero balance, which used to match the
+  # generic "make your first transfer" branch first. It is still a reserve short
+  # of its floor, and the shortfall panel is what says so.
+  test "a reserve with nothing in it yet gets the shortfall panel" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Empty Reserve Pot", currency: @user.family.currency, balance: 0
+    )
+    goal = @user.family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @user.family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.reserve_shortfall.heading"), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.empty.heading"))}/, response.body)
+  end
+
   private
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.
