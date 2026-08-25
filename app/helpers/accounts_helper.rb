@@ -27,7 +27,11 @@ module AccountsHelper
   # "no viewer" are different answers that the empty-set fallback below
   # collapses into one.
   def viewer_present_for_account_scoping?
-    @accessible_account_ids.present? || Current.user.present?
+    # `nil?`, not `present?`: an injected list that is empty is still a viewer
+    # — one who may see nothing, which is a real answer. Treating it as "no
+    # viewer" would hand a member with no shared accounts an "Updating…" card
+    # that never updates into anything.
+    !@accessible_account_ids.nil? || Current.user.present?
   end
 
   # Reuses the list the accounts index already loaded; falls back to a query for

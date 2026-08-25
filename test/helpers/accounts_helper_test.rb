@@ -97,4 +97,15 @@ class AccountsHelperTest < ActionView::TestCase
     assert_not_includes rendered, @someone_elses.name
     assert_not_includes rendered, @owned.name
   end
+
+  # An empty injected list is still a viewer: one who may see nothing. Read as
+  # "no viewer", a member with no shared accounts would get an "Updating…"
+  # card that never updates into anything.
+  test "an injected empty list is a viewer who sees nothing" do
+    Current.session = nil
+    @accessible_account_ids = []
+
+    assert viewer_present_for_account_scoping?
+    assert_empty accounts_visible_to_viewer([ @owned, @someone_elses ])
+  end
 end
