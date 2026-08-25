@@ -15,6 +15,7 @@ struct SureSetupView: View {
               .resizable()
               .scaledToFit()
               .frame(width: 72, height: 66)
+              .frame(maxWidth: .infinity)
               .accessibilityHidden(true)
             Text("Your finances, made clear")
               .font(.largeTitle.bold())
