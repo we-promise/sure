@@ -497,6 +497,8 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match I18n.t("goals.show.reserve_shortfall.heading"), response.body
     assert_no_match(/#{Regexp.escape(I18n.t("goals.show.empty.heading"))}/, response.body)
+  end
+
   # --- Lot B6: earmark headroom in the form ---
 
   test "the new form renders each account's balance and what other goals hold" do
