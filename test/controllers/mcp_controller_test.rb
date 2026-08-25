@@ -255,7 +255,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "initialize returns server info and capabilities" do
     with_mcp_env do
-      post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: "2025-03-26" }).to_json,
+      post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: MCP_PROTOCOL_VERSION }).to_json,
            headers: mcp_headers(@token)
 
       assert_response :ok
@@ -267,6 +267,32 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_mcp_initialize_response(result)
       assert_equal "sure", result["serverInfo"]["name"]
       assert result["capabilities"].key?("tools")
+    end
+  end
+
+  test "initialize echoes a supported legacy protocol version" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: "2025-03-26" }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_equal "2025-03-26", result["protocolVersion"]
+      assert_equal "2025-03-26", response.headers["Mcp-Protocol-Version"]
+      assert_match(/\A[0-9a-f-]{36}\z/, result["sessionId"])
+    end
+  end
+
+  test "initialize rejects unsupported protocol versions" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: "2099-01-01" }, id: 24).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal 24, body["id"]
+      assert_equal(-32600, body["error"]["code"])
+      assert_includes body["error"]["message"], "2099-01-01"
     end
   end
 
@@ -300,6 +326,46 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         assert tool["inputSchema"].present?, "Tool #{tool['name']} missing inputSchema"
         assert_equal "object", tool["inputSchema"]["type"]
       end
+    end
+  end
+
+  test "tools/list accepts and echoes a valid MCP session id" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(@token)
+
+        assert_response :ok
+        session_id = response.headers["Mcp-Session-Id"]
+        assert session_id.present?, "initialize should return an MCP session id"
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token).merge(
+               "Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION,
+               "Mcp-Session-Id" => session_id
+             )
+
+        assert_response :ok
+        assert_equal MCP_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
+        assert_equal session_id, response.headers["Mcp-Session-Id"]
+        assert_kind_of Array, JSON.parse(response.body).dig("result", "tools")
+      end
+    end
+  end
+
+  test "tools/list rejects an invalid MCP session id" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 25).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION,
+             "Mcp-Session-Id" => SecureRandom.uuid
+           )
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal 25, body["id"]
+      assert_equal(-32600, body["error"]["code"])
+      assert_includes body["error"]["message"], "Invalid MCP session id"
     end
   end
 
@@ -551,6 +617,14 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     def with_mcp_env(&block)
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
+    end
+
+    def with_mcp_cache
+      original_cache = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      yield
+    ensure
+      Rails.cache = original_cache
     end
 
     def mcp_headers(token)

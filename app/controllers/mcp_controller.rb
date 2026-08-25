@@ -2,6 +2,8 @@ class McpController < ApplicationController
   include OauthBase
 
   PROTOCOL_VERSION = "2025-06-18"
+  SUPPORTED_PROTOCOL_VERSIONS = [ "2025-03-26", PROTOCOL_VERSION ].freeze
+  MCP_SESSION_TTL = 1.day
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
   skip_authentication
@@ -49,9 +51,11 @@ class McpController < ApplicationController
     end
 
     def dispatch_jsonrpc(request_id, method, params)
+      return unless prepare_mcp_request_context(request_id, method, params)
+
       case method
       when "initialize"
-        handle_initialize
+        handle_initialize(request_id, params)
       when "tools/list"
         handle_tools_list
       when "tools/call"
@@ -62,10 +66,15 @@ class McpController < ApplicationController
       end
     end
 
-    def handle_initialize
+    def handle_initialize(request_id, params)
+      @mcp_protocol_version = negotiated_protocol_version(request_id, params)
+      return unless @mcp_protocol_version
+
       @mcp_session_id = SecureRandom.uuid
+      Rails.cache.write(mcp_session_cache_key(@mcp_session_id), mcp_user.id, expires_in: MCP_SESSION_TTL)
+
       {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: @mcp_protocol_version,
         capabilities: { tools: {} },
         serverInfo: { name: "sure", version: "1.0" },
         sessionId: @mcp_session_id
@@ -164,6 +173,44 @@ class McpController < ApplicationController
       @mcp_user
     end
 
+    def prepare_mcp_request_context(request_id, method, params)
+      return true if method == "initialize"
+
+      @mcp_protocol_version = mcp_request_header("Mcp-Protocol-Version").presence || PROTOCOL_VERSION
+
+      unless SUPPORTED_PROTOCOL_VERSIONS.include?(@mcp_protocol_version)
+        render_jsonrpc_error(request_id, -32600, "Unsupported MCP protocol version: #{@mcp_protocol_version}")
+        return false
+      end
+
+      session_id = mcp_request_header("Mcp-Session-Id").presence
+      return true unless session_id
+
+      unless Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
+        render_jsonrpc_error(request_id, -32600, "Invalid MCP session id")
+        return false
+      end
+
+      @mcp_session_id = session_id
+      true
+    end
+
+    def negotiated_protocol_version(request_id, params)
+      requested_version = params&.dig("protocolVersion").presence || PROTOCOL_VERSION
+      return requested_version if SUPPORTED_PROTOCOL_VERSIONS.include?(requested_version)
+
+      render_jsonrpc_error(request_id, -32600, "Unsupported MCP protocol version: #{requested_version}")
+      nil
+    end
+
+    def mcp_session_cache_key(session_id)
+      "mcp:session:#{session_id}"
+    end
+
+    def mcp_request_header(name)
+      request.headers[name] || request.get_header("HTTP_#{name.upcase.tr('-', '_')}")
+    end
+
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
@@ -181,7 +228,7 @@ class McpController < ApplicationController
     end
 
     def set_mcp_response_headers
-      response.set_header("Mcp-Protocol-Version", PROTOCOL_VERSION)
+      response.set_header("Mcp-Protocol-Version", @mcp_protocol_version || PROTOCOL_VERSION)
       response.set_header("Mcp-Session-Id", @mcp_session_id) if @mcp_session_id.present?
     end
 end
