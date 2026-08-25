@@ -15,10 +15,18 @@ export default class extends Controller {
   static targets = ["allocationInput", "warning", "checkbox"]
   static values = {
     currency: String,
+    locale: String,
     wholeBalance: String,
     prorata: String,
     headroom: String,
   }
+
+  // A complete number, optionally with one decimal separator and digits after
+  // it. `Number.parseFloat` alone accepts prefixes — "500abc" becomes 500 —
+  // and a bare comma-to-dot swap turns the thousands-separated "1,500" into
+  // 1.5, so a typo or a habit from another locale silently changed the amount
+  // the preview was based on.
+  static ALLOCATION_PATTERN = /^\d+(?:[.,]\d+)?$/
 
   connect() {
     this.refresh()
@@ -46,6 +54,8 @@ export default class extends Controller {
     if (raw === "") {
       return this.#show(warning, this.wholeBalanceValue)
     }
+
+    if (!this.constructor.ALLOCATION_PATTERN.test(raw)) return this.#hide(warning)
 
     const entered = Number.parseFloat(raw.replace(",", "."))
     if (Number.isNaN(entered)) return this.#hide(warning)
@@ -75,7 +85,7 @@ export default class extends Controller {
 
   #money(value) {
     try {
-      return new Intl.NumberFormat(undefined, {
+      return new Intl.NumberFormat(this.localeValue || undefined, {
         style: "currency",
         currency: this.currencyValue || "USD",
         maximumFractionDigits: 0,

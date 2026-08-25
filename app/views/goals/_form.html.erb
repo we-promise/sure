@@ -76,6 +76,13 @@
       <div class="bg-container-inset rounded-lg p-1"
            data-controller="goal-earmark"
            data-goal-earmark-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
+           <%# The APPLICATION locale, not the browser's. `Intl.NumberFormat`
+               with `undefined` lets the browser pick, so a French user on an
+               English-locale browser read separators and symbol placement that
+               matched nothing else on the page. The amounts themselves cannot
+               be formatted server-side — they change with every keystroke — so
+               the server decides the locale and the client applies it. %>
+           data-goal-earmark-locale-value="<%= I18n.locale %>"
            data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
            data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
            data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
