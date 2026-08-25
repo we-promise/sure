@@ -81,8 +81,21 @@ class OnchainWalletItem::WalletLinker
   end
 
   private
+    def discard_leftover_row(asset)
+      onchain_wallet_item.onchain_wallet_accounts
+        .for_wallet(chain, address)
+        .unlinked
+        .select { |row| row.matches_asset?(asset) }
+        .each(&:destroy!)
+    end
+
     def create_asset!(asset)
       OnchainWalletAccount.transaction do
+        # A row left behind by a deleted account still holds this asset's slot in
+        # the partial unique index while displaying nowhere, so creating beside
+        # it raises. It tracks nothing, so it is the one that goes.
+        discard_leftover_row(asset)
+
         onchain_account = onchain_wallet_item.onchain_wallet_accounts.create!(
           chain: chain,
           wallet_address: address,
