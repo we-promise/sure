@@ -158,11 +158,15 @@
     <div class="flex flex-wrap justify-end gap-2">
       <%= form.submit(trade_republic_item.session_configured? ? t(".update_configuration") : t(".save_configuration")) %>
       <% if is_new_record %>
-        <%= button_tag t(".qr_login"),
-                       type: "submit",
-                       name: "login_method",
-                       value: "qr",
-                       class: "inline-flex items-center justify-center gap-1 px-3 py-1.5 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary/10" %>
+        <%= render DS::Button.new(
+              text: t(".qr_login"),
+              variant: :outline,
+              size: :sm,
+              icon: "qr-code",
+              type: "submit",
+              name: "login_method",
+              value: "qr"
+            ) %>
       <% end %>
     </div>
     <% end %>
@@ -173,12 +177,15 @@
       <% if trade_republic_item.login_stage == "expired" %>
         <div class="w-2 h-2 bg-destructive rounded-full"></div>
         <p class="text-sm text-secondary"><%= t(".login_expired") %></p>
-        <%= button_to initiate_login_trade_republic_item_path(trade_republic_item),
-                      method: :post,
-                      class: "ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary" do %>
-          <%= icon "rotate-cw", size: "sm" %>
-          <%= t(".restart_login") %>
-        <% end %>
+        <%= render DS::Button.new(
+              text: t(".restart_login"),
+              variant: :outline,
+              size: :sm,
+              icon: "rotate-cw",
+              href: initiate_login_trade_republic_item_path(trade_republic_item),
+              method: :post,
+              form: { class: "ml-auto" }
+            ) %>
       <% else %>
         <div class="w-2 h-2 bg-warning rounded-full"></div>
         <p class="text-sm text-secondary">
