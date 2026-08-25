@@ -1,6 +1,6 @@
 class GoalsController < ApplicationController
   before_action :require_preview_features!
-  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen]
+  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen consume record_consumption]
 
   FUNDABLE_TYPES = Goal::FUNDABLE_ACCOUNT_TYPES
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
@@ -160,6 +160,19 @@ class GoalsController < ApplicationController
     perform_transition!(:unarchive)
   end
 
+  # Renders the dialog. The write lives in its own action below.
+  def consume
+  end
+
+  def record_consumption
+    @goal.consume!(params[:amount], account: consumption_account)
+    redirect_to goal_path(@goal), notice: t("goals.consume.success", amount: params[:amount])
+  rescue Goal::ConsumptionRefused => e
+    redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to goal_path(@goal), alert: e.record.errors.full_messages.to_sentence
+  end
+
   def reopen
     perform_transition!(:reopen)
   end
@@ -310,6 +323,18 @@ class GoalsController < ApplicationController
         tracked_total: tracked_total,
         active_total: active_goals.size
       }
+    end
+
+    # A blank id means "the goal has one link, use it" and the model decides
+    # whether that is true. An id that resolves to nothing is refused here
+    # rather than falling back to nil: on a single-link goal, nil would consume
+    # from that link and the user would see a spend recorded against an account
+    # they did not name.
+    def consumption_account
+      return nil if params[:account_id].blank?
+
+      Current.family.accounts.find_by(id: params[:account_id]) ||
+        raise(Goal::ConsumptionRefused.new(:account_not_linked))
     end
 
     def perform_transition!(event)

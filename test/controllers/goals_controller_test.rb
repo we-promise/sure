@@ -499,6 +499,58 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("goals.show.empty.heading"))}/, response.body)
   end
 
+  # --- Lot B4: recording a partial spend ---
+
+  test "recording a spend keeps the goal at full progress and frees the earmark" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Trip Pot", currency: @user.family.currency, balance: 5_000
+    )
+    goal = @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    post consume_goal_url(goal), params: { amount: 2_000 }
+
+    assert_redirected_to goal_url(goal)
+    assert_equal 2_000, goal.reload.consumed_amount
+    assert_equal 3_000, goal.goal_accounts.first.reload.allocated_amount
+  end
+
+  test "a refused spend says which rule refused it" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Reserve Pot", currency: @user.family.currency, balance: 4_000
+    )
+    reserve = @user.family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @user.family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    post consume_goal_url(reserve), params: { amount: 1_000 }
+
+    assert_redirected_to goal_url(reserve)
+    assert_equal I18n.t("goals.consume.errors.maintained"), flash[:alert]
+    assert_equal 0, reserve.reload.consumed_amount
+  end
+
+  # A blank account id means "this goal has one link". An id resolving to
+  # nothing must not fall back to that, or a single-link goal would record a
+  # spend against an account the user never named.
+  test "an unknown account id is refused rather than falling through" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Trip Pot", currency: @user.family.currency, balance: 5_000
+    )
+    goal = @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    post consume_goal_url(goal), params: { amount: 1_000, account_id: SecureRandom.uuid }
+
+    assert_equal I18n.t("goals.consume.errors.account_not_linked"), flash[:alert]
+    assert_equal 0, goal.reload.consumed_amount
+  end
+
   private
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.

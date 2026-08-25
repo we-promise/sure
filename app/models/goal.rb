@@ -85,6 +85,18 @@ class Goal < ApplicationRecord
   # Goal#whole_account_conflicts_on), and the restore guard
   # #restore_must_not_recreate_whole_account_conflict, which reads the same
   # method. Adding a state here makes all of them release together.
+  # Raised by #consume!. Carries a reason so the controller can say WHICH rule
+  # refused rather than "something went wrong" — every one of them is
+  # actionable by the user.
+  class ConsumptionRefused < StandardError
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super("goal consumption refused: #{reason}")
+    end
+  end
+
   RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
@@ -382,8 +394,50 @@ class Goal < ApplicationRecord
     Money.new(amount, currency)
   end
 
+  # What is still to be found. Money already SPENT on the thing the goal was
+  # for counts as found: it did its job. Without that term, coming home from
+  # the holiday a goal paid for dropped it from 100% to 20%, and the only way
+  # back was to edit the target — falsifying what the user had set out to save.
   def remaining_amount
-    @remaining_amount ||= [ target_amount - current_balance, 0 ].max
+    @remaining_amount ||= [ target_amount - current_balance - consumed_amount.to_d, 0 ].max
+  end
+
+  # Records that `amount` was spent on the thing this goal was for.
+  #
+  # Two things happen, and the second is the one that is easy to miss: the
+  # earmark on the account shrinks by the same amount. Without that, money the
+  # user has already spent stays reserved, and keeps its share of the account
+  # away from every sibling goal — the very double-counting the exclusivity
+  # rules exist to prevent, arriving through the back door.
+  #
+  # `account:` may be omitted only when the goal has one link. With several,
+  # guessing would silently pick a side; the caller has to say which pot the
+  # money came out of.
+  def consume!(amount, account: nil)
+    amount = amount.to_d
+    raise ConsumptionRefused.new(:non_positive) unless amount.positive?
+    # A reserve is not consumed, it is drawn down and refilled. Spending from
+    # one leaves a shortfall to close, which `remaining_amount` already reports
+    # on its own; recording it as consumption would erase exactly the signal
+    # the reserve exists to give.
+    raise ConsumptionRefused.new(:maintained) if maintained?
+    raise ConsumptionRefused.new(:exceeds_target) if consumed_amount.to_d + amount > target_amount.to_d
+
+    link = consumption_link_for(account)
+
+    transaction do
+      link.lock!
+
+      # A whole-account link reserves no fixed slice, so there is nothing to
+      # shrink — it already takes only what the account has left.
+      if link.allocated_amount.present?
+        link.update!(allocated_amount: [ link.allocated_amount.to_d - amount, 0 ].max)
+      end
+
+      update!(consumed_amount: consumed_amount.to_d + amount)
+    end
+
+    reload
   end
 
   def remaining_amount_money
@@ -400,7 +454,7 @@ class Goal < ApplicationRecord
     elsif remaining_amount.to_d.zero?
       100
     else
-      ((current_balance.to_d / target_amount.to_d) * 100).floor.clamp(0, 99)
+      (((current_balance.to_d + consumed_amount.to_d) / target_amount.to_d) * 100).floor.clamp(0, 99)
     end
   end
 
@@ -878,8 +932,21 @@ class Goal < ApplicationRecord
       end
     end
 
+    def consumption_link_for(account)
+      links = goal_accounts.to_a
+      raise ConsumptionRefused.new(:no_linked_account) if links.empty?
+
+      if account.nil?
+        raise ConsumptionRefused.new(:account_required) if links.size > 1
+        return links.first
+      end
+
+      links.find { |link| link.account_id == account.id } ||
+        raise(ConsumptionRefused.new(:account_not_linked))
+    end
+
     def thaw_completed_amount!
-      update_columns(completed_amount: nil, completed_at: nil)
+      update_columns(completed_amount: nil, completed_at: nil, consumed_amount: 0)
     end
 
     def reset_state_dependent_caches!

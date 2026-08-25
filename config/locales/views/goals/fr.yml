@@ -166,6 +166,23 @@ fr:
     resume:
       invalid_transition: L'objectif ne peut pas être repris dans son état actuel.
       success: Objectif repris.
+    consume:
+      title: Enregistrer une dépense
+      subtitle: "%{goal}"
+      amount_label: Combien avez-vous utilisé ?
+      amount_hint: "%{saved} soutiennent actuellement cet objectif."
+      account_label: Depuis quel compte ?
+      earmark_note: "Le montant enregistré cesse d'être réservé à cet objectif : vos autres objectifs sur ce compte récupèrent leur part."
+      cancel: Annuler
+      submit: Enregistrer
+      success: "%{amount} enregistrés comme utilisés."
+      errors:
+        non_positive: Indiquez un montant supérieur à zéro.
+        maintained: Une réserve se ponctionne et se recomplète, elle ne se dépense pas — son manque apparaît déjà sur l'objectif.
+        exceeds_target: C'est plus que ce que cet objectif visait à épargner.
+        account_required: Cet objectif est financé par plusieurs comptes — indiquez celui d'où vient l'argent.
+        account_not_linked: Ce compte ne finance pas cet objectif.
+        no_linked_account: Cet objectif n'a plus de compte de financement.
     show:
       archive: Archiver
       archived_banner:
