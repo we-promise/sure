@@ -229,8 +229,13 @@ class Budget < ApplicationRecord
       if ids.empty?
         0.to_d
       else
+        # Converted per goal. `available_cash` converts each account balance
+        # into the budget currency, so summing backings in their own would
+        # subtract euros from dollars: a fully earmarked EUR 1,000 account in
+        # a USD budget would read 1,200 available, 1,000 earmarked and 200
+        # free, when none of it is free.
         Goal.prepared_for(family, scope: family.goals.where.not(state: Goal::RELEASED_STATES))
-            .sum { |goal| goal.backing_within(ids) }
+            .sum { |goal| convert_to_budget_currency(goal.backing_within(ids), goal.currency) }
       end
     end
   end
@@ -493,12 +498,17 @@ class Budget < ApplicationRecord
   end
 
   private
+    # `find_or_fetch_rate`, not `find_rate` — the latter does not exist, and
+    # every multi-currency family opening this page hit a NoMethodError.
+    #
+    # No rate for the day leaves the amount as it stands. A cash panel that
+    # renders with one figure unconverted is wrong by the spread; one that
+    # raises takes the whole budget page down with it.
     def convert_to_budget_currency(amount, from_currency)
       return amount.to_d if from_currency == currency
 
-      ExchangeRate.find_rate(from: from_currency, to: currency, date: Date.current)&.rate.then do |rate|
-        rate ? amount.to_d * rate : amount.to_d
-      end
+      rate = ExchangeRate.find_or_fetch_rate(from: from_currency, to: currency, date: Date.current)&.rate
+      rate ? amount.to_d * rate : amount.to_d
     end
     def income_statement
       @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)

@@ -83,6 +83,54 @@ class BudgetAvailableCashTest < ActiveSupport::TestCase
     assert_equal 3_000, reloaded.budgeted_spending
   end
 
+
+  # --- Review follow-ups (#3179) ---
+
+  # `available_cash` converts each balance into the budget currency, so an
+  # earmark summed in the goal's own would be subtracted from a figure it does
+  # not match: a fully earmarked EUR account reading as partly free.
+  test "a foreign-currency earmark is converted before it is subtracted" do
+    account = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "EUR pot", currency: "EUR", balance: 1_000
+    )
+    @family.goals.create!(
+      name: "Trip", target_amount: 1_000, currency: "EUR"
+    ) { |g| g.goal_accounts.build(account: account, allocated_amount: 1_000) }
+
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1.2))
+
+    assert_equal 1_200, @budget.available_cash
+    assert_equal 1_200, @budget.earmarked_for_goals
+    assert_equal 0, @budget.free_cash, "none of a fully earmarked account is free"
+  end
+
+  # `ExchangeRate.find_rate` does not exist; every multi-currency family
+  # opening the budget page hit a NoMethodError before the cash panel rendered.
+  test "a foreign-currency account does not take the page down" do
+    Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "EUR pot", currency: "EUR", balance: 1_000
+    )
+
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1.2))
+
+    assert_equal 1_200, @budget.available_cash
+  end
+
+  # A missing rate leaves the amount as it stands rather than raising: a panel
+  # wrong by the spread beats the whole budget page failing to render.
+  test "a missing rate leaves the figure standing rather than raising" do
+    Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "EUR pot", currency: "EUR", balance: 1_000
+    )
+
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    assert_equal 1_000, @budget.available_cash
+  end
+
   private
     def depository(balance)
       Account.create!(
