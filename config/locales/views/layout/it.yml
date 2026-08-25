@@ -9,7 +9,7 @@ it:
       nav:
         assistant: Assistente
         budgets: Budget
-    insights: Insight
+        insights: Insight
         plan: Piano
         home: Home
         reports: Rapporti
