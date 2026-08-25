@@ -115,5 +115,4 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_equal "read_write", checking[:permission]
     assert_equal({ financial: false, annotations: true }, checking[:transaction_editing])
   end
-  end
 end

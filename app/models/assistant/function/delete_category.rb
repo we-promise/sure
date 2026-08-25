@@ -32,9 +32,9 @@ class Assistant::Function::DeleteCategory < Assistant::Function
         .lock
         .index_by { |category| category.id.to_s }
       category = categories[category_id]
-      return error("not_found", "Category not found.") unless category
+      next error("not_found", "Category not found.") unless category
       replacement = replacement_id && categories[replacement_id]
-      return error("invalid_replacement", "Replacement category not found.") if replacement_id && !replacement
+      next error("invalid_replacement", "Replacement category not found.") if replacement_id && !replacement
 
       name = category.name
       category.replace_and_destroy!(replacement)

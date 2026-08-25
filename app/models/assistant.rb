@@ -35,10 +35,9 @@ module Assistant
       REGISTRY.keys
     end
 
-    # The single registry behind both the builtin chat and the /mcp endpoint's
-    # tools/list — a function class added here is immediately callable by an
-    # external agent, so pass the user to keep preview tools out of the default
-    # surface.
+    # Shared baseline for builtin chat and MCP. MCP-only destructive tools are
+    # appended in mcp_function_classes so they are not exposed to the builtin
+    # assistant; pass the user to keep preview tools out of the default surface.
     def function_classes(user = nil)
       classes = [
         Function::GetTransactions,

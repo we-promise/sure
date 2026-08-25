@@ -31,9 +31,9 @@ class Assistant::Function::DeleteTag < Assistant::Function
         .lock
         .index_by { |tag| tag.id.to_s }
       tag = tags[tag_id]
-      return error("not_found", "Tag not found.") unless tag
+      next error("not_found", "Tag not found.") unless tag
       replacement = replacement_id && tags[replacement_id]
-      return error("invalid_replacement", "Replacement tag not found.") if replacement_id && !replacement
+      next error("invalid_replacement", "Replacement tag not found.") if replacement_id && !replacement
 
       name = tag.name
       tag.replace_and_destroy!(replacement)

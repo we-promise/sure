@@ -55,11 +55,7 @@ openssl rand -base64 32
 The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
 
 > [!CAUTION]
-<<<<<<< HEAD
-> The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, transaction updates, and budget updates. Only set this for users you trust with your AI provider.
-=======
 > The AI assistant receives the full MCP tool set for the specified user. This includes tools that create, update, unlink, schedule deletion of, and permanently delete financial records. Only configure a trusted AI client and user.
->>>>>>> aefca4a1 (feat(mcp): add practical financial CRUD tools)
 
 ## Configuration
 
@@ -151,7 +147,7 @@ At the time of writing, `tools/list` includes:
 | `get_tags` | Tags with pagination |
 | `get_categories` | Categories with hierarchy and pagination |
 | `create_account` / `update_account` / `delete_account` | Manage writable manual accounts |
-| `create_goal` | Create a savings goal linked to depository accounts |
+| `create_goal` | Create a funding goal linked to eligible depository or investment accounts |
 | `get_goals` / `update_goal` / `delete_goal` | List and manage goals and their linked accounts |
 | `create_tag` / `update_tag` | Manage tags |
 | `delete_tag` | Delete a tag, optionally reassigning its transactions |
