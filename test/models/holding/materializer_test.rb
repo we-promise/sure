@@ -42,6 +42,20 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_nil latest_holding.avg_cost
   end
 
+  # A row carrying a figure with no `cost_basis_source` was invisible to
+  # `load_existing_holdings_map`, so the clearing above saw no existing holding
+  # and left the stale basis standing — the rows least able to justify the
+  # number they hold being the ones that kept it.
+  test "a transfer clears a stored basis that never recorded where it came from" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    @account.holdings.where(security: @aapl).update_all(cost_basis: 200, cost_basis_source: nil)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis, "a source-less figure outlived the transfer"
+  end
   # Somebody asserted what this position cost them, which is exactly what the
   # app cannot work out for a transfer. Theirs to keep.
   test "a transfer leaves a provider cost basis alone" do

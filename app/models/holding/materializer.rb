@@ -169,10 +169,15 @@ class Holding::Materializer
       # - Locked holdings (must preserve their cost_basis)
       # - Holdings with a source (need to check priority)
       # - Provider-sourced holdings (must not be overwritten)
+      # - Anything carrying a cost_basis at all, source or not. A row with a
+      #   figure and no source was invisible here, so the transfer clearing
+      #   below saw `existing` as nil and left the stale basis standing —
+      #   exactly the rows least able to justify the number they hold.
       account.holdings
         .where(cost_basis_locked: true)
         .or(account.holdings.where.not(cost_basis_source: nil))
         .or(account.holdings.where.not(account_provider_id: nil))
+        .or(account.holdings.where.not(cost_basis: nil))
         .index_by { |h| holding_key(h) }
     end
 

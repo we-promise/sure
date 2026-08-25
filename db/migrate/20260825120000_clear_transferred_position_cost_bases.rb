@@ -11,7 +11,7 @@
 # Only figures this app worked out are cleared. A `manual` or `provider` basis
 # is somebody asserting what the position cost, which is exactly the thing the
 # app cannot derive for a transfer, and stays.
-class ClearTransferredPositionCostBases < ActiveRecord::Migration[8.0]
+class ClearTransferredPositionCostBases < ActiveRecord::Migration[7.2]
   def up
     execute <<~SQL
       UPDATE holdings
