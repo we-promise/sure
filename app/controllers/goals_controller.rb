@@ -162,6 +162,7 @@ class GoalsController < ApplicationController
 
   # Renders the dialog. The write lives in its own action below.
   def consume
+    @consumption_accounts = eligible_consumption_accounts
   end
 
   def record_consumption
@@ -332,15 +333,33 @@ class GoalsController < ApplicationController
     # rather than falling back to nil: on a single-link goal, nil would consume
     # from that link and the user would see a spend recorded against an account
     # they did not name.
-    def consumption_account
-      return nil if params[:account_id].blank?
+    # The goal's links narrowed to what the VIEWER may see. A goal can be
+    # backed by a private account, and both halves of that leak matter: the
+    # dialog would name an account the reader is not allowed to know exists,
+    # and a direct POST would reduce its earmark — the figures moving
+    # afterwards saying how much was in it.
+    def eligible_consumption_accounts
+      @eligible_consumption_accounts ||= begin
+        linked = @goal.linked_accounts
+        visible_ids = Current.user.accessible_accounts.where(id: linked.map(&:id)).pluck(:id).to_set
+        linked.select { |account| visible_ids.include?(account.id) }
+      end
+    end
 
-      # The VIEWER's accessible accounts, not the family's. `Current.family`
-      # resolves private accounts the requester cannot see, so a family member
-      # could name one and have its earmark reduced — learning it exists, and
-      # by how much, from the figures that moved.
-      Current.user.accessible_accounts.find_by(id: params[:account_id]) ||
-        raise(Goal::ConsumptionRefused.new(:account_not_linked))
+    def consumption_account
+      eligible = eligible_consumption_accounts
+      raise Goal::ConsumptionRefused.new(:account_not_linked) if eligible.empty?
+
+      if params[:account_id].present?
+        return eligible.find { |account| account.id.to_s == params[:account_id].to_s } ||
+          raise(Goal::ConsumptionRefused.new(:account_not_linked))
+      end
+
+      # Named explicitly even when the goal has several links, because the one
+      # the viewer can reach is not necessarily the one the model would pick on
+      # its own. With more than one eligible link it stays nil, and the model
+      # refuses rather than guessing.
+      eligible.size == 1 ? eligible.first : nil
     end
 
     def perform_transition!(event)

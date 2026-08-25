@@ -23,14 +23,17 @@
 
       <%# Only asked when there is a choice to make. With one link the model
           takes it on its own, and a select of one is a question with no answer. %>
-      <% if @goal.linked_accounts.size > 1 %>
+      <%# The viewer's eligible links, not the goal's. Listing all of them
+          would name private accounts the reader may not know exist, and offer
+          options the controller then refuses. %>
+      <% if @consumption_accounts.size > 1 %>
         <%# DS::Select, not a bare select_tag: the design system already has the
             primitive and hand-rolling an input shape is how a page stops
             matching the rest of the app. %>
         <%= render DS::Select.new(
               form: f,
               method: :account_id,
-              items: @goal.linked_accounts.map { |account| { label: account.name, value: account.id } },
+              items: @consumption_accounts.map { |account| { label: account.name, value: account.id } },
               label: t(".account_label")
             ) %>
       <% end %>

@@ -117,6 +117,30 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/goal_account_ids_#{private_account.id}/, response.body)
   end
 
+  # A goal can be backed by an account the viewer is not allowed to see. Both
+  # halves of that leak matter: the dialog naming it, and a direct POST moving
+  # its earmark — the figures afterwards saying how much was in it.
+  test "the consumption dialog does not name a linked account the viewer cannot see" do
+    private_account = private_linked_account
+
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_no_match(/Member Private Checking/, response.body)
+    assert_no_match(/#{private_account.id}/, response.body)
+  end
+
+  test "consumption is refused against a linked account the viewer cannot see" do
+    private_account = private_linked_account
+    link = @goal.goal_accounts.find_by(account_id: private_account.id)
+
+    post consume_goal_url(@goal), params: { amount: "100", account_id: private_account.id }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal 0, @goal.reload.consumed_amount
+    assert_equal 500, link.reload.allocated_amount
+  end
+
   test "create rejects a same-family account not shared with the current user" do
     private_account = Account.create!(
       family: @user.family,
@@ -552,6 +576,20 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    # A private account of another member, linked to the goal under test.
+    def private_linked_account
+      account = Account.create!(
+        family: @user.family,
+        owner: users(:family_member),
+        accountable: Depository.new,
+        name: "Member Private Checking",
+        currency: @goal.currency,
+        balance: 1_000
+      )
+      @goal.goal_accounts.create!(account: account, allocated_amount: 500)
+      account
+    end
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.
     def fully_funded_goal
