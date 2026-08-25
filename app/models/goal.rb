@@ -963,7 +963,13 @@ class Goal < ApplicationRecord
     # an active state, where `complete` is already refused for a reserve.
     def kind_locked_while_released
       return unless persisted? && will_save_change_to_kind?
-      return unless state.in?(RELEASED_STATES)
+      # The PERSISTED state, not the one in memory. A single update can set
+      # `state: "active"` alongside the new kind, and reading the attribute
+      # would see the goal as already reopened and wave it through — while the
+      # direct write skipped the `reopen` transition that clears
+      # `completed_amount`, leaving an active reserve reporting a frozen
+      # snapshot forever. Reopening has to be its own gesture.
+      return unless state_in_database.in?(RELEASED_STATES)
 
       errors.add(:kind, :locked_while_released)
     end

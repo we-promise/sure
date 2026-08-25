@@ -999,6 +999,23 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil goal.status_callout_context
   end
 
+  # Setting state and kind in one write skips the `reopen` transition, so
+  # `completed_amount` never thaws. Reading the in-memory state let that
+  # through: the goal looked already-reopened while its frozen snapshot
+  # survived, and an active reserve reported it forever.
+  test "reopening and converting in a single write is refused" do
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: standoff_account)
+    end
+    goal.complete!
+    frozen = goal.reload.completed_amount
+
+    assert_not goal.update(state: "active", kind: "maintained")
+    assert_includes goal.errors[:kind], "Reopen this goal before turning it into a reserve."
+    assert_equal "completed", goal.reload.state
+    assert_equal frozen, goal.reload.completed_amount
+  end
+
   private
 
     # Its own account, so the shared-pool haircut does not make the frozen
