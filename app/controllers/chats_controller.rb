@@ -17,9 +17,15 @@ class ChatsController < ApplicationController
   end
 
   def create
+    if chat_params[:content].blank?
+      return redirect_to new_chat_path, alert: t(".content_blank")
+    end
+
     @chat = Current.user.chats.start!(chat_params[:content], model: chat_params[:ai_model])
     set_last_viewed_chat(@chat)
     redirect_to chat_path(@chat, thinking: true)
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to new_chat_path, alert: e.record.errors.full_messages.to_sentence
   end
 
   def edit
