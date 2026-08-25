@@ -34,7 +34,12 @@ class BudgetCategoriesController < ApplicationController
 
   def update
     @budget_category = @budget.budget_categories.find(params[:id])
-    @budget_category.update!(rollover_enabled: rollover_enabled_param) unless rollover_enabled_param.nil?
+    unless rollover_enabled_param.nil?
+      @budget_category.update!(rollover_enabled: rollover_enabled_param)
+      # A month the user opened before making this choice was created with the
+      # flag off and had nothing to inherit, so the chain stopped there.
+      @budget_category.propagate_rollover_choice_forward!
+    end
     @budget_category.update_budgeted_spending!(budgeted_spending_param)
 
     # Allocations and the rollover toggle both feed the chain, so recompute

@@ -391,7 +391,7 @@ RSpec.configure do |config|
           },
           BudgetCategorySummary: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
@@ -420,7 +420,7 @@ RSpec.configure do |config|
           },
           BudgetCategory: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },

@@ -145,6 +145,27 @@ class BudgetCategory < ApplicationRecord
     budget.budget_category_actual_spending(self)
   end
 
+  # The toggle is a standing choice about the envelope, and the comment on
+  # Budget#inherited_rollover_flags already says so: "turning it off on a given
+  # month still overrides it from there on."
+  #
+  # Inheritance at row creation only covers months that do not exist yet. A
+  # user who opened March, then went back to January and switched rollover on,
+  # left March sitting at `false` — created before the choice was made, so it
+  # never had one to inherit — and the chain died there. Applying the choice
+  # forward closes that hole without a tri-state column: later months carry the
+  # most recent decision, which is the one the user just made.
+  def propagate_rollover_choice_forward!
+    later = BudgetCategory
+      .joins(:budget)
+      .where(category_id: category_id)
+      .where(budgets: { family_id: budget.family_id, user_id: budget.user_id })
+      .where("budgets.start_date > ?", budget.start_date)
+      .where.not(rollover_enabled: rollover_enabled)
+
+    later.update_all(rollover_enabled: rollover_enabled, updated_at: Time.current)
+  end
+
   def update_budgeted_spending!(new_budgeted_spending)
     self.class.transaction do
       lock!

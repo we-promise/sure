@@ -666,6 +666,7 @@ components:
       - currency
       - subcategory
       - inherits_parent_budget
+      - rollover_enabled
       - category
       - created_at
       - updated_at
@@ -727,6 +728,7 @@ components:
       - currency
       - subcategory
       - inherits_parent_budget
+      - rollover_enabled
       - category
       - created_at
       - updated_at

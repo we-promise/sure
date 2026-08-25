@@ -869,6 +869,35 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert_not ann_second.budget_categories.find_by!(category: @category).rollover_enabled?
   end
 
+  # Inheritance at row creation only covers months that do not exist yet. A
+  # month opened BEFORE the user made the choice was created with the flag off
+  # and had nothing to inherit, so the chain died there.
+  test "switching rollover on reaches months that were already open" do
+    first = initialized_budget(2.months.ago)
+    later = initialized_budget(1.month.ago)
+    allocate(first, 100, rollover: false)
+    allocate(later, 100, rollover: false)
+
+    budget_category_for(first).update!(rollover_enabled: true)
+    budget_category_for(first).propagate_rollover_choice_forward!
+
+    assert budget_category_for(later).reload.rollover_enabled?
+  end
+
+  test "switching it off reaches them too, and never runs backwards" do
+    first = initialized_budget(2.months.ago)
+    middle = initialized_budget(1.month.ago)
+    allocate(first, 100)
+    allocate(middle, 100)
+
+    budget_category_for(middle).update!(rollover_enabled: false)
+    budget_category_for(middle).propagate_rollover_choice_forward!
+
+    assert_not budget_category_for(middle).reload.rollover_enabled?
+    assert budget_category_for(first).reload.rollover_enabled?,
+           "an earlier month keeps the choice it was given"
+  end
+
   private
     def capture_sql
       statements = []
