@@ -45,6 +45,11 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
          params: { account_id: theirs.id, simplefin_account_id: simplefin_account.id },
          headers: { "Turbo-Frame" => "modal" }
 
+    # Asserted first: `assert_not_includes` is satisfied by a redirect or an
+    # empty body, so without this the test would keep passing the day the
+    # action stopped rendering the rebuilt list at all.
+    assert_response :success
+
     assert_not_includes response.body, members_own.name,
       "the stream rebuilt the accounts list and handed back an account nobody shared with this admin"
   end

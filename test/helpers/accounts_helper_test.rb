@@ -58,4 +58,43 @@ class AccountsHelperTest < ActionView::TestCase
 
     assert_includes visible, @someone_elses
   end
+
+  # A background broadcast renders these partials with no `Current.user`. The
+  # empty-set fallback collapses "no viewer" into "no accessible accounts",
+  # which replaced a populated provider card with an empty one — the accounts
+  # looking deleted rather than merely unrendered.
+  test "knows the difference between no viewer and a viewer who sees nothing" do
+    Current.session = nil
+
+    assert_not viewer_present_for_account_scoping?,
+      "a job with no viewer was treated as a viewer who may see nothing"
+  end
+
+  test "a signed-in viewer is a viewer even with nothing shared" do
+    Current.session = @session
+
+    assert viewer_present_for_account_scoping?
+  end
+
+  # The index injects the list, and the partial must still scope to it even
+  # where `Current.user` has not been reached for.
+  test "an injected list counts as a viewer" do
+    Current.session = nil
+    @accessible_account_ids = [ @owned.id ]
+
+    assert viewer_present_for_account_scoping?
+  end
+
+  # The whole point: with no viewer the card must not come back empty, because
+  # an empty provider card reads as "your accounts are gone" rather than "this
+  # is waiting on a refresh".
+  test "the groups partial says it is updating rather than showing nothing" do
+    Current.session = nil
+
+    render partial: "accounts/index/account_groups", locals: { accounts: [ @owned, @someone_elses ] }
+
+    assert_includes rendered, "account-groups-awaiting-refresh"
+    assert_not_includes rendered, @someone_elses.name
+    assert_not_includes rendered, @owned.name
+  end
 end

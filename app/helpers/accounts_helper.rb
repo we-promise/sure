@@ -22,6 +22,14 @@ module AccountsHelper
     accounts.select { |account| ids.include?(account.id) }
   end
 
+  # Whether there is a viewer to scope to at all. A background broadcast renders
+  # these partials with `Current.user` nil, and "no accessible accounts" and
+  # "no viewer" are different answers that the empty-set fallback below
+  # collapses into one.
+  def viewer_present_for_account_scoping?
+    @accessible_account_ids.present? || Current.user.present?
+  end
+
   # Reuses the list the accounts index already loaded; falls back to a query for
   # any other caller, once per request.
   def viewer_accessible_account_ids
