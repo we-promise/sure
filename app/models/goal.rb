@@ -40,8 +40,18 @@ class Goal < ApplicationRecord
   # creation and whenever the inputs change — never on an unrelated save, so
   # the job keeps owning the monthly cadence and renaming a goal cannot
   # silently move a financial figure.
+  # A target_amount edit is in the list because in this mode the amount is
+  # derived, not typed: without it the form could persist an arbitrary figure
+  # under a "six months of expenses" label until the next monthly refresh.
   before_save :apply_months_of_expenses_target,
-              if: -> { months_of_expenses_target? && (new_record? || will_save_change_to_target_months? || will_save_change_to_target_mode?) }
+              if: -> {
+                months_of_expenses_target? && (
+                  new_record? ||
+                  will_save_change_to_target_months? ||
+                  will_save_change_to_target_mode? ||
+                  will_save_change_to_target_amount?
+                )
+              }
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -459,7 +469,25 @@ class Goal < ApplicationRecord
       return nil unless median.positive?
 
       computed = (median * target_months).round(2)
-      computed.positive? ? computed : nil
+      return nil unless computed.positive?
+
+      # The median comes back in FAMILY currency; `target_amount` is stored in
+      # the GOAL's. A EUR reserve in a USD family would otherwise read a 3,000
+      # dollar floor as 3,000 euros, and rewrite it that way every month.
+      converted = convert_to_goal_currency(computed)
+      converted&.positive? ? converted : nil
+    end
+
+    # nil when there is no rate for the day. That is the same safe failure as
+    # a family with no spending history: the previous target stands, because
+    # it is a number the user has been saving against and a wrong one is worse
+    # than a stale one.
+    def convert_to_goal_currency(amount)
+      return amount if currency == family.currency
+
+      Money.new(amount, family.currency).exchange_to(currency).amount.round(2)
+    rescue Money::ConversionError
+      nil
     end
 
   public
@@ -1078,18 +1106,29 @@ class Goal < ApplicationRecord
       update_columns(**attrs)
     end
 
+    # Leaves whatever the user typed when the median cannot be computed: the
+    # presence + positivity validations still apply, so a family with no
+    # spending history is asked for a figure rather than blocked.
+    #
+    # Runs on a target_amount edit too, and overwrites it. In this mode the
+    # floor is derived, not typed — the form disables the field, but the
+    # invariant cannot depend on the form: a goal left saying
+    # "six months of expenses" while holding a figure someone typed is
+    # untrue on its face, and would stay untrue until the next monthly run.
+    def apply_months_of_expenses_target
+      computed = months_of_expenses_amount
+      return self.target_amount = computed if computed
+
+      # Nothing to derive from and a typed figure on its way in: keep the one
+      # the reserve already had. Same reasoning as the refresh job — a stale
+      # floor beats a wrong one, and this one would be wearing a label saying
+      # it was computed.
+      self.target_amount = target_amount_in_database if will_save_change_to_target_amount? && !new_record?
+    end
 
     # target_months only means something for a reserve on the months basis.
     # Allowing it elsewhere would leave a number nothing reads, which the
     # refresh job would then look at and skip for reasons no one could see.
-    # Leaves whatever the user typed when the median cannot be computed: the
-    # presence + positivity validations still apply, so a family with no
-    # spending history is asked for a figure rather than blocked.
-    def apply_months_of_expenses_target
-      computed = months_of_expenses_amount
-      self.target_amount = computed if computed
-    end
-
     def months_target_requires_a_reserve
       return if target_mode == "fixed" && target_months.blank?
       return if months_of_expenses_target? && maintained? && target_months.present?

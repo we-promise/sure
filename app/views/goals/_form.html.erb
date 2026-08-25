@@ -49,7 +49,8 @@
     <%# Only meaningful for a reserve, and only in months mode — the Stimulus
         controller shows it accordingly. The amount field stays visible either
         way: in months mode it shows what the job last computed, which is the
-        figure the user is actually saving against. %>
+        figure the user is actually saving against — read-only there, because
+        in that mode it is derived rather than chosen. %>
     <div data-goal-kind-target="modeField" class="hidden">
       <%= f.select :target_mode,
                    Goal::TARGET_MODES.map { |mode| [ t("goals.form.target_modes.#{mode}"), mode ] },
@@ -67,7 +68,7 @@
     </div>
 
     <div class="grid grid-cols-2 gap-3 items-start">
-      <div>
+      <div data-goal-kind-target="amountField">
         <%= f.money_field :target_amount,
                           label: t("goals.form.fields.target_amount"),
                           hide_currency: true,

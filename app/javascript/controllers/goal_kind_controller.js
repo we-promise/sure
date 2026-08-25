@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // due on a date. Hiding the target-date field keeps a stale value from being
 // submitted and driving a pace the goal does not have.
 export default class extends Controller {
-  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField"]
+  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField"]
 
   connect() {
     this.refresh()
@@ -25,6 +25,18 @@ export default class extends Controller {
     const months = maintained && this.hasModeSelectTarget && this.modeSelectTarget.value === "months_of_expenses"
     this.monthsFieldTargets.forEach((field) => field.classList.toggle("hidden", !months))
     if (!months) this.#clearInputs(this.monthsFieldTargets)
+
+    // In months mode the floor is derived from the family's spending, not
+    // chosen. Shown, because it is the figure the user is saving against, but
+    // not editable — the model overwrites a typed one anyway, and a field that
+    // silently discards what you put in it is worse than one you cannot type
+    // into.
+    this.amountFieldTargets.forEach((field) => {
+      field.querySelectorAll("input").forEach((input) => {
+        input.readOnly = months
+        input.classList.toggle("opacity-60", months)
+      })
+    })
   }
 
   #clearInputs(fields) {

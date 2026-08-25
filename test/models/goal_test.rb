@@ -1151,6 +1151,51 @@ class GoalTest < ActiveSupport::TestCase
     assert_not reserve.needs_attention?
   end
 
+  # --- months-of-expenses review follow-ups ---
+
+  # The median comes back in FAMILY currency; target_amount is stored in the
+  # GOAL's. A EUR reserve in a USD family would otherwise read a 3,000 dollar
+  # floor as 3,000 euros, and rewrite it that way every month.
+  test "a reserve in another currency gets its floor converted" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "EUR pot", currency: "EUR", balance: 1_000)
+    goal = @family.goals.create!(
+      name: "Precaution", target_amount: 1_000, currency: "EUR",
+      kind: "maintained", target_mode: "months_of_expenses", target_months: 6
+    ) { |g| g.goal_accounts.build(account: account, allocated_amount: 1_000) }
+
+    # 500/month family currency x 6 months = 3,000, at a rate of 0.9 = 2,700.
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+    Money.any_instance.stubs(:exchange_to).returns(Money.new(2_700, "EUR"))
+
+    goal.update!(target_amount: 1)
+
+    assert_equal 2_700, goal.reload.target_amount.to_d
+  end
+
+  # The floor is derived in this mode. Without this the edit form could
+  # persist an arbitrary figure under a "six months of expenses" label until
+  # the next monthly refresh.
+  test "a typed amount cannot stand in for a derived floor" do
+    goal = months_based_reserve
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+
+    goal.update!(target_amount: 99)
+
+    assert_equal 3_000, goal.reload.target_amount.to_d
+  end
+
+  # Nothing to derive from and a typed figure on its way in: a stale floor
+  # beats a wrong one wearing a computed label.
+  test "with no spending history a typed amount does not replace the floor" do
+    goal = months_based_reserve
+    IncomeStatement.any_instance.stubs(:median_expense).returns(0)
+
+    goal.update!(target_amount: 99)
+
+    assert_equal 3_000, goal.reload.target_amount.to_d
+  end
+
   private
 
     # Its own account, so the shared-pool haircut does not make the frozen
@@ -1168,6 +1213,17 @@ class GoalTest < ActiveSupport::TestCase
       Account.create!(family: @family, accountable: Depository.new,
                       name: "Pot #{SecureRandom.hex(3)}",
                       currency: @family.currency, balance: balance)
+  end
+
+    def months_based_reserve
+      account = Account.create!(family: @family, accountable: Depository.new,
+                                name: "Reserve pot #{SecureRandom.hex(3)}",
+                                currency: @family.currency, balance: 3_000)
+      IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+      @family.goals.create!(
+        name: "Precaution", target_amount: 3_000, currency: @family.currency,
+        kind: "maintained", target_mode: "months_of_expenses", target_months: 6
+      ) { |g| g.goal_accounts.build(account: account, allocated_amount: 3_000) }
     end
     # A fresh account: the fixtures deliberately carry three goals holding
     # whole-account links on `depository`, a legacy overlap the exclusivity
