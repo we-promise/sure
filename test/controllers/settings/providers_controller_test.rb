@@ -436,20 +436,38 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   test "GET connect_form for snaptrade shows connect CTA when configured but item is not authorized" do
     sign_in users(:empty)
     Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(true)
 
     get connect_form_settings_providers_path(provider_key: "snaptrade")
 
     assert_response :success
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
+    # Both grants are available here, so the device code is offered alongside.
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_device_button")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
+  end
+
+  test "GET connect_form for snaptrade offers only the device code without a confidential client" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_device_button")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready_device")
+    # The browser redirect needs a client secret this deployment does not have.
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
   end
 
   test "GET connect_form for snaptrade shows authorized status and reauthorize CTA when item is connected" do
     # Default signed-in user (family_admin) belongs to dylan_family, which owns
     # the oauth-authorized `configured_item` fixture.
     Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(true)
 
     get connect_form_settings_providers_path(provider_key: "snaptrade")
 
