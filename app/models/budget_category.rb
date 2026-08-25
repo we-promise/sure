@@ -65,7 +65,7 @@ class BudgetCategory < ApplicationRecord
         to.reload
 
         # Re-checked under the lock: the balance read before it may be stale.
-        raise InvalidMove.new(:insufficient_funds) if amount > (from[:budgeted_spending] || 0)
+        raise InvalidMove.new(:insufficient_funds) if amount > movable_from(from)
 
         from.update_budgeted_spending!((from[:budgeted_spending] || 0) - amount)
         to.update_budgeted_spending!((to[:budgeted_spending] || 0) + amount)
@@ -84,7 +84,28 @@ class BudgetCategory < ApplicationRecord
         raise InvalidMove.new(:different_budgets) unless from.budget_id == to.budget_id
         raise InvalidMove.new(:same_category) if from.id == to.id
         raise InvalidMove.new(:parent_child) if direct_lineage?(from, to)
-        raise InvalidMove.new(:insufficient_funds) if amount > (from[:budgeted_spending] || 0)
+        raise InvalidMove.new(:insufficient_funds) if amount > movable_from(from)
+      end
+
+      # What a category can actually send away. For a leaf that is its whole
+      # allocation; for a parent it is only its own reserve, because
+      # `budgeted_spending` on a parent ALREADY CONTAINS its individually
+      # funded subcategories' allocations (sync_parent_budgeted_spending!
+      # keeps it at children + reserve).
+      #
+      # Comparing against the gross figure let a move spend money that is
+      # already ring-fenced by a child, leaving the parent below the sum of
+      # its children — and the next edit to any child rebuilt the parent back
+      # up, silently undoing the move. The money appeared to teleport back.
+      def movable_from(budget_category)
+        gross = budget_category[:budgeted_spending] || 0
+        return gross if budget_category.subcategory?
+
+        ring_fenced = budget_category.subcategories
+                                     .reject(&:inherits_parent_budget?)
+                                     .sum { |child| child[:budgeted_spending] || 0 }
+
+        [ gross - ring_fenced, 0 ].max
       end
 
       # sync_parent_budgeted_spending! rebuilds a parent from the sum of its

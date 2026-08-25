@@ -286,17 +286,24 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal before, @budget.reload.allocated_spending, "allocated_spending must be invariant"
   end
 
+  # Deliberately a leaf as the source: only there does "the whole allocation"
+  # mean the whole of it. A parent's figure already contains its individually
+  # funded children's, so its boundary is its own reserve — covered separately
+  # below. This test used to move a parent's gross amount and pass, which is
+  # exactly the money-teleports-back bug.
   test "moving the whole allocation is allowed, moving one cent more is not" do
     other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
     destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+    source = @subcategory_with_limit_bc.reload
+    whole = source.budgeted_spending
 
     assert_raises(BudgetCategory::InvalidMove) do
-      BudgetCategory.move_allocation!(from: destination, to: @parent_budget_category, amount: 0.01)
+      BudgetCategory.move_allocation!(from: source, to: destination, amount: whole + 0.01)
     end
 
-    BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: 1000)
-    assert_equal 0, @parent_budget_category.reload.budgeted_spending
-    assert_equal 1000, destination.reload.budgeted_spending
+    BudgetCategory.move_allocation!(from: source, to: destination, amount: whole)
+    assert_equal 0, source.reload.budgeted_spending
+    assert_equal whole, destination.reload.budgeted_spending
   end
 
   test "an amount larger than the source allocation is refused" do
@@ -385,6 +392,40 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 900, @parent_budget_category.reload.budgeted_spending,
                  "the parent must absorb its subcategory's decrease"
     assert_equal before, @budget.reload.allocated_spending, "allocated_spending must be invariant"
+  end
+
+  # A parent's budgeted_spending already contains its individually funded
+  # subcategories', so treating the gross figure as movable let a move spend
+  # money a child had ring-fenced. The parent dropped below the sum of its
+  # children, and the next edit to any child rebuilt it — the money appeared
+  # to teleport back.
+  test "a parent can only send away its own reserve, not its children's money" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+    parent_gross = @parent_budget_category.reload.budgeted_spending
+    ring_fenced = @subcategory_with_limit_bc.reload.budgeted_spending
+    reserve = parent_gross - ring_fenced
+
+    assert_operator ring_fenced, :>, 0, "fixture should ring-fence part of the parent"
+
+    error = assert_raises(BudgetCategory::InvalidMove) do
+      BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: reserve + 1)
+    end
+    assert_equal :insufficient_funds, error.reason
+
+    assert_equal parent_gross, @parent_budget_category.reload.budgeted_spending
+  end
+
+  test "a parent may still send away every penny of its own reserve" do
+    other_parent = Category.create!(name: "Test Transport #{Time.now.to_f}", family: @family, color: "#e99537")
+    destination = BudgetCategory.create!(budget: @budget, category: other_parent, budgeted_spending: 0, currency: "USD")
+    reserve = @parent_budget_category.reload.budgeted_spending - @subcategory_with_limit_bc.reload.budgeted_spending
+    before_total = @budget.reload.allocated_spending
+
+    BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: reserve)
+
+    assert_equal reserve, destination.reload.budgeted_spending
+    assert_equal before_total, @budget.reload.allocated_spending, "allocated_spending must be invariant"
   end
 
   test "a move between two subcategories of the same parent leaves the parent alone" do

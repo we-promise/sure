@@ -25,6 +25,7 @@ fr:
       button_title: Déplacer de l'argent depuis cette catégorie
       cancel: Annuler
       dialog_title: Déplacer de l'argent
+      no_destination: C'est la seule enveloppe disponible pour l'instant — une catégorie ne peut pas envoyer vers son propre parent ni vers sa sous-catégorie.
       errors:
         different_budgets: Les deux catégories doivent appartenir au même budget.
         insufficient_funds: C'est plus que ce que cette catégorie a alloué.

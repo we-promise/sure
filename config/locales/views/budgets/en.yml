@@ -86,6 +86,7 @@ en:
       button_title: Move money from this category
       cancel: Cancel
       dialog_title: Move money
+      no_destination: This is the only envelope money can move between right now — a category cannot send to its own parent or child.
       submit: Move
       amount_label: Amount
       available: "%{amount} available"
