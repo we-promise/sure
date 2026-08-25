@@ -20,4 +20,18 @@ class MobileDeviceTest < ActiveSupport::TestCase
       assert_not app.confidential
     end
   end
+
+  test "inactive users cannot receive new mobile tokens" do
+    user = users(:family_member)
+    device = user.mobile_devices.create!(
+      device_id: "inactive-token-test",
+      device_name: "Inactive test device",
+      device_type: "ios"
+    )
+    user.update_column(:active, false)
+
+    assert_no_difference "Doorkeeper::AccessToken.count" do
+      assert_raises(ActiveRecord::RecordInvalid) { device.issue_token! }
+    end
+  end
 end

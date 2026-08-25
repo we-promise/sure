@@ -225,6 +225,36 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Insight: {
+            type: :object,
+            required: %w[id type title body priority status],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string },
+              title: { type: :string },
+              body: { type: :string },
+              priority: { type: :string, enum: %w[high medium low] },
+              status: { type: :string, enum: %w[active read] },
+              generated_at: { type: :string, format: :'date-time', nullable: true }
+            }
+          },
+          InsightCollection: {
+            type: :object,
+            required: %w[insights],
+            properties: {
+              insights: { type: :array, items: { '$ref' => '#/components/schemas/Insight' } }
+            }
+          },
+          PushSubscription: {
+            type: :object,
+            required: %w[id environment platform last_registered_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              last_registered_at: { type: :string, format: :'date-time' }
+            }
+          },
           RetryResponse: {
             type: :object,
             required: %w[message message_id],
@@ -800,6 +830,7 @@ RSpec.configure do |config|
               notes: { type: :string, nullable: true },
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },
+              user_modified: { type: :boolean },
               classification: { type: :string },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },

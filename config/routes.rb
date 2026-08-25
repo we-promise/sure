@@ -127,6 +127,27 @@ Rails.application.routes.draw do
     end
   end
 
+  # Self-custody / on-chain wallets
+  resources :onchain_wallet_items, only: [ :update, :destroy ] do
+    collection do
+      get :new_wallet
+      post :preview_wallet
+      post :link_wallet
+      post :enable_crypto_prices
+    end
+
+    member do
+      post :sync
+      get :manage
+      get :review_tokens
+      post :update_tokens
+      get :edit_wallet
+      patch :change_address
+      delete :disconnect_wallet
+      delete :disconnect_asset
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :show, :destroy ] do
     collection do
       get :preload_accounts
@@ -136,6 +157,8 @@ Rails.application.routes.draw do
       get :callback
       get :oauth_authorize
       get :oauth_callback
+      get :oauth_device_authorize
+      post :start_oauth_device_flow
     end
 
     member do
@@ -144,6 +167,7 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :complete_oauth_device_flow
       delete :delete_connection
     end
   end
@@ -651,6 +675,8 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
+      resources :insights, only: [ :index ]
+      resources :push_subscriptions, only: [ :create, :destroy ]
       resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create", as: :sync_job
       resources :syncs, only: [ :index, :show ] do
@@ -838,13 +864,22 @@ Rails.application.routes.draw do
         post :test_connection
       end
     end
-    resources :users, only: [ :index, :update ]
+    resources :users, only: [ :index, :update, :destroy ] do
+      get :deletion, on: :member
+    end
+    resources :sso_identity_blocks, only: [ :destroy ]
     resources :invitations, only: [ :destroy ]
     resources :families, only: [] do
       member do
         delete :invitations, to: "invitations#destroy_all"
       end
     end
+    # Singular `resource :system_health` would otherwise route to
+    # `Admin::SystemHealthsController` (Rails pluralizes the controller
+    # name even for singular resources, unlike its plural siblings above
+    # that happen to round-trip cleanly). The controller file is singular,
+    # so name it explicitly.
+    resource :system_health, only: :show, controller: "system_health"
   end
 
   # Defines the root path route ("/")

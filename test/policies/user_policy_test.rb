@@ -42,6 +42,22 @@ class UserPolicyTest < ActiveSupport::TestCase
     assert_not UserPolicy.new(nil, @regular_user).update?
   end
 
+  test "super admin can destroy another user" do
+    assert UserPolicy.new(@super_admin, @regular_user).destroy?
+  end
+
+  test "super admin cannot destroy themselves" do
+    assert_not UserPolicy.new(@super_admin, @super_admin).destroy?
+  end
+
+  test "regular user cannot destroy anyone" do
+    assert_not UserPolicy.new(@regular_user, @other_user).destroy?
+  end
+
+  test "nil user cannot destroy anyone" do
+    assert_not UserPolicy.new(nil, @regular_user).destroy?
+  end
+
   test "scope returns all users for super admin" do
     scope = UserPolicy::Scope.new(@super_admin, User).resolve
     assert_equal User.count, scope.count

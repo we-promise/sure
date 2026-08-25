@@ -1,6 +1,9 @@
 ---
 en:
   insights:
+    notification:
+      title: New financial insight
+      body: Open Sure to review your latest AI insight.
     index:
       title: Insights
       subtitle: What's happening across your finances, refreshed nightly.
