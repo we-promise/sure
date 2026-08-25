@@ -19,7 +19,7 @@
           <div class="rounded-lg border border-secondary bg-container-inset px-3 py-2">
             <p class="text-xs text-secondary"><%= t("trade_republic_items.portfolio_categories.#{category}") %></p>
             <p class="text-sm font-medium text-primary"><%= t(".positions", count: summary[:count]) %></p>
-            <p class="text-xs text-secondary"><%= format_money Money.new((summary[:value] * 100).round, @account.currency) %></p>
+            <p class="text-xs text-secondary"><%= format_money Money.new(summary[:value].round(2), @account.currency) %></p>
           </div>
         <% end %>
       </div>

@@ -109,7 +109,7 @@
             <span class="text-secondary"><%= t(".data_quality.unknown", count: quality[:unknown_events]) %></span>
           </div>
           <div class="grid gap-2 sm:grid-cols-2 text-xs">
-            <% expense_money = Money.new((expenses[:total] * 100).round, trade_republic_item.currency) %>
+            <% expense_money = Money.new(expenses[:total].round(2), trade_republic_item.currency) %>
             <span class="text-secondary"><%= t(".data_quality.expenses", count: expenses[:count], amount: format_money(expense_money)) %></span>
             <span class="text-secondary"><%= t(".data_quality.reconciliation", matched: reconciliation.count { |check| check[:reconciled] }, total: reconciliation.size) %></span>
           </div>
