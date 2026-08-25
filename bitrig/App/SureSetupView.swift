@@ -81,7 +81,6 @@ struct SureSetupView: View {
         .frame(maxWidth: 620, alignment: .leading)
         .padding(24)
       }
-      .navigationTitle("Insights")
     }
   }
 }
