@@ -65,3 +65,34 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", edit_budget_path(Budget.date_to_param(Date.current))
   end
 end
+
+class PlansControllerHouseholdSwitchingTest < ActionDispatch::IntegrationTest
+  setup do
+    @family = families(:empty)
+    @family.update!(personal_budgets: true)
+    @owner = users(:josh)
+    @owner.update!(preferences: (@owner.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in @owner
+    ensure_tailwind_build
+  end
+
+  test "renders a household/mine switcher once personal_budgets is on, and switches to household" do
+    get plan_url
+
+    assert_response :success
+    assert_select "a[href=?]", plan_path(owner: "household")
+    assert_select "a[href=?]", plan_path(owner: @owner.id)
+
+    get plan_url, params: { owner: "household" }
+    assert_response :success
+  end
+
+  test "hides the household pill when household_budget_enabled is off" do
+    @family.update!(household_budget_enabled: false)
+
+    get plan_url
+
+    assert_response :success
+    assert_select "a[href=?]", plan_path(owner: "household"), count: 0
+  end
+end

@@ -40,6 +40,7 @@ module Provider::LlmConcept
     instructions: nil,
     functions: [],
     function_results: [],
+    tool_choice: nil,
     messages: nil,
     conversation_history: [],
     streamer: nil,

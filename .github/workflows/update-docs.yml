@@ -26,20 +26,14 @@ jobs:
               return;
             }
 
-            const url = `https://api.mintlify.com/v1/agent/${projectId}/job`;
+            const url = `https://api.mintlify.com/v2/agent/${projectId}/job`;
+            const prompt = [
+              'You are an action runner that updates documentation based on code changes. You should never ask questions. If you are not able to access the repository, report the error and exit.',
+              `Update the documentation for our recent pushes to main:\n\nRepository: ${owner}/${repo}`,
+              'Open a pull request when files are edited.'
+            ].join('\n\n');
             const payload = {
-              branch: `mintlify/docs-update-${Date.now()}`,
-              messages: [
-                {
-                  role: 'system',
-                  content: 'You are an action runner that updates documentation based on code changes. You should never ask questions. If you are not able to access the repository, report the error and exit.'
-                },
-                {
-                  role: 'user',
-                  content: `Update the documentation for our recent pushes to main:\n\nRepository: ${owner}/${repo}`
-                }
-              ],
-              asDraft: false
+              prompt
             };
 
             try {
@@ -56,27 +50,23 @@ jobs:
                 throw new Error(`API request failed with status ${response.status}: ${await response.text()}`);
               }
 
-              const reader = response.body.getReader();
-              const decoder = new TextDecoder();
-              let buffer = '';
+              const body = await response.text();
+              const job = JSON.parse(body);
 
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-                for (const line of lines) {
-                  if (line.trim()) {
-                    console.log(line);
-                  }
-                }
-              }
-              if (buffer.trim()) {
-                console.log(buffer);
+              if (!job.id) {
+                throw new Error(`API response did not include a job id: ${body}`);
               }
 
-              core.notice(`Documentation update job triggered for ${owner}/${repo}`);
+              if (job.status === 'failed') {
+                throw new Error(`Mintlify job ${job.id} failed immediately`);
+              }
+
+              console.log(`Mintlify documentation update job ${job.id} created with status: ${job.status}`);
+              if (job.prLink) {
+                console.log(`Mintlify pull request: ${job.prLink}`);
+              }
+
+              core.notice(`Documentation update job ${job.id} triggered for ${owner}/${repo}`);
             } catch (error) {
               core.setFailed(`Failed to create documentation update job: ${error.message}`);
             }
