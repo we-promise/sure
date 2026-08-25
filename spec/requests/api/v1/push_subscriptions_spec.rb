@@ -34,6 +34,14 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
         schema "$ref" => "#/components/schemas/PushSubscription"
         run_test!
       end
+
+
+      response "422", "invalid subscription" do
+        schema "$ref" => "#/components/schemas/ErrorResponse"
+        let(:subscription) { { token: "ab" * 32, environment: "staging", platform: "ios" } }
+
+        run_test!
+      end
     end
   end
 

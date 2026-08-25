@@ -4,9 +4,9 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
   before_action :ensure_write_scope
 
   def create
-    subscription = PushSubscription.find_or_initialize_by(token: subscription_params[:token])
+    token = subscription_params[:token].to_s.downcase
+    subscription = current_resource_owner.push_subscriptions.find_or_initialize_by(token: token)
     subscription.assign_attributes(
-      user: current_resource_owner,
       environment: subscription_params[:environment],
       platform: subscription_params[:platform],
       last_registered_at: Time.current

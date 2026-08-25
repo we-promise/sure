@@ -1634,8 +1634,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["last_registered_at"], name: "index_push_subscriptions_on_last_registered_at"
-    t.index ["token"], name: "index_push_subscriptions_on_token", unique: true
+    t.index "lower((token)::text)", name: "index_push_subscriptions_on_lower_token", unique: true
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying, 'production'::character varying]::text[])", name: "chk_push_subscriptions_environment"
+    t.check_constraint "platform::text = 'ios'::text", name: "chk_push_subscriptions_platform"
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
