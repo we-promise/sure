@@ -1000,6 +1000,266 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  test "index caches uncategorized_count and projected_recurring across requests" do
+    # Test environment uses null_store; swap in a memory store so the cache
+    # actually persists between the two requests below.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    assert_response :success
+
+    queries = capture_sql_queries { get transactions_url }
+    assert_response :success
+
+    # uncategorized_transactions is a scope (joins/wheres), so its name never
+    # appears in the generated SQL -- match the COUNT query it produces instead.
+    assert_empty queries.select { |q| q =~ /SELECT COUNT/i && q =~ /category_id.*IS NULL/i },
+      "second request with unchanged data should reuse the cached uncategorized count"
+    # Building the cache key itself still runs small COUNT/MAX queries against
+    # recurring_transactions (Family#recurring_transactions_version and
+    # #recurring_transaction_merchants_version), so match the projection query
+    # the cached block itself would run instead of the whole table name.
+    assert_empty queries.grep(/next_expected_date/i),
+      "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects new transactions immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "New uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count + 1, updated_count,
+      "a new uncategorized transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects categorizing a transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Needs a category",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.entryable.update!(category: categories(:food_and_drink))
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "categorizing a transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    share.account.entries.create!(
+      name: "Uncategorized on shared account",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    sign_in member
+    get transactions_url
+    count_with_access = rendered_uncategorized_count
+    assert_operator count_with_access, :>, 0,
+      "the member should see the shared account's uncategorized transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    count_after_revocation = rendered_uncategorized_count
+
+    assert_operator count_after_revocation, :<, count_with_access,
+      "revoking account-share access must not leave a stale cached count that still includes the now-inaccessible account"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    recurring = recurring_transactions(:netflix_subscription)
+    assert_equal share.account_id, recurring.account_id,
+      "fixture assumption: the shared depository account has the netflix recurring charge"
+
+    merchant_name_pattern = /#{Regexp.escape(recurring.merchant.name)}/
+
+    sign_in member
+    get transactions_url
+    assert_match merchant_name_pattern, response.body,
+      "the member should see the shared account's recurring transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    assert_no_match merchant_name_pattern, response.body,
+      "revoking account-share access must not leave a stale cached projected-recurring list"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a merchant rename immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+    merchant = recurring.merchant
+
+    get transactions_url
+    assert_match(/#{Regexp.escape(merchant.name)}/, response.body,
+      "the recurring transaction should render with the merchant's original name")
+
+    merchant.update!(name: "Netflix Renamed")
+
+    get transactions_url
+    assert_match(/Netflix Renamed/, response.body,
+      "renaming the merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a provider merchant update immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # Recurring detection copies transaction.merchant_id, which can point at a
+    # shared ProviderMerchant (not just a family-owned FamilyMerchant) -- e.g.
+    # ProviderMerchant::Enhancer updates these after the recurring row exists.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Merchant Original", source: "enable_banking")
+    recurring = recurring_transactions(:netflix_subscription)
+    recurring.update!(merchant: provider_merchant, name: nil)
+
+    get transactions_url
+    assert_match(/Provider Merchant Original/, response.body,
+      "the recurring transaction should render with the provider merchant's original name")
+
+    provider_merchant.update!(name: "Provider Merchant Renamed")
+
+    get transactions_url
+    assert_match(/Provider Merchant Renamed/, response.body,
+      "updating the provider merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects deleting an uncategorized transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Deleted while uncategorized",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.destroy!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "deleting an uncategorized transaction must not leave a stale cached count"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects disabling an account immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "Uncategorized on account about to be disabled",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+    assert_operator initial_count, :>, 0
+
+    account.disable!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_operator updated_count, :<, initial_count,
+      "disabling an account must not leave a stale cached count that still includes its transactions"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is scoped per user, not just per family" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # family_member has no share on this account (see test/fixtures/account_shares.yml),
+    # so only the admin can see its uncategorized transaction.
+    accounts(:other_asset).entries.create!(
+      name: "Admin-only uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    admin_count = rendered_uncategorized_count
+    assert_operator admin_count, :>, 0
+
+    sign_in users(:family_member)
+    get transactions_url
+    member_count = rendered_uncategorized_count
+
+    assert_not_equal admin_count, member_count,
+      "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
+  ensure
+    Rails.cache = original_cache
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
@@ -1007,6 +1267,13 @@ end
 
     def normalize_sql_query(sql)
       sql.to_s.squish.gsub(/[`"]/, "").downcase
+    end
+
+    # The "Categorize (N)" menu item only renders when @uncategorized_count
+    # is positive, so an absent match means the count is 0.
+    def rendered_uncategorized_count
+      match = response.body.match(/Categorize \((\d+)\)/)
+      match ? match[1].to_i : 0
     end
 
     # Per-row lazy loads use `column = ?`. Do not treat `IN (...)` as lazy
