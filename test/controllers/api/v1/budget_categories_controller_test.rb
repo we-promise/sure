@@ -213,4 +213,29 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
   ensure
     api_key_without_read&.destroy
   end
+
+  # Every web surface that shows the carry recomputes on the way in, through
+  # Budget.find_or_bootstrap. This endpoint reads the materialized column
+  # straight, so it was the one place a carry left stale by a sync or a
+  # recategorisation could still be served.
+  test "index refreshes a stale carry rather than serving it" do
+    earlier = Budget.find_or_bootstrap(@family, start_date: 3.months.ago.to_date, user: nil)
+    earlier.update!(budgeted_spending: 3_000, expected_income: 5_000)
+    earlier.budget_categories.find_by!(category: @category)
+           .update!(budgeted_spending: 500, rollover_enabled: true)
+
+    later = Budget.find_or_bootstrap(@family, start_date: 2.months.ago.to_date, user: nil)
+    later.update!(budgeted_spending: 3_000, expected_income: 5_000)
+    later.budget_categories.find_by!(category: @category)
+         .update!(budgeted_spending: 500, rollover_enabled: true)
+
+    # Simulate what a sync does: rewrite the stored carry behind the app's
+    # back, the way a changed past month would leave it.
+    later.budget_categories.find_by!(category: @category).update_column(:rolled_over_amount, 0)
+
+    get api_v1_budget_categories_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal 500, later.budget_categories.find_by!(category: @category).reload[:rolled_over_amount]
+  end
 end
