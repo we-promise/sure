@@ -16,7 +16,13 @@ export default class extends Controller {
     if (maintained) {
       this.dateFieldTargets.forEach((field) => {
         const input = field.querySelector("input")
-        if (input) input.value = ""
+        if (!input) return
+
+        input.value = ""
+        // Assigning `value` fires nothing, so the pace suggestion bound to
+        // this input's action kept showing a monthly figure derived from a
+        // deadline the goal no longer has.
+        input.dispatchEvent(new Event("input", { bubbles: true }))
       })
     }
   }
