@@ -12,6 +12,7 @@ class AiHealth
     DEFAULT_CACHE_TTL = 60.seconds
     DEFAULT_TIMEOUT = 5
     EMBEDDING_TEST_INPUT = "Sure AI health check"
+    CHAT_TEST_INPUT = "Reply with OK."
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
       def passing?
@@ -45,18 +46,25 @@ class AiHealth
       @cache = cache
     end
 
-    def llm(provider:, endpoint:, access_token:, model:)
+    def llm(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      verification = openai_compatible ? :chat_completion : :models
+
       run(
         component: "llm",
         provider_key: provider,
         endpoint: endpoint,
         model: model,
-        credential: access_token
+        credential: access_token,
+        verification: verification
       ) do
         model_available = case provider
         when :openai
-          response = openai_client(access_token:, endpoint:).models.list
-          openai_model_ids(response).include?(model)
+          if openai_compatible
+            openai_chat_completion_available?(access_token:, endpoint:, model:)
+          else
+            response = openai_client(access_token:, endpoint:).models.list
+            openai_model_ids(response).include?(model)
+          end
         when :anthropic
           model_info = anthropic_client(access_token:, endpoint:).models.retrieve(model)
           model_info.respond_to?(:id) && model_info.id.present?
@@ -112,8 +120,8 @@ class AiHealth
     private
       attr_reader :cache, :force
 
-      def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil)
-        key = cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:)
+      def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)
+        key = cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
         cache.delete(key) if force
 
         result = nil
@@ -168,9 +176,22 @@ class AiHealth
         response["data"].filter_map { |item| item["id"] || item[:id] }
       end
 
-      def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:)
+      def openai_chat_completion_available?(access_token:, endpoint:, model:)
+        response = openai_client(access_token:, endpoint:).chat(
+          parameters: {
+            model: model,
+            messages: [ { role: "user", content: CHAT_TEST_INPUT } ],
+            max_tokens: 1,
+            temperature: 0
+          }
+        )
+
+        response.is_a?(Hash) && response["choices"].is_a?(Array) && response["choices"].any?
+      end
+
+      def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
         fingerprint = Digest::SHA256.hexdigest(
-          [ component, provider_key, endpoint, model, credential, dimensions ].join("\0")
+          [ component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
         )
         "#{CACHE_NAMESPACE}/#{fingerprint}"
       end
