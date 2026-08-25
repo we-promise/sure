@@ -5,7 +5,12 @@ require "swagger_helper"
 RSpec.describe "API V1 Insights", type: :request do
   let(:family) { Family.create!(name: "API Family") }
   let(:user) do
-    family.users.create!(email: "insights-api@example.com", password: "password123", ai_enabled: true)
+    family.users.create!(
+      email: "insights-api@example.com",
+      password: "password123",
+      ai_enabled: true,
+      preferences: { "preview_features_enabled" => true }
+    )
   end
   let(:api_key) do
     key = ApiKey.generate_secure_key
@@ -21,6 +26,21 @@ RSpec.describe "API V1 Insights", type: :request do
 
       response "200", "insights listed" do
         schema "$ref" => "#/components/schemas/InsightCollection"
+        run_test!
+      end
+
+
+      response "403", "preview features disabled" do
+        schema "$ref" => "#/components/schemas/ErrorResponse"
+        let(:user) do
+          family.users.create!(
+            email: "insights-disabled-api@example.com",
+            password: "password123",
+            ai_enabled: true,
+            preferences: { "preview_features_enabled" => false }
+          )
+        end
+
         run_test!
       end
     end

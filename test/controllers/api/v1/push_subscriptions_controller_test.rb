@@ -4,7 +4,8 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
     key = ApiKey.generate_secure_key
-    @api_key = @user.api_keys.create!(
+    @api_key = ApiKey.create!(
+      user: @user,
       name: "Native push test",
       key: key,
       scopes: [ "read_write" ],
@@ -38,7 +39,8 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
   test "requires a read write API key" do
     read_key_value = ApiKey.generate_secure_key
-    read_key = @user.api_keys.create!(
+    read_key = ApiKey.create!(
+      user: @user,
       name: "Read-only native push test",
       key: read_key_value,
       scopes: [ "read" ],
@@ -60,6 +62,63 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
          as: :json
 
     assert_response :unprocessable_entity
+  end
+
+  test "rejects an invalid APNs environment" do
+    post api_v1_push_subscriptions_url,
+         params: { token: @token, environment: "staging", platform: "ios" },
+         headers: @headers,
+         as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "normalizes APNs tokens before lookup and persistence" do
+    post api_v1_push_subscriptions_url,
+         params: { token: @token.upcase, environment: "sandbox", platform: "ios" },
+         headers: @headers,
+         as: :json
+
+    assert_response :created
+    assert PushSubscription.exists?(token: @token)
+
+    assert_no_difference "PushSubscription.count" do
+      post api_v1_push_subscriptions_url,
+           params: { token: @token, environment: "sandbox", platform: "ios" },
+           headers: @headers,
+           as: :json
+    end
+  end
+
+  test "does not transfer another user's token" do
+    other_user = users(:empty)
+    subscription = other_user.push_subscriptions.create!(
+      token: @token,
+      environment: "sandbox",
+      platform: "ios",
+      last_registered_at: Time.current
+    )
+
+    post api_v1_push_subscriptions_url,
+         params: { token: @token.upcase, environment: "production", platform: "ios" },
+         headers: @headers,
+         as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal other_user, subscription.reload.user
+    assert_equal "sandbox", subscription.environment
+  end
+
+  test "returns a controlled response when concurrent token registration conflicts" do
+    PushSubscription.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique)
+
+    post api_v1_push_subscriptions_url,
+         params: { token: @token, environment: "sandbox", platform: "ios" },
+         headers: @headers,
+         as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_error", response.parsed_body["error"]
   end
 
   test "removes the current user's token" do

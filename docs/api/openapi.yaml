@@ -4595,6 +4595,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/InsightCollection"
+        '403':
+          description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/push_subscriptions":
     post:
       summary: Register an APNs device token
@@ -4610,6 +4616,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/PushSubscription"
+        '422':
+          description: invalid or conflicting subscription
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:

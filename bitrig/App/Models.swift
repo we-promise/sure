@@ -55,6 +55,7 @@ struct SureAccount: Codable, Identifiable, Sendable {
 
 struct AccountCollection: Codable, Sendable {
   var accounts: [SureAccount]
+  var pagination: SurePagination?
 }
 
 struct SureBudget: Codable, Identifiable, Sendable {
@@ -78,6 +79,7 @@ struct SureBudget: Codable, Identifiable, Sendable {
 
 struct BudgetCollection: Codable, Sendable {
   var budgets: [SureBudget]
+  var pagination: SurePagination?
 }
 
 struct SureInsight: Codable, Identifiable, Sendable, Equatable {
@@ -129,6 +131,21 @@ struct SureChat: Codable, Identifiable, Sendable, Hashable {
 
 struct ChatCollection: Codable, Sendable {
   var chats: [SureChat]
+  var pagination: SurePagination?
+}
+
+struct SurePagination: Codable, Sendable {
+  var page: Int
+  var perPage: Int
+  var totalCount: Int
+  var totalPages: Int
+
+  enum CodingKeys: String, CodingKey {
+    case page
+    case perPage = "per_page"
+    case totalCount = "total_count"
+    case totalPages = "total_pages"
+  }
 }
 
 struct SureMessage: Codable, Identifiable, Sendable, Equatable {
@@ -153,9 +170,10 @@ struct ChatDetail: Codable, Sendable {
   var createdAt: String
   var updatedAt: String
   var messages: [SureMessage]
+  var pagination: SurePagination?
 
   enum CodingKeys: String, CodingKey {
-    case id, title, error, messages
+    case id, title, error, messages, pagination
     case createdAt = "created_at"
     case updatedAt = "updated_at"
   }

@@ -40,8 +40,10 @@ struct SureSettingsView: View {
           .background(.background.secondary, in: .rect(cornerRadius: 18))
 
           Button(role: .destructive) {
-            store.disconnect()
-            dismiss()
+            Task {
+              await store.disconnect()
+              dismiss()
+            }
           } label: {
             Label("Disconnect this device", systemImage: "rectangle.portrait.and.arrow.right")
               .frame(maxWidth: .infinity)

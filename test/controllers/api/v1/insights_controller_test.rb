@@ -3,11 +3,13 @@ require "test_helper"
 class Api::V1::InsightsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     key = ApiKey.generate_secure_key
-    @api_key = @user.api_keys.create!(
+    @api_key = ApiKey.create!(
+      user: @user,
       name: "Native insights test",
       key: key,
-      scopes: [ "read_write" ],
+      scopes: [ "read" ],
       source: "mobile"
     )
     @insight = @user.family.insights.create!(
@@ -35,5 +37,14 @@ class Api::V1::InsightsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_insights_url
 
     assert_response :unauthorized
+  end
+
+  test "does not expose insights when the API key owner opted out of preview features" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
+
+    get api_v1_insights_url, headers: api_headers(@api_key)
+
+    assert_response :forbidden
+    assert_equal "feature_disabled", response.parsed_body.fetch("error")
   end
 end

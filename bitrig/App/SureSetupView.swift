@@ -38,12 +38,14 @@ struct SureSetupView: View {
           .padding(18)
           .background(.background.secondary, in: .rect(cornerRadius: 20))
 
-          VStack(alignment: .leading, spacing: 8) {
-            Label("Demo credentials", systemImage: "person.badge.key.fill")
+          VStack(alignment: .leading, spacing: 10) {
+            Label("Connect to the demo", systemImage: "person.badge.key.fill")
               .font(.headline)
-            Text("Sign in to demo.sure.am with user@example.com and Password1!, then create a read/write key in Settings → API keys. Paste that key above.")
+            Text("Sign in through the Sure demo, then create a read/write key in Settings → API keys. Paste that key above.")
               .font(.subheadline)
               .foregroundStyle(.secondary)
+            Link("Open Sure demo", destination: URL(string: "https://demo.sure.am")!)
+              .font(.subheadline.weight(.semibold))
           }
           .padding(16)
           .background(Color.sureIndigo.opacity(0.09), in: .rect(cornerRadius: 16))
