@@ -103,6 +103,19 @@ class Holding::Materializer
           # For locked holdings, preserve ALL cost_basis fields
           holdings_buffer_to_upsert_without_cost << base_attrs
           flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
+        elsif holding.cost_basis_unknown && clearable_calculated_basis?(existing)
+          # The position took in a transfer, so it has no cost basis this app
+          # can know. A nil from the calculator alone would leave the previous
+          # calculated figure standing — which is the stale number reporting a
+          # transferred coin as if it had been bought on arrival. Cleared, so
+          # the read path falls through and answers "unknown" rather than
+          # confidently wrong. A manual or provider figure is somebody's
+          # assertion about what the position cost, and stays.
+          holdings_buffer_to_upsert_with_cost << base_attrs.merge(
+            "cost_basis" => nil,
+            "cost_basis_source" => nil
+          )
+          flush.call(holdings_buffer_to_upsert_with_cost) if holdings_buffer_to_upsert_with_cost.size >= PERSIST_BATCH_SIZE
         elsif reconciled[:should_update] && reconciled[:cost_basis].present?
           # Update with new cost_basis and source
           holdings_buffer_to_upsert_with_cost << base_attrs.merge(
@@ -141,6 +154,14 @@ class Holding::Materializer
       # Flush remaining items in each buffer
       flush.call(holdings_buffer_to_upsert_with_cost) unless holdings_buffer_to_upsert_with_cost.empty?
       flush.call(holdings_buffer_to_upsert_without_cost) unless holdings_buffer_to_upsert_without_cost.empty?
+    end
+
+    # Nothing to clear, or a figure somebody asserted rather than one this app
+    # worked out.
+    def clearable_calculated_basis?(existing)
+      return false if existing.nil? || existing.cost_basis.blank?
+
+      existing.cost_basis_source.nil? || existing.cost_basis_source == "calculated"
     end
 
     def load_existing_holdings_map

@@ -498,6 +498,17 @@ class HoldingTest < ActiveSupport::TestCase
       assert_nil holding.avg_cost
     end
 
+    # A figure the user typed is theirs, not ours to discard: they are saying
+    # what the position cost them, which is exactly what the app cannot work
+    # out on its own for a transfer.
+    test "a cost basis the user set survives a transfer" do
+      holding = holdings(:one)
+      holding.account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+      holding.update_columns(cost_basis: 100, cost_basis_source: "manual")
+
+      assert_equal 100, holding.reload.avg_cost.amount.to_d
+    end
+
     test "a purchase still sets it" do
         holding = holdings(:one)
         holding.account.trades.each { |t| t.update!(investment_activity_label: "Buy") }
