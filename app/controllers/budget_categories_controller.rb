@@ -34,7 +34,15 @@ class BudgetCategoriesController < ApplicationController
 
   def update
     @budget_category = @budget.budget_categories.find(params[:id])
+    @budget_category.update!(rollover_enabled: rollover_enabled_param) unless rollover_enabled_param.nil?
     @budget_category.update_budgeted_spending!(budgeted_spending_param)
+
+    # Allocations and the rollover toggle both feed the chain, so recompute
+    # it here rather than on every transaction change: the budget page is
+    # the only place the amount is read, and it always comes through here or
+    # through Budget.find_or_bootstrap.
+    Budget::RolloverCalculator.new(family: @budget.family, user: @budget.user).recompute!
+    @budget_category.reload
 
     respond_to do |format|
       format.turbo_stream
@@ -45,6 +53,13 @@ class BudgetCategoriesController < ApplicationController
   end
 
   private
+    def rollover_enabled_param
+      permitted = params.require(:budget_category).permit(:rollover_enabled)
+      return nil unless permitted.key?(:rollover_enabled)
+
+      ActiveModel::Type::Boolean.new.cast(permitted[:rollover_enabled])
+    end
+
     def budgeted_spending_param
       params.require(:budget_category)
         .permit(:budgeted_spending)

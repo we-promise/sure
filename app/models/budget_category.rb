@@ -6,7 +6,8 @@ class BudgetCategory < ApplicationRecord
 
   validates :budget_id, uniqueness: { scope: :category_id }
 
-  monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense, :actual_spending
+  monetize :budgeted_spending, :available_to_spend, :avg_monthly_expense, :median_monthly_expense, :actual_spending,
+           :rolled_over_amount
 
   class Group
     attr_reader :budget_category, :budget_subcategories
@@ -76,6 +77,21 @@ class BudgetCategory < ApplicationRecord
     category.parent_id.present?
   end
 
+  # Materialized by Budget::RolloverCalculator, never derived on read. Going
+  # through the toggle here (and skipping subcategories that share their
+  # parent's budget) keeps every consumer consistent even if a stale amount
+  # outlives the toggle that produced it.
+  def rolled_over_amount
+    return 0 unless rollover_enabled?
+    return 0 if inherits_parent_budget?
+
+    super || 0
+  end
+
+  def rolled_over?
+    rolled_over_amount.positive?
+  end
+
   # Returns true if this subcategory has no individual budget limit and should use parent's budget
   def inherits_parent_budget?
     subcategory? && (self[:budgeted_spending].nil? || self[:budgeted_spending] == 0)
@@ -107,10 +123,10 @@ class BudgetCategory < ApplicationRecord
       parent.available_to_spend
     elsif subcategory?
       # Subcategory with individual limit
-      (self[:budgeted_spending] || 0) - actual_spending
+      (self[:budgeted_spending] || 0) + rolled_over_amount - actual_spending
     else
       # Parent category
-      parent_budget = self[:budgeted_spending] || 0
+      parent_budget = (self[:budgeted_spending] || 0) + rolled_over_amount
 
       # Get subcategories with and without individual limits
       subcategories_with_limits = subcategories.reject(&:inherits_parent_budget?)
@@ -135,18 +151,24 @@ class BudgetCategory < ApplicationRecord
     end
   end
 
+  # Consumption, so it measures against everything there is to spend --
+  # rollover included, which is what `available_to_spend` reports. (The
+  # allocation figures, `allocated_spending` and `available_to_allocate`,
+  # deliberately stay a pure "what did I plan for this month".) The
+  # zero-budget guards below apply to that effective amount, not to the
+  # allocation alone: a category funded only by rollover has money to spend.
   def percent_of_budget_spent
     if inherits_parent_budget?
       # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category
       return 0 unless parent
 
-      parent_budget = parent[:budgeted_spending] || 0
+      parent_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount
       return 0 if parent_budget == 0 && actual_spending == 0
       return 100 if parent_budget == 0 && actual_spending > 0
       (actual_spending.to_f / parent_budget) * 100
     else
-      budget_amount = self[:budgeted_spending] || 0
+      budget_amount = (self[:budgeted_spending] || 0) + rolled_over_amount
       return 0 if budget_amount == 0 && actual_spending == 0
       return 0 if budget_amount > 0 && actual_spending == 0
       return 100 if budget_amount == 0 && actual_spending > 0
@@ -162,8 +184,22 @@ class BudgetCategory < ApplicationRecord
     available_to_spend.negative?
   end
 
+  # "Is there money in this envelope", which drives the over-budget /
+  # on-track classification -- so it counts the carry too. Without it a
+  # category funded entirely by rollover reads as unbudgeted, lands in
+  # `unbudgeted_with_spending?` and gets an alert pill while it still has
+  # money left. `display_budgeted_spending` stays the month's allocation
+  # alone: the card shows the two figures side by side.
   def budgeted?
-    display_budgeted_spending.to_d.positive?
+    (display_budgeted_spending.to_d + display_rolled_over_amount.to_d).positive?
+  end
+
+  # Sibling of `display_budgeted_spending`: a subcategory sharing its
+  # parent's budget shares its parent's carry as well.
+  def display_rolled_over_amount
+    return rolled_over_amount unless inherits_parent_budget?
+
+    parent_budget_category&.rolled_over_amount || 0
   end
 
   def unbudgeted_with_spending?

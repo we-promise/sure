@@ -72,8 +72,12 @@ en:
       left_to_allocate: left to allocate
       over_set: "> 100% set"
       percent_set: "%{percent} set"
+    budget_category:
+      rolled_over: "+%{amount} rolled over"
     budget_category_form:
       monthly_average: "%{amount}/m avg"
+      rollover_label: Rollover
+      rollover_title: Keep this category's unspent money from one month to the next
       shared_placeholder: Shared
       shared_title: Leave empty to share parent's budget
     confirm_button:
@@ -94,6 +98,7 @@ en:
       overspent: "overspent"
       left: "left"
       budgeted: "Budgeted"
+      rolled_over: "Rolled over"
       monthly_average_spending: "Monthly average spending"
       monthly_median_spending: "Monthly median spending"
       recent_transactions: "Recent Transactions"

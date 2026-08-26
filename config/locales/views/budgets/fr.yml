@@ -6,8 +6,12 @@ fr:
       left_to_allocate: reste à attribuer
       over_set: "> 100 % réglé"
       percent_set: "%{percent} défini"
+    budget_category:
+      rolled_over: "+%{amount} de report"
     budget_category_form:
       monthly_average: "%{amount}/mois en moyenne"
+      rollover_label: Report
+      rollover_title: Conserver d'un mois sur l'autre ce que cette catégorie n'a pas dépensé
       shared_placeholder: Partagé
       shared_title: Laisser vide pour partager le budget des parents
     confirm_button:
@@ -30,6 +34,7 @@ fr:
       overspent: trop dépensé
       overview: Aperçu
       recent_transactions: Transactions récentes
+      rolled_over: Reporté
       spending: "%{date} dépenses"
       status: Statut
       view_all_transactions: Voir toutes les transactions de catégorie
