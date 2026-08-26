@@ -604,13 +604,8 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert_not expense_filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
 
-  test "SUPPORTED_CONDITION_TYPES matches the registry's filter keys" do
-    # Guards against drift: if a new condition filter is added to a Rule::Registry,
-    # SUPPORTED_CONDITION_TYPES must be updated too, otherwise the inclusion
-    # validation in Rule::Condition will reject types the registry can handle.
-    registry_keys = @transaction_rule.registry.condition_filters.map(&:key)
-    # "compound" is handled directly in Rule::Condition#apply rather than via a filter.
-    expected = (registry_keys + [ "compound" ]).sort
+  test "SUPPORTED_CONDITION_TYPES comes from the registry's filter keys" do
+    expected = (Rule::Registry::TransactionResource.condition_filter_keys + [ "compound" ]).sort
 
     assert_equal expected, Rule::Condition::SUPPORTED_CONDITION_TYPES.sort
   end

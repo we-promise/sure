@@ -1,21 +1,5 @@
 class Rule::Condition < ApplicationRecord
-  # Keep in sync with the keys returned by each Rule::Registry subclass'
-  # #condition_filters (plus "compound", which is handled directly in #apply
-  # rather than via a filter). A cross-check test in
-  # test/models/rule/condition_test.rb guards against drift between this list
-  # and the registry.
-  SUPPORTED_CONDITION_TYPES = %w[
-    compound
-    transaction_account
-    transaction_amount
-    transaction_category
-    transaction_details
-    transaction_merchant
-    transaction_name
-    transaction_notes
-    transaction_tag
-    transaction_type
-  ].freeze
+  SUPPORTED_CONDITION_TYPES = (Rule::Registry::TransactionResource.condition_filter_keys + [ "compound" ]).freeze
 
   LEGACY_CONDITION_TYPE_ALIASES = {
     "name" => "transaction_name"
