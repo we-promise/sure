@@ -212,8 +212,8 @@ class SimplefinItem::Importer
         end
 
         adapter.update_balance(
-          balance: account_data[:balance],
-          cash_balance: account_data[:"available-balance"],
+          balance: normalized,
+          cash_balance: is_liability ? normalized : account_data[:"available-balance"],
           source: "simplefin"
         )
       end
