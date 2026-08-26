@@ -87,4 +87,10 @@ class MercuryItemTest < ActiveSupport::TestCase
     syncer = @mercury_item.send(:syncer)
     assert_instance_of MercuryItem::Syncer, syncer
   end
+
+  test "declares token as encrypted" do
+    skip "Encryption not configured" unless MercuryItem.encryption_ready?
+
+    assert_includes MercuryItem.encrypted_attributes.map(&:to_s), "token"
+  end
 end
