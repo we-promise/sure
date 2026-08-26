@@ -5,7 +5,7 @@ All notable changes to the Sure Helm chart will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.4] - 2026-08-31
 
 ### Changed
 - Updated the Pipelock CI action and deployment image from 2.8.0 to 3.4.0. The image uses the release's multi-architecture manifest digest.
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pipelock.flightRecorder`: structured Helm values for rendering `flight_recorder.enabled`, `require_receipts`, `redact`, `dir`, and `signing_key_path`.
 - `pipelock.extraVolumes` and `pipelock.extraVolumeMounts`: mount receipt evidence storage and receipt-signing keys without duplicating the Pipelock deployment template.
 
-## [0.7.1] - 2026-05-31]
+## [0.7.1] - 2026-05-31
 
 ### Changed
 - Bumped `pipelock.image.tag` from `2.2.0` to `2.5.0`. Picks up three releases of scanner, federation, and audit work — see the [pipelock changelog](https://github.com/luckyPipewrench/pipelock/blob/main/CHANGELOG.md) for the full surface.
