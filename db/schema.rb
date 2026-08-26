@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -365,10 +365,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
     t.uuid "category_id", null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
+    t.decimal "rolled_over_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.boolean "rollover_enabled", default: false, null: false
     t.datetime "updated_at", null: false
     t.index ["budget_id", "category_id"], name: "index_budget_categories_on_budget_id_and_category_id", unique: true
     t.index ["budget_id"], name: "index_budget_categories_on_budget_id"
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
+    t.check_constraint "rolled_over_amount >= 0::numeric", name: "chk_budget_categories_rolled_over_amount_non_negative"
   end
 
   create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -866,10 +869,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
 
   create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "color"
+    t.decimal "completed_amount", precision: 19, scale: 4
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.uuid "family_id", null: false
     t.string "icon"
+    t.string "kind", default: "one_off", null: false
     t.string "name", null: false
     t.text "notes"
     t.string "progress_basis", default: "balance", null: false
@@ -880,6 +886,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
+    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying, 'maintained'::character varying]::text[])", name: "chk_goals_kind_enum"
     t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying, 'contributions'::character varying]::text[])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
@@ -1622,6 +1629,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
     t.string "provider_key", null: false
     t.datetime "updated_at", null: false
     t.index ["provider_key", "period"], name: "index_provider_request_counts_on_provider_key_and_period", unique: true
+  end
+
+  create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "environment", null: false
+    t.datetime "last_registered_at", null: false
+    t.string "platform", default: "ios", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index "lower((token)::text)", name: "index_push_subscriptions_on_lower_token", unique: true
+    t.index ["last_registered_at"], name: "index_push_subscriptions_on_last_registered_at"
+    t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying, 'production'::character varying]::text[])", name: "chk_push_subscriptions_environment"
+    t.check_constraint "platform::text = 'ios'::text", name: "chk_push_subscriptions_platform"
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2493,6 +2515,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_130000) do
   add_foreign_key "onchain_wallet_items", "families"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"
   add_foreign_key "recurring_transactions", "accounts", column: "destination_account_id", on_delete: :cascade

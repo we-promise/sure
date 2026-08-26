@@ -4,7 +4,9 @@ class VectorStore::EmbeddableTest < ActiveSupport::TestCase
   class EmbeddableHost
     include VectorStore::Embeddable
     # Expose private methods for testing
-    public :extract_text, :chunk_text, :embed, :embed_batch
+    public :extract_text, :chunk_text, :embed, :embed_batch,
+           :embedding_model, :embedding_dimensions, :embedding_uri_base,
+           :embedding_access_token
   end
 
   setup do
@@ -136,6 +138,18 @@ class VectorStore::EmbeddableTest < ActiveSupport::TestCase
     @host.instance_variable_set(:@embedding_client, mock_client)
 
     assert_raises(VectorStore::Error) { @host.embed("test text") }
+  end
+
+  test "embedding configuration delegates to the shared runtime configuration" do
+    VectorStore.expects(:embedding_model).returns("model")
+    VectorStore.expects(:embedding_dimensions).returns(3)
+    VectorStore.expects(:embedding_uri_base).returns("https://embeddings.example.test/v1")
+    VectorStore.expects(:embedding_access_token).returns("token")
+
+    assert_equal "model", @host.embedding_model
+    assert_equal 3, @host.embedding_dimensions
+    assert_equal "https://embeddings.example.test/v1", @host.embedding_uri_base
+    assert_equal "token", @host.embedding_access_token
   end
 
   # --- embed_batch ---

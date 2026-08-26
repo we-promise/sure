@@ -46,6 +46,7 @@ class GoalsController < ApplicationController
       currency: Current.family.primary_currency_code
     )
     @linkable_accounts = linkable_accounts_for_new
+    @currently_linked_account_ids = []
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
@@ -72,6 +73,12 @@ class GoalsController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid
     @linkable_accounts = linkable_accounts_for_new
+    # From the in-memory links, not `pluck`: nothing is persisted on a failed
+    # create, so a query would come back empty and every box the user ticked
+    # would render unchecked. The amounts survived — the form reads those off
+    # the same built records — so the user was left staring at an error telling
+    # them to enter an amount, on a form whose accounts had silently cleared.
+    @currently_linked_account_ids = @goal.goal_accounts.map { |ga| ga.account_id.to_s }
     render :new, status: :unprocessable_entity
   end
 
@@ -169,11 +176,11 @@ class GoalsController < ApplicationController
     end
 
     def goal_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind)
     end
 
     def goal_update_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind)
     end
 
     def lookup_accounts(ids)
@@ -276,10 +283,15 @@ class GoalsController < ApplicationController
       #   fund, etc.) has no required monthly pace, so "on track" is
       #   undefined. Counting it would penalise the user for having
       #   open-ended goals — they'd never improve the ratio.
+      # - maintained → a reserve has no deadline and no pace benchmark at
+      #   all. Its statuses are `funded`/`depleted`, which match none of the
+      #   exclusions above, so without this it would land in the denominator
+      #   and never in the numerator: a family with one reserve read
+      #   "0 of 1 on track" for a goal that is working exactly as intended.
       # When this hits zero the tile swaps to a celebration / empty
       # state in the view.
       tracked_total = active_goals.count do |g|
-        !g.paused? && g.status != :reached && g.status != :no_target_date
+        !g.paused? && !g.maintained? && g.status != :reached && g.status != :no_target_date
       end
 
       {

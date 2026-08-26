@@ -34,7 +34,7 @@ class Balance::SyncCache
     end
 
     def converted_entries
-      @converted_entries ||= account.entries.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
+      @converted_entries ||= account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
         # Use Money#exchange_to with custom rate if available, standard lookup otherwise.

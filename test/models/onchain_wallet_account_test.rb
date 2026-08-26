@@ -114,6 +114,20 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
     assert_not OnchainWalletAccount.exists?(onchain_account.id)
   end
 
+  test "deleting the account takes the tracking row with it" do
+    onchain_account = create_onchain_wallet_account(item: @item)
+    account = link_onchain_wallet_account!(onchain_account)
+
+    # Same reasoning as unlinking, by a route that used to miss it: the link is
+    # destroyed by the account here rather than by the row, and a guard meant to
+    # stop the row destroying itself was catching this case too.
+    assert_difference "OnchainWalletAccount.count", -1 do
+      account.destroy!
+    end
+
+    assert_not OnchainWalletAccount.exists?(onchain_account.id)
+  end
+
   test "a native row and token rows coexist for one address" do
     create_onchain_wallet_account(item: @item)
     create_onchain_wallet_account(item: @item, asset: fake_token_asset(contract: "0xaaa"))

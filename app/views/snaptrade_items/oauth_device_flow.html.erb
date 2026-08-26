@@ -1,0 +1,103 @@
+<%= render DS::Dialog.new(frame: "drawer", responsive: true, auto_open: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <%= render "settings/providers/drawer_header",
+               provider_key: "snaptrade",
+               title: t("snaptrade_items.oauth_device_flow.title") %>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <p class="text-sm text-secondary">
+        <%= t("snaptrade_items.oauth_device_flow.subtitle") %>
+      </p>
+
+      <% if @error_message.present? %>
+        <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+      <% end %>
+
+      <% if @device_authorization.present? %>
+        <div class="bg-surface-inset rounded-xl p-4 space-y-4">
+          <p class="text-sm text-secondary">
+            <%= t("snaptrade_items.oauth_device_flow.instructions") %>
+          </p>
+
+          <div class="space-y-1">
+            <p class="text-xs uppercase text-secondary">
+              <%= t("snaptrade_items.oauth_device_flow.code_label") %>
+            </p>
+            <p class="text-2xl font-semibold text-primary font-mono"><%= @device_authorization["user_code"] %></p>
+          </div>
+
+          <%= render DS::Link.new(
+            text: t("snaptrade_items.oauth_device_flow.open_snaptrade"),
+            href: @device_authorization["verification_uri_complete"].presence || @device_authorization["verification_uri"],
+            variant: :primary,
+            icon: "external-link",
+            target: "_blank",
+            rel: "noopener noreferrer",
+            full_width: true
+          ) %>
+        </div>
+
+        <%= form_with url: complete_oauth_device_flow_snaptrade_item_path(@snaptrade_item),
+                      method: :post,
+                      data: { turbo_frame: "drawer" },
+                      class: "space-y-3" do %>
+          <%# The device code and the flow's context are held in the session, not %>
+          <%# round-tripped through here: the code redeems into tokens on its own, %>
+          <%# so it stays server-side and the redemption stays bound to the family %>
+          <%# and item that started the flow. %>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Link.new(
+              text: t("snaptrade_items.oauth_device_flow.cancel_button"),
+              variant: :secondary,
+              href: connect_form_settings_providers_path(provider_key: "snaptrade"),
+              data: { turbo_frame: "drawer" }
+            ) %>
+            <%= render DS::Button.new(
+              text: t("snaptrade_items.oauth_device_flow.complete_button"),
+              variant: :primary,
+              icon: "check",
+              type: :submit
+            ) %>
+          </div>
+        <% end %>
+      <% elsif @device_flow_available %>
+        <%= form_with url: start_oauth_device_flow_snaptrade_items_path,
+                      method: :post,
+                      data: { turbo_frame: "drawer" },
+                      class: "space-y-3" do %>
+          <%= hidden_field_tag :item_id, @snaptrade_item.id if @snaptrade_item&.persisted? %>
+          <%= hidden_field_tag :scope, @oauth_scope if @oauth_scope.present? %>
+          <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+          <%= hidden_field_tag :accountable_type, @accountable_type if @accountable_type.present? %>
+
+          <div class="flex justify-end gap-2">
+            <%= render DS::Link.new(
+              text: t("snaptrade_items.oauth_device_flow.cancel_button"),
+              variant: :secondary,
+              href: connect_form_settings_providers_path(provider_key: "snaptrade"),
+              data: { turbo_frame: "drawer" }
+            ) %>
+            <%= render DS::Button.new(
+              text: t("snaptrade_items.oauth_device_flow.start_button"),
+              variant: :primary,
+              icon: "external-link",
+              type: :submit
+            ) %>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="flex justify-end">
+          <%= render DS::Link.new(
+            text: t("snaptrade_items.oauth_device_flow.cancel_button"),
+            variant: :secondary,
+            href: connect_form_settings_providers_path(provider_key: "snaptrade"),
+            data: { turbo_frame: "drawer" }
+          ) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

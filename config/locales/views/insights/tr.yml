@@ -1,6 +1,9 @@
 ---
 tr:
   insights:
+    notification:
+      title: Yeni finansal içgörü
+      body: En son yapay zekâ içgörünüzü incelemek için Sure'ı açın.
     actions:
       budget: Bütçeyi görüntüle
       cash_flow_warning: Yinelenen işlemleri incele

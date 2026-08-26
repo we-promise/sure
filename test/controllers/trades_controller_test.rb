@@ -8,6 +8,45 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:trade)
   end
 
+  # The header used to read the amount's sign and call every trade a buy or a
+  # sell, so an inbound transfer — Questrade journals one, and so do the
+  # self-custody wallets — was shown as a purchase it never was.
+  test "the header calls a labelled trade what it is, not a buy or a sell" do
+    @entry.trade.update!(investment_activity_label: "Transfer")
+
+    get trade_url(@entry)
+
+    assert_response :success
+    # Scoped to the header's own line: "Buy" also appears in the quick-edit
+    # picker further down the page.
+    assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.transfer")
+    assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.buy"), count: 0
+  end
+
+  test "an unlabelled trade still reads from the amount" do
+    @entry.trade.update!(investment_activity_label: nil)
+
+    get trade_url(@entry)
+
+    assert_response :success
+    expected = @entry.amount.positive? ? I18n.t("trades.header.buy") : I18n.t("trades.header.sell")
+    assert_select "span.text-secondary.text-sm", text: expected
+  end
+
+  # A label this view has no wording for must not blank the line out.
+  test "an unknown label falls back rather than rendering nothing" do
+    @entry.trade.update!(investment_activity_label: "Sweep In")
+    I18n.backend.store_translations(:en, trades: { header: { sweep_in: nil } })
+
+    get trade_url(@entry)
+
+    assert_response :success
+    expected = @entry.amount.positive? ? I18n.t("trades.header.buy") : I18n.t("trades.header.sell")
+    assert_select "span.text-secondary.text-sm", text: expected
+  ensure
+    I18n.reload!
+  end
+
   test "updates trade entry" do
     assert_no_difference [ "Entry.count", "Trade.count" ] do
       patch trade_url(@entry), params: {
