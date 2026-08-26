@@ -7,19 +7,48 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   test "OpenAI LLM probe calls the models endpoint and verifies the configured model" do
-    request = stub_request(:get, "http://ollama.example.test:11434/v1/models")
+    request = stub_request(:get, "https://api.openai.example.test/v1/models")
               .with(headers: { "Authorization" => "Bearer local-token" })
               .to_return(
                 status: 200,
                 headers: { "Content-Type" => "application/json" },
-                body: { data: [ { id: "qwen3:8b" } ] }.to_json
+                body: { data: [ { id: "gpt-4.1" } ] }.to_json
               )
 
     result = @probe.llm(
       provider: :openai,
-      endpoint: "http://ollama.example.test:11434/v1",
+      endpoint: "https://api.openai.example.test/v1",
       access_token: "local-token",
-      model: "qwen3:8b"
+      model: "gpt-4.1"
+    )
+
+    assert result.passing?
+    assert result.checked_at
+    assert_requested request
+  end
+
+  test "OpenAI-compatible LLM probe calls chat completions instead of the models endpoint" do
+    endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
+    request = stub_request(:post, "#{endpoint}/chat/completions")
+              .with(
+                headers: { "Authorization" => "Bearer cf-token" },
+                body: {
+                  model: "@cf/zai-org/glm-5.2",
+                  messages: [ { role: "user", content: AiHealth::Probe::CHAT_TEST_INPUT } ]
+                }
+              )
+              .to_return(
+                status: 200,
+                headers: { "Content-Type" => "application/json" },
+                body: { choices: [ { message: { content: "OK" } } ] }.to_json
+              )
+
+    result = @probe.llm(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "cf-token",
+      model: "@cf/zai-org/glm-5.2",
+      openai_compatible: true
     )
 
     assert result.passing?
