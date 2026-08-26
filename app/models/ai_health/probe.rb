@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "digest"
+require "timeout"
 
 class AiHealth
   # Performs bounded, non-destructive checks against the exact services used
@@ -13,6 +14,18 @@ class AiHealth
     DEFAULT_TIMEOUT = 5
     EMBEDDING_TEST_INPUT = "Sure AI health check"
     CHAT_TEST_INPUT = "Reply with OK."
+    PDF_TEST_INSTITUTION = "SUREHEALTHCHECKBANK"
+    PDF_TEST_LINES = [
+      "Bank Statement",
+      "Institution: #{PDF_TEST_INSTITUTION}",
+      "Account holder: Health Check",
+      "Statement period: 2026-01-01 to 2026-01-31",
+      "Opening balance: USD 100.00",
+      "Closing balance: USD 125.00",
+      "Transactions: 2",
+      "Synthetic data only. No customer data."
+    ].freeze
+    PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
       def passing?
@@ -76,6 +89,32 @@ class AiHealth
       end
     end
 
+    def pdf_text_extraction(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      pdf_processing(
+        provider: provider,
+        endpoint: endpoint,
+        access_token: access_token,
+        model: model,
+        openai_compatible: openai_compatible,
+        component: "pdf_text_extraction",
+        verification: :synthetic_pdf_text,
+        processing_mode: :text
+      )
+    end
+
+    def pdf_vision_processing(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      pdf_processing(
+        provider: provider,
+        endpoint: endpoint,
+        access_token: access_token,
+        model: model,
+        openai_compatible: openai_compatible,
+        component: "pdf_vision_processing",
+        verification: :synthetic_pdf_vision,
+        processing_mode: :vision
+      )
+    end
+
     def openai_vector_store(endpoint:, access_token:)
       run(
         component: "vector_store",
@@ -119,6 +158,44 @@ class AiHealth
 
     private
       attr_reader :cache, :force
+
+      def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible:, component:, verification:,
+                         processing_mode:)
+        run(
+          component: component,
+          provider_key: provider,
+          endpoint: endpoint,
+          model: model,
+          credential: access_token,
+          verification: verification
+        ) do
+          result = Timeout.timeout(timeout) do
+            case provider
+            when :openai
+              Provider::Openai::PdfProcessor.new(
+                openai_client(access_token:, endpoint:),
+                model: model,
+                pdf_content: synthetic_pdf,
+                custom_provider: openai_compatible,
+                max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
+                processing_mode: processing_mode
+              ).process
+            when :anthropic
+              raise Failure, :unsupported_provider unless processing_mode == :vision
+
+              Provider::Anthropic::PdfProcessor.new(
+                anthropic_client(access_token:, endpoint:),
+                model: model,
+                pdf_content: synthetic_pdf
+              ).process
+            else
+              raise Failure, :unsupported_provider
+            end
+          end
+
+          raise Failure, :invalid_response unless valid_pdf_result?(result)
+        end
+      end
 
       def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)
         key = cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
@@ -187,6 +264,41 @@ class AiHealth
         response.is_a?(Hash) && response["choices"].is_a?(Array) && response["choices"].any?
       end
 
+      def valid_pdf_result?(result)
+        result.is_a?(Provider::LlmConcept::PdfProcessingResult) &&
+          result.document_type == "bank_statement" &&
+          result.extracted_data.is_a?(Hash) &&
+          result.extracted_data["institution_name"] == PDF_TEST_INSTITUTION
+      end
+
+      def synthetic_pdf
+        return @synthetic_pdf if defined?(@synthetic_pdf)
+
+        text = PDF_TEST_LINES.map { |line| "(#{line}) Tj T*" }.join("\n")
+        content = "BT /F1 14 Tf 24 190 Td 22 TL\n#{text}\nET\n".b
+        objects = [
+          "<< /Type /Catalog /Pages 2 0 R >>",
+          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+          "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 480 216] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+          "<< /Length #{content.bytesize} >>\nstream\n#{content}endstream",
+          "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+        ]
+
+        pdf = "%PDF-1.4\n".b
+        offsets = [ 0 ]
+        objects.each_with_index do |object, index|
+          offsets << pdf.bytesize
+          pdf << "#{index + 1} 0 obj\n#{object}\nendobj\n".b
+        end
+
+        xref_offset = pdf.bytesize
+        pdf << "xref\n0 #{objects.size + 1}\n".b
+        pdf << "0000000000 65535 f \n".b
+        offsets.drop(1).each { |offset| pdf << format("%010d 00000 n \n", offset).b }
+        pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref_offset}\n%%EOF\n".b
+        @synthetic_pdf = pdf.freeze
+      end
+
       def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
         fingerprint = Digest::SHA256.hexdigest(
           [ component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
@@ -207,7 +319,7 @@ class AiHealth
       def failure_code(error)
         return error.failure_code if error.respond_to?(:failure_code)
 
-        error.is_a?(Faraday::TimeoutError) ? :timeout : :request_failed
+        error.is_a?(Faraday::TimeoutError) || error.is_a?(Timeout::Error) ? :timeout : :request_failed
       end
 
       def http_status(error)

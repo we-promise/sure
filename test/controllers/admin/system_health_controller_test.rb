@@ -19,6 +19,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     Setting.stubs(:anthropic_base_url).returns(nil)
     Setting.stubs(:anthropic_model).returns(nil)
     AiHealth::Probe.any_instance.stubs(:llm).returns(probe_result(:passing))
+    AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(probe_result(:passing))
+    AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:pgvector).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:embedding).returns(probe_result(:passing))
@@ -97,7 +99,9 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/OpenAI hosted vector store/, response.body)
     assert_match(/Live check passed/, response.body)
     assert_match(/Live checks passed/, response.body)
-    assert_match(/Supported/, response.body)
+    assert_match(/PDF text-extraction path/, response.body)
+    assert_match(/PDF vision\/native path/, response.body)
+    assert_equal 2, response.body.scan(/Synthetic PDF check passed/).size
     assert_no_match(/sk-secret-openai/, response.body)
   end
 
@@ -105,6 +109,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
     AiHealth::Probe.any_instance.expects(:llm).never
+    AiHealth::Probe.any_instance.expects(:pdf_text_extraction).never
+    AiHealth::Probe.any_instance.expects(:pdf_vision_processing).never
     AiHealth::Probe.any_instance.expects(:openai_vector_store).never
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
@@ -148,6 +154,46 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/use pgvector with a separate embeddings endpoint/, response.body)
     assert_match(/Live check failed/, response.body)
     assert_no_match(/local-token|uri-secret|query-secret/, response.body)
+  end
+
+  test "AI status reports text and vision PDF probes separately" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(
+      probe_result(:failing, failure_code: :invalid_response)
+    )
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/PDF text-extraction path/, response.body)
+    assert_match(/PDF vision\/native path/, response.body)
+    assert_match(/The synthetic PDF vision\/native check failed/, response.body)
+    assert_match(/Synthetic PDF check passed/, response.body)
+    assert_match(/Synthetic PDF check failed/, response.body)
+    assert_match(/Vision\/native failure reason/, response.body)
+    assert_match(/unexpected response/, response.body)
+    assert_no_match(/sk-secret-openai/, response.body)
+  end
+
+  test "AI status does not probe PDF processing when it is explicitly disabled" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.expects(:pdf_text_extraction).never
+    AiHealth::Probe.any_instance.expects(:pdf_vision_processing).never
+
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "sk-secret-openai",
+      "OPENAI_SUPPORTS_PDF_PROCESSING" => "false"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/Disabled or not supported by the effective provider\/model/, response.body)
+    assert_no_match(/The synthetic PDF .* check failed/, response.body)
   end
 
   test "AI status reports Anthropic with an available pgvector store" do
