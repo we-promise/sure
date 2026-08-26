@@ -85,6 +85,41 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil @account.suggested_subtype
   end
 
+  test "validates sync start date against Enable Banking history limits" do
+    @account.sync_start_date = Date.current + 1.day
+    assert_not @account.valid?
+
+    @account.sync_start_date = EnableBankingItem.minimum_sync_start_date - 1.day
+    assert_not @account.valid?
+
+    @account.sync_start_date = EnableBankingItem.minimum_sync_start_date
+    assert @account.valid?
+  end
+
+  test "does not invalidate an older persisted sync start date on snapshot updates" do
+    @account.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+    @account.reload
+
+    assert_nothing_raised do
+      @account.upsert_enable_banking_snapshot!({
+        uid: @account.uid,
+        identification_hash: @account.uid,
+        currency: "EUR",
+        cash_account_type: "CACC"
+      })
+    end
+
+    assert_equal(
+      {
+        "uid" => @account.uid,
+        "identification_hash" => @account.uid,
+        "currency" => "EUR",
+        "cash_account_type" => "CACC"
+      },
+      @account.reload.raw_payload
+    )
+  end
+
   test "is case insensitive for account type mapping" do
     @account.update!(account_type: "svgs")
     assert_equal "Depository", @account.suggested_account_type
