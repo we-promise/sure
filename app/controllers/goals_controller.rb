@@ -34,6 +34,7 @@ class GoalsController < ApplicationController
 
   def show
     @open_pledges = @goal.open_pledges.reverse_chronological.to_a
+    @unattributed_outflows = withdrawal_detector.unattributed_outflows.to_a
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ @goal.name, nil ]
@@ -171,8 +172,10 @@ class GoalsController < ApplicationController
   end
 
   def record_consumption
-    amount = params[:amount].to_d
-    @goal.consume!(amount, account: consumption_account)
+    txn = consumption_transaction
+    amount = txn ? txn.entry.amount.to_d : params[:amount].to_d
+
+    @goal.consume!(amount, account: consumption_account(txn), transaction: txn)
     redirect_to goal_path(@goal),
                 notice: t("goals.consume.success", amount: Money.new(amount, @goal.currency).format)
   rescue Goal::ConsumptionRefused => e
@@ -338,11 +341,22 @@ class GoalsController < ApplicationController
     # rather than falling back to nil: on a single-link goal, nil would consume
     # from that link and the user would see a spend recorded against an account
     # they did not name.
+    # Attributing a detected outflow: the transaction says both how much and
+    # from where, so neither is taken from the form.
+    def consumption_transaction
+      return nil if params[:transaction_id].blank?
+
+      withdrawal_detector.unattributed_outflows(limit: 50)
+                         .find_by(entryable_id: params[:transaction_id])
+                         &.entryable ||
+        raise(Goal::ConsumptionRefused.new(:transaction_not_found))
+    end
+
     # The goal's links narrowed to what the VIEWER may see. A goal can be
-    # backed by a private account, and both halves of that leak matter: the
+    # backed by a private account, and every half of that leak matters: the
     # dialog would name an account the reader is not allowed to know exists,
-    # and a direct POST would reduce its earmark — the figures moving
-    # afterwards saying how much was in it.
+    # the outflow panel would list its transactions, and a POST would reduce
+    # its earmark — the figures moving afterwards saying how much was in it.
     def eligible_consumption_accounts
       @eligible_consumption_accounts ||= begin
         linked = @goal.linked_accounts
@@ -351,12 +365,20 @@ class GoalsController < ApplicationController
       end
     end
 
-    def consumption_account
+    def withdrawal_detector
+      Goal::WithdrawalDetector.new(@goal, accounts: eligible_consumption_accounts)
+    end
+
+    def consumption_account(txn = nil)
       eligible = eligible_consumption_accounts
       raise Goal::ConsumptionRefused.new(:account_not_linked) if eligible.empty?
 
-      if params[:account_id].present?
-        return eligible.find { |account| account.id.to_s == params[:account_id].to_s } ||
+      # An attributed outflow names its own account; a typed spend names one
+      # only when the goal has a choice to offer.
+      account_id = txn ? txn.entry.account_id : params[:account_id]
+
+      if account_id.present?
+        return eligible.find { |account| account.id.to_s == account_id.to_s } ||
           raise(Goal::ConsumptionRefused.new(:account_not_linked))
       end
 
