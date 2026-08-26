@@ -12,6 +12,10 @@ class Category < ApplicationRecord
          dependent: :nullify
   belongs_to :parent, class_name: "Category", optional: true
 
+  # Set by .uncategorized so #filter_value can identify the synthetic instance
+  # without a locale-sensitive name comparison. Not a DB column.
+  attr_writer :synthetic_uncategorized
+
   # Stable, non-localized filter value for the synthetic "Uncategorized" option.
   # Using an opaque sentinel (rather than the translated display name) means a real
   # category can never collide with it, regardless of name or locale.
@@ -234,7 +238,7 @@ class Category < ApplicationRecord
         name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
-      )
+      ).tap { |category| category.synthetic_uncategorized = true }
     end
 
     def other_investments
@@ -382,8 +386,13 @@ class Category < ApplicationRecord
   # The value the transactions-filter checkbox submits for this category: the
   # persisted name for a real category, or the stable sentinel for the
   # synthetic "Uncategorized" pseudo-category returned by .uncategorized.
+  #
+  # Uses the explicit synthetic_uncategorized marker set by .uncategorized, not
+  # uncategorized? -- that predicate compares name against I18n.t in the *current*
+  # locale, so it would give the wrong answer if the instance were built under one
+  # locale and read under another.
   def filter_value
-    uncategorized? ? UNCATEGORIZED_FILTER_VALUE : name
+    @synthetic_uncategorized ? UNCATEGORIZED_FILTER_VALUE : name
   end
 
   # Predicate: is this the synthetic "Other Investments" category?

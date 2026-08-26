@@ -103,6 +103,18 @@ class CategoryTest < ActiveSupport::TestCase
     assert_equal categories(:food_and_drink).name, categories(:food_and_drink).filter_value
   end
 
+  test "filter_value stays the sentinel even when read under a different locale than it was built in" do
+    # Regression test: filter_value must not rely on a locale-sensitive name
+    # comparison (uncategorized? checks name against I18n.t in the *current*
+    # locale), or a synthetic instance built under one locale and read under
+    # another would silently stop matching.
+    synthetic = I18n.with_locale(:"zh-CN") { Category.uncategorized }
+
+    I18n.with_locale(:en) do
+      assert_equal Category::UNCATEGORIZED_FILTER_VALUE, synthetic.filter_value
+    end
+  end
+
   test "display_name preserves custom category names" do
     category = Category.new(name: "School Supplies", color: "#123456", lucide_icon: "book", family: @family)
 

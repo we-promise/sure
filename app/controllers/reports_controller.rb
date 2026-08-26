@@ -417,6 +417,7 @@ class ReportsController < ApplicationController
         {
           category_id: category.id,
           category_name: category.name,
+          category_filter_value: category.filter_value,
           category_color: category.color,
           category_icon: category.lucide_icon,
           total: 0,

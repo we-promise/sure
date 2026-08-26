@@ -42,6 +42,22 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_empty result[:transactions]
   end
 
+  test "translates the documented Uncategorized category alias to the filter sentinel" do
+    uncategorized_entry = Entry.create!(
+      account: accounts(:depository),
+      name: "AI uncategorized lookup",
+      date: Date.current,
+      amount: 42,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    result = @function.call("categories" => [ "Uncategorized" ])
+    result_ids = result[:transactions].map { |t| t[:id] }
+
+    assert_includes result_ids, uncategorized_entry.entryable.id
+  end
+
   test "schema no longer inlines user data enums" do
     schema = @function.params_schema
 

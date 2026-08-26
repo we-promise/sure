@@ -145,6 +145,16 @@ class Assistant::Function::GetTransactions < Assistant::Function
     search_params = params.except("order", "page", "page_size", "sort_by")
     search_params["status"] = search_params.delete("statuses") if search_params.key?("statuses")
 
+    # The categories filter now matches Category::UNCATEGORIZED_FILTER_VALUE, a stable
+    # sentinel, rather than the localized display name. params_schema still documents
+    # (and the AI still passes) the literal "Uncategorized", so translate it here.
+    if search_params["categories"].present?
+      uncategorized_aliases = [ "Uncategorized", Category.uncategorized_name ].uniq
+      search_params["categories"] = search_params["categories"].map do |name|
+        uncategorized_aliases.include?(name) ? Category::UNCATEGORIZED_FILTER_VALUE : name
+      end
+    end
+
     search = Transaction::Search.new(
       family,
       filters: search_params,
