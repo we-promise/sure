@@ -14,15 +14,14 @@ class Provider::Anthropic::PdfProcessor
   REQUEST_ENVELOPE_BYTES = 1 * 1024 * 1024
   MAX_PDF_BYTES = (MAX_REQUEST_BYTES - REQUEST_ENVELOPE_BYTES) * 3 / 4
 
-  attr_reader :client, :model, :pdf_content, :langfuse_trace, :family, :probe_marker_field
+  attr_reader :client, :model, :pdf_content, :langfuse_trace, :family
 
-  def initialize(client, model:, pdf_content:, langfuse_trace: nil, family: nil, probe_marker_field: nil)
+  def initialize(client, model:, pdf_content:, langfuse_trace: nil, family: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
     @langfuse_trace = langfuse_trace
     @family = family
-    @probe_marker_field = probe_marker_field
   end
 
   def process
@@ -94,14 +93,6 @@ class Provider::Anthropic::PdfProcessor
         currency: { type: [ "string", "null" ] },
         account_holder: { type: [ "string", "null" ] }
       }
-      extracted_data_required = []
-      if probe_marker_field.present?
-        extracted_data_properties[probe_marker_field] = {
-          type: "string",
-          description: "Exact health-check marker copied from the document."
-        }
-        extracted_data_required << probe_marker_field
-      end
 
       {
         name: TOOL_NAME,
@@ -121,7 +112,7 @@ class Provider::Anthropic::PdfProcessor
             extracted_data: {
               type: "object",
               properties: extracted_data_properties,
-              required: extracted_data_required,
+              required: [],
               additionalProperties: false
             }
           },
@@ -132,7 +123,7 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def instructions
-      base_instructions = <<~INSTRUCTIONS
+      <<~INSTRUCTIONS
         You analyze financial documents. For the attached PDF, classify the document type,
         summarize it, and extract key metadata. Return the result via the report_document_analysis tool.
 
@@ -149,15 +140,6 @@ class Provider::Anthropic::PdfProcessor
           - If a field is unclear/redacted, return null for it
           - Do not invent figures or names you cannot read
           - For statements with many transactions, return the count rather than enumerating them
-      INSTRUCTIONS
-
-      return base_instructions if probe_marker_field.blank?
-
-      <<~INSTRUCTIONS
-        #{base_instructions}
-
-        HEALTH CHECK: Copy the health-check marker visible in the document exactly into the
-        "#{probe_marker_field}" field inside "extracted_data". Do not infer or alter the marker.
       INSTRUCTIONS
     end
 

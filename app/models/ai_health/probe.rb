@@ -14,9 +14,17 @@ class AiHealth
     DEFAULT_TIMEOUT = 5
     EMBEDDING_TEST_INPUT = "Sure AI health check"
     CHAT_TEST_INPUT = "Reply with OK."
-    PDF_TEST_MARKER = "SURE_PDF_HEALTH_CHECK_OK"
-    PDF_MARKER_FIELD = "probe_marker"
-    PDF_TEST_TEXT = "#{PDF_TEST_MARKER}. No customer data."
+    PDF_TEST_INSTITUTION = "SUREHEALTHCHECKBANK"
+    PDF_TEST_LINES = [
+      "Bank Statement",
+      "Institution: #{PDF_TEST_INSTITUTION}",
+      "Account holder: Health Check",
+      "Statement period: 2026-01-01 to 2026-01-31",
+      "Opening balance: USD 100.00",
+      "Closing balance: USD 125.00",
+      "Transactions: 2",
+      "Synthetic data only. No customer data."
+    ].freeze
     PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
@@ -170,8 +178,7 @@ class AiHealth
                 pdf_content: synthetic_pdf,
                 custom_provider: openai_compatible,
                 max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
-                processing_mode: processing_mode,
-                probe_marker_field: PDF_MARKER_FIELD
+                processing_mode: processing_mode
               ).process
             when :anthropic
               raise Failure, :unsupported_provider unless processing_mode == :vision
@@ -179,8 +186,7 @@ class AiHealth
               Provider::Anthropic::PdfProcessor.new(
                 anthropic_client(access_token:, endpoint:),
                 model: model,
-                pdf_content: synthetic_pdf,
-                probe_marker_field: PDF_MARKER_FIELD
+                pdf_content: synthetic_pdf
               ).process
             else
               raise Failure, :unsupported_provider
@@ -260,19 +266,20 @@ class AiHealth
 
       def valid_pdf_result?(result)
         result.is_a?(Provider::LlmConcept::PdfProcessingResult) &&
-          Import::DOCUMENT_TYPES.include?(result.document_type) &&
+          result.document_type == "bank_statement" &&
           result.extracted_data.is_a?(Hash) &&
-          result.extracted_data[PDF_MARKER_FIELD] == PDF_TEST_MARKER
+          result.extracted_data["institution_name"] == PDF_TEST_INSTITUTION
       end
 
       def synthetic_pdf
         return @synthetic_pdf if defined?(@synthetic_pdf)
 
-        content = "BT /F1 16 Tf 24 90 Td (#{PDF_TEST_TEXT}) Tj ET\n".b
+        text = PDF_TEST_LINES.map { |line| "(#{line}) Tj T*" }.join("\n")
+        content = "BT /F1 14 Tf 24 190 Td 22 TL\n#{text}\nET\n".b
         objects = [
           "<< /Type /Catalog /Pages 2 0 R >>",
           "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-          "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 480 144] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+          "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 480 216] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
           "<< /Length #{content.bytesize} >>\nstream\n#{content}endstream",
           "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
         ]
