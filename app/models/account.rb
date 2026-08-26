@@ -471,14 +471,16 @@ class Account < ApplicationRecord
     manual? && !investment? ? "manual_save" : "transfer"
   end
 
-  # Total fixed earmark this account currently has reserved across every
-  # non-archived goal (unallocated/whole-balance links reserve no fixed
-  # slice). Mirrors Budget#allocated_spending.
+  # Total fixed earmark this account currently has reserved across every goal
+  # still holding its money (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending. Scoped to Goal::RELEASED_STATES
+  # so this and Goal.pooled_allocations_for never disagree — if they did,
+  # free_to_earmark would contradict the figures the goals themselves show.
   def goal_earmarked_total
     GoalAccount.joins(:goal)
                .where(account_id: id)
                .where.not(allocated_amount: nil)
-               .where.not(goals: { state: "archived" })
+               .where.not(goals: { state: Goal::RELEASED_STATES })
                .sum(:allocated_amount)
                .to_d
   end

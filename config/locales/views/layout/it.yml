@@ -9,6 +9,8 @@ it:
       nav:
         assistant: Assistente
         budgets: Budget
+        insights: Insight
+        plan: Piano
         home: Home
         reports: Rapporti
         goals: Obiettivi
