@@ -53,4 +53,19 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.explicitly_configured?
     assert ActiveRecordEncryptionConfig.ready?
   end
+
+  test "detects a secret key base that was previously shipped as a compose default" do
+    known_default = ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first
+
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?("a-real-generated-secret")
+  end
+
+  test "using_known_compromised_secret_key_base? defaults to the app's own secret_key_base" do
+    Rails.application.stubs(:secret_key_base).returns(ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first)
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
+
+    Rails.application.stubs(:secret_key_base).returns("a-real-generated-secret")
+    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
+  end
 end

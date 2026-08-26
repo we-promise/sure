@@ -1,5 +1,51 @@
 require Rails.root.join("lib/active_record_encryption_config").to_s
 
+# Until every existing row has been re-encrypted (see
+# `bin/rails security:backfill_encryption`), plenty of installs still have
+# genuinely plaintext data in columns that `encryption_ready?` now treats as
+# encrypted (see #3142). Without these two settings, Rails raises
+# ActiveRecord::Encryption::Errors::Decryption the moment any of that legacy
+# data is read (e.g. an admin's or a self-hosted user's own email at login,
+# via User#email's deterministic encryption) and deterministic lookups like
+# `User.find_by(email:)` stop matching not-yet-backfilled rows entirely.
+# Both default to false upstream and are meant exactly for this transition
+# period; see https://guides.rubyonrails.org/active_record_encryption.html.
+Rails.application.config.active_record.encryption.support_unencrypted_data = true
+Rails.application.config.active_record.encryption.extend_queries = true
+
+if Rails.env.test?
+  # Rails' fixture-time attribute encryption (encrypt_fixtures, set in
+  # config/environments/test.rb) replaces a fixture's clean value with an
+  # already-serialized ciphertext String. For jsonb/json columns, the
+  # fixture loader's own column type-casting then serializes *that string*
+  # again on insert, double-JSON-encoding it — the same failure mode as
+  # rails/rails#48601 (encrypted fixtures + a non-string column type). The
+  # result fails to decrypt and, thanks to support_unencrypted_data above,
+  # falls back to the still-double-encoded String instead of the original
+  # Hash/Array, breaking every consumer of the payload (e.g. `.to_h`).
+  #
+  # String-column fixtures (tokens, api keys, email, ...) round-trip fine
+  # through encrypt_fixtures and keep exercising real encrypt/decrypt in
+  # tests; only json/jsonb-typed attributes are exempted here, so their
+  # fixtures load as plain values — read back correctly via
+  # support_unencrypted_data, exactly like not-yet-backfilled legacy data.
+  Rails.application.config.after_initialize do
+    ActiveRecord::Encryption::EncryptedFixtures.module_eval do
+      def encrypt_fixture_data(fixture, model_class)
+        model_class&.encrypted_attributes&.each do |attribute_name|
+          next unless (clean_value = fixture[attribute_name.to_s])
+
+          type = model_class.type_for_attribute(attribute_name)
+          next if type.cast_type.is_a?(ActiveRecord::Type::Json)
+
+          @clean_values[attribute_name.to_s] = clean_value
+          fixture[attribute_name.to_s] = type.serialize(clean_value)
+        end
+      end
+    end
+  end
+end
+
 # Configure Active Record encryption keys
 # Priority order:
 # 1. Environment variables (works for both managed and self-hosted modes)
