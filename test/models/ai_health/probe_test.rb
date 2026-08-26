@@ -34,9 +34,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
                 headers: { "Authorization" => "Bearer cf-token" },
                 body: {
                   model: "@cf/zai-org/glm-5.2",
-                  messages: [ { role: "user", content: AiHealth::Probe::CHAT_TEST_INPUT } ],
-                  max_tokens: 1,
-                  temperature: 0
+                  messages: [ { role: "user", content: AiHealth::Probe::CHAT_TEST_INPUT } ]
                 }
               )
               .to_return(

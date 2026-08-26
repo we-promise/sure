@@ -180,9 +180,7 @@ class AiHealth
         response = openai_client(access_token:, endpoint:).chat(
           parameters: {
             model: model,
-            messages: [ { role: "user", content: CHAT_TEST_INPUT } ],
-            max_tokens: 1,
-            temperature: 0
+            messages: [ { role: "user", content: CHAT_TEST_INPUT } ]
           }
         )
 
