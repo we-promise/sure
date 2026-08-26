@@ -428,6 +428,12 @@ Rails.application.routes.draw do
       patch :archive
       patch :unarchive
       patch :reopen
+      # Two actions on one path rather than one action branching on the verb:
+      # HEAD routes like GET but `request.get?` is false for it, so a branch
+      # would send a HEAD request down the write path. A goal can be partly
+      # spent more than once, so the write is a POST, not a PATCH on the goal.
+      get :consume
+      post :consume, action: :record_consumption, as: nil
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
