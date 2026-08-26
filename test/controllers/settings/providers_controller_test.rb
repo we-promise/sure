@@ -448,6 +448,40 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     Setting["plaid_secret"] = nil
   end
 
+  test "GET show warns when encryption keys are auto-derived from a known compromised secret" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "GET show hides compromised secret warning when encryption keys are not explicitly configured" do
+    # The "not configured at all" warning takes priority; don't show both.
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "GET show hides compromised secret warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
   test "GET connect_form renders Interactive Brokers panel" do
     get connect_form_settings_providers_path(provider_key: "ibkr")
 

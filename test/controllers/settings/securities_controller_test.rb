@@ -45,4 +45,48 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
   end
+
+  test "warns when encryption keys are auto-derived from a known compromised secret" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "hides compromised secret warning when encryption is not configured at all" do
+    # The "not configured" warning takes priority; don't show both.
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "hides compromised secret warning when keys are not derived from the known value" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(false)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  test "does not show compromised secret warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
 end
