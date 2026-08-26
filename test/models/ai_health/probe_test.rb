@@ -89,15 +89,21 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
           "message" => {
             "content" => {
               document_type: "other",
-              summary: "Sure synthetic PDF health check.",
-              extracted_data: {}
+              summary: "A synthetic document containing no customer data.",
+              extracted_data: {
+                probe_marker: AiHealth::Probe::PDF_TEST_MARKER
+              }
             }.to_json
           }
         }
       ]
     }
     client = mock("openai_client")
-    client.expects(:chat).returns(response)
+    captured = nil
+    client.expects(:chat).with do |params|
+      captured = params
+      true
+    end.returns(response)
     @probe.stubs(:openai_client).returns(client)
     Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
 
@@ -110,14 +116,21 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     )
 
     assert result.passing?
+    instructions = captured.dig(:parameters, :messages, 0, :content)
+    assert_includes instructions, %Q("#{AiHealth::Probe::PDF_MARKER_FIELD}")
+    assert_not_includes instructions, AiHealth::Probe::PDF_TEST_MARKER
   end
 
-  test "PDF processing probe fails when the response does not identify the PDF marker" do
+  test "PDF processing probe requires the exact marker in the dedicated field" do
     response = {
       "choices" => [
         {
           "message" => {
-            "content" => { document_type: "other", summary: "A generic document.", extracted_data: {} }.to_json
+            "content" => {
+              document_type: "other",
+              summary: "Sure synthetic PDF health check.",
+              extracted_data: { probe_marker: "WRONG_MARKER" }
+            }.to_json
           }
         }
       ]
@@ -145,16 +158,23 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       :tool_use,
       {
         "document_type" => "other",
-        "summary" => "Sure synthetic PDF health check.",
-        "extracted_data" => {}
+        "summary" => "A synthetic document containing no customer data.",
+        "extracted_data" => {
+          AiHealth::Probe::PDF_MARKER_FIELD => AiHealth::Probe::PDF_TEST_MARKER
+        }
       }
     )
     response = Struct.new(:content, :usage).new([ tool_use ], nil)
     messages = mock("anthropic_messages")
     messages.expects(:create).with do |params|
       source = params.dig(:messages, 0, :content, 0, :source)
+      extracted_data_schema = params.dig(:tools, 0, :input_schema, :properties, :extracted_data)
       source[:media_type] == "application/pdf" &&
-        Base64.strict_decode64(source[:data]) == @probe.send(:synthetic_pdf)
+        Base64.strict_decode64(source[:data]) == @probe.send(:synthetic_pdf) &&
+        extracted_data_schema[:properties].key?(AiHealth::Probe::PDF_MARKER_FIELD) &&
+        extracted_data_schema[:required].include?(AiHealth::Probe::PDF_MARKER_FIELD) &&
+        params[:system_].include?(%Q("#{AiHealth::Probe::PDF_MARKER_FIELD}")) &&
+        !params[:system_].include?(AiHealth::Probe::PDF_TEST_MARKER)
     end.returns(response)
     @probe.stubs(:anthropic_client).returns(stub(messages: messages))
 

@@ -14,7 +14,9 @@ class AiHealth
     DEFAULT_TIMEOUT = 5
     EMBEDDING_TEST_INPUT = "Sure AI health check"
     CHAT_TEST_INPUT = "Reply with OK."
-    PDF_TEST_TEXT = "Sure synthetic PDF health check. No customer data."
+    PDF_TEST_MARKER = "SURE_PDF_HEALTH_CHECK_OK"
+    PDF_MARKER_FIELD = "probe_marker"
+    PDF_TEST_TEXT = "#{PDF_TEST_MARKER}. No customer data."
     PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
@@ -97,13 +99,15 @@ class AiHealth
               pdf_content: synthetic_pdf,
               custom_provider: openai_compatible,
               max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
-              prefer_vision: true
+              prefer_vision: true,
+              probe_marker_field: PDF_MARKER_FIELD
             ).process
           when :anthropic
             Provider::Anthropic::PdfProcessor.new(
               anthropic_client(access_token:, endpoint:),
               model: model,
-              pdf_content: synthetic_pdf
+              pdf_content: synthetic_pdf,
+              probe_marker_field: PDF_MARKER_FIELD
             ).process
           else
             raise Failure, :unsupported_provider
@@ -226,14 +230,10 @@ class AiHealth
       end
 
       def valid_pdf_result?(result)
-        summary = result.respond_to?(:summary) ? result.summary.to_s.downcase : ""
-
         result.is_a?(Provider::LlmConcept::PdfProcessingResult) &&
-          summary.match?(/\bsure\b/) &&
-          summary.include?("health") &&
-          summary.include?("check") &&
           Import::DOCUMENT_TYPES.include?(result.document_type) &&
-          result.extracted_data.is_a?(Hash)
+          result.extracted_data.is_a?(Hash) &&
+          result.extracted_data[PDF_MARKER_FIELD] == PDF_TEST_MARKER
       end
 
       def synthetic_pdf

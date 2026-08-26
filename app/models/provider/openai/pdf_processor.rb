@@ -2,10 +2,10 @@ class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
   attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
-              :prefer_vision
+              :prefer_vision, :probe_marker_field
 
   def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
-                 max_response_tokens:, prefer_vision: false)
+                 max_response_tokens:, prefer_vision: false, probe_marker_field: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -14,6 +14,7 @@ class Provider::Openai::PdfProcessor
     @family = family
     @max_response_tokens = max_response_tokens
     @prefer_vision = prefer_vision
+    @probe_marker_field = probe_marker_field
   end
 
   def process
@@ -43,7 +44,7 @@ class Provider::Openai::PdfProcessor
   end
 
   def instructions
-    <<~INSTRUCTIONS.strip
+    base_instructions = <<~INSTRUCTIONS.strip
       You are a financial document analysis assistant. Your job is to analyze uploaded PDF documents
       and provide a structured summary of what the document contains.
 
@@ -93,6 +94,15 @@ class Provider::Openai::PdfProcessor
           "account_holder": "Name or null"
         }
       }
+    INSTRUCTIONS
+
+    return base_instructions if probe_marker_field.blank?
+
+    <<~INSTRUCTIONS.strip
+      #{base_instructions}
+
+      HEALTH CHECK: Copy the health-check marker visible in the document exactly into the
+      "#{probe_marker_field}" field inside "extracted_data". Do not infer or alter the marker.
     INSTRUCTIONS
   end
 

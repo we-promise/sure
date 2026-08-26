@@ -14,14 +14,15 @@ class Provider::Anthropic::PdfProcessor
   REQUEST_ENVELOPE_BYTES = 1 * 1024 * 1024
   MAX_PDF_BYTES = (MAX_REQUEST_BYTES - REQUEST_ENVELOPE_BYTES) * 3 / 4
 
-  attr_reader :client, :model, :pdf_content, :langfuse_trace, :family
+  attr_reader :client, :model, :pdf_content, :langfuse_trace, :family, :probe_marker_field
 
-  def initialize(client, model:, pdf_content:, langfuse_trace: nil, family: nil)
+  def initialize(client, model:, pdf_content:, langfuse_trace: nil, family: nil, probe_marker_field: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
     @langfuse_trace = langfuse_trace
     @family = family
+    @probe_marker_field = probe_marker_field
   end
 
   def process
@@ -83,6 +84,25 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def output_tool
+      extracted_data_properties = {
+        institution_name: { type: [ "string", "null" ] },
+        statement_period_start: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
+        statement_period_end: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
+        transaction_count: { type: [ "integer", "null" ] },
+        opening_balance: { type: [ "number", "null" ] },
+        closing_balance: { type: [ "number", "null" ] },
+        currency: { type: [ "string", "null" ] },
+        account_holder: { type: [ "string", "null" ] }
+      }
+      extracted_data_required = []
+      if probe_marker_field.present?
+        extracted_data_properties[probe_marker_field] = {
+          type: "string",
+          description: "Exact health-check marker copied from the document."
+        }
+        extracted_data_required << probe_marker_field
+      end
+
       {
         name: TOOL_NAME,
         description: "Return the structured analysis of the attached document.",
@@ -100,17 +120,8 @@ class Provider::Anthropic::PdfProcessor
             },
             extracted_data: {
               type: "object",
-              properties: {
-                institution_name: { type: [ "string", "null" ] },
-                statement_period_start: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
-                statement_period_end: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
-                transaction_count: { type: [ "integer", "null" ] },
-                opening_balance: { type: [ "number", "null" ] },
-                closing_balance: { type: [ "number", "null" ] },
-                currency: { type: [ "string", "null" ] },
-                account_holder: { type: [ "string", "null" ] }
-              },
-              required: [],
+              properties: extracted_data_properties,
+              required: extracted_data_required,
               additionalProperties: false
             }
           },
@@ -121,7 +132,7 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def instructions
-      <<~INSTRUCTIONS
+      base_instructions = <<~INSTRUCTIONS
         You analyze financial documents. For the attached PDF, classify the document type,
         summarize it, and extract key metadata. Return the result via the report_document_analysis tool.
 
@@ -138,6 +149,15 @@ class Provider::Anthropic::PdfProcessor
           - If a field is unclear/redacted, return null for it
           - Do not invent figures or names you cannot read
           - For statements with many transactions, return the count rather than enumerating them
+      INSTRUCTIONS
+
+      return base_instructions if probe_marker_field.blank?
+
+      <<~INSTRUCTIONS
+        #{base_instructions}
+
+        HEALTH CHECK: Copy the health-check marker visible in the document exactly into the
+        "#{probe_marker_field}" field inside "extracted_data". Do not infer or alter the marker.
       INSTRUCTIONS
     end
 
