@@ -22,5 +22,7 @@ en:
               must_be_fundable: All linked accounts must be cash or investment accounts.
               currency_mismatch: All linked accounts must share the same currency.
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
+            kind:
+              locked_while_released: Reopen this goal before turning it into a reserve.
             currency:
               locked_after_linked: Can't change the currency after the goal is linked to accounts.

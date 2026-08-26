@@ -30,6 +30,13 @@ fr:
     errors:
       not_found: Cet objectif n'a pas pu être trouvé. Il a peut-être été supprimé.
     form:
+      kinds:
+        maintained:
+          hint: Un niveau à tenir, comme une épargne de précaution. Jamais clôturée.
+          label: Réserve à maintenir
+        one_off:
+          hint: Épargner pour quelque chose, puis clôturer une fois la dépense faite.
+          label: Objectif ponctuel
       create: Créer l'objectif
       errors:
         accounts_required: Sélectionnez au moins un compte de financement.
@@ -76,6 +83,8 @@ fr:
       footer_no_deadline: Ouvert
       footer_no_pledges: Aucune promesse rapprochée
       footer_paused: En pause
+      footer_reserve_intact: Réserve constituée
+      footer_reserve_short: "%{amount} à recompléter"
       footer_reached: Objectif atteint
       left: restant
       n_accounts: "%{first} +%{count}"
@@ -168,6 +177,8 @@ fr:
         body: Rythme actuel %{avg}/mois · requis %{required}/mois pour atteindre votre objectif.
         title: Épargnez %{amount}/mois de plus pour rattraper le retard
       celebration:
+        body_reserve: "Votre réserve a atteint son niveau cible, %{saved} sur %{target}. Rien à faire — elle reste affectée."
+        heading_reserve: Réserve constituée
         body_reached: "Vous avez atteint votre cible, à %{saved} sur %{target}. Il n'est pas encore clôturé — l'argent lui reste affecté."
         close_cta: Clôturer cet objectif
         close_hint: La clôture libère l'argent affecté au profit de vos autres objectifs sur le même compte. À faire une fois la dépense réellement effectuée.
@@ -242,11 +253,15 @@ fr:
         no_pace: Aucun dépôt pour le moment. Ajoutez de l'argent sur un compte lié pour démarrer la projection.
         no_target_date: Aucune date cible définie. Définissez-en une pour projeter la fin.
         on_track_html: Au rythme actuel, vous atteindrez cet objectif vers le <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        reserve: "Une réserve maintient un niveau : il n'y a pas d'échéance à projeter."
         reached: Vous avez atteint l'objectif. Aucune projection nécessaire.
         today_marker: Aujourd'hui
         tooltip_projected: 'Projeté : %{amount}'
         tooltip_saved: 'Épargné : %{amount}'
         tooltip_target_relation: "%{percent}% de la cible de %{target}"
+      reserve_shortfall:
+        heading: Réserve sous son niveau
+        body: "Vous détenez %{saved} sur %{target}. Complétez de %{missing} pour la ramener à son niveau."
       record_pledge_cta: Enregistrer une promesse
       reopen: Réouvrir l'objectif
       resume: Reprendre
@@ -258,6 +273,7 @@ fr:
         saved: Épargné
         to_go: "%{amount} restant(s)"
       status_callout:
+        depleted: "il manque %{amount} — complétez pour ramener la réserve à son niveau"
         behind: épargnez %{amount}/mois de plus pour rattraper le retard
         behind_covered: les promesses en attente comblent le retard
         no_target_date: définissez une date cible pour projeter une date de fin
@@ -269,6 +285,8 @@ fr:
       completed: Terminé
       paused: En pause
     status:
+      depleted: À recompléter
+      funded: Réserve constituée
       archived: Archivé
       behind: En retard
       completed: Terminé
