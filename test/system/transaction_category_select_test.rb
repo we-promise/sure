@@ -17,7 +17,11 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
         assert_text 'Create "Inline Test Category"'
         click_button 'Create "Inline Test Category"'
 
-        assert_text "Inline Test Category"
+        assert_selector(
+          "[data-category-select-target='option'][aria-selected='true']",
+          text: "Inline Test Category",
+          visible: :all
+        )
       end
     end
 

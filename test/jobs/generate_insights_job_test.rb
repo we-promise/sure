@@ -89,6 +89,38 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal 5000.0, insight.metadata["balance"]
   end
 
+  test "enqueues notifications for newly created insights" do
+    opted_in_user, opted_out_user = @family.users.to_a
+    set_preview_features(opted_out_user, false)
+    subscription = opted_in_user.push_subscriptions.create!(
+      token: "ab" * 32,
+      environment: "sandbox",
+      platform: "ios",
+      last_registered_at: Time.current
+    )
+    opted_out_user.push_subscriptions.create!(
+      token: "cd" * 32,
+      environment: "sandbox",
+      platform: "ios",
+      last_registered_at: Time.current
+    )
+    Apns::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight ])
+
+    assert_enqueued_jobs 1, only: DeliverInsightNotificationJob do
+      assert_enqueued_with(
+        job: DeliverInsightNotificationJob,
+        args: ->(args) {
+          args.one? &&
+            args.first[:insight_id].present? &&
+            args.first[:push_subscription_id] == subscription.id
+        }
+      ) do
+        GenerateInsightsJob.perform_now(family_id: @family.id)
+      end
+    end
+  end
+
   test "re-running with unchanged numbers does not duplicate or rewrite" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
