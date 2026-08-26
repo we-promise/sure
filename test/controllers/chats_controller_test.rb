@@ -21,8 +21,13 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "shows chat" do
-    get chat_url(chats(:one))
+    chat = chats(:one)
+    @user.update!(last_viewed_chat: nil)
+
+    get chat_url(chat)
+
     assert_response :success
+    assert_equal chat, @user.reload.last_viewed_chat
   end
 
   test "destroys chat" do
