@@ -36,12 +36,13 @@ class PlaidItem < ApplicationRecord
       .uniq
   end
 
-  def get_update_link_token(webhooks_url:, redirect_url:)
+  def get_update_link_token(webhooks_url:, redirect_url:, account_selection_enabled: false)
     family.get_link_token(
       webhooks_url: webhooks_url,
       redirect_url: redirect_url,
       region: plaid_region,
-      access_token: access_token
+      access_token: access_token,
+      account_selection_enabled: account_selection_enabled
     )
   rescue Plaid::ApiError => e
     error_body = begin

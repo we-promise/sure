@@ -57,6 +57,24 @@ class PlaidItemTest < ActiveSupport::TestCase
     assert_predicate @plaid_item.reload, :requires_update?
   end
 
+  test "get_update_link_token can enable account selection" do
+    Family.any_instance.expects(:get_link_token).with(
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: "https://example.com/accounts",
+      region: @plaid_item.plaid_region,
+      access_token: @plaid_item.access_token,
+      account_selection_enabled: true
+    ).returns("link-token")
+
+    result = @plaid_item.get_update_link_token(
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: "https://example.com/accounts",
+      account_selection_enabled: true
+    )
+
+    assert_equal "link-token", result
+  end
+
   test "get_update_link_token re-raises other Plaid errors so the controller can surface them" do
     # Issue #1792: silently swallowing all Plaid errors here is what made the
     # "modal closes with nothing happening" experience so opaque.
