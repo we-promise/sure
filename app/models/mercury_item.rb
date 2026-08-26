@@ -6,6 +6,8 @@ class MercuryItem < ApplicationRecord
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :token, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
