@@ -460,6 +460,144 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("5000"), Goal.find(whole.id).current_balance.to_d
   end
 
+  # --- Lot B1: a reached goal lets go of its money ---
+
+  # The whole scenario from the plan, as one regression test. Before B1 the
+  # last line read 2500 / 50%: the completed goal kept reserving, the
+  # untouched precaution goal was cut in half by the pro-rata haircut, and
+  # archiving froze the wrong figure into the history.
+  test "completing a goal frees its siblings and keeps its own history straight" do
+    livret = Account.create!(family: @family, accountable: Depository.new, name: "Livret B1", currency: "USD", balance: 10_000)
+    precaution = @family.goals.create!(name: "Precaution B1", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: livret, allocated_amount: 5_000)
+    end
+    vacances = @family.goals.create!(name: "Vacances B1", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: livret, allocated_amount: 5_000)
+    end
+
+    assert_equal BigDecimal("5000"), Goal.find(precaution.id).current_balance.to_d
+    assert_equal BigDecimal("5000"), Goal.find(vacances.id).current_balance.to_d
+
+    vacances.complete!
+    livret.update!(balance: 5_000)
+
+    assert_equal BigDecimal("5000"), Goal.find(precaution.id).current_balance.to_d,
+                 "the untouched goal must keep its full earmark once its sibling is done"
+    assert_equal 100, Goal.find(precaution.id).progress_percent.to_i
+    assert_equal BigDecimal("5000"), Goal.find(vacances.id).current_balance.to_d,
+                 "a completed goal reports what it reached, not what is left"
+
+    vacances.archive!
+    assert_equal BigDecimal("5000"), Goal.find(vacances.id).current_balance.to_d,
+                 "archiving after completion must not rewrite the frozen figure"
+  end
+
+  test "a completed goal releases its earmark from the shared pool" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Pool Savings", currency: "USD", balance: 5_000)
+    whole = @family.goals.create!(name: "Whole C", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    earmarked = @family.goals.create!(name: "Earmarked C", target_amount: 2_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 2_000)
+    end
+
+    assert_equal BigDecimal("3000"), Goal.find(whole.id).current_balance.to_d
+    earmarked.complete!
+    assert_equal BigDecimal("5000"), Goal.find(whole.id).current_balance.to_d
+  end
+
+  test "a completed goal keeps its amount when the balance later drops" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Spent Savings", currency: "USD", balance: 4_000)
+    goal = @family.goals.create!(name: "Frozen", target_amount: 4_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.complete!
+    assert_equal BigDecimal("4000"), goal.completed_amount.to_d
+    assert goal.completed_at.present?
+
+    account.update!(balance: 100)
+    assert_equal BigDecimal("4000"), Goal.find(goal.id).current_balance.to_d
+  end
+
+  # `archive` accepts a goal straight from active or paused, so an archived
+  # goal that was never completed has no frozen amount — the read guard is
+  # `completed_amount.present?`, not `completed?`.
+  test "a goal archived without being completed keeps the live calculation" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Direct Archive", currency: "USD", balance: 3_000)
+    goal = @family.goals.create!(name: "Straight to archive", target_amount: 3_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.archive!
+    assert_nil goal.completed_amount
+
+    account.update!(balance: 250)
+    assert_equal BigDecimal("250"), Goal.find(goal.id).current_balance.to_d
+  end
+
+  test "reopen and unarchive hand the goal back to the live calculation" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Thaw Savings", currency: "USD", balance: 2_000)
+
+    [ :reopen, :unarchive ].each_with_index do |event, i|
+      goal = @family.goals.create!(name: "Thaw #{i}", target_amount: 2_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 1_000)
+      end
+      goal.complete!
+      assert_equal BigDecimal("1000"), goal.completed_amount.to_d
+
+      goal.archive! if event == :unarchive
+      goal.public_send("#{event}!")
+
+      assert_nil goal.reload.completed_amount, "#{event} must clear the frozen amount"
+      assert_nil goal.completed_at
+      account.update!(balance: 500)
+      assert_equal BigDecimal("500"), Goal.find(goal.id).current_balance.to_d
+      account.update!(balance: 2_000)
+      goal.destroy!
+    end
+  end
+
+  # Pause means "I have stopped feeding this", not "I have released it".
+  test "a paused goal keeps reserving its earmark" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Paused Savings", currency: "USD", balance: 5_000)
+    whole = @family.goals.create!(name: "Whole P", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    earmarked = @family.goals.create!(name: "Earmarked P", target_amount: 2_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 2_000)
+    end
+
+    earmarked.pause!
+    assert_equal BigDecimal("3000"), Goal.find(whole.id).current_balance.to_d,
+                 "a paused goal must keep its slice out of the pool's reach"
+  end
+
+  # free_to_earmark and the pool read the same set of goals — Goal::RELEASED_STATES.
+  # If they disagreed, the account would advertise headroom the goals deny.
+  test "free_to_earmark and the shared pool agree after a completion" do
+    account = Account.create!(family: @family, accountable: Depository.new, name: "Agreement Savings", currency: "USD", balance: 5_000)
+    goal = @family.goals.create!(name: "Agreeable", target_amount: 1_500, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_500)
+    end
+
+    assert_equal BigDecimal("1500"), account.goal_earmarked_total
+    goal.complete!
+    account.reload
+
+    assert_equal BigDecimal("0"), account.goal_earmarked_total
+    assert_equal BigDecimal("5000"), account.free_to_earmark
+    assert_empty Goal.pooled_allocations_for(@family)[account.id].to_a
+  end
+
+  test "goals are one_off by default and kind is constrained" do
+    assert @goal.one_off?
+    assert_not @goal.maintained?
+
+    @goal.kind = "nonsense"
+    assert_not @goal.valid?
+  end
+
   test "account free_to_earmark subtracts non-archived fixed earmarks" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Headroom Savings", currency: "USD", balance: 5_000)
     @family.goals.create!(name: "Earmarker", target_amount: 10_000, currency: "USD") do |g|
@@ -646,7 +784,96 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "active", goal.reload.state
   end
 
+  # Once a goal is closed, `current_balance` returns the frozen amount and stops
+  # tracking its accounts. Spending them afterwards used to send the projection
+  # ratio past 1 — a frozen amount over a live 100 scaled every historical point
+  # by the difference, drawing a chart that never happened.
+  #
+  # The series is stubbed at its collaborator rather than built from Balance
+  # rows: ChartSeriesBuilder returns zeros for a fixture account here, and a
+  # series of zeros multiplies to zero whatever the ratio, so the assertion
+  # would pass without proving anything.
+  test "the projection never scales the saved series past the accounts it came from" do
+    goal = @family.goals.create!(name: "Closed trip", target_amount: 4_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: @depository, allocated_amount: 4_000)
+    end
+    goal.complete!
+    @depository.update!(balance: 100)
+
+    historical = OpenStruct.new(date: Date.current, value: Money.new(5_000, "USD"))
+    Balance::ChartSeriesBuilder.any_instance
+                               .stubs(:balance_series)
+                               .returns(OpenStruct.new(values: [ historical ]))
+
+    payload = Goal.find(goal.id).projection_payload
+
+    # The series is the WHOLE linked-account history, scaled to this goal's
+    # share of it. A share cannot exceed the whole, so no point may come out
+    # above the historical figure it was scaled from — whatever the frozen
+    # amount says. Unclamped this rendered 5,000 x 33.
+    assert_not_empty payload[:saved_series], "empty series would make this assertion vacuous"
+    assert_operator payload[:saved_series].first[:value].to_d, :<=, 5_000,
+                    "a saved point outran the history it was scaled from"
+  end
+
+
+  # AASM runs an event's `after` hook on the non-bang form too, which does not
+  # save. The completion snapshot used to be written there, so `complete` left
+  # the row `active` in the database carrying a frozen amount and a completion
+  # date — a goal still being funded that everything keying off
+  # `completed_amount.present?` read as closed.
+  test "complete without the bang stamps nothing" do
+    goal = completable_goal
+
+    goal.complete
+
+    row = Goal.where(id: goal.id).pick(:state, :completed_amount, :completed_at)
+    assert_equal "active", row[0]
+    assert_nil row[1]
+    assert_nil row[2]
+  end
+
+  test "complete! freezes the amount alongside the state it belongs to" do
+    goal = completable_goal
+
+    goal.complete!
+
+    row = Goal.where(id: goal.id).pick(:state, :completed_amount, :completed_at)
+    assert_equal "completed", row[0]
+    assert_equal 4_000, row[1].to_d
+    assert_not_nil row[2]
+  end
+
+  test "reopening without the bang thaws nothing" do
+    goal = completable_goal
+    goal.complete!
+
+    goal.reopen
+
+    assert_equal 4_000, Goal.where(id: goal.id).pick(:completed_amount).to_d
+  end
+
+  test "reopen! hands the goal back to the live calculation" do
+    goal = completable_goal
+    goal.complete!
+
+    goal.reopen!
+
+    assert_nil Goal.where(id: goal.id).pick(:completed_amount)
+  end
+
   private
+
+    # Its own account, so the shared-pool haircut does not make the frozen
+    # figure depend on what the fixtures happen to claim.
+    def completable_goal
+      account = Account.create!(family: @family, accountable: Depository.new,
+                                name: "Close pot #{SecureRandom.hex(3)}",
+                                currency: @family.currency, balance: 4_000)
+      @family.goals.create!(name: "Trip", target_amount: 4_000, currency: @family.currency) do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 4_000)
+      end
+    end
     # A fresh account: the fixtures deliberately carry three goals holding
     # whole-account links on `depository`, a legacy overlap the exclusivity
     # rule tolerates but which would muddy every assertion here.

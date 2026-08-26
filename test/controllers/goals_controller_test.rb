@@ -357,7 +357,80 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='goal[account_ids][]'][value=?][checked]", account.id
   end
 
+  # --- Lot B2: closing a reached goal ---
+
+  # The panel used to say "Goal closed at ..." for a goal that was merely at
+  # 100%, and offer Archive — the gesture that does NOT release the money.
+  test "a one_off goal at 100 percent is offered closing, not archiving" do
+    goal = fully_funded_goal
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.celebration.close_cta"), response.body
+    assert_match I18n.t("goals.show.celebration.close_hint"), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.archive_cta"))}/, response.body)
+  end
+
+  test "a goal below 100 percent is offered no closing action" do
+    goal = fully_funded_goal
+    goal.update!(target_amount: 10_000)
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+  # Reaching the target is the normal state of a reserve, not a prompt to
+  # close it — and B3 forbids `complete` for them outright.
+  test "a maintained goal at 100 percent is never offered closing" do
+    goal = fully_funded_goal
+    goal.update_column(:kind, "maintained")
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+  test "a completed goal shows the amount and date it froze" do
+    goal = fully_funded_goal
+    goal.complete!
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.celebration.frozen",
+                        date: I18n.l(goal.reload.completed_at.to_date, format: :long),
+                        amount: goal.current_balance_money.format(precision: 0)),
+                 response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+  test "an archived goal is offered no closing action" do
+    goal = fully_funded_goal
+    goal.archive!
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
   private
+    # An active one_off goal sitting exactly at its target, on an account no
+    # other goal claims.
+    def fully_funded_goal
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Funded Pot", currency: "USD", balance: 2_000
+      )
+      @user.family.goals.create!(name: "Funded", target_amount: 2_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account)
+      end
+    end
+
     # A fundable account no goal fixture claims. The fixtures link
     # @depository and @connected as whole-balance earmarks, and GoalAccount
     # refuses a second whole-balance link on an account already claimed in
