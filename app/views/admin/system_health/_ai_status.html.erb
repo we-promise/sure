@@ -25,6 +25,14 @@
     ) %>
   <% end %>
 
+  <% if ai_health.pdf_processing_status == :failing %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.pdf_probe_failed.title"),
+      message: t("admin.system_health.show.ai.alerts.pdf_probe_failed.message"),
+      variant: :error
+    ) %>
+  <% end %>
+
   <% case ai_health.vector_store_status %>
   <% when :failing %>
     <% if ai_health.openai_vector_store_uses_custom_endpoint? %>
@@ -102,7 +110,7 @@
       </div>
       <div>
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.pdf_processing") %></dt>
-        <dd class="mt-1 font-medium <%= ai_health.pdf_processing_supported? ? "text-success" : "text-warning" %>">
+        <dd class="mt-1 font-medium <%= ai_health.pdf_processing_supported? ? "text-success" : (ai_health.pdf_processing_status == :failing ? "text-destructive" : "text-warning") %>">
           <%= t("admin.system_health.show.ai.pdf_statuses.#{ai_health.pdf_processing_status}") %>
         </dd>
       </div>
@@ -128,6 +136,12 @@
         <div>
           <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.failure_reason") %></dt>
           <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.llm_probe.failure_code}") %></dd>
+        </div>
+      <% end %>
+      <% if ai_health.pdf_processing_probe.failure_code %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.pdf_failure_reason") %></dt>
+          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.pdf_processing_probe.failure_code}") %></dd>
         </div>
       <% end %>
     </dl>

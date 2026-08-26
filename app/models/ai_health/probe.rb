@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "digest"
+require "timeout"
 
 class AiHealth
   # Performs bounded, non-destructive checks against the exact services used
@@ -13,6 +14,8 @@ class AiHealth
     DEFAULT_TIMEOUT = 5
     EMBEDDING_TEST_INPUT = "Sure AI health check"
     CHAT_TEST_INPUT = "Reply with OK."
+    PDF_TEST_TEXT = "Sure synthetic PDF health check. No customer data."
+    PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
       def passing?
@@ -73,6 +76,41 @@ class AiHealth
         end
 
         raise Failure, :model_not_available unless model_available
+      end
+    end
+
+    def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      run(
+        component: "pdf_processing",
+        provider_key: provider,
+        endpoint: endpoint,
+        model: model,
+        credential: access_token,
+        verification: :synthetic_pdf
+      ) do
+        result = Timeout.timeout(timeout) do
+          case provider
+          when :openai
+            Provider::Openai::PdfProcessor.new(
+              openai_client(access_token:, endpoint:),
+              model: model,
+              pdf_content: synthetic_pdf,
+              custom_provider: openai_compatible,
+              max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
+              prefer_vision: true
+            ).process
+          when :anthropic
+            Provider::Anthropic::PdfProcessor.new(
+              anthropic_client(access_token:, endpoint:),
+              model: model,
+              pdf_content: synthetic_pdf
+            ).process
+          else
+            raise Failure, :unsupported_provider
+          end
+        end
+
+        raise Failure, :invalid_response unless valid_pdf_result?(result)
       end
     end
 
@@ -187,6 +225,44 @@ class AiHealth
         response.is_a?(Hash) && response["choices"].is_a?(Array) && response["choices"].any?
       end
 
+      def valid_pdf_result?(result)
+        summary = result.respond_to?(:summary) ? result.summary.to_s.downcase : ""
+
+        result.is_a?(Provider::LlmConcept::PdfProcessingResult) &&
+          summary.match?(/\bsure\b/) &&
+          summary.include?("health") &&
+          summary.include?("check") &&
+          Import::DOCUMENT_TYPES.include?(result.document_type) &&
+          result.extracted_data.is_a?(Hash)
+      end
+
+      def synthetic_pdf
+        return @synthetic_pdf if defined?(@synthetic_pdf)
+
+        content = "BT /F1 16 Tf 24 90 Td (#{PDF_TEST_TEXT}) Tj ET\n".b
+        objects = [
+          "<< /Type /Catalog /Pages 2 0 R >>",
+          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+          "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 480 144] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+          "<< /Length #{content.bytesize} >>\nstream\n#{content}endstream",
+          "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+        ]
+
+        pdf = "%PDF-1.4\n".b
+        offsets = [ 0 ]
+        objects.each_with_index do |object, index|
+          offsets << pdf.bytesize
+          pdf << "#{index + 1} 0 obj\n#{object}\nendobj\n".b
+        end
+
+        xref_offset = pdf.bytesize
+        pdf << "xref\n0 #{objects.size + 1}\n".b
+        pdf << "0000000000 65535 f \n".b
+        offsets.drop(1).each { |offset| pdf << format("%010d 00000 n \n", offset).b }
+        pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref_offset}\n%%EOF\n".b
+        @synthetic_pdf = pdf.freeze
+      end
+
       def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
         fingerprint = Digest::SHA256.hexdigest(
           [ component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
@@ -207,7 +283,7 @@ class AiHealth
       def failure_code(error)
         return error.failure_code if error.respond_to?(:failure_code)
 
-        error.is_a?(Faraday::TimeoutError) ? :timeout : :request_failed
+        error.is_a?(Faraday::TimeoutError) || error.is_a?(Timeout::Error) ? :timeout : :request_failed
       end
 
       def http_status(error)
