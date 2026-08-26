@@ -25,6 +25,10 @@ class DS::CategorySelect < DesignSystemComponent
     form.field_id(:category_id)
   end
 
+  def trigger_id
+    "category_id_trigger"
+  end
+
   def menu_id
     "#{field_id}_menu"
   end
