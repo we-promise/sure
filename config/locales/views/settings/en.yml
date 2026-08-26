@@ -383,6 +383,10 @@ en:
         beta: Beta
         alpha: Alpha
       drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
+      drawer_trust_statement_encryption_unconfigured: "Read-only access. Sure can never move money. Configure explicit encryption keys before storing provider credentials in production."
+      provider_setup_encryption_warning:
+        title: Encryption keys missing
+        message: "This self-hosted install has not configured explicit Active Record encryption keys. Configure primary_key, deterministic_key and key_derivation_salt before saving provider credentials in production."
       setup_steps:
         eyebrow: Setup
         need_help: "Need help?"

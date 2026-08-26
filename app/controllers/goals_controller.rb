@@ -46,6 +46,7 @@ class GoalsController < ApplicationController
       currency: Current.family.primary_currency_code
     )
     @linkable_accounts = linkable_accounts_for_new
+    @currently_linked_account_ids = []
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
@@ -72,6 +73,12 @@ class GoalsController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid
     @linkable_accounts = linkable_accounts_for_new
+    # From the in-memory links, not `pluck`: nothing is persisted on a failed
+    # create, so a query would come back empty and every box the user ticked
+    # would render unchecked. The amounts survived — the form reads those off
+    # the same built records — so the user was left staring at an error telling
+    # them to enter an amount, on a form whose accounts had silently cleared.
+    @currently_linked_account_ids = @goal.goal_accounts.map { |ga| ga.account_id.to_s }
     render :new, status: :unprocessable_entity
   end
 

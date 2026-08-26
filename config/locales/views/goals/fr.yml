@@ -168,17 +168,21 @@ fr:
         body: Rythme actuel %{avg}/mois · requis %{required}/mois pour atteindre votre objectif.
         title: Épargnez %{amount}/mois de plus pour rattraper le retard
       celebration:
+        body_reached: "Vous avez atteint votre cible, à %{saved} sur %{target}. Il n'est pas encore clôturé — l'argent lui reste affecté."
+        close_cta: Clôturer cet objectif
+        close_hint: La clôture libère l'argent affecté au profit de vos autres objectifs sur le même compte. À faire une fois la dépense réellement effectuée.
+        frozen: "Atteint le %{date} · %{amount}"
         archive_cta: Archiver l'objectif
         body: Objectif clôturé à %{saved} sur %{target}. Conservez-le, ou archivez-le dès maintenant.
         heading: Objectif atteint. Bon travail !
       complete: Marquer comme terminé
-      confirm_archive_body: Les objectifs archivés disparaissent de la liste principale. Vous pourrez les restaurer plus tard.
+      confirm_archive_body: Les objectifs archivés disparaissent de la liste principale. Vous pourrez les restaurer plus tard. L'archivage n'enregistre pas le montant atteint — clôturez d'abord l'objectif si vous voulez le conserver.
       confirm_archive_cta: Archiver
       confirm_archive_title: Archiver cet objectif ?
       confirm_delete_title: "Supprimer cet objectif ?"
       confirm_delete_body: "%{name} et son historique de versements sont supprimés définitivement. Vos comptes liés, soldes et transactions ne sont pas affectés. Pour en garder une trace, archivez-le plutôt."
       confirm_delete_cta: "Supprimer l'objectif"
-      confirm_complete_body: Il quittera la liste En cours. Vous pourrez toujours l'archiver ou le restaurer plus tard.
+      confirm_complete_body: L'argent qui lui était affecté sera libéré pour vos autres objectifs sur le même compte. Il quittera la liste En cours, et vous pourrez toujours l'archiver ou le restaurer plus tard.
       confirm_complete_body_short: Vous êtes à %{progress}%, %{saved} sur %{target}. Marquer comme terminé enregistrera cela comme votre réussite à la place de l'objectif initial. Continuer, ou fermer ceci et ajuster l'objectif à la place ?
       confirm_complete_cta: Marquer comme terminé
       confirm_complete_title: Marquer cet objectif comme terminé ?

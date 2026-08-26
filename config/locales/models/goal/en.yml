@@ -17,6 +17,7 @@ en:
           attributes:
             base:
               at_least_one_linked_account_required: Pick at least one account to fund this goal.
+              whole_account_conflict_on_restore: "Can't restore this goal: “%{account_name}” is now fully earmarked for “%{goal_name}”. Enter an amount on one of them first."
             linked_accounts:
               must_be_fundable: All linked accounts must be cash or investment accounts.
               currency_mismatch: All linked accounts must share the same currency.
