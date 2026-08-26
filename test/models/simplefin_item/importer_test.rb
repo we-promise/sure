@@ -87,13 +87,13 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
 
   private
 
-  def create_simplefin_account(account_id, name, account_type, current_balance)
-    @item.simplefin_accounts.create!(
-      name: name,
-      account_id: account_id,
-      account_type: account_type,
-      currency: "USD",
-      current_balance: current_balance
-    )
-  end
+    def create_simplefin_account(account_id, name, account_type, current_balance)
+      @item.simplefin_accounts.create!(
+        name: name,
+        account_id: account_id,
+        account_type: account_type,
+        currency: "USD",
+        current_balance: current_balance
+      )
+    end
 end
