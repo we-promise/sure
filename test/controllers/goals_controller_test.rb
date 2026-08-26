@@ -574,21 +574,6 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-balance][data-earmarked-by-others]", minimum: 1
   end
 
-  private
-    # SQL the pooled-allocation read issues, and nothing else: goal_accounts
-    # joined to goals.
-    def count_pool_queries
-      count = 0
-      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-        sql = payload[:sql].to_s
-        count += 1 if sql.include?("FROM \"goal_accounts\"") && sql.include?("INNER JOIN \"goals\"")
-      end
-      yield
-      count
-    ensure
-      ActiveSupport::Notifications.unsubscribe(sub)
-    end
-
   # --- Lot B4: recording a partial spend ---
 
   test "recording a spend keeps the goal at full progress and frees the earmark" do
@@ -640,6 +625,21 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("goals.consume.errors.account_not_linked"), flash[:alert]
     assert_equal 0, goal.reload.consumed_amount
   end
+
+  private
+    # SQL the pooled-allocation read issues, and nothing else: goal_accounts
+    # joined to goals.
+    def count_pool_queries
+      count = 0
+      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        count += 1 if sql.include?("FROM \"goal_accounts\"") && sql.include?("INNER JOIN \"goals\"")
+      end
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
 
   private
 
