@@ -82,7 +82,48 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal AiHealth::Probe::PDF_TEST_TEXT, reader.pages.first.text
   end
 
-  test "PDF processing probe exercises the OpenAI vision processor and validates its result" do
+  test "PDF text-extraction probe exercises only the OpenAI text processor and validates its result" do
+    response = {
+      "choices" => [
+        {
+          "message" => {
+            "content" => {
+              document_type: "other",
+              summary: "A synthetic document containing no customer data.",
+              extracted_data: {
+                probe_marker: AiHealth::Probe::PDF_TEST_MARKER
+              }
+            }.to_json
+          }
+        }
+      ]
+    }
+    client = mock("openai_client")
+    captured = nil
+    client.expects(:chat).with do |params|
+      captured = params
+      true
+    end.returns(response)
+    @probe.stubs(:openai_client).returns(client)
+    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).never
+
+    result = @probe.pdf_text_extraction(
+      provider: :openai,
+      endpoint: "https://api.cloudflare.example.test/v1",
+      access_token: "token",
+      model: "text-model",
+      openai_compatible: true
+    )
+
+    assert result.passing?
+    instructions = captured.dig(:parameters, :messages, 0, :content)
+    document_text = captured.dig(:parameters, :messages, 1, :content)
+    assert_includes instructions, %Q("#{AiHealth::Probe::PDF_MARKER_FIELD}")
+    assert_not_includes instructions, AiHealth::Probe::PDF_TEST_MARKER
+    assert_includes document_text, AiHealth::Probe::PDF_TEST_MARKER
+  end
+
+  test "PDF vision probe exercises only the OpenAI vision processor and validates its result" do
     response = {
       "choices" => [
         {
@@ -107,7 +148,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     @probe.stubs(:openai_client).returns(client)
     Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
 
-    result = @probe.pdf_processing(
+    result = @probe.pdf_vision_processing(
       provider: :openai,
       endpoint: "https://api.cloudflare.example.test/v1",
       access_token: "token",
@@ -121,7 +162,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_not_includes instructions, AiHealth::Probe::PDF_TEST_MARKER
   end
 
-  test "PDF processing probe requires the exact marker in the dedicated field" do
+  test "PDF processing probes require the exact marker in the dedicated field" do
     response = {
       "choices" => [
         {
@@ -141,7 +182,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
 
-    result = @probe.pdf_processing(
+    result = @probe.pdf_vision_processing(
       provider: :openai,
       endpoint: "https://api.cloudflare.example.test/v1",
       access_token: "token",
@@ -153,7 +194,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal :invalid_response, result.failure_code
   end
 
-  test "PDF processing probe sends the synthetic PDF as an Anthropic document block" do
+  test "PDF vision probe sends the synthetic PDF as an Anthropic document block" do
     tool_use = Struct.new(:type, :input).new(
       :tool_use,
       {
@@ -178,7 +219,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end.returns(response)
     @probe.stubs(:anthropic_client).returns(stub(messages: messages))
 
-    result = @probe.pdf_processing(
+    result = @probe.pdf_vision_processing(
       provider: :anthropic,
       endpoint: "https://api.anthropic.com",
       access_token: "token",

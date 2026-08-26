@@ -2,10 +2,10 @@ class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
   attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
-              :prefer_vision, :probe_marker_field
+              :processing_mode, :probe_marker_field
 
   def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
-                 max_response_tokens:, prefer_vision: false, probe_marker_field: nil)
+                 max_response_tokens:, processing_mode: :auto, probe_marker_field: nil)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -13,7 +13,7 @@ class Provider::Openai::PdfProcessor
     @langfuse_trace = langfuse_trace
     @family = family
     @max_response_tokens = max_response_tokens
-    @prefer_vision = prefer_vision
+    @processing_mode = processing_mode
     @probe_marker_field = probe_marker_field
   end
 
@@ -25,15 +25,20 @@ class Provider::Openai::PdfProcessor
 
     # Try text extraction first (works with all models)
     # Fall back to vision API with images if text extraction fails (for scanned PDFs)
-    response = if prefer_vision
+    response = case processing_mode
+    when :text
+      process_with_text_extraction
+    when :vision
       process_with_vision
-    else
+    when :auto
       begin
         process_with_text_extraction
       rescue Provider::Openai::Error => e
         Rails.logger.warn("Text extraction failed: #{e.message}, trying vision API with images")
         process_with_vision
       end
+    else
+      raise ArgumentError, "Unknown PDF processing mode: #{processing_mode.inspect}"
     end
 
     span&.end(output: response.to_h)

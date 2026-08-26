@@ -45,9 +45,12 @@ en:
             llm_probe_failed:
               title: The LLM live check failed
               message: Sure could not verify both the configured endpoint and model. The failure was recorded in Settings → Debug logs and Rails.logger.
-            pdf_probe_failed:
-              title: The synthetic PDF check failed
-              message: Sure could not process a one-page synthetic PDF through the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pdf_text_extraction_failed:
+              title: The synthetic PDF text-extraction check failed
+              message: Sure could not complete the text-first path that extracts embedded PDF text locally and sends it to the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pdf_vision_processing_failed:
+              title: The synthetic PDF vision/native check failed
+              message: Sure could not complete the image or native-document PDF path through the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
             vector_probe_failed:
               title: The document-search live check failed
               message: Sure could not verify the selected vector store and every required embedding service. The failure was recorded in Settings → Debug logs and Rails.logger.
@@ -62,7 +65,7 @@ en:
               message: Check the adapter requirements below. For pgvector, the database must provide the vector extension or an existing vector_store_chunks table.
           llm:
             title: LLM and PDF processing
-            description: The live checks verify the configured model and process a one-page synthetic PDF containing no customer data. Credential values are never displayed.
+            description: The live checks verify the configured model, then separately exercise text extraction and vision/native processing with a one-page synthetic PDF containing no customer data. Credential values are never displayed.
           vector_store:
             title: Vector store and document search
             description: The live check queries the hosted vector-store API, or tests the pgvector table and creates one short embedding without storing it.
@@ -71,7 +74,8 @@ en:
             effective_provider: Effective provider
             model: Model
             endpoint: Endpoint
-            pdf_processing: PDF processing
+            pdf_text_extraction: PDF text-extraction path
+            pdf_vision_processing: PDF vision/native path
             request_timeout: Request timeout
             openai_credentials: OpenAI credentials
             openai_compatible_credentials: OpenAI-compatible API credentials
@@ -83,7 +87,8 @@ en:
             embedding_model: Embedding model
             embedding_endpoint: Embedding endpoint
             embedding_dimensions: Embedding dimensions
-            pdf_failure_reason: PDF check failure reason
+            pdf_text_extraction_failure_reason: Text-extraction failure reason
+            pdf_vision_processing_failure_reason: Vision/native failure reason
             storage_probe: pgvector storage check
             embedding_probe: Embedding endpoint check
             failure_reason: Failure reason

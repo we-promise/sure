@@ -1,3 +1,18 @@
+<% pdf_checks = [
+  {
+    key: :pdf_text_extraction,
+    status: ai_health.pdf_text_extraction_status,
+    supported: ai_health.pdf_text_extraction_supported?,
+    probe: ai_health.pdf_text_extraction_probe
+  },
+  {
+    key: :pdf_vision_processing,
+    status: ai_health.pdf_vision_processing_status,
+    supported: ai_health.pdf_vision_processing_supported?,
+    probe: ai_health.pdf_vision_processing_probe
+  }
+] %>
+
 <div class="space-y-4" data-testid="ai-status">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-secondary">
@@ -25,10 +40,10 @@
     ) %>
   <% end %>
 
-  <% if ai_health.pdf_processing_status == :failing %>
+  <% pdf_checks.select { |check| check[:status] == :failing }.each do |check| %>
     <%= render DS::Alert.new(
-      title: t("admin.system_health.show.ai.alerts.pdf_probe_failed.title"),
-      message: t("admin.system_health.show.ai.alerts.pdf_probe_failed.message"),
+      title: t("admin.system_health.show.ai.alerts.#{check[:key]}_failed.title"),
+      message: t("admin.system_health.show.ai.alerts.#{check[:key]}_failed.message"),
       variant: :error
     ) %>
   <% end %>
@@ -108,12 +123,14 @@
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.endpoint") %></dt>
         <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.llm_endpoint %></dd>
       </div>
-      <div>
-        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.pdf_processing") %></dt>
-        <dd class="mt-1 font-medium <%= ai_health.pdf_processing_supported? ? "text-success" : (ai_health.pdf_processing_status == :failing ? "text-destructive" : "text-warning") %>">
-          <%= t("admin.system_health.show.ai.pdf_statuses.#{ai_health.pdf_processing_status}") %>
-        </dd>
-      </div>
+      <% pdf_checks.each do |check| %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}") %></dt>
+          <dd class="mt-1 font-medium <%= check[:supported] ? "text-success" : (check[:status] == :failing ? "text-destructive" : "text-warning") %>">
+            <%= t("admin.system_health.show.ai.pdf_statuses.#{check[:status]}") %>
+          </dd>
+        </div>
+      <% end %>
       <div>
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.request_timeout") %></dt>
         <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.llm_request_timeout) %></dd>
@@ -138,10 +155,10 @@
           <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.llm_probe.failure_code}") %></dd>
         </div>
       <% end %>
-      <% if ai_health.pdf_processing_probe.failure_code %>
+      <% pdf_checks.select { |check| check[:probe].failure_code }.each do |check| %>
         <div>
-          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.pdf_failure_reason") %></dt>
-          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.pdf_processing_probe.failure_code}") %></dd>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}_failure_reason") %></dt>
+          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{check[:probe].failure_code}") %></dd>
         </div>
       <% end %>
     </dl>

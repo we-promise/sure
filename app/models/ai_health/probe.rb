@@ -81,41 +81,30 @@ class AiHealth
       end
     end
 
-    def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible: false)
-      run(
-        component: "pdf_processing",
-        provider_key: provider,
+    def pdf_text_extraction(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      pdf_processing(
+        provider: provider,
         endpoint: endpoint,
+        access_token: access_token,
         model: model,
-        credential: access_token,
-        verification: :synthetic_pdf
-      ) do
-        result = Timeout.timeout(timeout) do
-          case provider
-          when :openai
-            Provider::Openai::PdfProcessor.new(
-              openai_client(access_token:, endpoint:),
-              model: model,
-              pdf_content: synthetic_pdf,
-              custom_provider: openai_compatible,
-              max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
-              prefer_vision: true,
-              probe_marker_field: PDF_MARKER_FIELD
-            ).process
-          when :anthropic
-            Provider::Anthropic::PdfProcessor.new(
-              anthropic_client(access_token:, endpoint:),
-              model: model,
-              pdf_content: synthetic_pdf,
-              probe_marker_field: PDF_MARKER_FIELD
-            ).process
-          else
-            raise Failure, :unsupported_provider
-          end
-        end
+        openai_compatible: openai_compatible,
+        component: "pdf_text_extraction",
+        verification: :synthetic_pdf_text,
+        processing_mode: :text
+      )
+    end
 
-        raise Failure, :invalid_response unless valid_pdf_result?(result)
-      end
+    def pdf_vision_processing(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      pdf_processing(
+        provider: provider,
+        endpoint: endpoint,
+        access_token: access_token,
+        model: model,
+        openai_compatible: openai_compatible,
+        component: "pdf_vision_processing",
+        verification: :synthetic_pdf_vision,
+        processing_mode: :vision
+      )
     end
 
     def openai_vector_store(endpoint:, access_token:)
@@ -161,6 +150,46 @@ class AiHealth
 
     private
       attr_reader :cache, :force
+
+      def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible:, component:, verification:,
+                         processing_mode:)
+        run(
+          component: component,
+          provider_key: provider,
+          endpoint: endpoint,
+          model: model,
+          credential: access_token,
+          verification: verification
+        ) do
+          result = Timeout.timeout(timeout) do
+            case provider
+            when :openai
+              Provider::Openai::PdfProcessor.new(
+                openai_client(access_token:, endpoint:),
+                model: model,
+                pdf_content: synthetic_pdf,
+                custom_provider: openai_compatible,
+                max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
+                processing_mode: processing_mode,
+                probe_marker_field: PDF_MARKER_FIELD
+              ).process
+            when :anthropic
+              raise Failure, :unsupported_provider unless processing_mode == :vision
+
+              Provider::Anthropic::PdfProcessor.new(
+                anthropic_client(access_token:, endpoint:),
+                model: model,
+                pdf_content: synthetic_pdf,
+                probe_marker_field: PDF_MARKER_FIELD
+              ).process
+            else
+              raise Failure, :unsupported_provider
+            end
+          end
+
+          raise Failure, :invalid_response unless valid_pdf_result?(result)
+        end
+      end
 
       def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)
         key = cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
