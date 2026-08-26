@@ -108,4 +108,13 @@ class BinanceItemTest < ActiveSupport::TestCase
 
     assert_equal 1, @item.linked_accounts_count
   end
+
+  test "declares credentials and raw payload as encrypted" do
+    skip "Encryption not configured" unless BinanceItem.encryption_ready?
+
+    encrypted = BinanceItem.encrypted_attributes.map(&:to_s)
+    assert_includes encrypted, "api_key"
+    assert_includes encrypted, "api_secret"
+    assert_includes encrypted, "raw_payload"
+  end
 end
