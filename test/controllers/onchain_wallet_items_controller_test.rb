@@ -480,8 +480,14 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "unticking one asset removes only it" do
     item = create_onchain_wallet_item(family: @family)
+    # Linked, because that is what a tracked asset actually is. Left unlinked
+    # these are orphan rows, and revising now rebuilds those into real ones —
+    # so the surviving row would be a new one and the assertion below would be
+    # measuring the repair rather than the removal.
     native = create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(native)
     token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    link_onchain_wallet_account!(token_asset)
     stub_wallet_with_token
 
     post update_tokens_onchain_wallet_item_url(item), params: {
