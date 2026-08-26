@@ -4,6 +4,16 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
+  # States in which a goal has let go of its money: `Goal.pooled_allocations_for`
+  # leaves it out of the backing math, so its links reserve nothing and the
+  # account it pointed at is free again.
+  #
+  # Read by three places that must agree — the shared pool, GoalAccount's
+  # exclusivity check, and the restore guard below. Keeping them on one constant
+  # is what stops the double-counting hole from reopening the day this set
+  # grows: adding a state here makes every one of them release together.
+  RELEASED_STATES = %w[archived].freeze
+
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
@@ -30,6 +40,14 @@ class Goal < ApplicationRecord
   validate :linked_accounts_must_match_goal_currency
   validate :linked_accounts_must_belong_to_family
   validate :currency_locked_once_linked
+  validate :restore_must_not_recreate_whole_account_conflict
+
+  # Autosave validates each link separately, so each would otherwise take its
+  # own account lock in association order. Two goals saving links on the same
+  # two accounts in opposite orders would then hold one lock each and wait on
+  # the other. Taking the whole set here, sorted, before any child validates,
+  # is what makes the order the same for everyone.
+  before_validation :lock_whole_account_claims_in_order
 
   monetize :target_amount
 
@@ -53,12 +71,75 @@ class Goal < ApplicationRecord
   def self.pooled_allocations_for(family)
     GoalAccount.joins(:goal)
                .where(goals: { family_id: family.id })
-               .where.not(goals: { state: "archived" })
+               .where.not(goals: { state: RELEASED_STATES })
                .pluck(:account_id, :goal_id, :allocated_amount)
                .group_by(&:first)
                .transform_values do |triples|
                  triples.map { |(_, goal_id, amount)| { goal_id: goal_id, allocated_amount: amount } }
                end
+  end
+
+  # Whole-account links held by OTHER goals of this family on any of
+  # `account_ids` — the links that would double-count the balance if this goal
+  # claimed one of those accounts in full too.
+  #
+  # Shared by GoalAccount's exclusivity validation (which asks about the one
+  # account being written) and by the restore guard (which asks about every
+  # account this goal claims in full). One query, one scope: the two cannot
+  # drift into disagreeing about what "already claimed" means.
+  # `excluding_link_id` is the row being written, when there is one. Excluding
+  # by goal alone is not enough for a link that is CHANGING goals: its persisted
+  # row still carries the old goal_id, so the query hands it back and the link
+  # conflicts with itself.
+  # A whole-account claim is exclusive per account, and the check that enforces
+  # it is a read. Callers take this first so the read and the write that
+  # follows are one step as far as any other request is concerned.
+  def self.lock_whole_account_claims!(account_id)
+    # Bound rather than interpolated. The key is a digest of an id and could
+    # not carry a payload, but a hand-built SQL string in a model is the shape
+    # a reader has to stop and verify — and Brakeman flags it, correctly.
+    # Projected through a subquery so the result set is an integer, not the
+    # `void` the lock function returns — which the adapter cannot type and
+    # logs a warning about on every acquisition.
+    connection.exec_query(
+      "SELECT 1 FROM (SELECT pg_advisory_xact_lock($1)) locked",
+      "Goal Whole-Account Claim Lock",
+      [ ActiveRecord::Relation::QueryAttribute.new(
+          "key", whole_account_claim_lock_key(account_id), ActiveRecord::Type::BigInteger.new
+        ) ]
+    )
+  end
+
+  def self.whole_account_claim_lock_key(account_id)
+    Digest::SHA1.hexdigest("goal_accounts:whole_account:#{account_id}").to_i(16) % (2**63)
+  end
+
+  def whole_account_conflicts_on(account_ids, excluding_link_id: nil)
+    ids = Array(account_ids).compact
+    return GoalAccount.none if ids.empty?
+
+    # Serialised before the read, because what follows is a check-then-write:
+    # two requests can both find no conflict and both commit a whole-account
+    # claim, recreating exactly the double-count this exists to prevent. A
+    # transaction-scoped advisory lock rather than a row lock — the conflicting
+    # write may be an INSERT, so there is no row to lock — and it is released
+    # when the enclosing transaction ends, whichever way it ends.
+    #
+    # Locked in id order so two goals claiming the same pair of accounts in
+    # opposite orders cannot deadlock against each other. Saving a goal takes
+    # the whole set up front (see `lock_whole_account_claims_in_order`); this
+    # covers a link saved on its own, and re-taking a lock the transaction
+    # already holds costs nothing.
+    ids.sort.each { |account_id| self.class.lock_whole_account_claims!(account_id) }
+
+    scope = GoalAccount.joins(:goal)
+                       .where(account_id: ids, allocated_amount: nil)
+                       .where(goals: { family_id: family_id })
+                       .where.not(goals: { state: RELEASED_STATES })
+
+    scope = scope.where.not(goal_id: id) if persisted?
+    scope = scope.where.not(id: excluding_link_id) if excluding_link_id
+    scope
   end
 
   attr_writer :pooled_allocations
@@ -766,5 +847,49 @@ class Goal < ApplicationRecord
       return unless goal_accounts.where.not(id: nil).exists?
 
       errors.add(:currency, :locked_after_linked)
+    end
+
+    # Archiving a goal frees the accounts it claimed in full, so another goal
+    # can legitimately claim one of them while it is away. Restoring it would
+    # then put two whole-account links back on the same account and reopen the
+    # double-counting `GoalAccount#whole_account_link_must_be_exclusive` closes
+    # — that check only fires when a link is written, and a state change writes
+    # none.
+    #
+    # A validation rather than an AASM guard: `may_fire_event?` stays true, the
+    # save fails, and GoalsController#perform_transition! already surfaces
+    # `errors.full_messages`. The user reads which goal holds the account
+    # instead of a generic "can't do that in this state".
+    def restore_must_not_recreate_whole_account_conflict
+      return unless will_save_change_to_state?
+
+      previous_state, next_state = state_change_to_be_saved
+      return unless previous_state.in?(RELEASED_STATES)
+      return if next_state.in?(RELEASED_STATES)
+
+      conflict = whole_account_conflicts_on(own_whole_account_ids).first
+      return if conflict.nil?
+
+      errors.add(
+        :base,
+        :whole_account_conflict_on_restore,
+        goal_name: conflict.goal.name,
+        account_name: conflict.account.name
+      )
+    end
+
+    # Accounts this goal claims in full. Read from the loaded association so it
+    # is correct for a goal whose links were built but not yet saved.
+    def lock_whole_account_claims_in_order
+      ids = own_whole_account_ids
+      ids |= goal_accounts.filter_map { |ga| ga.account_id if ga.will_save_change_to_allocated_amount? }
+      ids.compact.uniq.sort.each { |account_id| self.class.lock_whole_account_claims!(account_id) }
+    end
+
+    def own_whole_account_ids
+      goal_accounts
+        .reject(&:marked_for_destruction?)
+        .select(&:whole_account?)
+        .filter_map(&:account_id)
     end
 end

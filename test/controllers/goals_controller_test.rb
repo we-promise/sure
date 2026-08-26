@@ -45,6 +45,13 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create persists a goal with linked accounts" do
+    # Fresh accounts: the goal fixtures already claim @depository and
+    # @connected in full, and GoalAccount refuses a second whole-balance
+    # link on a contested account. Blank allocations here keep this test on
+    # the default "dedicate the whole balance" path.
+    first = unclaimed_account("Holiday Pot")
+    second = unclaimed_account("House Pot")
+
     assert_difference -> { Goal.count } => 1,
                       -> { GoalAccount.count } => 2 do
       post goals_url, params: {
@@ -53,7 +60,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
           target_amount: "1000",
           target_date: 3.months.from_now.to_date.iso8601,
           color: "#4da568",
-          account_ids: [ @depository.id, @connected.id ]
+          account_ids: [ first.id, second.id ]
         }
       }
     end
@@ -235,13 +242,14 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   # not the stale (empty) set already on the record.
   test "an orphaned goal can be repaired by re-linking an account" do
     orphan = orphaned_goal
+    rescue_account = unclaimed_account("Rescue Pot")
 
     patch goal_url(orphan), params: {
-      goal: { name: orphan.name, target_amount: orphan.target_amount, account_ids: [ @depository.id ] }
+      goal: { name: orphan.name, target_amount: orphan.target_amount, account_ids: [ rescue_account.id ] }
     }
 
     assert_redirected_to goal_path(orphan)
-    assert_equal [ @depository.id ], orphan.reload.goal_accounts.pluck(:account_id)
+    assert_equal [ rescue_account.id ], orphan.reload.goal_accounts.pluck(:account_id)
     assert orphan.valid?
   end
 
@@ -324,7 +332,44 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/without a deadline/i, response.body)
   end
 
+  # The form reads its ticks from a separate local, not from the built links,
+  # so a failed create rendered every account unchecked while the amounts the
+  # user typed survived — an error telling them to enter an amount, on a form
+  # whose accounts had silently cleared.
+  test "a rejected creation keeps the accounts the user ticked" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Contested Pot", currency: @user.family.currency, balance: 3_000
+    )
+    holder = @user.family.goals.create!(name: "Holder", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert holder.persisted?
+
+    post goals_url, params: {
+      goal: {
+        name: "Second claim", target_amount: 5_000,
+        account_ids: [ account.id ], allocations: { account.id.to_s => "" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='goal[account_ids][]'][value=?][checked]", account.id
+  end
+
   private
+    # A fundable account no goal fixture claims. The fixtures link
+    # @depository and @connected as whole-balance earmarks, and GoalAccount
+    # refuses a second whole-balance link on an account already claimed in
+    # full — so any test that wants the default "dedicate the whole balance"
+    # link needs an account of its own.
+    def unclaimed_account(name)
+      Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: name, currency: "USD", balance: 1_000
+      )
+    end
+
     # A goal in the state account deletion leaves behind: still present, zero
     # linked accounts, failing its own validations.
     def orphaned_goal
@@ -342,9 +387,19 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       goal
     end
 
+    # Each goal gets its own funding account, mirroring @depository's balance.
+    # These goals used to share @depository as a whole-balance link, which
+    # GoalAccount now refuses — and which was the double count in the first
+    # place: every goal read the same 5,000 as if it were its own. One account
+    # each keeps every goal's current_balance identical to what it was, without
+    # the overlap.
     def build_goal(family, name, target_amount: 1_000_000, target_date: nil)
+      funding = Account.create!(
+        family: family, accountable: Depository.new,
+        name: "#{name} Funding", currency: "USD", balance: @depository.balance
+      )
       g = family.goals.new(name: name, target_amount: target_amount, target_date: target_date, currency: "USD")
-      g.goal_accounts.build(account: @depository)
+      g.goal_accounts.build(account: funding)
       g.save!
       g
     end
@@ -363,7 +418,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
           currency: "USD",
           state: "archived",
           family_id: other_family.id,
-          account_ids: [ @depository.id ]
+          account_ids: [ unclaimed_account("Hijack Pot").id ]
         }
       }
     end

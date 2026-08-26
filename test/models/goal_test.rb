@@ -14,6 +14,40 @@ class GoalTest < ActiveSupport::TestCase
     assert @goal.valid?
   end
 
+  # Two whole-account links on ONE account each claim the entire balance, so
+  # the account is counted twice. The pro-rata haircut in backing_share_for
+  # only scales FIXED earmarks: `others_fixed` sums allocated_amount, and an
+  # unallocated link contributes nil.to_d == 0, so the two links never see
+  # each other. GoalAccount now refuses to create this state (see
+  # GoalAccountTest), but rows that predate the guard still read this way —
+  # this test pins the behaviour those rows get, and is the reason the guard
+  # exists.
+  test "two grandfathered whole-account links each claim the full balance" do
+    livret = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "Livret A", currency: "USD", balance: 6_000
+    )
+    precaution = @family.goals.create!(
+      name: "Precaution", target_amount: 5_000, currency: "USD",
+      goal_accounts: [ GoalAccount.new(account: livret) ]
+    )
+    # Built with a fixed earmark so the new guard lets it through, then
+    # forced to NULL behind the validation's back — exactly the shape of a
+    # row written before the guard shipped.
+    vacances = @family.goals.create!(
+      name: "Vacances", target_amount: 5_000, currency: "USD",
+      goal_accounts: [ GoalAccount.new(account: livret, allocated_amount: 1) ]
+    )
+    vacances.goal_accounts.first.update_column(:allocated_amount, nil)
+
+    assert_equal 6_000, precaution.reload.current_balance.to_i
+    assert_equal 6_000, vacances.reload.current_balance.to_i
+    assert_equal 12_000, precaution.current_balance.to_i + vacances.current_balance.to_i,
+                 "6 000 of balance backing 12 000 of goals — the double count B7 guards against"
+    assert_equal 100, precaution.progress_percent.to_i
+    assert_equal 100, vacances.progress_percent.to_i
+  end
+
   # The confirm dialog assigns `body` to innerHTML, so an unescaped goal name
   # would execute when a family member opens the delete confirmation.
   test "deletion_confirm escapes the goal name in the dialog body" do
@@ -166,8 +200,19 @@ class GoalTest < ActiveSupport::TestCase
     assert_includes @goal.errors[:currency], "Can't change the currency after the goal is linked to accounts."
   end
 
-  test "current_balance sums linked account balances" do
-    expected = @goal.linked_accounts.sum(&:balance).to_d
+  # A whole-account link takes what is LEFT of the balance once other goals'
+  # fixed earmarks are set aside — not the gross balance. This used to assert
+  # the gross figure, which only held because the fixtures had three goals
+  # claiming `depository` in full at once: the very state the exclusivity rule
+  # forbids, and one where the same money was counted three times.
+  test "current_balance sums linked account balances net of other goals' earmarks" do
+    account_ids = @goal.linked_accounts.map(&:id)
+    others_fixed = GoalAccount.where(account_id: account_ids)
+                              .where.not(goal_id: @goal.id)
+                              .sum(:allocated_amount)
+    expected = @goal.linked_accounts.sum(&:balance).to_d - others_fixed
+
+    assert_operator others_fixed, :>, 0, "fixtures should exercise the netting"
     assert_equal expected, @goal.current_balance.to_d
   end
 
@@ -536,4 +581,85 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 1, summary[:behind_count]
     assert_kind_of Money, summary[:saved_money]
   end
+
+  # --- Restoring a goal must not recreate a whole-account overlap ---
+  #
+  # The door-side tests — writing a link onto a contested account — live in
+  # goal_account_test.rb. These cover the other way in: a state change, which
+  # writes no link at all and so slips past that validation entirely.
+
+  test "restoring an archived goal is refused when its account was claimed meanwhile" do
+    account = standoff_account
+    away = whole_account_goal("Away", account)
+    away.archive!
+
+    # Legitimate while `away` holds nothing: an archived goal releases its
+    # accounts, so this claim is exactly what the pool expects.
+    whole_account_goal("Claimer", account)
+
+    away.reload
+    assert_not away.unarchive!, "expected the restore to be refused"
+    assert_equal "archived", away.reload.state
+    assert_match "Claimer", away.errors.full_messages.to_sentence
+  end
+
+  test "restoring is allowed once the other goal earmarks a fixed slice instead" do
+    account = standoff_account
+    away = whole_account_goal("Away", account)
+    away.archive!
+    claimer = whole_account_goal("Claimer", account)
+
+    claimer.goal_accounts.first.update!(allocated_amount: 2_000)
+
+    away.reload
+    assert away.unarchive!, away.errors.full_messages.to_sentence
+    assert_equal "active", away.reload.state
+  end
+
+  test "restoring an archived goal whose account is still free is untouched" do
+    account = standoff_account
+    away = whole_account_goal("Away", account)
+    away.archive!
+
+    away.reload
+    assert away.unarchive!, away.errors.full_messages.to_sentence
+    assert_equal "active", away.reload.state
+  end
+
+  # `paused` is not a released state: a paused goal never let go of its
+  # accounts, so nothing can legitimately have claimed one meanwhile. The guard
+  # that restricts this check to restores from a released state is what keeps a
+  # user holding a LEGACY overlap — data the rule predates — from being
+  # stranded on a goal they merely shelved. Built through update_column, since
+  # the overlap is exactly what the door now refuses to write.
+  test "resuming a paused goal is never blocked, even on a legacy overlap" do
+    account = standoff_account
+    goal = whole_account_goal("Shelved", account)
+    squatter = @family.goals.create!(name: "Squatter", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1)
+    end
+    squatter.goal_accounts.first.update_column(:allocated_amount, nil)
+
+    goal.pause!
+
+    assert goal.reload.resume!, goal.errors.full_messages.to_sentence
+    assert_equal "active", goal.reload.state
+  end
+
+  private
+    # A fresh account: the fixtures deliberately carry three goals holding
+    # whole-account links on `depository`, a legacy overlap the exclusivity
+    # rule tolerates but which would muddy every assertion here.
+    def standoff_account
+      Account.create!(
+        family: @family, accountable: Depository.new,
+        name: "Standoff Savings #{SecureRandom.hex(4)}", currency: "USD", balance: 6_000
+      )
+    end
+
+    def whole_account_goal(name, account)
+      @family.goals.create!(name: name, target_amount: 5_000, currency: "USD") do |goal|
+        goal.goal_accounts.build(account: account)
+      end
+    end
 end
