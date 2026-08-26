@@ -20,8 +20,17 @@ class Security < ApplicationRecord
 
   # Builds the Brandfetch crypto URL for a base asset (e.g. "BTC"). Returns
   # nil when Brandfetch isn't configured.
+  # The symbol goes into a URL path segment, and it comes from provider data —
+  # an on-chain token can be called anything its deployer chose. A slash, a
+  # question mark or a hash would not merely break the link: they would point
+  # the path elsewhere on the CDN, or push the client id into a fragment where
+  # Brandfetch never sees it. Guarded here rather than at each call site, since
+  # six of them reach this method from four different providers.
+  SAFE_CRYPTO_SYMBOL = /\A[A-Za-z0-9][A-Za-z0-9.\-]{0,31}\z/
+
   def self.brandfetch_crypto_url(base_asset)
     return nil if base_asset.blank?
+    return nil unless base_asset.to_s.match?(SAFE_CRYPTO_SYMBOL)
     return nil unless Setting.brand_fetch_client_id.present?
     size = Setting.brand_fetch_logo_size
     "https://cdn.brandfetch.io/crypto/#{base_asset}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
