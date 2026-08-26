@@ -1,4 +1,4 @@
-class AddIdempotencyToTransfers < ActiveRecord::Migration[8.1]
+class AddIdempotencyToTransfers < ActiveRecord::Migration[7.2]
   def change
     add_column :transfers, :external_id, :string
     add_column :transfers, :idempotency_fingerprint, :string
