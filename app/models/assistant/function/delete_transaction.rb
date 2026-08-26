@@ -37,14 +37,11 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     transaction_name = nil
 
     Entry.transaction do
+      Account::MutationAccess.lock!(accounts: [ entry.account ], user:, level: Account::MutationAccess::WRITE)
       entry.lock!
       transaction.lock!
       entry.association(:entryable).target = transaction
 
-      unless entry.account.permission_for(user).in?([ :owner, :full_control ])
-        result = error("not_authorized", "You do not have permission to delete this transaction.")
-        next
-      end
       if entry.split_child? || entry.split_parent?
         result = error("split_transaction", "Split transactions must be deleted with the split editor.")
         next
@@ -66,6 +63,8 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       deleted_transaction_id: transaction_id,
       message: "Transaction '#{transaction_name}' deleted."
     }
+  rescue Account::MutationAccess::Denied
+    error("not_authorized", "You do not have permission to delete this transaction.")
   rescue ActiveRecord::RecordNotFound
     error("not_found", "Transaction with id '#{params["id"]}' not found.")
   rescue ActiveRecord::RecordNotDestroyed => e

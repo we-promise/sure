@@ -20,42 +20,59 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
   end
 
   def call(params = {})
-    transfer = find_writable_transfer(params["id"])
+    transfer = find_family_transfer(params["id"])
     return error("not_found", "Writable transfer not found.") unless transfer
-    return error("no_changes", "Provide amount, date, notes, or exchange_rate.") if (params.keys & %w[amount date notes exchange_rate]).empty?
 
-    entry_change = params.key?("amount") || params.key?("date") || params.key?("exchange_rate")
+    changed_fields = params.keys & %w[amount date notes exchange_rate]
+    return error("no_changes", "Provide amount, date, notes, or exchange_rate.") if changed_fields.empty?
+
+    requested_amount = positive_decimal(params["amount"], "amount") if params.key?("amount")
+    requested_date = Date.iso8601(params["date"].to_s) if params.key?("date")
+    requested_rate = positive_decimal(params["exchange_rate"], "exchange_rate") if params.key?("exchange_rate")
+    financial_change = changed_fields.intersect?(%w[amount date exchange_rate])
 
     Transfer.transaction do
+      accounts = [ transfer.from_account, transfer.to_account ].compact
+      Account::MutationAccess.lock!(accounts:, user:, level: Account::MutationAccess::WRITE)
       transfer.lock!
-      [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ].sort_by(&:id).each(&:lock!) if entry_change
 
-      attrs = {}
-      if entry_change
-        outflow_entry = transfer.outflow_transaction.entry
-        inflow_entry = transfer.inflow_transaction.entry
+      if financial_change
+        principal_entries = [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ]
+        fee_entries = params.key?("date") ? transfer.fee_transactions.includes(:entry).map(&:entry) : []
+        (principal_entries + fee_entries).compact.uniq.sort_by(&:id).each(&:lock!)
+
+        outflow_entry, inflow_entry = principal_entries
         original_amount = outflow_entry.amount.abs
-        amount = params.key?("amount") ? BigDecimal(params["amount"].to_s) : original_amount
-        return error("invalid_amount", "amount must be greater than 0.") unless amount.positive? && amount.finite?
+        amount = requested_amount || original_amount
+        date = requested_date || transfer.date
+        converted = converted_amount(transfer, amount, original_amount, date, requested_rate)
 
-        date = params.key?("date") ? Date.iso8601(params["date"].to_s) : transfer.date
-        converted = converted_amount(transfer, amount, original_amount, date, params)
-        outflow_entry.update!(amount: amount, date: date)
-        inflow_entry.update!(amount: -converted, date: date)
-        outflow_entry.lock_saved_attributes!
-        inflow_entry.lock_saved_attributes!
-        outflow_entry.mark_user_modified!
-        inflow_entry.mark_user_modified!
-        attrs[:amount] = amount
+        outflow_entry.update!(amount:, date:)
+        inflow_entry.update!(amount: -converted, date:)
+        mark_financial_edit!(outflow_entry)
+        mark_financial_edit!(inflow_entry)
+
+        fee_entries.each do |entry|
+          entry.update!(date:)
+          mark_financial_edit!(entry)
+        end
+
+        transfer.amount = amount
       end
 
-      attrs[:notes] = params["notes"] if params.key?("notes")
-      transfer.update!(attrs)
+      transfer.notes = params["notes"] if params.key?("notes")
+      transfer.save! if transfer.changed?
     end
-    transfer.sync_account_later if entry_change
 
+    transfer.sync_account_later if financial_change
     transfer.reload
-    { success: true, transfer: { id: transfer.id, amount: transfer.amount, date: transfer.date, notes: transfer.notes }, message: "Transfer updated." }
+    {
+      success: true,
+      transfer: { id: transfer.id, amount: transfer.amount, date: transfer.date, notes: transfer.notes },
+      message: "Transfer updated."
+    }
+  rescue Account::MutationAccess::Denied
+    error("not_found", "Writable transfer not found.")
   rescue Date::Error, ArgumentError, Money::ConversionError => e
     error("invalid_parameters", e.message)
   rescue ActiveRecord::RecordInvalid => e
@@ -63,32 +80,39 @@ class Assistant::Function::UpdateTransfer < Assistant::Function
   end
 
   private
-    def converted_amount(transfer, amount, original_amount, date, params)
+    def converted_amount(transfer, amount, original_amount, date, exchange_rate)
       return amount if transfer.from_account.currency == transfer.to_account.currency
 
-      if params.key?("exchange_rate")
-        exchange_rate = BigDecimal(params["exchange_rate"].to_s)
-        raise ArgumentError, "exchange_rate must be a finite number greater than 0." unless exchange_rate.positive? && exchange_rate.finite?
-
+      if exchange_rate
         return Money.new(amount, transfer.from_account.currency)
-          .exchange_to(transfer.to_account.currency, date: date, custom_rate: exchange_rate).amount
+          .exchange_to(transfer.to_account.currency, date:, custom_rate: exchange_rate).amount
       end
 
       original_destination_amount = transfer.inflow_transaction.entry.amount.abs
-      params.key?("amount") ? original_destination_amount * amount / original_amount : original_destination_amount
+      amount == original_amount ? original_destination_amount : original_destination_amount * amount / original_amount
     end
 
-    def find_writable_transfer(id)
+    def positive_decimal(value, name)
+      amount = BigDecimal(value.to_s)
+      raise ArgumentError, "#{name} must be a finite number greater than 0." unless amount.finite? && amount.positive?
+
+      amount
+    end
+
+    def mark_financial_edit!(entry)
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
+    end
+
+    def find_family_transfer(id)
       return nil unless valid_uuid?(id)
 
-      transaction_ids = family.transactions
-        .joins(:entry)
-        .where(entries: { account_id: family.accounts.writable_by(user).visible.select(:id) })
-        .select(:id)
-      Transfer.where(inflow_transaction_id: transaction_ids, outflow_transaction_id: transaction_ids).find_by(id: id)
+      Transfer.for_family(family)
+        .between_accounts(family.accounts.writable_by(user).visible.select(:id))
+        .find_by(id:)
     end
 
     def error(key, message)
-      { success: false, error: key, message: message }
+      { success: false, error: key, message: }
     end
 end

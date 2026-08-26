@@ -37,6 +37,27 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_equal accounts(:depository).subtype, account[:subtype]
   end
 
+  test "returns goal funding status and available allocation for fundable accounts" do
+    account = @family.accounts.create!(owner: @user, name: "Goal funding account", accountable: Depository.new, balance: 5_000, currency: "USD")
+    @family.goals.create!(name: "Whole claim", target_amount: 5_000, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: account)
+    end
+
+    payload = @fn.call[:accounts].find { |item| item[:id] == account.id }
+
+    assert_equal "whole_account_claimed", payload.dig(:goal_funding, :status)
+    assert_equal 5_000, payload.dig(:goal_funding, :free_to_earmark)
+  end
+
+  test "marks non-fundable account types explicitly" do
+    account = @family.accounts.create!(owner: @user, name: "Not goal fundable", accountable: OtherAsset.new, balance: 100, currency: "USD")
+
+    payload = @fn.call[:accounts].find { |item| item[:id] == account.id }
+
+    assert_equal "unsupported_account_type", payload.dig(:goal_funding, :status)
+    assert_nil payload.dig(:goal_funding, :free_to_earmark)
+  end
+
   test "excludes hidden accounts" do
     hidden = @family.accounts.visible.first
     hidden.update!(status: "disabled")

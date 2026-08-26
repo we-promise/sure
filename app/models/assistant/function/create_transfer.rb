@@ -28,7 +28,7 @@ class Assistant::Function::CreateTransfer < Assistant::Function
   end
 
   def call(params = {})
-    accounts = family.accounts.writable_by(user).visible.where(id: [ params["from_account_id"], params["to_account_id"] ]).index_by { |account| account.id.to_s }
+    accounts = family.accounts.visible.writable_by(user).where(id: [ params["from_account_id"], params["to_account_id"] ]).index_by { |account| account.id.to_s }
     source = accounts[params["from_account_id"].to_s]
     destination = accounts[params["to_account_id"].to_s]
     return error("account_not_found", "Both source and destination accounts must be writable.") unless source && destination
@@ -43,12 +43,16 @@ class Assistant::Function::CreateTransfer < Assistant::Function
     exchange_rate = optional_positive_decimal(params["exchange_rate"], "exchange_rate")
     source_fee = non_negative_decimal(params["source_fee_amount"], "source_fee_amount")
     destination_fee = non_negative_decimal(params["destination_fee_amount"], "destination_fee_amount")
-    fingerprint = fingerprint_for(source, destination, amount, date, exchange_rate, source_fee, destination_fee)
-
-    existing = Transfer.find_by(external_id: storage_key)
-    return idempotency_result(existing, fingerprint) if existing
-
+    fingerprint = nil
     transfer = Transfer.transaction do
+      locked = Account::MutationAccess.lock!(accounts: [ source, destination ], user:, level: Account::MutationAccess::WRITE)
+      source = locked.fetch(source.id.to_s)
+      destination = locked.fetch(destination.id.to_s)
+      fingerprint = fingerprint_for(source, destination, amount, date, exchange_rate, source_fee, destination_fee)
+
+      existing = Transfer.find_by(external_id: storage_key)
+      next idempotency_result(existing, fingerprint) if existing
+
       created = Transfer::Creator.new(
         family: family,
         source_account_id: source.id,
@@ -63,8 +67,12 @@ class Assistant::Function::CreateTransfer < Assistant::Function
       created
     end
 
+    return transfer if transfer.is_a?(Hash)
+
     sync_transfer_accounts(transfer)
     { success: true, created: true, transfer: serialize(transfer), message: "Transfer created." }
+  rescue Account::MutationAccess::Denied
+    error("account_not_found", "Both source and destination accounts must be writable.")
   rescue ActiveRecord::RecordNotUnique
     existing = Transfer.find_by(external_id: storage_key)
     return idempotency_result(existing, fingerprint) if existing

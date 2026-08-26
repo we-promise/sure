@@ -93,13 +93,6 @@ class Assistant::Function
       end
     end
 
-    # Still used by update_tag, which identifies tags by name. Tag lists are
-    # small; the large data-driven enums (accounts, categories, merchants)
-    # are gone from schemas in favor of exact-name params.
-    def family_tag_names
-      @family_tag_names ||= family.tags.pluck(:name)
-    end
-
     # Shared page-size clamp for paginated tools declaring a page_size param.
     def resolved_page_size(params)
       return self.class.default_page_size if params["page_size"].blank?

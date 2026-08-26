@@ -41,10 +41,14 @@ class Assistant::Function::GetAccounts < Assistant::Function
     include_series = params["include_balance_series"] == true
     period = series_period(params)
 
+    accounts = accounts_scope(include_series).to_a
+    goal_funding = Goal::FundingAvailability.for(family:, accounts:)
+
     {
       as_of_date: Date.current,
-      accounts: accounts_scope(include_series).map do |account|
+      accounts: accounts.map do |account|
         permission = account.permission_for(user)
+        funding = goal_funding.fetch(account.id.to_s)
         payload = {
           id: account.id,
           name: account.name,
@@ -63,7 +67,11 @@ class Assistant::Function::GetAccounts < Assistant::Function
           start_date: account.start_date,
           is_linked: account.linked?,
           provider: account.provider_name,
-          status: account.status
+          status: account.status,
+          goal_funding: {
+            status: funding.status,
+            free_to_earmark: funding.free_to_earmark
+          }
         }
 
         if include_series

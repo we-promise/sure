@@ -21,13 +21,9 @@ class Assistant::Function::GetTransfers < Assistant::Function
     limit = Integer(params.fetch("limit", DEFAULT_LIMIT), exception: false)
     return { success: false, error: "invalid_parameters", message: "limit must be between 1 and #{MAX_LIMIT}." } unless limit&.between?(1, MAX_LIMIT)
 
-    transaction_ids = family.transactions
-      .joins(:entry)
-      .where(entries: { account_id: user.accessible_accounts.visible.select(:id) })
-      .select(:id)
-
     transfers = Transfer
-      .where(inflow_transaction_id: transaction_ids, outflow_transaction_id: transaction_ids)
+      .for_family(family)
+      .between_accounts(user.accessible_accounts.visible.select(:id))
       .includes(inflow_transaction: { entry: :account }, outflow_transaction: { entry: :account })
       .order(created_at: :desc)
       .limit(limit)

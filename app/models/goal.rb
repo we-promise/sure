@@ -4,16 +4,6 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
-  # States in which a goal has let go of its money: `Goal.pooled_allocations_for`
-  # leaves it out of the backing math, so its links reserve nothing and the
-  # account it pointed at is free again.
-  #
-  # Read by three places that must agree — the shared pool, GoalAccount's
-  # exclusivity check, and the restore guard below. Keeping them on one constant
-  # is what stops the double-counting hole from reopening the day this set
-  # grows: adding a state here makes every one of them release together.
-  RELEASED_STATES = %w[archived].freeze
-
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 

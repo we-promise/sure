@@ -4,7 +4,7 @@ class Assistant::Function::DeleteAccount < Assistant::Function
 
     def description
       <<~INSTRUCTIONS
-        Schedules a writable manual account and its financial data for deletion.
+        Schedules an owned manual account and its financial data for deletion.
         Linked provider accounts must be unlinked in Sure before they can be deleted.
       INSTRUCTIONS
     end
@@ -25,9 +25,14 @@ class Assistant::Function::DeleteAccount < Assistant::Function
 
     result = nil
     Account.transaction do
-      account.lock!
-      unless account.permission_for(user).in?([ :owner, :full_control ]) && !account.pending_deletion?
-        result = error("not_found", "Writable account not found.")
+      begin
+        account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::OWNER).fetch(account.id.to_s)
+      rescue Account::MutationAccess::Denied
+        result = error("not_found", "Owned account not found.")
+        next
+      end
+      if account.pending_deletion?
+        result = error("not_found", "Owned account not found.")
         next
       end
       if account.linked?
@@ -53,7 +58,7 @@ class Assistant::Function::DeleteAccount < Assistant::Function
     def find_account(id)
       return nil unless valid_uuid?(id)
 
-      family.accounts.writable_by(user).where.not(status: :pending_deletion).find_by(id: id)
+      family.accounts.where(owner: user).where.not(status: :pending_deletion).find_by(id: id)
     end
 
     def error(key, message)

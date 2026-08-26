@@ -57,6 +57,29 @@ class Assistant::Function::TransferActionsTest < ActiveSupport::TestCase
     assert Transaction.exists?(inflow_id)
   end
 
+  test "moves fee entries with principal entries when transfer date changes" do
+    created = Assistant::Function::CreateTransfer.new(@user).call(
+      "from_account_id" => @source.id,
+      "to_account_id" => @destination.id,
+      "amount" => 125,
+      "date" => Date.current.iso8601,
+      "source_fee_amount" => 2,
+      "destination_fee_amount" => 3,
+      "external_id" => "transfer-fee-date-#{SecureRandom.uuid}"
+    )
+    transfer = Transfer.find(created.dig(:transfer, :id))
+    transfer.fee_transactions.each { |fee| fee.entry.update_columns(user_modified: false, locked_attributes: {}) }
+    new_date = Date.current - 5.days
+
+    result = Assistant::Function::UpdateTransfer.new(@user).call("id" => transfer.id, "date" => new_date.iso8601)
+
+    assert_equal true, result[:success]
+    all_entries = [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry ] + transfer.fee_transactions.map(&:entry)
+    assert(all_entries.all? { |entry| entry.reload.date == new_date })
+    assert(all_entries.all?(&:user_modified?))
+    assert(all_entries.all? { |entry| entry.locked_attributes.key?("date") })
+  end
+
   test "notes-only update preserves both transfer entry amounts" do
     euro_account = @family.accounts.create!(
       owner: @user,

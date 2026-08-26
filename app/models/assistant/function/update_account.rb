@@ -33,7 +33,7 @@ class Assistant::Function::UpdateAccount < Assistant::Function
     balance_error = nil
 
     Account.transaction do
-      account.lock!
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
 
       if params.key?("balance")
         balance = BigDecimal(params["balance"].to_s)
@@ -65,6 +65,8 @@ class Assistant::Function::UpdateAccount < Assistant::Function
       },
       message: "Account '#{account.name}' updated."
     }
+  rescue Account::MutationAccess::Denied
+    error("not_found", "Writable account not found.")
   rescue ArgumentError
     error("invalid_balance", "balance must be a finite number.")
   rescue ActiveRecord::RecordInvalid => e

@@ -83,6 +83,8 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
     result = nil
     Entry.transaction do
       entry = transaction.entry
+      level = (params.keys & %w[name amount date nature]).any? ? Account::MutationAccess::WRITE : Account::MutationAccess::ANNOTATE
+      Account::MutationAccess.lock!(accounts: [ entry.account ], user:, level:)
       entry.lock!
       transaction.lock!
       entry.association(:entryable).target = transaction
@@ -93,10 +95,6 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       end
       if financial_fields?(params) && (entry.split_parent? || transaction.transfer.present?)
         result = error("complex_transaction", "Split and linked transfer transactions must be edited with their dedicated tools.")
-        next
-      end
-      unless permitted_to_update?(entry.account, params)
-        result = error("not_authorized", "You do not have permission to update this transaction.")
         next
       end
 
@@ -129,6 +127,8 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
       transaction: serialize(transaction.reload),
       message: "Transaction '#{transaction.entry.name}' updated."
     }
+  rescue Account::MutationAccess::Denied
+    error("not_authorized", "You do not have permission to update this transaction.")
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.join("; "))
   end
@@ -141,13 +141,6 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
         .joins(:entry)
         .where(entries: { account_id: user.accessible_accounts.visible.select(:id) })
         .find_by(id: id)
-    end
-
-    def permitted_to_update?(account, params)
-      permission = account.permission_for(user)
-      return true if permission.in?([ :owner, :full_control ])
-
-      permission == :read_write && (params.keys & %w[name amount date nature]).empty?
     end
 
     def entry_attributes(params, entry)

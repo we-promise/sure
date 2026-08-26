@@ -31,6 +31,20 @@ class Assistant::Function::ImportBankStatementAuthorizationTest < ActiveSupport:
     assert_equal "account_not_found", result[:error]
   end
 
+  test "rechecks account permission after extraction before creating the import" do
+    provider = mock
+    provider.expects(:extract_bank_statement).returns(
+      stub(success?: true, data: { transactions: [ { date: Date.current.iso8601, amount: 10, name: "Test" } ], period: nil, account_holder: nil })
+    )
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    Account::MutationAccess.expects(:lock!).raises(Account::MutationAccess::Denied)
+
+    assert_no_difference "Import.count" do
+      result = @function.call("pdf_import_id" => @pdf_import.id, "account_id" => accounts(:depository).id)
+      assert_equal "account_not_found", result[:error]
+    end
+  end
+
   test "rejects users who cannot manage bank statements" do
     AccountStatement.stubs(:statement_manager?).with(@member).returns(false)
 

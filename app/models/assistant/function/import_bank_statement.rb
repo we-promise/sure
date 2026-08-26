@@ -136,21 +136,23 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     # Create a CSV from extracted transactions
     csv_content = generate_csv(result[:transactions])
 
-    # Create a TransactionImport
-    import = family.imports.create!(
-      type: "TransactionImport",
-      account: account,
-      raw_file_str: csv_content,
-      date_col_label: "date",
-      amount_col_label: "amount",
-      name_col_label: "name",
-      category_col_label: "category",
-      notes_col_label: "notes",
-      date_format: "%Y-%m-%d",
-      signage_convention: "inflows_positive"
-    )
-
-    import.generate_rows_from_csv
+    import = Import.transaction do
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
+      created = family.imports.create!(
+        type: "TransactionImport",
+        account: account,
+        raw_file_str: csv_content,
+        date_col_label: "date",
+        amount_col_label: "amount",
+        name_col_label: "name",
+        category_col_label: "category",
+        notes_col_label: "notes",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_positive"
+      )
+      created.generate_rows_from_csv
+      created
+    end
 
     {
       success: true,
@@ -160,6 +162,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       statement_period: result[:period],
       account_holder: result[:account_holder],
       message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. Review and publish when ready."
+    }
+  rescue Account::MutationAccess::Denied
+    {
+      success: false,
+      error: "account_not_found",
+      message: "Account is no longer writable. No import was created.",
+      available_accounts: writable_depository_accounts.map { |available| { id: available.id, name: available.name } }
     }
   rescue Provider::Error, Faraday::Error, Timeout::Error, RuntimeError => e
     Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")

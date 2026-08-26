@@ -81,11 +81,11 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     account = family.accounts.visible.writable_by(user).find_by(id: params["account_id"])
     return error("account_not_found", "Writable account with id '#{params["account_id"]}' not found.") unless account
 
-    fingerprint = fingerprint_for(account, attrs, params)
-
     # Serialize lookup + create across the family's accounts. Replace with a
     # per-key advisory lock only if family-level MCP write contention is measured.
     family.with_lock do
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
+      fingerprint = fingerprint_for(account, attrs, params)
       existing_entry = family.entries.find_by(source: "mcp", external_id: attrs[:external_id])
 
       if existing_entry
@@ -119,6 +119,8 @@ class Assistant::Function::CreateTransaction < Assistant::Function
         end
       end
     end
+  rescue Account::MutationAccess::Denied
+    error("account_not_found", "Writable account with id '#{params["account_id"]}' not found.")
   rescue ActiveRecord::RecordNotUnique
     existing_entry = family&.entries&.find_by(source: "mcp", external_id: attrs[:external_id])
     existing_entry ? existing_response(existing_entry, fingerprint) : raise

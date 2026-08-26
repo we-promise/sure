@@ -83,6 +83,15 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
     assert account.reload.pending_deletion?
   end
 
+  test "does not let a full-control share delete the account itself" do
+    account = accounts(:depository)
+    result = Assistant::Function::DeleteAccount.new(users(:family_member)).call("id" => account.id)
+
+    assert_equal false, result[:success]
+    assert_equal "not_found", result[:error]
+    refute account.reload.pending_deletion?
+  end
+
   test "does not delete linked accounts" do
     account = accounts(:connected)
     function = Assistant::Function::DeleteAccount.new(@user)
