@@ -74,6 +74,100 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert result.passing?
   end
 
+  test "synthetic PDF is valid and contains no customer data" do
+    pdf = @probe.send(:synthetic_pdf)
+    reader = PDF::Reader.new(StringIO.new(pdf))
+
+    assert_equal 1, reader.page_count
+    assert_equal AiHealth::Probe::PDF_TEST_TEXT, reader.pages.first.text
+  end
+
+  test "PDF processing probe exercises the OpenAI vision processor and validates its result" do
+    response = {
+      "choices" => [
+        {
+          "message" => {
+            "content" => {
+              document_type: "other",
+              summary: "Sure synthetic PDF health check.",
+              extracted_data: {}
+            }.to_json
+          }
+        }
+      ]
+    }
+    client = mock("openai_client")
+    client.expects(:chat).returns(response)
+    @probe.stubs(:openai_client).returns(client)
+    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+
+    result = @probe.pdf_processing(
+      provider: :openai,
+      endpoint: "https://api.cloudflare.example.test/v1",
+      access_token: "token",
+      model: "vision-model",
+      openai_compatible: true
+    )
+
+    assert result.passing?
+  end
+
+  test "PDF processing probe fails when the response does not identify the PDF marker" do
+    response = {
+      "choices" => [
+        {
+          "message" => {
+            "content" => { document_type: "other", summary: "A generic document.", extracted_data: {} }.to_json
+          }
+        }
+      ]
+    }
+    client = stub(chat: response)
+    @probe.stubs(:openai_client).returns(client)
+    Provider::Openai::PdfProcessor.any_instance.stubs(:convert_pdf_to_images).returns([ "encoded-page" ])
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.pdf_processing(
+      provider: :openai,
+      endpoint: "https://api.cloudflare.example.test/v1",
+      access_token: "token",
+      model: "vision-model",
+      openai_compatible: true
+    )
+
+    assert result.failing?
+    assert_equal :invalid_response, result.failure_code
+  end
+
+  test "PDF processing probe sends the synthetic PDF as an Anthropic document block" do
+    tool_use = Struct.new(:type, :input).new(
+      :tool_use,
+      {
+        "document_type" => "other",
+        "summary" => "Sure synthetic PDF health check.",
+        "extracted_data" => {}
+      }
+    )
+    response = Struct.new(:content, :usage).new([ tool_use ], nil)
+    messages = mock("anthropic_messages")
+    messages.expects(:create).with do |params|
+      source = params.dig(:messages, 0, :content, 0, :source)
+      source[:media_type] == "application/pdf" &&
+        Base64.strict_decode64(source[:data]) == @probe.send(:synthetic_pdf)
+    end.returns(response)
+    @probe.stubs(:anthropic_client).returns(stub(messages: messages))
+
+    result = @probe.pdf_processing(
+      provider: :anthropic,
+      endpoint: "https://api.anthropic.com",
+      access_token: "token",
+      model: "claude-sonnet-4-6"
+    )
+
+    assert result.passing?
+  end
+
   test "failed LLM probe writes a system-wide debug entry and Rails log without secrets" do
     models = stub(list: { "data" => [ { "id" => "another-model" } ] })
     @probe.stubs(:openai_client).returns(stub(models: models))

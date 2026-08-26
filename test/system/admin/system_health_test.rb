@@ -9,6 +9,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     Setting.stubs(:openai_model).returns(nil)
     stub_healthy_sidekiq
     AiHealth::Probe.any_instance.stubs(:llm).returns(probe_result(:passing))
+    AiHealth::Probe.any_instance.stubs(:pdf_processing).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(probe_result(:passing))
   end
 
@@ -26,6 +27,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
       assert_current_path admin_system_health_path(tab: "ai")
       assert_selector "button[role='tab'][aria-selected='true']", text: "AI status"
       assert_text "Live check passed"
+      assert_text "Synthetic PDF check passed"
       assert_text "Live checks passed"
     end
   end
