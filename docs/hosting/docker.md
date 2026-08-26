@@ -49,12 +49,9 @@ This command will do the following:
 
 At this point, the only file in your current working directory should be `compose.yml`.
 
-### Step 3 (optional): Configure your environment
+### Step 3 (required): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
-
-If you're running the app locally and don't care much about security, you can skip this step.
+`compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
 
 #### Create your environment file
 
@@ -293,6 +290,20 @@ cd ~/docker-apps/sure # Navigate to whatever directory you configured the app in
 docker compose pull # This pulls the "latest" published image from GHCR
 docker compose build # This rebuilds the app with updates
 docker compose up --no-deps -d web worker # This restarts the app using the newest version
+```
+
+### Re-encrypting data after an encryption-related update
+
+If a release note mentions a fix to Active Record encryption configuration, any data written before you updated may still be stored as plaintext even though it's supposed to be encrypted. After updating, run the backfill task once to encrypt it in place:
+
+```bash
+docker compose exec web bin/rails security:backfill_encryption
+```
+
+This is idempotent (safe to re-run) and defaults to a dry run — pass `dry_run=0` to actually write changes:
+
+```bash
+docker compose exec web bin/rails "security:backfill_encryption[100,0]"
 ```
 
 ## How to change which updates your app receives
