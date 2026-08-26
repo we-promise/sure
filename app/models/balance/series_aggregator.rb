@@ -8,6 +8,7 @@ class Balance::SeriesAggregator
     @align_to_common_start = align_to_common_start
   end
 
+  # Combines component series into one currency-normalized balance series.
   def aggregate
     return empty_series if normalized_series_list.empty?
 

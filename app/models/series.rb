@@ -21,10 +21,12 @@ class Series
   )
 
   class << self
+    # Formats a chart date using the current family's configured date format.
     def format_date(date)
       I18n.l(date, format: Current.family&.date_format.presence || :long)
     end
 
+    # Builds a series and its per-point trends from unordered raw values.
     def from_raw_values(values, interval: "1 day")
       raise ArgumentError, "Must be an array of at least 2 values" unless values.size >= 2
       raise ArgumentError, "Must have date and value properties" unless values.all? { |value| value.has_key?(:date) && value.has_key?(:value) }

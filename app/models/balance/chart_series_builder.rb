@@ -32,7 +32,8 @@ class Balance::ChartSeriesBuilder
     raise
   end
 
-  # Unrealized gains series: for each date, sum of (market value - cost basis) across
+  # Builds an unrealized-gains series from the latest holding snapshot per security.
+  # For each date, it sums market value minus cost basis across
   # the latest holding snapshot per security. Holdings without a usable cost basis
   # (nil, or unlocked zero from providers) contribute a gain of 0.
   def gains_series
@@ -68,6 +69,7 @@ class Balance::ChartSeriesBuilder
       @interval || period.interval
     end
 
+    # Builds a balance series for a balance column and its matching start column.
     def build_series_for(column)
       values = query_data.map do |datum|
         # Map column names to their start equivalents
