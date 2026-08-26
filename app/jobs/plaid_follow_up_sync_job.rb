@@ -14,7 +14,6 @@ class PlaidFollowUpSyncJob < ApplicationJob
         )
       else
         message = "Gave up waiting for PlaidItem #{plaid_item.id} sync #{active_sync_id} to finish"
-        Rails.logger.warn("PlaidFollowUpSyncJob - #{message}")
         DebugLogEntry.capture(
           category: "background_jobs",
           level: "warn",
