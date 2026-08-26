@@ -46,8 +46,29 @@
       <p class="<%= "hidden" unless goal.errors[:name].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="nameError"><%= t("goals.form.errors.name_required") %></p>
     </div>
 
+    <%# Only meaningful for a reserve, and only in months mode — the Stimulus
+        controller shows it accordingly. The amount field stays visible either
+        way: in months mode it shows what the job last computed, which is the
+        figure the user is actually saving against — read-only there, because
+        in that mode it is derived rather than chosen. %>
+    <div data-goal-kind-target="modeField" class="hidden">
+      <%= f.select :target_mode,
+                   Goal::TARGET_MODES.map { |mode| [ t("goals.form.target_modes.#{mode}"), mode ] },
+                   { label: t("goals.form.fields.target_mode") },
+                   data: { goal_kind_target: "modeSelect", action: "change->goal-kind#refresh" } %>
+    </div>
+
+    <div data-goal-kind-target="monthsField" class="hidden">
+      <%= f.number_field :target_months,
+                         label: t("goals.form.fields.target_months"),
+                         min: 1,
+                         step: 1,
+                         placeholder: "6" %>
+      <p class="mt-1 text-xs text-secondary"><%= t("goals.form.fields.target_months_hint") %></p>
+    </div>
+
     <div class="grid grid-cols-2 gap-3 items-start">
-      <div>
+      <div data-goal-kind-target="amountField">
         <%= f.money_field :target_amount,
                           label: t("goals.form.fields.target_amount"),
                           hide_currency: true,

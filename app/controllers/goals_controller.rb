@@ -200,11 +200,11 @@ class GoalsController < ApplicationController
     end
 
     def goal_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
     end
 
     def goal_update_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
     end
 
     def lookup_accounts(ids)

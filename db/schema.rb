@@ -885,6 +885,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_25_120000) do
     t.decimal "consumed_amount", precision: 19, scale: 4, default: "0.0", null: false
     t.datetime "completed_at"
     t.string "kind", default: "one_off", null: false
+    t.string "target_mode", default: "fixed", null: false
+    t.integer "target_months"
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
@@ -893,6 +895,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_25_120000) do
     t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying, 'contributions'::character varying]::text[])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying, 'months_of_expenses'::character varying]::text[])", name: "chk_goals_target_mode_enum"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
