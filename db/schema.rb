@@ -2257,11 +2257,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_25_120000) do
   create_table "transfers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "amount", precision: 19, scale: 4, default: "0.0", null: false
     t.datetime "created_at", null: false
+    t.string "external_id"
+    t.string "idempotency_fingerprint"
     t.uuid "inflow_transaction_id", null: false
     t.text "notes"
     t.uuid "outflow_transaction_id", null: false
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["external_id"], name: "index_transfers_on_external_id", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["inflow_transaction_id", "outflow_transaction_id"], name: "idx_on_inflow_transaction_id_outflow_transaction_id_8cd07a28bd", unique: true
     t.index ["inflow_transaction_id"], name: "index_transfers_on_inflow_transaction_id"
     t.index ["outflow_transaction_id"], name: "index_transfers_on_outflow_transaction_id"

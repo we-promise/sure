@@ -8,7 +8,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
       <<~INSTRUCTIONS
         Creates a goal for the user's family.
 
-        Use when the user describes a target they want to save toward — e.g.
+        Use when the user describes a target they want to fund — e.g.
         "vacation in 4 months for $5000", "downpayment for a car next year",
         "build an emergency fund of $10k".
 
@@ -44,7 +44,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         },
         target_amount: {
           type: "number",
-          description: "Total amount to save, in the linked accounts' currency."
+          description: "Total amount to fund, in the linked accounts' currency."
         },
         target_date: {
           type: "string",

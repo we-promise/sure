@@ -53,6 +53,10 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   def call(params = {})
+    unless AccountStatement.statement_manager?(user)
+      return { success: false, error: "forbidden", message: "User is not allowed to manage bank statements." }
+    end
+
     pdf_import = family.imports.find_by(id: params["pdf_import_id"], type: "PdfImport")
 
     unless pdf_import
@@ -78,17 +82,17 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         success: false,
         error: "account_required",
         message: "Please specify which account to import transactions into",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: writable_depository_accounts.map { |account| { id: account.id, name: account.name } }
       }
     end
 
-    account = family.accounts.find_by(id: params["account_id"])
+    account = writable_depository_accounts.find_by(id: params["account_id"])
     unless account
       return {
         success: false,
         error: "account_not_found",
         message: "Account not found",
-        available_accounts: family.accounts.visible.depository.map { |a| { id: a.id, name: a.name } }
+        available_accounts: writable_depository_accounts.map { |account| { id: account.id, name: account.name } }
       }
     end
 
@@ -168,6 +172,10 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   private
+
+    def writable_depository_accounts
+      family.accounts.writable_by(user).visible.where(accountable_type: "Depository")
+    end
 
     def generate_csv(transactions)
       CSV.generate do |csv|

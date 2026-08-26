@@ -44,9 +44,12 @@ class Assistant::Function::GetAccounts < Assistant::Function
     {
       as_of_date: Date.current,
       accounts: accounts_scope(include_series).map do |account|
+        permission = account.permission_for(user)
         payload = {
           id: account.id,
           name: account.name,
+          permission: permission.to_s,
+          writable: permission.in?([ :owner, :full_control ]),
           balance: account.balance,
           currency: account.currency,
           balance_formatted: account.balance_money.format,
