@@ -2,6 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
 
   def show
     @breadcrumbs = [
@@ -151,6 +152,11 @@ class Settings::ProvidersController < ApplicationController
       return if Current.user.admin?
 
       redirect_to root_path, alert: t("settings.providers.not_authorized")
+    end
+
+    def set_encryption_warning_context
+      @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
+        !ActiveRecordEncryptionConfig.explicitly_configured?
     end
 
     # Reload provider configurations after settings update
