@@ -133,7 +133,7 @@ class SimplefinItem::Importer
         # Normalize balances for SimpleFIN liabilities so immediate UI is correct after discovery
         bal   = to_decimal(account_data[:balance])
         avail = to_decimal(account_data[:"available-balance"])
-        observed = bal.nonzero? ? bal : avail
+        observed = account_data[:balance].nil? ? avail : bal
 
         is_linked_liability = [ "CreditCard", "Loan" ].include?(acct.accountable_type)
         inferred = begin
@@ -149,10 +149,17 @@ class SimplefinItem::Importer
           nil
         end
         is_mapper_liability = inferred && [ "CreditCard", "Loan" ].include?(inferred.accountable_type)
-        is_liability = is_linked_liability || is_mapper_liability
+        is_liability =
+          if acct.accountable_type.present?
+            is_linked_liability
+          else
+            is_mapper_liability
+          end
 
         normalized = observed
-        if is_liability
+        if acct.accountable_type == "Loan"
+          normalized = observed.abs
+        elsif is_liability
           # Try the overpayment analyzer first (feature-flagged)
           begin
             result = SimplefinAccount::Liabilities::OverpaymentAnalyzer
@@ -212,8 +219,8 @@ class SimplefinItem::Importer
         end
 
         adapter.update_balance(
-          balance: account_data[:balance],
-          cash_balance: account_data[:"available-balance"],
+          balance: normalized,
+          cash_balance: is_liability ? normalized : account_data[:"available-balance"],
           source: "simplefin"
         )
       end
