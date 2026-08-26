@@ -24,7 +24,9 @@ class Goals::ProgressRingComponent < ApplicationComponent
 
   def percent_text_class
     case goal.status
-    when :reached then "text-success"
+    # `funded` is a reserve sitting at its floor — the same "nothing to do
+    # here" as a one-off that reached its target, and it should read as such.
+    when :reached, :funded then "text-success"
     else "text-primary"
     end
   end

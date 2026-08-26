@@ -1,6 +1,10 @@
 <%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: []) %>
 
-<div data-controller="goal-form"
+<%# goal-kind lives on this wrapper, not on the kind selector: its
+     dateField target is a sibling of the radios, and a controller only sees
+     targets inside its own element. Scoped to the selector, dateFieldTargets
+     came back empty and picking "Reserve to maintain" never hid the date. %>
+<div data-controller="goal-form goal-kind"
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
@@ -12,6 +16,24 @@
                        data: { action: "submit->goal-form#validateOnSubmit" } do |f| %>
     <div class="flex justify-center">
       <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
+    </div>
+
+    <%# Kind first: it changes what the rest of the form means. A reserve has
+        no deadline — target_date is hidden rather than disabled so it cannot
+        be submitted with a value that would then drive a pace the goal does
+        not have. %>
+    <div class="grid grid-cols-2 gap-2">
+      <% Goal::KINDS.each do |kind| %>
+        <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
+          <%= f.radio_button :kind, kind,
+                             class: "radio mt-0.5 shrink-0",
+                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
+          <span class="min-w-0">
+            <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
+            <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
+          </span>
+        </label>
+      <% end %>
     </div>
 
     <div>
@@ -33,9 +55,11 @@
                           amount_data: { goal_form_target: "amountInput", action: "input->goal-form#suggestedChanged" } %>
         <p class="<%= "hidden" unless goal.errors[:target_amount].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="amountError"><%= t("goals.form.errors.amount_required") %></p>
       </div>
-      <%= f.date_field :target_date,
-                       label: t("goals.form.fields.target_date"),
-                       data: { goal_form_target: "dateInput", action: "input->goal-form#suggestedChanged" } %>
+      <div data-goal-kind-target="dateField">
+        <%= f.date_field :target_date,
+                         label: t("goals.form.fields.target_date"),
+                         data: { goal_form_target: "dateInput", action: "input->goal-form#suggestedChanged" } %>
+      </div>
     </div>
 
     <p class="text-xs text-secondary italic tabular-nums privacy-sensitive hidden" data-goal-form-target="suggested"></p>

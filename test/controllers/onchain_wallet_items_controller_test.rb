@@ -240,7 +240,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "link_wallet refuses an address the family already tracks" do
     item = create_onchain_wallet_item(family: @family)
-    create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
     stub_wallet_with_token
 
     assert_no_difference "OnchainWalletAccount.count" do
@@ -257,7 +257,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "preview_wallet refuses an address the family already tracks" do
     item = create_onchain_wallet_item(family: @family)
-    create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
 
     post preview_wallet_onchain_wallet_items_url, params: {
       address: OnchainTestHelper::FAKE_ADDRESS,
@@ -480,8 +480,14 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "unticking one asset removes only it" do
     item = create_onchain_wallet_item(family: @family)
+    # Linked, because that is what a tracked asset actually is. Left unlinked
+    # these are orphan rows, and revising now rebuilds those into real ones —
+    # so the surviving row would be a new one and the assertion below would be
+    # measuring the repair rather than the removal.
     native = create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(native)
     token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    link_onchain_wallet_account!(token_asset)
     stub_wallet_with_token
 
     post update_tokens_onchain_wallet_item_url(item), params: {
@@ -550,8 +556,8 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "change_address refuses an address already tracked elsewhere" do
     item = create_onchain_wallet_item(family: @family)
-    create_onchain_wallet_account(item: item)
-    create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT))
 
     patch change_address_onchain_wallet_item_url(item), params: {
       chain: OnchainTestHelper::FAKE_CHAIN,
@@ -561,6 +567,25 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_match I18n.t("onchain_wallet_items.change_address.errors.already_linked"), response.body
+  end
+
+  test "change_address moves onto an address whose leftover row tracks nothing" do
+    item = create_onchain_wallet_item(family: @family)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
+    leftover = create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
+
+    patch change_address_onchain_wallet_item_url(item), params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      new_address: OnchainTestHelper::FAKE_ADDRESS_ALT
+    }
+
+    # The destination looks taken but is not: the leftover holds the slot in the
+    # unique index without tracking anything, and colliding with it would put a
+    # database error in front of the user.
+    assert_redirected_to manage_onchain_wallet_item_path(item)
+    assert_not OnchainWalletAccount.exists?(leftover.id)
+    assert_equal OnchainTestHelper::FAKE_ADDRESS_ALT, item.onchain_wallet_accounts.sole.wallet_address
   end
 
   test "disconnect_wallet stops tracking every asset at that address only" do
