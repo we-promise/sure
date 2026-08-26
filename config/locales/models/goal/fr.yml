@@ -17,6 +17,7 @@ fr:
           attributes:
             base:
               at_least_one_linked_account_required: Sélectionnez au moins un compte pour financer cet objectif.
+              whole_account_conflict_on_restore: "Impossible de restaurer cet objectif : « %{account_name} » est désormais entièrement affecté à « %{goal_name} ». Indiquez d'abord un montant sur l'un des deux."
             currency:
               locked_after_linked: Impossible de modifier la devise après que l'objectif a été lié à des comptes.
             linked_accounts:
