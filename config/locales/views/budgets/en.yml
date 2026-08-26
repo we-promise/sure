@@ -82,6 +82,24 @@ en:
       shared_title: Leave empty to share parent's budget
     confirm_button:
       confirm: "Confirm"
+    move:
+      button_title: Move money from this category
+      cancel: Cancel
+      dialog_title: Move money
+      no_destination: This is the only envelope money can move between right now — a category cannot send to its own parent or child.
+      submit: Move
+      amount_label: Amount
+      available: "%{amount} available"
+      from_label: From
+      to_label: To
+      success: Money moved.
+      errors:
+        different_budgets: Both categories must belong to the same budget.
+        insufficient_funds: That is more than this category has allocated.
+        non_positive_amount: Enter an amount greater than zero.
+        parent_child: Money cannot move between a category and its own subcategory — adjust the subcategory directly.
+        same_category: Pick a different category to move the money to.
+        uncategorized: Uncategorized is not a real envelope, so money cannot move in or out of it.
     no_categories:
       oops: "Oops!"
       no_categories_message: "You have not created or assigned any expense categories to your transactions yet."

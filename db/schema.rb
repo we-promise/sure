@@ -372,6 +372,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_23_000000) do
     t.index ["budget_id", "category_id"], name: "index_budget_categories_on_budget_id_and_category_id", unique: true
     t.index ["budget_id"], name: "index_budget_categories_on_budget_id"
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
+    t.check_constraint "rolled_over_amount >= 0::numeric", name: "chk_budget_categories_rolled_over_amount_non_negative"
   end
 
   create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

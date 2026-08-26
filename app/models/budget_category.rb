@@ -36,6 +36,97 @@ class BudgetCategory < ApplicationRecord
         category: nil,
       )
     end
+
+    # Moves `amount` of allocation from one envelope to another in a single
+    # step — YNAB's "roll with the punches". Deliberately keeps no history:
+    # v1 stores the resulting allocations, nothing else.
+    #
+    # ⚠️ Does NOT recompute the rollover chain, on purpose. The caller must
+    # run Budget::RolloverCalculator AFTER this returns, never inside it:
+    # the calculator takes a transaction-scoped advisory lock, and taking it
+    # while these row locks are held inverts the lock order every other
+    # caller uses (update_budgeted_spending! commits before the calculator
+    # runs). Two concurrent moves would then deadlock — one holding rows and
+    # waiting for the advisory lock, the other holding the advisory lock and
+    # waiting for those rows.
+    def move_allocation!(from:, to:, amount:)
+      amount = amount.to_d
+      validate_move!(from: from, to: to, amount: amount)
+
+      transaction do
+        # Deterministic lock order — the critical detail of this operation.
+        # update_budgeted_spending! locks its own row and, for a
+        # subcategory, its parent. Two simultaneous moves in opposite
+        # directions would each hold what the other wants, so every row this
+        # touches is locked up front, by ascending id.
+        where(id: lock_ids_for_move(from, to)).order(:id).lock.to_a
+
+        from.reload
+        to.reload
+
+        # Re-checked under the lock: the balance read before it may be stale.
+        raise InvalidMove.new(:insufficient_funds) if amount > movable_from(from)
+
+        from.update_budgeted_spending!((from[:budgeted_spending] || 0) - amount)
+        to.update_budgeted_spending!((to[:budgeted_spending] || 0) + amount)
+      end
+
+      [ from.reload, to.reload ]
+    end
+
+    private
+      def validate_move!(from:, to:, amount:)
+        raise InvalidMove.new(:non_positive_amount) unless amount.positive?
+        # Checked before the budget comparison: "Uncategorized" is synthesized
+        # on read and carries no budget_id, so it would otherwise be reported
+        # as belonging to a different budget — true, but not the reason.
+        raise InvalidMove.new(:uncategorized) if [ from, to ].any? { |bc| bc[:category_id].nil? || !bc.persisted? }
+        raise InvalidMove.new(:different_budgets) unless from.budget_id == to.budget_id
+        raise InvalidMove.new(:same_category) if from.id == to.id
+        raise InvalidMove.new(:parent_child) if direct_lineage?(from, to)
+        raise InvalidMove.new(:insufficient_funds) if amount > movable_from(from)
+      end
+
+      # What a category can actually send away. For a leaf that is its whole
+      # allocation; for a parent it is only its own reserve, because
+      # `budgeted_spending` on a parent ALREADY CONTAINS its individually
+      # funded subcategories' allocations (sync_parent_budgeted_spending!
+      # keeps it at children + reserve).
+      #
+      # Comparing against the gross figure let a move spend money that is
+      # already ring-fenced by a child, leaving the parent below the sum of
+      # its children — and the next edit to any child rebuilt the parent back
+      # up, silently undoing the move. The money appeared to teleport back.
+      def movable_from(budget_category)
+        gross = budget_category[:budgeted_spending] || 0
+        return gross if budget_category.subcategory?
+
+        ring_fenced = budget_category.subcategories
+                                     .reject(&:inherits_parent_budget?)
+                                     .sum { |child| child[:budgeted_spending] || 0 }
+
+        [ gross - ring_fenced, 0 ].max
+      end
+
+      # sync_parent_budgeted_spending! rebuilds a parent from the sum of its
+      # children plus its own reserve, so money moved between a parent and
+      # its direct child would be re-derived away and the "sum is conserved"
+      # invariant would not hold. Refuse the move rather than special-case it.
+      def direct_lineage?(from, to)
+        from[:category_id] == to.category.parent_id || to[:category_id] == from.category.parent_id
+      end
+
+      # from, to, and whichever parents update_budgeted_spending! will touch.
+      def lock_ids_for_move(from, to)
+        parent_category_ids = [ from, to ].filter_map { |bc| bc.category.parent_id }
+        parent_ids = if parent_category_ids.any?
+          from.budget.budget_categories.where(category_id: parent_category_ids).pluck(:id)
+        else
+          []
+        end
+
+        ([ from.id, to.id ] + parent_ids).uniq
+      end
   end
 
   def initialized?
@@ -54,6 +145,27 @@ class BudgetCategory < ApplicationRecord
     budget.budget_category_actual_spending(self)
   end
 
+  # The toggle is a standing choice about the envelope, and the comment on
+  # Budget#inherited_rollover_flags already says so: "turning it off on a given
+  # month still overrides it from there on."
+  #
+  # Inheritance at row creation only covers months that do not exist yet. A
+  # user who opened March, then went back to January and switched rollover on,
+  # left March sitting at `false` — created before the choice was made, so it
+  # never had one to inherit — and the chain died there. Applying the choice
+  # forward closes that hole without a tri-state column: later months carry the
+  # most recent decision, which is the one the user just made.
+  def propagate_rollover_choice_forward!
+    later = BudgetCategory
+      .joins(:budget)
+      .where(category_id: category_id)
+      .where(budgets: { family_id: budget.family_id, user_id: budget.user_id })
+      .where("budgets.start_date > ?", budget.start_date)
+      .where.not(rollover_enabled: rollover_enabled)
+
+    later.update_all(rollover_enabled: rollover_enabled, updated_at: Time.current)
+  end
+
   def update_budgeted_spending!(new_budgeted_spending)
     self.class.transaction do
       lock!
@@ -62,6 +174,18 @@ class BudgetCategory < ApplicationRecord
       update!(budgeted_spending: new_budgeted_spending)
 
       sync_parent_budgeted_spending!(previous_budgeted_spending:) if subcategory?
+    end
+  end
+
+  # Raised by move_allocation! when the requested move is not one the budget
+  # can represent. Carries an i18n key rather than a sentence so the
+  # controller renders it localized.
+  class InvalidMove < StandardError
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super(I18n.t("budget_categories.move.errors.#{reason}"))
     end
   end
 
