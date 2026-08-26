@@ -104,6 +104,12 @@ class OnchainWalletItem < ApplicationRecord
     raise ActiveRecord::RecordNotFound, "No tracked assets at that address" if rows.empty?
 
     transaction do
+      # The destination can still hold rows left behind by deleted accounts.
+      # They track nothing, yet they hold the slot in the partial unique index
+      # that the rows moving in need, so they make way. A destination that is
+      # genuinely tracked never reaches here — the caller refuses it.
+      accounts_for_wallet(chain, to).unlinked.destroy_all
+
       rows.each do |row|
         previous_display_name = row.display_name
         # The digest is cleared so the next sync reprocesses against the new

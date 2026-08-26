@@ -31,6 +31,12 @@ class Goal < ApplicationRecord
   validate :linked_accounts_must_belong_to_family
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
+  validate :kind_locked_while_released
+  # A reserve has no deadline. Normalising here rather than rejecting: the form
+  # hides the field for a reserve, so a date can only arrive from a conversion
+  # or a crafted request — refusing would show an error about a field the user
+  # cannot see.
+  before_validation :clear_target_date_for_maintained
 
   # Autosave validates each link separately, so each would otherwise take its
   # own account lock in association order. Two goals saving links on the same
@@ -72,16 +78,23 @@ class Goal < ApplicationRecord
   RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
-  # floor to hold (see Lot B3, which gives this column its behavior). Nothing
-  # branches on it yet beyond these predicates — the column exists now so the
-  # lifecycle written here does not have to be retrofitted later.
+  # floor to hold — an emergency fund is not an achievement to file away, it
+  # is a level to keep. The two differ in what 100% means, whether `complete`
+  # is even allowed, and how they sort.
   KINDS = %w[one_off maintained].freeze
 
   validates :kind, inclusion: { in: KINDS }
 
-  # Display order for active (non-completed/non-archived) goals: behind
-  # first, then on-track, then open-ended. Paused sorts after all of these.
-  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, on_track: 1, no_target_date: 2 }.freeze
+  # Display order for active (non-completed/non-archived) goals: whatever
+  # needs money first, then on-track, then open-ended, then the reserves that
+  # are already whole. Paused sorts after all of these.
+  #
+  # `depleted` shares rank 0 with `behind`: a reserve below its floor is the
+  # same kind of "this needs attention" as a goal off pace. `active_display_sort`
+  # falls back to 4 for anything unranked, so omitting these two would bury a
+  # drained emergency fund at the very bottom of the list — the exact opposite
+  # of what it means.
+  ACTIVE_DISPLAY_STATUS_RANK = { behind: 0, depleted: 0, on_track: 1, no_target_date: 2, funded: 3 }.freeze
 
   scope :alphabetically, -> { order(Arel.sql("LOWER(name) ASC")) }
   scope :active_first, lambda {
@@ -231,8 +244,17 @@ class Goal < ApplicationRecord
 
   # Display order shared by the goals index and the Plan hub: behind first,
   # then on-track, then open-ended, paused last, name as tie-breaker.
+  # Paused sorts last, behind every ranked status and the unranked fallback.
+  # It used to share rank 3 with :funded, so a paused goal whose name sorted
+  # first jumped ahead of a reserve that was whole — the list claiming the
+  # paused one wanted attention more.
+  PAUSED_DISPLAY_RANK = 5
+
   def self.active_display_sort(goals)
-    goals.sort_by { |goal| [ goal.paused? ? 3 : ACTIVE_DISPLAY_STATUS_RANK.fetch(goal.status, 4), goal.name.downcase ] }
+    goals.sort_by do |goal|
+      rank = goal.paused? ? PAUSED_DISPLAY_RANK : ACTIVE_DISPLAY_STATUS_RANK.fetch(goal.status, 4)
+      [ rank, goal.name.downcase ]
+    end
   end
 
   # Active goals ready to render outside the goals index (e.g. the Plan hub).
@@ -273,8 +295,11 @@ class Goal < ApplicationRecord
       transitions from: :paused, to: :active
     end
 
+    # Guarded to one_off: completing releases the earmark, and releasing the
+    # money is the opposite of what a reserve is for. A maintained goal at
+    # 100% is simply whole; there is nothing to close.
     event :complete do
-      transitions from: [ :active, :paused ], to: :completed
+      transitions from: [ :active, :paused ], to: :completed, guard: :one_off?
     end
 
     event :archive do
@@ -523,6 +548,10 @@ class Goal < ApplicationRecord
   def status
     return @status if defined?(@status)
 
+    # A reserve is never "reached": sitting at its floor is its steady state,
+    # not an achievement to file away. It is either whole or short.
+    return @status = (remaining_amount.to_d.zero? ? :funded : :depleted) if maintained?
+
     @status = if completed? || remaining_amount.to_d.zero?
       :reached
     elsif target_date.nil?
@@ -538,8 +567,13 @@ class Goal < ApplicationRecord
   # are excluded even when their raw status computes :behind — pausing stops
   # the pace clock on purpose, so surfacing them as behind (or summing them
   # into "needs this month") would nag the user about a goal they shelved.
+  #
+  # Maintained reserves are excluded for a different reason: they have no
+  # pace at all. monthly_target_amount and pace both derive from target_date,
+  # which a reserve does not have, so "save X/month to catch up" would be
+  # advice about a deadline that does not exist.
   def behind_pace?
-    !paused? && status == :behind
+    !paused? && !maintained? && status == :behind
   end
 
   # Date of the most-recently-matched pledge's underlying entry. Used by the
@@ -646,6 +680,11 @@ class Goal < ApplicationRecord
       end
     when :no_target_date
       I18n.t("goals.show.status_callout.no_target_date")
+    when :depleted
+      # A drained reserve had no callout at all: the one status that most
+      # deserves a line of explanation was the one that said nothing.
+      I18n.t("goals.show.status_callout.depleted",
+             amount: remaining_amount_money.format(precision: 0))
     end
   end
 
@@ -683,11 +722,25 @@ class Goal < ApplicationRecord
   # Single source of truth for the projection-chart subtitle / chart-aria
   # description. Used to live inline in show.html.erb as a 17-line if/elsif
   # chain. Returns an `html_safe` string when it picks the `_html` variant.
+  # The two statuses that mean "this one wants looking at": a goal off its
+  # pace, and a reserve below its floor. Named once because three places were
+  # spelling the pair out and one of them had already fallen behind.
+  def needs_attention?
+    status.in?(%i[behind depleted])
+  end
+
   def projection_summary
     return @projection_summary if defined?(@projection_summary)
 
     @projection_summary =
-      if completed? || progress_percent >= 100
+      if maintained?
+        # A reserve holds a level; there is no finish line to project toward
+        # and no target to have "hit". It never reaches the projection panel
+        # today — the shortfall and celebration panels catch it first — but
+        # this method reads as the single source of truth for that subtitle,
+        # so it should not hand a caller a one-off's wording.
+        I18n.t("goals.show.projection.reserve")
+      elsif completed? || progress_percent >= 100
         I18n.t("goals.show.projection.reached")
       elsif target_date.nil?
         I18n.t("goals.show.projection.no_target_date")
@@ -915,6 +968,27 @@ class Goal < ApplicationRecord
       return if foreign.empty?
 
       errors.add(:linked_accounts, :must_belong_to_family)
+    end
+
+    # Switching a released goal to `maintained` would leave a reserve sitting in
+    # `completed` — a state that has HANDED BACK its earmark — while the show
+    # page promises its money stays reserved. The conversion has to go through
+    # an active state, where `complete` is already refused for a reserve.
+    def kind_locked_while_released
+      return unless persisted? && will_save_change_to_kind?
+      # The PERSISTED state, not the one in memory. A single update can set
+      # `state: "active"` alongside the new kind, and reading the attribute
+      # would see the goal as already reopened and wave it through — while the
+      # direct write skipped the `reopen` transition that clears
+      # `completed_amount`, leaving an active reserve reporting a frozen
+      # snapshot forever. Reopening has to be its own gesture.
+      return unless state_in_database.in?(RELEASED_STATES)
+
+      errors.add(:kind, :locked_while_released)
+    end
+
+    def clear_target_date_for_maintained
+      self.target_date = nil if maintained?
     end
 
     def currency_locked_once_linked

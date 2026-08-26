@@ -153,6 +153,39 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.read?
   end
 
+  # The title is built from I18n and the generator's own data, not written by
+  # the model. A goal or category renamed since the insight was stored left it
+  # naming something that no longer exists, for the rest of the month.
+  test "a renamed subject refreshes the title without resurfacing the insight" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    original_body = insight.body
+    insight.mark_read!
+
+    stub_generated([ generated_insight(title: "Idle cash in Holiday Fund") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal "Idle cash in Holiday Fund", insight.title
+    assert_equal original_body, insight.body, "a rename is not worth an LLM rewrite"
+    assert insight.read?, "a rename is not a reason to nag the user again"
+  end
+  test "a reactivated insight also picks up a renamed subject" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.update!(status: "expired")
+
+    stub_generated([ generated_insight(title: "Idle cash in Holiday Fund") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert insight.active?
+    assert_equal "Idle cash in Holiday Fund", insight.title
+  end
   test "acknowledged insight stays acknowledged when numbers are unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
@@ -256,11 +289,11 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     # display_balance changes only the formatted facts, leaving metadata (the
     # material-change signal) untouched — mirrors a balance drifting slightly
     # between runs without crossing a bucket boundary.
-    def generated_insight(balance: 5000.0, display_balance: nil)
+    def generated_insight(balance: 5000.0, display_balance: nil, title: "Idle cash in Test Checking")
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
         priority: "low",
-        title: "Idle cash in Test Checking",
+        title: title,
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
         metadata: { account_id: "test-account", balance: balance },
