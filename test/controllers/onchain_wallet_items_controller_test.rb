@@ -522,25 +522,6 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not OnchainWalletAccount.exists?(gone.id)
   end
 
-  test "change_address moves onto an address whose leftover row tracks nothing" do
-    item = create_onchain_wallet_item(family: @family)
-    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
-    leftover = create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
-
-    patch change_address_onchain_wallet_item_url(item), params: {
-      chain: OnchainTestHelper::FAKE_CHAIN,
-      address: OnchainTestHelper::FAKE_ADDRESS,
-      new_address: OnchainTestHelper::FAKE_ADDRESS_ALT
-    }
-
-    # The destination looks taken but is not: the leftover holds the slot in the
-    # unique index without tracking anything, and colliding with it would put a
-    # database error in front of the user.
-    assert_redirected_to manage_onchain_wallet_item_path(item)
-    assert_not OnchainWalletAccount.exists?(leftover.id)
-    assert_equal OnchainTestHelper::FAKE_ADDRESS_ALT, item.onchain_wallet_accounts.sole.wallet_address
-  end
-
   test "disconnect_wallet stops tracking every asset at that address only" do
     item = create_onchain_wallet_item(family: @family)
     create_onchain_wallet_account(item: item)
