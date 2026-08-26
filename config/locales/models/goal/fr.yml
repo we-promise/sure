@@ -25,6 +25,11 @@ fr:
               below_consumed: Impossible de fixer une cible inférieure à ce que cet objectif a déjà enregistré comme dépensé.
             currency:
               locked_after_linked: Impossible de modifier la devise après que l'objectif a été lié à des comptes.
+            target_mode:
+              months_requires_maintained: Seule une réserve à maintenir peut avoir une cible exprimée en mois de dépenses.
+            target_months:
+              blank: Indiquez combien de mois de dépenses cette réserve doit couvrir.
+              only_with_months_mode: Les mois de dépenses ne s'appliquent que si la cible est exprimée ainsi.
             linked_accounts:
               currency_mismatch: Tous les comptes liés doivent partager la même devise.
               must_be_fundable: Tous les comptes liés doivent être des comptes de trésorerie ou d'investissement.

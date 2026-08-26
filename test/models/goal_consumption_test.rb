@@ -204,6 +204,29 @@ class GoalConsumptionTest < ActiveSupport::TestCase
     assert_equal 50, goal.progress_percent, "and progress is preserved, which is the point"
   end
 
+  # Restarting a goal drops what it spent under its previous life, along with
+  # the frozen figure. A goal archived straight from active never froze one —
+  # unarchiving it is picking the same goal back up, not restarting it.
+  test "unarchiving a goal that never completed keeps what it spent" do
+    goal = goal_with(earmark: 5_000, balance: 5_000, target: 5_000)
+    goal.consume!(1_000)
+    goal.archive!
+
+    goal.unarchive!
+
+    assert_equal 1_000, goal.reload.consumed_amount
+  end
+
+  test "reopening a completed goal starts it over" do
+    goal = goal_with(earmark: 5_000, balance: 5_000, target: 5_000)
+    goal.consume!(1_000)
+    goal.complete!
+
+    goal.reopen!
+
+    assert_equal 0, goal.reload.consumed_amount
+  end
+
   private
     def fresh_account(balance)
       Account.create!(

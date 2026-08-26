@@ -141,6 +141,22 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 500, link.reload.allocated_amount
   end
 
+  # The outflow panel is the third door onto a private backing account: it
+  # would list its transactions, naming the account, its spending and roughly
+  # its size to someone with no access to it.
+  test "the outflow panel does not surface a spend on an account the viewer cannot see" do
+    private_account = private_linked_account
+    private_account.entries.create!(
+      name: "Private Spend", date: Date.current, amount: 400,
+      currency: private_account.currency, entryable: Transaction.new
+    )
+
+    get goal_url(@goal)
+
+    assert_response :success
+    assert_no_match(/Private Spend/, response.body)
+  end
+
   test "create rejects a same-family account not shared with the current user" do
     private_account = Account.create!(
       family: @user.family,
@@ -523,6 +539,57 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{Regexp.escape(I18n.t("goals.show.empty.heading"))}/, response.body)
   end
 
+  # --- Lot B6: earmark headroom in the form ---
+
+  test "the new form renders each account's balance and what other goals hold" do
+    account = unclaimed_account("Headroom Pot")
+    @user.family.goals.create!(name: "Neighbour", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 400)
+    end
+
+    get new_goal_url
+
+    assert_response :success
+    assert_select "[data-balance][data-earmarked-by-others]", minimum: 1
+    assert_match 'data-earmarked-by-others="400.0"', response.body
+  end
+
+  # The N+1 this lot exists to avoid: the form lists every fundable account,
+  # so reading the pool per account would scale with the account list.
+  test "the form reads the shared pool exactly once, however many accounts" do
+    3.times { |i| unclaimed_account("Pool Pot #{i}") }
+
+    assert_equal 1, count_pool_queries { get new_goal_url }
+    assert_response :success
+  end
+
+  # The acceptance criterion of this lot: reopening a goal must not count its
+  # own earmark, or re-entering the same figure would trip a message about a
+  # setup the user has not touched.
+  test "the edit form does not count the edited goal's own earmark" do
+    account = unclaimed_account("Reopen Pot")
+    goal = @user.family.goals.create!(name: "Reopened", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    get edit_goal_url(goal)
+
+    assert_response :success
+    assert_match 'data-earmarked-by-others="0.0"', response.body
+    assert_no_match(/data-earmarked-by-others="5000/, response.body)
+  end
+
+  # The error paths re-render the same form, so they need the pool too —
+  # without it the row helper is handed nil and the render blows up.
+  test "the pool is available again when create re-renders after an error" do
+    unclaimed_account("Error Pot")
+
+    post goals_url, params: { goal: { name: "No accounts", target_amount: "1000", color: "#4da568" } }
+
+    assert_response :unprocessable_entity
+    assert_select "[data-balance][data-earmarked-by-others]", minimum: 1
+  end
+
   # --- Lot B4: recording a partial spend ---
 
   test "recording a spend keeps the goal at full progress and frees the earmark" do
@@ -575,6 +642,58 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, goal.reload.consumed_amount
   end
 
+  # --- Lot B5: attributing an outflow the app spotted ---
+
+  test "the goal page offers an outflow nothing has claimed" do
+    goal, entry = goal_with_outflow
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.unattributed_outflows.heading"), response.body
+    assert_match entry.name, response.body
+  end
+
+  test "attributing an outflow takes its amount and stops offering it" do
+    goal, entry = goal_with_outflow
+
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+
+    assert_redirected_to goal_url(goal)
+    assert_equal entry.amount.to_d, goal.reload.consumed_amount
+
+    get goal_url(goal)
+    assert_no_match I18n.t("goals.unattributed_outflows.heading"), response.body
+  end
+
+  # The stamp is what makes this idempotent: replaying the same attribution
+  # must not credit the goal twice for one spend.
+  test "the same outflow cannot be attributed twice" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    recorded = goal.reload.consumed_amount
+
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+
+    assert_equal recorded, goal.reload.consumed_amount
+    assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
+  end
+
+  private
+    # SQL the pooled-allocation read issues, and nothing else: goal_accounts
+    # joined to goals.
+    def count_pool_queries
+      count = 0
+      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        count += 1 if sql.include?("FROM \"goal_accounts\"") && sql.include?("INNER JOIN \"goals\"")
+      end
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
+
   private
 
     # A private account of another member, linked to the goal under test.
@@ -589,6 +708,21 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       )
       @goal.goal_accounts.create!(account: account, allocated_amount: 500)
       account
+    end
+
+    def goal_with_outflow
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Trip Pot #{SecureRandom.hex(4)}", currency: @user.family.currency, balance: 5_000
+      )
+      goal = @user.family.goals.create!(
+        name: "Trip", target_amount: 5_000, currency: @user.family.currency
+      ) { |g| g.goal_accounts.build(account: account, allocated_amount: 5_000) }
+      entry = account.entries.create!(
+        name: "Flights", date: Date.current, amount: 1_200,
+        currency: account.currency, entryable: Transaction.new
+      )
+      [ goal, entry ]
     end
     # An active one_off goal sitting exactly at its target, on an account no
     # other goal claims.

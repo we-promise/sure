@@ -113,7 +113,13 @@ en:
         account_not_linked: That account does not fund this goal.
         not_active: This goal is no longer active, so nothing can be recorded against it.
         exceeds_earmark: That is more than this account has earmarked for the goal.
+        transaction_already_claimed: That outflow has already been attributed.
+        transaction_not_found: That outflow is no longer available to attribute.
         no_linked_account: This goal has no funding account left.
+    unattributed_outflows:
+      heading: Money left these accounts
+      body: If any of this was spent on %{goal}, say so and it stops counting against the target.
+      attribute: This was it
     show:
       edit: Edit
       consume: I used some of this money
@@ -285,6 +291,9 @@ en:
         one: Last pledge matched 1 day ago
         other: "Last pledge matched %{count} days ago"
     form:
+      target_modes:
+        fixed: A fixed amount
+        months_of_expenses: A number of months of expenses
       kinds:
         one_off:
           hint: Save toward something, then close it when you spend it.
@@ -300,7 +309,14 @@ en:
         name_required: Give your goal a name.
         amount_required: Set a target above zero.
         accounts_required: Pick at least one funding account.
+      earmark:
+        headroom: "{left} left to earmark on this account."
+        prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
+        whole_balance: This account will fund whatever is left after the other earmarks.
       fields:
+        target_mode: How the floor is set
+        target_months: Months of expenses
+        target_months_hint: Recomputed on the 1st of each month from your median monthly spending.
         name: Name
         name_placeholder: Emergency fund, House down payment…
         target_amount: Target amount
