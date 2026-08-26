@@ -21,7 +21,9 @@
         <div class="min-w-0">
           <p class="text-sm text-primary truncate"><%= entry.name %></p>
           <p class="text-xs text-secondary tabular-nums privacy-sensitive">
-            <%= l(entry.date, format: :long) %> · <%= entry.account.name %>
+            <%= l(entry.date, format: :long) %>
+            <span aria-hidden="true"><%= t("shared.dot_separator") %></span>
+            <%= entry.account.name %>
           </p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
