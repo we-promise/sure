@@ -133,7 +133,7 @@
               variant: "outline",
               full_width: true,
               href: transactions_path(q: {
-                categories: [@budget_category.name],
+                categories: [@budget_category.category.filter_value],
                 start_date: @budget.start_date,
                 end_date: @budget.end_date
               }),

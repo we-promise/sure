@@ -48,6 +48,10 @@
     <div class="flex items-center gap-2">
       <p><%= Tag.untagged_name %></p>
     </div>
+  <% elsif param_key == "categories" && param_value == Category::UNCATEGORIZED_FILTER_VALUE %>
+    <div class="flex items-center gap-2">
+      <p><%= Category.uncategorized_name %></p>
+    </div>
   <% else %>
     <div class="flex items-center gap-2">
       <p><%= param_value %></p>

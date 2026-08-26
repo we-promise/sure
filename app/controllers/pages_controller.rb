@@ -425,6 +425,7 @@ class PagesController < ApplicationController
           {
             id: ct.category.id,
             name: ct.category.name,
+            filter_value: ct.category.filter_value,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
             percentage: ct.weight.round(1),

@@ -91,6 +91,18 @@ class CategoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects the reserved Uncategorized filter sentinel as a name" do
+    category = Category.new(name: Category::UNCATEGORIZED_FILTER_VALUE, color: "#123456", lucide_icon: "folder", family: @family)
+
+    assert_not category.valid?
+    assert_includes category.errors[:name], "is reserved"
+  end
+
+  test "filter_value returns the sentinel for the synthetic Uncategorized category and the name for real categories" do
+    assert_equal Category::UNCATEGORIZED_FILTER_VALUE, Category.uncategorized.filter_value
+    assert_equal categories(:food_and_drink).name, categories(:food_and_drink).filter_value
+  end
+
   test "display_name preserves custom category names" do
     category = Category.new(name: "School Supplies", color: "#123456", lucide_icon: "book", family: @family)
 

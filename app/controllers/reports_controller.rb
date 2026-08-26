@@ -397,10 +397,11 @@ class ReportsController < ApplicationController
       family_currency = Current.family.currency
 
       # Helper to initialize a category group hash
-      init_category_group = ->(id, name, color, icon, type) do
+      init_category_group = ->(id, name, color, icon, type, filter_value) do
         {
           category_id: id,
           category_name: name,
+          category_filter_value: filter_value,
           category_color: color,
           category_icon: icon,
           type: type,
@@ -437,16 +438,16 @@ class ReportsController < ApplicationController
           # Uncategorized or Other Investments (for trades)
           if is_trade
             parent_key = [ :other_investments, type ]
-            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments.name, Category.other_investments.color, Category.other_investments.lucide_icon, type)
+            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments.name, Category.other_investments.color, Category.other_investments.lucide_icon, type, Category.other_investments.name)
           else
             parent_key = [ :uncategorized, type ]
-            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized.name, Category.uncategorized.color, Category.uncategorized.lucide_icon, type)
+            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized.name, Category.uncategorized.color, Category.uncategorized.lucide_icon, type, Category.uncategorized.filter_value)
           end
         elsif category.parent_id.present?
           # This is a subcategory - group under parent
           parent = category.parent
           parent_key = [ parent.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type)
+          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type, parent.filter_value)
 
           # Add to subcategory
           grouped_data[parent_key][:subcategories][category.id] ||= init_subcategory.call(category)
@@ -456,7 +457,7 @@ class ReportsController < ApplicationController
         else
           # This is a root category (no parent)
           parent_key = [ category.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type)
+          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type, category.filter_value)
         end
 
         grouped_data[parent_key][:count] += 1
