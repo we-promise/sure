@@ -1,4 +1,4 @@
-<%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: []) %>
+<%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: [], pooled_allocations: {}) %>
 
 <%# goal-kind lives on this wrapper, not on the kind selector: its
      dateField target is a sibling of the radios, and a controller only sees
@@ -70,7 +70,22 @@
         <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.funding_accounts_hint") %></p>
         <p class="text-xs text-subdued mt-0.5"><%= t("goals.form.fields.earmark_hint") %></p>
       </div>
-      <div class="bg-container-inset rounded-lg p-1">
+      <%# Its own controller, not goal-form: that one is already at 10 targets
+          against the 7 the project guidelines suggest, and this needs none of
+          its state. Three targets here. %>
+      <div class="bg-container-inset rounded-lg p-1"
+           data-controller="goal-earmark"
+           data-goal-earmark-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
+           <%# The APPLICATION locale, not the browser's. `Intl.NumberFormat`
+               with `undefined` lets the browser pick, so a French user on an
+               English-locale browser read separators and symbol placement that
+               matched nothing else on the page. The amounts themselves cannot
+               be formatted server-side — they change with every keystroke — so
+               the server decides the locale and the client applies it. %>
+           data-goal-earmark-locale-value="<%= I18n.locale %>"
+           data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
+           data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
+           data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
         <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
         <% grouped.each_with_index do |(subtype, accts), group_idx| %>
@@ -78,7 +93,10 @@
           <div class="bg-container rounded-md <%= "mb-1" if group_idx < grouped.size - 1 %>">
             <% accts.each_with_index do |account, idx| %>
               <% linked_ga = linked_allocation_by_account[account.id] %>
-              <div class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>">
+              <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
+                   data-balance="<%= account.balance.to_d %>"
+                   data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>">
+              <div class="flex items-center gap-3">
                 <label class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
                   <%= check_box_tag "goal[account_ids][]",
                                     account.id,
@@ -87,7 +105,8 @@
                                     class: "checkbox checkbox--light shrink-0",
                                     data: {
                                       goal_form_target: "linkedAccountCheckbox",
-                                      action: "change->goal-form#linkedAccountChanged"
+                                      goal_earmark_target: "checkbox",
+                                      action: "change->goal-form#linkedAccountChanged change->goal-earmark#refresh"
                                     } %>
                   <%= render Goals::AvatarComponent.new(name: account.name, color: Goals::AvatarComponent.color_for(account.name), size: "md") %>
                   <div class="min-w-0">
@@ -102,7 +121,13 @@
                                    inputmode: "decimal",
                                    autocomplete: "off",
                                    aria: { label: t("goals.form.fields.earmark_for", account: account.name) },
+                                   data: { goal_earmark_target: "allocationInput", action: "input->goal-earmark#refresh" },
                                    class: "shrink-0 w-36 rounded-md border border-primary bg-container px-2.5 py-1.5 text-sm text-right tabular-nums text-primary placeholder:text-subdued focus-ring privacy-sensitive" %>
+                </div>
+                <%# Never text-destructive: none of this is an error. A goal
+                    in progress legitimately claims more than its account
+                    holds — that is what saving toward something looks like. %>
+                <p class="mt-1 text-xs text-secondary privacy-sensitive hidden" data-goal-earmark-target="warning"></p>
               </div>
             <% end %>
           </div>

@@ -42,6 +42,10 @@ fr:
         accounts_required: Sélectionnez au moins un compte de financement.
         amount_required: Définissez une cible supérieure à zéro.
         name_required: Donnez un nom à votre objectif.
+      earmark:
+        headroom: "Il reste {left} affectables sur ce compte."
+        prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
+        whole_balance: Ce compte financera le solde restant après les autres affectations.
       fields:
         color: Couleur
         earmark_for: Affecter un montant pour %{account}
