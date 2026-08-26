@@ -59,6 +59,23 @@ namespace :security do
     results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
     results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
     results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:akahu_items] = backfill_model(AkahuItem, %i[app_token user_token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:binance_items] = backfill_model(BinanceItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
+    results[:brex_items] = backfill_model(BrexItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:coinbase_items] = backfill_model(CoinbaseItem, %i[api_key api_secret raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:coinstats_items] = backfill_model(CoinstatsItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:ibkr_items] = backfill_model(IbkrItem, %i[query_id token raw_payload], batch_size, dry_run)
+    results[:indexa_capital_items] = backfill_model(IndexaCapitalItem, %i[password api_token username document raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:kraken_items] = backfill_model(KrakenItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
+    results[:mercury_items] = backfill_model(MercuryItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:onchain_wallet_items] = backfill_model(OnchainWalletItem, %i[etherscan_api_key], batch_size, dry_run)
+    results[:questrade_items] = backfill_model(QuestradeItem, %i[refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:redbark_items] = backfill_model(RedbarkItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:snaptrade_items] = backfill_model(SnaptradeItem, %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:sophtron_items] = backfill_model(SophtronItem, %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload], batch_size, dry_run)
+    results[:trading212_items] = backfill_model(Trading212Item, %i[api_key api_secret raw_instruments_payload], batch_size, dry_run)
+    results[:up_items] = backfill_model(UpItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:wise_items] = backfill_model(WiseItem, %i[token raw_payload], batch_size, dry_run)
 
     # Provider accounts
     results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
@@ -69,6 +86,24 @@ namespace :security do
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:akahu_accounts] = backfill_model(AkahuAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:binance_accounts] = backfill_model(BinanceAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:brex_accounts] = backfill_model(BrexAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:ibkr_accounts] = backfill_model(IbkrAccount, %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload], batch_size, dry_run)
+    results[:indexa_capital_accounts] = backfill_model(IndexaCapitalAccount, %i[raw_payload raw_holdings_payload raw_activities_payload], batch_size, dry_run)
+    results[:kraken_accounts] = backfill_model(KrakenAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:onchain_wallet_accounts] = backfill_model(OnchainWalletAccount, %i[raw_payload raw_movements_payload], batch_size, dry_run)
+    results[:questrade_accounts] = backfill_model(QuestradeAccount, %i[raw_payload raw_holdings_payload raw_activities_payload raw_balances_payload], batch_size, dry_run)
+    results[:redbark_accounts] = backfill_model(RedbarkAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:sophtron_accounts] = backfill_model(SophtronAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:trading212_accounts] = backfill_model(Trading212Account, %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload], batch_size, dry_run)
+    results[:up_accounts] = backfill_model(UpAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:wise_accounts] = backfill_model(WiseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+
+    # Sure's own first-party secrets
+    results[:api_keys] = backfill_model(ApiKey, %i[display_key], batch_size, dry_run)
+    results[:sso_providers] = backfill_model(SsoProvider, %i[client_secret], batch_size, dry_run)
+    results[:sso_identity_blocks] = backfill_model(SsoIdentityBlock, %i[identity_label], batch_size, dry_run)
 
     puts({
       ok: true,

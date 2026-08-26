@@ -9,6 +9,10 @@ class IndexaCapitalItem < ApplicationRecord
   if encryption_ready?
     encrypts :password, deterministic: true
     encrypts :api_token, deterministic: true
+    encrypts :username
+    encrypts :document
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
