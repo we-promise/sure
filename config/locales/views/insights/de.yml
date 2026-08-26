@@ -1,6 +1,9 @@
 ---
 de:
   insights:
+    notification:
+      title: Neue Finanzanalyse
+      body: Öffne Sure, um deine neueste KI-Analyse anzusehen.
     actions:
       budget: Budget ansehen
       cash_flow_warning: Wiederkehrende Buchungen prüfen

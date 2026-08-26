@@ -5,6 +5,12 @@ class Budget < ApplicationRecord
 
   attr_accessor :current_user
 
+  # Overrides the account scope `income_statement` would otherwise infer.
+  # Budget::RolloverCalculator sets it on the household chain: the carry it
+  # stores is one shared row, so it must not be computed through whichever
+  # viewer's account access happened to trigger the recompute.
+  attr_writer :income_statement_accounts
+
   belongs_to :family
   belongs_to :user, optional: true
 
@@ -15,7 +21,8 @@ class Budget < ApplicationRecord
 
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
-           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income
+           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
+           :total_rolled_over
 
   class << self
     def date_to_param(date)
@@ -75,6 +82,8 @@ class Budget < ApplicationRecord
         budget.current_user = user
         budget.sync_budget_categories
 
+        Budget::RolloverCalculator.new(family: family, user: owner).recompute!
+
         budget
       end
     end
@@ -112,16 +121,36 @@ class Budget < ApplicationRecord
     categories_to_remove = existing_budget_category_ids - current_category_ids
 
     # Create missing categories
+    inherited_rollover = inherited_rollover_flags(categories_to_add)
+
     categories_to_add.each do |category_id|
       budget_categories.create!(
         category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
-        currency: family.currency
+        currency: family.currency,
+        rollover_enabled: inherited_rollover.fetch(category_id, false)
       )
     end
 
     # Remove old categories
     budget_categories.where(category_id: categories_to_remove).destroy_all if categories_to_remove.any?
+  end
+
+  # Rollover is a standing choice about an envelope, not about one month: a
+  # user who switches it on for Vacations expects it to keep going, and a
+  # month bootstrapped with the flag off would silently break the chain. New
+  # rows therefore inherit it from the last initialized budget of the same
+  # owner -- the same chain the carry itself walks. Turning it off on a given
+  # month still overrides it from there on.
+  def inherited_rollover_flags(category_ids)
+    return {} if category_ids.empty?
+
+    source = most_recent_initialized_budget
+    return {} unless source
+
+    source.budget_categories
+      .where(category_id: category_ids, rollover_enabled: true)
+      .each_with_object({}) { |bc, flags| flags[bc.category_id] = true }
   end
 
   def uncategorized_budget_category
@@ -209,8 +238,18 @@ class Budget < ApplicationRecord
         target_bc = target_by_category[source_bc.category_id]
         next unless target_bc
 
-        target_bc.update!(budgeted_spending: source_bc.budgeted_spending)
+        # The toggle is a preference and travels with the copy; the amount
+        # is derived state that only Budget::RolloverCalculator may write.
+        target_bc.update!(
+          budgeted_spending: source_bc.budgeted_spending,
+          rollover_enabled: source_bc.rollover_enabled
+        )
       end
+
+      # Copying the toggle changes what the chain should hold, and this runs
+      # after find_or_bootstrap already recomputed it. Recompute again so the
+      # target doesn't sit on a zero carry until the next page load.
+      Budget::RolloverCalculator.new(family: family, user: user).recompute!
     end
   end
 
@@ -351,6 +390,15 @@ class Budget < ApplicationRecord
     (budgeted_spending || 0) - allocated_spending
   end
 
+  # Informational aggregate only -- deliberately kept out of
+  # `allocated_spending` and `available_to_allocate`, which stay a pure
+  # "what did I plan to spend this month" pair. Ring-fenced subcategories
+  # carry their own surplus and their parent's is net of theirs, so summing
+  # every non-inheriting category counts each amount once.
+  def total_rolled_over
+    budget_categories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
+  end
+
   def allocations_valid?
     initialized? && available_to_allocate >= 0 && allocated_spending > 0
   end
@@ -393,6 +441,8 @@ class Budget < ApplicationRecord
     # viewer sees the owner's numbers, and household vs. personal actually
     # differ instead of both reflecting the viewer's full accessible set.
     def income_statement_accounts
+      return @income_statement_accounts if @income_statement_accounts
+
       family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 

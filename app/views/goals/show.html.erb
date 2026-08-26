@@ -175,9 +175,41 @@
         <div class="w-16 h-16 rounded-full bg-success/10 inline-flex items-center justify-center text-success mb-3">
           <%= icon("party-popper", size: "2xl", color: "success") %>
         </div>
+        <%# Two situations reach this panel and they are not the same thing.
+            A `completed` goal is closed: its earmark has been released and
+            its amount is frozen. A goal merely at 100% is still holding its
+            money and still competing with its siblings on the account — the
+            copy used to tell it "Goal closed at ...", and offered Archive as
+            the only action, which is the gesture that does NOT release
+            anything. Closing is what does. %>
+        <% closed = @goal.completed? %>
         <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
-        <p class="text-sm text-secondary mt-1 max-w-md privacy-sensitive"><%= t(".celebration.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %></p>
-        <% if @goal.may_archive? %>
+        <p class="text-sm text-secondary mt-1 max-w-md privacy-sensitive">
+          <%= t(closed ? ".celebration.body" : ".celebration.body_reached",
+                saved: @goal.current_balance_money.format(precision: 0),
+                target: @goal.target_amount_money.format(precision: 0)) %>
+        </p>
+        <% if closed && @goal.completed_at.present? %>
+          <p class="text-xs text-secondary mt-2 tabular-nums privacy-sensitive">
+            <%= t(".celebration.frozen",
+                  date: l(@goal.completed_at.to_date, format: :long),
+                  amount: @goal.current_balance_money.format(precision: 0)) %>
+          </p>
+        <% end %>
+        <%# A maintained reserve at 100% is in its normal state, not waiting
+            to be closed — Lot B3 forbids `complete` for them outright. %>
+        <% if !closed && @goal.one_off? && @goal.may_complete? %>
+          <div class="mt-4">
+            <%= render DS::Button.new(
+              text: t(".celebration.close_cta"),
+              href: complete_goal_path(@goal),
+              variant: "primary",
+              size: "sm",
+              method: :patch
+            ) %>
+          </div>
+          <p class="text-xs text-secondary mt-2 max-w-md"><%= t(".celebration.close_hint") %></p>
+        <% elsif @goal.may_archive? %>
           <div class="mt-4">
             <%= render DS::Button.new(
               text: t(".celebration.archive_cta"),

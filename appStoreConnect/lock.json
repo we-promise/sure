@@ -1,0 +1,71 @@
+{
+  "appId": "6804843427",
+  "derived": {
+    "appStoreVersionScreenshotSets": {
+
+    },
+    "pricing": {
+      "automaticPrices": [
+
+      ]
+    }
+  },
+  "formatVersion": 1,
+  "gitignore": "created",
+  "resources": {
+    "ageRatingDeclaration": {
+      "fields": {
+        "ageRatingOverrideV2": "NONE",
+        "koreaAgeRatingOverride": "NONE"
+      },
+      "id": "dfacd01a-5017-45ae-a573-78a0664c9e08",
+      "type": "ageRatingDeclarations"
+    },
+    "app": {
+      "fields": {
+        "primaryLocale": "en-US"
+      },
+      "id": "6804843427",
+      "type": "apps"
+    },
+    "appInfo": {
+      "fields": {
+
+      },
+      "id": "dfacd01a-5017-45ae-a573-78a0664c9e08",
+      "type": "appInfos"
+    },
+    "appInfoLocalization:en-US": {
+      "fields": {
+        "name": "Sure Insights"
+      },
+      "id": "4b775417-5fc0-4aa4-8a4b-a426529092bb",
+      "type": "appInfoLocalizations"
+    },
+    "appStoreVersion:IOS:1.0": {
+      "fields": {
+        "releaseType": "AFTER_APPROVAL",
+        "versionString": "1.0"
+      },
+      "id": "75f1c2c3-9fc3-4aff-bc21-74da4323c777",
+      "type": "appStoreVersions"
+    },
+    "appStoreVersionLocalization:IOS:1.0:en-US": {
+      "fields": {
+
+      },
+      "id": "855fd9e3-2474-42b6-b9da-4df74ad2c2be",
+      "type": "appStoreVersionLocalizations"
+    },
+    "pricing": {
+      "fields": {
+        "baseTerritory": "USA",
+        "manualPrices": [
+
+        ]
+      },
+      "id": "6804843427",
+      "type": "appPriceSchedules"
+    }
+  }
+}
