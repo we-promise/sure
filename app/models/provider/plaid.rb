@@ -49,14 +49,14 @@ class Provider::Plaid
       country_codes: country_codes,
       language: "en",
       webhook: webhooks_url,
-      redirect_uri: redirect_url,
-      transactions: { days_requested: MAX_HISTORY_DAYS }
+      redirect_uri: redirect_url
     }
 
     if access_token.present?
       request_params[:access_token] = access_token
       request_params[:update] = { account_selection_enabled: true } if account_selection_enabled
     else
+      request_params[:transactions] = { days_requested: MAX_HISTORY_DAYS }
       request_params[:products] = [ get_primary_product(accountable_type) ]
       request_params[:additional_consented_products] = get_additional_consented_products(accountable_type)
     end

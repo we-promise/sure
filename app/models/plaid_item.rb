@@ -65,6 +65,17 @@ class PlaidItem < ApplicationRecord
     end
   end
 
+  # Queue a fresh import after an in-flight sync. Plaid Link can finish adding
+  # accounts after the active sync already fetched its account list.
+  def sync_later_with_follow_up
+    active_sync = syncs.visible.ordered.first
+    sync_later
+
+    return unless active_sync&.reload&.in_progress?
+
+    PlaidFollowUpSyncJob.set(wait: PlaidFollowUpSyncJob::RETRY_DELAY).perform_later(self, active_sync_id: active_sync.id)
+  end
+
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)

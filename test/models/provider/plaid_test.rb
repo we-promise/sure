@@ -37,7 +37,8 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
       params[:access_token] == "access-token" &&
         params[:update] == { account_selection_enabled: true } &&
-        params[:products].nil?
+        params[:products].nil? &&
+        params[:transactions].nil?
     end.returns(request)
     @plaid.client.expects(:link_token_create).with(request).returns("response")
 

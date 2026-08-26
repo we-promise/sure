@@ -75,6 +75,15 @@ class PlaidItemTest < ActiveSupport::TestCase
     assert_equal "link-token", result
   end
 
+  test "sync_later_with_follow_up queues a follow-up after an active sync" do
+    active_sync = @plaid_item.syncs.create!
+    active_sync.start!
+
+    assert_enqueued_with job: PlaidFollowUpSyncJob do
+      @plaid_item.sync_later_with_follow_up
+    end
+  end
+
   test "get_update_link_token re-raises other Plaid errors so the controller can surface them" do
     # Issue #1792: silently swallowing all Plaid errors here is what made the
     # "modal closes with nothing happening" experience so opaque.
