@@ -19,13 +19,21 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
   end
 
   test "creates a goal with linked accounts" do
+    # A fresh account, not one the goal fixtures already claim in full:
+    # GoalAccount refuses a second whole-balance link on a contested account,
+    # and this function has no way to pass an earmark.
+    unclaimed = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "Vacation Savings", currency: "USD", balance: 2_000
+    )
+
     assert_difference -> { Goal.count } => 1,
                       -> { GoalAccount.count } => 1 do
       result = @fn.call(
         "name" => "Vacation",
         "target_amount" => 1500,
         "target_date" => 3.months.from_now.to_date.iso8601,
-        "linked_account_names" => [ @depository.name ]
+        "linked_account_names" => [ unclaimed.name ]
       )
 
       assert result[:success]

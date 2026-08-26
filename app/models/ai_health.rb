@@ -158,7 +158,8 @@ class AiHealth
           provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,
-          model: llm_model
+          model: llm_model,
+          openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
         )
       end
 

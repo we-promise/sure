@@ -85,6 +85,13 @@
         <% end %>
       </div>
       <p class="<%= "hidden" unless goal.errors[:base].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="accountsError"><%= t("goals.form.errors.accounts_required") %></p>
+      <%# Server-side only: GoalAccount refuses a second whole-balance link on an
+          account another goal already claims in full. There is no client-side
+          equivalent to mirror, so this renders straight from the record rather
+          than through a goal-form target (the controller is already at 10). %>
+      <% goal.errors.where(:"goal_accounts.base").each do |error| %>
+        <p class="mt-1.5 text-xs text-destructive"><%= error.message %></p>
+      <% end %>
     </div>
 
     <%= f.text_area :notes,
