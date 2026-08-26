@@ -93,4 +93,47 @@ class TradeTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("1.1234567890"), trade.price
   end
+
+  test "a transfer out realises nothing, however it is priced" do
+    account, security = position_with_known_cost_basis
+
+    moved = build_negative_trade(account, security, label: "Transfer")
+    sold  = build_negative_trade(account, security, label: "Sell")
+
+    # Same sign, same shape, same price — only the label separates a sale from
+    # coins walking to another wallet you own.
+    assert_nil moved.realized_gain_loss
+    assert_not_nil sold.realized_gain_loss
+  end
+
+  test "every internal movement label realises nothing" do
+    account, security = position_with_known_cost_basis
+
+    Trade::INTERNAL_MOVEMENT_LABELS.each do |label|
+      trade = build_negative_trade(account, security, label: label)
+      assert_nil trade.realized_gain_loss, "#{label} should not realise a gain"
+    end
+  end
+
+  private
+    # A position whose cost basis is known, which is what makes a fabricated
+    # gain possible: without one, realized_gain_loss returns nil for any reason.
+    def position_with_known_cost_basis
+      family = families(:empty)
+      account = family.accounts.create!(name: "Wallet", balance: 100, currency: "USD",
+                                        accountable: Investment.new)
+      security = Security.find_or_create_by!(ticker: "MOVE") { |s| s.name = "Movable" }
+      Holding.create!(account: account, security: security, date: 10.days.ago.to_date,
+                      qty: 100, price: 2, amount: 200, currency: "USD", cost_basis: 1)
+
+      [ account, security ]
+    end
+
+    def build_negative_trade(account, security, label:)
+      account.entries.create!(
+        date: 3.days.ago.to_date, name: "out #{label}", amount: 0, currency: "USD",
+        entryable: Trade.new(security: security, qty: -40, price: 3, currency: "USD",
+                             investment_activity_label: label)
+      ).entryable
+    end
 end

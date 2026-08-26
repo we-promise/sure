@@ -10,6 +10,11 @@ class Trade < ApplicationRecord
   # Use the same activity labels as Transaction
   ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
 
+  # The labels that mean the asset went somewhere else you own rather than
+  # being bought or sold. Shared with Transaction, which already keeps them out
+  # of the income statement for the same reason.
+  INTERNAL_MOVEMENT_LABELS = Transaction::INTERNAL_MOVEMENT_LABELS
+
   validates :qty, presence: true
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
@@ -42,6 +47,12 @@ class Trade < ApplicationRecord
 
   def sell?
     qty.negative?
+  end
+
+  # A negative quantity that left for another account you own. It looks exactly
+  # like a sale — same sign, same shape — and only the label tells them apart.
+  def internal_movement?
+    INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
   end
 
   class << self
@@ -91,6 +102,10 @@ class Trade < ApplicationRecord
 
     def calculate_realized_gain_loss
       return nil unless sell?
+      # Moving an asset to another account you own realises nothing. Without
+      # this the cost basis is compared against the day's price and the
+      # difference is booked as a gain the user never made.
+      return nil if internal_movement?
 
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
       # Treat defined-but-empty preload as authoritative to prevent DB fallback

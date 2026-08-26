@@ -598,4 +598,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "button[disabled][aria-label=?]", I18n.t("reports.index.next_period")
   end
+
+  test "a transfer out is not listed among the period's sales" do
+    account = @family.accounts.create!(name: "Wallet", balance: 100, currency: "USD",
+                                       accountable: Investment.new)
+    security = Security.find_or_create_by!(ticker: "MOVE") { |sec| sec.name = "Movable" }
+    Holding.create!(account: account, security: security, date: 10.days.ago.to_date,
+                    qty: 100, price: 2, amount: 200, currency: "USD", cost_basis: 1)
+
+    %w[Transfer Sell].each do |label|
+      account.entries.create!(
+        date: 3.days.ago.to_date, name: "out #{label}", amount: 0, currency: "USD",
+        entryable: Trade.new(security: security, qty: -40, price: 3, currency: "USD",
+                             investment_activity_label: label)
+      )
+    end
+
+    get reports_path(period: "last_30_days")
+    assert_response :success
+
+    # A transfer out carries the same negative quantity as a sale. Counting it
+    # as one both inflates the number of sales and books a gain nobody made.
+    assert_match I18n.t("reports.investment_performance.sells_count", count: 1), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
+  end
 end
