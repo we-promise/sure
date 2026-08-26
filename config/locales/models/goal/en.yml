@@ -24,5 +24,8 @@ en:
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
             kind:
               locked_while_released: Reopen this goal before turning it into a reserve.
+              locked_once_consumed: This goal has already recorded money as spent, so it cannot become a reserve.
+            target_amount:
+              below_consumed: Can't set a target below what this goal has already recorded as spent.
             currency:
               locked_after_linked: Can't change the currency after the goal is linked to accounts.

@@ -37,6 +37,13 @@
         <% if @goal.may_resume? %>
           <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
         <% end %>
+        <%# Partial spend: only offered on a one-off goal that is still running
+            and has something to spend. A reserve is drawn down and refilled,
+            not consumed — the model refuses it outright. %>
+        <% if @goal.one_off? && @goal.active? && @goal.current_balance.to_d.positive? %>
+          <% menu.with_item(variant: "link", text: t(".consume"), icon: "hand-coins",
+                            href: consume_goal_path(@goal), data: { turbo_frame: :modal }) %>
+        <% end %>
         <% if @goal.may_complete? %>
           <% menu.with_item(
                variant: "button",

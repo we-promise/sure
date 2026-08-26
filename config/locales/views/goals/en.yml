@@ -95,8 +95,28 @@ en:
     reopen:
       success: Goal reopened.
       invalid_transition: Goal can't be reopened from its current state.
+    consume:
+      title: Record a spend
+      subtitle: "%{goal}"
+      amount_label: How much did you use?
+      amount_hint: "%{saved} is currently backing this goal."
+      account_label: From which account?
+      earmark_note: The amount you record stops being reserved for this goal, so your other goals on that account get their share back.
+      cancel: Cancel
+      submit: Record it
+      success: "%{amount} recorded as used."
+      errors:
+        non_positive: Enter an amount greater than zero.
+        maintained: A reserve is drawn down and refilled, not spent — its shortfall already shows on the goal.
+        exceeds_target: That is more than this goal ever set out to save.
+        account_required: This goal is funded by several accounts — say which one the money came out of.
+        account_not_linked: That account does not fund this goal.
+        not_active: This goal is no longer active, so nothing can be recorded against it.
+        exceeds_earmark: That is more than this account has earmarked for the goal.
+        no_linked_account: This goal has no funding account left.
     show:
       edit: Edit
+      consume: I used some of this money
       pause: Pause
       resume: Resume
       complete: Mark complete
