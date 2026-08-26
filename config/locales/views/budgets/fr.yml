@@ -57,6 +57,13 @@ fr:
       status: Statut
       view_all_transactions: Voir toutes les transactions de catégorie
   budgets:
+    available_cash:
+      heading: Trésorerie disponible
+      subtitle: À côté du plan ci-dessus, pas dedans.
+      available: Disponible en cash
+      earmarked: Déjà fléché vers des objectifs
+      free: Réellement libre
+      goals_link: Voir les objectifs
     switcher:
       aria_label: "Changer de budget"
       household: "Commun"

@@ -38,6 +38,13 @@ en:
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
+    available_cash:
+      heading: Cash on hand
+      subtitle: Beside the plan above, not part of it.
+      available: Available in cash
+      earmarked: Already earmarked for goals
+      free: Really free
+      goals_link: View goals
     show:
       categories:
         amount: Amount
