@@ -26,34 +26,44 @@ uk:
         title: "Якість даних і відомості про синхронізацію"
         repair: "Відновити імпортовані дані"
         positions:
-          one: "%{count} position"
-          other: "%{count} positions"
+          one: "%{count} позиція"
+          few: "%{count} позиції"
+          many: "%{count} позицій"
+          other: "%{count} позиції"
         unpriced:
-          one: "%{count} without current price"
-          other: "%{count} without current price"
+          one: "%{count} позиція без поточної ціни"
+          few: "%{count} позиції без поточної ціни"
+          many: "%{count} позицій без поточної ціни"
+          other: "%{count} позиції без поточної ціни"
         events:
-          one: "%{count} activity"
-          other: "%{count} activities"
+          one: "%{count} операція"
+          few: "%{count} операції"
+          many: "%{count} операцій"
+          other: "%{count} операції"
         unknown:
-          one: "%{count} unknown activity"
-          other: "%{count} unknown activities"
+          one: "%{count} невідома операція"
+          few: "%{count} невідомі операції"
+          many: "%{count} невідомих операцій"
+          other: "%{count} невідомі операції"
         expenses:
-          one: "%{count} expense in the last 30 days (%{amount})"
-          other: "%{count} expenses in the last 30 days (%{amount})"
-        reconciliation: "%{matched}/%{total} account balances reconciled"
-        sync_history: Recent syncs
+          one: "%{count} витрата за останні 30 днів (%{amount})"
+          few: "%{count} витрати за останні 30 днів (%{amount})"
+          many: "%{count} витрат за останні 30 днів (%{amount})"
+          other: "%{count} витрати за останні 30 днів (%{amount})"
+        reconciliation: "%{matched}/%{total} балансів рахунків узгоджено"
+        sync_history: Останні синхронізації
         sync_status:
-          completed: Completed
-          failed: Failed
-          pending: Pending
-          syncing: Syncing
-          stale: Stale
+          completed: Завершено
+          failed: Помилка
+          pending: Очікує
+          syncing: Синхронізується
+          stale: Застаріло
     setup_accounts:
       page_title: "Налаштувати рахунок Trade Republic"
       subtitle: "Пов’яжіть інвестиційний рахунок Trade Republic."
       available_accounts:
-        account_type_investment: "Investment portfolio"
-        account_type_cash: "Cash account"
+        account_type_investment: "Інвестиційний портфель"
+        account_type_cash: "Грошовий рахунок"
       buttons:
         refresh: "Оновити"
         cancel: "Скасувати"
@@ -85,10 +95,14 @@ uk:
       success: "Рахунок успішно пов’язано з Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "Успішно створено %{count} рахунок Trade Republic."
+        few: "Успішно створено %{count} рахунки Trade Republic."
+        many: "Успішно створено %{count} рахунків Trade Republic."
+        other: "Успішно створено %{count} рахунку Trade Republic."
+      none_created: "Жодного рахунку не створено."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Не вдалося повністю налаштувати %{count} вибраний рахунок Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+        few: "Не вдалося повністю налаштувати %{count} вибрані рахунки Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+        many: "Не вдалося повністю налаштувати %{count} вибраних рахунків Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+        other: "Не вдалося повністю налаштувати %{count} вибраного рахунку Trade Republic. Перевірте журнал налагодження та повторіть спробу."
       none_selected: "Рахунки не вибрано."

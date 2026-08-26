@@ -4,6 +4,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @item = trade_republic_items(:configured_item)
+    @item.trade_republic_accounts.destroy_all
   end
 
   test "import creates trade_republic_account with exact decimal balances" do
@@ -178,8 +179,10 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
   end
 
   test "unpriced positions preserve the last known portfolio balance" do
-    portfolio = @item.trade_republic_accounts.find_by!(kind: "portfolio")
-    portfolio.update!(
+    portfolio = @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Existing portfolio",
+      currency: "EUR",
       trade_republic_account_id: "DE5555",
       current_balance: BigDecimal("1234.56"),
       raw_positions_payload: [ { "isin" => "KEEP", "quantity" => "2", "price" => "617.28" } ]

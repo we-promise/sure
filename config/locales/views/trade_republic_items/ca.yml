@@ -26,34 +26,34 @@ ca:
         title: "Qualitat de les dades i detalls de sincronització"
         repair: "Repara les dades importades"
         positions:
-          one: "%{count} position"
-          other: "%{count} positions"
+          one: "%{count} posició"
+          other: "%{count} posicions"
         unpriced:
-          one: "%{count} without current price"
-          other: "%{count} without current price"
+          one: "%{count} sense preu actual"
+          other: "%{count} sense preu actual"
         events:
-          one: "%{count} activity"
-          other: "%{count} activities"
+          one: "%{count} activitat"
+          other: "%{count} activitats"
         unknown:
-          one: "%{count} unknown activity"
-          other: "%{count} unknown activities"
+          one: "%{count} activitat desconeguda"
+          other: "%{count} activitats desconegudes"
         expenses:
-          one: "%{count} expense in the last 30 days (%{amount})"
-          other: "%{count} expenses in the last 30 days (%{amount})"
-        reconciliation: "%{matched}/%{total} account balances reconciled"
-        sync_history: Recent syncs
+          one: "%{count} despesa durant els darrers 30 dies (%{amount})"
+          other: "%{count} despeses durant els darrers 30 dies (%{amount})"
+        reconciliation: "%{matched}/%{total} saldos de compte conciliats"
+        sync_history: Sincronitzacions recents
         sync_status:
-          completed: Completed
-          failed: Failed
-          pending: Pending
-          syncing: Syncing
-          stale: Stale
+          completed: Completada
+          failed: Fallida
+          pending: Pendent
+          syncing: Sincronitzant
+          stale: Obsoleta
     setup_accounts:
       page_title: "Configura el compte de Trade Republic"
       subtitle: "Enllaça el teu compte d'inversió de Trade Republic."
       available_accounts:
-        account_type_investment: "Investment portfolio"
-        account_type_cash: "Cash account"
+        account_type_investment: "Cartera d'inversió"
+        account_type_cash: "Compte d'efectiu"
       buttons:
         refresh: "Actualitza"
         cancel: "Cancel·la"
@@ -85,10 +85,10 @@ ca:
       success: "Enllaçat correctament amb el compte de Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "S'ha creat correctament %{count} compte de Trade Republic."
+        other: "S'han creat correctament %{count} comptes de Trade Republic."
+      none_created: "No s'ha creat cap compte."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "No s'ha pogut completar un compte de Trade Republic seleccionat. Revisa el registre de depuració i torna-ho a provar."
+        other: "No s'han pogut completar %{count} comptes de Trade Republic seleccionats. Revisa el registre de depuració i torna-ho a provar."
       none_selected: "No s'ha seleccionat cap compte."

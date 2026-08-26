@@ -546,6 +546,7 @@ de:
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren
         sync: Sync
+        disconnect: Trade Republic trennen
         disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
         status_configured_prefix: "Verbunden. Im Reiter"
         accounts_tab: Konten

@@ -26,34 +26,34 @@ tr:
         title: "Veri kalitesi ve senkronizasyon ayrıntıları"
         repair: "İçe aktarılan verileri onar"
         positions:
-          one: "%{count} position"
-          other: "%{count} positions"
+          one: "%{count} pozisyon"
+          other: "%{count} pozisyon"
         unpriced:
-          one: "%{count} without current price"
-          other: "%{count} without current price"
+          one: "%{count} güncel fiyatı olmayan pozisyon"
+          other: "%{count} güncel fiyatı olmayan pozisyon"
         events:
-          one: "%{count} activity"
-          other: "%{count} activities"
+          one: "%{count} işlem"
+          other: "%{count} işlem"
         unknown:
-          one: "%{count} unknown activity"
-          other: "%{count} unknown activities"
+          one: "%{count} bilinmeyen işlem"
+          other: "%{count} bilinmeyen işlem"
         expenses:
-          one: "%{count} expense in the last 30 days (%{amount})"
-          other: "%{count} expenses in the last 30 days (%{amount})"
-        reconciliation: "%{matched}/%{total} account balances reconciled"
-        sync_history: Recent syncs
+          one: "Son 30 günde %{count} gider (%{amount})"
+          other: "Son 30 günde %{count} gider (%{amount})"
+        reconciliation: "%{matched}/%{total} hesap bakiyesi mutabık"
+        sync_history: Son senkronizasyonlar
         sync_status:
-          completed: Completed
-          failed: Failed
-          pending: Pending
-          syncing: Syncing
-          stale: Stale
+          completed: Tamamlandı
+          failed: Başarısız
+          pending: Beklemede
+          syncing: Senkronize ediliyor
+          stale: Güncel değil
     setup_accounts:
       page_title: "Trade Republic hesabını ayarla"
       subtitle: "Trade Republic yatırım hesabınızı bağlayın."
       available_accounts:
-        account_type_investment: "Investment portfolio"
-        account_type_cash: "Cash account"
+        account_type_investment: "Yatırım portföyü"
+        account_type_cash: "Nakit hesabı"
       buttons:
         refresh: "Yenile"
         cancel: "İptal"
@@ -85,10 +85,10 @@ tr:
       success: "Hesap Trade Republic'e başarıyla bağlandı."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "%{count} Trade Republic hesabı başarıyla oluşturuldu."
+        other: "%{count} Trade Republic hesabı başarıyla oluşturuldu."
+      none_created: "Hiçbir hesap oluşturulmadı."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
+        other: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
       none_selected: "Hesap seçilmedi."

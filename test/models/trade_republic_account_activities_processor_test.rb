@@ -4,6 +4,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
     @item = trade_republic_items(:configured_item)
+    @item.trade_republic_accounts.destroy_all
 
     @tr_account = @item.trade_republic_accounts.create!(
       name: "Processor Test",

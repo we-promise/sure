@@ -59,10 +59,12 @@ ro:
       success: "Cont asociat cu succes la Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "A fost creat cu succes %{count} cont Trade Republic."
+        few: "Au fost create cu succes %{count} conturi Trade Republic."
+        other: "Au fost create cu succes %{count} de conturi Trade Republic."
+      none_created: "Nu a fost creat niciun cont."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Un cont Trade Republic selectat nu a putut fi configurat complet. Verifică jurnalul de depanare și încearcă din nou."
+        few: "%{count} conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
+        other: "%{count} de conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
       none_selected: "Nu a fost selectat niciun cont."

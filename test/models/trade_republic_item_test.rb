@@ -1,6 +1,18 @@
 require "test_helper"
 
 class TradeRepublicItemTest < ActiveSupport::TestCase
+  test "database enforces one account of each kind per item" do
+    item = trade_republic_items(:configured_item)
+
+    assert_raises ActiveRecord::RecordNotUnique do
+      item.trade_republic_accounts.create!(
+        kind: "portfolio",
+        name: "Duplicate portfolio",
+        currency: "EUR"
+      )
+    end
+  end
+
   test "syncable scope requires a stored session" do
     items = TradeRepublicItem.syncable
 
@@ -61,6 +73,7 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
       currency: "EUR"
     )
     item.trade_republic_accounts.create!(
+      kind: "cash",
       name: "Summary Unlinked",
       trade_republic_account_id: "DESUMM2",
       currency: "EUR"

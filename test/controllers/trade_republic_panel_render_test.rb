@@ -27,4 +27,15 @@ class TradeRepublicPanelRenderTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'value="qr"'
     refute_includes response.body, "hover:bg-primary/10"
   end
+
+  test "configured connection renders an accessible disconnect button" do
+    TradeRepublicItem.any_instance.stubs(:session_configured?).returns(true)
+
+    get connect_form_settings_providers_path(provider_key: "trade_republic")
+    assert_response :success
+
+    disconnect_label = I18n.t("settings.providers.trade_republic_panel.disconnect")
+    assert_includes response.body, %(aria-label="#{disconnect_label}")
+    assert_includes response.body, %(title="#{disconnect_label}")
+  end
 end

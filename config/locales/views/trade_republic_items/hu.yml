@@ -59,10 +59,10 @@ hu:
       success: "A fiók sikeresen összekapcsolva a Trade Republic szolgáltatással."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "Sikeresen létrejött %{count} Trade Republic-fiók."
+        other: "Sikeresen létrejött %{count} Trade Republic-fiók."
+      none_created: "Nem jött létre fiók."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Egy kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
+        other: "%{count} kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
       none_selected: "Nem választottál ki fiókot."

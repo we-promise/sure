@@ -59,10 +59,10 @@ pt-BR:
       success: "Conta vinculada com sucesso à Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "Foi criada com sucesso %{count} conta da Trade Republic."
+        other: "Foram criadas com sucesso %{count} contas da Trade Republic."
+      none_created: "Nenhuma conta foi criada."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Não foi possível concluir uma conta selecionada da Trade Republic. Verifique o log de depuração e tente novamente."
+        other: "Não foi possível concluir %{count} contas selecionadas da Trade Republic. Verifique o log de depuração e tente novamente."
       none_selected: "Nenhuma conta foi selecionada."

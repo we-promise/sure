@@ -685,6 +685,7 @@ en:
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
         sync: Sync
+        disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
         status_configured_prefix: "Connected. Visit the"
         accounts_tab: Accounts
