@@ -58,6 +58,35 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_includes result_ids, uncategorized_entry.entryable.id
   end
 
+  test "a real category literally named Uncategorized takes priority over the alias translation" do
+    family = @user.family
+    lookalike_category = family.categories.create!(name: "Uncategorized", color: "#123456")
+
+    lookalike_entry = Entry.create!(
+      account: accounts(:depository),
+      name: "AI lookalike category lookup",
+      date: Date.current,
+      amount: 42,
+      currency: "USD",
+      entryable: Transaction.new(category: lookalike_category)
+    )
+
+    truly_uncategorized_entry = Entry.create!(
+      account: accounts(:depository),
+      name: "AI truly uncategorized lookup",
+      date: Date.current,
+      amount: 42,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    result = @function.call("categories" => [ "Uncategorized" ])
+    result_ids = result[:transactions].map { |t| t[:id] }
+
+    assert_includes result_ids, lookalike_entry.entryable.id
+    assert_not_includes result_ids, truly_uncategorized_entry.entryable.id
+  end
+
   test "schema no longer inlines user data enums" do
     schema = @function.params_schema
 

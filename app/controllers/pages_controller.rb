@@ -402,7 +402,7 @@ class PagesController < ApplicationController
           sub_pct = total.zero? ? 0 : (sub_val / total * 100).round(1)
           sub_color = sub[:category].color.presence || color
           sub_key = "#{opposite_prefix}_sub_#{sub[:category].id}"
-          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
 
           # Opposite direction: if parent is outbound (expense), this sub is inbound (income)
           if flow_direction == :inbound

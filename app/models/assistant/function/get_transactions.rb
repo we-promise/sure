@@ -147,10 +147,15 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
     # The categories filter now matches Category::UNCATEGORIZED_FILTER_VALUE, a stable
     # sentinel, rather than the localized display name. params_schema still documents
-    # (and the AI still passes) the literal "Uncategorized", so translate it here.
+    # (and the AI still passes) the literal "Uncategorized", so translate it here --
+    # unless the family has a real category with that exact name, which takes priority
+    # (get_categories never lists the synthetic option, so a real category by that
+    # name is what the AI actually meant).
     if search_params["categories"].present?
       uncategorized_aliases = [ "Uncategorized", Category.uncategorized_name ].uniq
+      real_names_matching_alias = family.categories.where(name: uncategorized_aliases).pluck(:name)
       search_params["categories"] = search_params["categories"].map do |name|
+        next name if real_names_matching_alias.include?(name)
         uncategorized_aliases.include?(name) ? Category::UNCATEGORIZED_FILTER_VALUE : name
       end
     end
