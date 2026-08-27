@@ -21,9 +21,50 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 # "not complete" (fallback enabled) whenever it can't be read - fresh
 # installs, pre-migration boots, or DB errors - so this preserves the
 # original crash-safe behavior for anyone who hasn't backfilled yet.
+#
+# MUST stay a plain, synchronous call here (not deferred into
+# after_initialize or any other lazy hook): ActiveRecord's own
+# "active_record_encryption.configuration" railtie initializer registers an
+# ActiveSupport.on_load(:active_record_encryption) callback that snapshots
+# Rails.application.config.active_record.encryption.* into the real,
+# long-lived ActiveRecord::Encryption.config object the FIRST time anything
+# touches ActiveRecord::Base's connection (verified empirically: it's the
+# ActiveRecord::Base.connection call inside backfill_completed? itself that
+# fires this, since establishing a connection pulls in AR's encrypted-type
+# machinery). That same connection touch also fires the separate
+# ActiveSupport.on_load(:active_record) hook AR's railtie uses to decide,
+# ONCE, whether to install ExtendedDeterministicQueries/
+# ExtendedDeterministicUniquenessValidator support - based on whatever
+# extend_queries was at that moment (still unset, since this all happens
+# before this statement gets to set it). Setting
+# Rails.application.config.active_record.encryption.* afterwards (below) is
+# necessary for anything that reads it directly, but insufficient on its
+# own for either of these: ActiveRecord::Encryption.config is patched
+# directly so the encryption engine picks up the right value regardless of
+# exactly when the snapshot fired, and install_support is called directly
+# (idempotent - Module#prepend/include are no-ops if already applied) so
+# deterministic queries/uniqueness validations against legacy plaintext
+# rows actually work when extend_queries ends up true, instead of silently
+# never getting the query-rewriting support installed. Deferring the whole
+# block into after_initialize does NOT fix any of this - the snapshot
+# always happens before after_initialize runs (also verified empirically) -
+# and reading `Setting` (an autoloaded app/* constant) directly here isn't
+# possible in the first place: Rails autoloading isn't available yet while
+# config/initializers/*.rb are still being evaluated. See the comment on
+# ActiveRecordEncryptionConfig.backfill_completed? (lib/
+# active_record_encryption_config.rb) for why it reads the `settings` table
+# via raw SQL instead.
 encryption_fallback_enabled = !ActiveRecordEncryptionConfig.backfill_completed?
 Rails.application.config.active_record.encryption.support_unencrypted_data = encryption_fallback_enabled
 Rails.application.config.active_record.encryption.extend_queries = encryption_fallback_enabled
+if defined?(ActiveRecord::Encryption)
+  ActiveRecord::Encryption.config.support_unencrypted_data = encryption_fallback_enabled
+  ActiveRecord::Encryption.config.extend_queries = encryption_fallback_enabled
+  if encryption_fallback_enabled
+    ActiveRecord::Encryption::ExtendedDeterministicQueries.install_support
+    ActiveRecord::Encryption::ExtendedDeterministicUniquenessValidator.install_support
+  end
+end
 
 # KNOWN LIMITATION: extend_queries does not reliably extend deterministic
 # lookups to match legacy plaintext data for attributes that combine

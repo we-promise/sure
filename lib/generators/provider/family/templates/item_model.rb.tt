@@ -5,11 +5,14 @@ class <%= class_name %>Item < ApplicationRecord
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  # Encrypt sensitive credentials if ActiveRecord encryption is configured
+  # Encrypt sensitive credentials and raw provider payloads if ActiveRecord
+  # encryption is configured
   if encryption_ready?
 <% parsed_fields.select { |f| f[:secret] }.each do |field| -%>
     encrypts :<%= field[:name] %>, deterministic: true
 <% end -%>
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true

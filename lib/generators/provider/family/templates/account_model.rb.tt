@@ -1,8 +1,20 @@
 # frozen_string_literal: true
 
 class <%= class_name %>Account < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
   include <%= class_name %>Account::DataHelpers
+
+  # Encrypt raw provider payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+<% if banking_provider? -%>
+    encrypts :raw_transactions_payload
+<% end -%>
+<% if investment_provider? -%>
+    encrypts :raw_holdings_payload
+    encrypts :raw_activities_payload
+<% end -%>
+  end
 
   belongs_to :<%= file_name %>_item
 
