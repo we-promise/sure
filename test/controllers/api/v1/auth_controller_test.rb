@@ -94,6 +94,17 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Device information is required", response_data["error"]
   end
 
+  test "should return bad request when signup user params are missing" do
+    assert_no_difference([ "User.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/signup", params: { device: @device_info }
+    end
+
+    assert_response :bad_request
+    response_data = JSON.parse(response.body)
+    assert_equal "bad_request", response_data["error"]
+    assert_equal "Required parameters are missing or invalid", response_data["message"]
+  end
+
   test "should reject signup with invalid device_type before committing any state" do
     # Pre-validation catches bad device_type and returns 400 without creating
     # user/family/device/token. Guards against a partial-commit state where the

@@ -1005,6 +1005,23 @@ components:
         updated_at:
           type: string
           format: date-time
+    MerchantImportResult:
+      type: object
+      required:
+      - imported
+      - skipped
+      - merchants
+      properties:
+        imported:
+          type: integer
+          description: Number of merchants successfully created
+        skipped:
+          type: integer
+          description: Number of rows skipped (duplicates or invalid)
+        merchants:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MerchantDetail"
     Tag:
       type: object
       required:
@@ -1564,6 +1581,20 @@ components:
           - liability_payment
           - loan_payment
         notes:
+          type: string
+          nullable: true
+        source_fee_amount:
+          type: string
+          nullable: true
+          description: Fee charged to the source account
+        source_fee_currency:
+          type: string
+          nullable: true
+        destination_fee_amount:
+          type: string
+          nullable: true
+          description: Fee deducted from the destination account
+        destination_fee_currency:
           type: string
           nullable: true
         inflow_transaction:
@@ -3318,6 +3349,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: invite code required or invalid
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: required user parameters missing
           content:
             application/json:
               schema:
@@ -5723,6 +5760,39 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/MerchantDetail"
+    post:
+      summary: Import merchants from CSV
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: merchants imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantImportResult"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing file or invalid CSV
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: file
+        required: true
+        description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
     parameters:
     - name: id

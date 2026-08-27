@@ -69,6 +69,11 @@ RSpec.describe 'API V1 Auth', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
+
+      response '400', 'required user parameters missing' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
     end
   end
 
