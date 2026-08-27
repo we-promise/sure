@@ -547,8 +547,6 @@ class Goal < ApplicationRecord
       link.lock!
       stamp_consumption!(transaction) if transaction
 
-      # A whole-account link reserves no fixed slice, so there is nothing to
-      # shrink — it already takes only what the account has left.
       if link.allocated_amount.present?
         # Refused rather than clamped. Clamping released only what the link
         # held while `consumed_amount` took the full figure, so the two sides
@@ -559,6 +557,22 @@ class Goal < ApplicationRecord
         end
 
         link.update!(allocated_amount: link.allocated_amount.to_d - amount)
+      else
+        # A whole-account link has no slice to shrink, so `consumed_amount`
+        # would be added to a backing that has not moved: the goal reads 6,000
+        # of 5,000 until the real transaction lands and the balance catches up.
+        # A fixed earmark never has that window, because shrinking it caps the
+        # backing straight away.
+        #
+        # Spending settles what the link claims. It stops taking "whatever is
+        # there" and takes what is left after the spend — which is also what
+        # happened: the account is no longer wholly available to this goal.
+        # Money paid in later is not silently swept up; the user re-earmarks
+        # it, which is the same decision they made the first time.
+        remaining = backing_within([ link.account_id ]).to_d - amount
+        raise ConsumptionRefused.new(:exceeds_earmark) if remaining.negative?
+
+        link.update!(allocated_amount: remaining)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
