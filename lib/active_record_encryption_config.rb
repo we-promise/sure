@@ -45,7 +45,10 @@ module ActiveRecordEncryptionConfig
   end
 
   def credentials_configured?(credentials = Rails.application.credentials)
-    credentials.active_record_encryption.present?
+    config = credentials.active_record_encryption
+    return false unless config.present?
+
+    CONFIG_KEYS.all? { |key| config.public_send(key).present? }
   rescue NoMethodError
     false
   end
