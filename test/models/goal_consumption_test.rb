@@ -79,6 +79,36 @@ class GoalConsumptionTest < ActiveSupport::TestCase
     assert_equal 5_000, goal.current_balance.to_d + goal.consumed_amount.to_d
   end
 
+  # The order the two events arrive in is not fixed. A spend recorded before
+  # the sync lands needs the account's fall accounted for; the same spend
+  # recorded after it has already had it, and subtracting twice reported
+  # 4,000 of a 5,000 goal that was whole. Capping at what is left to reach is
+  # the same answer either way.
+  test "it is right when the balance falls before the spend is recorded" do
+    account = fresh_account(4_000)
+    goal = @family.goals.create!(name: "Late", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.consume!(1_000)
+
+    assert_equal 5_000, goal.current_balance.to_d + goal.consumed_amount.to_d
+  end
+
+  # A goal holding more than it needs keeps counting only toward its target
+  # once it has spent something — the cap is what makes the two orders agree,
+  # and it applies the same way here.
+  test "a goal holding more than its target settles at its target" do
+    account = fresh_account(7_000)
+    goal = @family.goals.create!(name: "Over", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.consume!(1_000)
+
+    assert_equal 5_000, goal.current_balance.to_d + goal.consumed_amount.to_d
+  end
+
   # And it stays right once the spend actually lands, which is the state a
   # fixed earmark has always handled and this one did not.
   test "it is still right once the balance catches up" do
@@ -96,7 +126,7 @@ class GoalConsumptionTest < ActiveSupport::TestCase
 
   # Nothing to take it from: the refusal is the same one a fixed earmark gives
   # when the amount is larger than the slice.
-  test "spending more than a whole-account link backs is refused" do
+  test "spending more than the goal has left to reach is refused" do
     account = fresh_account(1_000)
     goal = @family.goals.create!(name: "Whole", target_amount: 5_000, currency: "USD") do |g|
       g.goal_accounts.build(account: account)

@@ -565,14 +565,24 @@ class Goal < ApplicationRecord
         # backing straight away.
         #
         # Spending settles what the link claims. It stops taking "whatever is
-        # there" and takes what is left after the spend — which is also what
-        # happened: the account is no longer wholly available to this goal.
-        # Money paid in later is not silently swept up; the user re-earmarks
-        # it, which is the same decision they made the first time.
-        remaining = backing_within([ link.account_id ]).to_d - amount
-        raise ConsumptionRefused.new(:exceeds_earmark) if remaining.negative?
+        # there" and takes what the goal still needs after this spend.
+        #
+        # Deliberately NOT "what it backs, minus the amount". That depends on
+        # whether the money has already left the account, and the app cannot
+        # know: a spend recorded before the sync lands needs the subtraction,
+        # the same spend recorded after it has already had one, and taking it
+        # twice reports 4,000 of a 5,000 goal that is whole. Capping at what
+        # is left to reach is the same answer in both orders, with nothing to
+        # infer.
+        backed = backing_within([ link.account_id ]).to_d
 
-        link.update!(allocated_amount: remaining)
+        # Same refusal a fixed earmark gives, for the same reason: the link
+        # cannot have supplied money it never backed. `still_needed` cannot go
+        # negative — the target check above has already refused that.
+        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+
+        still_needed = target_amount.to_d - consumed_amount.to_d - amount
+        link.update!(allocated_amount: [ backed, still_needed ].min)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
