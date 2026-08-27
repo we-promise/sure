@@ -353,15 +353,18 @@ class CreateBillsSubsystem < ActiveRecord::Migration[7.2]
     # A single broad grouping missed pairs the narrower merchant indexes would
     # still reject, and the failure would land after the bills tables were
     # already dropped.
+    # account_id is the one nullable indexed column, and the indexes treat
+    # NULLs as distinct: two accountless rows never collide, so grouping them
+    # here would refuse a rollback PostgreSQL can perform.
     collision_checks = [
       [ "family_id, account_id, merchant_id, amount, currency",
-        "merchant_id IS NOT NULL AND destination_account_id IS NULL" ],
+        "account_id IS NOT NULL AND merchant_id IS NOT NULL AND destination_account_id IS NULL" ],
       [ "family_id, account_id, name, amount, currency",
-        "name IS NOT NULL AND merchant_id IS NULL AND destination_account_id IS NULL" ],
+        "account_id IS NOT NULL AND name IS NOT NULL AND merchant_id IS NULL AND destination_account_id IS NULL" ],
       [ "family_id, account_id, destination_account_id, merchant_id, amount, currency",
-        "destination_account_id IS NOT NULL AND merchant_id IS NOT NULL" ],
+        "account_id IS NOT NULL AND destination_account_id IS NOT NULL AND merchant_id IS NOT NULL" ],
       [ "family_id, account_id, destination_account_id, name, amount, currency",
-        "destination_account_id IS NOT NULL AND name IS NOT NULL AND merchant_id IS NULL" ]
+        "account_id IS NOT NULL AND destination_account_id IS NOT NULL AND name IS NOT NULL AND merchant_id IS NULL" ]
     ]
     forked = collision_checks.any? do |columns, predicate|
       ActiveModel::Type::Boolean.new.cast(select_value(<<~SQL))
