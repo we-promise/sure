@@ -117,9 +117,12 @@ pub fn run() {
                         // server the user has saved, so a malicious deep link
                         // can't load an arbitrary origin into the main webview.
                         if let Some(target) = deep_link::parse(u) {
-                            if servers::is_known_server(&target.server) {
+                            // Gate on the destination, not the bare origin: a
+                            // saved server may be mounted under a path, and the
+                            // link's own path is what lands inside it.
+                            let dest = format!("{}{}", target.server, target.path);
+                            if servers::is_known_server(&dest) {
                                 if let Some(w) = handle.get_webview_window("main") {
-                                    let dest = format!("{}{}", target.server, target.path);
                                     let _ = w.eval(&format!("window.location.assign({:?})", dest));
                                 }
                             }

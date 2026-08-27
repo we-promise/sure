@@ -19,6 +19,7 @@ class AiHealth
               :embedding_endpoint, :embedding_model, :embedding_dimensions,
               :pgvector_extension_available, :pgvector_extension_enabled,
               :pgvector_table_available, :qdrant_endpoint, :llm_probe,
+              :pdf_text_extraction_probe, :pdf_vision_processing_probe,
               :vector_store_probe, :embedding_probe
 
   def initialize(run_probes: true, force_probes: false)
@@ -55,14 +56,20 @@ class AiHealth
     @openai_custom_endpoint
   end
 
-  def pdf_processing_supported?
-    @pdf_processing_supported == true
+  def pdf_text_extraction_supported?
+    @pdf_text_extraction_capable == true && pdf_text_extraction_probe.passing?
   end
 
-  def pdf_processing_status
-    return :unavailable unless llm_configured?
+  def pdf_text_extraction_status
+    pdf_probe_status(pdf_text_extraction_probe, capable: @pdf_text_extraction_capable)
+  end
 
-    pdf_processing_supported? ? :supported : :unsupported
+  def pdf_vision_processing_supported?
+    @pdf_vision_processing_capable == true && pdf_vision_processing_probe.passing?
+  end
+
+  def pdf_vision_processing_status
+    pdf_probe_status(pdf_vision_processing_probe, capable: @pdf_vision_processing_capable)
   end
 
   def vector_store_configured?
@@ -86,7 +93,9 @@ class AiHealth
   end
 
   def last_checked_at
-    [ llm_probe, vector_store_probe, embedding_probe ].filter_map(&:checked_at).max
+    [ llm_probe, pdf_text_extraction_probe, pdf_vision_processing_probe, vector_store_probe, embedding_probe ]
+      .filter_map(&:checked_at)
+      .max
   end
 
   def self.redact_endpoint(value)
@@ -120,9 +129,11 @@ class AiHealth
       @llm_model = effective_model(provider_for_details)
       @llm_endpoint = endpoint(provider_for_details)
       @llm_request_timeout = request_timeout(provider_for_details)
-      @pdf_processing_supported = safely(false) do
+      @pdf_processing_capable = safely(false) do
         @llm_provider&.supports_pdf_processing?(model: llm_model)
       end
+      @pdf_text_extraction_capable = @pdf_processing_capable && @effective_llm_protocol == :openai
+      @pdf_vision_processing_capable = @pdf_processing_capable
 
       @openai_endpoint = redact_endpoint(openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT)
       @llm_access_token = access_token(@effective_llm_protocol)
@@ -148,6 +159,8 @@ class AiHealth
 
     def load_probes
       @llm_probe = llm_configured? ? Probe.not_checked : Probe.not_configured
+      @pdf_text_extraction_probe = llm_configured? && @pdf_text_extraction_capable ? Probe.not_checked : Probe.not_configured
+      @pdf_vision_processing_probe = llm_configured? && @pdf_vision_processing_capable ? Probe.not_checked : Probe.not_configured
       @vector_store_probe = vector_store_adapter.present? ? Probe.not_checked : Probe.not_configured
       @embedding_probe = vector_store_adapter == :pgvector ? Probe.not_checked : Probe.not_configured
       return unless run_probes?
@@ -158,8 +171,27 @@ class AiHealth
           provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,
-          model: llm_model
+          model: llm_model,
+          openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
         )
+        if @pdf_text_extraction_capable
+          @pdf_text_extraction_probe = probe.pdf_text_extraction(
+            provider: @effective_llm_protocol,
+            endpoint: @llm_raw_endpoint,
+            access_token: @llm_access_token,
+            model: llm_model,
+            openai_compatible: openai_compatible_endpoint?
+          )
+        end
+        if @pdf_vision_processing_capable
+          @pdf_vision_processing_probe = probe.pdf_vision_processing(
+            provider: @effective_llm_protocol,
+            endpoint: @llm_raw_endpoint,
+            access_token: @llm_access_token,
+            model: llm_model,
+            openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+          )
+        end
       end
 
       case vector_store_adapter
@@ -183,6 +215,14 @@ class AiHealth
 
     def run_probes?
       @run_probes
+    end
+
+    def pdf_probe_status(probe, capable:)
+      return :unavailable unless llm_configured?
+      return :unsupported unless capable
+      return :not_checked unless run_probes?
+
+      probe.passing? ? :supported : :failing
     end
 
     def load_pgvector_status

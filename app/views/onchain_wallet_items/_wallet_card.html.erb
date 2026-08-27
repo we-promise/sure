@@ -45,17 +45,32 @@
           </div>
         </div>
 
-        <%# Management lives in the provider settings panel, where linking,
-            token review and disconnection already are — this card links to it
-            rather than growing a second, partial copy of those controls. %>
+        <%# A menu, like every other provider card on this page, holding the
+            same two actions Kraken's does. Management itself is reached from
+            the provider settings, as it is for every other connection — no
+            card here links to it, and a menu of actions is the wrong place for
+            a navigation link. %>
         <% if Current.user&.admin? %>
-          <%= render DS::Link.new(
-                text: t(".manage"),
-                icon: "settings",
-                variant: "secondary",
-                href: settings_providers_path,
-                frame: "_top"
-              ) %>
+          <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+            <% unless onchain_wallet_item.syncing? %>
+              <% menu.with_item(
+                   variant: "button",
+                   text: t(".sync"),
+                   icon: "refresh-cw",
+                   href: sync_onchain_wallet_item_path(onchain_wallet_item),
+                   method: :post
+                 ) %>
+            <% end %>
+
+            <% menu.with_item(
+                 variant: "button",
+                 text: t(".delete"),
+                 icon: "trash-2",
+                 href: onchain_wallet_item_path(onchain_wallet_item),
+                 method: :delete,
+                 confirm: CustomConfirm.for_resource_deletion(onchain_wallet_item.institution_display_name, high_severity: true)
+               ) %>
+          <% end %>
         <% end %>
       </div>
     <% end %>
