@@ -457,8 +457,22 @@ class Goal < ApplicationRecord
     computed
   end
 
+  # Whether a months-based target could be worked out AT ALL right now. The
+  # form has to know before the user has picked anything, so this deliberately
+  # ignores the goal's own kind, mode and months: it answers "is there spending
+  # history to derive from", nothing else. With none, the typed amount is the
+  # only way to set a target, so the form must keep offering the field.
+  def months_target_derivable?
+    return false if family.nil? || currency.blank?
+
+    median = median_monthly_expense
+    return false unless median.positive?
+
+    convert_to_goal_currency(median).to_d.positive?
+  end
+
   private
-    # The floor this reserve should hold, or nil when it cannot be computed.
+    # The family's median monthly spend, in FAMILY currency.
     #
     # ⚠️ The account scope is passed EXPLICITLY, and that is the whole point
     # of this method. IncomeStatement's constructor does `user || Current.user`
@@ -468,14 +482,20 @@ class Goal < ApplicationRecord
     # whole family: derived from a viewer's slice of the accounts it would
     # change depending on who last triggered it. The rollover chain hit
     # exactly this and had to be pinned the same way.
+    # Deliberately not memoized. The refresh job derives again on an instance
+    # it has already saved through, and a median frozen on first read would
+    # hand it back the figure it started with.
+    def median_monthly_expense
+      IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
+                     .median_expense(interval: "month").to_d
+    end
+
+    # The balance this reserve should hold, or nil when it cannot be computed.
     def months_of_expenses_amount
       return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
+      return nil unless median_monthly_expense.positive?
 
-      statement = IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
-      median = statement.median_expense(interval: "month").to_d
-      return nil unless median.positive?
-
-      computed = (median * target_months).round(2)
+      computed = (median_monthly_expense * target_months).round(2)
       return nil unless computed.positive?
 
       # The median comes back in FAMILY currency; `target_amount` is stored in

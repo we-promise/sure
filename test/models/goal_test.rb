@@ -779,6 +779,39 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1000"), goal.reload.target_amount.to_d
   end
 
+  # The form asks this BEFORE the user has picked a kind or a number of months,
+  # to decide whether to keep offering the amount field. So it must answer for
+  # the family alone, not for what this goal happens to be right now.
+  test "derivability is answered for the family, whatever the goal is set to" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+
+    assert goal.months_target_derivable?,
+           "a one-off with no months set still has spending to derive from"
+  end
+
+  # With nothing to derive from, the typed amount is the only way to give the
+  # reserve a target. The form has to be told, or it hides the only field that
+  # would let the user do it.
+  test "a family with no spending history can derive nothing" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+
+    assert_not goal.months_target_derivable?
+  end
+
+  test "derivability follows the goal's currency, not the family's" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    goal.stubs(:currency).returns("EUR")
+    Money.any_instance.stubs(:exchange_to).raises(
+      Money::ConversionError.new(from_currency: "USD", to_currency: "EUR", date: Date.current)
+    )
+
+    assert_not goal.months_target_derivable?,
+               "no rate for the day means no figure to show, so the field must stay"
+  end
+
   test "account free_to_earmark subtracts non-archived fixed earmarks" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Headroom Savings", currency: "USD", balance: 5_000)
     @family.goals.create!(name: "Earmarker", target_amount: 10_000, currency: "USD") do |g|

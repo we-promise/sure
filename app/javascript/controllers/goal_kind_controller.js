@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
-// A maintained reserve has no deadline: it is a level to hold, not something
-// due on a date. Hiding the target-date field keeps a stale value from being
+// A maintained reserve has no deadline: it is a target balance to hold, not
+// something due on a date. Hiding the target-date field keeps a stale value from being
 // submitted and driving a pace the goal does not have.
 export default class extends Controller {
   static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField", "amountDerived"]
@@ -9,6 +9,7 @@ export default class extends Controller {
   static values = {
     amountLabel: String,
     balanceLabel: String,
+    derivable: Boolean,
   }
 
   connect() {
@@ -33,11 +34,25 @@ export default class extends Controller {
 
     // Three states. A one-off saves toward a target amount; a fixed reserve
     // holds a target balance you type; a months-based reserve holds one worked
-    // out from spending, so the input gives way to the figure itself. A
+    // out from spending, so the input gives way to the figure itself — a
     // greyed-out input still reads as something to fill in, beside the months
     // that are the actual question.
-    this.amountFieldTargets.forEach((field) => field.classList.toggle("hidden", months))
-    this.amountDerivedTargets.forEach((field) => field.classList.toggle("hidden", !months))
+    //
+    // Only where there IS spending to work one out from, though. With none the
+    // model keeps whatever was typed, so the field has to stay: it is then the
+    // only way to give the reserve a target at all.
+    const derived = months && this.derivableValue
+    this.amountFieldTargets.forEach((field) => field.classList.toggle("hidden", derived))
+    this.amountDerivedTargets.forEach((field) => field.classList.toggle("hidden", !derived))
+
+    // Disabled, not merely hidden. A `required` input is still validated by
+    // the browser while `display: none`, which then blocks a submit it cannot
+    // show the error on — the reserve became impossible to create. Disabling
+    // also keeps the typed figure out of the params, so what lands is the
+    // figure the model derived.
+    this.amountFieldTargets.forEach((field) => {
+      field.querySelectorAll("input").forEach((input) => { input.disabled = derived })
+    })
 
     const label = maintained ? this.balanceLabelValue : this.amountLabelValue
     this.amountFieldTargets.forEach((field) => {

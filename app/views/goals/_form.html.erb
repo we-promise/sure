@@ -10,7 +10,8 @@
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
      data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>"
      data-goal-kind-amount-label-value="<%= t("goals.form.fields.target_amount") %>"
-     data-goal-kind-balance-label-value="<%= t("goals.form.fields.target_balance") %>">
+     data-goal-kind-balance-label-value="<%= t("goals.form.fields.target_balance") %>"
+     data-goal-kind-derivable-value="<%= goal.months_target_derivable? %>">
   <%= styled_form_with model: goal,
                        url: goal.persisted? ? goal_path(goal) : goals_path,
                        method: goal.persisted? ? :patch : :post,
@@ -81,7 +82,9 @@
 
       <%# In months mode the balance is worked out, not typed. A read-only
           input still reads as something to fill in, sitting beside the months
-          that are the actual question — so it is shown as what it is. %>
+          that are the actual question — so it is shown as what it is. Only
+          when there is spending to work it out from, though: with none, the
+          controller leaves the field above in place and this stays hidden. %>
       <div data-goal-kind-target="amountDerived" class="hidden">
         <p class="form-field__label"><%= t("goals.form.fields.target_balance") %></p>
         <p class="mt-1 text-lg font-medium text-primary tabular-nums privacy-sensitive">
