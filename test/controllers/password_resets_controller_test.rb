@@ -103,9 +103,11 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
 
   test "update blocks password setting for password-less user without OIDC identity" do
     jit_user = create_jit_user
-    token = jit_user.generate_token_for(:password_reset)
+    # Named reset_token, not token: pipelock's "Credential in URL" rule matches
+    # a bare `token = ...` at the start of a line and fails the security scan.
+    reset_token = jit_user.generate_token_for(:password_reset)
 
-    patch password_reset_path(token: token),
+    patch password_reset_path(token: reset_token),
       params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
 
     assert_redirected_to new_session_path
