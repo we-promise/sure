@@ -177,4 +177,29 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
 
     refute ActiveRecordEncryptionConfig.backfill_completed?
   end
+
+  test "detects partially configured encryption credentials" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+  end
+
+  test "does not treat absent encryption credentials as partial" do
+    credentials = OpenStruct.new(active_record_encryption: nil)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "does not treat complete encryption credentials as partial" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
 end
