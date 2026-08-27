@@ -238,10 +238,23 @@ class RecurringTransaction
             source = rate ? (allocated / BigDecimal(rate.to_s)).round(4) : nil
             [ allocated, source, entry.currency ]
           elsif rate
-            allocated = (entry_total * BigDecimal(rate.to_s)).round(4)
-            [ allocated, entry_total, entry.currency ]
+            # Bounded the same way the same-currency default is: by what is
+            # left of the entry and what the occurrence still owes. Defaulting
+            # to the entry's full total meant a partly allocated foreign
+            # transaction could never be attached without an explicit amount,
+            # because the guard rejected the untaken remainder's own default.
+            source = entry_capacity(entry, entry_total)
+            converted = (source * BigDecimal(rate.to_s)).round(4)
+            remaining = occurrence.remaining_amount
+
+            if remaining.positive? && remaining < converted
+              [ remaining, (remaining / BigDecimal(rate.to_s)).round(4), entry.currency ]
+            else
+              [ converted, source, entry.currency ]
+            end
           else
-            raise MissingRateError, "no exchange rate from #{entry.currency} to #{occurrence.currency}; enter an amount explicitly"
+            raise MissingRateError, I18n.t("recurring_transactions.allocator.missing_rate",
+                                           from: entry.currency, to: occurrence.currency)
           end
         end
       end
@@ -320,17 +333,16 @@ class RecurringTransaction
         if source_amount.nil? || unmeasurable_entry?(entry)
           return if RecurringAllocation.where(entry: entry).none?
 
-          raise OverAllocationError,
-                "this transaction carries an allocation that cannot be converted to " \
-                "#{entry.currency}, so what is left of it cannot be measured. Add an exchange " \
-                "rate for #{entry.date} or remove the existing payment first"
+          raise OverAllocationError, I18n.t("recurring_transactions.allocator.unmeasurable",
+                                            currency: entry.currency, date: entry.date)
         end
 
         capacity = entry_capacity(entry, entry.amount.abs)
 
         if source_amount > capacity + RecurringOccurrence::CLOSE_EPSILON
-          raise OverAllocationError,
-                "allocating #{source_amount} exceeds the transaction's remaining #{capacity} #{entry.currency}"
+          raise OverAllocationError, I18n.t("recurring_transactions.allocator.over_allocated",
+                                            amount: source_amount, capacity: capacity,
+                                            currency: entry.currency)
         end
       end
   end

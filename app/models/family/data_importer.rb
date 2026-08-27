@@ -628,6 +628,12 @@ class Family::DataImporter
         )
         rule.save!
         increment_summary("RecurrenceRule", created ? :created : :updated)
+      rescue ActiveRecord::RecordInvalid
+        # The enum fallback keeps unknown cadences from raising, but the
+        # substituted monthly can still be incoherent with the row's other day
+        # fields, and a missing interval reads as zero. One stale export row is
+        # a skip, never a rollback of every record type in the file.
+        increment_summary("RecurrenceRule", :skipped)
       end
     end
 

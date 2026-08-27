@@ -50,6 +50,7 @@ class RecurringTransaction
     def repair_orphans!
       orphans = RecurringAllocation
                   .joins(:recurring_occurrence)
+                  .includes(recurring_occurrence: :recurring_transaction)
                   .where(recurring_occurrences: { family_id: family.id })
                   .where(entry_id: nil)
                   .where(source: %w[auto_matched user_confirmed])

@@ -207,6 +207,39 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal "EUR", allocation.source_currency
   end
 
+  test "a partly allocated cross-currency entry defaults to its leftover" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+    foreign = @account.entries.create!(
+      date: Date.current, amount: 100, currency: "EUR", name: "EU charge",
+      entryable: Transaction.new
+    )
+    @allocator.allocate!(entry: foreign, amount: 55)
+
+    free_date = (Date.current + 2.months).beginning_of_month + 9
+    other = @rent.recurring_occurrences.create!(
+      family: @family, original_due_on: free_date, due_on: free_date, currency: "USD"
+    )
+    # 50 EUR of the entry is spoken for, so the default is the 50 EUR
+    # leftover converted, not the full 100 the old default reached for.
+    allocation = Allocator.new(other).allocate!(entry: foreign)
+
+    assert_equal 55, allocation.allocated_amount
+    assert_equal 50, allocation.source_amount
+  end
+
+  test "a cross-currency default takes what the occurrence needs, not the whole entry" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1, date: Date.current)
+    @allocator.allocate!(entry: entry_for(1900))
+    foreign = @account.entries.create!(
+      date: Date.current, amount: 200, currency: "EUR", name: "EU charge",
+      entryable: Transaction.new
+    )
+    allocation = @allocator.allocate!(entry: foreign)
+
+    assert_equal 100, allocation.allocated_amount
+    assert @occurrence.reload.paid?
+  end
+
   test "entry deletion nullifies the link but keeps the payment" do
     payment = entry_for(500)
     allocation = @allocator.allocate!(entry: payment)
