@@ -23,6 +23,22 @@ module SnaptradeItem::Provided
     payload
   end
 
+  # Ask SnapTrade for a device code the user confirms on their side. Returns the
+  # device authorization payload; nothing is persisted until it is redeemed.
+  def start_oauth_device_flow(scope: "read")
+    Provider::Snaptrade.start_device_authorization(scope: scope)
+  end
+
+  # Redeem a confirmed device code. The payload has the same shape as the
+  # authorization-code response, so the item ends up in exactly the state
+  # complete_oauth_exchange! leaves it in -- one token model, two grants.
+  def complete_oauth_device_flow!(device_code:)
+    payload = Provider::Snaptrade.poll_device_token(device_code: device_code)
+    apply_oauth_tokens!(payload)
+    update!(status: :good)
+    payload
+  end
+
   # Get the connection portal URL for linking brokerages
   def connection_portal_url(redirect_url:, broker: nil)
     provider = snaptrade_provider

@@ -66,3 +66,9 @@ sweep_expired_goal_pledges:
   class: "SweepExpiredGoalPledgesJob"
   queue: "scheduled"
   description: "Marks goal pledges that passed their 7-day window as expired"
+
+refresh_maintained_goal_targets:
+  cron: "0 3 1 * *" # 3:00 AM on the 1st of each month
+  class: "RefreshMaintainedGoalTargetsJob"
+  queue: "scheduled"
+  description: "Recomputes the floor of reserves expressed in months of expenses"
