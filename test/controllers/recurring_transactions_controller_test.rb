@@ -135,7 +135,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     account = accounts(:depository)
     2.times do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        date: Date.current - ((i + 1) * 30).days,
         amount: 45.00, currency: "USD", name: "City Water",
         entryable: Transaction.new
       )
@@ -151,7 +151,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   test "the candidate strip never offers a pattern on an account the member cannot reach" do
     3.times do |i|
       accounts(:investment).entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        date: Date.current - ((i + 1) * 30).days,
         amount: 45.00, currency: "USD", name: "PRIVATE BROKERAGE SUB",
         entryable: Transaction.new
       )
@@ -173,7 +173,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        date: Date.current - ((i + 1) * 30).days,
         amount: 45.00, currency: "USD", name: "City Water",
         entryable: Transaction.new
       )
@@ -191,7 +191,7 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     account = accounts(:depository)
     entries = 2.times.map do |i|
       account.entries.create!(
-        date: (i + 1).months.ago.beginning_of_month + 9.days,
+        date: Date.current - ((i + 1) * 30).days,
         amount: 45.00, currency: "USD", name: "City Water",
         entryable: Transaction.new
       )

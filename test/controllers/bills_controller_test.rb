@@ -1,6 +1,10 @@
 require "test_helper"
 
 class BillsControllerTest < ActionDispatch::IntegrationTest
+  teardown do
+    travel_back
+  end
+
   setup do
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
@@ -1414,6 +1418,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # paid weekly: four paychecks and four rent payments land in one list. The
   # markers only earn their place when income actually subdivides the month.
   test "weekly income marks pay periods inside the month" do
+    travel_to Date.current.beginning_of_month + 9.days
+
     declare_scheduled_income(frequency: "weekly", weekday: Date.current.wday)
     declare_weekly_bill
 
@@ -1425,6 +1431,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "monthly income leaves the month undivided" do
+    travel_to Date.current.beginning_of_month + 9.days
+
     declare_scheduled_income(frequency: "monthly", day_of_month: Date.current.day)
     declare_weekly_bill
 
@@ -1436,6 +1444,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "no declared income leaves the month undivided" do
+    travel_to Date.current.beginning_of_month + 9.days
+
     declare_weekly_bill
 
     get bills_url
