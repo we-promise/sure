@@ -61,6 +61,48 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     assert_equal "legacy-plaintext@example.com", user.reload.email
   end
 
+  test "User.find_by_email works around the known limitation for legacy plaintext rows" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    assert_equal user, User.find_by_email("legacy-plaintext@example.com")
+    # Also matches with surrounding whitespace/mixed case, like a raw form param.
+    assert_equal user, User.find_by_email("  Legacy-Plaintext@Example.com  ")
+  end
+
+  test "User.authenticate_by_email works around the known limitation for legacy plaintext rows" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update!(password: "correct-horse-battery-staple")
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    assert_equal user, User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "correct-horse-battery-staple")
+    assert_nil User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "wrong-password")
+  end
+
+  test "deterministic find_by matches a legacy plaintext row for downcase attributes without a model-level normalizes declaration" do
+    skip "Encryption not configured" unless Invitation.encryption_ready? && InviteCode.encryption_ready?
+
+    invitation = invitations(:one)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE invitations SET email = ? WHERE id = ?", "legacy-invite@example.com", invitation.id ])
+    )
+    assert_equal invitation, Invitation.find_by(email: "legacy-invite@example.com")
+
+    invite_code = InviteCode.create!
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE invite_codes SET token = ? WHERE id = ?", "legacy-token-xyz", invite_code.id ])
+    )
+    assert_equal invite_code, InviteCode.find_by(token: "legacy-token-xyz")
+  end
+
   test "reads a legacy plaintext jsonb value as its original Hash, not a String" do
     skip "Encryption not configured" unless SnaptradeAccount.encryption_ready?
 

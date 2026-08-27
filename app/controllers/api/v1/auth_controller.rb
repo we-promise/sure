@@ -71,7 +71,7 @@ module Api
       end
 
       def login
-        user = User.find_by(email: params[:email])
+        user = User.find_by_email(params[:email])
 
         if user&.authenticate(params[:password])
           # Check MFA if enabled
@@ -152,7 +152,7 @@ module Api
         cached = validate_linking_code(linking_code)
         return unless cached
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless user&.active?
           render json: { error: "Invalid email or password" }, status: :unauthorized
