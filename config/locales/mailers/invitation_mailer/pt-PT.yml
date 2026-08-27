@@ -1,5 +1,5 @@
 ---
-en:
+pt-PT:
   invitation_mailer:
     invite_email:
       subject: "%{inviter} has invited you to join their household on %{product_name}!"

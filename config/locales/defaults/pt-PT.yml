@@ -1,5 +1,5 @@
 ---
-en:
+pt-PT:
   defaults:
     brand_name: "%{brand_name}"
     product_name: "%{product_name}"
@@ -141,11 +141,11 @@ en:
       required: é obrigatório
       taken: já existe
       too_long:
-        one: é demasiado longo (máximo: %{count} caracter)
-        other: é demasiado longo (máximo: %{count} caracteres)
+        one: "é demasiado longo (máximo: %{count} caracter)"
+        other: "é demasiado longo (máximo: %{count} caracteres)"
       too_short:
-        one: é demasiado curto (mínimo: %{count} caracter)
-        other: é demasiado curto (mínimo: %{count} caracteres)
+        one: "é demasiado curto (mínimo: %{count} caracter)"
+        other: "é demasiado curto (mínimo: %{count} caracteres)"
       wrong_length:
         one: tem o tamanho errado (deve ter %{count} caracter)
         other: tem o tamanho errado (deve ter %{count} caracteres)

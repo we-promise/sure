@@ -1,0 +1,107 @@
+---
+pt-PT:
+  properties:
+    edit:
+      edit: Edit %{account}
+      title: Enter property manually
+    form:
+      address_line1: Street address
+      address_line1_placeholder: 123 Main St
+      area: Living area
+      area_placeholder: '2000'
+      area_unit: Unit of measurement
+      country: Country
+      country_placeholder: US
+      locality: City
+      locality_placeholder: San Francisco
+      none: None
+      postal_code: ZIP/Postal code
+      postal_code_placeholder: '94105'
+      region: State/Province
+      region_placeholder: CA
+      subtype_prompt: Select property type
+      year_built: Year built
+      year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    new:
+      title: Enter property manually
+      next: "Next"
+      avm_option: "Add via %{provider}"
+      avm_title: "Add property via %{provider}"
+      avm_description: "Enter a name for the property and its address. %{provider} will look up the property details and estimated market value for you."
+      avm_us_only: "%{provider} only supports properties located in the United States."
+      avm_submit: "Look up property"
+      avm_preview_title: "Confirm property details"
+      avm_preview_description: "Here's what %{provider} found. Review the details before adding the property — nothing has been created yet."
+      avm_preview_no_record: "%{provider} couldn't find a property record at this address, so the value shown is an estimate based on the surrounding area. Double-check the address before continuing."
+      avm_preview_back: "Back"
+      avm_preview_confirm: "Add property"
+    address:
+      title: "Enter property manually"
+      address_line1_label: "Address Line 1"
+      address_line1_placeholder: "123 Main Street"
+      city_label: "City"
+      city_placeholder: "San Francisco"
+      state_region_label: "State/Region"
+      state_region_placeholder: "CA"
+      postal_code_label: "Postal Code"
+      postal_code_placeholder: "12345"
+      country_label: "Country"
+      country_placeholder: "USA"
+      save: "Save"
+    balances:
+      title: "Enter property manually"
+      market_value_label: "Estimated market value"
+      market_value_tooltip: "The estimated market value of your property. This number can often be found on sites like Zillow or Redfin, and is never an exact number."
+      save: "Save"
+      next: "Next"
+    overview_fields:
+      name_label: "Name"
+      name_placeholder: "Vacation home"
+      subtype_prompt: "Select type"
+      property_type_label: "Property type"
+      year_built_label: "Year Built (optional)"
+      year_built_placeholder: "1990"
+      area_label: "Area (optional)"
+      area_placeholder: "1200"
+      square_feet: "Square Feet"
+      square_meters: "Square Meters"
+      area_unit_label: "Area Unit"
+    overview:
+      living_area: Living Area
+      market_value: Market Value
+      purchase_price: Purchase Price
+      trend: Trend
+      unknown: Unknown
+      year_built: Year Built
+    tabs:
+      overview:
+        living_area: Living Area
+        market_value: Market Value
+        purchase_price: Purchase Price
+        trend: Trend
+        unknown: Unknown
+        year_built: Year Built
+        edit_account_details: "Edit account details"
+    subtypes:
+      apartment:
+        short: Apartment
+        long: Apartment
+      plot:
+        short: Plot
+        long: Plot / Land
+      commercial:
+        short: Commercial
+        long: Commercial Property
+      rented:
+        short: Rented
+        long: Rented Property
+      agri_land:
+        short: Agri Land
+        long: Agricultural Land
+    form_tabs:
+      address: Address
+      overview: Overview
+      value: Value
