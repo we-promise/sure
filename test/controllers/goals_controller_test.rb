@@ -768,6 +768,42 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       assert_no_match(/already used|déjà utilisés/, label)
     end
 
+    # The months mode could not be created from the UI at all. The form makes the
+    # amount read-only, so it submits empty; `target_amount` is required and
+    # validations run before any save callback, so the derivation that fills it
+    # never ran. Every existing test set the amount explicitly, which is why the
+    # model looked fine.
+    test "a months-of-expenses reserve can be created without typing an amount" do
+      account = unclaimed_account("Reserve Pot")
+      IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+
+      assert_difference -> { Goal.count }, 1 do
+        post goals_url, params: { goal: {
+          name: "Precaution", color: "#4da568", kind: "maintained",
+          target_mode: "months_of_expenses", target_months: "6",
+          target_amount: "", account_ids: [ account.id ]
+        } }
+      end
+
+      goal = Goal.order(created_at: :desc).first
+      assert_equal 3_000, goal.target_amount.to_d, "the floor was not derived from the months"
+      assert goal.maintained?
+    end
+
+    # A fixed reserve still needs one, and still says so.
+    test "a fixed-amount goal still requires the amount" do
+      account = unclaimed_account("Fixed Pot")
+
+      assert_no_difference -> { Goal.count } do
+        post goals_url, params: { goal: {
+          name: "No amount", color: "#4da568",
+          target_amount: "", account_ids: [ account.id ]
+        } }
+      end
+
+      assert_response :unprocessable_entity
+    end
+
   private
 
     # A private account of another member, linked to the goal under test.
