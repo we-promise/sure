@@ -10,6 +10,20 @@ class Account::SyncerTest < ActiveSupport::TestCase
     Account::Syncer.new(account).perform_post_sync
   end
 
+  test "preloads account providers once for the full sync" do
+    account = accounts(:depository)
+    AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+    Account::MarketDataImporter.any_instance.stubs(:import_all)
+    Balance::Materializer.any_instance.stubs(:materialize_balances)
+
+    queries = capture_sql_queries do
+      Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))
+    end
+
+    provider_queries = queries.grep(/FROM "account_providers"/)
+    assert_equal 1, provider_queries.size, provider_queries.join("\n")
+  end
+
   test "applies IBKR historical balance overrides after materialization" do
     family = families(:empty)
     account = family.accounts.create!(

@@ -42,6 +42,18 @@ class Account::LinkableTest < ActiveSupport::TestCase
     refute @account.linked_to?("SimplefinAccount")
   end
 
+  test "linked_to? reuses a loaded account providers association" do
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    @account.account_providers.load
+
+    queries = capture_sql_queries do
+      assert @account.linked_to?("PlaidAccount")
+      refute @account.linked_to?("SimplefinAccount")
+    end
+
+    assert_empty queries.grep(/FROM "account_providers"/)
+  end
+
   test "can_delete_holdings? returns true for unlinked accounts" do
     assert @account.unlinked?
     assert @account.can_delete_holdings?
