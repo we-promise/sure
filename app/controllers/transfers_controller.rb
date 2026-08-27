@@ -10,6 +10,7 @@ class TransfersController < ApplicationController
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
     @tags = Current.family.tags.alphabetically
+    @categories = Current.family.categories.alphabetically_by_hierarchy
   end
 
   def show
@@ -46,6 +47,7 @@ class TransfersController < ApplicationController
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
       tag_ids: transfer_params[:tag_ids],
+      category_id: transfer_params[:category_id],
       idempotency_key: submitted_idempotency_key
     ).create
 
@@ -57,7 +59,9 @@ class TransfersController < ApplicationController
       end
     else
       @from_account_id = transfer_params[:from_account_id]
+      @selected_category_id = transfer_params[:category_id]
       @tags = Current.family.tags.alphabetically
+      @categories = Current.family.categories.alphabetically_by_hierarchy
       render :new, status: :unprocessable_entity
     end
   rescue Money::ConversionError
@@ -66,7 +70,9 @@ class TransfersController < ApplicationController
     @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
+    @selected_category_id = transfer_params[:category_id]
     @tags = Current.family.tags.alphabetically
+    @categories = Current.family.categories.alphabetically_by_hierarchy
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
@@ -82,7 +88,9 @@ class TransfersController < ApplicationController
     @transfer.errors.add(:base, t(".stale_form"))
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
+    @selected_category_id = transfer_params[:category_id]
     @tags = Current.family.tags.alphabetically
+    @categories = Current.family.categories.alphabetically_by_hierarchy
     render :new, status: :unprocessable_entity
   end
 
@@ -203,7 +211,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, tag_ids: [])
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, :category_id, tag_ids: [])
     end
 
     # Anti-double-submit token: a random UUID rendered fresh on every "new
