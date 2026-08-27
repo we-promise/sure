@@ -135,8 +135,8 @@ fr:
         copy_token_html: Copiez le jeton et ajoutez-le en tant que connexion nommée
           ci-dessous. Sure stocke le jeton uniquement pour synchroniser cette
           famille.
-        create_token: 'Créez un jeton API avec ces étendues en lecture seule : comptes.cash.readonly,
-          comptes.card.readonly, transactions.cash.readonly, transactions.card.readonly'
+        create_token: 'Créez un jeton API avec ces étendues en lecture seule : accounts.cash.readonly,
+          accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly'
         open_tokens: Accédez aux paramètres du développeur Brex/du jeton API de l'entreprise
           que vous souhaitez connecter.
         sign_in_html: Visitez %{link} et connectez-vous au compte que vous souhaitez
