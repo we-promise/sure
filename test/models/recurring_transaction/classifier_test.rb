@@ -75,6 +75,24 @@ class RecurringTransaction::ClassifierTest < ActiveSupport::TestCase
     assert_equal "suggested", created.status
   end
 
+
+  # A substring test let "max" claim any Maxwell and "gas" claim a gastropub,
+  # and a false subscription match also set autopay, which hides the row from
+  # the needs-action list.
+  test "short keywords only match whole words" do
+    result = RecurringTransaction::Classifier.classify(
+      name: "Maxwell Plumbing", entries: entries_of(45)
+    )
+    assert_equal "bill", result.bill_type, "Maxwell is not HBO Max"
+  end
+
+  test "the real service names still match" do
+    result = RecurringTransaction::Classifier.classify(
+      name: "HBO MAX SUBSCRIPTION", entries: entries_of(15.99)
+    )
+    assert_equal "subscription", result.bill_type
+  end
+
   private
     def entries_of(*amounts)
       amounts.map.with_index do |amount, index|

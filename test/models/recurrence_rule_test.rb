@@ -111,4 +111,12 @@ class RecurrenceRuleTest < ActiveSupport::TestCase
       @recurring.destroy!
     end
   end
+
+  test "a week-of-month anchor without a weekday is rejected" do
+    rule = @recurring.recurrence_rules.build(frequency: "monthly", day_of_month: 10, weekday_ordinal: 2)
+
+    assert_not rule.valid?
+    assert rule.errors[:weekday_ordinal].any?,
+      "an ordinal with no weekday persists an incoherent day anchor"
+  end
 end

@@ -147,6 +147,18 @@ class CreateBillsSubsystem < ActiveRecord::Migration[7.2]
               unique: true, name: "idx_recurring_txns_pair_name",
               where: "destination_account_id IS NOT NULL AND name IS NOT NULL AND merchant_id IS NULL"
 
+    # Session imports resolve cross-chunk references through persisted source
+    # mappings, and occurrences joined that contract when allocations started
+    # arriving in later chunks than the cycles they pay.
+    remove_check_constraint :import_source_mappings, name: "chk_import_source_mappings_source_type"
+    add_check_constraint :import_source_mappings,
+                         "source_type IN ('Account', 'Category', 'Tag', 'Merchant', 'RecurringTransaction', 'RecurringOccurrence', 'Transaction', 'Budget', 'Security', 'Rule')",
+                         name: "chk_import_source_mappings_source_type"
+    remove_check_constraint :import_source_mappings, name: "chk_import_source_mappings_target_type"
+    add_check_constraint :import_source_mappings,
+                         "target_type IN ('Account', 'Category', 'Tag', 'Merchant', 'RecurringTransaction', 'RecurringOccurrence', 'Transaction', 'Budget', 'Security', 'Rule')",
+                         name: "chk_import_source_mappings_target_type"
+
     # -- Occurrences, allocations, rejections, price history -----------------
     # One row per expected obligation instance. Materialized only inside a
     # rolling window or when carrying state; closed rows are immutable
@@ -321,6 +333,35 @@ class CreateBillsSubsystem < ActiveRecord::Migration[7.2]
     drop_table :recurring_match_rejections
     drop_table :recurring_allocations
     drop_table :recurring_occurrences
+
+    remove_check_constraint :import_source_mappings, name: "chk_import_source_mappings_source_type"
+    add_check_constraint :import_source_mappings,
+                         "source_type IN ('Account', 'Category', 'Tag', 'Merchant', 'RecurringTransaction', 'Transaction', 'Budget', 'Security', 'Rule')",
+                         name: "chk_import_source_mappings_source_type"
+    remove_check_constraint :import_source_mappings, name: "chk_import_source_mappings_target_type"
+    add_check_constraint :import_source_mappings,
+                         "target_type IN ('Account', 'Category', 'Tag', 'Merchant', 'RecurringTransaction', 'Transaction', 'Budget', 'Security', 'Rule')",
+                         name: "chk_import_source_mappings_target_type"
+
+    # The up migration widens the uniqueness key with dedup_scope, so rows that
+    # differ only in scope, deliberate price forks, can exist by the time anyone
+    # rolls back. Recreating the narrower indexes would then fail mid-migration,
+    # or force a choice about which fork to destroy. Refusing with a clear
+    # message beats either. A database that never grew such rows rolls back
+    # exactly as before.
+    forked = select_value(<<~SQL)
+      SELECT EXISTS (
+        SELECT 1 FROM recurring_transactions
+        GROUP BY family_id, account_id, destination_account_id, merchant_id, name, amount, currency
+        HAVING COUNT(*) > 1
+      )
+    SQL
+    if ActiveModel::Type::Boolean.new.cast(forked)
+      raise ActiveRecord::IrreversibleMigration,
+            "recurring_transactions holds rows distinguished only by dedup_scope " \
+            "(price-forked series). The pre-bills unique indexes cannot be recreated " \
+            "without losing one of each pair. Remove or merge the forked series first."
+    end
 
     remove_index :recurring_transactions, name: "idx_recurring_txns_acct_merchant"
     remove_index :recurring_transactions, name: "idx_recurring_txns_acct_name"

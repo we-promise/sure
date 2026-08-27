@@ -446,6 +446,17 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 8, 15), cycle.end
   end
 
+
+  # The legacy shim builds Date.new from expected_day_of_month, and a nil there
+  # raises TypeError past the ArgumentError rescue.
+  test "a rules-backed schedule with no legacy day never enters the shim" do
+    schedule = build_schedule(rules: [ rule(frequency: "monthly", day_of_month: 12) ])
+
+    assert_nothing_raised do
+      assert_equal 12, schedule.next_occurrence_from_today.day
+    end
+  end
+
   private
     def rule(frequency:, interval: 1, day_of_month: nil, weekday: nil, weekday_ordinal: nil, month_of_year: nil)
       RecurringTransaction::Schedule::Rule.new(

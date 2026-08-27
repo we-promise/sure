@@ -1,6 +1,10 @@
 require "application_system_test_case"
 
 class DeclareAndPayBillTest < ApplicationSystemTestCase
+  teardown do
+    travel_back
+  end
+
   setup do
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
@@ -9,6 +13,11 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
   end
 
   test "declare rent, allocate a real payment, watch it stay partial, settle it" do
+    # due lands ten days out. Late in a month that crosses into the next one,
+    # which files the row under a different section with a different subline,
+    # so the clock is pinned where the test's premise holds.
+    travel_to Date.current.beginning_of_month + 9.days
+
     due = Date.current + 10
     payment = @account.entries.create!(
       date: Date.current - 1, amount: 537.50, currency: "USD", name: "WATSON PROPERTY LLC",

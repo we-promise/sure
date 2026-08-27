@@ -18,7 +18,7 @@ class Api::V1::RecurringTransactionsController < Api::V1::BaseController
 
     @per_page = safe_per_page_param
     recurring_transactions_query = read_recurring_transactions_scope
-      .includes(:account, :merchant)
+      .includes(:account, :merchant, :recurrence_rules)
       .order(status: :asc, next_expected_date: :asc)
 
     recurring_transactions_query = apply_filters(recurring_transactions_query)

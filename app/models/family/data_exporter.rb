@@ -627,6 +627,7 @@ class Family::DataExporter
         end_on: recurring_transaction.end_on,
         end_after_count: recurring_transaction.end_after_count,
         weekend_adjust: recurring_transaction.weekend_adjust,
+        holiday_calendar: recurring_transaction.holiday_calendar,
         matcher_hints: recurring_transaction.matcher_hints,
         dedup_scope: recurring_transaction.dedup_scope,
         replaced_by_id: recurring_transaction.replaced_by_id,

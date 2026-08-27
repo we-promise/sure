@@ -21,8 +21,12 @@ class RecurringTransaction
         when rules.size == 1
           detect_single(rules.first)
         when rules.size == 2 && rules.all? { |rule| monthly_day_rule?(rule) }
-          days = rules.map(&:day_of_month).sort
-          detection(key: "semimonthly", day_of_month: days.first, second_day_of_month: days.last)
+          days = canonical_semimonthly_days(rules.map(&:day_of_month))
+          if days.uniq.size == 1
+            detection(key: "monthly", day_of_month: days.first)
+          else
+            detection(key: "semimonthly", day_of_month: days.first, second_day_of_month: days.last)
+          end
         else
           detection(key: CUSTOM)
         end
@@ -120,9 +124,12 @@ class RecurringTransaction
           when "weekly", "biweekly"
             detection(key: preset, weekday: weekday)
           when "semimonthly"
-            days = [ day_of_month || 1, second_day_of_month || 15 ]
-            days = days.sort unless days.include?(RecurrenceRule::LAST)
-            detection(key: preset, day_of_month: days.first, second_day_of_month: days.last)
+            days = canonical_semimonthly_days([ day_of_month || 1, second_day_of_month || 15 ])
+            if days.uniq.size == 1
+              detection(key: "monthly", day_of_month: days.first)
+            else
+              detection(key: preset, day_of_month: days.first, second_day_of_month: days.last)
+            end
           when "annual"
             detection(key: preset, day_of_month: day_of_month || reference.day,
                       month_of_year: month_of_year || reference.month)
@@ -156,6 +163,14 @@ class RecurringTransaction
           end
 
           recurring.expected_day_of_month = authoritative_day(target.key, target.day_of_month, reference)
+        end
+
+        # LAST sorts as the day it stands for, the end of the month, so
+        # (15, LAST) and (LAST, 15) are one schedule. Without one canonical
+        # order each reapply rewrote the rules instead of no-opping. Two equal
+        # anchors are one monthly schedule, not a semimonthly pair.
+        def canonical_semimonthly_days(days)
+          days.sort_by { |day| day == RecurrenceRule::LAST ? 32 : day }
         end
 
         def monthly_day_rule?(rule)

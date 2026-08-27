@@ -55,13 +55,29 @@ class RecurringTransaction
                   .where(source: %w[auto_matched user_confirmed])
 
       orphans.find_each do |allocation|
+        series = allocation.recurring_occurrence.recurring_transaction
+
+        # Allocations store magnitudes, entries store signs: an income entry is
+        # negative, so a magnitude-only lookup never found a reposted paycheck
+        # and orphaned income stayed orphaned for good.
+        amounts = [ allocation.source_amount, allocation.allocated_amount ].compact
+        amounts = (amounts + amounts.map(&:-@)).uniq
+
+        # Same date and amount alone can be a coincidental twin. The candidate
+        # must also look like the series' own charge: the scoped account, the
+        # merchant when both sides know one, and a related name otherwise. Not
+        # the strict identity the live matcher uses, because a repost is the
+        # one case where the descriptor legitimately mutates (POSTED suffixes,
+        # PENDING prefixes), which is why this repair exists at all.
         replacement = family.entries
           .where(entryable_type: "Transaction")
           .where(currency: allocation.source_currency || allocation.currency)
           .where(date: allocation.paid_on)
-          .where(amount: [ allocation.source_amount, allocation.allocated_amount ].compact)
+          .where(amount: amounts)
           .where.not(id: RecurringAllocation.where.not(entry_id: nil).select(:entry_id))
-          .first
+          .then { |scope| series.account_id.present? ? scope.where(account_id: series.account_id) : scope }
+          .includes(:entryable)
+          .find { |entry| repair_identity?(series, entry) }
 
         allocation.update!(entry: replacement) if replacement
       end
@@ -275,6 +291,20 @@ class RecurringTransaction
 
       def within_window?(occurrence, entry)
         window_for(occurrence).cover?(entry.date)
+      end
+
+      # Looser than identity_matches? on purpose, see repair_orphans!: a repost
+      # keeps the merchant when it has one, and its name stays kin to the old
+      # descriptor rather than equal to it.
+      def repair_identity?(series, entry)
+        if series.merchant_id.present? && entry.entryable.merchant_id.present?
+          return entry.entryable.merchant_id == series.merchant_id
+        end
+
+        candidate = normalize_name(entry.name)
+        known_names(series).any? do |known|
+          candidate == known || candidate.start_with?(known) || known.start_with?(candidate)
+        end
       end
 
       # Hard filters: right sign, right currency, right account when the

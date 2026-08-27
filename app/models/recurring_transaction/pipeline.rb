@@ -48,7 +48,11 @@ class RecurringTransaction
     # true when the lock was acquired and the block ran.
     def self.with_family_lock(family_id)
       lock_key = advisory_lock_key(family_id)
-      acquired = ActiveRecord::Base.connection.select_value(
+      # One leased connection for both halves: the unlock must run on the same
+      # PostgreSQL session that took the lock, and bare .connection is
+      # soft-deprecated in Rails 8.1.
+      connection = ActiveRecord::Base.lease_connection
+      acquired = connection.select_value(
         ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
       )
 
@@ -57,7 +61,7 @@ class RecurringTransaction
       begin
         yield
       ensure
-        ActiveRecord::Base.connection.execute(
+        connection.execute(
           ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
         )
       end

@@ -44,6 +44,7 @@ class RecurrenceRule < ApplicationRecord
 
         errors.add(:base, :day_spec_required) unless day_of_month.present? ^ weekday.present?
         errors.add(:weekday_ordinal, :required_with_weekday) if weekday.present? && weekday_ordinal.blank?
+        errors.add(:weekday_ordinal, :not_allowed_without_weekday) if weekday_ordinal.present? && weekday.blank?
       end
     end
 end

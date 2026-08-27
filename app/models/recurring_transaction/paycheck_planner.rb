@@ -246,6 +246,7 @@ class RecurringTransaction
               .where("recurring_occurrences.due_on <= ?", through)
               .includes(recurring_transaction: :merchant)
               .to_a
+              .tap { |occurrences| preload_confirmed_sums(occurrences) }
       end
 
       # Cash a bill can actually be paid from before the next paycheck: the
@@ -268,12 +269,33 @@ class RecurringTransaction
 
         @cash_on_hand =
           if accounts.exists?
-            accounts.sum { |account| to_family_currency(account.balance_money) }
+            # One unconvertible account must not shrink the balance silently: a
+            # partial sum reads as "short" when the missing account might cover
+            # everything. Unknown stays unknown.
+            balances = accounts.map do |account|
+              account.balance_money.exchange_to(family.currency).amount
+            rescue Money::ConversionError
+              @unconvertible_count += 1
+              nil
+            end
+
+            balances.sum unless balances.include?(nil)
           end
       end
 
       # An unconvertible obligation is counted and reported, never folded in as
       # zero, which would inflate what the plan says is safe to spend.
+      # remaining_amount aggregates confirmed allocations per occurrence, one
+      # query each. Same grouped-sum-into-the-cache pattern the bills tools and
+      # BudgetCategory#bills_reservation already use.
+      def preload_confirmed_sums(occurrences)
+        sums = RecurringAllocation.confirmed
+                                  .where(recurring_occurrence_id: occurrences.map(&:id))
+                                  .group(:recurring_occurrence_id)
+                                  .sum(:allocated_amount)
+        occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+      end
+
       def to_family_currency(money)
         money.exchange_to(family.currency).amount
       rescue Money::ConversionError

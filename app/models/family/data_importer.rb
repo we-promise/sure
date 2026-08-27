@@ -48,6 +48,7 @@ class Family::DataImporter
     tags: "Tag",
     merchants: "Merchant",
     recurring_transactions: "RecurringTransaction",
+    recurring_occurrences: "RecurringOccurrence",
     transactions: "Transaction",
     budgets: "Budget",
     securities: "Security",
@@ -88,13 +89,13 @@ class Family::DataImporter
       tags: {},
       merchants: {},
       recurring_transactions: {},
+      recurring_occurrences: {},
       transactions: {},
       budgets: {},
       securities: {},
       rules: {}
     }
     @security_cache = {}
-    @recurring_occurrence_ids = {}
     @pending_replacements = {}
     @created_accounts = []
     @created_entries = []
@@ -549,6 +550,7 @@ class Family::DataImporter
           end_on: parse_import_date(data["end_on"]),
           end_after_count: data["end_after_count"],
           weekend_adjust: imported_enum_value(data["weekend_adjust"], RecurringTransaction.weekend_adjusts, "none"),
+          holiday_calendar: data["holiday_calendar"],
           matcher_hints: data["matcher_hints"] || {}
         )
         # These columns are NOT NULL with database defaults. An export written
@@ -667,7 +669,7 @@ class Family::DataImporter
         end
 
         occurrence.save!
-        @recurring_occurrence_ids[data["id"]] = occurrence.id
+        map_source!(:recurring_occurrences, data["id"], occurrence)
         increment_summary("RecurringOccurrence", created ? :created : :updated)
       end
     end
@@ -675,7 +677,12 @@ class Family::DataImporter
     def import_recurring_allocations(records)
       records.each do |record|
         data = record["data"]
-        occurrence_id = @recurring_occurrence_ids[data["recurring_occurrence_id"]]
+        # Session imports arrive in chunks, each through a fresh importer. An
+        # in-memory map died with its chunk, so an allocation landing after its
+        # occurrence's chunk was silently skipped. The persisted mapping is the
+        # one source that survives.
+        occurrence_id = mapped_id(:recurring_occurrences, data["recurring_occurrence_id"],
+                                  record_type: "RecurringAllocation", required: false)
         occurrence = RecurringOccurrence.find_by(id: occurrence_id) if occurrence_id.present?
         if occurrence.blank?
           increment_summary("RecurringAllocation", :skipped)

@@ -379,6 +379,23 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert paying.short?, "a bill that outgrows its paycheck is short however much cash exists"
   end
 
+
+  # One unconvertible account used to fold to zero inside the sum, so the cash
+  # figure quietly shrank and the bridge cried short against a partial balance.
+  test "one unconvertible account makes the cash balance unknown, not smaller" do
+    ExchangeRate.delete_all
+    set_cash(5_000)
+    @family.accounts.create!(name: "EUR pocket", balance: 100, currency: "EUR",
+                             accountable: Depository.new)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_nil bridge.cash_on_hand, "a partial balance is not a balance"
+    assert_not bridge.short?, "an unknown balance is not evidence of a shortfall"
+  end
+
   private
     # The family fixture carries more than one deposit account, and the plan
     # sums all of them, so a test that means to pin the cash has to set them all.

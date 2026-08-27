@@ -283,6 +283,42 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
       "outside tolerance the score is a flat zero, and zero must not reach a picker"
   end
 
+
+  # Allocations store magnitudes, entries store signs. A magnitude-only lookup
+  # never matched a reposted paycheck, so orphaned income stayed orphaned.
+  test "repair finds a reposted income entry by its signed amount" do
+    series = create_series(name: "PAYCHECK CO", amount: -1840, day_offset: 0, bill_type: "income")
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    original = create_entry(amount: -1840, date: Date.current, name: "PAYCHECK CO")
+    @matcher.run!
+    allocation = occurrence.allocations.sole
+
+    original.destroy!
+    assert_nil allocation.reload.entry_id
+
+    replacement = create_entry(amount: -1840, date: allocation.paid_on, name: "PAYCHECK CO POSTED")
+    @matcher.repair_orphans!
+
+    assert_equal replacement.id, allocation.reload.entry_id
+  end
+
+  # Same day, same amount, different merchant is a coincidental twin, not the
+  # bill's own repost, and attaching it reports the bill paid by a stranger.
+  test "repair refuses a same-amount entry that is not the series' identity" do
+    series = create_series(name: "POWER CO", amount: 60, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    original = create_entry(amount: 60, date: Date.current, name: "POWER CO")
+    @matcher.run!
+    allocation = occurrence.allocations.sole
+
+    original.destroy!
+    create_entry(amount: 60, date: allocation.paid_on, name: "SUSHI PALACE")
+
+    @matcher.repair_orphans!
+
+    assert_nil allocation.reload.entry_id, "a stranger with the same price is not the bill"
+  end
+
   private
     def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly", bill_type: "bill")
       due = Date.current + day_offset

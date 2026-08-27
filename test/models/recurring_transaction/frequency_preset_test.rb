@@ -112,4 +112,32 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     @recurring.save!
     assert_in_delta @recurring.amount / 12.0, @recurring.reload.monthly_equivalent_amount.amount.to_f, 0.01
   end
+
+  # (15, LAST) and (LAST, 15) are one schedule. Without a canonical order each
+  # reapply rewrote the rules instead of no-opping, and two equal anchors made
+  # two identical monthly rules read back as semimonthly.
+  test "semimonthly with a last-day anchor round-trips as a no-op" do
+    Preset.apply(@recurring, preset: "semimonthly",
+                 day_of_month: 15, second_day_of_month: RecurrenceRule::LAST)
+    @recurring.save!
+    first_shape = @recurring.recurrence_rules.reload.map { |r| [ r.frequency, r.day_of_month ] }.sort_by(&:to_s)
+
+    found = Preset.detect(@recurring)
+    assert_equal "semimonthly", found.key
+
+    Preset.apply(@recurring, preset: "semimonthly",
+                 day_of_month: found.day_of_month, second_day_of_month: found.second_day_of_month)
+    @recurring.save!
+
+    assert_equal first_shape,
+      @recurring.recurrence_rules.reload.map { |r| [ r.frequency, r.day_of_month ] }.sort_by(&:to_s),
+      "reapplying what detect reported must change nothing"
+  end
+
+  test "two equal anchors are one monthly schedule" do
+    Preset.apply(@recurring, preset: "semimonthly", day_of_month: 5, second_day_of_month: 5)
+    @recurring.save!
+
+    assert_equal "monthly", Preset.detect(@recurring.reload).key
+  end
 end

@@ -19,6 +19,7 @@ en:
             weekday_ordinal:
               not_allowed_for_weekly: "does not apply to a weekly rule"
               required_with_weekday: "is required when a weekday is set"
+              not_allowed_without_weekday: "only applies when a weekday is set"
             day_of_month:
               not_allowed_for_weekly: "does not apply to a weekly rule"
             month_of_year:

@@ -237,7 +237,10 @@ class RecurringTransaction
       # monthly day-of-month rule with no interval, adjustment, or end. Only
       # these series get the preserved quirks.
       def legacy_monthly?
-        rules.size == 1 &&
+        # The shim builds Date.new from this value, and a nil raises TypeError,
+        # which the ArgumentError rescue does not cover.
+        expected_day_of_month.present? &&
+          rules.size == 1 &&
           rules.first.frequency == "monthly" &&
           rules.first.day_of_month.present? &&
           rules.first.day_of_month != RecurrenceRule::LAST &&

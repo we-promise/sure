@@ -166,7 +166,7 @@ class RecurringTransaction
       def with_entry_lock(entry)
         return yield if entry.nil?
 
-        occurrence.class.connection.execute(
+        occurrence.class.lease_connection.execute(
           ActiveRecord::Base.sanitize_sql_array(
             [ "SELECT pg_advisory_xact_lock(?::int, ?::int)", ENTRY_LOCK_NAMESPACE, entry_lock_id(entry) ]
           )

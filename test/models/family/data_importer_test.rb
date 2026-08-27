@@ -2354,7 +2354,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
   test "replaying a bills export changes nothing the second time" do
     records = bills_ndjson_records
-    Family::DataImporter.new(@family, build_ndjson(records)).import!
+    session = @family.import_sessions.create!
+    Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
 
     census = -> {
       [ RecurrenceRule.joins(:recurring_transaction).where(recurring_transactions: { family_id: @family.id }).count,
@@ -2363,12 +2364,10 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     }
     before = census.call
 
-    importer = Family::DataImporter.new(@family, build_ndjson(records))
-    parsed = importer.send(:parse_ndjson)
-    importer.send(:import_recurring_transactions, parsed["RecurringTransaction"])
-    importer.send(:import_recurrence_rules, parsed["RecurrenceRule"])
-    importer.send(:import_recurring_occurrences, parsed["RecurringOccurrence"])
-    importer.send(:import_recurring_allocations, parsed["RecurringAllocation"])
+    # The replay contract is the session's: mappings persisted on the first
+    # pass, so a fresh importer resolves every record to the row already
+    # created instead of skipping or duplicating it.
+    Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
 
     assert_equal before, census.call
   end
@@ -2433,6 +2432,56 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     duplicates = series.recurring_occurrences.group(:original_due_on).count.select { |_, n| n > 1 }
 
     assert_empty duplicates, "generation and import collided on the same due date"
+  end
+
+
+  # Occurrence generation fires after_commit on the instance the importer
+  # created. If validation cached its rules while they were still empty, a
+  # biweekly restore would materialize monthly phantom occurrences beside the
+  # real schedule.
+  test "a restored biweekly series keeps its cadence, with no monthly phantoms" do
+    Family::DataImporter.new(@family, build_ndjson(bills_ndjson_records)).import!
+
+    series = @family.recurring_transactions.find_by!(name: "Rent")
+
+    # The imported historical row is weekend-adjusted off its weekday, so the
+    # cadence check runs on what generation produced: every scheduled cycle
+    # lands on the rule's weekday, fourteen days from its neighbour. A monthly
+    # phantom would land on the 9th, whatever weekday that is.
+    generated = series.recurring_occurrences.open_status.order(:due_on).pluck(:due_on)
+    assert generated.any?, "generation must have materialized future cycles"
+
+    generated.each do |due_on|
+      assert_equal 1, due_on.cwday, "#{due_on} is not the rule's Monday"
+    end
+    generated.each_cons(2) do |a, b|
+      assert_equal 14, (b - a).to_i, "#{a} to #{b} is not one biweekly step"
+    end
+  end
+
+  # Session imports arrive in chunks, each processed by a fresh importer. The
+  # occurrence map used to live in memory, so an allocation whose occurrence
+  # landed in an earlier chunk was silently skipped.
+  test "an allocation in a later session chunk finds its occurrence from an earlier one" do
+    records = bills_ndjson_records
+    allocations = records.select { |r| r[:type] == "RecurringAllocation" }
+    rest = records - allocations
+    assert allocations.any?, "fixture must carry at least one allocation"
+
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(sequence: 1, client_chunk_id: "bills",
+                          content: build_ndjson(rest),
+                          filename: "bills.ndjson", content_type: "application/x-ndjson")
+    session.attach_chunk!(sequence: 2, client_chunk_id: "allocations",
+                          content: build_ndjson(allocations),
+                          filename: "allocations.ndjson", content_type: "application/x-ndjson")
+
+    session.publish
+
+    series = @family.recurring_transactions.find_by!(name: "Rent")
+    assert_operator RecurringAllocation.joins(:recurring_occurrence)
+      .where(recurring_occurrences: { recurring_transaction_id: series.id }).count, :>, 0,
+      "the later chunk's allocation must resolve its occurrence through the persisted mapping"
   end
 
   private

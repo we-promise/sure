@@ -10,7 +10,7 @@ class RecurringTransaction
   class Classifier
     # Services that are subscriptions essentially always.
     SUBSCRIPTION_KEYWORDS = %w[
-      netflix spotify hulu disney hbo max paramount peacock crunchyroll
+      netflix spotify hulu disney hbo hbo\ max paramount peacock crunchyroll
       youtube prime audible kindle icloud apple.com/bill google\ one
       playstation xbox nintendo twitch patreon substack onlyfans
       dropbox github openai anthropic claude chatgpt midjourney canva adobe
@@ -82,8 +82,11 @@ class RecurringTransaction
         flat_amounts? && modest_amount? && credit_card_account?
       end
 
+      # Whole words only. A substring test let "max" claim Maxwell Plumbing
+      # and "gas" claim a gastropub, and a false subscription match also set
+      # autopay, which removes the row from the needs-action list.
       def matches?(keywords)
-        keywords.any? { |keyword| name.include?(keyword) }
+        keywords.any? { |keyword| name.match?(/\b#{Regexp.escape(keyword)}\b/) }
       end
 
       def flat_amounts?
