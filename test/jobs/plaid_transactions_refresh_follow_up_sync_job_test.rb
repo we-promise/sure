@@ -20,4 +20,20 @@ class PlaidTransactionsRefreshFollowUpSyncJobTest < ActiveJob::TestCase
       end
     end
   end
+
+  test "records exhausted retries and still hands off to sync_later" do
+    item = plaid_items(:one)
+    active_sync = item.syncs.create!
+    active_sync.start!
+    item.expects(:sync_later).once
+
+    assert_difference "DebugLogEntry.count", 1 do
+      PlaidTransactionsRefreshFollowUpSyncJob.perform_now(item, attempts_remaining: 0)
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync", entry.category
+    assert_equal "PlaidTransactionsRefreshFollowUpSyncJob", entry.source
+    assert_equal item.family, entry.family
+  end
 end
