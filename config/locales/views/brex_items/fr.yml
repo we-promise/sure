@@ -238,9 +238,9 @@ fr:
           savings: Économies
         investment:
           401k: 401(k)
-          403b: 403b)
+          403b: 403(b)
           529_plan: Régime 529
-          angel: Ange
+          angel: Angel
           brokerage: Courtage
           hsa: Compte d'épargne santé
           ira: IRA traditionnel
@@ -249,7 +249,7 @@ fr:
           retirement: Retraite
           roth_401k: Roth 401(k)
           roth_ira: Roth IRA
-          tsp: Plan d'épargne-épargne
+          tsp: Plan d'épargne
         loan:
           auto: Prêt automobile
           mortgage: Hypothèque

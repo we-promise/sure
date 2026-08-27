@@ -299,7 +299,7 @@ fr:
       note_placeholder: Entrez une note
       one_time_description: Les transactions ponctuelles seront exclues de certains calculs budgétaires et rapports afin de vous aider à voir ce qui compte vraiment.
       one_time_title: Transaction ponctuelle (%{type})
-      open_matcher: Matcheur ouvert
+      open_matcher: Ouvrir le matcheur
       overview: Aperçu
       payee: Bénéficiaire
       pending_duplicate_merger_button: Ouvrir la fusion

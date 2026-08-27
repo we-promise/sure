@@ -15,7 +15,7 @@ fr:
       delete_connection_confirm: Supprimer la connexion
       delete_connection_title: Supprimer la connexion de courtier ?
       description: SnapTrade se connecte à plus de 25 courtiers majeurs (Fidelity, Vanguard, Schwab, Robinhood, etc.) et fournit l'historique complet des transactions avec des libellés d'activité et le coût d'acquisition.
-      free_tier_warning: L'offre gratuite inclut 5 connexions de courtier. Les connexions supplémentaires nécessitent un forfait SnapTrade payant.
+      free_tier_warning: L'offre gratuite inclut 20 connexions de courtier. Les connexions supplémentaires nécessitent un forfait SnapTrade payant.
       loading_connections: Chargement des connexions…
       manage_connections: Gérer les connexions
       name: SnapTrade
@@ -115,7 +115,7 @@ fr:
       create_button: Créer les comptes sélectionnés
       creating: Création des comptes…
       done_button: Terminé
-      free_tier_note: L'offre gratuite SnapTrade autorise 5 connexions de courtier. Consultez votre tableau de bord SnapTrade pour l'utilisation actuelle.
+      free_tier_note: L'offre gratuite SnapTrade autorise 20 connexions de courtier.
       header: Configurer vos comptes SnapTrade
       info_activities: Historique des transactions boursières avec libellés d'activité (Achat, Vente, Dividende, etc.)
       info_cost_basis: Coût d'acquisition par position (lorsque disponible)
