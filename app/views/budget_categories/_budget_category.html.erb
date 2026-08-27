@@ -64,6 +64,11 @@
             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-tint-5 text-secondary"><%= t("reports.budget_performance.shared") %></span>
           <% end %>
         </div>
+        <% if budget_category.rolled_over? %>
+          <div class="whitespace-nowrap w-full sm:w-auto text-xs text-secondary privacy-sensitive">
+            <%= t("budget_categories.budget_category.rolled_over", amount: format_money(budget_category.rolled_over_amount_money)) %>
+          </div>
+        <% end %>
         <% if budget_category.suggested_daily_spending.present? %>
           <% daily_info = budget_category.suggested_daily_spending %>
           <div class="w-full sm:w-auto text-xs text-subdued">

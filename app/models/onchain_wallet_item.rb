@@ -99,25 +99,6 @@ class OnchainWalletItem < ApplicationRecord
   # Moves every tracked asset at an address to a new one, keeping the rows — and
   # so the accounts, holdings and entries hanging off them — intact. Recreating
   # them would throw away the balance history the user came here for.
-  def change_wallet_address!(chain:, from:, to:)
-    rows = accounts_for_wallet(chain, from).to_a
-    raise ActiveRecord::RecordNotFound, "No tracked assets at that address" if rows.empty?
-
-    transaction do
-      rows.each do |row|
-        previous_display_name = row.display_name
-        # The digest is cleared so the next sync reprocesses against the new
-        # address even if it happens to hold the same amount.
-        row.update!(wallet_address: to, content_hash: nil)
-
-        account = row.current_account
-        account.update!(name: row.display_name) if account && account.name == previous_display_name
-      end
-    end
-
-    sync_later
-    rows.size
-  end
 
   # Stops tracking every asset at an address. The accounts and their history stay
   # behind as manual accounts; only the provider link goes.

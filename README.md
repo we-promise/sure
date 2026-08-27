@@ -43,6 +43,8 @@ Join us!
 ## Hosting Sure
 
 Sure is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
+Sure can be accessed from a browser, the macOS desktop app, the mobile app, API
+clients, and LLM agents. See [Sure Clients](docs/clients.md) for an overview.
 
 ## Forking and Attribution
 
@@ -106,6 +108,8 @@ For further instructions, see guides below.
 [![Run on PikaPods](https://www.pikapods.com/static/run-button.svg)](https://www.pikapods.com/pods?run=sure)
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
+
+[![Deploy on Hostim](https://hostim.dev/img/deploy-button.svg)](https://console.hostim.dev/dashboard?preview=1&modal=1&template=sure)
 
 ### Managed OpenClaw for Sure Finances
 

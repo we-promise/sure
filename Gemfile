@@ -59,6 +59,7 @@ gem "image_processing", ">= 1.2"
 gem "ostruct"
 gem "bcrypt", "~> 3.1"
 gem "jwt"
+gem "apnotic", "~> 1.8"
 gem "jbuilder"
 gem "countries"
 
