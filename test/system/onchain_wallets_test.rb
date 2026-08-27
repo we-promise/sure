@@ -45,10 +45,19 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     open_onchain_panel
 
     # The provider panel opens in the drawer frame.
-    assert_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
     assert_text I18n.t("onchain_wallet_items.price_provider_warning.title")
 
+    # The read-only reassurance is no longer a permanent banner here...
+    assert_no_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
+
     click_on I18n.t("settings.providers.onchain_wallet_panel.add_wallet")
+
+    # ...it lives where the address is pasted. Scoped to the modal, because a
+    # page-wide assertion would pass from any frame and prove nothing about
+    # where the banner actually went.
+    within "turbo-frame#modal" do
+      assert_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
+    end
 
     # The linking modal opens on top of the drawer.
     assert_text I18n.t("onchain_wallet_items.new_wallet.title")
@@ -89,7 +98,9 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     assert_text I18n.t("onchain_wallet_items.manage.title")
     assert_text OnchainTestHelper::FAKE_ADDRESS
 
-    # Review tokens reopens the selection with the address untouched.
+    # The per-address actions live in a menu, as repeated row actions do
+    # everywhere else in this app.
+    find("[aria-haspopup='menu']", match: :first).click
     click_on I18n.t("onchain_wallet_items.manage.review_tokens")
     assert_text I18n.t("onchain_wallet_items.review_tokens.title")
     assert_no_selector "input[name='new_address']"

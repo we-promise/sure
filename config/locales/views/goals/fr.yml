@@ -30,6 +30,9 @@ fr:
     errors:
       not_found: Cet objectif n'a pas pu être trouvé. Il a peut-être été supprimé.
     form:
+      target_modes:
+        fixed: Un montant fixe
+        months_of_expenses: Un nombre de mois de dépenses
       kinds:
         maintained:
           hint: Un niveau à tenir, comme une épargne de précaution. Jamais clôturée.
@@ -42,7 +45,14 @@ fr:
         accounts_required: Sélectionnez au moins un compte de financement.
         amount_required: Définissez une cible supérieure à zéro.
         name_required: Donnez un nom à votre objectif.
+      earmark:
+        headroom: "Il reste {left} affectables sur ce compte."
+        prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
+        whole_balance: Ce compte financera le solde restant après les autres affectations.
       fields:
+        target_mode: Comment le seuil est fixé
+        target_months: Mois de dépenses
+        target_months_hint: Recalculé le 1er de chaque mois à partir de vos dépenses mensuelles médianes.
         color: Couleur
         earmark_for: Affecter un montant pour %{account}
         earmark_hint: Laissez le montant vide pour dédier la totalité du solde de ce compte.
@@ -166,6 +176,31 @@ fr:
     resume:
       invalid_transition: L'objectif ne peut pas être repris dans son état actuel.
       success: Objectif repris.
+    consume:
+      title: Enregistrer une dépense
+      subtitle: "%{goal}"
+      amount_label: Combien avez-vous utilisé ?
+      amount_hint: "%{saved} soutiennent actuellement cet objectif."
+      account_label: Depuis quel compte ?
+      earmark_note: "Le montant enregistré cesse d'être réservé à cet objectif : vos autres objectifs sur ce compte récupèrent leur part."
+      cancel: Annuler
+      submit: Enregistrer
+      success: "%{amount} enregistrés comme utilisés."
+      errors:
+        non_positive: Indiquez un montant supérieur à zéro.
+        maintained: Une réserve se ponctionne et se recomplète, elle ne se dépense pas — son manque apparaît déjà sur l'objectif.
+        exceeds_target: C'est plus que ce que cet objectif visait à épargner.
+        account_required: Cet objectif est financé par plusieurs comptes — indiquez celui d'où vient l'argent.
+        account_not_linked: Ce compte ne finance pas cet objectif.
+        not_active: Cet objectif n'est plus actif, rien ne peut y être enregistré.
+        exceeds_earmark: C'est plus que ce que ce compte a affecté à l'objectif.
+        transaction_already_claimed: Cette sortie a déjà été attribuée.
+        transaction_not_found: Cette sortie n'est plus disponible.
+        no_linked_account: Cet objectif n'a plus de compte de financement.
+    unattributed_outflows:
+      heading: De l'argent est sorti de ces comptes
+      body: Si une partie a servi à %{goal}, dites-le et elle cessera de compter comme un retard.
+      attribute: C'était ça
     show:
       archive: Archiver
       archived_banner:
@@ -199,6 +234,7 @@ fr:
       confirm_complete_title: Marquer cet objectif comme terminé ?
       delete: Supprimer
       edit: Modifier
+      consume: J'ai utilisé une partie de cet argent
       empty:
         body: Effectuez un virement sur votre compte lié. Sure le détectera lors de la prochaine synchronisation. Ou mettez à jour manuellement le solde du compte.
         heading: Aucun dépôt pour l'instant
