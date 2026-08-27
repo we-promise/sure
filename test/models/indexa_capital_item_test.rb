@@ -144,7 +144,7 @@ class IndexaCapitalItemTest < ActiveSupport::TestCase
   test "declares credentials and raw payloads as encrypted" do
     skip "Encryption not configured" unless IndexaCapitalItem.encryption_ready?
 
-    encrypted = IndexaCapitalItem.encrypted_attributes.map(&:to_s)
+    encrypted = Array(IndexaCapitalItem.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "password"
     assert_includes encrypted, "api_token"
     assert_includes encrypted, "username"

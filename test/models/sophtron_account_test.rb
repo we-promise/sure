@@ -25,7 +25,7 @@ class SophtronAccountTest < ActiveSupport::TestCase
   test "declares raw payloads as encrypted" do
     skip "Encryption not configured" unless SophtronAccount.encryption_ready?
 
-    encrypted = SophtronAccount.encrypted_attributes.map(&:to_s)
+    encrypted = Array(SophtronAccount.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "raw_payload"
     assert_includes encrypted, "raw_transactions_payload"
   end

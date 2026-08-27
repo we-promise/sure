@@ -219,7 +219,7 @@ class SophtronItemTest < ActiveSupport::TestCase
   test "declares credentials and raw payloads as encrypted" do
     skip "Encryption not configured" unless SophtronItem.encryption_ready?
 
-    encrypted = SophtronItem.encrypted_attributes.map(&:to_s)
+    encrypted = Array(SophtronItem.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "user_id"
     assert_includes encrypted, "access_key"
     assert_includes encrypted, "raw_payload"

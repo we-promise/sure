@@ -91,7 +91,7 @@ class MercuryItemTest < ActiveSupport::TestCase
   test "declares token and raw payloads as encrypted" do
     skip "Encryption not configured" unless MercuryItem.encryption_ready?
 
-    encrypted = MercuryItem.encrypted_attributes.map(&:to_s)
+    encrypted = Array(MercuryItem.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "token"
     assert_includes encrypted, "raw_payload"
     assert_includes encrypted, "raw_institution_payload"

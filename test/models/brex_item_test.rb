@@ -104,7 +104,7 @@ class BrexItemTest < ActiveSupport::TestCase
   test "declares Brex token and raw payload as encrypted" do
     skip "Encryption not configured" unless BrexItem.encryption_ready?
 
-    encrypted = BrexItem.encrypted_attributes.map(&:to_s)
+    encrypted = Array(BrexItem.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "token"
     assert_includes encrypted, "raw_payload"
     assert_includes encrypted, "raw_institution_payload"
