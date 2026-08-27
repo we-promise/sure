@@ -131,8 +131,10 @@ module ActiveRecordEncryptionConfig
     return false if raw_value.nil?
 
     stored_version = YAML.respond_to?(:unsafe_load) ? YAML.unsafe_load(raw_value) : YAML.load(raw_value)
-    stored_version.to_i >= required_version
-  rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::StatementInvalid => e
+    return false unless stored_version.is_a?(Integer)
+
+    stored_version >= required_version
+  rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::StatementInvalid, Psych::Exception => e
     Rails.logger.warn("[ActiveRecordEncryptionConfig] Could not read encryption backfill status (#{e.class}); defaulting to fallback-enabled") if defined?(Rails.logger) && Rails.logger
     false
   end
