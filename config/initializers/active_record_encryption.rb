@@ -13,6 +13,29 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 Rails.application.config.active_record.encryption.support_unencrypted_data = true
 Rails.application.config.active_record.encryption.extend_queries = true
 
+# KNOWN LIMITATION: extend_queries does not reliably extend deterministic
+# lookups to match legacy plaintext data for attributes that combine
+# `encrypts ..., deterministic: true, downcase: true` with a model-level
+# `normalizes` declaration on the same attribute - which is exactly
+# User#email, User#unconfirmed_email, Invitation#email, and InviteCode#token
+# (see app/models/user.rb's `normalizes :email, with: ->(email) {
+# email.strip.downcase }`). Arel::Nodes::HomogeneousIn#casted_values calls
+# #serialize on the *outermost* ActiveModel::Attributes::Normalization::
+# NormalizedValueType wrapper, whose #cast runs the normalization proc
+# directly on each query value - including extend_queries' internal
+# AdditionalValue wrapper for the clean-text fallback, which doesn't
+# respond to #strip. In production this makes `User.find_by(email:)`
+# silently fail to match not-yet-backfilled legacy rows instead of raising
+# (support_unencrypted_data still makes plain *reads* of already-loaded
+# records work). Fixing this generically would mean patching the shared
+# ActiveModel normalization type, which is used for unrelated attributes
+# across the app - too invasive for this fix. Operators MUST run
+# `bin/rails security:backfill_encryption` immediately after upgrading,
+# before relying on login/invitation flows for accounts whose data
+# predates this fix. Non-downcase deterministic fields (tokens, API keys,
+# ...) are unaffected - confirmed in
+# test/initializers/active_record_encryption_test.rb.
+
 if Rails.env.test?
   # Rails' fixture-time attribute encryption (encrypt_fixtures, set in
   # config/environments/test.rb) replaces a fixture's clean value with an

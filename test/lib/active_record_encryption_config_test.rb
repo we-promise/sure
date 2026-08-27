@@ -68,4 +68,16 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     Rails.application.stubs(:secret_key_base).returns("a-real-generated-secret")
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
   end
+
+  test "using_known_compromised_secret_key_base? is false when explicit keys are configured" do
+    # explicitly_configured? (env vars or credentials) takes precedence over
+    # SECRET_KEY_BASE in config/initializers/active_record_encryption.rb, so
+    # an install with its own explicit keys is unaffected even if it still
+    # has this SECRET_KEY_BASE value lying around (e.g. never rotated it
+    # because it isn't actually the key source).
+    known_default = ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+
+    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+  end
 end
