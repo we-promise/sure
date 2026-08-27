@@ -550,4 +550,26 @@ class AccountTest < ActiveSupport::TestCase
     outflow_transaction.reload
     assert_equal "standard", outflow_transaction.kind
   end
+
+  test "cleanup transfers preloads transaction associations" do
+    counterparty = @family.accounts.create!(
+      owner: @admin,
+      name: "Transfer counterparty",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    transfers = 3.times.map do |index|
+      create_transfer(
+        from_account: @account,
+        to_account: counterparty,
+        amount: 10 + index
+      )
+    end
+
+    queries = capture_sql_queries { @account.send(:cleanup_transfers) }
+
+    assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
+    assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
+  end
 end

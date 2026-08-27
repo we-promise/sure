@@ -699,6 +699,7 @@ class Account < ApplicationRecord
       transaction_ids = entries.where(entryable_type: "Transaction").pluck(:entryable_id)
 
       transfers = Transfer.where(inflow_transaction_id: transaction_ids).or(Transfer.where(outflow_transaction_id: transaction_ids))
+                         .includes(inflow_transaction: { entry: { account: :family } }, outflow_transaction: { entry: { account: :family } })
 
       transfers.find_each(&:destroy!)
     end
