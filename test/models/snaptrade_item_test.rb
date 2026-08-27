@@ -65,7 +65,7 @@ class SnaptradeItemTest < ActiveSupport::TestCase
   test "declares OAuth credential fields as encrypted" do
     skip "Encryption not configured" unless SnaptradeItem.encryption_ready?
 
-    encrypted = SnaptradeItem.encrypted_attributes.map(&:to_s)
+    encrypted = Array(SnaptradeItem.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "client_id"
     assert_includes encrypted, "consumer_key"
     assert_includes encrypted, "snaptrade_user_secret"
