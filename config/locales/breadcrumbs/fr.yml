@@ -48,7 +48,7 @@ fr:
     lunchflow_items: Lunch Flow
     mcp: Serveur MCP
     merchants: Marchands
-    mercury_items: Mercure
+    mercury_items: Mercury
     messages: Messages
     mfa: Authentification à deux facteurs
     oidc_accounts: Comptes SSO
@@ -79,7 +79,7 @@ fr:
     sso_providers: Fournisseurs SSO
     subscriptions: Abonnement
     tags: Balises
-    trades: Métiers
+    trades: Transactions boursières
     transactions: Transactions
     transfer_matches: Matchs de transfert
     transfers: Transferts

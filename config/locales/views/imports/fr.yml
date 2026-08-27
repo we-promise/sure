@@ -67,7 +67,7 @@ fr:
         format_label: Formater
         leave_empty: Laisser vide
         name_label: Nom
-        no_security_provider_warning: Le fournisseur de prix de sécurité n'est pas configuré.  Vos importations commerciales fonctionneront, mais bien sûr, elles ne rempliront pas l'historique des prix.  Veuillez accéder à vos paramètres pour configurer cela.
+        no_security_provider_warning: Le fournisseur de prix des titres n'est pas configuré.  Vos importations commerciales fonctionneront, mais Sure ne remplira pas l'historique des prix.  Veuillez accéder à vos paramètres pour configurer cela.
         note_label: Remarque
         price_label: Prix
         quantity_label: Quantité
@@ -280,7 +280,7 @@ fr:
       rejected_transfers: Transferts rejetés
       rules: Règles
       tags: Balises
-      trades: Métiers
+      trades: Transactions boursières
       transactions: Opérations
       transfers: Transferts
       valuations: Évaluations

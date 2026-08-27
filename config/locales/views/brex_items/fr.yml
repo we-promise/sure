@@ -133,7 +133,7 @@ fr:
         title: Le chiffrement de la base de données n'est pas configuré
       instructions:
         copy_token_html: Copiez le jeton et ajoutez-le en tant que connexion nommée
-          ci-dessous. Bien sûr, stocke le jeton uniquement pour synchroniser cette
+          ci-dessous. Sure stocke le jeton uniquement pour synchroniser cette
           famille.
         create_token: 'Créez un jeton API avec ces étendues en lecture seule : comptes.cash.readonly,
           comptes.card.readonly, transactions.cash.readonly, transactions.card.readonly'

@@ -53,7 +53,7 @@ fr:
         %{count}. Coût estimé : <span class="font-semibold">~$%{cost}</span>'
       apply_notice_html: Vous êtes sur le point d'appliquer cette règle aux <span
         class="text-primary font-medium">%{count} %{resource}</span> qui répondent
-        aux critères de règle spécifiés.  Veuillez confirmer si vous souhaitez procéder
+        aux critères de règle spécifiés. Veuillez confirmer si vous souhaitez procéder
         à ce changement.
       confirm_changes: Confirmer les modifications
       cost_unavailable_model: L'estimation des coûts n'est pas disponible pour le
