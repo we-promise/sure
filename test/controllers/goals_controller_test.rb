@@ -862,6 +862,34 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
 
 
+    # The hint for a blank amount is chosen client-side from two strings the
+    # form hands over. A missing one does not raise — the value reads as
+    # undefined and the line renders empty — so the wiring is what needs
+    # pinning, not the ternary that picks between them.
+    test "the form carries both blank-amount hints" do
+      unclaimed_account("Hint Pot")
+
+      get new_goal_url
+
+      assert_response :success
+      # Escaped: the copy carries an apostrophe, and the attribute value in the
+      # response is HTML-escaped.
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("goals.form.earmark.whole_balance_alone"))
+      assert_includes response.body, ERB::Util.html_escape(I18n.t("goals.form.earmark.whole_balance"))
+    end
+
+    # The two must stay distinguishable: if they ever say the same thing, the
+    # branch is doing nothing and a first-time user is back to being told about
+    # earmarks that do not exist.
+    test "the two blank-amount hints say different things" do
+      assert_not_equal I18n.t("goals.form.earmark.whole_balance"),
+                       I18n.t("goals.form.earmark.whole_balance_alone")
+      assert_no_match(/earmark/i, I18n.t("goals.form.earmark.whole_balance_alone"),
+        "the hint shown with no other claims should not mention earmarks")
+    end
+
+  private
+
     # A private account of another member, linked to the goal under test.
     def private_linked_account
       account = Account.create!(

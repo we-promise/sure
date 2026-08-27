@@ -125,6 +125,7 @@
                the server decides the locale and the client applies it. %>
            data-goal-earmark-locale-value="<%= I18n.locale %>"
            data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
+           data-goal-earmark-whole-balance-alone-value="<%= t("goals.form.earmark.whole_balance_alone") %>"
            data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
            data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>

@@ -316,6 +316,7 @@ en:
         headroom: "{left} left to earmark on this account."
         prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
         whole_balance: This account will fund whatever is left after the other earmarks.
+        whole_balance_alone: "This goal will use this account's whole balance."
       fields:
         target_mode: How the target balance is set
         target_months: Months of expenses
