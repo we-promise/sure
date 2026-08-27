@@ -1,5 +1,5 @@
 class Transfer::Creator
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil)
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, category_id: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
@@ -8,6 +8,7 @@ class Transfer::Creator
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
     @tag_ids = Array(tag_ids).reject(&:blank?)
+    @category_id = category_id.presence
 
     if exchange_rate.present?
       rate_value = exchange_rate.to_d
@@ -47,7 +48,7 @@ class Transfer::Creator
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids
+    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :category_id
 
     def apply_tags!(transfer)
       resolved_ids = family.tags.where(id: tag_ids).pluck(:id)
@@ -64,7 +65,7 @@ class Transfer::Creator
 
       Transaction.new(
         kind: kind,
-        category: (investment_contributions_category if kind == "investment_contribution"),
+        category_id: outflow_category_id(kind),
         entry: source_account.entries.build(
           amount: amount,
           currency: source_account.currency,
@@ -73,6 +74,12 @@ class Transfer::Creator
           user_modified: true,
         )
       )
+    end
+
+    def outflow_category_id(kind)
+      return category_id if category_id.present?
+
+      investment_contributions_category.id if kind == "investment_contribution"
     end
 
     def investment_contributions_category

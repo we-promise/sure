@@ -29,10 +29,10 @@ class TransactionsController < ApplicationController
                          :category, :merchant, :tags,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
-                         #   counterpart display and Transfer#categorizable?/#payment?
+                         #   counterpart display and Transfer#payment?
                          # - inflow rows need outflow_transaction (from_account) for
                          #   counterpart display, and inflow_transaction (to_account)
-                         #   for the category menu on the same row
+                         #   for Transfer#payment? on the same row
                          {
                            transfer_as_outflow: {
                              inflow_transaction: { entry: :account }

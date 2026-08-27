@@ -10,6 +10,7 @@ en:
     form:
       amount: Amount
       bank_charges: Bank Charges
+      category: Category
       outgoing_fee: Outgoing transfer fee
       incoming_fee: Incoming transfer fee
       date: Date
@@ -24,6 +25,7 @@ en:
       submit: Create transfer
       to: To
       transfer: Transfer
+      uncategorized: Uncategorized
     new:
       title: New transfer
     show:
