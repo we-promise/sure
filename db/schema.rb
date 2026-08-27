@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -366,9 +366,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.uuid "category_id", null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
-    t.datetime "updated_at", null: false
-    t.boolean "rollover_enabled", default: false, null: false
     t.decimal "rolled_over_amount", precision: 19, scale: 4, default: "0.0", null: false
+    t.boolean "rollover_enabled", default: false, null: false
+    t.datetime "updated_at", null: false
     t.index ["budget_id", "category_id"], name: "index_budget_categories_on_budget_id_and_category_id", unique: true
     t.index ["budget_id"], name: "index_budget_categories_on_budget_id"
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
@@ -599,7 +599,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.check_constraint "interest_rate >= 0::numeric AND interest_rate <= 100::numeric", name: "chk_emi_plans_interest_rate_range"
     t.check_constraint "principal_amount > 0::numeric", name: "chk_emi_plans_principal_amount_positive"
     t.check_constraint "processing_fee >= 0::numeric", name: "chk_emi_plans_processing_fee_non_negative"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'foreclosed'::character varying, 'completed'::character varying]::text[])", name: "chk_emi_plans_status"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'foreclosed'::character varying::text, 'completed'::character varying::text])", name: "chk_emi_plans_status"
     t.check_constraint "tenure_months > 0 AND tenure_months <= 480", name: "chk_emi_plans_tenure_months_range"
   end
 
@@ -706,7 +706,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "emi_installment_number IS NULL OR emi_installment_number > 0", name: "chk_entries_emi_installment_number_positive"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
-    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying, 'cleared'::character varying, 'reconciled'::character varying]::text[])", name: "chk_entries_reconciled_status"
+    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying::text, 'cleared'::character varying::text, 'reconciled'::character varying::text])", name: "chk_entries_reconciled_status"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -903,6 +903,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.string "color"
     t.decimal "completed_amount", precision: 19, scale: 4
     t.datetime "completed_at"
+    t.decimal "consumed_amount", precision: 19, scale: 4, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.uuid "family_id", null: false
@@ -914,14 +915,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.string "state", default: "active", null: false
     t.decimal "target_amount", precision: 19, scale: 4, null: false
     t.date "target_date"
+    t.string "target_mode", default: "fixed", null: false
+    t.integer "target_months"
     t.datetime "updated_at", null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
+    t.check_constraint "consumed_amount >= 0::numeric", name: "chk_goals_consumed_amount_non_negative"
+    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying::text, 'maintained'::character varying::text])", name: "chk_goals_kind_enum"
     t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying::text, 'contributions'::character varying::text])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
-    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying::text, 'maintained'::character varying::text])", name: "chk_goals_kind_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying, 'months_of_expenses'::character varying]::text[])", name: "chk_goals_target_mode_enum"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1564,7 +1569,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.index ["onchain_wallet_item_id", "chain", "wallet_address"], name: "index_onchain_wallet_accounts_unique_native", unique: true, where: "((asset_kind)::text = 'native'::text)"
     t.index ["onchain_wallet_item_id"], name: "index_onchain_wallet_accounts_on_onchain_wallet_item_id"
     t.check_constraint "asset_kind::text = 'native'::text OR contract_address IS NOT NULL", name: "chk_onchain_wallet_accounts_token_has_contract"
-    t.check_constraint "asset_kind::text = ANY (ARRAY['native'::character varying, 'erc20'::character varying, 'spl'::character varying]::text[])", name: "chk_onchain_wallet_accounts_known_asset_kind"
+    t.check_constraint "asset_kind::text = ANY (ARRAY['native'::character varying::text, 'erc20'::character varying::text, 'spl'::character varying::text])", name: "chk_onchain_wallet_accounts_known_asset_kind"
   end
 
   create_table "onchain_wallet_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1664,17 +1669,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
   end
 
   create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.string "token", null: false
-    t.string "environment", null: false
-    t.string "platform", default: "ios", null: false
-    t.datetime "last_registered_at", null: false
     t.datetime "created_at", null: false
+    t.string "environment", null: false
+    t.datetime "last_registered_at", null: false
+    t.string "platform", default: "ios", null: false
+    t.string "token", null: false
     t.datetime "updated_at", null: false
-    t.index ["last_registered_at"], name: "index_push_subscriptions_on_last_registered_at"
+    t.uuid "user_id", null: false
     t.index "lower((token)::text)", name: "index_push_subscriptions_on_lower_token", unique: true
+    t.index ["last_registered_at"], name: "index_push_subscriptions_on_last_registered_at"
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
-    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying, 'production'::character varying]::text[])", name: "chk_push_subscriptions_environment"
+    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying::text, 'production'::character varying::text])", name: "chk_push_subscriptions_environment"
     t.check_constraint "platform::text = 'ios'::text", name: "chk_push_subscriptions_platform"
   end
 
