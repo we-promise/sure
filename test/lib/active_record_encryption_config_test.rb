@@ -94,4 +94,33 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
 
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
   end
+
+  test "backfill_completed? is false before any backfill has run" do
+    Setting.encryption_backfill_completed_version = 0
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? is true once the stored version meets the required version" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+
+    assert ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? is false when the stored version predates a coverage expansion" do
+    # Simulates an install that completed a backfill under an older, narrower
+    # CURRENT_BACKFILL_VERSION before upgrading to code that covers more
+    # models/fields - it must not be treated as complete until it re-runs
+    # the task, or the fallback gets disabled for newly-covered models that
+    # were never actually backfilled.
+    Setting.encryption_backfill_completed_version = 1
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?(required_version: 2)
+  end
+
+  test "backfill_completed? defaults to false when the settings table can't be read" do
+    Setting.stubs(:encryption_backfill_completed_version).raises(ActiveRecord::StatementInvalid, "relation \"settings\" does not exist")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
 end

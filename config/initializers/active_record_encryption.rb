@@ -10,8 +10,20 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 # `User.find_by(email:)` stop matching not-yet-backfilled rows entirely.
 # Both default to false upstream and are meant exactly for this transition
 # period; see https://guides.rubyonrails.org/active_record_encryption.html.
-Rails.application.config.active_record.encryption.support_unencrypted_data = true
-Rails.application.config.active_record.encryption.extend_queries = true
+#
+# Gated on ActiveRecordEncryptionConfig.backfill_completed? (see #3214)
+# instead of being unconditional: leaving this on forever means a plaintext
+# value that lands in an encrypted column later - a bug, a bad migration, a
+# manual DB edit - would be silently accepted instead of raising, quietly
+# undermining the integrity guarantee encryption exists to provide. The flag
+# it checks is a versioned Setting, flipped by security:backfill_encryption
+# only on a clean (zero-failure), non-dry-run completion, and defaults to
+# "not complete" (fallback enabled) whenever it can't be read - fresh
+# installs, pre-migration boots, or DB errors - so this preserves the
+# original crash-safe behavior for anyone who hasn't backfilled yet.
+encryption_fallback_enabled = !ActiveRecordEncryptionConfig.backfill_completed?
+Rails.application.config.active_record.encryption.support_unencrypted_data = encryption_fallback_enabled
+Rails.application.config.active_record.encryption.extend_queries = encryption_fallback_enabled
 
 # KNOWN LIMITATION: extend_queries does not reliably extend deterministic
 # lookups to match legacy plaintext data for attributes that combine

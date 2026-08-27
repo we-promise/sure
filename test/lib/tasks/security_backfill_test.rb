@@ -71,6 +71,38 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       "the stored value must be an encryption envelope, not plaintext {}")
   end
 
+  test "a clean non-dry-run completion marks the backfill flag complete" do
+    Setting.encryption_backfill_completed_version = 0
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION, Setting.encryption_backfill_completed_version
+  end
+
+  test "a dry run does not mark the backfill flag complete" do
+    Setting.encryption_backfill_completed_version = 0
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
+
+    assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
+  test "a run with failures does not mark the backfill flag complete" do
+    Setting.encryption_backfill_completed_version = 0
+
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Failure Test", api_key: "seed")
+    item.save!(validate: false)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_items SET api_key = ? WHERE id = ?", "plaintext-key", item.id ]))
+
+    # Force the write phase of this record's backfill to fail so failed_count > 0.
+    LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
   test "covers every provider item and account model, not just the original subset" do
     out, _err = capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
     results = JSON.parse(out.lines.last)["results"]

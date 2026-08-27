@@ -3,6 +3,14 @@
 require "test_helper"
 
 class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
+  # Both settings are gated on ActiveRecordEncryptionConfig.backfill_completed?
+  # (see #3214) instead of being unconditionally on. They're expected to be
+  # `true` here because the initializer runs once at boot, before this test
+  # (or any test) can flip Setting.encryption_backfill_completed_version -
+  # the test suite always boots in the "backfill not completed" state.
+  # Coverage for the gating logic itself (both the "complete" and
+  # "not complete" branches) lives in test/lib/active_record_encryption_config_test.rb,
+  # since re-running the initializer per-test isn't possible.
   test "supports reading legacy plaintext data written before encryption was correctly gated" do
     # Without this, any not-yet-backfilled row (see bin/rails
     # security:backfill_encryption) raises ActiveRecord::Encryption::Errors::Decryption

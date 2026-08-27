@@ -105,6 +105,15 @@ namespace :security do
     results[:sso_providers] = backfill_model(SsoProvider, %i[client_secret], batch_size, dry_run)
     results[:sso_identity_blocks] = backfill_model(SsoIdentityBlock, %i[identity_label], batch_size, dry_run)
 
+    # Only mark the backfill complete on a clean, non-dry-run pass: a partial
+    # failure leaves some rows still plaintext, and flipping the flag would
+    # disable the legacy-plaintext fallback (config/initializers/
+    # active_record_encryption.rb) for models that still need it, turning a
+    # readable row into a boot-time ActiveRecord::Encryption::Errors::Decryption.
+    if !dry_run && results.values.all? { |r| r[:failed_count].zero? }
+      Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    end
+
     puts({
       ok: true,
       dry_run: dry_run,
