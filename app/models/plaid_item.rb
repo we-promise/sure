@@ -27,6 +27,8 @@ class PlaidItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  TRANSACTIONS_REFRESH_COOLDOWN = 5.minutes
+
   # Get accounts from both new and legacy systems
   def accounts
     @accounts ||= plaid_accounts
@@ -67,6 +69,24 @@ class PlaidItem < ApplicationRecord
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
+  end
+
+  def request_transactions_refresh_later
+    return unless supports_product?("transactions")
+
+    refresh_requested = Rails.cache.write(
+      transactions_refresh_cache_key,
+      true,
+      expires_in: TRANSACTIONS_REFRESH_COOLDOWN,
+      unless_exist: true
+    )
+
+    PlaidTransactionsRefreshJob.perform_later(self) if refresh_requested
+  end
+
+  def sync_later_with_provider_refresh
+    request_transactions_refresh_later
+    sync_later
   end
 
   def import_latest_plaid_data
@@ -121,6 +141,10 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+    def transactions_refresh_cache_key
+      "plaid_item:#{id}:transactions_refresh_requested"
+    end
+
     def remove_plaid_item
       return unless plaid_provider.present?
 

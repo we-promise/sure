@@ -46,7 +46,7 @@ class PlaidItemsController < ApplicationController
 
   def sync
     unless @plaid_item.syncing?
-      @plaid_item.sync_later
+      @plaid_item.sync_later_with_provider_refresh
     end
 
     respond_to do |format|

@@ -79,6 +79,15 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sync all requests fresh Plaid transactions before syncing the family" do
+    PlaidItem.any_instance.expects(:request_transactions_refresh_later).once
+    Family.any_instance.expects(:sync_later).once
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
+  end
+
   test "show avoids N+1 transfer queries across paginated entries" do
     queries = capture_sql_queries { get account_url(@account) }
     assert_response :success
@@ -353,7 +362,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # Mock at the class level since controller loads account from DB
     Account.any_instance.expects(:syncing?).returns(false)
     PlaidItem.any_instance.expects(:syncing?).returns(false)
-    PlaidItem.any_instance.expects(:sync_later).once
+    PlaidItem.any_instance.expects(:sync_later_with_provider_refresh).once
 
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)
