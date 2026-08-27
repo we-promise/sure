@@ -50,6 +50,9 @@ export default class extends Controller {
 
     const balance = Number.parseFloat(row.dataset.balance || "0")
     const others = Number.parseFloat(row.dataset.earmarkedByOthers || "0")
+    // A whole-account link elsewhere sums to zero above, so the amount alone
+    // cannot tell "nobody else claims this" from "somebody claims all of it".
+    const claimedWhole = row.dataset.wholeAccountClaimed === "true"
     const raw = input.value.trim()
 
     // "whatever is left after the other earmarks" describes nothing when there
@@ -58,7 +61,7 @@ export default class extends Controller {
     if (raw === "") {
       return this.#show(
         warning,
-        others > 0 ? this.wholeBalanceValue : this.wholeBalanceAloneValue,
+        others > 0 || claimedWhole ? this.wholeBalanceValue : this.wholeBalanceAloneValue,
       )
     }
 

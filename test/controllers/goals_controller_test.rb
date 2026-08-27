@@ -862,6 +862,22 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
 
 
+    # The row must carry both readings, since one of them is invisible to the
+    # other: a whole-account claim elsewhere sums to zero, and without the flag
+    # the form would tell the user the account is theirs alone and then refuse
+    # the blank allocation on submit.
+    test "each account row carries the whole-account claim as well as the sum" do
+      account = unclaimed_account("Claimed Pot")
+      @user.family.goals.create!(name: "Neighbour", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account)
+      end
+
+      get new_goal_url
+
+      assert_response :success
+      assert_match(/data-earmarked-by-others="0(\.0)?"[^>]*data-whole-account-claimed="true"/m, response.body)
+    end
+
     # The hint for a blank amount is chosen client-side from two strings the
     # form hands over. A missing one does not raise — the value reads as
     # undefined and the line renders empty — so the wiring is what needs
