@@ -164,6 +164,17 @@ class PlaidItemTest < ActiveSupport::TestCase
     @plaid_item.request_transactions_refresh_later
   end
 
+  test "user sync releases cooldown lease when refresh job enqueue raises" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(true)
+    PlaidTransactionsRefreshJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    Rails.cache.expects(:delete).with("plaid_item:#{@plaid_item.id}:transactions_refresh_requested")
+
+    assert_raises RedisClient::Error do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
   test "user sync preserves follow-up sync while requesting provider refresh" do
     @plaid_item.expects(:request_transactions_refresh_later).once
     @plaid_item.expects(:sync_later_with_follow_up).once

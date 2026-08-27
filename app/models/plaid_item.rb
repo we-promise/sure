@@ -96,7 +96,13 @@ class PlaidItem < ApplicationRecord
 
     return unless refresh_requested
 
-    enqueued_job = PlaidTransactionsRefreshJob.perform_later(self)
+    enqueued_job = begin
+      PlaidTransactionsRefreshJob.perform_later(self)
+    rescue
+      Rails.cache.delete(transactions_refresh_cache_key)
+      raise
+    end
+
     Rails.cache.delete(transactions_refresh_cache_key) unless enqueued_job
   end
 
