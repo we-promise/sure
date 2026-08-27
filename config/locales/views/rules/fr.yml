@@ -79,7 +79,7 @@ fr:
       starting_from: À partir de
       then: ALORS
     index:
-      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent.  Assurez-vous
+      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent. Assurez-vous
         de filtrer le plus étroitement possible pour éviter des coûts inutiles.
       delete_all_rules: Supprimer toutes les règles
       new_rule: Nouvelle règle
