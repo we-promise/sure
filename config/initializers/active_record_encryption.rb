@@ -84,6 +84,14 @@ if ActiveRecordEncryptionConfig.partial_env?
   raise ActiveRecordEncryptionConfig.partial_env_message
 end
 
+# A present-but-incomplete credentials.active_record_encryption block does
+# NOT fall through to auto-generation below (see the elsif's `.present?`
+# guard) - without this check it would silently disable encryption entirely
+# instead of failing loudly, unlike the equivalent partial-ENV case above.
+if ActiveRecordEncryptionConfig.partial_credentials?
+  raise ActiveRecordEncryptionConfig.partial_credentials_message
+end
+
 # If all environment variables are present, use them (works for both managed and self-hosted)
 if ActiveRecordEncryptionConfig.complete_env?
   Rails.application.config.active_record.encryption.primary_key = primary_key
