@@ -136,4 +136,26 @@ class TradeTest < ActiveSupport::TestCase
                              investment_activity_label: label)
       ).entryable
     end
+
+    # "Exchange" means a currency exchange on cash and is internal there. On a
+    # security the label covers currency *or security* exchanges, and a
+    # security-for-security exchange can dispose of an appreciated asset — so
+    # borrowing Transaction's list erased a realized gain with nothing to show
+    # for it.
+    test "an exchange is not treated as an internal movement on a trade" do
+      assert_not Trade.new(investment_activity_label: "Exchange").internal_movement?
+    end
+
+    test "the labels that unambiguously preserve ownership still are" do
+      %w[Transfer Sweep\ In Sweep\ Out].each do |label|
+        assert Trade.new(investment_activity_label: label).internal_movement?, label
+      end
+    end
+
+    # The two lists are deliberately different; this fails if one is ever
+    # aliased back onto the other.
+    test "a trade does not borrow the cash list" do
+      assert_includes Transaction::INTERNAL_MOVEMENT_LABELS, "Exchange"
+      assert_not_includes Trade::INTERNAL_MOVEMENT_LABELS, "Exchange"
+    end
 end

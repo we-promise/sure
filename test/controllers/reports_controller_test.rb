@@ -614,7 +614,10 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    get reports_path(period: "last_30_days")
+    # `period_type`, not `period` — the controller reads the former, so the
+    # latter silently fell back to the current month and the trades dated
+    # three days ago dropped out of range on the 1st to the 3rd.
+    get reports_path(period_type: :custom, start_date: 30.days.ago.to_date, end_date: Date.current)
     assert_response :success
 
     # A transfer out carries the same negative quantity as a sale. Counting it

@@ -11,9 +11,19 @@ class Trade < ApplicationRecord
   ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
 
   # The labels that mean the asset went somewhere else you own rather than
-  # being bought or sold. Shared with Transaction, which already keeps them out
-  # of the income statement for the same reason.
-  INTERNAL_MOVEMENT_LABELS = Transaction::INTERNAL_MOVEMENT_LABELS
+  # being bought or sold.
+  #
+  # Deliberately NOT `Transaction::INTERNAL_MOVEMENT_LABELS`, which also holds
+  # "Exchange". On cash that means a currency exchange and is internal; on a
+  # security the label covers "currency **or security** exchanges"
+  # (docs/onboarding/guide.md), and a security-for-security exchange can
+  # dispose of an appreciated asset.
+  #
+  # The two errors are not symmetrical. Listing a movement that was not a sale
+  # is visible and correctable; erasing a realized gain is neither — it simply
+  # is not there. So only labels that unambiguously preserve ownership are
+  # excluded, and an ambiguous one is left where the user can see it.
+  INTERNAL_MOVEMENT_LABELS = %w[Transfer Sweep\ In Sweep\ Out].freeze
 
   validates :qty, presence: true
   validates :price, :currency, presence: true
