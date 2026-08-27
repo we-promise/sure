@@ -45,6 +45,20 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.runtime_configured?(config)
   end
 
+  test "detects complete credentials configuration" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+  end
+
+  test "does not treat partial credentials as configured" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+  end
+
   test "explicit configuration excludes runtime generated config" do
     ActiveRecordEncryptionConfig.stubs(:complete_env?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:credentials_configured?).returns(false)
