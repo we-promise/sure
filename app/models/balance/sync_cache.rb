@@ -53,9 +53,13 @@ class Balance::SyncCache
               custom_rate: custom_rate
             ).amount
           rescue Money::ConversionError
-            Rails.logger.warn(
-              "Balance::SyncCache - dropped entry #{e.id} on account #{account.id}: " \
-              "no FX rate to convert to #{account.currency} on #{e.date}"
+            DebugLogEntry.capture(
+              category: "balance",
+              level: "warn",
+              source: self.class.name,
+              account: account,
+              message: "Dropped entry #{e.id}: no FX rate to convert to #{account.currency} on #{e.date}",
+              metadata: { entry_id: e.id, currency: e.currency, target_currency: account.currency, date: e.date }
             )
             next nil
           end

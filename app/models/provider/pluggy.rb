@@ -65,7 +65,8 @@ class Provider::Pluggy
       return existing if existing && !force
 
       @api_key_mutex.synchronize do
-        return Rails.cache.read(cache_key) if Rails.cache.exist?(cache_key) && !force
+        existing = Rails.cache.read(cache_key)
+        return existing if existing && !force
         response = post(
           "#{base_url}/auth",
           body: { clientId: client_id, clientSecret: client_secret }.to_json,
@@ -95,7 +96,6 @@ class Provider::Pluggy
       uri = path.start_with?("http") ? path : "#{base_url}#{path}"
       resp = method == :get ? get(uri, opts) : send(method, uri, opts)
       handle_response(resp)
-      parsed(resp)
     end
 
     def handle_response(resp)

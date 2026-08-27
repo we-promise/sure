@@ -43,7 +43,9 @@ class PluggyItemsController < ApplicationController
       end
     end
 
-    if @pluggy_item.save
+    item_id_verified = verify_pluggy_item_id(@pluggy_item)
+    @pluggy_item.errors.add(:pluggy_item_id, t("pluggy_items.errors.invalid_item_id")) unless item_id_verified
+    if item_id_verified && @pluggy_item.save
       if should_auto_connect?(@pluggy_item)
         redirect_to connect_form_settings_providers_path(provider_key: "pluggy"),
                     notice: t(".connect_next"),
@@ -110,7 +112,10 @@ class PluggyItemsController < ApplicationController
     # been persisted from the widget / webhook / dashboard flow. A credential
     # edit never touches `pluggy_item_id`; the existing value is preserved by
     # the `update` below.
-    if @pluggy_item.update(attrs)
+    @pluggy_item.assign_attributes(attrs)
+    item_id_verified = verify_pluggy_item_id(@pluggy_item, item_id: attrs[:pluggy_item_id])
+    @pluggy_item.errors.add(:pluggy_item_id, t("pluggy_items.errors.invalid_item_id")) unless item_id_verified
+    if item_id_verified && @pluggy_item.save
       # `update` is only reached from the "Update Configuration" credential form on
       # the providers panel. Don't force the Pluggy Connect drawer open on every
       # credential change — the user expects a plain save (see _pluggy_panel). The
@@ -427,6 +432,20 @@ class PluggyItemsController < ApplicationController
 
     def should_auto_connect?(item)
       item.credentials_configured? && item.pluggy_item_id.blank?
+    end
+
+    def verify_pluggy_item_id(item, item_id: item.pluggy_item_id)
+      return true if item_id.blank?
+      return false unless item.credentials_configured?
+
+      upstream_item = Provider::Pluggy.get_item(
+        item_id: item_id,
+        client_id: item.client_id,
+        client_secret: item.client_secret
+      )
+      upstream_item[:clientUserId].to_s == item.client_user_id
+    rescue Provider::Pluggy::Error
+      false
     end
 
     def link_pluggy_account(pluggy_account, accountable_type)

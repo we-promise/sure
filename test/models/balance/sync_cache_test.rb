@@ -202,7 +202,7 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
       )
     )
 
-    Rails.logger.expects(:warn).with(regexp_matches(/Balance::SyncCache - dropped entry/)).once
+    DebugLogEntry.expects(:capture).with { |args| args[:category] == "balance" && args[:level] == "warn" }.once
 
     converted_entries = Balance::SyncCache.new(@account).send(:converted_entries)
 
@@ -239,7 +239,7 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
       entryable: Transaction.new(category: @family.categories.first, extra: {})
     )
 
-    Rails.logger.expects(:warn).with(regexp_matches(/dropped entry/)).once
+    DebugLogEntry.expects(:capture).with { |args| args[:category] == "balance" && args[:level] == "warn" }.once
 
     converted_entries = Balance::SyncCache.new(@account).send(:converted_entries)
 

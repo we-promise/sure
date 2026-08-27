@@ -83,6 +83,12 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
     # alongside the developer credentials. There is no Plaid-style
     # public_token exchange — the itemId is stored directly on
     # `pluggy_item_id` and is immediately usable to fetch accounts.
+    Provider::Pluggy.stubs(:get_item).with(
+      item_id: "widget-returned-item-id",
+      client_id: "widget_client_id",
+      client_secret: "widget_client_secret"
+    ).returns({ clientUserId: users(:family_admin).family.id.then { |id| "pluggy_#{id}" } }.with_indifferent_access)
+
     assert_difference -> { PluggyItem.count }, 1 do
       assert_enqueued_with(job: SyncJob) do
         post pluggy_items_url, params: {
@@ -99,6 +105,23 @@ class PluggyItemsControllerTest < ActionDispatch::IntegrationTest
 
     item = PluggyItem.order(created_at: :desc).first
     assert_equal "widget-returned-item-id", item.pluggy_item_id
+  end
+
+  test "widget item_id flow rejects an item belonging to another family" do
+    Provider::Pluggy.stubs(:get_item).returns({ clientUserId: "pluggy_other-family" }.with_indifferent_access)
+
+    assert_no_difference -> { PluggyItem.count } do
+      post pluggy_items_url, params: {
+        pluggy_item: {
+          client_id: "widget_client_id",
+          client_secret: "widget_client_secret",
+          pluggy_item_id: "foreign-item-id"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes flash[:alert], "does not belong to this family"
   end
 
   test "create re-renders the providers panel when validation fails" do

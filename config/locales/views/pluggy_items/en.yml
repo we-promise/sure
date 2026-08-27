@@ -15,6 +15,7 @@ en:
         other: "%{count} institutions"
     errors:
       provider_not_configured: "Pluggy provider is not configured"
+      invalid_item_id: "The Pluggy connection does not belong to this family."
 
     # Syncer status messages
     sync:
