@@ -543,6 +543,20 @@ class Family < ApplicationRecord
     Rails.application.config.app_mode.self_hosted?
   end
 
+  # Lazy so existing families get a token on first render, and resetting is
+  # revocation.
+  def bills_feed_token!
+    return bills_feed_token if bills_feed_token.present?
+
+    update!(bills_feed_token: SecureRandom.urlsafe_base64(24))
+    bills_feed_token
+  end
+
+  def reset_bills_feed_token!
+    update!(bills_feed_token: SecureRandom.urlsafe_base64(24))
+    bills_feed_token
+  end
+
   private
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
