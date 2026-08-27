@@ -103,6 +103,45 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_equal 0, Setting.encryption_backfill_completed_version
   end
 
+  # Regression test for a gap CodeRabbit flagged: without invalidating the flag
+  # up front, a *previously completed* backfill's flag would survive a later
+  # failed run untouched, letting ActiveRecordEncryptionConfig.backfill_completed?
+  # keep reporting "complete" while this run's still-plaintext rows sit unencrypted.
+  test "a run with failures invalidates a previously-set completion flag" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Reinvalidate Test", api_key: "seed")
+    item.save!(validate: false)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_items SET api_key = ? WHERE id = ?", "plaintext-key", item.id ]))
+
+    LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
+  # Regression test for a gap Codex flagged: SnaptradeAccount#raw_balances_payload
+  # is an encrypted column (app/models/snaptrade_account.rb) but was missing from
+  # this task's field list, so upgraded installs with plaintext balance data would
+  # get marked "backfill complete" while that column was still readable-but-raw -
+  # and once support_unencrypted_data turns off, reads of it raise.
+  test "backfills SnaptradeAccount#raw_balances_payload" do
+    account = snaptrade_accounts(:fidelity_401k)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE snaptrade_accounts SET raw_balances_payload = ?::jsonb WHERE id = ?",
+      [ { "currency" => "USD", "cash" => 1500.0 } ].to_json, account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    account.reload
+    assert_kind_of Array, account.raw_balances_payload
+    assert_equal "USD", account.raw_balances_payload.first["currency"]
+    at_rest = account.read_attribute_before_type_cast(:raw_balances_payload).to_s
+    refute_includes at_rest, "1500.0"
+  end
+
   test "covers every provider item and account model, not just the original subset" do
     out, _err = capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
     results = JSON.parse(out.lines.last)["results"]

@@ -97,15 +97,41 @@ module ActiveRecordEncryptionConfig
 
   # Whether `bin/rails security:backfill_encryption` has completed, cleanly,
   # against the current CURRENT_BACKFILL_VERSION's model/field coverage.
-  # Checked at boot in config/initializers/active_record_encryption.rb, which
-  # runs before the backfill task can possibly have run on a fresh install -
-  # and before the `settings` table is guaranteed to exist at all (first
-  # `db:create`, asset precompile without a DB, etc). `false` is the safe
-  # default in every one of those cases: it keeps the legacy-plaintext
+  #
+  # Checked at boot in config/initializers/active_record_encryption.rb via a
+  # PLAIN (non-deferred) call: ActiveRecord's own "active_record_encryption.
+  # configuration" railtie initializer reads
+  # Rails.application.config.active_record.encryption.* into the actual
+  # ActiveRecord::Encryption.config object once, synchronously, in between
+  # config/initializers running and Rails.application.config.after_initialize
+  # firing - so setting support_unencrypted_data/extend_queries from inside
+  # after_initialize (or any other deferred hook) is silently too late and
+  # has no effect on real encryption behavior (verified empirically; this
+  # method must stay callable synchronously at initializer time).
+  #
+  # That timing rules out using the `Setting` model directly: Setting is an
+  # autoloaded app/* constant, and Rails autoloading isn't available yet
+  # while config/initializers/*.rb are still being evaluated (referencing
+  # any app/models class there raises `NameError: uninitialized constant`,
+  # unconditionally - not just when the DB/table is missing). So this reads
+  # the same `settings` table RailsSettings::Base uses directly via SQL,
+  # sidestepping autoloading entirely while keeping the synchronous timing
+  # `active_record_encryption.rb` depends on.
+  #
+  # This also runs before the backfill task can possibly have run on a fresh
+  # install - and before the `settings` table is guaranteed to exist at all
+  # (first `db:create`, asset precompile without a DB, etc). `false` is the
+  # safe default in every one of those cases: it keeps the legacy-plaintext
   # fallback enabled, matching this app's pre-gating behavior, rather than
   # risking ActiveRecord::Encryption::Errors::Decryption on boot.
   def backfill_completed?(required_version: CURRENT_BACKFILL_VERSION)
-    Setting.encryption_backfill_completed_version.to_i >= required_version
+    raw_value = ActiveRecord::Base.connection.select_value(
+      "SELECT value FROM settings WHERE var = 'encryption_backfill_completed_version' LIMIT 1"
+    )
+    return false if raw_value.nil?
+
+    stored_version = YAML.respond_to?(:unsafe_load) ? YAML.unsafe_load(raw_value) : YAML.load(raw_value)
+    stored_version.to_i >= required_version
   rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::StatementInvalid => e
     Rails.logger.warn("[ActiveRecordEncryptionConfig] Could not read encryption backfill status (#{e.class}); defaulting to fallback-enabled") if defined?(Rails.logger) && Rails.logger
     false

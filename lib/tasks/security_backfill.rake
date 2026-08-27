@@ -35,6 +35,13 @@ namespace :security do
       exit 1
     end
 
+    # Invalidate any previous completion flag before this run starts (not just
+    # on failure at the end): if a prior run already completed successfully
+    # and this run then fails or aborts partway through, leaving the old flag
+    # in place would let ActiveRecordEncryptionConfig.backfill_completed?
+    # report "complete" while this run's still-plaintext rows are unencrypted.
+    Setting.encryption_backfill_completed_version = nil unless dry_run
+
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
@@ -82,7 +89,7 @@ namespace :security do
     results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
     results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload], batch_size, dry_run)
+    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload], batch_size, dry_run)
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
