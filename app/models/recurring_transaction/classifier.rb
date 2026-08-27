@@ -23,7 +23,7 @@ class RecurringTransaction
     # Wording that marks classic push-payment obligations: utilities,
     # telecom, insurance, housing, taxes.
     BILL_KEYWORDS = %w[
-      electric power energy gas water sewer utility utilit insurance insur
+      electric power energy gas water sewer utility utilit* insurance insur*
       mortgage rent lease loan hoa property tax comcast xfinity spectrum
       cox centurylink frontier at&t verizon t-mobile tmobile mint\ mobile
       wireless phone internet interest finance\ charge
@@ -84,9 +84,17 @@ class RecurringTransaction
 
       # Whole words only. A substring test let "max" claim Maxwell Plumbing
       # and "gas" claim a gastropub, and a false subscription match also set
-      # autopay, which removes the row from the needs-action list.
+      # autopay, which removes the row from the needs-action list. A trailing
+      # "*" marks a stem that may carry a suffix, so "utilit*" still reaches
+      # "UTILITIES" without a bare stem matching inside unrelated words.
       def matches?(keywords)
-        keywords.any? { |keyword| name.match?(/\b#{Regexp.escape(keyword)}\b/) }
+        keywords.any? do |keyword|
+          if keyword.end_with?("*")
+            name.match?(/\b#{Regexp.escape(keyword.delete_suffix('*'))}\w*/)
+          else
+            name.match?(/\b#{Regexp.escape(keyword)}\b/)
+          end
+        end
       end
 
       def flat_amounts?

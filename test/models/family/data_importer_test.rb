@@ -2376,20 +2376,34 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     records = bills_ndjson_records
     records.each { |record| record[:data].delete(:closed_at) if record[:type] == "RecurringOccurrence" }
 
-    Family::DataImporter.new(@family, build_ndjson(records)).import!
+    session = @family.import_sessions.create!
+    Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
     occurrence = @family.recurring_transactions.sole
                         .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
     first_stamp = occurrence.closed_at
     assert_not_nil first_stamp
     assert_equal Date.new(2026, 6, 9), first_stamp.to_date, "the stand-in derives from the due date"
 
-    importer = Family::DataImporter.new(@family, build_ndjson(records))
-    parsed = importer.send(:parse_ndjson)
-    importer.send(:import_recurring_transactions, parsed["RecurringTransaction"])
-    importer.send(:import_recurring_occurrences, parsed["RecurringOccurrence"])
+    # A day later so a stand-in recomputed at import time would visibly move.
+    travel 1.day do
+      Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
+    end
 
     assert_equal first_stamp, occurrence.reload.closed_at,
       "an import-time stand-in would move the historical timestamp on every replay"
+  end
+
+  test "one incoherent recurrence rule row is skipped, not the whole import" do
+    records = bills_ndjson_records
+    records.each do |record|
+      record[:data][:interval] = nil if record[:type] == "RecurrenceRule"
+    end
+
+    result = Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    assert_equal 1, result.dig(:summary, "recurrence_rules", "skipped")
+    assert_equal 1, @family.recurring_transactions.count,
+      "the rest of the file must land even though one rule row was stale"
   end
 
   test "a hand-recorded allocation without a paid_on is skipped, not defaulted to today" do

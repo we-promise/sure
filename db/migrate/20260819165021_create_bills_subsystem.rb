@@ -349,14 +349,31 @@ class CreateBillsSubsystem < ActiveRecord::Migration[7.2]
     # or force a choice about which fork to destroy. Refusing with a clear
     # message beats either. A database that never grew such rows rolls back
     # exactly as before.
-    forked = select_value(<<~SQL)
-      SELECT EXISTS (
-        SELECT 1 FROM recurring_transactions
-        GROUP BY family_id, account_id, destination_account_id, merchant_id, name, amount, currency
-        HAVING COUNT(*) > 1
-      )
-    SQL
-    if ActiveModel::Type::Boolean.new.cast(forked)
+    # One check per restored index, mirroring its exact columns and predicate.
+    # A single broad grouping missed pairs the narrower merchant indexes would
+    # still reject, and the failure would land after the bills tables were
+    # already dropped.
+    collision_checks = [
+      [ "family_id, account_id, merchant_id, amount, currency",
+        "merchant_id IS NOT NULL AND destination_account_id IS NULL" ],
+      [ "family_id, account_id, name, amount, currency",
+        "name IS NOT NULL AND merchant_id IS NULL AND destination_account_id IS NULL" ],
+      [ "family_id, account_id, destination_account_id, merchant_id, amount, currency",
+        "destination_account_id IS NOT NULL AND merchant_id IS NOT NULL" ],
+      [ "family_id, account_id, destination_account_id, name, amount, currency",
+        "destination_account_id IS NOT NULL AND name IS NOT NULL AND merchant_id IS NULL" ]
+    ]
+    forked = collision_checks.any? do |columns, predicate|
+      ActiveModel::Type::Boolean.new.cast(select_value(<<~SQL))
+        SELECT EXISTS (
+          SELECT 1 FROM recurring_transactions
+          WHERE #{predicate}
+          GROUP BY #{columns}
+          HAVING COUNT(*) > 1
+        )
+      SQL
+    end
+    if forked
       raise ActiveRecord::IrreversibleMigration,
             "recurring_transactions holds rows distinguished only by dedup_scope " \
             "(price-forked series). The pre-bills unique indexes cannot be recreated " \

@@ -93,6 +93,22 @@ class RecurringTransaction::ClassifierTest < ActiveSupport::TestCase
     assert_equal "subscription", result.bill_type
   end
 
+  # The word-boundary fix silently disabled the stems: utilit never
+  # matches UTILITIES. Starred stems accept a suffix without regaining the
+  # anywhere-in-the-word looseness the boundary fix removed.
+  test "keyword stems still reach their inflections" do
+    utilities = RecurringTransaction::Classifier.classify(
+      name: "AUSTIN UTILITIES", entries: entries_of(120)
+    )
+    assert_equal "bill", utilities.bill_type
+    assert_not utilities.autopay, "a utility is not autopay by default"
+
+    insurer = RecurringTransaction::Classifier.classify(
+      name: "STATE FARM INSUR PREM", entries: entries_of(140)
+    )
+    assert_equal "bill", insurer.bill_type
+  end
+
   private
     def entries_of(*amounts)
       amounts.map.with_index do |amount, index|
