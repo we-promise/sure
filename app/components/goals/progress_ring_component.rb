@@ -23,11 +23,11 @@ class Goals::ProgressRingComponent < ApplicationComponent
   # this is the same sentence for someone who cannot see it.
   def aria_label
     if goal.any_consumption?
-      I18n.t("goals.show.ring.aria_label_with_used",
+      t("goals.show.ring.aria_label_with_used",
              percent: percent, amount: amount_label, target: target_label,
              used: goal.consumed_amount_money.format)
     else
-      I18n.t("goals.show.ring.aria_label",
+      t("goals.show.ring.aria_label",
              percent: percent, amount: amount_label, target: target_label)
     end
   end
