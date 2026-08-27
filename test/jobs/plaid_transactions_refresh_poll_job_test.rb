@@ -8,12 +8,16 @@ class PlaidTransactionsRefreshPollJobTest < ActiveJob::TestCase
     PlaidItem.any_instance.stubs(:plaid_provider).returns(@provider)
   end
 
-  test "stops when a webhook sync already advanced the cursor" do
+  test "continues polling from a cursor advanced by a concurrent sync" do
     @plaid_item.update!(next_cursor: "advanced-cursor")
-    @provider.expects(:get_transactions).never
+    @provider.expects(:get_transactions)
+      .with(@plaid_item.access_token, next_cursor: "advanced-cursor")
+      .returns(stub(cursor: "refreshed-cursor"))
 
-    assert_no_enqueued_jobs do
-      PlaidTransactionsRefreshPollJob.perform_now(@plaid_item, cursor: "saved-cursor")
+    assert_enqueued_with(job: SyncJob) do
+      perform_enqueued_jobs(only: PlaidTransactionsRefreshFollowUpSyncJob) do
+        PlaidTransactionsRefreshPollJob.perform_now(@plaid_item, cursor: "saved-cursor")
+      end
     end
   end
 
@@ -22,7 +26,7 @@ class PlaidTransactionsRefreshPollJobTest < ActiveJob::TestCase
       .with(@plaid_item.access_token, next_cursor: "saved-cursor")
       .returns(stub(cursor: "advanced-cursor"))
 
-    assert_enqueued_with(job: SyncJob) do
+    assert_enqueued_with(job: PlaidTransactionsRefreshFollowUpSyncJob) do
       PlaidTransactionsRefreshPollJob.perform_now(@plaid_item, cursor: "saved-cursor")
     end
   end
@@ -46,7 +50,7 @@ class PlaidTransactionsRefreshPollJobTest < ActiveJob::TestCase
     @provider.expects(:get_transactions).returns(stub(cursor: "saved-cursor"))
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_enqueued_with(job: SyncJob) do
+      assert_enqueued_with(job: PlaidTransactionsRefreshFollowUpSyncJob) do
         PlaidTransactionsRefreshPollJob.perform_now(
           @plaid_item,
           cursor: "saved-cursor",
@@ -60,7 +64,7 @@ class PlaidTransactionsRefreshPollJobTest < ActiveJob::TestCase
     @provider.expects(:get_transactions).raises(Plaid::ApiError.new(code: 500))
 
     assert_difference "DebugLogEntry.count", 1 do
-      assert_enqueued_with(job: SyncJob) do
+      assert_enqueued_with(job: PlaidTransactionsRefreshFollowUpSyncJob) do
         PlaidTransactionsRefreshPollJob.perform_now(@plaid_item, cursor: "saved-cursor")
       end
     end

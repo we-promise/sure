@@ -6,7 +6,7 @@ class PlaidTransactionsRefreshPollJob < ApplicationJob
 
   def perform(plaid_item, cursor:, attempts_remaining: MAX_ATTEMPTS)
     plaid_item.reload
-    return if plaid_item.next_cursor != cursor
+    cursor = plaid_item.next_cursor if plaid_item.next_cursor != cursor
 
     transactions = plaid_item.plaid_provider.get_transactions(
       plaid_item.access_token,
@@ -14,7 +14,7 @@ class PlaidTransactionsRefreshPollJob < ApplicationJob
     )
 
     if transactions.cursor != cursor
-      plaid_item.sync_later
+      PlaidTransactionsRefreshFollowUpSyncJob.perform_later(plaid_item)
     elsif attempts_remaining.to_i > 1
       self.class
         .set(wait: POLL_INTERVAL)
@@ -29,7 +29,7 @@ class PlaidTransactionsRefreshPollJob < ApplicationJob
         family: plaid_item.family
       )
 
-      plaid_item.sync_later
+      PlaidTransactionsRefreshFollowUpSyncJob.perform_later(plaid_item)
     end
   rescue => error
     DebugLogEntry.capture(
@@ -42,6 +42,6 @@ class PlaidTransactionsRefreshPollJob < ApplicationJob
       metadata: { error_class: error.class.name }
     )
 
-    plaid_item.sync_later
+    PlaidTransactionsRefreshFollowUpSyncJob.perform_later(plaid_item)
   end
 end

@@ -73,6 +73,7 @@ class PlaidItem < ApplicationRecord
 
   def request_transactions_refresh_later
     return unless supports_product?("transactions")
+    return unless shared_transactions_refresh_cache?
 
     refresh_requested = Rails.cache.write(
       transactions_refresh_cache_key,
@@ -81,7 +82,10 @@ class PlaidItem < ApplicationRecord
       unless_exist: true
     )
 
-    PlaidTransactionsRefreshJob.perform_later(self) if refresh_requested
+    return unless refresh_requested
+
+    enqueued_job = PlaidTransactionsRefreshJob.perform_later(self)
+    Rails.cache.delete(transactions_refresh_cache_key) unless enqueued_job
   end
 
   def sync_later_with_provider_refresh
@@ -143,6 +147,15 @@ class PlaidItem < ApplicationRecord
   private
     def transactions_refresh_cache_key
       "plaid_item:#{id}:transactions_refresh_requested"
+    end
+
+    def shared_transactions_refresh_cache?
+      shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
+        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
+        Rails.cache.class.name == "SolidCache::Store"
+
+      Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
+      shared_cache
     end
 
     def remove_plaid_item
