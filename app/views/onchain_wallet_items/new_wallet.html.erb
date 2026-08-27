@@ -1,0 +1,59 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <%= render "onchain_wallet_items/price_provider_warning" %>
+
+      <%# Shown here rather than as a permanent banner on the settings page:
+          the question it answers — can Sure spend my coins? — is asked at the
+          moment of pasting an address, and a banner one has already read twice
+          stops being read at all. %>
+      <%= render DS::Alert.new(
+            variant: :info,
+            message: safe_join([
+              content_tag(:p, t("settings.providers.onchain_wallet_panel.keyless_title"), class: "font-medium"),
+              content_tag(:p, t("settings.providers.onchain_wallet_panel.keyless_body"), class: "mt-1")
+            ])
+          ) %>
+
+      <% if @error_message.present? %>
+        <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+      <% end %>
+
+      <%= styled_form_with url: preview_wallet_onchain_wallet_items_path,
+                           method: :post,
+                           data: { turbo_frame: "modal" },
+                           class: "space-y-4" do |form| %>
+        <%= form.text_field :address,
+                            label: t(".address_label"),
+                            placeholder: t(".address_placeholder"),
+                            value: @address,
+                            required: true %>
+
+        <%= form.select :chain,
+                        options_for_select(
+                          Onchain::Chains.all.map { |chain| [ chain.label, chain.key ] }.sort_by(&:first),
+                          @chain
+                        ),
+                        { include_blank: t(".chain_auto_detect"), label: t(".chain_label") },
+                        class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
+
+        <div class="rounded-lg bg-surface p-3 space-y-2 text-sm text-secondary">
+          <p class="flex items-start gap-2">
+            <%= icon "info", size: "sm", class: "text-primary mt-0.5 shrink-0" %>
+            <span><%= t(".bitcoin_single_address_note") %></span>
+          </p>
+          <p class="flex items-start gap-2">
+            <%= icon "eye", size: "sm", class: "text-primary mt-0.5 shrink-0" %>
+            <span><%= t(".read_only_note") %></span>
+          </p>
+        </div>
+
+        <div class="flex justify-end">
+          <%= form.submit t(".continue") %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

@@ -64,20 +64,30 @@ class InvestmentStatement
   # All current holdings across investment accounts. Holdings are returned in
   # their native currency; callers that aggregate across accounts must convert
   # to family currency via convert_to_family_currency.
+  #
+  # Memoized: top_holdings, allocation, unrealized_gains, unrealized_gains_trend,
+  # and day_change each call this, so an unmemoized version ran the same
+  # DISTINCT ON query up to 5x per dashboard/report request.
   def current_holdings
-    return Holding.none unless investment_accounts.any?
+    @current_holdings ||= begin
+      account_ids = investment_account_ids
 
-    # Get the latest holding for each security per account
-    Holding
-      .where(account_id: investment_account_ids)
-      .where.not(qty: 0)
-      .where(
-        id: Holding
-          .where(account_id: investment_account_ids)
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-      )
-      .includes(:security, :account)
+      if account_ids.any?
+        # Get the latest holding for each security per account
+        Holding
+          .where(account_id: account_ids)
+          .where.not(qty: 0)
+          .where(
+            id: Holding
+              .where(account_id: account_ids)
+              .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
+              .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+          )
+          .includes(:security, :account)
+      else
+        Holding.none
+      end
+    end
   end
 
   # Top holdings by family-currency value

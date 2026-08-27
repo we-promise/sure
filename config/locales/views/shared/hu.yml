@@ -29,6 +29,8 @@ hu:
       resource_deletion_body: "Biztosan törli a következőt: %{resource}? Ez a művelet nem vonható vissza."
       resource_deletion_btn_text: "%{resource} törlése"
     family_moniker:
+      group_plural: Csoportok
+      group_singular: Csoport
       singular: Háztartás
       plural: Háztartások
     trend_change:

@@ -25,6 +25,16 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     assert_operator @stored_credential.sign_count, :>, 0
   end
 
+  test "rejects passkey authentication when session creation fails" do
+    PasskeySessionsController.any_instance.stubs(:create_session_for).returns(false)
+
+    post passkey_session_path, params: { credential: passkey_assertion }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal I18n.t("passkey_sessions.invalid_credential"), JSON.parse(response.body).fetch("error")
+    assert_not Session.exists?(user_id: @user.id)
+  end
+
   # The pending invitation lives in the Rack session, and complete_sign_in reads
   # it immediately after creating the session. Anything that clears the session
   # in between — a reset_session added to "fix" session fixation, say — drops the
@@ -216,7 +226,12 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     def sign_out
-      @user.sessions.each { |session| delete session_path(session) }
+      # Deleting sessions through the controller de-authenticates the request the
+      # moment our own session dies, so every later delete in the loop is a
+      # silent no-op and whichever sessions sort after it survive. The order is
+      # unspecified, which made every suite that signs out this way flaky.
+      # Teardown hygiene is not the behavior under test, so destroy directly.
+      @user.sessions.destroy_all
     end
 
     def with_webauthn_config(rp_id:, allowed_origins:)

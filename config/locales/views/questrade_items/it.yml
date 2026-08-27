@@ -1,0 +1,261 @@
+---
+it:
+  questrade_items:
+    default_name: Connessione Questrade
+    sync_status:
+      no_accounts: Nessun conto trovato
+      synced:
+        one: "%{count} conto sincronizzato"
+        other: "%{count} conti sincronizzati"
+      synced_with_setup: "%{linked} sincronizzati, %{unlinked} da configurare"
+    institution_summary:
+      none: Nessun istituto connesso
+      count:
+        one: "%{count} istituto"
+        other: "%{count} istituti"
+    errors:
+      provider_not_configured: Il provider Questrade non è configurato
+    sync:
+      status:
+        importing: Importazione dei conti da Questrade...
+        processing: Elaborazione di posizioni e attività...
+        calculating: Calcolo dei saldi...
+        importing_data: Importazione dei dati dei conti...
+        checking_setup: Verifica della configurazione dei conti...
+        needs_setup:
+          one: "%{count} conto deve essere configurato..."
+          other: "%{count} conti devono essere configurati..."
+      success: Sincronizzazione avviata
+    panel:
+      eyebrow: Configurazione · solo desktop
+      help_text: Documentazione API Questrade
+      disconnect: Disconnetti
+      disconnect_confirm: Disconnettere Questrade? Questa operazione rimuove la connessione e scollega i conti sincronizzati.
+      steps:
+        s1_html: 'Accedi al <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">portale Questrade</a> da un browser desktop. Le impostazioni API non sono disponibili nell''app mobile.'
+        s2: Apri Impostazioni e, nelle impostazioni generali, modifica le impostazioni IQ API.
+        s3_html: 'Nella finestra di accesso API, fai clic su <strong>Gestisci</strong> sotto <strong>Le mie applicazioni</strong>.'
+        s4: Registra un'app personale con nome e descrizione, quindi salva.
+        s5: Aggiungi un nuovo dispositivo e genera un token.
+        s6: Incolla il token generato qui sotto e salva.
+      setup_instructions: "Istruzioni di configurazione:"
+      step_1: Visita la dashboard di Questrade per ottenere le credenziali
+      step_2: Inserisci le credenziali qui sotto e fai clic su Salva
+      step_3: Dopo una connessione riuscita, vai alla scheda Conti per configurare i nuovi conti
+      field_descriptions: "Descrizione dei campi:"
+      optional: "(Opzionale)"
+      required: "(obbligatorio)"
+      optional_with_default: "(opzionale, valore predefinito %{default_value})"
+      save_button: Salva configurazione
+      update_button: Aggiorna configurazione
+      token_refresh_hint: I token Questrade si rinnovano automaticamente a ogni sincronizzazione dei conti. Se una connessione rimane inutilizzata per oltre 7 giorni e scade, incolla qui un nuovo token per riattivarla senza disconnetterla.
+      status_configured_html: 'Configurato e pronto all''uso. Visita la scheda <a href="%{accounts_path}" class="link">Conti</a> per gestire e configurare i conti.'
+      status_not_configured: Non configurato
+      fields:
+        refresh_token:
+          label: Token di aggiornamento
+          description: Il tuo token di aggiornamento Questrade
+          placeholder_new: Incolla qui il token di aggiornamento
+          placeholder_update: Inserisci un nuovo token di aggiornamento
+        api_server:
+          label: Server API
+          description: Il tuo server API Questrade
+          placeholder_new: Incolla qui il server API
+          placeholder_update: Inserisci un nuovo server API per aggiornarlo
+    create:
+      success: Connessione Questrade creata correttamente
+    update:
+      success: Connessione Questrade aggiornata
+    destroy:
+      success: Connessione Questrade rimossa
+    index:
+      title: Connessioni Questrade
+    loading:
+      loading_message: Caricamento dei conti Questrade...
+      loading_title: Caricamento
+    link_accounts:
+      all_already_linked:
+        one: Il conto selezionato (%{names}) è già collegato
+        other: "Tutti i %{count} conti selezionati sono già collegati: %{names}"
+      api_error: "Errore API: %{message}"
+      invalid_account_names:
+        one: Impossibile collegare un conto senza nome
+        other: "Impossibile collegare %{count} conti senza nome"
+      link_failed: Impossibile collegare i conti
+      no_accounts_selected: Seleziona almeno un conto
+      no_api_key: Chiave API Questrade non trovata. Configurala nelle impostazioni dei provider.
+      partial_invalid: "%{created_count} conti collegati correttamente, %{already_linked_count} erano già collegati e %{invalid_count} avevano nomi non validi"
+      partial_success: "%{created_count} conti collegati correttamente. %{already_linked_count} erano già collegati: %{already_linked_names}"
+      success:
+        one: "%{count} conto collegato correttamente"
+        other: "%{count} conti collegati correttamente"
+    questrade_item:
+      kind: Intermediazione
+      accounts_need_setup: I conti devono essere configurati
+      delete: Elimina connessione
+      deletion_in_progress: eliminazione in corso...
+      error: Errore
+      more_accounts_available:
+        one: "%{count} altro conto disponibile"
+        other: "%{count} altri conti disponibili"
+      no_accounts_description: Questa connessione non ha ancora conti collegati.
+      no_accounts_title: Nessun conto
+      provider_name: Questrade
+      requires_update: La connessione deve essere aggiornata
+      setup_action: Configura nuovi conti
+      setup_description: "%{linked} conti collegati su %{total}. Scegli i tipi di conto per i nuovi conti Questrade importati."
+      setup_needed: Nuovi conti pronti per la configurazione
+      status: "Sincronizzato %{timestamp} fa"
+      status_never: Mai sincronizzato
+      status_with_summary: "Ultima sincronizzazione %{timestamp} fa - %{summary}"
+      syncing: Sincronizzazione in corso...
+      total: Totale
+      unlinked: Non collegato
+      update_credentials: Aggiorna credenziali
+    select_accounts:
+      accounts_selected: conti selezionati
+      api_error: "Errore API: %{message}"
+      cancel: Annulla
+      configure_name_in_provider: "Impossibile importare: configura il nome del conto in Questrade"
+      description: Seleziona i conti da collegare al tuo conto %{product_name}.
+      link_accounts: Collega i conti selezionati
+      no_accounts_found: Nessun conto trovato. Controlla la configurazione della chiave API.
+      no_api_key: La chiave API Questrade non è configurata. Configurala nelle Impostazioni.
+      no_credentials_configured: Prima configura le credenziali Questrade nelle impostazioni dei provider.
+      no_name_placeholder: "(Senza nome)"
+      title: Seleziona i conti Questrade
+    select_existing_account:
+      page_title: Collega un conto Questrade
+      dialog_title: Collega a un conto Questrade
+      linking_label: Collegamento
+      none_available: Nessun conto Questrade non collegato disponibile.
+      buttons:
+        cancel: Annulla
+        link: Collega
+      account_already_linked: Questo conto è già collegato a un provider
+      all_accounts_already_linked: Tutti i conti Questrade sono già collegati
+      api_error: "Errore API: %{message}"
+      balance_label: "Saldo:"
+      cancel: Annulla
+      cancel_button: Annulla
+      configure_name_in_provider: "Impossibile importare: configura il nome del conto in Questrade"
+      connect_hint: Collega un conto Questrade per abilitare la sincronizzazione automatica.
+      description: Seleziona un conto Questrade da collegare a questo conto. Le transazioni saranno sincronizzate e deduplicate automaticamente.
+      header: Collega a Questrade
+      link_account: Collega conto
+      link_button: Collega questo conto
+      linking_to: "Collegamento a:"
+      no_account_specified: Nessun conto specificato
+      no_accounts: Nessun conto Questrade non collegato trovato.
+      no_accounts_found: Nessun conto Questrade trovato. Controlla la configurazione della chiave API.
+      no_api_key: La chiave API Questrade non è configurata. Configurala nelle Impostazioni.
+      no_credentials_configured: Prima configura le credenziali Questrade nelle impostazioni dei provider.
+      no_name_placeholder: "(Senza nome)"
+      settings_link: Vai alle impostazioni dei provider
+      subtitle: Scegli un conto Questrade
+      title: "Collega %{account_name} a Questrade"
+    link_existing_account:
+      account_already_linked: Questo conto è già collegato a un provider
+      api_error: "Errore API: %{message}"
+      invalid_account_name: Impossibile collegare un conto senza nome
+      provider_account_already_linked: Questo conto Questrade è già collegato a un altro conto
+      provider_account_not_found: Conto Questrade non trovato
+      missing_parameters: Parametri obbligatori mancanti
+      no_api_key: Chiave API Questrade non trovata. Configurala nelle impostazioni dei provider.
+      success: "%{account_name} collegato correttamente a Questrade"
+    setup_accounts:
+      page_title: Configura i conti Questrade
+      dialog_title: Configura i tuoi conti Questrade
+      all_linked: Tutti i conti Questrade sono già collegati.
+      import_as: Importa come
+      buttons:
+        cancel: Annulla
+        create: Crea conti
+        done: Fatto
+      types:
+        investment: Investimento
+        depository: Liquidità / conto di deposito
+        skip: Ignora questo conto
+      account_type_label: "Tipo di conto:"
+      accounts_count:
+        one: "%{count} conto disponibile"
+        other: "%{count} conti disponibili"
+      all_accounts_linked: Tutti i tuoi conti Questrade sono già stati configurati.
+      api_error: "Errore API: %{message}"
+      creating: Creazione dei conti...
+      fetch_failed: Impossibile recuperare i conti
+      import_selected: Importa i conti selezionati
+      instructions: Seleziona i conti da importare da Questrade. Puoi scegliere più conti.
+      no_accounts: Nessun conto non collegato trovato per questa connessione Questrade.
+      no_accounts_to_setup: Nessun conto da configurare
+      no_api_key: La chiave API Questrade non è configurata. Controlla le impostazioni della connessione.
+      select_all: Seleziona tutto
+      account_types:
+        skip: Ignora questo conto
+        depository: Conto corrente o di risparmio
+        credit_card: Carta di credito
+        investment: Conto di investimento
+        crypto: Conto di criptovalute
+        loan: Prestito o mutuo
+        other_asset: Altra attività
+      subtype_labels:
+        depository: "Sottotipo di conto:"
+        credit_card: ""
+        investment: "Tipo di investimento:"
+        crypto: ""
+        loan: "Tipo di prestito:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: Le carte di credito saranno configurate automaticamente come conti carta di credito.
+        other_asset: Non sono necessarie opzioni aggiuntive per le altre attività.
+        crypto: I conti di criptovalute saranno configurati per monitorare posizioni e transazioni.
+      subtypes:
+        depository:
+          checking: Conto corrente
+          savings: Conto di risparmio
+          hsa: Conto di risparmio sanitario
+          cd: Certificato di deposito
+          money_market: Mercato monetario
+        investment:
+          brokerage: Intermediazione
+          pension: Pensione
+          retirement: Previdenza
+          "401k": "401(k)"
+          roth_401k: Roth 401(k)
+          "403b": "403(b)"
+          tsp: Piano di risparmio previdenziale
+          "529_plan": Piano 529
+          hsa: Conto di risparmio sanitario
+          mutual_fund: Fondo comune
+          ira: IRA tradizionale
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Mutuo
+          student: Prestito per studenti
+          auto: Prestito auto
+          other: Altro prestito
+      balance: Saldo
+      cancel: Annulla
+      choose_account_type: "Scegli il tipo corretto per ciascun conto Questrade:"
+      create_accounts: Crea conti
+      creating_accounts: Creazione dei conti...
+      historical_data_range: "Intervallo di dati storici:"
+      subtitle: Scegli i tipi di conto corretti per i conti importati
+      sync_start_date_help: Scegli da quanto tempo indietro sincronizzare la cronologia delle transazioni.
+      sync_start_date_label: "Inizia a sincronizzare le transazioni dal:"
+      title: Configura i tuoi conti Questrade
+    setup_required:
+      title: Connetti prima Questrade
+      not_configured_title: Questrade non è ancora connesso
+      not_configured_description: Aggiungi la connessione Questrade nelle impostazioni dei provider, poi torna qui per collegare i conti.
+      go_to_provider_settings: Vai alle impostazioni dei provider
+    complete_account_setup:
+      all_skipped: Tutti i conti sono stati ignorati. Non è stato creato alcun conto.
+      creation_failed: "Impossibile creare i conti: %{error}"
+      no_accounts: Nessun conto da configurare.
+      success:
+        one: "%{count} conto creato correttamente."
+        other: "%{count} conti creati correttamente."
+    preload_accounts:
+      no_credentials_configured: Prima configura le credenziali Questrade nelle impostazioni dei provider.

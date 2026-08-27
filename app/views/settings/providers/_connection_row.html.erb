@@ -1,4 +1,4 @@
-<%# locals: (entry:, open:) %>
+<%# locals: (entry:, open:, provider_setup_encryption_warning: false) %>
 <%
   status        = entry[:summary][:status]
   meta          = entry[:summary][:meta]
@@ -39,7 +39,9 @@
   </summary>
   <div class="space-y-4 mt-4 px-4 pb-4">
     <% if entry[:configuration] %>
-      <%= render "settings/providers/provider_form", configuration: entry[:configuration] %>
+      <%= render "settings/providers/provider_form",
+                 configuration: entry[:configuration],
+                 provider_setup_encryption_warning: provider_setup_encryption_warning %>
     <% else %>
       <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
         <%= render "settings/providers/#{entry[:partial]}" %>
