@@ -4,7 +4,12 @@ import { Controller } from "@hotwired/stimulus"
 // due on a date. Hiding the target-date field keeps a stale value from being
 // submitted and driving a pace the goal does not have.
 export default class extends Controller {
-  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField"]
+  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField", "amountDerived"]
+
+  static values = {
+    amountLabel: String,
+    balanceLabel: String,
+  }
 
   connect() {
     this.refresh()
@@ -26,16 +31,18 @@ export default class extends Controller {
     this.monthsFieldTargets.forEach((field) => field.classList.toggle("hidden", !months))
     if (!months) this.#clearInputs(this.monthsFieldTargets)
 
-    // In months mode the floor is derived from the family's spending, not
-    // chosen. Shown, because it is the figure the user is saving against, but
-    // not editable — the model overwrites a typed one anyway, and a field that
-    // silently discards what you put in it is worse than one you cannot type
-    // into.
+    // Three states. A one-off saves toward a target amount; a fixed reserve
+    // holds a target balance you type; a months-based reserve holds one worked
+    // out from spending, so the input gives way to the figure itself. A
+    // greyed-out input still reads as something to fill in, beside the months
+    // that are the actual question.
+    this.amountFieldTargets.forEach((field) => field.classList.toggle("hidden", months))
+    this.amountDerivedTargets.forEach((field) => field.classList.toggle("hidden", !months))
+
+    const label = maintained ? this.balanceLabelValue : this.amountLabelValue
     this.amountFieldTargets.forEach((field) => {
-      field.querySelectorAll("input").forEach((input) => {
-        input.readOnly = months
-        input.classList.toggle("opacity-60", months)
-      })
+      const el = field.querySelector(".form-field__label")
+      if (el && label) el.textContent = label
     })
   }
 
