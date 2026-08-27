@@ -547,8 +547,6 @@ class Goal < ApplicationRecord
       link.lock!
       stamp_consumption!(transaction) if transaction
 
-      # A whole-account link reserves no fixed slice, so there is nothing to
-      # shrink — it already takes only what the account has left.
       if link.allocated_amount.present?
         # Refused rather than clamped. Clamping released only what the link
         # held while `consumed_amount` took the full figure, so the two sides
@@ -559,6 +557,32 @@ class Goal < ApplicationRecord
         end
 
         link.update!(allocated_amount: link.allocated_amount.to_d - amount)
+      else
+        # A whole-account link has no slice to shrink, so `consumed_amount`
+        # would be added to a backing that has not moved: the goal reads 6,000
+        # of 5,000 until the real transaction lands and the balance catches up.
+        # A fixed earmark never has that window, because shrinking it caps the
+        # backing straight away.
+        #
+        # Spending settles what the link claims. It stops taking "whatever is
+        # there" and takes what the goal still needs after this spend.
+        #
+        # Deliberately NOT "what it backs, minus the amount". That depends on
+        # whether the money has already left the account, and the app cannot
+        # know: a spend recorded before the sync lands needs the subtraction,
+        # the same spend recorded after it has already had one, and taking it
+        # twice reports 4,000 of a 5,000 goal that is whole. Capping at what
+        # is left to reach is the same answer in both orders, with nothing to
+        # infer.
+        backed = backing_within([ link.account_id ]).to_d
+
+        # Same refusal a fixed earmark gives, for the same reason: the link
+        # cannot have supplied money it never backed. `still_needed` cannot go
+        # negative — the target check above has already refused that.
+        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+
+        still_needed = target_amount.to_d - consumed_amount.to_d - amount
+        link.update!(allocated_amount: [ backed, still_needed ].min)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
