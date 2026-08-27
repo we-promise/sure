@@ -25,6 +25,16 @@ module ActiveRecordEncryptionConfig
     key_derivation_salt
   ].freeze
 
+  # Bump this whenever a model/field is added to the coverage of
+  # `bin/rails security:backfill_encryption` (lib/tasks/security_backfill.rake).
+  # `backfill_completed?` compares an install's stored
+  # Setting.encryption_backfill_completed_version against this value, so
+  # bumping it correctly puts installs that completed a backfill under an
+  # older, narrower version back into "not complete" until they re-run the
+  # task - otherwise the legacy-plaintext fallback would get disabled for
+  # models the install's last backfill never actually covered.
+  CURRENT_BACKFILL_VERSION = 1
+
   module_function
 
   def complete_env?(env = ENV)
@@ -83,5 +93,21 @@ module ActiveRecordEncryptionConfig
 
   def env_value_present?(env, key)
     env[key].present?
+  end
+
+  # Whether `bin/rails security:backfill_encryption` has completed, cleanly,
+  # against the current CURRENT_BACKFILL_VERSION's model/field coverage.
+  # Checked at boot in config/initializers/active_record_encryption.rb, which
+  # runs before the backfill task can possibly have run on a fresh install -
+  # and before the `settings` table is guaranteed to exist at all (first
+  # `db:create`, asset precompile without a DB, etc). `false` is the safe
+  # default in every one of those cases: it keeps the legacy-plaintext
+  # fallback enabled, matching this app's pre-gating behavior, rather than
+  # risking ActiveRecord::Encryption::Errors::Decryption on boot.
+  def backfill_completed?(required_version: CURRENT_BACKFILL_VERSION)
+    Setting.encryption_backfill_completed_version.to_i >= required_version
+  rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::StatementInvalid => e
+    Rails.logger.warn("[ActiveRecordEncryptionConfig] Could not read encryption backfill status (#{e.class}); defaulting to fallback-enabled") if defined?(Rails.logger) && Rails.logger
+    false
   end
 end

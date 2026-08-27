@@ -39,5 +39,16 @@ Rails.application.config.after_initialize do
       bin/rails db:encryption:init as the current scheme, then re-run
       bin/rails security:backfill_encryption to re-encrypt under the new keys.
     WARN
+  elsif !ActiveRecordEncryptionConfig.backfill_completed?
+    Rails.logger.warn(<<~WARN)
+      [SECURITY] ActiveRecord Encryption is configured, but
+      bin/rails security:backfill_encryption has not completed successfully
+      yet. Until it does, legacy plaintext data in encrypted columns is
+      still readable via a fallback (support_unencrypted_data/extend_queries
+      in config/initializers/active_record_encryption.rb) instead of raising
+      - which also means a stray plaintext write (bug, bad migration, manual
+      DB edit) would be silently accepted instead of caught. Run
+      bin/rails security:backfill_encryption now to close this gap.
+    WARN
   end
 end
