@@ -34,6 +34,24 @@ class Goal < ApplicationRecord
   # before_save (not before_validation) so it only mutates on persistence, not
   # on every valid? call — a goal can be inspected without its basis flipping.
   before_save :default_progress_basis_for_investment
+  # A reserve measured in months is derived, not typed: computing it only in
+  # the monthly job would leave a brand-new one wrong until the 1st, so the
+  # feature's first impression would be its least convincing moment. Fired on
+  # creation and whenever the inputs change — never on an unrelated save, so
+  # the job keeps owning the monthly cadence and renaming a goal cannot
+  # silently move a financial figure.
+  # A target_amount edit is in the list because in this mode the amount is
+  # derived, not typed: without it the form could persist an arbitrary figure
+  # under a "six months of expenses" label until the next monthly refresh.
+  before_save :apply_months_of_expenses_target,
+              if: -> {
+                months_of_expenses_target? && (
+                  new_record? ||
+                  will_save_change_to_target_months? ||
+                  will_save_change_to_target_mode? ||
+                  will_save_change_to_target_amount?
+                )
+              }
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -42,6 +60,8 @@ class Goal < ApplicationRecord
   validate :currency_locked_once_linked
   validate :restore_must_not_recreate_whole_account_conflict
   validate :kind_locked_while_released
+  validate :kind_locked_once_consumed
+  validate :target_must_cover_what_was_consumed
   # A reserve has no deadline. Normalising here rather than rejecting: the form
   # hides the field for a reserve, so a date can only arrive from a conversion
   # or a crafted request — refusing would show an error about a field the user
@@ -85,6 +105,18 @@ class Goal < ApplicationRecord
   # Goal#whole_account_conflicts_on), and the restore guard
   # #restore_must_not_recreate_whole_account_conflict, which reads the same
   # method. Adding a state here makes all of them release together.
+  # Raised by #consume!. Carries a reason so the controller can say WHICH rule
+  # refused rather than "something went wrong" — every one of them is
+  # actionable by the user.
+  class ConsumptionRefused < StandardError
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super("goal consumption refused: #{reason}")
+    end
+  end
+
   RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
@@ -93,7 +125,19 @@ class Goal < ApplicationRecord
   # is even allowed, and how they sort.
   KINDS = %w[one_off maintained].freeze
 
+  # How a reserve's floor is expressed. "6 months of expenses" is a moving
+  # number — what covers six months in January is not what covers six months
+  # in December — so RefreshMaintainedGoalTargetsJob rewrites `target_amount`
+  # monthly. `target_amount` stays the single source of truth on purpose:
+  # every aggregate that reads it (remaining_amount, progress_percent,
+  # Goal.summary_for, the ring, the card) keeps working untouched, where an
+  # effective_target_amount would have to be threaded through all of them.
+  TARGET_MODES = %w[fixed months_of_expenses].freeze
+
   validates :kind, inclusion: { in: KINDS }
+  validates :target_mode, inclusion: { in: TARGET_MODES }
+  validates :target_months, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :months_target_requires_a_reserve
 
   # Display order for active (non-completed/non-archived) goals: whatever
   # needs money first, then on-track, then open-ended, then the reserves that
@@ -358,6 +402,20 @@ class Goal < ApplicationRecord
   # This goal's backing from a single linked account — the earmarked slice, or
   # the whole-balance remainder when the link is unallocated — as Money. Used
   # by the funding breakdown so the per-account rows reconcile with the ring.
+  # This goal's backing drawn from a specific set of accounts, in its own
+  # currency. Used by the budget to ask "how much of THESE accounts is already
+  # spoken for" without counting a link held on an account outside the set.
+  #
+  # Goes through the same `backing_share_for` as everything else, so a
+  # whole-account link is counted for the remainder it actually claims rather
+  # than the zero its nil allocation would suggest.
+  def backing_within(account_ids)
+    ids = Array(account_ids).to_set
+    linked_accounts
+      .select { |account| account.currency == currency && ids.include?(account.id) }
+      .sum { |account| account_amount_for(account) }
+  end
+
   def account_backing(account)
     Money.new(account_amount_for(account), currency)
   end
@@ -374,6 +432,66 @@ class Goal < ApplicationRecord
     kind == "maintained"
   end
 
+  def months_of_expenses_target?
+    target_mode == "months_of_expenses"
+  end
+
+  # Recomputes this reserve's floor from the family's median monthly spend.
+  # Returns the new amount when it wrote one, nil when it deliberately did
+  # not — a family with no spending history yet, or a figure that would
+  # violate the `target_amount > 0` check constraint. Leaving the previous
+  # target standing is the safe failure: it is a number the user has been
+  # saving against, where zero would silently declare the reserve complete.
+  def refresh_target_from_expenses!
+    computed = months_of_expenses_amount
+    return nil if computed.nil? || computed == target_amount.to_d
+
+    update!(target_amount: computed)
+    computed
+  end
+
+  private
+    # The floor this reserve should hold, or nil when it cannot be computed.
+    #
+    # ⚠️ The account scope is passed EXPLICITLY, and that is the whole point
+    # of this method. IncomeStatement's constructor does `user || Current.user`
+    # and narrows to that user's accounts, so calling it bare gives a
+    # family-wide figure only by accident — when no user happens to be
+    # current, i.e. from a background job. `target_amount` is shared by the
+    # whole family: derived from a viewer's slice of the accounts it would
+    # change depending on who last triggered it. The rollover chain hit
+    # exactly this and had to be pinned the same way.
+    def months_of_expenses_amount
+      return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
+
+      statement = IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
+      median = statement.median_expense(interval: "month").to_d
+      return nil unless median.positive?
+
+      computed = (median * target_months).round(2)
+      return nil unless computed.positive?
+
+      # The median comes back in FAMILY currency; `target_amount` is stored in
+      # the GOAL's. A EUR reserve in a USD family would otherwise read a 3,000
+      # dollar floor as 3,000 euros, and rewrite it that way every month.
+      converted = convert_to_goal_currency(computed)
+      converted&.positive? ? converted : nil
+    end
+
+    # nil when there is no rate for the day. That is the same safe failure as
+    # a family with no spending history: the previous target stands, because
+    # it is a number the user has been saving against and a wrong one is worse
+    # than a stale one.
+    def convert_to_goal_currency(amount)
+      return amount if currency == family.currency
+
+      Money.new(amount, family.currency).exchange_to(currency).amount.round(2)
+    rescue Money::ConversionError
+      nil
+    end
+
+  public
+
   # Market value of the goal's backing (balance basis), regardless of the
   # progress basis — the "what it's worth today" figure shown next to
   # contributions on an investment-backed goal.
@@ -382,8 +500,76 @@ class Goal < ApplicationRecord
     Money.new(amount, currency)
   end
 
+  # What is still to be found. Money already SPENT on the thing the goal was
+  # for counts as found: it did its job. Without that term, coming home from
+  # the holiday a goal paid for dropped it from 100% to 20%, and the only way
+  # back was to edit the target — falsifying what the user had set out to save.
   def remaining_amount
-    @remaining_amount ||= [ target_amount - current_balance, 0 ].max
+    @remaining_amount ||= [ target_amount - current_balance - consumed_amount.to_d, 0 ].max
+  end
+
+  # Records that `amount` was spent on the thing this goal was for.
+  #
+  # Two things happen, and the second is the one that is easy to miss: the
+  # earmark on the account shrinks by the same amount. Without that, money the
+  # user has already spent stays reserved, and keeps its share of the account
+  # away from every sibling goal — the very double-counting the exclusivity
+  # rules exist to prevent, arriving through the back door.
+  #
+  # `account:` may be omitted only when the goal has one link. With several,
+  # guessing would silently pick a side; the caller has to say which pot the
+  # money came out of.
+  # `transaction:` anchors the record on the outflow it came from. Without one
+  # this is a bare declaration and nothing stops it being made twice; with one,
+  # the transaction is stamped and a second attempt on the same outflow is
+  # refused. Same `extra["goal"]` namespace the pledges already write into, so
+  # the two halves of a goal's money — in and out — are stamped alike.
+  def consume!(amount, account: nil, transaction: nil)
+    amount = amount.to_d
+    raise ConsumptionRefused.new(:non_positive) unless amount.positive?
+    # A reserve is not consumed, it is drawn down and refilled. Spending from
+    # one leaves a shortfall to close, which `remaining_amount` already reports
+    # on its own; recording it as consumption would erase exactly the signal
+    # the reserve exists to give.
+    raise ConsumptionRefused.new(:maintained) if maintained?
+
+    link = consumption_link_for(account)
+
+    # The GOAL is locked, not just the link. `consumed_amount` lives here, and
+    # two concurrent requests locking only their own links would both read the
+    # same old value, both pass the target check, and both add to it — the
+    # goal ending up consumed past its target with neither request at fault.
+    # The checks below therefore run under the lock, on freshly read values.
+    with_lock do
+      raise ConsumptionRefused.new(:not_active) unless active?
+      raise ConsumptionRefused.new(:exceeds_target) if consumed_amount.to_d + amount > target_amount.to_d
+
+      link.lock!
+      stamp_consumption!(transaction) if transaction
+
+      # A whole-account link reserves no fixed slice, so there is nothing to
+      # shrink — it already takes only what the account has left.
+      if link.allocated_amount.present?
+        # Refused rather than clamped. Clamping released only what the link
+        # held while `consumed_amount` took the full figure, so the two sides
+        # silently disagreed: money counted as spent that was never released,
+        # and still reserved against every sibling goal on the account.
+        if amount > link.allocated_amount.to_d
+          raise ConsumptionRefused.new(:exceeds_earmark)
+        end
+
+        link.update!(allocated_amount: link.allocated_amount.to_d - amount)
+      end
+
+      update!(consumed_amount: consumed_amount.to_d + amount)
+    end
+
+    # `reload` refreshes the columns and leaves the memos standing. Consuming
+    # moves the same balance-derived figures a transition does — and shrinks a
+    # link's allocation, so the pooled-allocation memo goes with them.
+    reload
+    reset_state_dependent_caches!
+    self
   end
 
   def remaining_amount_money
@@ -400,7 +586,7 @@ class Goal < ApplicationRecord
     elsif remaining_amount.to_d.zero?
       100
     else
-      ((current_balance.to_d / target_amount.to_d) * 100).floor.clamp(0, 99)
+      (((current_balance.to_d + consumed_amount.to_d) / target_amount.to_d) * 100).floor.clamp(0, 99)
     end
   end
 
@@ -852,13 +1038,6 @@ class Goal < ApplicationRecord
       @pooled_pace ||= self.class.pace_for(family)
     end
 
-    # Cleared after every AASM transition. The state column drives the
-    # display_status / projection_summary memos; without this the same
-    # instance keeps returning the pre-transition value if a controller
-    # calls archive! / pause! and then renders without reload.
-    # Reopening or unarchiving hands the goal back to the live calculation:
-    # it is being funded again, so a figure frozen at an earlier close would
-    # misreport it from here on.
     def apply_state_change_side_effects
       previous_state, next_state = saved_change_to_state
 
@@ -878,10 +1057,95 @@ class Goal < ApplicationRecord
       end
     end
 
-    def thaw_completed_amount!
-      update_columns(completed_amount: nil, completed_at: nil)
+    # Claims the outflow for this goal, refusing one already claimed. Inside
+    # the caller's transaction, so a refusal here rolls the consumption back
+    # rather than leaving the goal credited for a spend it did not record.
+    def stamp_consumption!(txn)
+      txn.with_lock do
+        claimed_by = txn.extra&.dig("goal", "consumed_goal_id")
+        if claimed_by.present? && claimed_by != id
+          raise ConsumptionRefused.new(:transaction_already_claimed)
+        end
+        raise ConsumptionRefused.new(:transaction_already_claimed) if claimed_by == id
+
+        extra = txn.extra || {}
+        extra["goal"] = (extra["goal"] || {}).merge("consumed_goal_id" => id)
+        txn.update!(extra: extra)
+      end
     end
 
+    def consumption_link_for(account)
+      links = goal_accounts.to_a
+      raise ConsumptionRefused.new(:no_linked_account) if links.empty?
+
+      if account.nil?
+        raise ConsumptionRefused.new(:account_required) if links.size > 1
+        return links.first
+      end
+
+      links.find { |link| link.account_id == account.id } ||
+        raise(ConsumptionRefused.new(:account_not_linked))
+    end
+
+    # Reopening or unarchiving hands the goal back to the live calculation: it
+    # is being funded again, so a figure frozen at an earlier close would
+    # misreport it from here on. Reopening restarts the goal, so what was spent
+    # under its previous life goes with the frozen figure — leaving it would
+    # have the reopened goal claim credit for money spent on something it has
+    # already been closed for.
+    def thaw_completed_amount!
+      attrs = { completed_amount: nil, completed_at: nil }
+
+      # Only a goal that actually closed a lifecycle starts over. A goal
+      # archived straight from active never froze a figure, so unarchiving it
+      # is picking the same goal back up rather than restarting it — wiping
+      # what it had recorded as spent would delete history nothing replaced,
+      # and drop its progress for no reason the user can see.
+      attrs[:consumed_amount] = 0 if completed_amount.present?
+
+      update_columns(**attrs)
+    end
+
+    # Leaves whatever the user typed when the median cannot be computed: the
+    # presence + positivity validations still apply, so a family with no
+    # spending history is asked for a figure rather than blocked.
+    #
+    # Runs on a target_amount edit too, and overwrites it. In this mode the
+    # floor is derived, not typed — the form disables the field, but the
+    # invariant cannot depend on the form: a goal left saying
+    # "six months of expenses" while holding a figure someone typed is
+    # untrue on its face, and would stay untrue until the next monthly run.
+    def apply_months_of_expenses_target
+      computed = months_of_expenses_amount
+      return self.target_amount = computed if computed
+
+      # Nothing to derive from and a typed figure on its way in: keep the one
+      # the reserve already had. Same reasoning as the refresh job — a stale
+      # floor beats a wrong one, and this one would be wearing a label saying
+      # it was computed.
+      self.target_amount = target_amount_in_database if will_save_change_to_target_amount? && !new_record?
+    end
+
+    # target_months only means something for a reserve on the months basis.
+    # Allowing it elsewhere would leave a number nothing reads, which the
+    # refresh job would then look at and skip for reasons no one could see.
+    def months_target_requires_a_reserve
+      return if target_mode == "fixed" && target_months.blank?
+      return if months_of_expenses_target? && maintained? && target_months.present?
+
+      if months_of_expenses_target? && !maintained?
+        errors.add(:target_mode, :months_requires_maintained)
+      elsif months_of_expenses_target?
+        errors.add(:target_months, :blank)
+      else
+        errors.add(:target_months, :only_with_months_mode)
+      end
+    end
+
+    # Cleared after every AASM transition. The state column drives the
+    # display_status / projection_summary memos; without this the same instance
+    # keeps returning the pre-transition value if a controller calls archive! /
+    # pause! and then renders without reload.
     def reset_state_dependent_caches!
       # current_balance depends on the goal's own state — a goal in any of
       # RELEASED_STATES is excluded from the shared pool, and a completed one
@@ -984,6 +1248,28 @@ class Goal < ApplicationRecord
     # `completed` — a state that has HANDED BACK its earmark — while the show
     # page promises its money stays reserved. The conversion has to go through
     # an active state, where `complete` is already refused for a reserve.
+    # A reserve refuses consumption, so letting a goal that has already recorded
+    # some become one leaves that figure stranded: it still counts toward
+    # progress, on an object whose whole model says spending is a shortfall to
+    # refill rather than a job done. The two readings cannot both be true.
+    def kind_locked_once_consumed
+      return unless will_save_change_to_kind?
+      return unless maintained?
+      return unless consumed_amount.to_d.positive?
+
+      errors.add(:kind, :locked_once_consumed)
+    end
+
+    # The consumed total is checked while consuming, which left the ordinary
+    # edit form free to lower the target underneath it — a goal reporting more
+    # spent than it ever set out to save.
+    def target_must_cover_what_was_consumed
+      return unless target_amount.present? && consumed_amount.to_d.positive?
+      return if target_amount.to_d >= consumed_amount.to_d
+
+      errors.add(:target_amount, :below_consumed)
+    end
+
     def kind_locked_while_released
       return unless persisted? && will_save_change_to_kind?
       # The PERSISTED state, not the one in memory. A single update can set

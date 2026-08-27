@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -871,6 +871,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.string "color"
     t.decimal "completed_amount", precision: 19, scale: 4
     t.datetime "completed_at"
+    t.decimal "consumed_amount", precision: 19, scale: 4, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.uuid "family_id", null: false
@@ -882,14 +883,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.string "state", default: "active", null: false
     t.decimal "target_amount", precision: 19, scale: 4, null: false
     t.date "target_date"
+    t.string "target_mode", default: "fixed", null: false
+    t.integer "target_months"
     t.datetime "updated_at", null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
+    t.check_constraint "consumed_amount >= 0::numeric", name: "chk_goals_consumed_amount_non_negative"
     t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying, 'maintained'::character varying]::text[])", name: "chk_goals_kind_enum"
     t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying, 'contributions'::character varying]::text[])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying, 'paused'::character varying, 'completed'::character varying, 'archived'::character varying]::text[])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
+    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying, 'months_of_expenses'::character varying]::text[])", name: "chk_goals_target_mode_enum"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

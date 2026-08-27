@@ -34,6 +34,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # Without this the wallet is invisible here: its accounts carry a provider
     # link, so Account.manual excludes them, and no provider section claimed them.
     assert_select "##{dom_id(item, :accounts_index)}"
+    # The card carries the same actions menu every other provider card does.
+    assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
+    assert_select "form[action=?]", onchain_wallet_item_path(item)
   ensure
     unregister_fake_chain!
   end
