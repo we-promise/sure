@@ -81,7 +81,17 @@ class Goals::LifecyclePanelComponent < ApplicationComponent
   # without anything being recorded, and this must not read as a step to clear
   # first. Same condition as the menu entry, which stays where it is.
   def offer_recording_a_spend?
-    goal.one_off? && goal.active? && goal.current_balance.to_d.positive?
+    return false unless goal.one_off? && goal.active?
+
+    # `current_balance` counts every linked account, private ones included.
+    # Offering the link on the strength of money this reader cannot reach
+    # sends them to a dialog with nothing to pick and a refusal on submit —
+    # the same scoping the dialog itself already applies.
+    goal.backing_within(viewer_account_ids).to_d.positive?
+  end
+
+  def viewer_account_ids
+    @viewer_account_ids ||= Current.user&.accessible_accounts&.pluck(:id) || []
   end
 
   # --- projection ---

@@ -2,10 +2,16 @@ require "test_helper"
 
 # The panel choice was five predicates deep in ERB where the ordering between
 # them mattered and nothing said so. These pin the order, not the markup.
-class Goals::LifecyclePanelComponentTest < ActiveSupport::TestCase
+class Goals::LifecyclePanelComponentTest < ViewComponent::TestCase
   setup do
     @family = families(:dylan_family)
+    # The panel scopes what it offers to the reader's accessible accounts, so
+    # these need a reader — without one the offer is correctly withheld and
+    # every assertion about it would be measuring the wrong thing.
+    Current.session = sessions(:one)
   end
+
+  teardown { Current.session = nil }
 
   test "an archived or paused goal gets the inactive panel whatever its progress" do
     goal = funded_goal
@@ -91,15 +97,35 @@ class Goals::LifecyclePanelComponentTest < ActiveSupport::TestCase
     assert_not component_for(goal).offer_recording_a_spend?
   end
 
+  # `current_balance` counts every linked account, private ones included. The
+  # offer used to ride on that, so a reader backed only by somebody else's
+  # private account was sent to a dialog with nothing to pick and a refusal on
+  # submit.
+  test "money the reader cannot reach does not earn the offer" do
+    private_account = Account.create!(
+      family: @family, owner: users(:family_member), accountable: Depository.new,
+      name: "Member Private", currency: @family.currency, balance: 5_000
+    )
+    private_account.account_shares.destroy_all
+    goal = @family.goals.create!(
+      name: "Hidden", target_amount: 5_000, currency: @family.currency
+    ) { |g| g.goal_accounts.build(account: private_account, allocated_amount: 5_000) }
+
+    assert goal.current_balance.to_d.positive?, "the goal is backed, just not for this reader"
+    assert_not component_for(goal).offer_recording_a_spend?
+  end
+
   # A reserve gets neither action, so the row must not render at all — an
   # empty flex div still carries its top margin, and would open a gap under
   # copy that says there is nothing to do.
   test "a reserve renders no action row" do
     goal = funded_goal(kind: "maintained")
-    c = component_for(goal)
 
-    assert_not c.offer_recording_a_spend?
-    assert_equal :none, c.celebration_action
+    # Rendered, not merely asked: the predicates could both stay false while
+    # the template emitted the row anyway, which is the gap this guards.
+    render_inline(component_for(goal))
+
+    assert_no_selector "div.mt-4.flex"
   end
 
   private

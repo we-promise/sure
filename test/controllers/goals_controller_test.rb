@@ -834,6 +834,31 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The gap this closes: at the moment the user has reached the target and
+  # spent some of it, the page offered only "Close this goal" — which releases
+  # the earmark, and whose own hint says to do it once the money is actually
+  # spent. Saying so was two clicks away in the overflow menu.
+  test "a reached goal offers recording a spend outside the overflow menu" do
+    goal = reached_goal_holding_money
+
+    get goal_url(goal)
+
+    assert_response :success
+    # In the panel, not only in the menu: scoped to the celebration panel's
+    # own action row so a menu entry alone cannot satisfy it.
+    panel_links = css_select("section a[href='#{consume_goal_path(goal)}']")
+    assert_operator panel_links.size, :>=, 1,
+      "the spend action was still only reachable through the overflow menu"
+  end
+
+  test "closing is still offered alongside it" do
+    goal = reached_goal_holding_money
+
+    get goal_url(goal)
+
+    assert_select "form[action=?]", complete_goal_path(goal)
+  end
+
   private
 
     def spent_goal_for_display
