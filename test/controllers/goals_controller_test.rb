@@ -740,6 +740,34 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       assert_no_match(/already used|déjà utilisés/, response.body)
     end
 
+
+    # The ring announced the account balance while the visible headline beside it
+    # reported the progress total: same ring, two different numbers depending on
+    # whether you could see it.
+    test "the ring announces the same total the headline shows" do
+      goal = spent_goal_for_display
+
+      get goal_url(goal)
+
+      assert_response :success
+      label = css_select("[role=progressbar]").first["aria-label"]
+      assert_includes label, goal.progress_amount_money.format
+      assert_not_includes label, goal.current_balance_money.format
+      assert_includes label, goal.consumed_amount_money.format
+    end
+
+    test "a goal with nothing used keeps the plain wording" do
+      account = unclaimed_account("Plain Pot")
+      goal = @user.family.goals.create!(name: "Plain", target_amount: 1_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 1_000)
+      end
+
+      get goal_url(goal)
+
+      label = css_select("[role=progressbar]").first["aria-label"]
+      assert_no_match(/already used|déjà utilisés/, label)
+    end
+
   private
 
     # A private account of another member, linked to the goal under test.

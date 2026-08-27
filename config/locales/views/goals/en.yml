@@ -176,6 +176,7 @@ en:
         of_target: of target
         market_value: "Market value %{amount}"
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
+        aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:
         heading: Projection
         legend_saved: Saved
