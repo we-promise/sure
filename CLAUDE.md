@@ -37,6 +37,7 @@ To watch the browser live, open `http://localhost:7900` or `http://localhost:444
 - `bin/rails db:migrate` - Run pending migrations
 - `bin/rails db:rollback` - Rollback last migration
 - `bin/rails db:seed` - Load seed data
+- New migrations on `main` should inherit from `ActiveRecord::Migration[8.1]`; backport/release branches may keep the Rails migration version used by that branch.
 
 ### Setup
 - `bin/setup` - Initial project setup (installs dependencies, prepares database)

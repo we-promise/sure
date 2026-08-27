@@ -93,6 +93,46 @@ class AddFamilyNameIndexToTagsAndCategories < ActiveRecord::Migration[8.1]
           FROM tags
         ),
         tag_map AS (
+          SELECT id AS duplicate_id, keeper_id
+          FROM duplicate_tags
+          WHERE id <> keeper_id
+        )
+        UPDATE rule_actions
+        SET value = tag_map.keeper_id::text
+        FROM tag_map
+        WHERE rule_actions.action_type = 'set_transaction_tags'
+          AND rule_actions.value = tag_map.duplicate_id::text
+      SQL
+
+      execute <<~SQL.squish
+        WITH duplicate_tags AS (
+          SELECT id, FIRST_VALUE(id) OVER (
+            PARTITION BY family_id, name
+            ORDER BY created_at, id
+          ) AS keeper_id
+          FROM tags
+        ),
+        tag_map AS (
+          SELECT id AS duplicate_id, keeper_id
+          FROM duplicate_tags
+          WHERE id <> keeper_id
+        )
+        UPDATE rule_conditions
+        SET value = tag_map.keeper_id::text
+        FROM tag_map
+        WHERE rule_conditions.condition_type = 'transaction_tag'
+          AND rule_conditions.value = tag_map.duplicate_id::text
+      SQL
+
+      execute <<~SQL.squish
+        WITH duplicate_tags AS (
+          SELECT id, FIRST_VALUE(id) OVER (
+            PARTITION BY family_id, name
+            ORDER BY created_at, id
+          ) AS keeper_id
+          FROM tags
+        ),
+        tag_map AS (
           SELECT id AS duplicate_id
           FROM duplicate_tags
           WHERE id <> keeper_id
@@ -299,6 +339,46 @@ class AddFamilyNameIndexToTagsAndCategories < ActiveRecord::Migration[8.1]
         SET category_id = category_map.keeper_id
         FROM category_map
         WHERE budget_categories.category_id = category_map.duplicate_id
+      SQL
+
+      execute <<~SQL.squish
+        WITH duplicate_categories AS (
+          SELECT id, FIRST_VALUE(id) OVER (
+            PARTITION BY family_id, name
+            ORDER BY created_at, id
+          ) AS keeper_id
+          FROM categories
+        ),
+        category_map AS (
+          SELECT id AS duplicate_id, keeper_id
+          FROM duplicate_categories
+          WHERE id <> keeper_id
+        )
+        UPDATE rule_actions
+        SET value = category_map.keeper_id::text
+        FROM category_map
+        WHERE rule_actions.action_type = 'set_transaction_category'
+          AND rule_actions.value = category_map.duplicate_id::text
+      SQL
+
+      execute <<~SQL.squish
+        WITH duplicate_categories AS (
+          SELECT id, FIRST_VALUE(id) OVER (
+            PARTITION BY family_id, name
+            ORDER BY created_at, id
+          ) AS keeper_id
+          FROM categories
+        ),
+        category_map AS (
+          SELECT id AS duplicate_id, keeper_id
+          FROM duplicate_categories
+          WHERE id <> keeper_id
+        )
+        UPDATE rule_conditions
+        SET value = category_map.keeper_id::text
+        FROM category_map
+        WHERE rule_conditions.condition_type = 'transaction_category'
+          AND rule_conditions.value = category_map.duplicate_id::text
       SQL
 
       execute <<~SQL.squish

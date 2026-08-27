@@ -17,6 +17,7 @@
 
 ## Coding Style & Naming Conventions
 - Ruby: 2-space indent, `snake_case` for methods/vars, `CamelCase` for classes/modules. Follow Rails conventions for folders and file names.
+- Migrations on `main`: inherit from `ActiveRecord::Migration[8.1]`. Backport/release branches may keep the Rails migration version used by that branch.
 - Views: ERB checked by `erb-lint` (see `.erb_lint.yml`). Avoid heavy logic in views; prefer helpers/components.
 - JavaScript: `lowerCamelCase` for vars/functions, `PascalCase` for classes/components. Let Biome format code.
 - Commit small, cohesive changes; keep diffs focused.
