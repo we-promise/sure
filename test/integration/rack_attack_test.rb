@@ -31,7 +31,13 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_equal "user@example.com", discriminator.call(header_request("/"))
     assert_equal "user@example.com", discriminator.call(header_request("/", email: "  User@Example.com  "))
 
-    assert_nil discriminator.call(header_request("/", cookie: "session_token=abc"))
+    # Any session_token scopes the request out, verified or not. This throttle
+    # runs as middleware, before authenticate_user! has read the cookie, so
+    # deciding whether the session is real here would cost a Session lookup on
+    # every request and hand any peer that reaches the port a database query it
+    # can drive. Cookie presence is a scope discriminator, not a boundary.
+    assert_nil discriminator.call(header_request("/", cookie: "session_token=abc")),
+      "an unverified session_token still scopes the request out of the throttle"
     assert_nil discriminator.call(header_request("/api/v1/accounts"))
     assert_nil discriminator.call(header_request("/mcp"))
     assert_nil discriminator.call(header_request("/", email: ""))
