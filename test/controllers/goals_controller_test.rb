@@ -847,6 +847,16 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       goal.consume!(2_000)
       goal
     end
+
+    def reached_goal_holding_money
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Reached Pot", currency: "USD", balance: 5_000
+      )
+      @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 5_000)
+      end
+    end
     # SQL the pooled-allocation read issues, and nothing else: goal_accounts
     # joined to goals.
     def count_pool_queries
