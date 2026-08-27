@@ -14,7 +14,7 @@ class Transfer::Creator
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
     @tag_ids = Array(tag_ids).reject(&:blank?)
-    @category_id = category_id.presence
+    @category_id = family.categories.find_by(id: category_id.presence)&.id
     @idempotency_key = idempotency_key
 
     if exchange_rate.present?

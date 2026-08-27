@@ -71,6 +71,24 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow.kind
   end
 
+  test "ignores category_id belonging to another family" do
+    other_family_category = families(:empty).categories.create!(name: "Other family category")
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: accounts(:credit_card).id,
+      date: @date,
+      amount: @amount,
+      category_id: other_family_category.id
+    )
+
+    transfer = creator.create
+
+    assert transfer.persisted?
+    assert_nil transfer.outflow_transaction.category, "Should not assign a category belonging to another family"
+  end
+
   test "creates investment contribution when transferring from depository to crypto" do
     crypto_account = accounts(:crypto)
 
