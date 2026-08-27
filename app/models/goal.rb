@@ -12,7 +12,10 @@ class Goal < ApplicationRecord
   # exclusivity check, and the restore guard below. Keeping them on one constant
   # is what stops the double-counting hole from reopening the day this set
   # grows: adding a state here makes every one of them release together.
-  RELEASED_STATES = %w[archived].freeze
+  #
+  # `completed` belongs here for the same reason `archived` does: completing a
+  # goal hands back the earmark, so its links must stop reserving too.
+  RELEASED_STATES = %w[archived completed].freeze
 
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
@@ -116,8 +119,6 @@ class Goal < ApplicationRecord
       super("goal consumption refused: #{reason}")
     end
   end
-
-  RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
   # floor to hold — an emergency fund is not an achievement to file away, it
