@@ -345,6 +345,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sparkline renders an empty series without a trend" do
+    empty_series = Series.new(
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: []
+    )
+    Account.any_instance.expects(:sparkline_series).returns(empty_series)
+
+    get sparkline_account_url(@account)
+
+    assert_response :success
+    assert_select "p.font-mono", count: 0
+  end
+
   test "destroys account" do
     delete account_url(@account)
     assert_redirected_to accounts_path
