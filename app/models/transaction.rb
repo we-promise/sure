@@ -85,6 +85,10 @@ class Transaction < ApplicationRecord
   # they represent real cash outflow from a budgeting perspective.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
+  # These kinds are cash outflows even when their entry is an inflow (for
+  # example, a provider-imported contribution into an investment account).
+  INCOME_STATEMENT_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
+
   # A persisted Transfer is the authoritative signal that two transaction
   # records represent an internal movement. Reporting must exclude both legs
   # even when their destination-specific kinds are budget-tracked.
@@ -92,6 +96,12 @@ class Transaction < ApplicationRecord
   scope :for_cash_flow_reporting, ->(include_investment_contributions: true) {
     where(cash_flow_transfer_sql(include_investment_contributions: include_investment_contributions))
   }
+
+  def income_statement_classification
+    return "expense" if INCOME_STATEMENT_EXPENSE_KINDS.include?(kind)
+
+    entry.amount.negative? ? "income" : "expense"
+  end
 
   def self.unmatched_transfer_sql(transaction_alias = table_name)
     <<~SQL.squish

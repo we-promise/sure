@@ -18,7 +18,8 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
     "投资投入",
     "Investeringsbijdragen",
     "Befektetési befizetések",
-    "Đóng góp đầu tư"
+    "Đóng góp đầu tư",
+    "Інвестиційні внески"
   ].freeze
 
   def up
@@ -27,10 +28,42 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
 
     say_with_time "Categorizing confirmed matched investment contributions" do
       execute <<~SQL.squish
-        WITH candidates AS (
+        WITH categorized_categories AS (
+          SELECT DISTINCT ON (accounts.family_id)
+            accounts.family_id,
+            transactions.category_id
+          FROM transactions
+          JOIN entries
+            ON entries.entryable_id = transactions.id
+           AND entries.entryable_type = 'Transaction'
+          JOIN accounts ON accounts.id = entries.account_id
+          JOIN categories ON categories.id = transactions.category_id
+          WHERE transactions.kind = 'investment_contribution'
+            AND transactions.category_id IS NOT NULL
+            AND categories.family_id = accounts.family_id
+          ORDER BY accounts.family_id, categories.created_at ASC, categories.id ASC
+        ), named_categories AS (
+          SELECT DISTINCT ON (categories.family_id)
+            categories.family_id,
+            categories.id AS category_id
+          FROM categories
+          WHERE categories.name IN (#{quoted_names})
+          ORDER BY categories.family_id, categories.created_at ASC, categories.id ASC
+        ), family_categories AS (
+          SELECT family_id, category_id
+          FROM categorized_categories
+          UNION ALL
+          SELECT named.family_id, named.category_id
+          FROM named_categories named
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM categorized_categories categorized
+            WHERE categorized.family_id = named.family_id
+          )
+        ), candidates AS (
           SELECT
             transactions.id AS transaction_id,
-            matched_categories.id AS category_id
+            family_categories.category_id
           FROM transactions
           JOIN entries
             ON entries.entryable_id = transactions.id
@@ -39,14 +72,7 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
           JOIN transfers
             ON transfers.outflow_transaction_id = transactions.id
            AND transfers.status = 'confirmed'
-          CROSS JOIN LATERAL (
-            SELECT categories.id
-            FROM categories
-            WHERE categories.family_id = accounts.family_id
-              AND categories.name IN (#{quoted_names})
-            ORDER BY categories.created_at ASC, categories.id ASC
-            LIMIT 1
-          ) AS matched_categories
+          JOIN family_categories ON family_categories.family_id = accounts.family_id
           WHERE transactions.kind = 'investment_contribution'
             AND transactions.category_id IS NULL
         ), updated_transactions AS (

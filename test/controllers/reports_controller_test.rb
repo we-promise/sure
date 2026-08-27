@@ -382,6 +382,68 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match /Export Retirement Income/, @response.body
   end
 
+  test "classifies unpaired investment contributions as expenses across reports and exports" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    category = @family.categories.create!(name: "Imported Contribution Expense", color: "#111111")
+    amount = 321
+    create_transaction(
+      account: accounts(:investment),
+      name: "Imported investment contribution",
+      amount: -amount,
+      category: category,
+      kind: "investment_contribution"
+    )
+    formatted_amount = Money.new(amount, @family.currency).format
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+    expense_card = css_select("h3").find { |node| node.text.strip == I18n.t("reports.summary.total_expenses") }.parent.parent.parent
+    income_card = css_select("h3").find { |node| node.text.strip == I18n.t("reports.summary.total_income") }.parent.parent.parent
+    assert_includes expense_card.text, formatted_amount
+    assert_includes income_card.text, Money.new(0, @family.currency).format
+    breakdown = css_select("section[data-section-key='transactions_breakdown']").first
+    assert_includes breakdown.text, category.name
+    assert_includes breakdown.text, I18n.t("reports.transactions_breakdown.table.expense")
+    assert_not_includes breakdown.text, I18n.t("reports.transactions_breakdown.table.income")
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+    rows = CSV.parse(@response.body)
+    expenses_index = rows.index { |row| row.first == "EXPENSES" }
+    category_index = rows.index { |row| row.first == category.name }
+    assert_not_nil expenses_index
+    assert_operator category_index, :>, expenses_index
+
+    get print_reports_path(period_type: :monthly)
+    assert_response :ok
+    assert_includes @response.body, category.name
+
+    @family.update!(treat_investment_contributions_as_transfers: true)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+    expense_card = css_select("h3").find { |node| node.text.strip == I18n.t("reports.summary.total_expenses") }.parent.parent.parent
+    assert_includes expense_card.text, Money.new(0, @family.currency).format
+    breakdown = css_select("section[data-section-key='transactions_breakdown']").first
+    assert_not_includes breakdown.text, category.name
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+    assert_not_includes @response.body, category.name
+
+    get print_reports_path(period_type: :monthly)
+    assert_response :ok
+    assert_not_includes @response.body, category.name
+  end
+
   test "export transactions swaps dates when end_date is before start_date" do
     start_date = Date.current
     end_date = 1.month.ago.to_date

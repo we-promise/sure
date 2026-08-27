@@ -426,8 +426,12 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
-      process_entry = ->(category, entry, is_trade) do
-        type = entry.amount > 0 ? "expense" : "income"
+      process_entry = ->(category, entry, is_trade, transaction = nil) do
+        type = if transaction
+          transaction.income_statement_classification
+        else
+          entry.amount > 0 ? "expense" : "income"
+        end
         begin
           converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
@@ -467,7 +471,7 @@ class ReportsController < ApplicationController
 
       # Process transactions
       transactions.each do |transaction|
-        process_entry.call(transaction.category, transaction.entry, false)
+        process_entry.call(transaction.category, transaction.entry, false, transaction)
       end
 
       # Process trades
@@ -767,8 +771,7 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
+        type = transaction.income_statement_classification
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
