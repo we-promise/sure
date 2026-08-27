@@ -68,6 +68,15 @@
                 <%= format_money @budget_category.budgeted_spending_money %>
               </dd>
             </div>
+
+            <% if @budget_category.rolled_over? %>
+              <div class="flex items-center justify-between text-sm">
+                <dt class="text-secondary"><%= t(".rolled_over") %></dt>
+                <dd class="text-primary font-medium privacy-sensitive">
+                  <%= format_money @budget_category.rolled_over_amount_money %>
+                </dd>
+              </div>
+            <% end %>
           <% end %>
 
           <div class="flex items-center justify-between text-sm">

@@ -45,6 +45,13 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create persists a goal with linked accounts" do
+    # Fresh accounts: the goal fixtures already claim @depository and
+    # @connected in full, and GoalAccount refuses a second whole-balance
+    # link on a contested account. Blank allocations here keep this test on
+    # the default "dedicate the whole balance" path.
+    first = unclaimed_account("Holiday Pot")
+    second = unclaimed_account("House Pot")
+
     assert_difference -> { Goal.count } => 1,
                       -> { GoalAccount.count } => 2 do
       post goals_url, params: {
@@ -53,7 +60,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
           target_amount: "1000",
           target_date: 3.months.from_now.to_date.iso8601,
           color: "#4da568",
-          account_ids: [ @depository.id, @connected.id ]
+          account_ids: [ first.id, second.id ]
         }
       }
     end
@@ -108,6 +115,46 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match(/Member Private Checking/, response.body)
     assert_no_match(/goal_account_ids_#{private_account.id}/, response.body)
+  end
+
+  # A goal can be backed by an account the viewer is not allowed to see. Both
+  # halves of that leak matter: the dialog naming it, and a direct POST moving
+  # its earmark — the figures afterwards saying how much was in it.
+  test "the consumption dialog does not name a linked account the viewer cannot see" do
+    private_account = private_linked_account
+
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_no_match(/Member Private Checking/, response.body)
+    assert_no_match(/#{private_account.id}/, response.body)
+  end
+
+  test "consumption is refused against a linked account the viewer cannot see" do
+    private_account = private_linked_account
+    link = @goal.goal_accounts.find_by(account_id: private_account.id)
+
+    post consume_goal_url(@goal), params: { amount: "100", account_id: private_account.id }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal 0, @goal.reload.consumed_amount
+    assert_equal 500, link.reload.allocated_amount
+  end
+
+  # The outflow panel is the third door onto a private backing account: it
+  # would list its transactions, naming the account, its spending and roughly
+  # its size to someone with no access to it.
+  test "the outflow panel does not surface a spend on an account the viewer cannot see" do
+    private_account = private_linked_account
+    private_account.entries.create!(
+      name: "Private Spend", date: Date.current, amount: 400,
+      currency: private_account.currency, entryable: Transaction.new
+    )
+
+    get goal_url(@goal)
+
+    assert_response :success
+    assert_no_match(/Private Spend/, response.body)
   end
 
   test "create rejects a same-family account not shared with the current user" do
@@ -235,13 +282,14 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   # not the stale (empty) set already on the record.
   test "an orphaned goal can be repaired by re-linking an account" do
     orphan = orphaned_goal
+    rescue_account = unclaimed_account("Rescue Pot")
 
     patch goal_url(orphan), params: {
-      goal: { name: orphan.name, target_amount: orphan.target_amount, account_ids: [ @depository.id ] }
+      goal: { name: orphan.name, target_amount: orphan.target_amount, account_ids: [ rescue_account.id ] }
     }
 
     assert_redirected_to goal_path(orphan)
-    assert_equal [ @depository.id ], orphan.reload.goal_accounts.pluck(:account_id)
+    assert_equal [ rescue_account.id ], orphan.reload.goal_accounts.pluck(:account_id)
     assert orphan.valid?
   end
 
@@ -324,7 +372,382 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/without a deadline/i, response.body)
   end
 
+  # The form reads its ticks from a separate local, not from the built links,
+  # so a failed create rendered every account unchecked while the amounts the
+  # user typed survived — an error telling them to enter an amount, on a form
+  # whose accounts had silently cleared.
+  test "a rejected creation keeps the accounts the user ticked" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Contested Pot", currency: @user.family.currency, balance: 3_000
+    )
+    holder = @user.family.goals.create!(name: "Holder", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert holder.persisted?
+
+    post goals_url, params: {
+      goal: {
+        name: "Second claim", target_amount: 5_000,
+        account_ids: [ account.id ], allocations: { account.id.to_s => "" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='goal[account_ids][]'][value=?][checked]", account.id
+  end
+
+  # --- Lot B2: closing a reached goal ---
+
+  # The panel used to say "Goal closed at ..." for a goal that was merely at
+  # 100%, and offer Archive — the gesture that does NOT release the money.
+  test "a one_off goal at 100 percent is offered closing, not archiving" do
+    goal = fully_funded_goal
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.celebration.close_cta"), response.body
+    assert_match I18n.t("goals.show.celebration.close_hint"), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.archive_cta"))}/, response.body)
+  end
+
+  test "a goal below 100 percent is offered no closing action" do
+    goal = fully_funded_goal
+    goal.update!(target_amount: 10_000)
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+  # Reaching the target is the normal state of a reserve, not a prompt to
+  # close it — and B3 forbids `complete` for them outright.
+  test "a maintained goal at 100 percent is never offered closing" do
+    goal = fully_funded_goal
+    goal.update_column(:kind, "maintained")
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+  test "a completed goal shows the amount and date it froze" do
+    goal = fully_funded_goal
+    goal.complete!
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.celebration.frozen",
+                        date: I18n.l(goal.reload.completed_at.to_date, format: :long),
+                        amount: goal.current_balance_money.format(precision: 0)),
+                 response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+  test "an archived goal is offered no closing action" do
+    goal = fully_funded_goal
+    goal.archive!
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+  end
+
+
+  # --- Lot B3a: reserves ---
+
+  test "create accepts the maintained kind" do
+    account = unclaimed_account("Reserve Pot")
+
+    assert_difference -> { Goal.count }, 1 do
+      post goals_url, params: {
+        goal: { name: "Emergency", target_amount: "6000", color: "#4da568", kind: "maintained", account_ids: [ account.id ] }
+      }
+    end
+
+    assert Goal.order(created_at: :desc).first.maintained?
+  end
+
+  # The AASM guard refuses the transition; the controller must report that
+  # rather than claim success or blow up.
+  test "completing a reserve is refused at the controller too" do
+    goal = fully_funded_goal
+    goal.update_column(:kind, "maintained")
+
+    patch complete_goal_url(goal)
+
+    assert_redirected_to goal_path(goal)
+    assert_match(/./, flash[:alert].to_s)
+    assert_equal "active", goal.reload.state
+  end
+
+  test "a funded reserve reads as intact, with nothing to do" do
+    goal = fully_funded_goal
+    goal.update_column(:kind, "maintained")
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.celebration.heading_reserve"), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.close_cta"))}/, response.body)
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.celebration.archive_cta"))}/, response.body)
+  end
+
+  # A reserve has no deadline and no pace benchmark, so it can never land in
+  # the on-track numerator. Leaving it in the denominator made a family with
+  # one reserve read "0 of 1 on track" for a goal working exactly as intended.
+  test "a reserve stays out of the on-track denominator" do
+    @user.family.goals.where.not(state: "archived").find_each(&:archive!)
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Reserve Pot", currency: @user.family.currency, balance: 1_000
+    )
+    @user.family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @user.family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    get goals_url
+
+    assert_response :success
+    # The tile prints "<on track> of <tracked total>". The reserve must not
+    # appear in the denominator: before this, the page read "0 of 1".
+    assert_no_match(/0 of 1/, response.body)
+    assert_match(/0 of 0/, response.body)
+  end
+
+  # A brand-new reserve is depleted with a zero balance, which used to match the
+  # generic "make your first transfer" branch first. It is still a reserve short
+  # of its floor, and the shortfall panel is what says so.
+  test "a reserve with nothing in it yet gets the shortfall panel" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Empty Reserve Pot", currency: @user.family.currency, balance: 0
+    )
+    goal = @user.family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @user.family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.show.reserve_shortfall.heading"), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("goals.show.empty.heading"))}/, response.body)
+  end
+
+  # --- Lot B6: earmark headroom in the form ---
+
+  test "the new form renders each account's balance and what other goals hold" do
+    account = unclaimed_account("Headroom Pot")
+    @user.family.goals.create!(name: "Neighbour", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 400)
+    end
+
+    get new_goal_url
+
+    assert_response :success
+    assert_select "[data-balance][data-earmarked-by-others]", minimum: 1
+    assert_match 'data-earmarked-by-others="400.0"', response.body
+  end
+
+  # The N+1 this lot exists to avoid: the form lists every fundable account,
+  # so reading the pool per account would scale with the account list.
+  test "the form reads the shared pool exactly once, however many accounts" do
+    3.times { |i| unclaimed_account("Pool Pot #{i}") }
+
+    assert_equal 1, count_pool_queries { get new_goal_url }
+    assert_response :success
+  end
+
+  # The acceptance criterion of this lot: reopening a goal must not count its
+  # own earmark, or re-entering the same figure would trip a message about a
+  # setup the user has not touched.
+  test "the edit form does not count the edited goal's own earmark" do
+    account = unclaimed_account("Reopen Pot")
+    goal = @user.family.goals.create!(name: "Reopened", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    get edit_goal_url(goal)
+
+    assert_response :success
+    assert_match 'data-earmarked-by-others="0.0"', response.body
+    assert_no_match(/data-earmarked-by-others="5000/, response.body)
+  end
+
+  # The error paths re-render the same form, so they need the pool too —
+  # without it the row helper is handed nil and the render blows up.
+  test "the pool is available again when create re-renders after an error" do
+    unclaimed_account("Error Pot")
+
+    post goals_url, params: { goal: { name: "No accounts", target_amount: "1000", color: "#4da568" } }
+
+    assert_response :unprocessable_entity
+    assert_select "[data-balance][data-earmarked-by-others]", minimum: 1
+  end
+
+  # --- Lot B4: recording a partial spend ---
+
+  test "recording a spend keeps the goal at full progress and frees the earmark" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Trip Pot", currency: @user.family.currency, balance: 5_000
+    )
+    goal = @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    post consume_goal_url(goal), params: { amount: 2_000 }
+
+    assert_redirected_to goal_url(goal)
+    assert_equal 2_000, goal.reload.consumed_amount
+    assert_equal 3_000, goal.goal_accounts.first.reload.allocated_amount
+  end
+
+  test "a refused spend says which rule refused it" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Reserve Pot", currency: @user.family.currency, balance: 4_000
+    )
+    reserve = @user.family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @user.family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    post consume_goal_url(reserve), params: { amount: 1_000 }
+
+    assert_redirected_to goal_url(reserve)
+    assert_equal I18n.t("goals.consume.errors.maintained"), flash[:alert]
+    assert_equal 0, reserve.reload.consumed_amount
+  end
+
+  # A blank account id means "this goal has one link". An id resolving to
+  # nothing must not fall back to that, or a single-link goal would record a
+  # spend against an account the user never named.
+  test "an unknown account id is refused rather than falling through" do
+    account = Account.create!(
+      family: @user.family, accountable: Depository.new,
+      name: "Trip Pot", currency: @user.family.currency, balance: 5_000
+    )
+    goal = @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: @user.family.currency) do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    post consume_goal_url(goal), params: { amount: 1_000, account_id: SecureRandom.uuid }
+
+    assert_equal I18n.t("goals.consume.errors.account_not_linked"), flash[:alert]
+    assert_equal 0, goal.reload.consumed_amount
+  end
+
+  # --- Lot B5: attributing an outflow the app spotted ---
+
+  test "the goal page offers an outflow nothing has claimed" do
+    goal, entry = goal_with_outflow
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_match I18n.t("goals.unattributed_outflows.heading"), response.body
+    assert_match entry.name, response.body
+  end
+
+  test "attributing an outflow takes its amount and stops offering it" do
+    goal, entry = goal_with_outflow
+
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+
+    assert_redirected_to goal_url(goal)
+    assert_equal entry.amount.to_d, goal.reload.consumed_amount
+
+    get goal_url(goal)
+    assert_no_match I18n.t("goals.unattributed_outflows.heading"), response.body
+  end
+
+  # The stamp is what makes this idempotent: replaying the same attribution
+  # must not credit the goal twice for one spend.
+  test "the same outflow cannot be attributed twice" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    recorded = goal.reload.consumed_amount
+
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+
+    assert_equal recorded, goal.reload.consumed_amount
+    assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
+  end
+
   private
+    # SQL the pooled-allocation read issues, and nothing else: goal_accounts
+    # joined to goals.
+    def count_pool_queries
+      count = 0
+      sub = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        count += 1 if sql.include?("FROM \"goal_accounts\"") && sql.include?("INNER JOIN \"goals\"")
+      end
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
+
+  private
+
+    # A private account of another member, linked to the goal under test.
+    def private_linked_account
+      account = Account.create!(
+        family: @user.family,
+        owner: users(:family_member),
+        accountable: Depository.new,
+        name: "Member Private Checking",
+        currency: @goal.currency,
+        balance: 1_000
+      )
+      @goal.goal_accounts.create!(account: account, allocated_amount: 500)
+      account
+    end
+
+    def goal_with_outflow
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Trip Pot #{SecureRandom.hex(4)}", currency: @user.family.currency, balance: 5_000
+      )
+      goal = @user.family.goals.create!(
+        name: "Trip", target_amount: 5_000, currency: @user.family.currency
+      ) { |g| g.goal_accounts.build(account: account, allocated_amount: 5_000) }
+      entry = account.entries.create!(
+        name: "Flights", date: Date.current, amount: 1_200,
+        currency: account.currency, entryable: Transaction.new
+      )
+      [ goal, entry ]
+    end
+    # An active one_off goal sitting exactly at its target, on an account no
+    # other goal claims.
+    def fully_funded_goal
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Funded Pot", currency: "USD", balance: 2_000
+      )
+      @user.family.goals.create!(name: "Funded", target_amount: 2_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account)
+      end
+    end
+
+    # A fundable account no goal fixture claims. The fixtures link
+    # @depository and @connected as whole-balance earmarks, and GoalAccount
+    # refuses a second whole-balance link on an account already claimed in
+    # full — so any test that wants the default "dedicate the whole balance"
+    # link needs an account of its own.
+    def unclaimed_account(name)
+      Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: name, currency: "USD", balance: 1_000
+      )
+    end
+
     # A goal in the state account deletion leaves behind: still present, zero
     # linked accounts, failing its own validations.
     def orphaned_goal
@@ -342,9 +765,19 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       goal
     end
 
+    # Each goal gets its own funding account, mirroring @depository's balance.
+    # These goals used to share @depository as a whole-balance link, which
+    # GoalAccount now refuses — and which was the double count in the first
+    # place: every goal read the same 5,000 as if it were its own. One account
+    # each keeps every goal's current_balance identical to what it was, without
+    # the overlap.
     def build_goal(family, name, target_amount: 1_000_000, target_date: nil)
+      funding = Account.create!(
+        family: family, accountable: Depository.new,
+        name: "#{name} Funding", currency: "USD", balance: @depository.balance
+      )
       g = family.goals.new(name: name, target_amount: target_amount, target_date: target_date, currency: "USD")
-      g.goal_accounts.build(account: @depository)
+      g.goal_accounts.build(account: funding)
       g.save!
       g
     end
@@ -363,7 +796,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
           currency: "USD",
           state: "archived",
           family_id: other_family.id,
-          account_ids: [ @depository.id ]
+          account_ids: [ unclaimed_account("Hijack Pot").id ]
         }
       }
     end
