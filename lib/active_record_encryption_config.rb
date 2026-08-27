@@ -64,7 +64,15 @@ module ActiveRecordEncryptionConfig
     explicitly_configured? || runtime_configured?
   end
 
+  # Only meaningful for the auto-derived path: explicit env vars or Rails
+  # credentials (explicitly_configured?) take precedence over SECRET_KEY_BASE
+  # in config/initializers/active_record_encryption.rb, so an install that
+  # set its own encryption keys but happens to still have this SECRET_KEY_BASE
+  # value (e.g. never bothered rotating it because it isn't the key source)
+  # is not actually affected and should not be warned.
   def using_known_compromised_secret_key_base?(secret_key_base = Rails.application.secret_key_base)
+    return false if explicitly_configured?
+
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false
