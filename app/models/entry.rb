@@ -616,7 +616,7 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
-      entries = all.includes(:originated_emi_plan, :emi_plan).to_a
+      entries = all.preload(:entryable, :originated_emi_plan, :emi_plan).to_a
 
       # emi_date_locked? calls EmiPlan#posted_installments.exists? for every
       # emi_purchase entry, which is one query per foreclosed plan when run
