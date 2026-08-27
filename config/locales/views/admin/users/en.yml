@@ -32,7 +32,13 @@ en:
           session_count: "Session count"
           never: "Never"
           role: "Role"
+          remove: "Remove"
         role_descriptions_title: "Role Descriptions"
+        removed_sso_identities:
+          title: "Removed SSO identities"
+          description: "These identities cannot create or reconnect an account. Allow an identity again only when the removal was accidental."
+          allow_again: "Allow again"
+          confirm: "Allow %{email} to sign in or create an account through SSO again?"
         roles:
           guest: "Guest"
           member: "Member"
@@ -51,3 +57,16 @@ en:
       update:
         success: "User role updated successfully."
         failure: "Failed to update user role."
+      destroy:
+        success: "User access revoked and permanent deletion scheduled."
+        failure: "Failed to remove user."
+        cannot_remove_self: "You cannot remove your own account from here."
+        cannot_remove_last_super_admin: "You cannot remove the last active super admin."
+        confirmation_mismatch: "The email address did not match. The user was not removed."
+      deletion:
+        title: "Permanently remove user"
+        warning: "This immediately revokes access and schedules permanent deletion of the user and their data. This cannot be undone."
+        instruction: "Type %{email} to confirm."
+        email_label: "User email"
+        cancel: "Cancel"
+        submit: "Permanently remove user"

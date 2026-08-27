@@ -37,7 +37,7 @@ class RuleRun < ApplicationRecord
       self.transactions_modified += modified_count
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
 
-      # If all jobs are done, mark as success
+      # Preserve a previously recorded failure while still draining pending jobs.
       self.status = "success" if pending_jobs_count <= 0 && !failed?
 
       save!
@@ -46,13 +46,15 @@ class RuleRun < ApplicationRecord
 
   def fail_job!(error:, source:, transaction_ids: [])
     should_log = false
+    current_error_message = "#{error.class}: #{error.message}"
 
     with_lock do
       should_log = !failed?
 
       self.pending_jobs_count = [ pending_jobs_count - 1, 0 ].max
       self.status = "failed"
-      self.error_message = "#{error.class}: #{error.message}"
+      existing_error_messages = error_message.to_s.split("\n").reject(&:blank?)
+      self.error_message = (existing_error_messages + [ current_error_message ]).uniq.join("\n")
 
       save!
     end

@@ -57,6 +57,14 @@ class Import < ApplicationRecord
     "1,234"    => { separator: "",  delimiter: "," }   # Zero-decimal currencies like JPY
   }.freeze
 
+  # 2-digit years are ambiguous (Ruby's %y assumes 1969-2068), so this is kept
+  # out of Family::DATE_FORMATS (the global preference) and only offered when
+  # mapping a CSV file, where the user can see and verify a preview against
+  # their own data (maintainer decision on PR #531).
+  CSV_ONLY_DATE_FORMATS = [
+    [ "DD/MM/YY", "%d/%m/%y" ]
+  ].freeze
+
   def self.reasonable_date_range
     Date.new(1970, 1, 1)..Date.today.next_year(5)
   end
@@ -319,11 +327,12 @@ class Import < ApplicationRecord
     Import.transaction do
       accounts.destroy_all
       entries.destroy_all
+      revert_derived_state!
     end
 
     family.sync_later
 
-    update! status: :pending
+    update! status: status_after_revert
   rescue => error
     update! status: :revert_failed, error: error.message
   end
@@ -531,6 +540,19 @@ class Import < ApplicationRecord
   end
 
   private
+    # Hook for import types that also maintain state outside their own rows and
+    # entries -- PdfImport records statement reconciliation on entries it did
+    # not create, and destroying its own entries does not unwind that. Runs
+    # inside revert's transaction, so a failure here rolls the whole revert back.
+    def revert_derived_state!
+    end
+
+    # Where the record lands once its data is gone. Most imports return to
+    # pending with their rows intact, ready to be published again.
+    def status_after_revert
+      :pending
+    end
+
     # Commit signal for import types whose records hang off the family rather
     # than the import itself (Category/Merchant/Rule imports create no entries
     # or accounts, so the base data_committed? can't see them). import! runs as

@@ -62,6 +62,7 @@
       </div>
 
       <% categories.each do |category| %>
+        <% is_child = category.parent_id.present? %>
         <% is_selected = category.id == selected_id %>
         <div class="filterable-item text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
              role="option"
@@ -73,6 +74,9 @@
           <span class="check-icon <%= "hidden" unless is_selected %>">
             <%= icon("check") %>
           </span>
+          <% if is_child %>
+            <%= icon("corner-down-right", size: "sm") %>
+          <% end %>
           <%= render partial: "categories/badge", locals: { category: category } %>
         </div>
       <% end %>

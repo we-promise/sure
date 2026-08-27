@@ -127,14 +127,14 @@
             <% if additional_preview_currencies.any? %>
               <div class="mt-2 flex flex-wrap gap-2">
                 <% additional_preview_currencies.each do |currency| %>
-                  <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-primary">
-                    <%= currency.iso_code %>
-                  </span>
+                  <%= render DS::Pill.new(label: currency.iso_code, tone: :neutral, marker: false) %>
                 <% end %>
                 <% if additional_currency_count > additional_preview_currencies.count %>
-                  <span class="inline-flex items-center rounded-full bg-surface-inset px-2.5 py-1 text-xs font-medium text-secondary">
-                    <%= t(".currencies_more", count: additional_currency_count - additional_preview_currencies.count) %>
-                  </span>
+                  <%= render DS::Pill.new(
+                        label: t(".currencies_more", count: additional_currency_count - additional_preview_currencies.count),
+                        tone: :neutral,
+                        marker: false
+                      ) %>
                 <% end %>
               </div>
             <% else %>
@@ -227,9 +227,7 @@
                           <div class="flex items-center gap-2">
                             <span class="text-sm font-medium text-primary"><%= currency.iso_code %></span>
                             <% if base_currency %>
-                              <span class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-secondary">
-                                <%= t(".base_currency_badge") %>
-                              </span>
+                              <%= render DS::Pill.new(label: t(".base_currency_badge"), tone: :neutral, marker: false) %>
                             <% end %>
                           </div>
                           <p class="mt-0.5 text-sm text-secondary"><%= currency.name %></p>
