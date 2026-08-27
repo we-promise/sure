@@ -119,7 +119,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "sync" do
     plaid_item = plaid_items(:one)
-    PlaidItem.any_instance.expects(:sync_later_with_follow_up).once
+    PlaidItem.any_instance.expects(:sync_later_with_provider_refresh).once
 
     post sync_plaid_item_url(plaid_item)
 

@@ -81,6 +81,14 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests a transaction refresh" do
+    @plaid.client.expects(:transactions_refresh).with do |request|
+      request.access_token == "access-token"
+    end
+
+    @plaid.refresh_transactions("access-token")
+  end
+
   test "gets item investments" do
     VCR.use_cassette("plaid/get_item_investments") do
       access_token = get_access_token
