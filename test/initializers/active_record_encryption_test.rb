@@ -87,6 +87,24 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     assert_nil User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "wrong-password")
   end
 
+  test "User.authenticate_by_email does not fall back to a second password check for an already-encrypted user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update!(password: "correct-horse-battery-staple")
+
+    User.expects(:find_by_email).never
+
+    assert_equal user, User.authenticate_by_email(email: user.email, password: "correct-horse-battery-staple")
+    assert_nil User.authenticate_by_email(email: user.email, password: "wrong-password")
+  end
+
+  test "User.authenticate_by_email returns nil for an email that matches no user, plaintext or encrypted" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
+  end
+
   test "deterministic find_by matches a legacy plaintext row for downcase attributes without a model-level normalizes declaration" do
     skip "Encryption not configured" unless Invitation.encryption_ready? && InviteCode.encryption_ready?
 

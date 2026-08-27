@@ -105,13 +105,22 @@ class User < ApplicationRecord
 
     # `authenticate_by` (Rails' timing-safe login helper) has the same
     # not-yet-backfilled-row blind spot internally, since it looks the
-    # record up via `find_by(email:)`. Falls back to #find_by_email +
-    # a direct #authenticate check, at the cost of the timing-safety
-    # guarantee only for the rare not-yet-backfilled/wrong-password case.
+    # record up via `find_by(email:)`. Only fall back to #find_by_email +
+    # a direct #authenticate check when that deterministic lookup itself
+    # misses (i.e. a legacy plaintext row) - if it finds the row but the
+    # password is wrong, `authenticate_by` already returned nil correctly
+    # and re-checking via the fallback would run a second, redundant
+    # bcrypt digest on every ordinary failed login for an already-migrated
+    # user, undermining the timing-safety guarantee `authenticate_by` exists
+    # to provide.
     def authenticate_by_email(email:, password:)
       normalized = email.to_s.strip.downcase
-      authenticate_by(email: normalized, password: password) ||
+
+      if exists?(email: normalized)
+        authenticate_by(email: normalized, password: password)
+      else
         find_by_email(normalized)&.then { |user| user if user.authenticate(password) }
+      end
     end
 
     def human_attribute_name(attribute, options = {})
