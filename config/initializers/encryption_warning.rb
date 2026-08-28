@@ -31,13 +31,29 @@ Rails.application.config.after_initialize do
       the compromised key, the backfill task cannot tell that ciphertext
       apart from real plaintext, will re-encrypt it under the new key on
       top of the old encryption, and the original data becomes
-      unrecoverable. Rotate safely instead: keep
-      ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY (and friends) derived from this
-      SECRET_KEY_BASE configured as a `previous` encryption scheme
-      (https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)
-      so existing data still decrypts, generate new keys with
-      bin/rails db:encryption:init as the current scheme, then re-run
-      bin/rails security:backfill_encryption to re-encrypt under the new keys.
+      unrecoverable. Rotate safely instead:
+        1. Compute the OLD derived keys from your current SECRET_KEY_BASE
+           (bin/rails runner 'puts Digest::SHA256.hexdigest("\#{Rails.application.secret_key_base}:primary_key")[0..63]'
+           - repeat for :deterministic_key and :key_derivation_salt) and set
+           them as ACTIVE_RECORD_ENCRYPTION_*_PREVIOUS so existing data still
+           decrypts. Older Compose releases did not pass
+           ACTIVE_RECORD_ENCRYPTION_* through to the container, so don't
+           assume env vars alone reflect the keys actually used to write
+           existing data - derive from SECRET_KEY_BASE unless you know
+           otherwise.
+        2. Generate new ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY (and friends)
+           with bin/rails db:encryption:init and set those as the current
+           (non-_PREVIOUS) values.
+        3. Re-run bin/rails security:backfill_encryption to re-encrypt
+           existing rows under the new keys.
+        4. Separately, app/models/setting.rb encrypts its own fields
+           (provider/API credentials) using a key derived directly from
+           SECRET_KEY_BASE, NOT from these AR encryption keys - rotating
+           SECRET_KEY_BASE also invalidates those without any warning or
+           rotation path today. Expect saved Settings values to need
+           re-entering after this rotation, and rotate SECRET_KEY_BASE
+           itself only once you've confirmed that's acceptable (it also
+           invalidates all sessions and signed cookies).
     WARN
   end
 end

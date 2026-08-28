@@ -115,4 +115,25 @@ elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.crede
   Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
   Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
 end
+
+# Optional previous encryption scheme, for rotating ACTIVE_RECORD_ENCRYPTION_*
+# without losing access to data encrypted under the old keys (e.g. after
+# discovering the current keys were auto-derived from a compromised
+# SECRET_KEY_BASE - see ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES
+# and config/initializers/encryption_warning.rb). Set the *_PREVIOUS env vars
+# to the old key material before switching ACTIVE_RECORD_ENCRYPTION_* to new
+# values, then run `bin/rails security:backfill_encryption` to re-encrypt
+# existing rows under the new keys. Only takes effect once the new keys
+# above are themselves configured (env vars, credentials, or auto-derived).
+if ActiveRecordEncryptionConfig.partial_previous_env?
+  raise ActiveRecordEncryptionConfig.partial_previous_env_message
+end
+
+if ActiveRecordEncryptionConfig.complete_previous_env? && ActiveRecordEncryptionConfig.ready?
+  Rails.application.config.active_record.encryption.previous = [ {
+    primary_key: ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_PREVIOUS"],
+    deterministic_key: ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS"],
+    key_derivation_salt: ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_PREVIOUS"]
+  } ]
+end
 # If none of the above conditions are met, credentials from application.rb will be used

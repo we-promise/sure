@@ -69,6 +69,42 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
   end
 
+  test "detects complete previous-key rotation environment" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_PREVIOUS" => "primary",
+      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS" => "deterministic",
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_PREVIOUS" => "salt"
+    }
+
+    assert ActiveRecordEncryptionConfig.complete_previous_env?(env)
+    refute ActiveRecordEncryptionConfig.partial_previous_env?(env)
+    assert_empty ActiveRecordEncryptionConfig.missing_previous_env_keys(env)
+  end
+
+  test "detects partially configured previous-key rotation environment" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_PREVIOUS" => "primary",
+      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS" => nil,
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_PREVIOUS" => "salt"
+    }
+
+    refute ActiveRecordEncryptionConfig.complete_previous_env?(env)
+    assert ActiveRecordEncryptionConfig.partial_previous_env?(env)
+    assert_equal [ "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS" ], ActiveRecordEncryptionConfig.missing_previous_env_keys(env)
+    assert_includes ActiveRecordEncryptionConfig.partial_previous_env_message(env), "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS"
+  end
+
+  test "does not treat absent previous-key rotation environment as partial" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_PREVIOUS" => nil,
+      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS" => nil,
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_PREVIOUS" => nil
+    }
+
+    refute ActiveRecordEncryptionConfig.complete_previous_env?(env)
+    refute ActiveRecordEncryptionConfig.partial_previous_env?(env)
+  end
+
   test "using_known_compromised_secret_key_base? is false when explicit keys are configured" do
     # explicitly_configured? (env vars or credentials) takes precedence over
     # SECRET_KEY_BASE in config/initializers/active_record_encryption.rb, so
