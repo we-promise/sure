@@ -31,10 +31,34 @@ class Session < ApplicationRecord
     def clean
       count = 0
       where("updated_at < ?", INACTIVITY_TIMEOUT.ago).find_each do |session|
-        session.destroy
-        count += 1
+        # Recheck under a row lock: a request may have touched this session
+        # (see Authentication#find_session_by_cookie) between the query above
+        # and this iteration, in which case it is no longer inactive.
+        session.with_lock do
+          next unless session.updated_at < INACTIVITY_TIMEOUT.ago
+          session.destroy
+          count += 1
+        end
       end
       count
+    end
+
+    # Shared cookie -> Session resolver used by every path that authenticates
+    # via the signed session_token cookie (Authentication concern, Doorkeeper
+    # authenticators, SuperAdminConstraint), so inactivity expiry can't be
+    # bypassed by adding a new entry point that forgets to check `expired?`.
+    def find_active_by_cookie(cookie_value)
+      return nil if cookie_value.blank?
+
+      session_record = includes(:user).find_by(id: cookie_value)
+      return nil unless session_record
+
+      if session_record.user&.active? && !session_record.expired?
+        session_record
+      else
+        session_record.destroy!
+        nil
+      end
     end
   end
 
