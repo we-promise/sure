@@ -1,1 +1,0 @@
-{"nodes": [{"id": "$graphify-root$_mobile_android_settings_gradle", "label": "settings.gradle", "file_type": "code", "source_file": "mobile/android/settings.gradle", "source_location": "L1"}], "edges": [], "raw_calls": [], "parse_errors": {"first_error_line": 6, "multiline_error": false}}
