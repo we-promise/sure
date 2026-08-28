@@ -49,6 +49,12 @@ class Provider::Anthropic::AutoCategorizer
     raise
   end
 
+  # Public so /settings/ai_prompts can render the built-in text by constructing
+  # this class with `family: nil`.
+  def instructions
+    family&.ai_prompt(:categorizer_anthropic) || default_instructions
+  end
+
   private
     AutoCategorization = Provider::LlmConcept::AutoCategorization
 
@@ -94,7 +100,7 @@ class Provider::Anthropic::AutoCategorizer
       }
     end
 
-    def instructions
+    def default_instructions
       <<~INSTRUCTIONS.strip_heredoc
         You are an assistant to a consumer personal finance app. You will be provided a list of the user's
         transactions and a list of the user's categories. Your job is to auto-categorize each transaction
