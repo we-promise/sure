@@ -3,20 +3,17 @@ class TransfersController < ApplicationController
 
   before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
+  before_action :set_categories, only: %i[new show create]
+  before_action :set_tags, only: %i[new show create]
 
   helper_method :new_transfer_idempotency_key
 
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
-    @tags = Current.family.tags.alphabetically
-    @categories = Current.family.categories.alphabetically_by_hierarchy
   end
 
   def show
-    @categories = Current.family.categories.alphabetically_by_hierarchy
-    @tags = Current.family.tags.alphabetically
-
     # Whether the current user can hit `mark_as_recurring`: feature flag on,
     # AND they have write access to BOTH transfer endpoints. Gating the
     # view button on this avoids showing a CTA that the controller would
@@ -60,8 +57,6 @@ class TransfersController < ApplicationController
     else
       @from_account_id = transfer_params[:from_account_id]
       @selected_category_id = transfer_params[:category_id]
-      @tags = Current.family.tags.alphabetically
-      @categories = Current.family.categories.alphabetically_by_hierarchy
       render :new, status: :unprocessable_entity
     end
   rescue Money::ConversionError
@@ -71,8 +66,6 @@ class TransfersController < ApplicationController
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
     @selected_category_id = transfer_params[:category_id]
-    @tags = Current.family.tags.alphabetically
-    @categories = Current.family.categories.alphabetically_by_hierarchy
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
@@ -89,8 +82,6 @@ class TransfersController < ApplicationController
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
     @selected_category_id = transfer_params[:category_id]
-    @tags = Current.family.tags.alphabetically
-    @categories = Current.family.categories.alphabetically_by_hierarchy
     render :new, status: :unprocessable_entity
   end
 
@@ -239,6 +230,14 @@ class TransfersController < ApplicationController
           :account_providers,
           logo_attachment: :blob
         )
+    end
+
+    def set_categories
+      @categories = Current.family.categories.alphabetically_by_hierarchy
+    end
+
+    def set_tags
+      @tags = Current.family.tags.alphabetically
     end
 
     def transfer_update_params
