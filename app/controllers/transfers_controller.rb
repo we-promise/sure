@@ -32,7 +32,7 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
-    @transfer = Transfer::Creator.new(
+    creator_params = {
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
@@ -41,9 +41,11 @@ class TransfersController < ApplicationController
       exchange_rate: transfer_params[:exchange_rate].presence&.to_d,
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
-      tag_ids: transfer_params[:tag_ids],
-      category_id: transfer_params[:category_id]
-    ).create
+      tag_ids: transfer_params[:tag_ids]
+    }
+    creator_params[:category_id] = transfer_params[:category_id] if transfer_params.key?(:category_id)
+
+    @transfer = Transfer::Creator.new(**creator_params).create
 
     if @transfer.persisted?
       success_message = "Transfer created"
@@ -222,8 +224,10 @@ class TransfersController < ApplicationController
     end
 
     def update_transfer_details
-      category_id = Current.family.categories.find_by(id: transfer_update_params[:category_id].presence)&.id
-      @transfer.outflow_transaction.update!(category_id: category_id)
+      if transfer_update_params.key?(:category_id)
+        category_id = Current.family.categories.find_by(id: transfer_update_params[:category_id].presence)&.id
+        @transfer.outflow_transaction.update!(category_id: category_id)
+      end
       @transfer.update!(notes: transfer_update_params[:notes])
     end
 

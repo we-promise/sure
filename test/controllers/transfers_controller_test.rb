@@ -25,6 +25,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create defaults to investment contributions category when category_id is omitted" do
+    investment_category = ensure_investment_contributions_category(users(:family_admin).family)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:investment).id,
+          date: Date.current,
+          amount: 100
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+    assert_equal investment_category, transfer.outflow_transaction.category
+  end
+
   test "can create transfer with custom exchange rate" do
     usd_account = accounts(:depository)
     eur_account = users(:family_admin).family.accounts.create!(
@@ -370,6 +388,28 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to transactions_url
     assert_nil transfer.outflow_transaction.reload.category_id, "Should not assign a category belonging to another family"
+  end
+
+  test "omitted category_id on update leaves existing category unchanged" do
+    transfer = transfers(:one)
+    category = users(:family_admin).family.categories.create!(name: "Existing")
+    transfer.outflow_transaction.update!(category_id: category.id)
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Test notes" } }
+
+    assert_redirected_to transactions_url
+    assert_equal category.id, transfer.outflow_transaction.reload.category_id
+  end
+
+  test "explicit blank category_id on update clears the category" do
+    transfer = transfers(:one)
+    category = users(:family_admin).family.categories.create!(name: "Existing")
+    transfer.outflow_transaction.update!(category_id: category.id)
+
+    patch transfer_url(transfer), params: { transfer: { category_id: "" } }
+
+    assert_redirected_to transactions_url
+    assert_nil transfer.outflow_transaction.reload.category_id
   end
 
   test "can add notes to transfer" do
