@@ -5,7 +5,8 @@ set -euo pipefail
 export ENV=""
 export BASH_ENV=""
 
-CODEX_ENV_MARKER="tmp/codex-env"
+APP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CODEX_ENV_MARKER="${APP_ROOT}/tmp/codex-env"
 
 echo "Installing PostgreSQL and dependencies..."
 apt-get update -qq
