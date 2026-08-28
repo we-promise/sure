@@ -834,6 +834,55 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The gap this closes: at the moment the user has reached the target and
+  # spent some of it, the page offered only "Close this goal" — which releases
+  # the earmark, and whose own hint says to do it once the money is actually
+  # spent. Saying so was two clicks away in the overflow menu.
+  test "a reached goal offers recording a spend outside the overflow menu" do
+    goal = reached_goal_holding_money
+
+    get goal_url(goal)
+
+    assert_response :success
+    # In the panel, not only in the menu: scoped to the celebration panel's own
+    # action row by id. `section` was not enough — the panel renders through
+    # DS::Card, which emits a <section>, so any card on the page satisfied it.
+    panel_links = css_select("#goal-celebration-actions a[href='#{consume_goal_path(goal)}']")
+    assert_operator panel_links.size, :>=, 1,
+      "the spend action was still only reachable through the overflow menu"
+  end
+
+  test "closing is still offered alongside it" do
+    goal = reached_goal_holding_money
+
+    get goal_url(goal)
+
+    assert_select "form[action=?]", complete_goal_path(goal)
+  end
+
+  # Two doors lead to the same dialog, the panel and the overflow menu, and they
+  # disagreed: the menu gated on `current_balance`, which counts every linked
+  # account including ones private to another member. A reader backed only by
+  # such an account was shown the entry, opened a dialog with nothing to pick,
+  # and was refused on submit. Asserted page-wide on purpose — neither door may
+  # offer it.
+  test "money the reader cannot reach opens no door to the spend dialog" do
+    account = Account.create!(
+      family: @user.family, owner: users(:family_member), accountable: Depository.new,
+      name: "Member Only Pot", currency: "USD", balance: 5_000
+    )
+    goal = @user.family.goals.create!(name: "Hidden", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert goal.current_balance.to_d.positive?, "the goal is backed, just not for this reader"
+    assert_empty css_select("a[href='#{consume_goal_path(goal)}']"),
+      "a spend was still offered against money the reader cannot see"
+  end
+
   private
 
     def spent_goal_for_display
@@ -846,6 +895,16 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       end
       goal.consume!(2_000)
       goal
+    end
+
+    def reached_goal_holding_money
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Reached Pot", currency: "USD", balance: 5_000
+      )
+      @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 5_000)
+      end
     end
     # SQL the pooled-allocation read issues, and nothing else: goal_accounts
     # joined to goals.
