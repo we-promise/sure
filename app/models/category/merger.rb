@@ -30,6 +30,7 @@ class Category::Merger
       source_categories.each do |source|
         family.transactions.where(category_id: source.id).update_all(category_id: target_category.id)
         merge_budget_categories(source)
+        merge_goal_expense_categories(source)
         family.categories.where(parent_id: source.id).where.not(id: target_category.id).update_all(parent_id: target_category.id)
         family.categories.find(source.id).destroy!
         @merged_count += 1
@@ -68,6 +69,20 @@ class Category::Merger
       end
 
       ids
+    end
+
+    # A reserve that counted the source now counts the target instead. Where it
+    # already counted both, the surviving row is the one it keeps: the unique
+    # index allows one per goal, and the goal's intent — "count this category" —
+    # is satisfied either way.
+    def merge_goal_expense_categories(source)
+      GoalExpenseCategory.where(category_id: source.id).find_each do |link|
+        if GoalExpenseCategory.exists?(goal_id: link.goal_id, category_id: target_category.id)
+          link.destroy!
+        else
+          link.update!(category_id: target_category.id)
+        end
+      end
     end
 
     def merge_budget_categories(source)

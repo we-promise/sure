@@ -68,21 +68,33 @@
                          step: 1,
                          placeholder: "6" %>
       <p class="mt-1 text-xs text-secondary"><%= t("goals.form.fields.target_months_hint") %></p>
+      <%# The derived amount has no field of its own to carry an error, so the
+          one explaining that the window is empty is shown here — beside the
+          months and the categories, which are what the user can change. %>
+      <% goal.errors[:target_months].each do |message| %>
+        <p class="mt-1.5 text-xs text-destructive"><%= message %></p>
+      <% end %>
     </div>
 
     <%# Which spending the months are counted from. Nothing ticked means every
         expense, which is what a reserve meant before it could be narrowed — so
         the section opens closed and costs an untouched form nothing. %>
-    <div data-goal-kind-target="monthsField" class="hidden">
+    <div data-goal-kind-target="categoryField" class="hidden">
       <% selected_category_ids = goal.selected_category_ids.map(&:to_s) %>
-      <details class="group rounded-lg border border-primary bg-container" <%= "open" if selected_category_ids.any? || goal.include_uncategorized_expenses? %>>
-        <summary class="flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5">
-          <div class="min-w-0">
-            <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.expense_categories") %></span>
-            <p class="mt-0.5 text-xs text-secondary"><%= t("goals.form.fields.expense_categories_hint") %></p>
+      <%= render DS::Disclosure.new(
+            variant: :card,
+            open: selected_category_ids.any? || goal.include_uncategorized_expenses?,
+            body_class: nil
+          ) do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <div class="flex w-full items-center justify-between gap-3">
+            <div class="min-w-0">
+              <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.expense_categories") %></span>
+              <p class="mt-0.5 text-xs text-secondary"><%= t("goals.form.fields.expense_categories_hint") %></p>
+            </div>
+            <%= icon "chevron-down", size: "sm", color: "secondary", class: "shrink-0 group-open:rotate-180 motion-safe:transition-transform" %>
           </div>
-          <%= icon "chevron-down", size: "sm", color: "secondary", class: "shrink-0 transition-transform group-open:rotate-180" %>
-        </summary>
+        <% end %>
 
         <div class="max-h-72 overflow-y-auto border-t border-subdued bg-container-inset p-1">
           <%# Submitted even when every box is cleared, so "none of them" reaches
@@ -111,7 +123,7 @@
             </label>
           <% end %>
         </div>
-      </details>
+      <% end %>
     </div>
 
     <div class="grid grid-cols-2 gap-3 items-start">

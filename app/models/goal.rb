@@ -34,7 +34,12 @@ class Goal < ApplicationRecord
            class_name: "GoalPledge"
 
   validates :name, presence: true, length: { maximum: 255 }
-  validates :target_amount, presence: true, numericality: { greater_than: 0 }
+  # Not in months mode: the amount is derived there, so "can't be blank" would
+  # name a field the form has hidden and say nothing about why it is empty.
+  # `months_target_must_be_derivable` guards the same ground with the actual
+  # reason, and the column's NOT NULL / > 0 constraint stays covered either way.
+  validates :target_amount, presence: true, numericality: { greater_than: 0 },
+            unless: :months_of_expenses_target?
   validates :currency, presence: true
   # before_save (not before_validation) so it only mutates on persistence, not
   # on every valid? call — a goal can be inspected without its basis flipping.
@@ -71,6 +76,7 @@ class Goal < ApplicationRecord
   # new selection is actually readable.
   after_save :reapply_target_after_category_change, if: :expense_categories_changed_in_place?
 
+  validate :months_target_must_be_derivable, if: :months_of_expenses_target?
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
   validate :linked_accounts_must_match_goal_currency
@@ -1453,6 +1459,16 @@ class Goal < ApplicationRecord
 
       computed = months_of_expenses_amount
       update_column(:target_amount, computed) if computed && computed != target_amount.to_d
+    end
+
+    # Reached when the window holds nothing to read: a family with no history
+    # yet, or — more often — a reserve narrowed to categories nobody has spent
+    # in. The error goes on the months, which the user can see and change,
+    # rather than on the derived amount they cannot type into.
+    def months_target_must_be_derivable
+      return if target_amount.to_d.positive?
+
+      errors.add(:target_months, :no_spending_in_window)
     end
 
     def clear_target_date_for_maintained

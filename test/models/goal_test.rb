@@ -875,6 +875,67 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("3600"), goal.refresh_target_from_expenses!
   end
 
+  # The join carries a foreign key with no cleanup of its own, so a category a
+  # reserve counts could not be deleted at all — the delete failed, and with it
+  # merging, resetting financial data, and removing the family.
+  test "deleting a counted category leaves the reserve standing" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ essentials ]
+
+    assert_nothing_raised { essentials.destroy! }
+    assert_empty goal.reload.expense_categories
+    assert goal.persisted?
+  end
+
+  # Merging moves the reserve onto the surviving category rather than dropping
+  # it: the goal said "count this spending", and the spending has moved.
+  test "merging a counted category moves the reserve onto the survivor" do
+    source = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    target = @family.categories.create!(name: "Housing #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ source ]
+
+    Category::Merger.new(family: @family, target_category: target, source_categories: [ source ]).merge!
+
+    assert_equal [ target.id ], goal.reload.expense_categories.map(&:id)
+  end
+
+  # The unique index allows one row per goal, and the intent — "count this
+  # category" — is already satisfied by the row that survives.
+  test "merging into a category the reserve already counts keeps one row" do
+    source = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    target = @family.categories.create!(name: "Housing #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ source, target ]
+
+    Category::Merger.new(family: @family, target_category: target, source_categories: [ source ]).merge!
+
+    assert_equal [ target.id ], goal.reload.expense_categories.map(&:id)
+  end
+
+  # Narrowing to a category nobody has spent in leaves nothing to derive. The
+  # amount is not typed in this mode, so "can't be blank" would land on a field
+  # the form hides — the error has to name the cause, on a field the user can
+  # act on.
+  test "a reserve narrowed to spending that does not exist says why" do
+    empty = @family.categories.create!(name: "Unused #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    account = @family.accounts.create!(accountable: Depository.new, name: "Pot", currency: "USD", balance: 100)
+    seed_monthly_expenses(500)
+
+    goal = @family.goals.new(
+      name: "Precaution", currency: "USD", color: "#4da568", kind: "maintained",
+      target_mode: "months_of_expenses", target_months: 6
+    )
+    goal.goal_accounts.build(account: account)
+    goal.goal_expense_categories.build(category: empty)
+
+    assert_not goal.valid?
+    assert_includes goal.errors.attribute_names, :target_months
+    assert_empty goal.errors[:target_amount],
+                 "the blank derived amount was reported as if the user had left it out"
+  end
+
   test "a fixed reserve ignores the refresh entirely" do
     goal = reserve_goal(balance: 3_000, target: 1_000)
     seed_monthly_expenses(500)

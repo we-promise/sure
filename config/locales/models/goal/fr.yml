@@ -27,6 +27,7 @@ fr:
               locked_after_linked: Impossible de modifier la devise après que l'objectif a été lié à des comptes.
             target_mode:
               months_requires_maintained: Seule une réserve à maintenir peut avoir une cible exprimée en mois de dépenses.
+              no_spending_in_window: Aucune dépense sur ces mois pour en déduire une cible. Élargissez les catégories, changez le nombre de mois, ou fixez le montant vous-même.
             target_months:
               blank: Indiquez combien de mois de dépenses cette réserve doit couvrir.
               only_with_months_mode: Les mois de dépenses ne s'appliquent que si la cible est exprimée ainsi.
