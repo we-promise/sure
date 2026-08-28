@@ -106,16 +106,20 @@ class TradeRepublicAccount::ActivitiesProcessor
       # Amount falls back to |quantity| × price only when the provider omits
       # the exact cash amount. Fees and taxes stay embedded in the provider
       # amount rather than being inferred separately.
+      price = parse_decimal(detail[:price])
+      price = nil if price&.zero?
       amount = parse_decimal(detail[:amount])
+      amount = quantity.abs * price.abs if (!amount || amount.zero?) && price
       return false unless amount && !amount.zero?
 
       signed_amount = is_buy ? -amount.abs : amount.abs
+      price ||= amount.abs / signed_quantity.abs
 
       import_adapter.import_trade(
         external_id:    external_id,
         security:       security,
         quantity:       signed_quantity,
-        price:          detail[:price].present? ? parse_decimal(detail[:price]) : amount.abs / signed_quantity.abs,
+        price:          price,
         amount:         signed_amount,
         currency:       detail[:currency].presence || currency,
         date:           date,

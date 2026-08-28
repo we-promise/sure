@@ -19,6 +19,27 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "authenticated login rejects an account without a securities account number" do
+    response_class = Struct.new(:code, :body) do
+      def is_a?(klass)
+        return true if klass == Net::HTTPSuccess
+
+        super
+      end
+    end
+    session = mock
+    session.stubs(:login_headers).returns({})
+    session.expects(:get).with("/api/v2/auth/account", headers: {}).returns(
+      response_class.new("200", { "currency" => "EUR" }.to_json)
+    )
+
+    error = assert_raises(Provider::TradeRepublicClient::MalformedResponse) do
+      @client.send(:authenticated_session_result, session)
+    end
+
+    assert_match(/securities account number/i, error.message)
+  end
+
   test "reconstructs Trade Republic delta websocket payloads" do
     previous = '{"items":[1,2,3]}'
     delta = "=15\t+%2C4%5D%7D"

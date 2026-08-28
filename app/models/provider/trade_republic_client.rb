@@ -435,6 +435,10 @@ class Provider::TradeRepublicClient
       account_response = session.get("/api/v2/auth/account", headers: session.login_headers)
       raise_http_error(account_response, login: true)
       account = parse_json(account_response)
+      if account["securitiesAccountNumber"].blank?
+        raise MalformedResponse, "Trade Republic account response did not contain a securities account number"
+      end
+
       Result.new(data: {
         "status" => "ok",
         "session_txt" => session.cookies_blob,

@@ -55,6 +55,20 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("459.85"), trade.amount
   end
 
+  test "trade derives a missing amount from quantity and price" do
+    import_event(order_execution_detail(
+      event_id: "evt_price_only",
+      quantity: "2.5",
+      isin: "US0378331005",
+      amount: nil
+    ).deep_merge(detail: { price: "184.00" }))
+
+    trade = find_trade("trade_republic_event_evt_price_only")
+    assert_not_nil trade
+    assert_equal BigDecimal("184.00"), trade.entryable.price
+    assert_equal BigDecimal("-460.00"), trade.amount
+  end
+
   test "syncing the same events twice creates no duplicates" do
     events = [
       order_execution_detail(quantity: "1.5", isin: "US0378331005", amount: "100.00"),
