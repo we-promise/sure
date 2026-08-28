@@ -680,6 +680,18 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def spent_goal_for_display
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Spent Pot", currency: "USD", balance: 5_000
+      )
+      goal = @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 5_000)
+      end
+      goal.consume!(2_000)
+      goal
+    end
     # SQL the pooled-allocation read issues, and nothing else: goal_accounts
     # joined to goals.
     def count_pool_queries
@@ -692,6 +704,68 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       count
     ensure
       ActiveSupport::Notifications.unsubscribe(sub)
+    end
+
+
+    # The surface the user actually reads: the figure beside the ring, and the
+    # line saying part of it has been used. Asserted on the rendered page rather
+    # than the model, because the contradiction was a display bug — the model
+    # has always counted both halves.
+    test "the goal page reports the used portion as part of the total" do
+      goal = spent_goal_for_display
+
+      get goal_url(goal)
+
+      assert_response :success
+      assert_includes response.body, I18n.t("goals.show.ring.including_used",
+                                            amount: goal.consumed_amount_money.format(precision: 0))
+
+      # The headline figure specifically, not "somewhere on the page": the
+      # account balance still appears in the funding breakdown below, which is
+      # where that question belongs.
+      headline = css_select("p.text-xl.font-medium.text-primary").map(&:text).map(&:strip)
+      assert_includes headline, goal.progress_amount_money.format(precision: 0)
+      assert_not_includes headline, goal.current_balance_money.format(precision: 0)
+    end
+
+    test "a goal that has spent nothing says nothing about it" do
+      account = unclaimed_account("Quiet Pot")
+      goal = @user.family.goals.create!(name: "Quiet", target_amount: 1_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 1_000)
+      end
+
+      get goal_url(goal)
+
+      assert_response :success
+      assert_no_match(/already used|déjà utilisés/, response.body)
+    end
+
+
+    # The ring announced the account balance while the visible headline beside it
+    # reported the progress total: same ring, two different numbers depending on
+    # whether you could see it.
+    test "the ring announces the same total the headline shows" do
+      goal = spent_goal_for_display
+
+      get goal_url(goal)
+
+      assert_response :success
+      label = css_select("[role=progressbar]").first["aria-label"]
+      assert_includes label, goal.progress_amount_money.format
+      assert_not_includes label, goal.current_balance_money.format
+      assert_includes label, goal.consumed_amount_money.format
+    end
+
+    test "a goal with nothing used keeps the plain wording" do
+      account = unclaimed_account("Plain Pot")
+      goal = @user.family.goals.create!(name: "Plain", target_amount: 1_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 1_000)
+      end
+
+      get goal_url(goal)
+
+      label = css_select("[role=progressbar]").first["aria-label"]
+      assert_no_match(/already used|déjà utilisés/, label)
     end
 
   private

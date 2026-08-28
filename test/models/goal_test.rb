@@ -1196,7 +1196,54 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 3_000, goal.reload.target_amount.to_d
   end
 
+
+  # The ring is drawn from `progress_percent`, which counts money held plus
+  # money already spent on the goal. The headline figure showed only the first
+  # half, so a goal that had spent part of its savings sat at a 100% ring
+  # beside "3,000 of 5,000" — the two disagreeing on the same card, with
+  # nothing to say which one to believe.
+  test "the headline figure agrees with the ring after a spend" do
+    goal = spent_goal
+
+    assert_equal 100, goal.progress_percent
+    assert_equal 5_000, goal.progress_amount_money.amount.to_d,
+      "the figure beside the ring still reported the account balance"
+  end
+
+  # The amount is part of the total above it, never a second figure beside it:
+  # a reader should have nothing to add up.
+  test "what was used is reported as part of the total, and only when there is some" do
+    goal = spent_goal
+
+    assert goal.any_consumption?
+    assert_equal 2_000, goal.consumed_amount_money.amount.to_d
+    assert_equal goal.progress_amount_money.amount.to_d,
+                 goal.current_balance.to_d + goal.consumed_amount_money.amount.to_d
+  end
+
+  test "a goal that has spent nothing says nothing about it" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "Quiet pot", currency: @family.currency, balance: 1_000)
+    goal = @family.goals.create!(name: "Quiet", target_amount: 1_000, currency: @family.currency) do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    assert_not goal.any_consumption?
+  end
+
   private
+
+    # 5,000 saved, 2,000 of it since spent on the thing itself.
+    def spent_goal
+      account = Account.create!(family: @family, accountable: Depository.new,
+                                name: "Spent pot #{SecureRandom.hex(3)}",
+                                currency: @family.currency, balance: 5_000)
+      goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: @family.currency) do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 5_000)
+      end
+      goal.consume!(2_000)
+      goal
+    end
 
     # Its own account, so the shared-pool haircut does not make the frozen
     # figure depend on what the fixtures happen to claim.
