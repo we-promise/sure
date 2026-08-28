@@ -9,6 +9,21 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "payable ignores a debt destination that belongs to another family" do
+    foreign_card = families(:empty).accounts.create!(
+      name: "Foreign Card", balance: 0, currency: "USD", accountable: CreditCard.new
+    )
+    transfer = @family.recurring_transactions.create!(
+      name: "Card payment", account: @account, amount: 200, currency: "USD",
+      expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true
+    )
+    transfer.update_column(:destination_account_id, foreign_card.id)
+
+    assert_not_includes @family.recurring_transactions.payable, transfer,
+      "a destination outside the family is not this family's obligation"
+  end
+
   test "status is required" do
     recurring = @family.recurring_transactions.build(
       account: @account,

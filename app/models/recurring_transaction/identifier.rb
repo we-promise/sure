@@ -350,7 +350,10 @@ class RecurringTransaction
         return if rule.day_of_month == day
 
         rule.update!(day_of_month: day)
-        OccurrenceGenerator.new(recurring).regenerate_future!
+        # When the day column itself is about to change, the model's own
+        # after_commit regenerates once on save. The explicit pass is only
+        # for a rule that drifted out of agreement with an unchanged column.
+        OccurrenceGenerator.new(recurring).regenerate_future! unless recurring.will_save_change_to_expected_day_of_month?
       end
 
       def create_suggested_series(pattern, scoped:)

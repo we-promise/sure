@@ -99,7 +99,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
     # version silently under-counted it fourfold), and partially paid
     # occurrences contribute only what actually remains.
     def upcoming_recurring_entries
-      family.recurring_occurrences
+      occurrences = family.recurring_occurrences
         .open_status
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
@@ -107,6 +107,17 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         .where(currency: family.currency)
         .where(due_on: Date.current..(Date.current + HORIZON_DAYS))
         .includes(:recurring_transaction)
-        .map { |occurrence| Obligation.new(date: occurrence.due_on, amount: occurrence.remaining_amount) }
+        .to_a
+
+      # remaining_amount reads the confirmed-allocation sum, and this runs
+      # nightly for every family: one grouped query instead of one SUM per
+      # occurrence in the horizon.
+      sums = RecurringAllocation.confirmed
+                                .where(recurring_occurrence_id: occurrences.map(&:id))
+                                .group(:recurring_occurrence_id)
+                                .sum(:allocated_amount)
+      occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+
+      occurrences.map { |occurrence| Obligation.new(date: occurrence.due_on, amount: occurrence.remaining_amount) }
     end
 end
