@@ -92,7 +92,8 @@ class IbkrItemsController < ApplicationController
   end
 
   def select_accounts
-    ibkr_item = current_ibkr_item
+    ibkr_item = Current.family.ibkr_items.find_by(id: params[:ibkr_item_id])
+
     unless ibkr_item
       redirect_to settings_providers_path, alert: t(".not_configured")
       return
@@ -222,12 +223,6 @@ class IbkrItemsController < ApplicationController
 
     def set_ibkr_item
       @ibkr_item = Current.family.ibkr_items.find(params[:id])
-    end
-
-    def current_ibkr_item
-      active_items = Current.family.ibkr_items.active
-
-      active_items.syncable.ordered.first || active_items.ordered.first
     end
 
     def ibkr_item_params

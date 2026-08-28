@@ -501,6 +501,13 @@ zh-CN:
           all_other_options: 其他所有配置选项：“No”
         report_window_note: IBKR Flex reports 受您在 IBKR 中配置的查询窗口限制。Sure 将从此报告导入完整的当前持仓，以及最多最近 365 天的活动。
         sync: 同步
+        syncing: 正在同步
+        remove: 移除
+        setup_accounts: 设置账户
+        add_connection: 添加连接
+        new_connection_title: 新连接
+        connection_name_label: 连接名称
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: 断开 Interactive Brokers？
         query_id_label: Query ID
         query_id_placeholder_new: 输入您的 IBKR Flex Query ID
@@ -510,9 +517,6 @@ zh-CN:
         token_placeholder_existing: 留空以保留当前 Token
         save_configuration: 保存配置
         update_configuration: 更新配置
-        status_configured_prefix: "%{summary}。请访问"
-        accounts_tab: 账户
-        status_configured_suffix: 标签页以管理已发现的账户。
         not_configured: 未配置。
       akahu_panel:
         step_1_html: 前往 %{link} 并创建个人应用。

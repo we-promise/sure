@@ -541,6 +541,13 @@ it:
           all_other_options: 'Tutte le altre opzioni: "No"'
         report_window_note: "I rapporti IBKR Flex sono limitati alla finestra di query configurata in IBKR. Sure importerà le posizioni attuali complete più fino agli ultimi 365 giorni di attività da questo rapporto."
         sync: Sincronizza
+        syncing: Sincronizzazione
+        remove: Rimuovi
+        setup_accounts: Configura conti
+        add_connection: Aggiungi connessione
+        new_connection_title: Nuova connessione
+        connection_name_label: Nome della connessione
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: Disconnettere Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Inserisci il tuo IBKR Flex Query ID
@@ -550,7 +557,4 @@ it:
         token_placeholder_existing: Lascia vuoto per mantenere il Token attuale
         save_configuration: Salva configurazione
         update_configuration: Aggiorna configurazione
-        status_configured_prefix: "%{summary}. Visita la scheda"
-        accounts_tab: Conti
-        status_configured_suffix: per gestire i conti scoperti.
         not_configured: Non configurato.

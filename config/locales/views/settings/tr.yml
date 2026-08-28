@@ -377,7 +377,6 @@ tr:
         last_synced: Son senkronizasyon %{time} önce
         needs_attention: dikkat gerekiyor
       ibkr_panel:
-        accounts_tab: Hesaplar
         configuration:
           all_other_options: 'Diğer tüm yapılandırma seçenekleri: "No"'
           date_format: 'Tarih Formatı: yyyy-MM-dd'
@@ -428,8 +427,6 @@ tr:
             To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
             Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Seçenekler: Execution'
-        status_configured_prefix: "%{summary}. Şuraya gidin:"
-        status_configured_suffix: sekmesine giderek keşfedilen hesapları yönetin.
         steps:
           step_1: IBKR Client Portal'ınızda "Performance & Reports" > "Flex Queries"
             bölümüne gidin.
@@ -445,6 +442,13 @@ tr:
             kaydedin, ardından keşfedilen IBKR hesaplarını bağlamak için Hesaplar'a
             gidin.
         sync: Senkronize et
+        syncing: Senkronize ediliyor
+        remove: Kaldır
+        setup_accounts: Hesapları kur
+        add_connection: Bağlantı Ekle
+        new_connection_title: Yeni Bağlantı
+        connection_name_label: Bağlantı adı
+        connection_name_placeholder: Interactive Brokers
         token_label: Token
         token_placeholder_existing: Mevcut Token'ı korumak için boş bırakın
         token_placeholder_new: IBKR Flex Web Service Token'ınızı girin

@@ -588,6 +588,13 @@ uk:
           all_other_options: 'Усі інші параметри конфігурації: "Ні"'
         report_window_note: "Звіти IBKR Flex обмежені вікном запиту, яке ви налаштували в IBKR. Sure імпортує повні поточні активи плюс до останніх 365 днів активності з цього звіту."
         sync: Синхронізувати
+        syncing: Синхронізація
+        remove: Видалити
+        setup_accounts: Налаштувати облікові записи
+        add_connection: Додати з'єднання
+        new_connection_title: Нове з'єднання
+        connection_name_label: Назва з'єднання
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: Відключити Interactive Brokers?
         query_id_label: ID запиту
         query_id_placeholder_new: Введіть свій ID запиту IBKR Flex
@@ -597,7 +604,4 @@ uk:
         token_placeholder_existing: Залиште порожнім, щоб зберегти поточний токен
         save_configuration: Зберегти конфігурацію
         update_configuration: Оновити конфігурацію
-        status_configured_prefix: "%{summary}. Відвідайте"
-        accounts_tab: Рахунки
-        status_configured_suffix: вкладку для керування виявленими обліковими записами.
         not_configured: Не налаштовано.

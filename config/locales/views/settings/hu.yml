@@ -456,6 +456,13 @@ hu:
           all_other_options: 'Minden egyéb konfigurációs opció: „Nem"'
         report_window_note: "Az IBKR Flex-jelentések az IBKR-ben konfigurált lekérdezési ablakra korlátozódnak. A Sure a teljes aktuális pozíciókat, valamint a jelentésből legfeljebb 365 nap tevékenységet importál."
         sync: Szinkronizálás
+        syncing: Szinkronizálás
+        remove: Eltávolítás
+        setup_accounts: Számlák beállítása
+        add_connection: Kapcsolat hozzáadása
+        new_connection_title: Új kapcsolat
+        connection_name_label: Kapcsolat neve
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: Leválasztja az Interactive Brokers-t?
         query_id_label: Lekérdezés azonosítója
         query_id_placeholder_new: Add meg az IBKR Flex lekérdezés azonosítóját
@@ -465,7 +472,4 @@ hu:
         token_placeholder_existing: Hagyd üresen a meglévő token megtartásához
         save_configuration: Konfiguráció mentése
         update_configuration: Konfiguráció frissítése
-        status_configured_prefix: "%{summary}. Látogasd meg a"
-        accounts_tab: Számlák
-        status_configured_suffix: fület a felderített számlák kezeléséhez.
         not_configured: Nincs konfigurálva.

@@ -547,6 +547,13 @@ es:
           all_other_options: 'Todas las demás opciones de configuración: "No"'
         report_window_note: Los informes Flex de IBKR se limitan a la ventana de consulta que configuraste en IBKR. Sure importará todas las posiciones actuales más hasta los últimos 365 días de actividad de este informe.
         sync: Sincronizar
+        syncing: Sincronizando
+        remove: Eliminar
+        setup_accounts: Configurar cuentas
+        add_connection: Añadir conexión
+        new_connection_title: Nueva conexión
+        connection_name_label: Nombre de la conexión
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: ¿Desconectar Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Introduce tu Flex Query ID de IBKR
@@ -556,9 +563,6 @@ es:
         token_placeholder_existing: Deja en blanco para conservar el token actual
         save_configuration: Guardar configuración
         update_configuration: Actualizar configuración
-        status_configured_prefix: '%{summary}. Visita la pestaña'
-        accounts_tab: Cuentas
-        status_configured_suffix: para gestionar las cuentas detectadas.
         not_configured: Sin configurar.
       show:
         coinbase_title: Coinbase

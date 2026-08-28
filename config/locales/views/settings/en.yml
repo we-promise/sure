@@ -628,7 +628,10 @@ en:
           all_other_options: 'All other configuration options: "No"'
         report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
         sync: Sync
-        disconnect_confirm: Disconnect Interactive Brokers?
+        syncing: Syncing
+        disconnect_confirm: Disconnect this Interactive Brokers connection?
+        remove: Remove
+        setup_accounts: Set up accounts
         query_id_label: Query ID
         query_id_placeholder_new: Enter your IBKR Flex Query ID
         query_id_placeholder_existing: Leave blank to keep the current Query ID
@@ -637,10 +640,11 @@ en:
         token_placeholder_existing: Leave blank to keep the current Token
         save_configuration: Save Configuration
         update_configuration: Update Configuration
-        status_configured_prefix: "%{summary}. Visit the"
-        accounts_tab: Accounts
-        status_configured_suffix: tab to manage discovered accounts.
-        not_configured: Not configured.
+        add_connection: Add Connection
+        new_connection_title: New Connection
+        connection_name_label: Connection Name
+        connection_name_placeholder: Interactive Brokers
+        not_configured: Not configured
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).
