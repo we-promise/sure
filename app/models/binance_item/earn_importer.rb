@@ -11,7 +11,7 @@ class BinanceItem::EarnImporter
   end
 
   def import
-    @errors = []
+    @errors = {}
     flexible_raw = fetch_flexible
     locked_raw = fetch_locked
 
@@ -23,9 +23,14 @@ class BinanceItem::EarnImporter
         assets: [],
         raw: { "flexible" => nil, "locked" => nil },
         source: "earn",
-        error: @errors.uniq.join("; ").presence || "simple earn unavailable"
+        error: @errors.values.uniq.join("; ").presence || "simple earn unavailable"
       }
     end
+
+    # One side down does not fail the import, so the caller never records it —
+    # and /settings/debug would show nothing at all about an endpoint that has
+    # stopped answering, even though positions are being carried because of it.
+    record_partial_failure if @errors.any?
 
     assets = merge_earn_assets(
       parse_flexible(flexible_raw),
@@ -47,7 +52,7 @@ class BinanceItem::EarnImporter
     def fetch_flexible
       provider.get_simple_earn_flexible
     rescue => e
-      @errors << e.message
+      @errors["flexible"] = e.message
       Rails.logger.warn "BinanceItem::EarnImporter #{binance_item.id} - flexible failed: #{e.message}"
       nil
     end
@@ -55,7 +60,7 @@ class BinanceItem::EarnImporter
     def fetch_locked
       provider.get_simple_earn_locked
     rescue => e
-      @errors << e.message
+      @errors["locked"] = e.message
       Rails.logger.warn "BinanceItem::EarnImporter #{binance_item.id} - locked failed: #{e.message}"
       nil
     end
@@ -91,6 +96,22 @@ class BinanceItem::EarnImporter
       end
 
       merged.values
+    end
+
+    def record_partial_failure
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Binance Simple Earn read only part of its positions",
+        source: self.class.name,
+        provider_key: "binance",
+        family: binance_item.family,
+        metadata: {
+          binance_item_id: binance_item.id,
+          unavailable_endpoints: @errors.keys,
+          errors: @errors
+        }
+      )
     end
 
     def previous_earn_assets

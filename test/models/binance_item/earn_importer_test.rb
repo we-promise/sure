@@ -108,6 +108,32 @@ class BinanceItem::EarnImporterTest < ActiveSupport::TestCase
     assert_equal "4.0", assets.first[:total]
   end
 
+  # One side down does not fail the import, so the caller never records it. The
+  # endpoint that stopped answering would otherwise be invisible in
+  # /settings/debug, while positions are quietly carried because of it.
+  test "a side that went silent is recorded against the connection" do
+    @provider.stubs(:get_simple_earn_flexible).returns({ "rows" => [] })
+    @provider.stubs(:get_simple_earn_locked).raises(Provider::Binance::ApiError, "locked down")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      BinanceItem::EarnImporter.new(@item, provider: @provider).import
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "binance", entry.provider_key
+    assert_equal [ "locked" ], entry.metadata["unavailable_endpoints"]
+    assert_equal "locked down", entry.metadata.dig("errors", "locked")
+  end
+
+  test "both sides answering records nothing" do
+    @provider.stubs(:get_simple_earn_flexible).returns({ "rows" => [] })
+    @provider.stubs(:get_simple_earn_locked).returns({ "rows" => [] })
+
+    assert_no_difference "DebugLogEntry.count" do
+      BinanceItem::EarnImporter.new(@item, provider: @provider).import
+    end
+  end
+
   private
     def seed_previous_earn(symbol:, free:, locked:)
       @item.binance_accounts.create!(
