@@ -31,6 +31,7 @@ export default class extends Controller {
 
   #prepareDialog(data) {
     const variant = data.variant || "primary";
+    const confirmText = data.confirmText || this.defaultConfirmTextValue;
 
     this.confirmButtonTargets.forEach((button) => {
       if (button.dataset.variant === variant) {
@@ -39,7 +40,7 @@ export default class extends Controller {
         button.setAttribute("hidden", true);
       }
 
-      button.textContent = data.confirmText || this.defaultConfirmTextValue;
+      button.textContent = confirmText;
     });
 
     this.titleTarget.textContent = data.title || this.defaultTitleValue;

@@ -1,13 +1,16 @@
 <%# This dialog is used as an override to the browser's confirm API when submitting forms with data-turbo-confirm %>
 <%# See confirm_dialog_controller.js and _htmldoc.html.erb  %>
+<% default_title = t(".are_you_sure") %>
+<% default_body = t(".cannot_be_undone") %>
+<% default_confirm_text = t(".confirm") %>
 <%= render DS::Dialog.new(
       id: "confirm-dialog",
       auto_open: false,
       data: {
         controller: "confirm-dialog",
-        confirm_dialog_default_title_value: t(".are_you_sure"),
-        confirm_dialog_default_body_value: t(".cannot_be_undone"),
-        confirm_dialog_default_confirm_text_value: t(".confirm")
+        confirm_dialog_default_title_value: default_title,
+        confirm_dialog_default_body_value: default_body,
+        confirm_dialog_default_confirm_text_value: default_confirm_text
       },
       width: "sm",
       disable_frame: true
@@ -16,17 +19,17 @@
     <form method="dialog" class="space-y-4">
       <div class="space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <h3 class="font-medium text-primary" data-confirm-dialog-target="title"><%= t(".are_you_sure") %></h3>
+          <h3 class="font-medium text-primary" data-confirm-dialog-target="title"><%= default_title %></h3>
           <%= icon("x", as_button: true, type: "submit", value: "cancel") %>
         </div>
 
-        <p class="text-sm text-secondary" data-confirm-dialog-target="subtitle"><%= t(".cannot_be_undone") %></p>
+        <p class="text-sm text-secondary" data-confirm-dialog-target="subtitle"><%= default_body %></p>
       </div>
 
       <div>
         <% ["primary", "outline-destructive", "destructive"].each do |variant| %>
           <%= render DS::Button.new(
-          text: t(".confirm"),
+          text: default_confirm_text,
           variant: variant,
           type: :submit,
           autofocus: true,
