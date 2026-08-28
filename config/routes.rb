@@ -170,7 +170,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :ibkr_items, only: [ :create, :update, :destroy ] do
+  resources :ibkr_items, only: [ :new, :create, :update, :destroy ] do
     collection do
       get :select_accounts
       get :select_existing_account

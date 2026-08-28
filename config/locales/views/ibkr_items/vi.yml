@@ -90,3 +90,17 @@ vi:
         other: Đã tạo thành công %{count} tài khoản Interactive Brokers.
       none_selected: Không có tài khoản nào được chọn.
       none_created: Không có tài khoản nào được tạo.
+    new:
+      link_ibkr_title: Liên kết Interactive Brokers
+      syncing: Đang đồng bộ...
+      sync_error: Lỗi đồng bộ
+      not_configured_status: Chưa cấu hình
+      setup_accounts: Thiết lập tài khoản
+      not_configured: Interactive Brokers chưa được cấu hình
+      not_configured_description: Trước khi liên kết tài khoản Interactive Brokers, bạn cần cấu hình kết nối IBKR.
+      setup_steps_title: "Các bước thiết lập:"
+      setup_step_1_html: "Đi đến <strong>Cài đặt → Nhà cung cấp</strong>"
+      setup_step_2_html: "Tìm phần <strong>Interactive Brokers</strong>"
+      setup_step_3: Nhập thông tin xác thực Flex Query (Query ID và Token)
+      setup_step_4: Quay lại đây để liên kết tài khoản của bạn
+      go_to_provider_settings: Đi đến cài đặt nhà cung cấp

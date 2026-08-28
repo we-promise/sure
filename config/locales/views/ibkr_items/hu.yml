@@ -90,3 +90,17 @@ hu:
         other: Sikeresen létrehozva %{count} Interactive Brokers-számla.
       none_selected: Nem lett számla kijelölve.
       none_created: Nem lett számla létrehozva.
+    new:
+      link_ibkr_title: Interactive Brokers összekapcsolása
+      syncing: Szinkronizálás...
+      sync_error: Szinkronizálási hiba
+      not_configured_status: Nincs konfigurálva
+      setup_accounts: Számlák beállítása
+      not_configured: Az Interactive Brokers nincs konfigurálva
+      not_configured_description: Mielőtt összekapcsolná az Interactive Brokers számlákat, konfigurálnia kell az IBKR kapcsolatot.
+      setup_steps_title: "Beállítási lépések:"
+      setup_step_1_html: "Lépjen a <strong>Beállítások → Szolgáltatók</strong> részhez"
+      setup_step_2_html: "Keresse meg az <strong>Interactive Brokers</strong> részt"
+      setup_step_3: Adja meg Flex Query hitelesítő adatait (Query ID és Token)
+      setup_step_4: Térjen vissza ide a számlák összekapcsolásához
+      go_to_provider_settings: Ugrás a szolgáltató beállításaihoz

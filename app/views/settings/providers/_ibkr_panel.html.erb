@@ -94,7 +94,7 @@
   <%
     family = local_assigns[:family] || Current.family
     ibkr_items = family.ibkr_items.ordered
-    new_item = family.ibkr_items.new(name: "Interactive Brokers")
+    new_item = family.ibkr_items.new(name: t("ibkr_items.defaults.name"))
   %>
 
   <% if ibkr_items.any? %>
@@ -112,7 +112,9 @@
               <div class="w-2 h-2 bg-destructive rounded-full"></div>
               <div>
                 <p class="text-sm font-medium text-primary"><%= ibkr_item.name %></p>
-                <p class="text-xs text-destructive" title="<%= ibkr_item.sync_error %>"><%= ibkr_item.sync_error.truncate(50) %></p>
+                <%= render DS::Tooltip.new(text: ibkr_item.sync_error, icon: nil, as: :span, color: "destructive") do %>
+                  <span class="text-destructive"><%= ibkr_item.sync_error.truncate(50) %></span>
+                <% end %>
               </div>
             <% elsif ibkr_item.credentials_configured? %>
               <div class="w-2 h-2 bg-success rounded-full"></div>
@@ -131,13 +133,14 @@
 
           <div class="flex items-center gap-2">
             <% if ibkr_item.credentials_configured? %>
-              <%= button_to sync_ibkr_item_path(ibkr_item),
-                            method: :post,
-                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-surface-inset transition-colors",
-                            disabled: ibkr_item.syncing?,
-                            data: { turbo: false } do %>
-                <%= t(".sync") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t(".sync"),
+                href: sync_ibkr_item_path(ibkr_item),
+                variant: :outline,
+                size: :sm,
+                disabled: ibkr_item.syncing?,
+                data: { turbo_method: :post, turbo: false }
+              ) %>
             <% end %>
 
             <% if ibkr_item.unlinked_accounts_count > 0 %>
@@ -150,12 +153,13 @@
               ) %>
             <% end %>
 
-            <%= button_to ibkr_item_path(ibkr_item),
-                          method: :delete,
-                          class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors",
-                          data: { turbo_confirm: t(".disconnect_confirm") } do %>
-              <%= t(".remove") %>
-            <% end %>
+            <%= render DS::Button.new(
+              text: t(".remove"),
+              href: ibkr_item_path(ibkr_item),
+              variant: :outline_destructive,
+              size: :sm,
+              data: { turbo_method: :delete, turbo_confirm: t(".disconnect_confirm") }
+            ) %>
           </div>
         </div>
 
@@ -165,15 +169,13 @@
                              method: :patch,
                              data: { turbo: true },
                              class: "space-y-3 mt-3" do |form| %>
-          <%= form.text_field :query_id,
+          <%= form.password_field :query_id,
                               label: t(".query_id_label"),
-                              placeholder: t(".query_id_placeholder_existing"),
-                              type: :password %>
+                              placeholder: t(".query_id_placeholder_existing") %>
 
-          <%= form.text_field :token,
+          <%= form.password_field :token,
                               label: t(".token_label"),
-                              placeholder: t(".token_placeholder_existing"),
-                              type: :password %>
+                              placeholder: t(".token_placeholder_existing") %>
 
           <div class="flex flex-wrap justify-end gap-2">
             <%= form.submit t(".update_configuration") %>
@@ -204,18 +206,15 @@
                          class: "space-y-3" do |form| %>
       <%= form.text_field :name,
                           label: t(".connection_name_label"),
-                          placeholder: t(".connection_name_placeholder"),
-                          value: "" %>
+                          placeholder: t(".connection_name_placeholder") %>
 
-      <%= form.text_field :query_id,
+      <%= form.password_field :query_id,
                           label: t(".query_id_label"),
-                          placeholder: t(".query_id_placeholder_new"),
-                          type: :password %>
+                          placeholder: t(".query_id_placeholder_new") %>
 
-      <%= form.text_field :token,
+      <%= form.password_field :token,
                           label: t(".token_label"),
-                          placeholder: t(".token_placeholder_new"),
-                          type: :password %>
+                          placeholder: t(".token_placeholder_new") %>
 
       <div class="flex flex-wrap justify-end gap-2">
         <%= form.submit t(".save_configuration") %>

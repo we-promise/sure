@@ -95,6 +95,20 @@ ru:
       partial: "%{linked} связаны, %{unlinked} требуют настройки"
     update:
       success: Конфигурация Interactive Brokers успешно обновлена.
+    new:
+      link_ibkr_title: Подключить Interactive Brokers
+      syncing: Синхронизация...
+      sync_error: Ошибка синхронизации
+      not_configured_status: Не настроено
+      setup_accounts: Настроить счета
+      not_configured: Interactive Brokers не настроен
+      not_configured_description: Перед подключением счетов Interactive Brokers необходимо настроить соединение IBKR.
+      setup_steps_title: "Шаги настройки:"
+      setup_step_1_html: "Перейдите в <strong>Настройки → Провайдеры</strong>"
+      setup_step_2_html: "Найдите раздел <strong>Interactive Brokers</strong>"
+      setup_step_3: Введите ваши учётные данные Flex Query (Query ID и Token)
+      setup_step_4: Вернитесь сюда, чтобы подключить ваши счета
+      go_to_provider_settings: Перейти к настройкам провайдера
   providers:
     ibkr:
       connection_description: Подключите отчёт Flex Web Service от Interactive Brokers

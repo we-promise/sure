@@ -90,3 +90,17 @@ en:
         other: Successfully created %{count} Interactive Brokers accounts.
       none_selected: No accounts were selected.
       none_created: No accounts were created.
+    new:
+      link_ibkr_title: Link Interactive Brokers
+      syncing: Syncing...
+      sync_error: Sync error
+      not_configured_status: Not configured
+      setup_accounts: Setup Accounts
+      not_configured: Interactive Brokers not configured
+      not_configured_description: Before you can link Interactive Brokers accounts, you need to configure your IBKR connection.
+      setup_steps_title: "Setup Steps:"
+      setup_step_1_html: "Go to <strong>Settings → Providers</strong>"
+      setup_step_2_html: "Find the <strong>Interactive Brokers</strong> section"
+      setup_step_3: Enter your Flex Query credentials (Query ID and Token)
+      setup_step_4: Return here to link your accounts
+      go_to_provider_settings: Go to Provider Settings

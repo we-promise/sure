@@ -90,3 +90,17 @@ zh-TW:
         other: 成功建立 %{count} 個 Interactive Brokers 帳戶。
       none_selected: 未選擇任何帳戶。
       none_created: 未建立任何帳戶。
+    new:
+      link_ibkr_title: 連結 Interactive Brokers
+      syncing: 同步中...
+      sync_error: 同步錯誤
+      not_configured_status: 未設定
+      setup_accounts: 設定帳戶
+      not_configured: Interactive Brokers 未設定
+      not_configured_description: 在連結 Interactive Brokers 帳戶之前，您需要設定 IBKR 連線。
+      setup_steps_title: "設定步驟："
+      setup_step_1_html: "前往 <strong>設定 → 提供商</strong>"
+      setup_step_2_html: "找到 <strong>Interactive Brokers</strong> 部分"
+      setup_step_3: 輸入您的 Flex Query 憑證（Query ID 和 Token）
+      setup_step_4: 返回此處連結您的帳戶
+      go_to_provider_settings: 前往提供商設定

@@ -93,6 +93,20 @@ ca:
       partial: "%{linked} enllaçats, %{unlinked} necessiten configuració"
     update:
       success: La configuració d'Interactive Brokers s'ha actualitzat correctament.
+    new:
+      link_ibkr_title: Enllaçar Interactive Brokers
+      syncing: Sincronitzant...
+      sync_error: Error de sincronització
+      not_configured_status: No configurat
+      setup_accounts: Configurar comptes
+      not_configured: Interactive Brokers no està configurat
+      not_configured_description: Abans de poder enllaçar comptes d'Interactive Brokers, has de configurar la teva connexió IBKR.
+      setup_steps_title: "Passos de configuració:"
+      setup_step_1_html: "Vés a <strong>Configuració → Proveïdors</strong>"
+      setup_step_2_html: "Troba la secció <strong>Interactive Brokers</strong>"
+      setup_step_3: Introdueix les teves credencials de Flex Query (Query ID i Token)
+      setup_step_4: Torna aquí per enllaçar els teus comptes
+      go_to_provider_settings: Anar a configuració de proveïdors
   providers:
     ibkr:
       connection_description: Connecta un informe de Flex Web Service d'Interactive
