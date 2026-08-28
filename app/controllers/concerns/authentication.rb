@@ -27,12 +27,20 @@ module Authentication
       end
     end
 
+    # How often an active session's `updated_at` is bumped. Touching on every
+    # request would mean a write per page load; this keeps the inactivity
+    # clock reasonably accurate without that cost.
+    SESSION_TOUCH_INTERVAL = 1.hour
+
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
       return if cookie_value.blank?
 
       session_record = Session.includes(:user).find_by(id: cookie_value)
-      return session_record if session_record&.user&.active?
+      if session_record&.user&.active? && !session_record.expired?
+        session_record.touch if session_record.updated_at < SESSION_TOUCH_INTERVAL.ago
+        return session_record
+      end
 
       session_record&.destroy!
       cookies.delete(:session_token)

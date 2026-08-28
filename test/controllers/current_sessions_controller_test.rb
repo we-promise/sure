@@ -6,10 +6,17 @@ class CurrentSessionsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user
   end
 
-  test "can update the preferred tab for any namespace" do
-    put current_session_url, params: { current_session: { tab_key: "accounts_sidebar_tab", tab_value: "asset" } }
+  test "can update an allowed preferred tab" do
+    put current_session_url, params: { current_session: { tab_key: "account_sidebar_tab", tab_value: "asset" } }
     assert_response :success
     session = Session.order(updated_at: :desc).first
-    assert_equal "asset", session.get_preferred_tab("accounts_sidebar_tab")
+    assert_equal "asset", session.get_preferred_tab("account_sidebar_tab")
+  end
+
+  test "ignores tab keys outside the allowlist" do
+    put current_session_url, params: { current_session: { tab_key: "some_arbitrary_key", tab_value: "asset" } }
+    assert_response :success
+    session = Session.order(updated_at: :desc).first
+    assert_nil session.get_preferred_tab("some_arbitrary_key")
   end
 end
