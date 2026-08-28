@@ -802,6 +802,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.string "timezone"
     t.datetime "updated_at", null: false
     t.string "vector_store_id"
+    t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.index ["bills_feed_token"], name: "index_families_on_bills_feed_token", unique: true
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
