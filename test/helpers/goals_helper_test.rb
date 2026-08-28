@@ -61,6 +61,31 @@ class GoalsHelperTest < ActionView::TestCase
     assert_equal BigDecimal("750"), earmarked_by_other_goals(@account, pooled: pooled)
   end
 
+
+  # A whole-account link carries a nil allocation, so it sums to zero — the
+  # figure alone cannot tell "nobody else claims this account" from "another
+  # goal claims all of it". The second refuses a blank allocation at the door,
+  # so a form that reads them the same way promises something it cannot keep.
+  test "a whole-account claim is invisible to the sum but not to the predicate" do
+    build_goal("Whole", nil)
+
+    assert_equal BigDecimal("0"), earmarked_by_other_goals(@account, pooled: pooled)
+    assert whole_account_claimed_by_other_goals?(@account, pooled: pooled)
+  end
+
+  test "fixed earmarks alone leave the account unclaimed as a whole" do
+    build_goal("A", 2_000)
+
+    assert_not whole_account_claimed_by_other_goals?(@account, pooled: pooled)
+  end
+
+  # The goal being edited never counts against itself, on either reading.
+  test "the goal being edited is excluded from the whole-account check" do
+    mine = build_goal("Mine", nil)
+
+    assert_not whole_account_claimed_by_other_goals?(@account, pooled: pooled, current_goal: mine)
+  end
+
   private
     def build_goal(name, allocated)
       @family.goals.create!(name: name, target_amount: 10_000, currency: "USD") do |g|

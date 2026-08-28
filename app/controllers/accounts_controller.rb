@@ -63,6 +63,7 @@ class AccountsController < ApplicationController
   end
 
   def sync_all
+    family.plaid_items.syncable.each(&:request_transactions_refresh_later)
     family.sync_later
     redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
@@ -135,7 +136,13 @@ class AccountsController < ApplicationController
         # Each provider item will trigger an account sync when complete
         @account.account_providers.each do |account_provider|
           item = account_provider.adapter&.item
-          item&.sync_later if item && !item.syncing?
+          next unless item && !item.syncing?
+
+          if item.is_a?(PlaidItem)
+            item.sync_later_with_provider_refresh
+          else
+            item.sync_later
+          end
         end
       else
         # Manual accounts just need balance materialization
