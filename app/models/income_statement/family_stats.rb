@@ -1,4 +1,6 @@
 class IncomeStatement::FamilyStats
+  include IncomeStatement::ExpensePredicates
+
   def initialize(family, interval: "month", account_ids: nil)
     @family = family
     @interval = interval
@@ -28,35 +30,11 @@ class IncomeStatement::FamilyStats
     end
 
     def sql_params
-      params = {
+      {
         target_currency: @family.currency,
         interval: @interval,
         family_id: @family.id
-      }
-
-      ids = @family.tax_advantaged_account_ids
-      params[:tax_advantaged_account_ids] = ids if ids.present?
-
-      params
-    end
-
-    def budget_excluded_kinds_sql
-      @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
-    end
-
-    def pending_providers_sql
-      Transaction.pending_providers_sql("t")
-    end
-
-    def exclude_tax_advantaged_sql
-      ids = @family.tax_advantaged_account_ids
-      return "" if ids.empty?
-      "AND a.id NOT IN (:tax_advantaged_account_ids)"
-    end
-
-    def scope_to_account_ids_sql
-      return "" if @account_ids.nil?
-      ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
+      }.merge(tax_advantaged_params)
     end
 
     def query_sql
