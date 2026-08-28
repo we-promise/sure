@@ -67,4 +67,3 @@ ro:
         one: "Un cont Trade Republic selectat nu a putut fi configurat complet. Verifică jurnalul de depanare și încearcă din nou."
         few: "%{count} conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
         other: "%{count} de conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
-      none_selected: "Nu a fost selectat niciun cont."

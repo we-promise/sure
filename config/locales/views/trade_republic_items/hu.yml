@@ -65,4 +65,3 @@ hu:
       partial_failure:
         one: "Egy kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
         other: "%{count} kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
-      none_selected: "Nem választottál ki fiókot."

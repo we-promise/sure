@@ -91,4 +91,3 @@ tr:
       partial_failure:
         one: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
         other: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
-      none_selected: "Hesap seçilmedi."

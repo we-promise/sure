@@ -91,4 +91,3 @@ zh-CN:
       partial_failure:
         one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
         other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
-      none_selected: "未选择账户。"

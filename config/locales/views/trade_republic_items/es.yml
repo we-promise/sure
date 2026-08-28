@@ -91,4 +91,3 @@ es:
       partial_failure:
         one: "No se pudo completar una cuenta de Trade Republic seleccionada. Revisa el registro de depuración y vuelve a intentarlo."
         other: "No se pudieron completar %{count} cuentas de Trade Republic seleccionadas. Revisa el registro de depuración y vuelve a intentarlo."
-      none_selected: "No se ha seleccionado ninguna cuenta."

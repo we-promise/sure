@@ -65,4 +65,3 @@ it:
       partial_failure:
         one: "Non è stato possibile completare un conto Trade Republic selezionato. Controlla il registro di debug e riprova."
         other: "Non è stato possibile completare %{count} conti Trade Republic selezionati. Controlla il registro di debug e riprova."
-      none_selected: "Nessun conto selezionato."

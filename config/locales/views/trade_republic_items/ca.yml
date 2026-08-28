@@ -91,4 +91,3 @@ ca:
       partial_failure:
         one: "No s'ha pogut completar un compte de Trade Republic seleccionat. Revisa el registre de depuració i torna-ho a provar."
         other: "No s'han pogut completar %{count} comptes de Trade Republic seleccionats. Revisa el registre de depuració i torna-ho a provar."
-      none_selected: "No s'ha seleccionat cap compte."

@@ -65,4 +65,3 @@ pt-BR:
       partial_failure:
         one: "Não foi possível concluir uma conta selecionada da Trade Republic. Verifique o log de depuração e tente novamente."
         other: "Não foi possível concluir %{count} contas selecionadas da Trade Republic. Verifique o log de depuração e tente novamente."
-      none_selected: "Nenhuma conta foi selecionada."
