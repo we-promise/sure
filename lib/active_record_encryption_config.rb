@@ -60,12 +60,21 @@ module ActiveRecordEncryptionConfig
   # Left unchecked this silently disables encryption entirely (ready? / thus
   # every model's `encrypts` declaration goes false) instead of failing loudly
   # like the equivalent partial-ENV case does.
+  #
+  # Deliberately NOT the same shape as partial_env? (which requires at least
+  # one key present): once the credentials block itself exists at all - even
+  # with every individual key blank, e.g. `primary_key: ""` - that's already
+  # a configuration mistake worth failing loudly on, unlike ENV vars being
+  # entirely absent (a normal, unconfigured state that falls through to
+  # other paths). CodeRabbit caught this: an all-blank block used to slip
+  # through as present_count == 0, silently skipping both the raise and
+  # self-hosted auto-generation (config.application.rb's `.present?` check
+  # on the block already treats it as configured either way).
   def partial_credentials?(credentials = Rails.application.credentials)
     config = credentials.active_record_encryption
     return false unless config.present?
 
-    present_count = CONFIG_KEYS.count { |key| config.public_send(key).present? }
-    present_count.positive? && present_count < CONFIG_KEYS.count
+    !CONFIG_KEYS.all? { |key| config.public_send(key).present? }
   rescue NoMethodError
     false
   end
