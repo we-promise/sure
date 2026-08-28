@@ -7,13 +7,12 @@
         data: { controller: "auto-submit-form" },
         class: "flex flex-wrap items-center gap-2" do |form| %>
     <%= hidden_field_tag :view, "all" %>
-    <div class="grow max-w-xs">
-      <%= form.text_field :search,
-            value: params.dig(:q, :search),
-            placeholder: t(".search_placeholder"),
-            class: "form-field__input",
-            "data-auto-submit-form-target": "auto" %>
-    </div>
+    <%= render DS::SearchInput.new(
+          name: "q[search]",
+          value: params.dig(:q, :search),
+          placeholder: t(".search_placeholder"),
+          class: "grow max-w-xs",
+          data: { "auto-submit-form-target": "auto" }) %>
     <%= form.select :status,
           options_for_select(
             [ [ t(".any_status"), "" ] ] + BillsController::STATUS_FILTERS.map { |status| [ t(".status_filters.#{status}"), status ] },

@@ -34,7 +34,7 @@
     <% if reasons.any? %>
       <div class="flex flex-wrap gap-1.5">
         <% reasons.each do |reason| %>
-          <span class="text-xs text-secondary bg-container rounded-full px-2 py-0.5"><%= reason %></span>
+          <%= render DS::Pill.new(label: reason, tone: :neutral, marker: false) %>
         <% end %>
       </div>
     <% end %>

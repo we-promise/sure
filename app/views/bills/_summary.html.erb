@@ -48,27 +48,7 @@
   </p>
 
   <%# Subscription state is state, not depth, so it stays here. %>
-  <% trial = series.trial_ends_on.present? && series.trial_ends_on >= Date.current %>
-  <% renews = series.renews_on.present? && series.renews_on >= Date.current %>
-  <% if trial || renews || series.cancelled_on.present? %>
-    <div class="flex flex-wrap items-center gap-2">
-      <% if trial %>
-        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-warning/10 text-warning">
-          <%= t("bills.detail.trial_chip", date: l(series.trial_ends_on, format: :short)) %>
-        </span>
-      <% end %>
-      <% if renews %>
-        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-primary">
-          <%= t("bills.detail.renews_chip", date: l(series.renews_on, format: :short)) %>
-        </span>
-      <% end %>
-      <% if series.cancelled_on.present? %>
-        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-subdued">
-          <%= t("bills.detail.cancelled_chip", date: l(series.cancelled_on, format: :short)) %>
-        </span>
-      <% end %>
-    </div>
-  <% end %>
+  <%= render "bills/state_chips", series: series %>
 
   <%# What has actually paid this lately. %>
   <% if recent_allocations.any? %>
