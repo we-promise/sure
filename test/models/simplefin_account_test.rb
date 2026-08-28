@@ -44,6 +44,25 @@ class SimplefinAccountTest < ActiveSupport::TestCase
     assert_includes account.errors[:base], I18n.t("activerecord.errors.models.simplefin_account.no_balance")
   end
 
+  test "accepts only supported balance sign overrides" do
+    @simplefin_account.balance_sign_override = "credit"
+    assert @simplefin_account.valid?
+
+    @simplefin_account.balance_sign_override = "debt"
+    assert @simplefin_account.valid?
+
+    @simplefin_account.balance_sign_override = "unsupported"
+    refute @simplefin_account.valid?
+  end
+
+  test "database rejects an unsupported balance sign override" do
+    @simplefin_account.balance_sign_override = "unsupported"
+
+    assert_raises ActiveRecord::StatementInvalid do
+      @simplefin_account.save!(validate: false)
+    end
+  end
+
   test "can upsert snapshot data" do
     balance_date = "2024-01-15T10:30:00Z"
     snapshot = {
