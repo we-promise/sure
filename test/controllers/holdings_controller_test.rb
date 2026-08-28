@@ -2,6 +2,7 @@ require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
     @account = accounts(:investment)
     @holding = @account.holdings.first
@@ -24,6 +25,42 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     get holding_path(@holding)
 
     assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
+  end
+
+  test "show uses current market price for market value" do
+    security = Security.create!(
+      ticker: "WBIT.HM",
+      name: "WisdomTree Bitcoin",
+      offline: false
+    )
+    account = users(:family_admin).family.accounts.create!(
+      name: "Manual Brokerage",
+      balance: 13676.39,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    holding = account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 931,
+      price: 14.69,
+      amount: 13676.39,
+      currency: "EUR",
+      cost_basis: 14.69,
+      cost_basis_source: "calculated"
+    )
+    Security::Price.create!(
+      security: security,
+      date: Date.current,
+      price: 16.21,
+      currency: "EUR"
+    )
+
+    get holding_path(holding)
+
+    assert_response :success
+    assert_includes response.body, ApplicationController.helpers.format_money(Money.new(15091.51, "EUR"))
   end
 
   test "destroys holding and associated entries" do
