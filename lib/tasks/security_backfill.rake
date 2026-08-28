@@ -45,88 +45,45 @@ namespace :security do
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # User fields (MFA + PII)
-    # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
-    results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
+    # Note: otp_backup_codes excluded from User's fields below - it's a
+    # PostgreSQL array column incompatible with AR encryption.
+    #
+    # Field lists live in ActiveRecordEncryptionConfig::BACKFILL_MANIFEST
+    # (lib/active_record_encryption_config.rb), the single source of truth
+    # kept in sync with each model's `encrypts` declarations by
+    # test/lib/tasks/security_backfill_test.rb - update the manifest, not
+    # this loop, to add or change coverage.
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      results[key] = backfill_model(model_class_name.constantize, fields, batch_size, dry_run)
+    end
 
-    # Invitation tokens and email
-    results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
-
-    # InviteCode tokens
-    results[:invite_codes] = backfill_model(InviteCode, %i[token], batch_size, dry_run)
-
-    # Session user_agent (encryption) and ip_address_digest (hashing)
+    # Session user_agent (encryption) and ip_address_digest (hashing) - not
+    # part of BACKFILL_MANIFEST, see its comment for why.
     results[:sessions] = backfill_sessions(batch_size, dry_run)
 
-    # MobileDevice device_id
-    results[:mobile_devices] = backfill_model(MobileDevice, %i[device_id], batch_size, dry_run)
-
-    # Provider items
-    results[:plaid_items] = backfill_model(PlaidItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:akahu_items] = backfill_model(AkahuItem, %i[app_token user_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:binance_items] = backfill_model(BinanceItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
-    results[:brex_items] = backfill_model(BrexItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:coinbase_items] = backfill_model(CoinbaseItem, %i[api_key api_secret raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:coinstats_items] = backfill_model(CoinstatsItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:ibkr_items] = backfill_model(IbkrItem, %i[query_id token raw_payload], batch_size, dry_run)
-    results[:indexa_capital_items] = backfill_model(IndexaCapitalItem, %i[password api_token username document raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:kraken_items] = backfill_model(KrakenItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
-    results[:mercury_items] = backfill_model(MercuryItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:onchain_wallet_items] = backfill_model(OnchainWalletItem, %i[etherscan_api_key], batch_size, dry_run)
-    results[:questrade_items] = backfill_model(QuestradeItem, %i[refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:redbark_items] = backfill_model(RedbarkItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:snaptrade_items] = backfill_model(SnaptradeItem, %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:sophtron_items] = backfill_model(SophtronItem, %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload], batch_size, dry_run)
-    results[:trading212_items] = backfill_model(Trading212Item, %i[api_key api_secret raw_instruments_payload], batch_size, dry_run)
-    results[:up_items] = backfill_model(UpItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:wise_items] = backfill_model(WiseItem, %i[token raw_payload], batch_size, dry_run)
-
-    # Provider accounts
-    results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
-    results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload], batch_size, dry_run)
-    results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:akahu_accounts] = backfill_model(AkahuAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:binance_accounts] = backfill_model(BinanceAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:brex_accounts] = backfill_model(BrexAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:ibkr_accounts] = backfill_model(IbkrAccount, %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload], batch_size, dry_run)
-    results[:indexa_capital_accounts] = backfill_model(IndexaCapitalAccount, %i[raw_payload raw_holdings_payload raw_activities_payload], batch_size, dry_run)
-    results[:kraken_accounts] = backfill_model(KrakenAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:onchain_wallet_accounts] = backfill_model(OnchainWalletAccount, %i[raw_payload raw_movements_payload], batch_size, dry_run)
-    results[:questrade_accounts] = backfill_model(QuestradeAccount, %i[raw_payload raw_holdings_payload raw_activities_payload raw_balances_payload], batch_size, dry_run)
-    results[:redbark_accounts] = backfill_model(RedbarkAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:sophtron_accounts] = backfill_model(SophtronAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:trading212_accounts] = backfill_model(Trading212Account, %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload], batch_size, dry_run)
-    results[:up_accounts] = backfill_model(UpAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:wise_accounts] = backfill_model(WiseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-
-    # Sure's own first-party secrets
-    results[:api_keys] = backfill_model(ApiKey, %i[display_key], batch_size, dry_run)
-    results[:sso_providers] = backfill_model(SsoProvider, %i[client_secret], batch_size, dry_run)
-    results[:sso_identity_blocks] = backfill_model(SsoIdentityBlock, %i[identity_label], batch_size, dry_run)
+    all_succeeded = results.values.all? { |r| r[:failed_count].zero? }
 
     # Only mark the backfill complete on a clean, non-dry-run pass: a partial
     # failure leaves some rows still plaintext, and flipping the flag would
     # disable the legacy-plaintext fallback (config/initializers/
     # active_record_encryption.rb) for models that still need it, turning a
     # readable row into a boot-time ActiveRecord::Encryption::Errors::Decryption.
-    if !dry_run && results.values.all? { |r| r[:failed_count].zero? }
+    if !dry_run && all_succeeded
       Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
     end
 
     puts({
-      ok: true,
+      ok: all_succeeded,
       dry_run: dry_run,
       batch_size: batch_size,
       results: results
     }.to_json)
+
+    # An operator or deployment automation checking only the process exit
+    # code must be able to tell a partial failure apart from real success -
+    # ok: false in the JSON above isn't enough on its own since nothing
+    # forces anyone to parse it.
+    exit 1 unless all_succeeded
   end
 
   def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)

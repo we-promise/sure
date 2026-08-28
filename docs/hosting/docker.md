@@ -306,6 +306,12 @@ This is idempotent (safe to re-run) and defaults to a dry run — pass `dry_run=
 docker compose exec web bin/rails "security:backfill_encryption[100,0]"
 ```
 
+The `web` and `worker` processes only read the backfill-completion status once, at boot, so they keep running with the legacy-plaintext fallback enabled until you restart them — the task alone is not enough:
+
+```bash
+docker compose up --no-deps -d web worker
+```
+
 ## How to change which updates your app receives
 
 If you'd like to pin the app to a specific version or tag, all you need to do is edit the `compose.yml` file:

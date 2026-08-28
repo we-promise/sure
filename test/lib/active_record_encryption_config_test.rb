@@ -57,6 +57,40 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     credentials = OpenStruct.new(active_record_encryption: encryption_config)
 
     refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+  end
+
+  test "does not treat absent encryption credentials as partial" do
+    credentials = OpenStruct.new(active_record_encryption: nil)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "does not treat complete encryption credentials as partial" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "apply_keys! copies keys onto both the given config and the live ActiveRecord::Encryption engine" do
+    ActiveRecord::Encryption.config.expects(:primary_key=).with("pk")
+    ActiveRecord::Encryption.config.expects(:deterministic_key=).with("dk")
+    ActiveRecord::Encryption.config.expects(:key_derivation_salt=).with("salt")
+
+    rails_config = OpenStruct.new
+
+    ActiveRecordEncryptionConfig.apply_keys!(
+      primary_key: "pk", deterministic_key: "dk", key_derivation_salt: "salt", config: rails_config
+    )
+
+    assert_equal "pk", rails_config.primary_key
+    assert_equal "dk", rails_config.deterministic_key
+    assert_equal "salt", rails_config.key_derivation_salt
   end
 
   test "explicit configuration excludes runtime generated config" do
@@ -83,16 +117,19 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
   end
 
-  test "using_known_compromised_secret_key_base? is false when explicit keys are configured" do
-    # explicitly_configured? (env vars or credentials) takes precedence over
-    # SECRET_KEY_BASE in config/initializers/active_record_encryption.rb, so
-    # an install with its own explicit keys is unaffected even if it still
-    # has this SECRET_KEY_BASE value lying around (e.g. never rotated it
-    # because it isn't actually the key source).
+  test "using_known_compromised_secret_key_base? is true regardless of explicit AR encryption keys" do
+    # SECRET_KEY_BASE also signs/encrypts Rails session cookies and is the
+    # sole key source for Setting's own encryptor (app/models/setting.rb),
+    # independently of ActiveRecord Encryption. An install with its own
+    # explicit AR keys is unaffected on the AR-encryption front, but its
+    # sessions and Setting-stored values (AI/market-data provider API keys)
+    # remain just as crackable, so this must not be suppressed by
+    # explicitly_configured? - see config/initializers/encryption_warning.rb
+    # for how the two concerns are reported separately.
     known_default = ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first
     ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
 
-    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
   end
 
   test "backfill_completed? is false before any backfill has run" do
@@ -119,7 +156,24 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
   end
 
   test "backfill_completed? defaults to false when the settings table can't be read" do
-    Setting.stubs(:encryption_backfill_completed_version).raises(ActiveRecord::StatementInvalid, "relation \"settings\" does not exist")
+    # backfill_completed? deliberately bypasses the Setting model (see its
+    # comment for why) and queries the settings table directly via
+    # ActiveRecord::Base.connection.select_value - stubbing Setting itself,
+    # as a previous version of this test did, never exercises the real
+    # rescue path at all since that method is never called.
+    ActiveRecord::Base.connection.stubs(:select_value).raises(ActiveRecord::StatementInvalid, "relation \"settings\" does not exist")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? defaults to false when the stored value isn't a YAML-serialized Integer" do
+    ActiveRecord::Base.connection.stubs(:select_value).returns("not_an_integer")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? defaults to false when the stored value is malformed YAML" do
+    ActiveRecord::Base.connection.stubs(:select_value).raises(Psych::Exception, "malformed yaml")
 
     refute ActiveRecordEncryptionConfig.backfill_completed?
   end
