@@ -6,6 +6,17 @@ class Session < ApplicationRecord
     encrypts :user_agent
   end
 
+  # Sessions have no explicit expiry column; a session is considered expired
+  # once it hasn't been touched (see Authentication#find_session_by_cookie)
+  # for this long. Without this, the signed session cookie is `.permanent`
+  # (20 years) and a stolen cookie would grant indefinite access.
+  INACTIVITY_TIMEOUT = 30.days
+
+  # Only keys actually rendered by DS::Tabs (session_key:) may be persisted.
+  # Without this, PUT /current_session accepts any tab_key/tab_value pair
+  # from the client and writes it straight into this record's jsonb column.
+  ALLOWED_TAB_KEYS = %w[account_sidebar_tab].freeze
+
   belongs_to :user, counter_cache: :sessions_count
   belongs_to :active_impersonator_session,
     -> { where(status: :in_progress) },
@@ -15,6 +26,17 @@ class Session < ApplicationRecord
   before_create :capture_session_info
 
   after_create :update_user_last_login
+
+  class << self
+    def clean
+      count = 0
+      where("updated_at < ?", INACTIVITY_TIMEOUT.ago).find_each do |session|
+        session.destroy
+        count += 1
+      end
+      count
+    end
+  end
 
   def prev_transaction_page_params
     super || {}
@@ -26,9 +48,15 @@ class Session < ApplicationRecord
   end
 
   def set_preferred_tab(tab_key, tab_value)
+    return unless ALLOWED_TAB_KEYS.include?(tab_key)
+
     data["tab_preferences"] ||= {}
     data["tab_preferences"][tab_key] = tab_value
     save!
+  end
+
+  def expired?
+    updated_at < INACTIVITY_TIMEOUT.ago
   end
 
   private
