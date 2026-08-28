@@ -95,15 +95,21 @@ module ActiveRecordEncryptionConfig
     explicitly_configured? || runtime_configured?
   end
 
-  # Only meaningful for the auto-derived path: explicit env vars or Rails
-  # credentials (explicitly_configured?) take precedence over SECRET_KEY_BASE
-  # in config/initializers/active_record_encryption.rb, so an install that
-  # set its own encryption keys but happens to still have this SECRET_KEY_BASE
-  # value (e.g. never bothered rotating it because it isn't the key source)
-  # is not actually affected and should not be warned.
+  # Deliberately independent of explicitly_configured?/ready?: this is a fact
+  # about SECRET_KEY_BASE itself, not about whether ActiveRecord Encryption's
+  # own keys happen to be derived from it. Explicit AR keys only mean AR
+  # encryption isn't affected - SECRET_KEY_BASE also signs/encrypts Rails
+  # session cookies and is the sole key source for Setting's own encryptor
+  # (app/models/setting.rb's setting_encryptor), independently of AR
+  # encryption config. An earlier version of this method returned false
+  # whenever explicitly_configured? was true, which suppressed the warning
+  # in config/initializers/encryption_warning.rb entirely for installs with
+  # explicit AR keys - even though their sessions and Setting-encrypted
+  # provider/AI API keys remained trivially crackable by anyone who knows
+  # this public compromised value. Callers that only care about whether AR
+  # encryption itself is affected should check explicitly_configured?
+  # separately (see encryption_warning.rb's two message variants).
   def using_known_compromised_secret_key_base?(secret_key_base = Rails.application.secret_key_base)
-    return false if explicitly_configured?
-
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false
