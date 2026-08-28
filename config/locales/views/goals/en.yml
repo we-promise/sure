@@ -116,6 +116,10 @@ en:
         transaction_already_claimed: That outflow has already been attributed.
         transaction_not_found: That outflow is no longer available to attribute.
         no_linked_account: This goal has no funding account left.
+    consumed_outflows:
+      heading: What this goal paid for
+      summary: "%{total} used · %{listed} across %{count} transactions"
+      unaccounted: "· %{amount} recorded without a transaction"
     unattributed_outflows:
       heading: Money left these accounts
       body: If any of this was spent on %{goal}, say so and it stops counting against the target.

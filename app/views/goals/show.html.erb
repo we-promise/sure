@@ -178,6 +178,10 @@
     <% end %>
   <% end %>
 
+  <% if @consumed_entries.any? || @goal.any_consumption? %>
+    <%= render "consumed_outflows", goal: @goal, entries: @consumed_entries %>
+  <% end %>
+
   <% if @goal.notes.present? %>
     <%= render DS::Card.new do %>
       <h2 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h2>

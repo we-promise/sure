@@ -697,6 +697,34 @@ class Goal < ApplicationRecord
     end
   public
 
+  # The spends attributed to this goal, as entries. `consumed_amount` is a bare
+  # number with nothing behind it, so this is the only way a reader can check
+  # it, remember what it was for, or notice an attribution they did not mean.
+  #
+  # `@>` rather than `->>`: the GIN index on `transactions.extra` is jsonb_ops,
+  # which serves containment and not equality on an extracted text field.
+  #
+  # Scoped to the accounts the reader may see, for the reason the consumption
+  # dialog is: a family goal can be backed by an account private to another
+  # member, and its spending is that member's business.
+  def consumed_entries(account_ids)
+    return Entry.none if account_ids.blank?
+
+    Entry.joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+         .where(account_id: account_ids)
+         .where("transactions.extra @> ?", { goal: { consumed_goal_id: id } }.to_json)
+         .includes(:account)
+         .order(date: :desc, id: :desc)
+  end
+
+  # What the listed spends account for, and what they do not. A consumption
+  # entered as a bare amount leaves no trace at all, so the list is incomplete
+  # by construction — saying so is the difference between an honest gap and a
+  # figure that looks wrong.
+  def consumption_unaccounted_for(listed_total)
+    [ consumed_amount.to_d - listed_total.to_d, 0.to_d ].max
+  end
+
   def any_consumption?
     consumed_amount.to_d.positive?
   end

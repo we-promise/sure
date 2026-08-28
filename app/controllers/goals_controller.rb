@@ -35,6 +35,7 @@ class GoalsController < ApplicationController
   def show
     @open_pledges = @goal.open_pledges.reverse_chronological.to_a
     @unattributed_outflows = withdrawal_detector.unattributed_outflows.to_a
+    @consumed_entries = @goal.consumed_entries(eligible_consumption_accounts.map(&:id)).to_a
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ @goal.name, nil ]

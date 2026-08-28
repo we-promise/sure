@@ -202,6 +202,10 @@ fr:
         transaction_already_claimed: Cette sortie a déjà été attribuée.
         transaction_not_found: Cette sortie n'est plus disponible.
         no_linked_account: Cet objectif n'a plus de compte de financement.
+    consumed_outflows:
+      heading: Ce que cet objectif a payé
+      summary: "%{total} utilisés · %{listed} sur %{count} opérations"
+      unaccounted: "· %{amount} enregistrés sans opération"
     unattributed_outflows:
       heading: De l'argent est sorti de ces comptes
       body: Si une partie a servi à %{goal}, dites-le et elle cessera de compter comme un retard.
