@@ -46,9 +46,11 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
     end
 
     txns = gather_transactions(account)
-    return unknown("insufficient-txns") if txns.size < min_txns
-
     metrics = compute_metrics(txns)
+    if txns.size < min_txns && !strong_low_history_credit?(metrics)
+      return unknown("insufficient-txns")
+    end
+
     cls, reason = classify(metrics)
 
     if %i[credit debt].include?(cls)
@@ -136,7 +138,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
         next nil if d < start_date
         { amount: amt, date: d }
       end
-      raw_txns
+      raw_txns.size > txns.size ? raw_txns : txns
     rescue => e
       Rails.logger.debug("SimpleFIN transaction gathering failed for sfa=#{@sfa.id}: #{e.class} - #{e.message}")
       []
@@ -185,8 +187,7 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
       # Sanity check: if transaction net is way off from observed balance, data is likely incomplete
       # (e.g., pending charges not in history yet). Use 10% tolerance or minimum $5.
       # Note: SimpleFIN always sends negative for liabilities, so we compare magnitudes only.
-      tolerance = [ BigDecimal("5"), @observed.abs * BigDecimal("0.10") ].max
-      if (net.abs - @observed.abs).abs > tolerance
+      unless reconciles_with_observed?(net)
         return [ :unknown, "net-balance-mismatch" ]
       end
 
@@ -201,6 +202,19 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzer
       end
 
       [ :unknown, "ambiguous" ]
+    end
+
+    def strong_low_history_credit?(metrics)
+      return false if metrics[:payments_count] < min_payments
+      return false if metrics[:recent_payment] && metrics[:payments_count] <= 2
+
+      net = metrics[:charges_total] - metrics[:payments_total]
+      net.negative? && reconciles_with_observed?(net)
+    end
+
+    def reconciles_with_observed?(net)
+      tolerance = [ BigDecimal("5"), @observed.abs * BigDecimal("0.10") ].max
+      (net.abs - @observed.abs).abs <= tolerance
     end
 
     def convert_provider_amount(val)
