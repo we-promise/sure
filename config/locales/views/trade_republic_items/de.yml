@@ -105,3 +105,16 @@ de:
       pin_required: "Gib deine Trade-Republic-PIN ein, um die Verbindung erneut zu authentifizieren."
     destroy:
       unlink_failed: "Trade Republic konnte nicht vollständig getrennt werden. Die Verbindung bleibt für einen sicheren erneuten Versuch erhalten."
+    activities:
+      labels:
+        contribution: Einzahlung
+        withdrawal: Auszahlung
+        interest: Zinsen
+        dividend: Dividende
+        card_payment: Kartenzahlung
+        cash_withdrawal: Bargeldabhebung
+        card_fee: Kartengebühr
+        card_refund: Kartenrückerstattung
+        tax_refund: Steuerrückerstattung
+        buy: Kauf
+        sell: Verkauf

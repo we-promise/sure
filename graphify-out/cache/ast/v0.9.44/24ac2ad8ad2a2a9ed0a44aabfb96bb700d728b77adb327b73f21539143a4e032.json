@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_config_initializers_content_security_policy_rb", "label": "content_security_policy.rb", "file_type": "code", "source_file": "config/initializers/content_security_policy.rb", "source_location": "L1"}], "edges": [], "raw_calls": []}

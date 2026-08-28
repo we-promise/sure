@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_config_initializers_enable_yjit_rb", "label": "enable_yjit.rb", "file_type": "code", "source_file": "config/initializers/enable_yjit.rb", "source_location": "L1"}], "edges": [], "raw_calls": []}

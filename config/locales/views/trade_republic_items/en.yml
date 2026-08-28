@@ -159,3 +159,16 @@ en:
       partial_failure:
         one: One selected Trade Republic account could not be completed. Check the debug log and try again.
         other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+    activities:
+      labels:
+        contribution: Contribution
+        withdrawal: Withdrawal
+        interest: Interest
+        dividend: Dividend
+        card_payment: Card payment
+        cash_withdrawal: Cash withdrawal
+        card_fee: Card fee
+        card_refund: Card refund
+        tax_refund: Tax refund
+        buy: Buy
+        sell: Sell

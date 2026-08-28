@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_bin_rubocop", "label": "rubocop", "file_type": "code", "source_file": "bin/rubocop", "source_location": "L1"}], "edges": [], "raw_calls": []}

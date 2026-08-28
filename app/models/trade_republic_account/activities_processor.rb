@@ -10,6 +10,16 @@ class TradeRepublicAccount::ActivitiesProcessor
     @category_matcher = TradeRepublicAccount::CategoryMatcher.new(trade_republic_account.trade_republic_item.family)
   end
 
+  private
+
+    def i18n_scope
+      "trade_republic_items.activities.labels"
+    end
+
+    def t(key, **options)
+      I18n.t(key, scope: i18n_scope, **options)
+    end
+
   def process
     return { trades: 0, transactions: 0 } unless account.present?
 
@@ -67,13 +77,13 @@ class TradeRepublicAccount::ActivitiesProcessor
       when CATEGORY_ORDER_EXECUTION
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
-        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: "Contribution"), sign: -1) ? :transaction : nil
+        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("contribution")), sign: -1) ? :transaction : nil
       when CATEGORY_WITHDRAWAL
-        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: "Withdrawal"), sign: 1) ? :transaction : nil
+        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("withdrawal")), sign: 1) ? :transaction : nil
       when CATEGORY_INTEREST
-        import_cash_movement(event, detail, external_id, date, label: "Interest", sign: -1) ? :transaction : nil
+        import_cash_movement(event, detail, external_id, date, label: t("interest"), sign: -1) ? :transaction : nil
       when CATEGORY_DIVIDEND
-        import_cash_movement(event, detail, external_id, date, label: "Dividend", sign: -1) ? :transaction : nil
+        import_cash_movement(event, detail, external_id, date, label: t("dividend"), sign: -1) ? :transaction : nil
       else
         record_unknown_event(event)
         nil
@@ -125,7 +135,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         date:           date,
         name:           build_trade_name(security.ticker, signed_quantity),
         source:         "trade_republic",
-        activity_label: is_buy ? "Buy" : "Sell",
+        activity_label: is_buy ? t("buy") : t("sell"),
         extra: {
           trade_republic: {
             event_id: event[:id],
@@ -199,17 +209,17 @@ class TradeRepublicAccount::ActivitiesProcessor
     def cash_label(event, default:)
       case event[:eventType].to_s
       when "CARD_TRANSACTION", "card_successful_transaction"
-        "Card payment"
+        t("card_payment")
       when "CARD_ATM_WITHDRAWAL"
-        "Cash withdrawal"
+        t("cash_withdrawal")
       when "CARD_ORDER_FEE"
-        "Card fee"
+        t("card_fee")
       when "CARD_CASH_BACK"
-        "Card payment"
+        t("card_payment")
       when "card_refund", "CARD_REFUND"
-        "Card refund"
+        t("card_refund")
       when "TAX_REFUND", "SSP_TAX_CORRECTION", "ssp_tax_correction_invoice"
-        "Tax refund"
+        t("tax_refund")
       else
         default
       end
@@ -264,7 +274,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def build_trade_name(ticker, signed_quantity)
-      action = signed_quantity.negative? ? "Sell" : "Buy"
+      action = signed_quantity.negative? ? t("sell") : t("buy")
       "#{action} #{signed_quantity.abs} shares of #{ticker}"
     end
 end

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_bin_brakeman", "label": "brakeman", "file_type": "code", "source_file": "bin/brakeman", "source_location": "L1"}], "edges": [], "raw_calls": []}
