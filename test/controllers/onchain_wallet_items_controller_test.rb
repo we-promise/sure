@@ -21,6 +21,9 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match I18n.t("onchain_wallet_items.new_wallet.bitcoin_single_address_note"), response.body
+    # "Can Sure spend my coins?" is asked while pasting an address, not while
+    # reading a settings page for the third time.
+    assert_match I18n.t("settings.providers.onchain_wallet_panel.keyless_title"), response.body
     assert_match I18n.t("onchain_wallet_items.new_wallet.read_only_note"), response.body
   end
 
@@ -28,7 +31,6 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     get connect_form_settings_providers_path(provider_key: "onchain_wallet")
 
     assert_response :success
-    assert_match I18n.t("settings.providers.onchain_wallet_panel.keyless_title"), response.body
     assert_select "a[href=?]", new_wallet_onchain_wallet_items_path
   end
 
@@ -240,7 +242,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "link_wallet refuses an address the family already tracks" do
     item = create_onchain_wallet_item(family: @family)
-    create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
     stub_wallet_with_token
 
     assert_no_difference "OnchainWalletAccount.count" do
@@ -257,7 +259,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "preview_wallet refuses an address the family already tracks" do
     item = create_onchain_wallet_item(family: @family)
-    create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: item))
 
     post preview_wallet_onchain_wallet_items_url, params: {
       address: OnchainTestHelper::FAKE_ADDRESS,
@@ -428,7 +430,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
-  test "manage lists every tracked address and offers all four actions" do
+  test "manage lists every tracked address and offers its actions" do
     item = create_onchain_wallet_item(family: @family)
     native = create_onchain_wallet_account(item: item)
     token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
@@ -438,10 +440,12 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match OnchainTestHelper::FAKE_ADDRESS, response.body
     assert_match I18n.t("onchain_wallet_items.manage.review_tokens"), response.body
-    assert_match I18n.t("onchain_wallet_items.manage.change_address"), response.body
     assert_match I18n.t("onchain_wallet_items.manage.disconnect_wallet"), response.body
     # Per-asset action, for each asset, not just one for the wallet.
     assert_select "form[action=?]", disconnect_asset_onchain_wallet_item_path(item), count: 2
+    # The per-address actions live in a menu, as the accounts page renders its
+    # own repeated row actions.
+    assert_select "form[action=?]", disconnect_wallet_onchain_wallet_item_path(item), count: 1
     assert_match native.symbol, response.body
     assert_match token_asset.symbol, response.body
   end
@@ -480,8 +484,14 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "unticking one asset removes only it" do
     item = create_onchain_wallet_item(family: @family)
+    # Linked, because that is what a tracked asset actually is. Left unlinked
+    # these are orphan rows, and revising now rebuilds those into real ones —
+    # so the surviving row would be a new one and the assertion below would be
+    # measuring the repair rather than the removal.
     native = create_onchain_wallet_account(item: item)
+    link_onchain_wallet_account!(native)
     token_asset = create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+    link_onchain_wallet_account!(token_asset)
     stub_wallet_with_token
 
     post update_tokens_onchain_wallet_item_url(item), params: {
@@ -510,57 +520,6 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_not OnchainWalletAccount.exists?(gone.id)
-  end
-
-  test "change_address keeps the rows, their accounts and their history" do
-    item = create_onchain_wallet_item(family: @family)
-    onchain_account = create_onchain_wallet_account(item: item)
-    account = link_onchain_wallet_account!(onchain_account)
-    balance = account.balances.create!(date: Date.current, balance: 100, cash_balance: 0, currency: account.currency)
-
-    patch change_address_onchain_wallet_item_url(item), params: {
-      chain: OnchainTestHelper::FAKE_CHAIN,
-      address: OnchainTestHelper::FAKE_ADDRESS,
-      new_address: OnchainTestHelper::FAKE_ADDRESS_ALT
-    }
-
-    assert_redirected_to manage_onchain_wallet_item_path(item)
-    onchain_account.reload
-    assert_equal OnchainTestHelper::FAKE_ADDRESS_ALT, onchain_account.wallet_address
-    assert_equal account, onchain_account.account
-    assert Account.exists?(account.id)
-    assert account.balances.exists?(balance.id)
-    assert_nil onchain_account.content_hash
-  end
-
-  test "change_address refuses an address that is invalid for the chain" do
-    item = create_onchain_wallet_item(family: @family)
-    onchain_account = create_onchain_wallet_account(item: item)
-
-    patch change_address_onchain_wallet_item_url(item), params: {
-      chain: OnchainTestHelper::FAKE_CHAIN,
-      address: OnchainTestHelper::FAKE_ADDRESS,
-      new_address: "not-an-address"
-    }
-
-    assert_response :unprocessable_entity
-    assert_match I18n.t("onchain_wallet_items.change_address.errors.invalid_address"), response.body
-    assert_equal OnchainTestHelper::FAKE_ADDRESS, onchain_account.reload.wallet_address
-  end
-
-  test "change_address refuses an address already tracked elsewhere" do
-    item = create_onchain_wallet_item(family: @family)
-    create_onchain_wallet_account(item: item)
-    create_onchain_wallet_account(item: item, address: OnchainTestHelper::FAKE_ADDRESS_ALT)
-
-    patch change_address_onchain_wallet_item_url(item), params: {
-      chain: OnchainTestHelper::FAKE_CHAIN,
-      address: OnchainTestHelper::FAKE_ADDRESS,
-      new_address: OnchainTestHelper::FAKE_ADDRESS_ALT
-    }
-
-    assert_response :unprocessable_entity
-    assert_match I18n.t("onchain_wallet_items.change_address.errors.already_linked"), response.body
   end
 
   test "disconnect_wallet stops tracking every asset at that address only" do

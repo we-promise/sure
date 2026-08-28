@@ -17,6 +17,7 @@ en:
             base:
               cannot_deactivate_admin_with_other_users: Admin cannot delete account
                 while other users are present. Please delete all members first.
+              provider_item_has_other_accounts: User owns accounts linked to a provider connection that also has accounts owned by another user. Move or unlink those accounts before changing family/group membership.
               cannot_remove_last_super_admin: Cannot remove the last active super
                 admin. Promote another user to super admin first.
             profile_image:

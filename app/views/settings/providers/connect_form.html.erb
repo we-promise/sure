@@ -4,6 +4,16 @@
     <%= render "settings/providers/drawer_header", provider_key: provider_key, title: @panel_title %>
   <% end %>
   <% dialog.with_body do %>
+    <% if @provider_setup_encryption_warning %>
+      <div class="mb-4">
+        <%= render DS::Alert.new(
+              variant: :warning,
+              title: t("settings.providers.provider_setup_encryption_warning.title"),
+              message: t("settings.providers.provider_setup_encryption_warning.message")
+            ) %>
+      </div>
+    <% end %>
+
     <% if @panel_partial %>
       <turbo-frame id="<%= @panel_key %>-connect-form" target="_top">
         <%= render "settings/providers/#{@panel_partial}" %>
@@ -15,7 +25,7 @@
     <% end %>
 
     <p class="text-xs text-secondary mt-6 pt-3 border-t border-tertiary">
-      <%= t("settings.providers.drawer_trust_statement") %>
+      <%= t(@provider_setup_encryption_warning ? "settings.providers.drawer_trust_statement_encryption_unconfigured" : "settings.providers.drawer_trust_statement") %>
     </p>
   <% end %>
 <% end %>
