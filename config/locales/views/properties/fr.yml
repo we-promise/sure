@@ -75,7 +75,7 @@ fr:
         long: Propriété commerciale
         short: Commercial
       plot:
-        long: Terrain / Terrain
+        long: Terrain / Parcelle
         short: Terrain
       rented:
         long: Propriété louée
