@@ -5,7 +5,13 @@ class Transfer::Creator
   # than a genuine double-submit. See #find_existing_transfer.
   StaleIdempotencyKeyError = Class.new(StandardError)
 
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, category_id: nil, idempotency_key: nil)
+  # Sentinel default so we can tell "caller didn't pass category_id" (keep the
+  # investment-contribution fallback) apart from "caller explicitly passed a
+  # blank category_id" (user picked Uncategorized; honor it).
+  CATEGORY_ID_NOT_PROVIDED = Object.new
+  private_constant :CATEGORY_ID_NOT_PROVIDED
+
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, category_id: CATEGORY_ID_NOT_PROVIDED, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
@@ -14,7 +20,8 @@ class Transfer::Creator
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
     @tag_ids = Array(tag_ids).reject(&:blank?)
-    @category_id = family.categories.find_by(id: category_id.presence)&.id
+    @category_provided = category_id != CATEGORY_ID_NOT_PROVIDED
+    @category_id = @category_provided ? family.categories.find_by(id: category_id.presence)&.id : nil
     @idempotency_key = idempotency_key
 
     if exchange_rate.present?
@@ -152,6 +159,10 @@ class Transfer::Creator
       { idempotency_key: key }
     end
 
+    def category_provided?
+      @category_provided
+    end
+
     def apply_tags!(transfer)
       resolved_ids = family.tags.where(id: tag_ids).pluck(:id)
       return if resolved_ids.empty?
@@ -180,7 +191,7 @@ class Transfer::Creator
     end
 
     def outflow_category_id(kind)
-      return category_id if category_id.present?
+      return category_id if category_provided?
 
       investment_contributions_category.id if kind == "investment_contribution"
     end
