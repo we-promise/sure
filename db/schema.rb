@@ -2027,6 +2027,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.string "account_type"
     t.decimal "available_balance", precision: 19, scale: 4
     t.datetime "balance_date"
+    t.string "balance_sign_override"
     t.datetime "created_at", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
@@ -2041,6 +2042,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id", "account_id"], name: "idx_unique_sfa_per_item_and_upstream", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
+    t.check_constraint "balance_sign_override::text = ANY (ARRAY['credit'::character varying, 'debt'::character varying]::text[])", name: "chk_simplefin_accounts_balance_sign_override"
   end
 
   create_table "simplefin_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
