@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.4] - 2026-08-31
 
 ### Changed
+- Add here
+
+### Added
+- Add here
+
+## [0.7.4] - 2026-08-31
+
+### Changed
 - Updated the Pipelock CI action and deployment image from 2.8.0 to 3.4.0. The image uses the release's multi-architecture manifest digest.
 - CI now runs Pipelock's built-in test vectors and validates the Compose config plus the Helm-rendered `pipelock.yaml` with the pinned binary.
 - Corrected the HTTPS coverage docs. The default examples apply tunnel-level controls but can't inspect encrypted request or response bodies without TLS interception.

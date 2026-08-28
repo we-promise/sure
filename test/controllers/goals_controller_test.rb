@@ -783,6 +783,57 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/already used|déjà utilisés/, label)
   end
 
+
+  # A reserve holds a balance rather than reaching an amount. "Target balance"
+  # is what this kind of app calls that, and it keeps the noun the rest of the
+  # page already uses 55 times — rather than inventing a "level" or a "floor"
+  # that nothing else in the domain says.
+  test "the form carries both the amount and the balance wording" do
+    unclaimed_account("Vocab Pot")
+
+    get new_goal_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("goals.form.fields.target_amount")
+    assert_includes response.body, I18n.t("goals.form.fields.target_balance")
+  end
+
+  # In months mode the balance is worked out, not typed. A read-only input
+  # still reads as something to fill in, beside the months that are the real
+  # question, so the figure is presented as a result instead.
+  test "the form carries the derived balance as a result, not a field" do
+    unclaimed_account("Derived Pot")
+
+    get new_goal_url
+
+    assert_response :success
+    assert_select "[data-goal-kind-target=amountDerived]", 1
+    assert_includes response.body, I18n.t("goals.form.fields.target_balance_pending")
+  end
+
+  test "editing a months reserve shows the balance it currently holds" do
+    account = unclaimed_account("Existing Pot")
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+    goal = @user.family.goals.create!(
+      name: "Precaution", target_amount: 3_000, currency: "USD", kind: "maintained",
+      target_mode: "months_of_expenses", target_months: 6
+    ) { |g| g.goal_accounts.build(account: account, allocated_amount: 3_000) }
+
+    get edit_goal_url(goal)
+
+    assert_response :success
+    assert_includes response.body, goal.target_amount_money.format(precision: 0)
+  end
+
+  # One vocabulary, not three. "level" and "floor" said the same thing as
+  # "target balance" in different words, on the same page.
+  test "the goals copy settles on one word for a reserve's balance" do
+    %i[en fr].each do |locale|
+      copy = YAML.load_file(Rails.root.join("config/locales/views/goals/#{locale}.yml")).to_s
+      assert_no_match(/\bfloor\b|\bniveau\b/i, copy, "#{locale} still mixes vocabularies")
+    end
+  end
+
   private
 
     def spent_goal_for_display
