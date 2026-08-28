@@ -25,6 +25,17 @@ class Trade < ApplicationRecord
   # excluded, and an ambiguous one is left where the user can see it.
   INTERNAL_MOVEMENT_LABELS = %w[Transfer Sweep\ In Sweep\ Out].freeze
 
+  # Moving an asset between places you own is not an acquisition, so it must not
+  # set a cost basis. Named here because Holding reads it.
+  #
+  # A single label rather than INTERNAL_MOVEMENT_LABELS above, though both rest
+  # on ownership being preserved: this one is the label the onchain processor
+  # writes, and the only one seen setting a basis it should not. Widening the
+  # basis guard to the sweep labels would change which holdings lose their
+  # basis, and nothing has shown a sweep landing on a security — so it stays
+  # narrow until something does.
+  TRANSFER_LABEL = "Transfer".freeze
+
   validates :qty, presence: true
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
