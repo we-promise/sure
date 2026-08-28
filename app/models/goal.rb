@@ -577,6 +577,33 @@ class Goal < ApplicationRecord
     @remaining_amount_money ||= Money.new(remaining_amount, currency)
   end
 
+  # What progress actually counts: money still held for the goal, plus money
+  # already taken out of it and spent on the thing it was for.
+  #
+  # `progress_percent` and `remaining_amount` have always been computed from
+  # both. Only the headline figure showed the first half, so a goal that had
+  # spent part of its savings sat at a 100% ring beside "3,000 of 5,000" — the
+  # ring and the numbers disagreeing on the same card, with nothing to explain
+  # which one to believe.
+  def progress_amount
+    current_balance.to_d + consumed_amount.to_d
+  end
+
+  def progress_amount_money
+    @progress_amount_money ||= Money.new(progress_amount, currency)
+  end
+
+  def consumed_amount_money
+    @consumed_amount_money ||= Money.new(consumed_amount.to_d, currency)
+  end
+
+  # Only a goal that has actually recorded a spend says anything about it: the
+  # overwhelming majority never do, and a permanent "0 used" line would be
+  # noise on every card.
+  def any_consumption?
+    consumed_amount.to_d.positive?
+  end
+
   def progress_percent
     return @progress_percent if defined?(@progress_percent)
 
@@ -1158,6 +1185,7 @@ class Goal < ApplicationRecord
         @current_balance @current_balance_money
         @remaining_amount @remaining_amount_money
         @progress_percent @monthly_target_amount
+        @progress_amount_money @consumed_amount_money
         @pace @pace_money @status @pooled_allocations
       ].each do |ivar|
         remove_instance_variable(ivar) if instance_variable_defined?(ivar)

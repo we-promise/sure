@@ -133,7 +133,15 @@
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
     <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
-      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
+      <%# The figure the ring is drawn from — held plus already spent on the
+          goal — so the two agree. What is still sitting in each account is in
+          the funding breakdown below, which is where that question belongs. %>
+      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.progress_amount_money.format(precision: 0) %></p>
+      <% if @goal.any_consumption? %>
+        <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive">
+          <%= t(".ring.including_used", amount: @goal.consumed_amount_money.format(precision: 0)) %>
+        </p>
+      <% end %>
       <% if @goal.contributions_basis? %>
         <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.market_value", amount: @goal.market_value_money.format(precision: 0)) %></p>
       <% end %>

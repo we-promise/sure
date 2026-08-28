@@ -169,12 +169,14 @@ en:
         target_by: "Target %{amount} by %{date}"
         target_by_past: "Target %{amount} · was due %{date}"
       ring:
+        including_used: "Including %{amount} already used"
         saved: Saved
         of: "of %{target}"
         to_go: "%{amount} to go"
         of_target: of target
         market_value: "Market value %{amount}"
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
+        aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:
         heading: Projection
         legend_saved: Saved
@@ -259,6 +261,7 @@ en:
       no_depository_accounts: You need at least one depository account (checking, savings, HSA, CD, money-market) before creating a goal.
       add_account: Add an account
     goal_card:
+      including_used: "Including %{amount} already used"
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
       left: left

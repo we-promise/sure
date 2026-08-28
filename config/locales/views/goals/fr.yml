@@ -76,6 +76,7 @@ fr:
       suggested_no_date: Définissez une date cible pour projeter la fin.
       suggested_with_date: Épargnez {monthly}/mois sur {accounts} pour l'atteindre à temps.
     goal_card:
+      including_used: "Dont %{amount} déjà utilisés"
       accounts:
         one: 1 compte
         other: "%{count} comptes"
@@ -302,7 +303,9 @@ fr:
       reopen: Réouvrir l'objectif
       resume: Reprendre
       ring:
+        including_used: "Dont %{amount} déjà utilisés"
         aria_label: Objectif complété à %{percent}%. %{amount} sur %{target} épargnés.
+        aria_label_with_used: "Objectif à %{percent}%. %{amount} sur %{target}, dont %{used} déjà utilisés."
         market_value: Valeur de marché %{amount}
         of: sur %{target}
         of_target: de l'objectif
