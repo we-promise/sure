@@ -169,10 +169,21 @@ end %>
                   response served on click would never clear the badge. %>
               <%= link_to insights_path,
                     class: "relative inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring",
-                    title: t("layouts.application.insights"),
                     aria: { label: t("layouts.application.insights") },
                     data: { turbo_prefetch: false } do %>
-                <%= icon("lightbulb", size: "sm") %>
+                <%# `as: :span` + `html_class:` so the tooltip trigger fills this
+                    already-focusable link (full hover target). DS::Tooltip
+                    binds keyboard focus on the closest <a>/<summary> ancestor.
+                    Unread count stays a hand-rolled inverse chip — DS::Pill's
+                    filled neutral tone is not theme-swapped and disappears on
+                    dark nav surfaces. %>
+                <%= render DS::Tooltip.new(
+                      text: t("layouts.application.insights"),
+                      icon: "lightbulb",
+                      size: "sm",
+                      as: :span,
+                      html_class: "size-full items-center justify-center"
+                    ) %>
                 <% if unread_insights_count.positive? %>
                   <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-inverse text-inverse text-[10px] font-medium flex items-center justify-center pointer-events-none"><%= unread_insights_count > 9 ? "9+" : unread_insights_count %></span>
                 <% end %>
@@ -211,7 +222,7 @@ end %>
         inert: !Current.user.show_ai_sidebar?,
         data: { app_layout_target: "rightSidebar", sidebar_resize_target: "rightSidebar" } do %>
       <%= render "layouts/shared/sidebar_resize_handle", side: "right" %>
-      <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", turbo_permanent: true } do %>
+      <%= tag.div id: "chat-container", class: "relative h-full px-4 overflow-y-auto", data: { controller: "chat hotkey", chat_response_timeout_value: Chat.response_timeout_ms, turbo_permanent: true } do %>
         <div class="flex flex-col h-full justify-between shrink-0">
           <%= turbo_frame_tag chat_frame, src: chat_view_path(@chat), loading: "lazy", class: "h-full" do %>
             <div class="flex justify-center items-center h-full">

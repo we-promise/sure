@@ -463,6 +463,30 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid refresh token", response_data["error"]
   end
 
+  test "should not refresh a token after its user is deactivated" do
+    user = users(:family_admin)
+    device = user.mobile_devices.create!(@device_info)
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: @shared_app,
+      resource_owner_id: user.id,
+      mobile_device_id: device.id,
+      expires_in: 30.days.to_i,
+      scopes: "read_write",
+      use_refresh_token: true
+    )
+    user.update_column(:active, false)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: {
+        refresh_token: initial_token.refresh_token,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
+  end
+
   test "should not refresh without refresh token" do
     post "/api/v1/auth/refresh", params: {
       device: @device_info
@@ -575,6 +599,31 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should NOT be consumed on failed password
     assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a failed attempt"
+  end
+
+  test "should reject SSO link for an inactive user" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-inactive",
+      email: "inactive@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference "OidcIdentity.count" do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?
   end
 
   test "should reject SSO link when user has MFA enabled" do
@@ -703,6 +752,66 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should be consumed
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "sso_create_account makes new family creator admin even when provider default role is member" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", settings: { default_role: "member" } }
+    ])
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-member-default",
+      email: "member-default@example.com",
+      first_name: "Member",
+      last_name: "Default",
+      name: "Member Default",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference([ "User.count", "OidcIdentity.count", "Family.count" ], 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Member",
+        last_name: "Default"
+      }
+    end
+
+    assert_response :success
+    new_user = User.find_by!(email: "member-default@example.com")
+    assert_equal "admin", new_user.role
+    assert new_user.admin?
+  end
+
+  test "sso_create_account preserves super admin provider default for new family creator" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "google_oauth2", settings: { default_role: "super_admin" } }
+    ])
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-super-admin-default",
+      email: "super-admin-default@example.com",
+      first_name: "Super",
+      last_name: "Default",
+      name: "Super Default",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference([ "User.count", "OidcIdentity.count", "Family.count" ], 1) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Super",
+        last_name: "Default"
+      }
+    end
+
+    assert_response :success
+    new_user = User.find_by!(email: "super-admin-default@example.com")
+    assert_equal "super_admin", new_user.role
+    assert new_user.admin?
   end
 
   test "should reject SSO create account when not allowed" do
@@ -898,6 +1007,30 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal family.id, invitee.family_id
     assert_equal family.accounts.pluck(:id).sort,
       AccountShare.where(user: invitee).pluck(:account_id).sort
+  end
+
+  test "mobile SSO cannot use a cached linking code after its identity is removed" do
+    identity = oidc_identities(:bob_google)
+    SsoIdentityBlock.block_all!(OidcIdentity.where(id: identity.id), identity_label: identity.user.email)
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: identity.provider,
+      uid: identity.uid,
+      email: "removed-mobile-sso@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Removed",
+        last_name: "User"
+      }
+    end
+
+    assert_response :forbidden
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
   test "mobile SSO onboarding via invitation shares nothing when family sharing is private" do

@@ -84,7 +84,7 @@ fr:
         completion: achèvement
         cost_by_model: Coût par modèle
         cost_by_operation: Coût par opération
-        cost_estimates_description: "Les coûts sont estimés d’après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
+        cost_estimates_description: "Les coûts sont estimés d'après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
         cost_estimates_title: À propos des estimations de coûts
         end_date: Date de fin
         failed: Échec
@@ -139,6 +139,16 @@ fr:
         additional_currencies_label: Devises supplémentaires
         base_currency_badge: Devise de base
         base_currency_label: Devise de base
+        budget_sharing_title: Partage de budget
+        budget_sharing_subtitle: Autorisez d'autres membres à consulter ou modifier votre budget personnel
+        budget_sharing_no_members: Aucun autre membre de votre %{moniker} avec qui partager
+        budget_sharing_permission_label: "Accès de %{name}"
+        budget_sharing_permissions:
+          none: Aucun accès
+          read_only: Lecture seule
+          read_write: Peut modifier
+        budget_subtitle: Configurez le fonctionnement de vos budgets
+        budget_title: Budget
         country: Pays
         currencies_more: "+%{count} de plus"
         currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
@@ -160,6 +170,10 @@ fr:
         no_additional_currencies: Aucune sélectionnée
         no_matching_currencies: Aucune devise trouvée
         page_title: Préférences
+        personal_budgets: Budgets personnels
+        personal_budgets_hint: Activer les budgets individuels pour chaque membre de la famille.
+        household_budget_enabled: Budget commun
+        household_budget_enabled_hint: Garder un budget commun au foyer en plus des budgets personnels. Désactivez pour n'utiliser que les budgets personnels.
         preview:
           description: Activez les fonctionnalités en cours étiquetées Aperçu ou Canary.
           title: Activer les fonctionnalités d'aperçu
@@ -176,6 +190,9 @@ fr:
         sharing_title: Partage de %{moniker}
         timezone: Fuseau horaire
         translations_notice: Veuillez noter que nous travaillons toujours sur des traductions dans différentes langues.
+    budget_shares:
+      update:
+        success: Paramètres de partage de budget mis à jour
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
@@ -186,16 +203,16 @@ fr:
       show:
         confirm_delete:
           body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
-          title: Supprimer le compte?
+          title: Supprimer le compte ?
         confirm_remove_invitation:
-          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email}?
+          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email} ?
           title: Supprimer l'invitation
         confirm_remove_member:
-          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte?
+          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte ?
           title: Supprimer le membre
         confirm_reset:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
-          title: Réinitialiser le compte?
+          title: Réinitialiser le compte ?
         confirm_reset_with_sample_data:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
           title: Réinitialiser le compte et charger des données d'exemple ?

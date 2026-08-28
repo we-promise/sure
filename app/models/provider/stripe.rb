@@ -67,6 +67,10 @@ class Provider::Stripe
     client.v1.customers.update(customer_id, metadata: metadata)
   end
 
+  def cancel_subscription(subscription_id)
+    client.v1.subscriptions.cancel(subscription_id)
+  end
+
   private
     attr_reader :client, :webhook_secret
 

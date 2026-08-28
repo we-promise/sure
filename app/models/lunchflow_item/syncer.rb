@@ -10,7 +10,7 @@ class LunchflowItem::Syncer
   def perform_sync(sync)
     # Phase 1: Import data from Lunchflow API
     sync.update!(status_text: "Importing accounts from Lunchflow...") if sync.respond_to?(:status_text)
-    lunchflow_item.import_latest_lunchflow_data
+    import_result = lunchflow_item.import_latest_lunchflow_data
 
     # Phase 2: Collect setup statistics using shared concern
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
@@ -54,8 +54,10 @@ class LunchflowItem::Syncer
       Rails.logger.info "LunchflowItem::Syncer - No linked accounts to process"
     end
 
-    # Mark sync health
-    collect_health_stats(sync, errors: nil)
+    # Mark sync health — surface importer failures so the sync isn't reported
+    # as completed when the upstream Lunchflow API rejected fetches (e.g.
+    # 429 rate-limit responses wrapped as 500s, transient network errors).
+    collect_health_stats(sync, errors: import_failures_as_errors(import_result).presence)
   rescue => e
     collect_health_stats(sync, errors: [ { message: e.message, category: "sync_error" } ])
     raise
@@ -66,6 +68,37 @@ class LunchflowItem::Syncer
   end
 
   private
+
+    # Translate the LunchflowItem::Importer result hash into the error-shape
+    # collect_health_stats expects. Returns [] for a successful import.
+    def import_failures_as_errors(import_result)
+      return [] unless import_result.is_a?(Hash)
+      return [] if import_result[:success]
+
+      errors = []
+      accounts_failed = import_result[:accounts_failed].to_i
+      transactions_failed = import_result[:transactions_failed].to_i
+
+      if accounts_failed.positive?
+        errors << {
+          message: I18n.t("provider_warnings.lunchflow_accounts_failed", count: accounts_failed),
+          category: "lunchflow_import"
+        }
+      end
+      if transactions_failed.positive?
+        errors << {
+          message: I18n.t("provider_warnings.lunchflow_transactions_failed", count: transactions_failed),
+          category: "lunchflow_import"
+        }
+      end
+      if errors.empty? && import_result[:error].present?
+        errors << {
+          message: I18n.t("provider_warnings.lunchflow_import_error", error: import_result[:error]),
+          category: "lunchflow_import"
+        }
+      end
+      errors
+    end
 
     # Collects a data quality warning if any linked accounts are investment or crypto accounts.
     # Lunchflow cannot provide activity labels (Buy, Sell, Dividend, etc.) for investment transactions,

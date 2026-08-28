@@ -1,9 +1,11 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
-  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens
+  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
+              :processing_mode
 
-  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil, max_response_tokens:)
+  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
+                 max_response_tokens:, processing_mode: :auto)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -11,6 +13,7 @@ class Provider::Openai::PdfProcessor
     @langfuse_trace = langfuse_trace
     @family = family
     @max_response_tokens = max_response_tokens
+    @processing_mode = processing_mode
   end
 
   def process
@@ -21,17 +24,26 @@ class Provider::Openai::PdfProcessor
 
     # Try text extraction first (works with all models)
     # Fall back to vision API with images if text extraction fails (for scanned PDFs)
-    response = begin
+    response = case processing_mode
+    when :text
       process_with_text_extraction
-    rescue Provider::Openai::Error => e
-      Rails.logger.warn("Text extraction failed: #{e.message}, trying vision API with images")
+    when :vision
       process_with_vision
+    when :auto
+      begin
+        process_with_text_extraction
+      rescue Provider::Openai::Error => e
+        Rails.logger.warn("Text extraction failed: #{e.message}, trying vision API with images")
+        process_with_vision
+      end
+    else
+      raise ArgumentError, "Unknown PDF processing mode: #{processing_mode.inspect}"
     end
 
     span&.end(output: response.to_h)
     response
   rescue => e
-    span&.end(output: { error: e.message }, level: "ERROR")
+    span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
     raise
   end
 

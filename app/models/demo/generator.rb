@@ -96,9 +96,6 @@ class Demo::Generator
       puts "👥 Creating demo family..."
       family = create_family_and_users!("Demo Family", email, onboarded: true, subscribed: true)
 
-      puts "🔑 Creating monitoring API key..."
-      create_monitoring_api_key!(family)
-
       puts "📊 Creating realistic financial data..."
       create_realistic_categories!(family)
       create_realistic_accounts!(family)
@@ -108,6 +105,9 @@ class Demo::Generator
 
       puts "🎯 Seeding goals..."
       generate_goals!(family)
+
+      puts "🔑 Creating monitoring API key..."
+      create_monitoring_api_key!(family)
 
       puts "✅ Realistic demo data loaded successfully!"
     end
@@ -194,17 +194,24 @@ class Demo::Generator
       admin_user = family.users.find_by(role: "admin")
       return unless admin_user
 
-      # Find existing key scoped to this admin user by the deterministic display_key value
-      existing_key = admin_user.api_keys.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
-
-      if existing_key
-        puts "  → Use existing monitoring API key"
-        return existing_key
-      end
-
       # Revoke any existing user-created web API keys to keep demo access predictable.
       # (the monitoring key uses the dedicated "monitoring" source and cannot be revoked)
       admin_user.api_keys.active.visible.where(source: "web").find_each(&:revoke!)
+
+      existing_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+
+      if existing_key
+        existing_key.update!(
+          user: admin_user,
+          name: "monitoring",
+          scopes: [ "read" ],
+          source: "monitoring",
+          revoked_at: nil,
+          expires_at: nil
+        )
+        puts "  → Use existing monitoring API key"
+        return existing_key
+      end
 
       api_key = admin_user.api_keys.create!(
         name: "monitoring",
@@ -363,7 +370,7 @@ class Demo::Generator
       # Fetch expense transactions in the analysis period (positive amounts = expenses)
       txns = Entry.joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
                   .joins("INNER JOIN categories ON categories.id = transactions.category_id")
-                  .where(entries: { entryable_type: "Transaction", date: analysis_period })
+                  .where(entries: { entryable_type: "Transaction", date: analysis_period, account_id: family.accounts.select(:id) })
                   .where("entries.amount > 0")
 
       spend_per_cat = txns.group("categories.id").sum("entries.amount")

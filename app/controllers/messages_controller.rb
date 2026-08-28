@@ -24,8 +24,16 @@ class MessagesController < ApplicationController
   # current user's chat.
   def report_timeout
     message = @chat.messages.find(params[:id])
-    @chat.handle_undelivered_response!(message)
-    head :ok
+
+    if @chat.handle_undelivered_response!(message)
+      head :ok
+    else
+      # Declined — the message has not waited past the server's own floor yet,
+      # which usually means the client's clock runs ahead of ours and it reported
+      # early. This must not be a 2xx: the watchdog only stops retrying a URL once
+      # it sees one, so answering OK here would strand the bubble spinning forever.
+      head :conflict
+    end
   rescue ActiveRecord::RecordNotFound
     head :not_found
   end

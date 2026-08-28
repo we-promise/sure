@@ -22,6 +22,13 @@ class Setting < RailsSettings::Base
   field :llm_context_window, type: :integer, default: ENV["LLM_CONTEXT_WINDOW"]&.to_i
   field :llm_max_response_tokens, type: :integer, default: ENV["LLM_MAX_RESPONSE_TOKENS"]&.to_i
   field :llm_max_items_per_call, type: :integer, default: ENV["LLM_MAX_ITEMS_PER_CALL"]&.to_i
+
+  # How long the chat UI waits for an assistant response before treating it as
+  # undelivered. Self-hosted users running local models on slow hardware need
+  # this well above the 90s default — a local model that takes minutes to
+  # generate would otherwise always trip the watchdog. Read via
+  # `Chat.response_timeout`, which applies ENV > Setting > default precedence.
+  field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
   field :external_assistant_agent_id, type: :string

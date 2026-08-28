@@ -305,7 +305,11 @@ de:
       clear_filter: Filter löschen
       connect: Verbinden
       drawer_trust_statement: Nur Lesezugriff. Sure kann kein Geld bewegen, und deine Zugangsdaten liegen verschlüsselt.
+      drawer_trust_statement_encryption_unconfigured: Nur Lesezugriff. Sure kann kein Geld bewegen. Konfiguriere explizite Verschlüsselungsschlüssel, bevor du Provider-Zugangsdaten in Produktion speicherst.
       empty_filter: Kein Anbieter passt zu deinem Filter.
+      provider_setup_encryption_warning:
+        title: Verschlüsselungsschlüssel fehlen
+        message: Diese selbst gehostete Installation hat keine expliziten Active-Record-Verschlüsselungsschlüssel konfiguriert. Konfiguriere primary_key, deterministic_key und key_derivation_salt, bevor du Provider-Zugangsdaten in Produktion speicherst.
       groups:
         available: Verfügbar
         empty_available: Alle verfügbaren Anbieter sind verbunden.
@@ -535,7 +539,7 @@ de:
           busy: Aktiv
           dead: Gescheitert
           enqueued: Wartend
-          latency: "%{value}s Latenz"
+          queue_label: "%{name}: %{size} · %{latency}s Latenz"
           retries: Wiederholungen
           scheduled: Geplant
           workers: Worker

@@ -23,7 +23,7 @@ en:
           retries: "Retries"
           scheduled: "Scheduled"
           dead: "Dead"
-          latency: "%{value}s latency"
+          queue_label: "%{name}: %{size} · %{latency}s latency"
         table:
           type: "Operation"
           family: "Family"
@@ -175,10 +175,24 @@ en:
         language_auto: Browser language
         page_title: Preferences
         timezone: Timezone
+        translations_notice: Please note, we are still working on translations for various languages.
+        budget_title: Budget
+        budget_subtitle: Configure how your budgets behave
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
-        translations_notice: Please note, we are still working on translations for various languages.
+        personal_budgets: Personal budgets
+        personal_budgets_hint: Enable individual budgets for each family member.
+        household_budget_enabled: Household budget
+        household_budget_enabled_hint: Keep a shared household budget alongside personal budgets. Turn off to use personal budgets only.
+        budget_sharing_title: Budget sharing
+        budget_sharing_subtitle: Let other members view or edit your personal budget
+        budget_sharing_no_members: No other members in your %{moniker} to share with
+        budget_sharing_permission_label: "%{name}'s access"
+        budget_sharing_permissions:
+          none: No access
+          read_only: View only
+          read_write: Can edit
         currencies_title: "%{moniker} Currencies"
         currencies_subtitle: Choose which currencies appear in money fields for your %{moniker}
         base_currency_label: Base currency
@@ -204,6 +218,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+    budget_shares:
+      update:
+        success: Budget sharing settings updated
     profiles:
       destroy:
         cannot_remove_self: You cannot remove yourself from the account.
@@ -332,6 +349,7 @@ en:
       self_hosting_label: Self-Hosting
       sso_providers_label: SSO Providers
       statement_vault_label: Statement Vault
+      system_health_label: System health
       tags_label: Tags
       transactions_section_title: Transactions
       users_label: Users
@@ -365,6 +383,10 @@ en:
         beta: Beta
         alpha: Alpha
       drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
+      drawer_trust_statement_encryption_unconfigured: "Read-only access. Sure can never move money. Configure explicit encryption keys before storing provider credentials in production."
+      provider_setup_encryption_warning:
+        title: Encryption keys missing
+        message: "This self-hosted install has not configured explicit Active Record encryption keys. Configure primary_key, deterministic_key and key_derivation_salt before saving provider credentials in production."
       setup_steps:
         eyebrow: Setup
         need_help: "Need help?"
@@ -405,6 +427,7 @@ en:
         coinbase: Import your Coinbase crypto holdings and track performance.
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        onchain_wallet: Track self-custody Bitcoin, EVM and Solana wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
@@ -484,6 +507,21 @@ en:
         sync: Sync
         disconnect: Disconnect
         disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      onchain_wallet_panel:
+        add_wallet: Add wallet
+        advanced: Advanced
+        disconnect_all: Disconnect all wallets
+        disconnect_all_confirm: This removes every tracked address and its accounts. Continue?
+        etherscan_api_key_label: Etherscan API key (optional)
+        etherscan_api_key_placeholder: Paste an Etherscan API key
+        etherscan_hint: Ethereum reads work without a key. Adding an Etherscan key only raises the rate limit for Ethereum.
+        keep_etherscan_api_key: Leave blank to keep the existing key
+        manage_wallets: Manage wallets
+        keyless_body: Sure only ever reads public chain data. No keys, seed phrases or signatures are involved, and nothing can be spent.
+        keyless_title: Read-only, no keys required
+        save: Save
+        sync_start_date_hint: Transfers before this date are ignored. Leave blank to import everything the explorer reports.
+        sync_start_date_label: Ignore transfers before
       enable_banking_panel:
         callback_url_instruction: "For the callback URL, use %{callback_url}."
         connection_error: Connection Error

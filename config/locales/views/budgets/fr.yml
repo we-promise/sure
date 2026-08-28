@@ -6,8 +6,12 @@ fr:
       left_to_allocate: reste à attribuer
       over_set: "> 100 % réglé"
       percent_set: "%{percent} défini"
+    budget_category:
+      rolled_over: "+%{amount} de report"
     budget_category_form:
       monthly_average: "%{amount}/mois en moyenne"
+      rollover_label: Report
+      rollover_title: Conserver d'un mois sur l'autre ce que cette catégorie n'a pas dépensé
       shared_placeholder: Partagé
       shared_title: Laisser vide pour partager le budget des parents
     confirm_button:
@@ -15,6 +19,24 @@ fr:
     index:
       description: Ajustez les budgets des catégories pour fixer des limites de dépenses. Les fonds non alloués seront automatiquement attribués comme non classés.
       title: Modifiez vos budgets de catégorie
+    move:
+      amount_label: Montant
+      available: "%{amount} disponible"
+      button_title: Déplacer de l'argent depuis cette catégorie
+      cancel: Annuler
+      dialog_title: Déplacer de l'argent
+      no_destination: C'est la seule enveloppe disponible pour l'instant — une catégorie ne peut pas envoyer vers son propre parent ni vers sa sous-catégorie.
+      errors:
+        different_budgets: Les deux catégories doivent appartenir au même budget.
+        insufficient_funds: C'est plus que ce que cette catégorie a alloué.
+        non_positive_amount: Indiquez un montant supérieur à zéro.
+        parent_child: L'argent ne peut pas circuler entre une catégorie et sa propre sous-catégorie — ajustez directement la sous-catégorie.
+        same_category: Choisissez une autre catégorie de destination.
+        uncategorized: "« Non classé » n'est pas une vraie enveloppe : l'argent ne peut ni y entrer ni en sortir."
+      from_label: Depuis
+      submit: Déplacer
+      success: Argent déplacé.
+      to_label: Vers
     no_categories:
       new_category: Nouvelle catégorie
       no_categories_message: Vous n'avez pas encore créé ou attribué de catégories de dépenses à vos transactions.
@@ -23,17 +45,28 @@ fr:
     show:
       budgeted: Budgétisé
       category: Catégorie
-      left: à gauche
+      left: restant
       monthly_average_spending: Dépenses moyennes mensuelles
       monthly_median_spending: Dépenses médianes mensuelles
       no_transactions: Aucune transaction trouvée pour cette période budgétaire.
       overspent: trop dépensé
       overview: Aperçu
       recent_transactions: Transactions récentes
+      rolled_over: Reporté
       spending: "%{date} dépenses"
       status: Statut
       view_all_transactions: Voir toutes les transactions de catégorie
   budgets:
+    available_cash:
+      heading: Trésorerie disponible
+      subtitle: À côté du plan ci-dessus, pas dedans.
+      available: Disponible en cash
+      earmarked: Déjà fléché vers des objectifs
+      free: Réellement libre
+      goals_link: Voir les objectifs
+    switcher:
+      aria_label: "Changer de budget"
+      household: "Commun"
     actuals_summary:
       expenses: Dépenses
       income: Revenu
@@ -64,7 +97,7 @@ fr:
       fresh_button: Repartir de zéro
       title: Configurez votre budget
     edit:
-      autosuggest_description: Cela sera basé sur l’historique des transactions. L'IA peut faire des erreurs, vérifiez avant de continuer.
+      autosuggest_description: Cela sera basé sur l'historique des transactions. L'IA peut faire des erreurs, vérifiez avant de continuer.
       autosuggest_title: Suggestion automatique de revenus et de budget de dépenses
       budgeted_spending: Dépenses budgétisées
       continue: Continuer
