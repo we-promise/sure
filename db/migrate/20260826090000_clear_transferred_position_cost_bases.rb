@@ -11,6 +11,13 @@
 # Only figures this app worked out are cleared. A `manual` or `provider` basis
 # is somebody asserting what the position cost, which is exactly the thing the
 # app cannot derive for a transfer, and stays.
+#
+# And only an INBOUND transfer, matching what the runtime does: both
+# `Holding#calculate_avg_cost` and the calculators drop `qty <= 0` rows before
+# they ever look at the label. Shares sent elsewhere say nothing about what the
+# remaining ones cost — that figure was worked out from real purchases and is
+# correct. Clearing it here would destroy a good number, irreversibly, on a
+# position the app still stands behind.
 class ClearTransferredPositionCostBases < ActiveRecord::Migration[7.2]
   def up
     execute <<~SQL
@@ -27,6 +34,7 @@ class ClearTransferredPositionCostBases < ActiveRecord::Migration[7.2]
           WHERE trades.security_id = holdings.security_id
             AND entries.account_id = holdings.account_id
             AND trades.investment_activity_label = 'Transfer'
+            AND trades.qty > 0
             AND entries.date <= holdings.date
         )
     SQL
