@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -796,6 +796,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_22_130000) do
     t.datetime "last_sync_all_attempted_at"
     t.boolean "personal_budgets", default: false, null: false
     t.boolean "household_budget_enabled", default: true, null: false
+    t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
