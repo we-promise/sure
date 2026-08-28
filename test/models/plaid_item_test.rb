@@ -113,4 +113,72 @@ class PlaidItemTest < ActiveSupport::TestCase
     end
     assert_predicate @plaid_item.reload, :good?
   end
+
+  test "user sync requests a provider refresh when cooldown lease is acquired" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.expects(:write).with(
+      "plaid_item:#{@plaid_item.id}:transactions_refresh_requested",
+      true,
+      expires_in: PlaidItem::TRANSACTIONS_REFRESH_COOLDOWN,
+      unless_exist: true
+    ).returns(true)
+
+    assert_enqueued_with(job: PlaidTransactionsRefreshJob, args: [ @plaid_item ]) do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync does not duplicate a recent provider refresh request" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(false)
+
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync does not request refresh without the transactions product" do
+    @plaid_item.update!(billed_products: [ "investments" ])
+
+    Rails.cache.expects(:write).never
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync rejects provider refresh without a shared cache" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(false)
+
+    Rails.cache.expects(:write).never
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync releases cooldown lease when refresh job is not enqueued" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(true)
+    PlaidTransactionsRefreshJob.stubs(:perform_later).returns(false)
+    Rails.cache.expects(:delete).with("plaid_item:#{@plaid_item.id}:transactions_refresh_requested")
+
+    @plaid_item.request_transactions_refresh_later
+  end
+
+  test "user sync releases cooldown lease when refresh job enqueue raises" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(true)
+    PlaidTransactionsRefreshJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    Rails.cache.expects(:delete).with("plaid_item:#{@plaid_item.id}:transactions_refresh_requested")
+
+    assert_raises RedisClient::Error do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync preserves follow-up sync while requesting provider refresh" do
+    @plaid_item.expects(:request_transactions_refresh_later).once
+    @plaid_item.expects(:sync_later_with_follow_up).once
+
+    @plaid_item.sync_later_with_provider_refresh
+  end
 end

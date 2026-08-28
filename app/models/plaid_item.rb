@@ -27,6 +27,8 @@ class PlaidItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  TRANSACTIONS_REFRESH_COOLDOWN = 5.minutes
+
   # Get accounts from both new and legacy systems
   def accounts
     @accounts ||= plaid_accounts
@@ -81,6 +83,34 @@ class PlaidItem < ApplicationRecord
     DestroyJob.perform_later(self)
   end
 
+  def request_transactions_refresh_later
+    return unless supports_product?("transactions")
+    return unless shared_transactions_refresh_cache?
+
+    refresh_requested = Rails.cache.write(
+      transactions_refresh_cache_key,
+      true,
+      expires_in: TRANSACTIONS_REFRESH_COOLDOWN,
+      unless_exist: true
+    )
+
+    return unless refresh_requested
+
+    enqueued_job = begin
+      PlaidTransactionsRefreshJob.perform_later(self)
+    rescue
+      Rails.cache.delete(transactions_refresh_cache_key)
+      raise
+    end
+
+    Rails.cache.delete(transactions_refresh_cache_key) unless enqueued_job
+  end
+
+  def sync_later_with_provider_refresh
+    request_transactions_refresh_later
+    sync_later_with_follow_up
+  end
+
   def import_latest_plaid_data
     PlaidItem::Importer.new(self, plaid_provider: plaid_provider).import
   end
@@ -133,6 +163,19 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+    def transactions_refresh_cache_key
+      "plaid_item:#{id}:transactions_refresh_requested"
+    end
+
+    def shared_transactions_refresh_cache?
+      shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
+        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
+        Rails.cache.class.name == "SolidCache::Store"
+
+      Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
+      shared_cache
+    end
+
     def remove_plaid_item
       return unless plaid_provider.present?
 

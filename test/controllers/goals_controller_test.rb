@@ -679,7 +679,174 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
   end
 
+  # The months mode could not be created from the UI at all. The form makes the
+  # amount read-only, so it submits empty; `target_amount` is required and
+  # validations run before any save callback, so the derivation that fills it
+  # never ran. Every existing test set the amount explicitly, which is why the
+  # model looked fine.
+  test "a months-of-expenses reserve can be created without typing an amount" do
+    account = unclaimed_account("Reserve Pot")
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+
+    assert_difference -> { Goal.count }, 1 do
+      post goals_url, params: { goal: {
+        name: "Precaution", color: "#4da568", kind: "maintained",
+        target_mode: "months_of_expenses", target_months: "6",
+        target_amount: "", account_ids: [ account.id ]
+      } }
+    end
+
+    goal = Goal.order(created_at: :desc).first
+    assert_equal 3_000, goal.target_amount.to_d, "the floor was not derived from the months"
+    assert goal.maintained?
+  end
+
+  # A fixed reserve still needs one, and still says so. Asserted on the error the
+  # form puts in front of the user, not on the status alone: a 422 for some
+  # unrelated reason would otherwise keep this green while the guard it names
+  # had quietly gone.
+  test "a fixed-amount goal still requires the amount" do
+    account = unclaimed_account("Fixed Pot")
+
+    assert_no_difference -> { Goal.count } do
+      post goals_url, params: { goal: {
+        name: "No amount", color: "#4da568",
+        target_amount: "", account_ids: [ account.id ]
+      } }
+    end
+
+    assert_response :unprocessable_entity
+    # The paragraph is in the markup either way; `hidden` is what decides
+    # whether it is shown, so its absence is the assertion.
+    assert_select "[data-goal-form-target=amountError]:not(.hidden)", 1,
+      "the form did not surface the missing-amount error"
+  end
+
+  # The surface the user actually reads: the figure beside the ring, and the
+  # line saying part of it has been used. Asserted on the rendered page rather
+  # than the model, because the contradiction was a display bug — the model
+  # has always counted both halves.
+  test "the goal page reports the used portion as part of the total" do
+    goal = spent_goal_for_display
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("goals.show.ring.including_used",
+                                          amount: goal.consumed_amount_money.format(precision: 0))
+
+    # The headline figure specifically, not "somewhere on the page": the
+    # account balance still appears in the funding breakdown below, which is
+    # where that question belongs.
+    headline = css_select("p.text-xl.font-medium.text-primary").map(&:text).map(&:strip)
+    assert_includes headline, goal.progress_amount_money.format(precision: 0)
+    assert_not_includes headline, goal.current_balance_money.format(precision: 0)
+  end
+
+  test "a goal that has spent nothing says nothing about it" do
+    account = unclaimed_account("Quiet Pot")
+    goal = @user.family.goals.create!(name: "Quiet", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/already used|déjà utilisés/, response.body)
+  end
+
+
+  # The ring announced the account balance while the visible headline beside it
+  # reported the progress total: same ring, two different numbers depending on
+  # whether you could see it.
+  test "the ring announces the same total the headline shows" do
+    goal = spent_goal_for_display
+
+    get goal_url(goal)
+
+    assert_response :success
+    label = css_select("[role=progressbar]").first["aria-label"]
+    assert_includes label, goal.progress_amount_money.format
+    assert_not_includes label, goal.current_balance_money.format
+    assert_includes label, goal.consumed_amount_money.format
+  end
+
+  test "a goal with nothing used keeps the plain wording" do
+    account = unclaimed_account("Plain Pot")
+    goal = @user.family.goals.create!(name: "Plain", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get goal_url(goal)
+
+    label = css_select("[role=progressbar]").first["aria-label"]
+    assert_no_match(/already used|déjà utilisés/, label)
+  end
+
+
+  # A reserve holds a balance rather than reaching an amount. "Target balance"
+  # is what this kind of app calls that, and it keeps the noun the rest of the
+  # page already uses 55 times — rather than inventing a "level" or a "floor"
+  # that nothing else in the domain says.
+  test "the form carries both the amount and the balance wording" do
+    unclaimed_account("Vocab Pot")
+
+    get new_goal_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("goals.form.fields.target_amount")
+    assert_includes response.body, I18n.t("goals.form.fields.target_balance")
+  end
+
+  # In months mode the balance is worked out, not typed. A read-only input
+  # still reads as something to fill in, beside the months that are the real
+  # question, so the figure is presented as a result instead.
+  test "the form carries the derived balance as a result, not a field" do
+    unclaimed_account("Derived Pot")
+
+    get new_goal_url
+
+    assert_response :success
+    assert_select "[data-goal-kind-target=amountDerived]", 1
+    assert_includes response.body, I18n.t("goals.form.fields.target_balance_pending")
+  end
+
+  test "editing a months reserve shows the balance it currently holds" do
+    account = unclaimed_account("Existing Pot")
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+    goal = @user.family.goals.create!(
+      name: "Precaution", target_amount: 3_000, currency: "USD", kind: "maintained",
+      target_mode: "months_of_expenses", target_months: 6
+    ) { |g| g.goal_accounts.build(account: account, allocated_amount: 3_000) }
+
+    get edit_goal_url(goal)
+
+    assert_response :success
+    assert_includes response.body, goal.target_amount_money.format(precision: 0)
+  end
+
+  # One vocabulary, not three. "level" and "floor" said the same thing as
+  # "target balance" in different words, on the same page.
+  test "the goals copy settles on one word for a reserve's balance" do
+    %i[en fr].each do |locale|
+      copy = YAML.load_file(Rails.root.join("config/locales/views/goals/#{locale}.yml")).to_s
+      assert_no_match(/\bfloor\b|\bniveau\b/i, copy, "#{locale} still mixes vocabularies")
+    end
+  end
+
   private
+
+    def spent_goal_for_display
+      account = Account.create!(
+        family: @user.family, accountable: Depository.new,
+        name: "Spent Pot", currency: "USD", balance: 5_000
+      )
+      goal = @user.family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 5_000)
+      end
+      goal.consume!(2_000)
+      goal
+    end
     # SQL the pooled-allocation read issues, and nothing else: goal_accounts
     # joined to goals.
     def count_pool_queries
@@ -694,7 +861,6 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       ActiveSupport::Notifications.unsubscribe(sub)
     end
 
-  private
 
     # A private account of another member, linked to the goal under test.
     def private_linked_account

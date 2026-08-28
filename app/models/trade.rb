@@ -10,6 +10,21 @@ class Trade < ApplicationRecord
   # Use the same activity labels as Transaction
   ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
 
+  # The labels that mean the asset went somewhere else you own rather than
+  # being bought or sold.
+  #
+  # Deliberately NOT `Transaction::INTERNAL_MOVEMENT_LABELS`, which also holds
+  # "Exchange". On cash that means a currency exchange and is internal; on a
+  # security the label covers "currency **or security** exchanges"
+  # (docs/onboarding/guide.md), and a security-for-security exchange can
+  # dispose of an appreciated asset.
+  #
+  # The two errors are not symmetrical. Listing a movement that was not a sale
+  # is visible and correctable; erasing a realized gain is neither — it simply
+  # is not there. So only labels that unambiguously preserve ownership are
+  # excluded, and an ambiguous one is left where the user can see it.
+  INTERNAL_MOVEMENT_LABELS = %w[Transfer Sweep\ In Sweep\ Out].freeze
+
   validates :qty, presence: true
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true
@@ -42,6 +57,12 @@ class Trade < ApplicationRecord
 
   def sell?
     qty.negative?
+  end
+
+  # A negative quantity that left for another account you own. It looks exactly
+  # like a sale — same sign, same shape — and only the label tells them apart.
+  def internal_movement?
+    INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
   end
 
   class << self
@@ -91,6 +112,10 @@ class Trade < ApplicationRecord
 
     def calculate_realized_gain_loss
       return nil unless sell?
+      # Moving an asset to another account you own realises nothing. Without
+      # this the cost basis is compared against the day's price and the
+      # difference is booked as a gain the user never made.
+      return nil if internal_movement?
 
       # Use preloaded holdings if available (set by reports controller to avoid N+1)
       # Treat defined-but-empty preload as authoritative to prevent DB fallback

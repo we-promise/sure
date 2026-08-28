@@ -12,7 +12,10 @@ class Goal < ApplicationRecord
   # exclusivity check, and the restore guard below. Keeping them on one constant
   # is what stops the double-counting hole from reopening the day this set
   # grows: adding a state here makes every one of them release together.
-  RELEASED_STATES = %w[archived].freeze
+  #
+  # `completed` belongs here for the same reason `archived` does: completing a
+  # goal hands back the earmark, so its links must stop reserving too.
+  RELEASED_STATES = %w[archived completed].freeze
 
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
@@ -43,15 +46,21 @@ class Goal < ApplicationRecord
   # A target_amount edit is in the list because in this mode the amount is
   # derived, not typed: without it the form could persist an arbitrary figure
   # under a "six months of expenses" label until the next monthly refresh.
-  before_save :apply_months_of_expenses_target,
-              if: -> {
-                months_of_expenses_target? && (
-                  new_record? ||
-                  will_save_change_to_target_months? ||
-                  will_save_change_to_target_mode? ||
-                  will_save_change_to_target_amount?
-                )
-              }
+  # before_VALIDATION, not before_save. `target_amount` is required and must be
+  # positive, and those run before any save callback — so a reserve whose
+  # amount is derived arrived at validation empty and was refused before the
+  # callback that fills it ever ran. The form makes the field read-only in this
+  # mode, so there was no way to satisfy the validation by hand either: the
+  # months mode could not be created from the UI at all.
+  before_validation :apply_months_of_expenses_target,
+                    if: -> {
+                      months_of_expenses_target? && (
+                        new_record? ||
+                        target_months_changed? ||
+                        target_mode_changed? ||
+                        target_amount_changed?
+                      )
+                    }
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -116,8 +125,6 @@ class Goal < ApplicationRecord
       super("goal consumption refused: #{reason}")
     end
   end
-
-  RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
   # floor to hold — an emergency fund is not an achievement to file away, it
@@ -450,8 +457,22 @@ class Goal < ApplicationRecord
     computed
   end
 
+  # Whether a months-based target could be worked out AT ALL right now. The
+  # form has to know before the user has picked anything, so this deliberately
+  # ignores the goal's own kind, mode and months: it answers "is there spending
+  # history to derive from", nothing else. With none, the typed amount is the
+  # only way to set a target, so the form must keep offering the field.
+  def months_target_derivable?
+    return false if family.nil? || currency.blank?
+
+    median = median_monthly_expense
+    return false unless median.positive?
+
+    convert_to_goal_currency(median).to_d.positive?
+  end
+
   private
-    # The floor this reserve should hold, or nil when it cannot be computed.
+    # The family's median monthly spend, in FAMILY currency.
     #
     # ⚠️ The account scope is passed EXPLICITLY, and that is the whole point
     # of this method. IncomeStatement's constructor does `user || Current.user`
@@ -461,11 +482,19 @@ class Goal < ApplicationRecord
     # whole family: derived from a viewer's slice of the accounts it would
     # change depending on who last triggered it. The rollover chain hit
     # exactly this and had to be pinned the same way.
+    # Deliberately not memoized. The refresh job derives again on an instance
+    # it has already saved through, and a median frozen on first read would
+    # hand it back the figure it started with.
+    def median_monthly_expense
+      IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
+                     .median_expense(interval: "month").to_d
+    end
+
+    # The balance this reserve should hold, or nil when it cannot be computed.
     def months_of_expenses_amount
       return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
 
-      statement = IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
-      median = statement.median_expense(interval: "month").to_d
+      median = median_monthly_expense
       return nil unless median.positive?
 
       computed = (median * target_months).round(2)
@@ -547,8 +576,6 @@ class Goal < ApplicationRecord
       link.lock!
       stamp_consumption!(transaction) if transaction
 
-      # A whole-account link reserves no fixed slice, so there is nothing to
-      # shrink — it already takes only what the account has left.
       if link.allocated_amount.present?
         # Refused rather than clamped. Clamping released only what the link
         # held while `consumed_amount` took the full figure, so the two sides
@@ -559,6 +586,32 @@ class Goal < ApplicationRecord
         end
 
         link.update!(allocated_amount: link.allocated_amount.to_d - amount)
+      else
+        # A whole-account link has no slice to shrink, so `consumed_amount`
+        # would be added to a backing that has not moved: the goal reads 6,000
+        # of 5,000 until the real transaction lands and the balance catches up.
+        # A fixed earmark never has that window, because shrinking it caps the
+        # backing straight away.
+        #
+        # Spending settles what the link claims. It stops taking "whatever is
+        # there" and takes what the goal still needs after this spend.
+        #
+        # Deliberately NOT "what it backs, minus the amount". That depends on
+        # whether the money has already left the account, and the app cannot
+        # know: a spend recorded before the sync lands needs the subtraction,
+        # the same spend recorded after it has already had one, and taking it
+        # twice reports 4,000 of a 5,000 goal that is whole. Capping at what
+        # is left to reach is the same answer in both orders, with nothing to
+        # infer.
+        backed = backing_within([ link.account_id ]).to_d
+
+        # Same refusal a fixed earmark gives, for the same reason: the link
+        # cannot have supplied money it never backed. `still_needed` cannot go
+        # negative — the target check above has already refused that.
+        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+
+        still_needed = target_amount.to_d - consumed_amount.to_d - amount
+        link.update!(allocated_amount: [ backed, still_needed ].min)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
@@ -574,6 +627,33 @@ class Goal < ApplicationRecord
 
   def remaining_amount_money
     @remaining_amount_money ||= Money.new(remaining_amount, currency)
+  end
+
+  # What progress actually counts: money still held for the goal, plus money
+  # already taken out of it and spent on the thing it was for.
+  #
+  # `progress_percent` and `remaining_amount` have always been computed from
+  # both. Only the headline figure showed the first half, so a goal that had
+  # spent part of its savings sat at a 100% ring beside "3,000 of 5,000" — the
+  # ring and the numbers disagreeing on the same card, with nothing to explain
+  # which one to believe.
+  def progress_amount
+    current_balance.to_d + consumed_amount.to_d
+  end
+
+  def progress_amount_money
+    @progress_amount_money ||= Money.new(progress_amount, currency)
+  end
+
+  def consumed_amount_money
+    @consumed_amount_money ||= Money.new(consumed_amount.to_d, currency)
+  end
+
+  # Only a goal that has actually recorded a spend says anything about it: the
+  # overwhelming majority never do, and a permanent "0 used" line would be
+  # noise on every card.
+  def any_consumption?
+    consumed_amount.to_d.positive?
   end
 
   def progress_percent
@@ -1123,7 +1203,7 @@ class Goal < ApplicationRecord
       # the reserve already had. Same reasoning as the refresh job — a stale
       # floor beats a wrong one, and this one would be wearing a label saying
       # it was computed.
-      self.target_amount = target_amount_in_database if will_save_change_to_target_amount? && !new_record?
+      self.target_amount = target_amount_in_database if target_amount_changed? && !new_record?
     end
 
     # target_months only means something for a reserve on the months basis.
@@ -1157,6 +1237,7 @@ class Goal < ApplicationRecord
         @current_balance @current_balance_money
         @remaining_amount @remaining_amount_money
         @progress_percent @monthly_target_amount
+        @progress_amount_money @consumed_amount_money
         @pace @pace_money @status @pooled_allocations
       ].each do |ivar|
         remove_instance_variable(ivar) if instance_variable_defined?(ivar)
