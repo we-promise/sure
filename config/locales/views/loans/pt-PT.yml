@@ -2,39 +2,39 @@
 pt-PT:
   loans:
     edit:
-      edit: Edit %{account}
+      edit: Editar %{account}
     form:
-      interest_rate: Interest rate
+      interest_rate: Taxa de juro
       interest_rate_placeholder: '5.25'
-      initial_balance: Original loan balance
-      rate_type: Rate type
-      term_months: Term (months)
+      initial_balance: Saldo inicial do empréstimo
+      rate_type: Tipo de taxa
+      term_months: Prazo (meses)
       term_months_placeholder: '360'
-      none: None
-      subtype_prompt: Select loan type
-      subtype_none: None
-      rate_type_adjustable: Adjustable
-      rate_type_fixed: Fixed
-      rate_type_variable: Variable
+      none: Nenhum
+      subtype_prompt: Selecionar tipo de empréstimo
+      subtype_none: Nenhum
+      rate_type_adjustable: Ajustável
+      rate_type_fixed: Fixa
+      rate_type_variable: Variável
     new:
-      title: Enter loan details
+      title: Introduzir dados do empréstimo
     overview:
-      interest_rate: Interest Rate
-      monthly_payment: Monthly Payment
-      not_applicable: N/A
-      original_principal: Original Principal
-      remaining_principal: Remaining Principal
-      term: Term
-      type: Type
-      unknown: Unknown
+      interest_rate: Taxa de juro
+      monthly_payment: Pagamento mensal
+      not_applicable: n/d
+      original_principal: Capital inicial
+      remaining_principal: Capital remanescente
+      term: Prazo
+      type: Tipo
+      unknown: Desconhecido
     tabs:
       overview:
-        interest_rate: Interest Rate
-        monthly_payment: Monthly Payment
-        not_applicable: N/A
-        original_principal: Original Principal
-        remaining_principal: Remaining Principal
-        term: Term
-        type: Type
-        unknown: Unknown
-        edit_loan_details: "Edit loan details"
+        interest_rate: Taxa de juro
+        monthly_payment: Pagamento mensal
+        not_applicable: n/d
+        original_principal: Capital inicial
+        remaining_principal: Capital remanescente
+        term: Prazo
+        type: Tipo
+        unknown: Desconhecido
+        edit_loan_details: "Editar dados do empréstimo"

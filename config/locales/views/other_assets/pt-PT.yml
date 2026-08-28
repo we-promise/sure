@@ -2,8 +2,8 @@
 pt-PT:
   other_assets:
     edit:
-      edit: Edit %{account}
-      balance_tracking_info: "Other Assets are tracked via manual valuations using 'New Balance', not transactions. Cashflow will not affect the account balance."
+      edit: Editar %{account}
+      balance_tracking_info: "Os Outros Ativos são atualizados através de avaliações manuais usando 'Novo Saldo', e não por transações. O fluxo de caixa não afetará o saldo da conta."
     new:
-      title: Enter asset details
-      balance_tracking_info: "Other Assets are tracked via manual valuations using 'New Balance', not transactions. Cashflow will not affect the account balance."
+      title: Introduzir detalhes do ativo
+      balance_tracking_info: "Os Outros Ativos são atualizados através de avaliações manuais usando 'Novo Saldo', e não por transações. O fluxo de caixa não afetará o saldo da conta."

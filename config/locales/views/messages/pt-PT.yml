@@ -2,8 +2,8 @@
 pt-PT:
   messages:
     create:
-      chat_not_found: This chat is no longer available.
+      chat_not_found: Este chat já não está disponível.
     chat_form:
-      placeholder: "Ask anything ..."
-      disclaimer: "AI responses are informational only. Not financial advice!"
-      coming_soon: Coming soon
+      placeholder: "Pergunte o que quiser ..."
+      disclaimer: "As respostas da IA são apenas informativas. Não constituem aconselhamento financeiro!"
+      coming_soon: Em breve

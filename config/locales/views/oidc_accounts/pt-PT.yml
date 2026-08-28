@@ -2,41 +2,41 @@
 pt-PT:
   oidc_accounts:
     link:
-      no_pending_oidc: No pending OIDC authentication found
-      title_link: Link OIDC Account
-      title_create: Create Account
-      verify_heading: Verify Your Identity
-      verify_description_html: "To link your %{provider} account%{email_suffix}, please verify your identity by entering your password."
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+      title_link: Ligar Conta OIDC
+      title_create: Criar Conta
+      verify_heading: Verifique a Sua Identidade
+      verify_description_html: "Para ligar a sua conta %{provider}%{email_suffix}, verifique a sua identidade introduzindo a sua palavra-passe."
       email_suffix_html: " (<strong>%{email}</strong>)"
-      email_label: Email
-      email_placeholder: Enter your email
-      password_label: Password
-      password_placeholder: Enter your password
-      verify_hint: This helps ensure that only you can link external accounts to your profile.
-      submit_link: Link Account
-      create_heading: Create New Account
-      create_description_html: "No account found with the email <strong>%{email}</strong>. Click below to create a new account using your %{provider} identity."
-      info_email: "Email:"
-      info_name: "Name:"
-      submit_create: Create Account
-      submit_accept_invitation: Accept Invitation
-      account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
-      cancel: Cancel
+      email_label: E-mail
+      email_placeholder: Introduza o seu e-mail
+      password_label: Palavra-passe
+      password_placeholder: Introduza a sua palavra-passe
+      verify_hint: Isto ajuda a garantir que apenas você pode ligar contas externas ao seu perfil.
+      submit_link: Ligar Conta
+      create_heading: Criar Nova Conta
+      create_description_html: "Não foi encontrada nenhuma conta com o e-mail <strong>%{email}</strong>. Clique abaixo para criar uma nova conta utilizando a sua identidade %{provider}."
+      info_email: "E-mail:"
+      info_name: "Designação:"
+      submit_create: Criar Conta
+      submit_accept_invitation: Aceitar Convite
+      account_creation_disabled: A criação de novas contas através do início de sessão único está desativada. Contacte um administrador para criar a sua conta.
+      cancel: Cancelar
     create_link:
-      no_pending_oidc: No pending OIDC authentication found
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
     new_user:
-      no_pending_oidc: No pending OIDC authentication found
-      title: Complete Your Account
-      heading: Create Your Account
-      description: Please confirm your details to complete account creation with your %{provider} identity.
-      email_label: Email (from SSO provider)
-      first_name_label: First Name
-      first_name_placeholder: Enter your first name
-      last_name_label: Last Name
-      last_name_placeholder: Enter your last name
-      submit: Create Account
-      cancel: Cancel
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+      title: Concluir a Sua Conta
+      heading: Criar a Sua Conta
+      description: Confirme os seus dados para concluir a criação da conta com a sua identidade %{provider}.
+      email_label: E-mail (do fornecedor SSO)
+      first_name_label: Primeiro Nome
+      first_name_placeholder: Introduza o seu primeiro nome
+      last_name_label: Apelido
+      last_name_placeholder: Introduza o seu apelido
+      submit: Criar Conta
+      cancel: Cancelar
     create_user:
-      no_pending_oidc: No pending OIDC authentication found
-      account_creation_disabled: SSO account creation is disabled. Please contact an administrator.
-      account_created: "Welcome! Your account has been created."
+      no_pending_oidc: Não foi encontrada nenhuma autenticação OIDC pendente
+      account_creation_disabled: A criação de contas SSO está desativada. Contacte um administrador.
+      account_created: "Bem-vindo! A sua conta foi criada."

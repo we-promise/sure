@@ -2,10 +2,10 @@
 pt-PT:
   account_order:
     balance_asc:
-      label: Saldo (Low to High)
+      label: Saldo (crescente)
       label_short: Saldo ↑
     balance_desc:
-      label: Saldo (High to Low)
+      label: Saldo (decrescente)
       label_short: Saldo ↓
     name_asc:
       label: Designação (A-Z)
@@ -23,12 +23,12 @@ pt-PT:
         name: Designação
         subtype: Subtipo
     models:
-      account: Account
-      account/credit: Credit Card
-      account/depository: Bank Account
-      account/investment: Investment
-      account/loan: Loan
-      account/other_asset: Other Asset
-      account/other_liability: Other Liability
-      account/property: Real Estate
-      account/vehicle: Vehicle
+      account: Conta
+      account/credit: Cartão de Crédito
+      account/depository: Conta Bancária
+      account/investment: Investimento
+      account/loan: Empréstimo
+      account/other_asset: Outro Ativo
+      account/other_liability: Outro Passivo
+      account/property: Imóvel
+      account/vehicle: Veículo

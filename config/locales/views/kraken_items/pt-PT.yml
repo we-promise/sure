@@ -3,83 +3,83 @@ pt-PT:
   kraken_items:
     provider_connection:
       default_name: Kraken
-      default_description: Link to a Kraken exchange account
+      default_description: Ligar a uma conta de exchange da Kraken
       name: "Kraken - %{name}"
-      description: "Link to %{name}"
+      description: "Ligar a %{name}"
     create:
       default_name: Kraken
-      success: Successfully connected to Kraken. Your exchange account is being synced.
+      success: Ligado à Kraken com sucesso. A sua conta de exchange está a ser sincronizada.
     update:
-      success: Successfully updated Kraken connection.
+      success: Ligação da Kraken atualizada com sucesso.
     destroy:
-      success: Scheduled Kraken connection for deletion.
+      success: Ligação da Kraken agendada para eliminação.
     select_accounts:
-      select_connection: Choose a Kraken connection in Provider Settings.
-      no_credentials_configured: Add Kraken API credentials before setting up accounts.
+      select_connection: Escolha uma ligação da Kraken nas Definições do Fornecedor.
+      no_credentials_configured: Adicione as credenciais da API da Kraken antes de configurar as contas.
     link_accounts:
-      select_connection: Choose a Kraken connection before linking accounts.
+      select_connection: Escolha uma ligação da Kraken antes de ligar contas.
     select_existing_account:
-      title: Link Kraken Account
-      no_accounts_found: No Kraken accounts found.
-      wait_for_sync: Wait for Kraken to finish syncing.
-      check_provider_health: Check that your Kraken API credentials are valid.
-      link: Link
-      cancel: Cancel
+      title: Ligar conta da Kraken
+      no_accounts_found: Nenhuma conta da Kraken encontrada.
+      wait_for_sync: Aguarde a Kraken concluir a sincronização.
+      check_provider_health: Verifique se as credenciais da API da Kraken são válidas.
+      link: Ligar
+      cancel: Cancelar
     link_existing_account:
-      success: Successfully linked to Kraken account
-      select_connection: Choose a Kraken connection before linking accounts.
+      success: Ligado com sucesso à conta da Kraken
+      select_connection: Escolha uma ligação da Kraken antes de ligar contas.
       errors:
-        only_manual: Only manual Crypto exchange accounts without an existing provider link can be linked to Kraken
-        invalid_kraken_account: Invalid Kraken account
-        kraken_account_already_linked: This Kraken account is already linked
+        only_manual: Apenas contas manuais de exchange de criptomoedas sem uma ligação de fornecedor existente podem ser ligadas à Kraken
+        invalid_kraken_account: Conta da Kraken inválida
+        kraken_account_already_linked: Esta conta da Kraken já está ligada
     setup_accounts:
-      title: Import Kraken Account
-      subtitle: Select the exchange account to track
-      instructions: Kraken imports one combined Crypto exchange account for this connection, with holdings and spot trade fills only.
-      no_accounts: All Kraken accounts have been imported.
+      title: Importar conta da Kraken
+      subtitle: Selecione a conta de exchange que pretende acompanhar
+      instructions: A Kraken importa uma única conta combinada de exchange de criptomoedas para esta ligação, com posições e execuções de negociações à vista apenas.
+      no_accounts: Todas as contas da Kraken foram importadas.
       accounts_count:
-        one: "%{count} account available"
-        other: "%{count} accounts available"
-      select_all: Select all
-      import_selected: Import Selected
-      cancel: Cancel
-      creating: Importing...
+        one: "%{count} conta disponível"
+        other: "%{count} contas disponíveis"
+      select_all: Selecionar todas
+      import_selected: Importar selecionadas
+      cancel: Cancelar
+      creating: A importar...
     complete_account_setup:
       success:
-        one: "Imported %{count} account"
-        other: "Imported %{count} accounts"
-      none_selected: No accounts selected
-      no_accounts: No accounts to import
+        one: "Importada %{count} conta"
+        other: "Importadas %{count} contas"
+      none_selected: Nenhuma conta selecionada
+      no_accounts: Nenhuma conta para importar
     kraken_item:
       provider_name: Kraken
-      syncing: Syncing...
-      reconnect: Credentials need updating
-      deletion_in_progress: Deleting...
+      syncing: A sincronizar...
+      reconnect: As credenciais precisam de ser atualizadas
+      deletion_in_progress: A eliminar...
       sync_status:
-        no_accounts: No accounts found
+        no_accounts: Nenhuma conta encontrada
         all_synced:
-          one: "%{count} account synced"
-          other: "%{count} accounts synced"
-        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
-      status: "Last synced %{timestamp} ago"
-      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
-      status_never: Never synced
-      delete: Delete
-      no_accounts_title: No accounts found
-      no_accounts_message: Your Kraken exchange account will appear here after syncing.
-      setup_needed: Account ready to import
-      setup_description: Import this Kraken connection as a Crypto exchange account.
-      setup_action: Import Account
-      import_accounts_menu: Import Account
-      stale_rate_warning: "Balance is approximate because the exact exchange rate for %{date} was unavailable. Will update on next sync."
+          one: "%{count} conta sincronizada"
+          other: "%{count} contas sincronizadas"
+        partial_sync: "%{linked_count} sincronizadas, %{unlinked_count} precisam de configuração"
+      status: "Sincronizado há %{timestamp}"
+      status_with_summary: "Sincronizado há %{timestamp} - %{summary}"
+      status_never: Nunca sincronizado
+      delete: Eliminar
+      no_accounts_title: Nenhuma conta encontrada
+      no_accounts_message: A sua conta de exchange da Kraken aparecerá aqui após a sincronização.
+      setup_needed: Conta pronta para importar
+      setup_description: Importe esta ligação da Kraken como uma conta de exchange de criptomoedas.
+      setup_action: Importar conta
+      import_accounts_menu: Importar conta
+      stale_rate_warning: "O saldo é aproximado porque a taxa de câmbio exata para %{date} não estava disponível. Será atualizada na próxima sincronização."
   kraken_item:
     syncer:
-      checking_credentials: Checking credentials...
-      credentials_invalid: Invalid Kraken API credentials. Please check your API key and secret.
-      importing_accounts: Importing accounts from Kraken...
-      checking_configuration: Checking account configuration...
+      checking_credentials: A verificar credenciais...
+      credentials_invalid: Credenciais da API da Kraken inválidas. Verifique a sua chave de API e o seu segredo.
+      importing_accounts: A importar contas da Kraken...
+      checking_configuration: A verificar a configuração da conta...
       accounts_need_setup:
-        one: "%{count} account needs setup"
-        other: "%{count} accounts need setup"
-      processing_accounts: Processing account data...
-      calculating_balances: Calculating balances...
+        one: "%{count} conta precisa de configuração"
+        other: "%{count} contas precisam de configuração"
+      processing_accounts: A processar os dados da conta...
+      calculating_balances: A calcular saldos...

@@ -2,10 +2,10 @@
 pt-PT:
   address:
     attributes:
-      country: Country
-      line1: Address Line 1
-      line2: Address Line 2
-      locality: Locality
-      postal_code: Postal Code
-      region: Region
+      country: País
+      line1: Linha 1 da Morada
+      line2: Linha 2 da Morada
+      locality: Localidade
+      postal_code: Código Postal
+      region: Região
     format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

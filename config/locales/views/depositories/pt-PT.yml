@@ -2,25 +2,25 @@
 pt-PT:
   depositories:
     edit:
-      edit: Edit %{account}
+      edit: Editar %{account}
     form:
-      none: None
-      subtype_prompt: Select account type
+      none: Nenhum
+      subtype_prompt: Selecione o tipo de conta
     new:
-      title: Enter account balance
+      title: Introduza o saldo da conta
     subtypes:
       cd:
-        long: Certificate of Deposit
+        long: Certificado de Depósito
         short: CD
       checking:
-        long: Checking
-        short: Checking
+        long: Conta à ordem
+        short: Conta à ordem
       hsa:
-        long: Health Savings Account
+        long: Conta Poupança Saúde
         short: HSA
       money_market:
-        long: Money Market
+        long: Mercado Monetário
         short: MM
       savings:
-        long: Savings
-        short: Savings
+        long: Poupança
+        short: Poupança

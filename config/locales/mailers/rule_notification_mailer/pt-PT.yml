@@ -3,14 +3,14 @@ pt-PT:
   rule_notification_mailer:
     digest:
       subject:
-        one: "1 new transaction matched your rule on %{product_name}"
-        other: "%{count} new transactions matched your rule on %{product_name}"
+        one: "1 nova transação correspondeu à sua regra no %{product_name}"
+        other: "%{count} novas transações corresponderam à sua regra no %{product_name}"
       heading:
-        one: "1 new transaction matched your rule"
-        other: "%{count} new transactions matched your rule"
-      intro: 'These transactions matched the rule "%{rule}":'
-      date: "Date"
-      name: "Name"
-      account: "Account"
-      amount: "Amount"
-      cta: "View transactions"
+        one: "1 nova transação correspondeu à sua regra"
+        other: "%{count} novas transações corresponderam à sua regra"
+      intro: 'Estas transações corresponderam à regra "%{rule}":'
+      date: "Data"
+      name: "Designação"
+      account: "Conta"
+      amount: "Montante"
+      cta: "Ver transações"

@@ -3,16 +3,16 @@ pt-PT:
   activerecord:
     attributes:
       import:
-        col_sep: Column separator
+        col_sep: Separador de colunas
         col_seps:
-          comma: Comma (,)
-          semicolon: Semicolon (;)
-        currency: Currency
-        number_format: Number Format
+          comma: Vírgula (,)
+          semicolon: Ponto e vírgula (;)
+        currency: Moeda
+        number_format: Formato de Número
     errors:
       models:
         import:
-          duplicate_headers: "CSV headers normalize to duplicate columns: %{columns}"
+          duplicate_headers: "Os cabeçalhos do CSV normalizam para colunas duplicadas: %{columns}"
           attributes:
             raw_file_str:
-              invalid_csv_format: is not a valid CSV format
+              invalid_csv_format: não é um formato CSV válido

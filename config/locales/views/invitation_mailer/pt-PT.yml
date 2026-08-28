@@ -2,7 +2,7 @@
 pt-PT:
   invitation_mailer:
     invite_email:
-      accept_button: Accept Invitation
-      body: "%{inviter} has invited you to join the %{family} %{moniker} on %{product_name}!"
-      expiry_notice: This invitation will expire in %{days} days
-      greeting: Welcome to %{product_name}!
+      accept_button: Aceitar Convite
+      body: "%{inviter} convidou-o(a) para aderir à %{family} %{moniker} na %{product_name}!"
+      expiry_notice: Este convite expirará em %{days} dias
+      greeting: Bem-vindo(a) ao %{product_name}!

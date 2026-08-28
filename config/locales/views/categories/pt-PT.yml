@@ -2,69 +2,69 @@
 pt-PT:
   categories:
     bootstrap:
-      success: Default categories created successfully
+      success: Categorias predefinidas criadas com sucesso
     category:
-      delete: Delete category
-      edit: Edit category
+      delete: Eliminar categoria
+      edit: Editar categoria
     create:
-      success: Category created successfully
+      success: Categoria criada com sucesso
     destroy:
-      success: Category deleted successfully
+      success: Categoria eliminada com sucesso
     edit:
-      edit: Edit category
+      edit: Editar categoria
     form:
-      placeholder: Category name
-      name_label: Name
-      unassigned: "(unassigned)"
-      parent_category_label: "Parent category (optional)"
-      trigger_label: Choose color and icon
-      color: Color
-      icon: Icon
-      auto_adjust: auto-adjust.
-      poor_contrast: "Poor contrast, choose a darker color or"
+      placeholder: Nome da categoria
+      name_label: Designação
+      unassigned: "(sem atribuição)"
+      parent_category_label: "Categoria principal (opcional)"
+      trigger_label: Escolher cor e ícone
+      color: Cor
+      icon: Ícone
+      auto_adjust: ajuste automático.
+      poor_contrast: "Contraste fraco, escolha uma cor mais escura ou"
     destroy_all:
-      success: All categories deleted
+      success: Todas as categorias eliminadas
     index:
-      bootstrap: Use defaults (recommended)
-      categories: Categories
-      categories_expenses: Expense categories
-      categories_incomes: Income categories
-      delete_all: Delete all
-      empty: No categories found
-      merge: Merge categories
-      new: New category
+      bootstrap: Utilizar predefinições (recomendado)
+      categories: Categorias
+      categories_expenses: Categorias de despesas
+      categories_incomes: Categorias de rendimentos
+      delete_all: Eliminar tudo
+      empty: Nenhuma categoria encontrada
+      merge: Fundir categorias
+      new: Nova categoria
     merge:
-      title: Merge categories
-      description: Select a target category and the categories to merge into it. Matching transactions and budget lines will move to the target.
-      target_label: Merge into (target)
-      select_target: Select target category...
-      sources_label: Categories to merge
-      sources_hint: Selected categories will be deleted after their transactions and budget lines move to the target. Do not select the target as a source.
-      submit: Merge selected
+      title: Fundir categorias
+      description: Selecione uma categoria de destino e as categorias a fundir nela. As transações e linhas de orçamento correspondentes serão movidas para o destino.
+      target_label: Fundir em (destino)
+      select_target: Selecionar categoria de destino...
+      sources_label: Categorias a fundir
+      sources_hint: As categorias selecionadas serão eliminadas depois de as suas transações e linhas de orçamento serem movidas para o destino. Não selecione o destino como origem.
+      submit: Fundir selecionadas
     menu:
-      loading: Loading...
+      loading: A carregar...
     new:
-      new_category: New category
+      new_category: Nova categoria
     perform_merge:
       success:
-        one: Successfully merged %{count} category
-        other: Successfully merged %{count} categories
-      no_categories_selected: No categories selected to merge
-      target_not_found: Target category not found
-      invalid_categories: Invalid categories selected
-      target_selected_as_source: Choose different categories for the target and sources.
+        one: "%{count} categoria fundida com sucesso"
+        other: "%{count} categorias fundidas com sucesso"
+      no_categories_selected: Nenhuma categoria selecionada para fundir
+      target_not_found: Categoria de destino não encontrada
+      invalid_categories: Categorias selecionadas inválidas
+      target_selected_as_source: Escolha categorias diferentes para o destino e as origens.
     update:
-      success: Category updated successfully
+      success: Categoria atualizada com sucesso
     virtual:
-      transfer: Transfer
-      payment: Payment
-      trade: Trade
+      transfer: Transferência
+      payment: Pagamento
+      trade: Negociação
   category:
     dropdowns:
       show:
-        bootstrap: Generate default categories
-        empty: No categories found
-        match_transfer: "Match transfer/payment"
-        one_time: "One-time %{type}"
-        income: "income"
-        expense: "expense"
+        bootstrap: Gerar categorias predefinidas
+        empty: Nenhuma categoria encontrada
+        match_transfer: "Corresponder transferência/pagamento"
+        one_time: "%{type} único(a)"
+        income: "rendimento"
+        expense: "despesa"

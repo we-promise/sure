@@ -2,29 +2,29 @@
 pt-PT:
   users:
     destroy:
-      success: Your account has been deleted.
+      success: A sua conta foi eliminada.
     update:
-      email_change_failed: Failed to change email address.
-      email_change_initiated: Please check your new email address for confirmation
-        instructions.
-      success: Your profile has been updated.
+      email_change_failed: Falha ao alterar o endereço de e-mail.
+      email_change_initiated: Verifique o seu novo endereço de e-mail para obter instruções
+        de confirmação.
+      success: O seu perfil foi atualizado.
     resend_confirmation_email:
-      success: A new confirmation email is queued to be sent.
-      no_pending_change: No email change is currently pending!
+      success: Um novo e-mail de confirmação está na fila para ser enviado.
+      no_pending_change: Não existe nenhuma alteração de e-mail pendente de momento!
     reset:
-      success: Your account has been reset. Data will be deleted in the background in some time.
-      unauthorized: You are not authorized to perform this action
+      success: A sua conta foi reposta. Os dados serão eliminados em segundo plano dentro de algum tempo.
+      unauthorized: Não está autorizado a realizar esta ação
     reset_with_sample_data:
-      success: Your account has been reset and sample data is being prepared. You’ll see demo data shortly.
+      success: A sua conta foi reposta e os dados de exemplo estão a ser preparados. Verá os dados de demonstração em breve.
     roles:
-      admin: Admin
-      member: Member
-      super_admin: Super admin
+      admin: Administrador
+      member: Membro
+      super_admin: Super administrador
     user_menu:
-      aria_label: Open account menu
-      version: Version
-      settings: Settings
-      changelog: Changelog
+      aria_label: Abrir menu da conta
+      version: Versão
+      settings: Definições
+      changelog: Registo de alterações
       feedback: Feedback
-      contact: Contact
-      log_out: Log out
+      contact: Contacto
+      log_out: Terminar sessão

@@ -3,6 +3,6 @@ pt-PT:
   admin:
     invitations:
       destroy:
-        success: "Invitation deleted."
+        success: "Convite eliminado."
       destroy_all:
-        success: "All invitations for this family have been deleted."
+        success: "Todos os convites para esta família foram eliminados."

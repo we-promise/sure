@@ -2,25 +2,25 @@
 pt-PT:
   tags:
     create:
-      created: Tag created
-      error: 'Error creating tag: %{error}'
+      created: Etiqueta criada
+      error: 'Erro ao criar etiqueta: %{error}'
     destroy:
-      deleted: Tag deleted
+      deleted: Etiqueta eliminada
     destroy_all:
-      all_deleted: All tags deleted
+      all_deleted: Todas as etiquetas eliminadas
     edit:
-      edit: Edit tag
+      edit: Editar etiqueta
     form:
-      placeholder: Tag name
+      placeholder: Designação da etiqueta
     index:
-      empty: No tags yet
-      new: New tag
-      tags: Tags
-      delete_all: Delete all
+      empty: Ainda não existem etiquetas
+      new: Nova etiqueta
+      tags: Etiquetas
+      delete_all: Eliminar todas
     new:
-      new: New tag
+      new: Nova etiqueta
     tag:
-      delete: Delete
-      edit: Edit
+      delete: Eliminar
+      edit: Editar
     update:
-      updated: Tag updated
+      updated: Etiqueta atualizada

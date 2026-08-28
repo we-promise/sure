@@ -2,248 +2,248 @@
 pt-PT:
   reports:
     index:
-      title: Reports
-      subtitle: Comprehensive insights into your financial health
-      export: Export CSV
-      print_report: Print Report
-      drag_to_reorder: "Drag to reorder section"
-      toggle_section: "Toggle section visibility"
+      title: Relatórios
+      subtitle: Informações abrangentes sobre a sua saúde financeira
+      export: Exportar CSV
+      print_report: Imprimir Relatório
+      drag_to_reorder: "Arraste para reordenar a secção"
+      toggle_section: "Alternar a visibilidade da secção"
       periods:
-        monthly: Monthly
-        quarterly: Quarterly
-        ytd: Year to Date
-        last_6_months: Last 6 Months
-        custom: Custom Range
+        monthly: Mensal
+        quarterly: Trimestral
+        ytd: Acumulado do Ano
+        last_6_months: Últimos 6 Meses
+        custom: Período Personalizado
       date_range:
-        from: From
-        to: To
-      showing_period: "Showing data from %{start} to %{end}"
-      previous_period: "Previous period"
-      next_period: "Next period"
-      today: "Today"
+        from: De
+        to: Até
+      showing_period: "A mostrar dados de %{start} a %{end}"
+      previous_period: "Período anterior"
+      next_period: "Período seguinte"
+      today: "Hoje"
       period_label:
-        quarterly: "Q%{quarter} %{year}"
-        ytd: "YTD %{year}"
+        quarterly: "T%{quarter} %{year}"
+        ytd: "Acumulado %{year}"
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
       period_picker:
-        quarter: "Q%{quarter} %{year}"
-        ytd: "YTD %{year}"
-      previous_year: "Previous year"
-      next_year: "Next year"
-      previous_decade: "Previous decade"
-      next_decade: "Next decade"
-    invalid_date_range: "End date cannot be before start date. The dates have been swapped."
+        quarter: "T%{quarter} %{year}"
+        ytd: "Acumulado %{year}"
+      previous_year: "Ano anterior"
+      next_year: "Ano seguinte"
+      previous_decade: "Década anterior"
+      next_decade: "Década seguinte"
+    invalid_date_range: "A data final não pode ser anterior à data inicial. As datas foram trocadas."
     summary:
-      total_income: Total Income
-      total_expenses: Total Expenses
-      net_savings: Net Savings
-      budget_performance: Budget Performance
-      vs_previous: vs previous period
-      income_minus_expenses: Income minus expenses
-      of_budget_used: of budget used
-      no_budget_data: No budget data for this period
+      total_income: Rendimento Total
+      total_expenses: Despesas Totais
+      net_savings: Poupança Líquida
+      budget_performance: Desempenho do Orçamento
+      vs_previous: vs. período anterior
+      income_minus_expenses: Rendimento menos despesas
+      of_budget_used: do orçamento utilizado
+      no_budget_data: Sem dados de orçamento para este período
     budget_performance:
-      title: Budget Performance
-      spent: Spent
-      budgeted: Budgeted
-      remaining: Remaining
-      over_by: Over by
-      shared: shared
-      suggested_daily: "%{amount} suggested per day for %{days} remaining days"
-      no_budgets: No budget categories set up for this month
+      title: Desempenho do Orçamento
+      spent: Gasto
+      budgeted: Orçado
+      remaining: Restante
+      over_by: Excedido em
+      shared: partilhado
+      suggested_daily: "%{amount} sugerido por dia para os %{days} dias restantes"
+      no_budgets: Sem categorias de orçamento configuradas para este mês
       status:
-        good: On Track
-        warning: Near Limit
-        over: Over Budget
+        good: No Caminho Certo
+        warning: Perto do Limite
+        over: Acima do Orçamento
     trends:
-      title: Trends & Insights
-      monthly_breakdown: Monthly Breakdown
-      month: Month
-      income: Income
-      expenses: Expenses
-      net: Net
-      savings_rate: Savings Rate
-      current: current
-      avg_monthly_income: Avg. Monthly Income
-      avg_monthly_expenses: Avg. Monthly Expenses
-      avg_monthly_savings: Avg. Monthly Savings
-      no_data: No trend data available
-      spending_patterns: Spending Patterns
-      weekday_spending: Weekday Spending
-      weekend_spending: Weekend Spending
+      title: Tendências e Informações
+      monthly_breakdown: Repartição Mensal
+      month: Mês
+      income: Rendimento
+      expenses: Despesas
+      net: Líquido
+      savings_rate: Taxa de Poupança
+      current: atual
+      avg_monthly_income: Rendimento Mensal Médio
+      avg_monthly_expenses: Despesas Mensais Médias
+      avg_monthly_savings: Poupança Mensal Média
+      no_data: Sem dados de tendências disponíveis
+      spending_patterns: Padrões de Gastos
+      weekday_spending: Gastos em Dias Úteis
+      weekend_spending: Gastos ao Fim de Semana
       total: Total
-      avg_per_transaction: Avg. per transaction
-      transactions: Transactions
-      insight_title: Insight
-      insight_higher_weekend: "You spend %{percent}% more per transaction on weekends than weekdays"
-      insight_higher_weekday: "You spend %{percent}% more per transaction on weekdays than weekends"
-      insight_similar: "Your spending per transaction is similar on weekdays and weekends"
-      no_spending_data: No spending data available for this period
+      avg_per_transaction: Média por transação
+      transactions: Transações
+      insight_title: Informação
+      insight_higher_weekend: "Gasta mais %{percent}% por transação aos fins de semana do que nos dias úteis"
+      insight_higher_weekday: "Gasta mais %{percent}% por transação nos dias úteis do que aos fins de semana"
+      insight_similar: "Os seus gastos por transação são semelhantes nos dias úteis e aos fins de semana"
+      no_spending_data: Sem dados de gastos disponíveis para este período
     empty_state:
-      title: No Data Available
-      description: Start tracking your finances by adding transactions or connecting your accounts to see comprehensive reports
-      add_transaction: Add Transaction
-      add_account: Add Account
+      title: Sem Dados Disponíveis
+      description: Comece a monitorizar as suas finanças adicionando transações ou ligando as suas contas para ver relatórios abrangentes
+      add_transaction: Adicionar Transação
+      add_account: Adicionar Conta
     transactions_breakdown:
-      title: Activity Breakdown
-      no_transactions: No activity found for the selected period and filters
+      title: Repartição de Atividade
+      no_transactions: Sem atividade encontrada para o período e filtros selecionados
       filters:
-        title: Filters
-        category: Category
-        account: Account
-        tag: Tag
-        amount_min: Min Amount
-        amount_max: Max Amount
-        date_range: Date Range
-        all_categories: All Categories
-        all_accounts: All Accounts
-        all_tags: All Tags
-        apply: Apply Filters
-        clear: Clear Filters
+        title: Filtros
+        category: Categoria
+        account: Conta
+        tag: Etiqueta
+        amount_min: Montante Mínimo
+        amount_max: Montante Máximo
+        date_range: Período
+        all_categories: Todas as Categorias
+        all_accounts: Todas as Contas
+        all_tags: Todas as Etiquetas
+        apply: Aplicar Filtros
+        clear: Limpar Filtros
       sort:
-        label: Sort by
-        date_desc: Date (Newest)
-        amount_desc: Amount (High to Low)
-        amount_asc: Amount (Low to High)
+        label: Ordenar por
+        date_desc: Data (mais recente)
+        amount_desc: Montante (maior para menor)
+        amount_asc: Montante (menor para maior)
       export:
-        label: Export
+        label: Exportar
         csv: CSV
         excel: Excel
         pdf: PDF
-        google_sheets: Open in Google Sheets
+        google_sheets: Abrir no Google Sheets
       table:
-        category: Category
-        amount: Amount
-        type: Type
-        expense: Expenses
-        income: Income
-        uncategorized: Uncategorized
+        category: Categoria
+        amount: Montante
+        type: Tipo
+        expense: Despesas
+        income: Rendimento
+        uncategorized: Sem categoria
         entries:
-          one: "%{count} entry"
-          other: "%{count} entries"
-        percentage: "% of Total"
+          one: "%{count} registo"
+          other: "%{count} registos"
+        percentage: "% do Total"
       pagination:
         showing:
-          one: Showing %{count} entry
-          other: Showing %{count} entries
-        previous: Previous
-        next: Next
+          one: A mostrar %{count} registo
+          other: A mostrar %{count} registos
+        previous: Anterior
+        next: Seguinte
     net_worth:
-      title: Net Worth
-      current_net_worth: Current Net Worth
-      period_change: Period Change
-      assets_vs_liabilities: Assets vs Liabilities
-      total_assets: Assets
-      total_liabilities: Liabilities
-      no_assets: No assets
-      no_liabilities: No liabilities
+      title: Património Líquido
+      current_net_worth: Património Líquido Atual
+      period_change: Alteração do Período
+      assets_vs_liabilities: Ativos vs. Passivos
+      total_assets: Ativos
+      total_liabilities: Passivos
+      no_assets: Sem ativos
+      no_liabilities: Sem passivos
     investment_performance:
-      title: Investment Performance
-      portfolio_value: Portfolio Value
-      total_return: Total Return
-      period_return: Period Return
-      contributions: Period Contributions
-      withdrawals: Period Withdrawals
-      top_holdings: Top Holdings
-      holding: Holding
-      weight: Weight
-      value: Value
-      return: Return
-      accounts: Investment Accounts
-      gains_by_tax_treatment: Gains by Tax Treatment
-      unrealized_gains: Unrealized Gains
-      realized_gains: Realized Gains
-      total_gains: Total Gains
-      taxable_realized_note: These gains may be subject to taxes
+      title: Desempenho do Investimento
+      portfolio_value: Valor da Carteira
+      total_return: Retorno Total
+      period_return: Retorno do Período
+      contributions: Contribuições do Período
+      withdrawals: Levantamentos do Período
+      top_holdings: Principais Posições
+      holding: Posição
+      weight: Peso
+      value: Valor
+      return: Retorno
+      accounts: Contas de Investimento
+      gains_by_tax_treatment: Ganhos por Tratamento Fiscal
+      unrealized_gains: Ganhos Não Realizados
+      realized_gains: Ganhos Realizados
+      total_gains: Ganhos Totais
+      taxable_realized_note: Estes ganhos podem estar sujeitos a impostos
       no_data: "-"
-      view_details: View details
+      view_details: Ver detalhes
       holdings_count:
-        one: "%{count} holding"
-        other: "%{count} holdings"
+        one: "%{count} posição"
+        other: "%{count} posições"
       sells_count:
-        one: "%{count} sell"
-        other: "%{count} sells"
-      holdings: Holdings
-      sell_trades: Sell Trades
-      and_more: "+%{count} more"
+        one: "%{count} venda"
+        other: "%{count} vendas"
+      holdings: Posições
+      sell_trades: Negociações de Venda
+      and_more: "+%{count} mais"
     investment_flows:
-      title: Investment Flows
-      description: Track money flowing into and out of your investment accounts through contributions and withdrawals.
-      contributions: Contributions
-      contributions_description: Money added to investments
-      withdrawals: Withdrawals
-      withdrawals_description: Money withdrawn from investments
-      net_flow: Net Flow
-      net_flow_description: Total net change
+      title: Fluxos de Investimento
+      description: Acompanhe o dinheiro que entra e sai das suas contas de investimento através de contribuições e levantamentos.
+      contributions: Contribuições
+      contributions_description: Dinheiro adicionado aos investimentos
+      withdrawals: Levantamentos
+      withdrawals_description: Dinheiro levantado dos investimentos
+      net_flow: Fluxo Líquido
+      net_flow_description: Alteração líquida total
     google_sheets_instructions:
-      title_with_key: "✅ Copy URL for Google Sheets"
-      title_no_key: "⚠️ API Key Required"
-      ready: Your CSV URL (with API key) is ready.
-      steps: "To import into Google Sheets:\n1. Create a new Google Sheet\n2. In cell A1, enter the formula shown below\n3. Press Enter"
-      security_warning: "This URL includes your API key. Keep it secure!"
-      need_key: To import data into Google Sheets, you need an API key.
-      step1: "Go to Settings → API Keys"
-      step2: "Create a new API key with \"read\" permission"
-      step3: Copy the API key
-      step4: "Add it to this URL as: ?api_key=YOUR_KEY"
-      example: Example
-      then_use: Then use the full URL with =IMPORTDATA() in Google Sheets.
-      open_sheets: Open Google Sheets
-      go_to_api_keys: Go to API Keys
-      close: Got it
+      title_with_key: "✅ Copiar URL para o Google Sheets"
+      title_no_key: "⚠️ Chave de API Necessária"
+      ready: O seu URL CSV (com chave de API) está pronto.
+      steps: "Para importar no Google Sheets:\n1. Crie uma nova folha de cálculo no Google\n2. Na célula A1, introduza a fórmula mostrada abaixo\n3. Prima Enter"
+      security_warning: "Este URL inclui a sua chave de API. Mantenha-a segura!"
+      need_key: Para importar dados no Google Sheets, precisa de uma chave de API.
+      step1: "Vá para Definições → Chaves de API"
+      step2: "Crie uma nova chave de API com permissão de \"leitura\""
+      step3: Copie a chave de API
+      step4: "Adicione-a a este URL como: ?api_key=YOUR_KEY"
+      example: Exemplo
+      then_use: Depois utilize o URL completo com =IMPORTDATA() no Google Sheets.
+      open_sheets: Abrir o Google Sheets
+      go_to_api_keys: Ir para Chaves de API
+      close: Percebido
     print:
-      document_title: Financial Report
-      title: Financial Report
-      generated_on: "Generated %{date}"
+      document_title: Relatório Financeiro
+      title: Relatório Financeiro
+      generated_on: "Gerado em %{date}"
       # Summary section
       summary:
-        title: Summary
-        income: Income
-        expenses: Expenses
-        net_savings: Net Savings
-        budget: Budget
-        vs_prior: "%{percent}% vs prior"
-        of_income: "%{percent}% of income"
-        used: used
+        title: Resumo
+        income: Rendimento
+        expenses: Despesas
+        net_savings: Poupança Líquida
+        budget: Orçamento
+        vs_prior: "%{percent}% vs. anterior"
+        of_income: "%{percent}% do rendimento"
+        used: utilizado
       # Net Worth section
       net_worth:
-        title: Net Worth
-        current_balance: Current Balance
-        this_period: this period
-        assets: Assets
-        liabilities: Liabilities
-        no_liabilities: No liabilities
+        title: Património Líquido
+        current_balance: Saldo Atual
+        this_period: neste período
+        assets: Ativos
+        liabilities: Passivos
+        no_liabilities: Sem passivos
       # Monthly Trends section
       trends:
-        title: Monthly Trends
-        month: Month
-        income: Income
-        expenses: Expenses
-        net: Net
-        savings_rate: Savings Rate
-        average: Average
-        current_month_note: "* Current month (partial data)"
+        title: Tendências Mensais
+        month: Mês
+        income: Rendimento
+        expenses: Despesas
+        net: Líquido
+        savings_rate: Taxa de Poupança
+        average: Média
+        current_month_note: "* Mês atual (dados parciais)"
       # Investments section
       investments:
-        title: Investments
-        portfolio_value: Portfolio Value
-        total_return: Total Return
-        period_return: Period Return
-        contributions: Contributions
-        withdrawals: Withdrawals
-        this_period: this period
-        top_holdings: Top Holdings
-        holding: Holding
-        weight: Weight
-        value: Value
-        return: Return
+        title: Investimentos
+        portfolio_value: Valor da Carteira
+        total_return: Retorno Total
+        period_return: Retorno do Período
+        contributions: Contribuições
+        withdrawals: Levantamentos
+        this_period: neste período
+        top_holdings: Principais Posições
+        holding: Posição
+        weight: Peso
+        value: Valor
+        return: Retorno
       # Spending by Category section
       spending:
-        title: Spending by Category
-        income: Income
-        expenses: Expenses
-        category: Category
-        amount: Amount
+        title: Gastos por Categoria
+        income: Rendimento
+        expenses: Despesas
+        category: Categoria
+        amount: Montante
         percent: "%"
-        more_categories: "+ %{count} more categories"
+        more_categories: "+ %{count} mais categorias"

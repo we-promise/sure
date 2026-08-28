@@ -2,36 +2,36 @@
 pt-PT:
   vehicles:
     edit:
-      edit: Edit %{account}
+      edit: Editar %{account}
     form:
-      make: Make
+      make: Marca
       make_placeholder: Toyota
-      mileage: Mileage
+      mileage: Quilometragem
       mileage_placeholder: '15000'
-      mileage_unit: Unit
-      model: Model
+      mileage_unit: Unidade
+      model: Modelo
       model_placeholder: Camry
-      year: Year
+      year: Ano
       year_placeholder: '2023'
-      mileage_unit_kilometers: Kilometers
-      mileage_unit_miles: Miles
+      mileage_unit_kilometers: Quilómetros
+      mileage_unit_miles: Milhas
     new:
-      title: Enter vehicle details
+      title: Introduzir detalhes do veículo
     overview:
-      current_price: Current Price
-      make_model: Make & Model
-      mileage: Mileage
-      purchase_price: Purchase Price
-      trend: Trend
-      unknown: Unknown
-      year: Year
+      current_price: Preço atual
+      make_model: Marca e modelo
+      mileage: Quilometragem
+      purchase_price: Preço de compra
+      trend: Tendência
+      unknown: Desconhecido
+      year: Ano
     tabs:
       overview:
-        current_price: Current Price
-        make_model: Make & Model
-        mileage: Mileage
-        purchase_price: Purchase Price
-        trend: Trend
-        unknown: Unknown
-        year: Year
-        edit_account_details: "Edit account details"
+        current_price: Preço atual
+        make_model: Marca e modelo
+        mileage: Quilometragem
+        purchase_price: Preço de compra
+        trend: Tendência
+        unknown: Desconhecido
+        year: Ano
+        edit_account_details: "Editar detalhes da conta"

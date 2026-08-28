@@ -2,9 +2,9 @@
 pt-PT:
   email_confirmation_mailer:
     confirmation_email:
-      body: You recently requested to change your email address. Click the button
-        below to confirm this change.
-      cta: Confirm email change
-      expiry_notice: This link will expire in %{hours} hours.
-      greeting: Hello!
-      subject: '%{product_name}: Confirm your email change'
+      body: Solicitou recentemente a alteração do seu endereço de e-mail. Clique no
+        botão abaixo para confirmar esta alteração.
+      cta: Confirmar alteração de e-mail
+      expiry_notice: Este link expirará em %{hours} horas.
+      greeting: Olá!
+      subject: '%{product_name}: Confirme a alteração do seu e-mail'

@@ -2,10 +2,10 @@
 pt-PT:
   invite_codes:
     create:
-      success: "Code generated"
+      success: "Código gerado"
     destroy:
-      success: "Code deleted"
+      success: "Código eliminado"
     index:
-      invite_code_description: Generate a new code to see it displayed here. Generated
-        codes that have been used will no longer be shown.
-      no_invite_codes: No codes to show
+      invite_code_description: Gere um novo código para o ver apresentado aqui. Os códigos gerados
+        que já foram utilizados deixarão de ser mostrados.
+      no_invite_codes: Não existem códigos para mostrar

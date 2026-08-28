@@ -3,204 +3,204 @@ pt-PT:
   account:
     entries:
       destroy:
-        success: "Entry deleted successfully."
+        success: "Registo eliminado com sucesso."
   accounts:
-    not_authorized: "You don't have permission to manage this account"
+    not_authorized: "Não tem permissão para gerir esta conta"
     account:
-      complete_setup: Complete setup
-      edit: Edit
-      link_lunchflow: Link with Lunch Flow
-      link_provider: Link with provider
-      unlink_provider: Unlink from provider
-      change_simplefin_account: Change SimpleFIN account
-      troubleshoot: Troubleshoot
-      enable: Enable account
-      disable: Disable account
-      exclude_from_reports: Exclude from all reports
-      include_in_reports: Include in reports
-      excluded_from_reports_indicator: Excluded from reports
-      set_default: Set as default
-      remove_default: Unset default
-      default_label: Default
-      delete: Delete account
-      sharing: Sharing
+      complete_setup: Concluir configuração
+      edit: Editar
+      link_lunchflow: Ligar com Lunch Flow
+      link_provider: Ligar com fornecedor
+      unlink_provider: Desligar do fornecedor
+      change_simplefin_account: Alterar conta SimpleFIN
+      troubleshoot: Resolver problemas
+      enable: Ativar conta
+      disable: Desativar conta
+      exclude_from_reports: Excluir de todos os relatórios
+      include_in_reports: Incluir nos relatórios
+      excluded_from_reports_indicator: Excluída dos relatórios
+      set_default: Definir como predefinida
+      remove_default: Remover predefinição
+      default_label: Predefinida
+      delete: Eliminar conta
+      sharing: Partilha
     chart:
-      data_not_available: Data not available for the selected period
+      data_not_available: Dados não disponíveis para o período selecionado
     create:
-      success: "%{type} account created"
+      success: "Conta %{type} criada"
     set_default:
-      depository_only: "Only cash and credit card accounts can be set as default."
+      depository_only: "Apenas as contas de dinheiro e cartões de crédito podem ser definidas como predefinidas."
     destroy:
-      success: "%{type} account scheduled for deletion"
-      cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
-      failed: "Resource deletion failed. Try again later."
+      success: "Conta %{type} agendada para eliminação"
+      cannot_delete_linked: "Não é possível eliminar uma conta ligada. Desligue-a primeiro."
+      failed: "A eliminação do recurso falhou. Tente novamente mais tarde."
     empty:
-      empty_message: Add an account either via connection, importing or entering manually.
-      new_account: New account
-      no_accounts: No accounts yet
+      empty_message: Adicione uma conta através de ligação, importação ou introdução manual.
+      new_account: Nova conta
+      no_accounts: Ainda sem contas
     form:
-      balance: "Balance on date:"
-      opening_balance_date_label: Opening balance date
-      name_label: Account name
-      name_placeholder: Example account name
-      additional_details: Additional details
-      institution_name_label: Institution name
-      institution_name_placeholder: e.g., Chase Bank
-      institution_domain_label: Institution domain
-      institution_domain_placeholder: e.g., chase.com
-      notes_label: Notes
-      notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
-      exclude_from_reports: Exclude from all reports
-      enable_category_matcher_label: Enable category matcher
-      enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
+      balance: "Saldo à data:"
+      opening_balance_date_label: Data do saldo inicial
+      name_label: Nome da conta
+      name_placeholder: Exemplo de nome de conta
+      additional_details: Detalhes adicionais
+      institution_name_label: Nome da instituição
+      institution_name_placeholder: ex., Banco Montepio
+      institution_domain_label: Domínio da instituição
+      institution_domain_placeholder: ex., montepio.pt
+      notes_label: Notas
+      notes_placeholder: Guarde informações adicionais, como números de conta, códigos de classificação, IBAN, números de encaminhamento, etc.
+      exclude_from_reports: Excluir de todos os relatórios
+      enable_category_matcher_label: Ativar correspondência de categorias
+      enable_category_matcher_hint: Quando ativado, a categoria sugerida pelo fornecedor é aplicada às transações importadas. Desative para deixar as novas transações sem categoria.
     index:
-      accounts: Accounts
-      cancel_sync: Cancel sync
+      accounts: Contas
+      cancel_sync: Cancelar sincronização
       manual_accounts:
-        other_accounts: Other accounts
-      new_account: New account
-      sync: Sync all
+        other_accounts: Outras contas
+      new_account: Nova conta
+      sync: Sincronizar tudo
     sync_all:
-      syncing: "Syncing accounts..."
+      syncing: "A sincronizar contas..."
     new:
-      import_accounts: Import accounts
+      import_accounts: Importar contas
       container:
-        select: Select
-        navigate: Navigate
-        close: Close
+        select: Selecionar
+        navigate: Navegar
+        close: Fechar
       method_selector:
-        connected_entry: Link account
-        connected_entry_eu: Link EU account
-        link_with_provider: "Link with %{provider}"
-        lunchflow_entry: Link Lunch Flow account
-        manual_entry: Enter account balance
-        title: How would you like to add it?
-      title: What would you like to add?
+        connected_entry: Ligar conta
+        connected_entry_eu: Ligar conta da UE
+        link_with_provider: "Ligar com %{provider}"
+        lunchflow_entry: Ligar conta do Lunch Flow
+        manual_entry: Introduzir saldo da conta
+        title: Como gostaria de adicionar?
+      title: O que gostaria de adicionar?
     show:
-      limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
+      limited_fx_history_warning: "O histórico de taxas de câmbio só está disponível a partir de %{date}. As transações anteriores a esta data utilizam conversões de moeda aproximadas — tal acontece quando o fornecedor de câmbio apenas oferece uma janela histórica limitada."
       tabs:
-        activity: Activity
-        holdings: Holdings
-        overview: Overview
-        statements: Statements
+        activity: Atividade
+        holdings: Posições
+        overview: Visão geral
+        statements: Extratos
       activity:
-        amount: Amount
-        balance: Balance
-        confirmed: Confirmed
-        date: Date
-        entries: entries
-        entry: entry
-        filter: Filter
-        new: New
-        new_activity: New activity
-        new_balance: New balance
-        new_trade: New trade
-        new_transaction: New transaction
-        new_transfer: New transfer
-        no_entries: No entries found
-        pending: Pending
+        amount: Montante
+        balance: Saldo
+        confirmed: Confirmado
+        date: Data
+        entries: registos
+        entry: registo
+        filter: Filtrar
+        new: Novo
+        new_activity: Nova atividade
+        new_balance: Novo saldo
+        new_trade: Nova negociação
+        new_transaction: Nova transação
+        new_transfer: Nova transferência
+        no_entries: Nenhum registo encontrado
+        pending: Pendente
         search:
-          placeholder: Search entries by name
-        search_placeholder: Search entries by name
-        status: Status
-        title: Activity
+          placeholder: Pesquisar registos por nome
+        search_placeholder: Pesquisar registos por nome
+        status: Estado
+        title: Atividade
       chart:
-        balance: Balance
-        owed: Amount owed
+        balance: Saldo
+        owed: Montante em dívida
       header:
-        complete_setup: Complete setup
+        complete_setup: Concluir configuração
       menu:
-        confirm_accept: Delete "%{name}"
-        confirm_body_html: "<p>By deleting this account, you will erase its value
-          history, affecting various aspects of your overall account. This action
-          will have a direct impact on your net worth calculations and the account
-          graphs.</p><br /> <p>After deletion, there is no way you'll be able to restore
-          the account information because you'll need to add it as a new account.</p>"
-        confirm_title: Delete account?
-        delete_account: Delete account
-        edit: Edit
-        import: Import transactions
-        import_trades: Import trades
-        import_transactions: Import transactions
-        manage: Manage accounts
-        sharing: Sharing
-        statements: Statements
-        exclude_from_reports: Exclude from all reports
-        include_in_reports: Include in reports
+        confirm_accept: Eliminar "%{name}"
+        confirm_body_html: "<p>Ao eliminar esta conta, irá apagar o seu histórico de valores,
+          afetando vários aspetos da sua conta geral. Esta ação
+          terá um impacto direto nos cálculos do património líquido e nos
+          gráficos da conta.</p><br /> <p>Após a eliminação, não há forma de restaurar
+          as informações da conta, pois terá de a adicionar como uma nova conta.</p>"
+        confirm_title: Eliminar conta?
+        delete_account: Eliminar conta
+        edit: Editar
+        import: Importar transações
+        import_trades: Importar negociações
+        import_transactions: Importar transações
+        manage: Gerir contas
+        sharing: Partilha
+        statements: Extratos
+        exclude_from_reports: Excluir de todos os relatórios
+        include_in_reports: Incluir nos relatórios
     update:
-      success: "%{type} account updated"
+      success: "Conta %{type} atualizada"
     sidebar:
-      missing_data: Missing historical data
-      missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
-      configure_providers: Configure your providers here.
+      missing_data: Faltam dados históricos
+      missing_data_description: "%{product} utiliza fornecedores de terceiros para obter taxas de câmbio históricas, preços de títulos e muito mais. Estes dados são necessários para calcular com precisão os saldos históricos das contas."
+      configure_providers: Configure aqui os seus fornecedores.
       tabs:
-        all: All
-        assets: Assets
-        debts: Debts
-      new_asset: New asset
-      new_debt: New debt
-      new_account: New account
-      new_account_group: "New %{account_group}"
+        all: Tudo
+        assets: Ativos
+        debts: Dívidas
+      new_asset: Novo ativo
+      new_debt: Nova dívida
+      new_account: Nova conta
+      new_account_group: "Novo(a) %{account_group}"
     types:
-      depository: Cash
-      investment: Investment
-      crypto: Crypto
-      property: Property
-      vehicle: Vehicle
-      other_asset: Other Asset
-      credit_card: Credit Card
-      loan: Loan
-      other_liability: Other Liability
+      depository: Dinheiro
+      investment: Investimento
+      crypto: Cripto
+      property: Imóvel
+      vehicle: Veículo
+      other_asset: Outro Ativo
+      credit_card: Cartão de Crédito
+      loan: Empréstimo
+      other_liability: Outro Passivo
     types_plural:
-      depository: Cash
-      investment: Investments
-      crypto: Crypto
-      property: Properties
-      vehicle: Vehicles
-      other_asset: Other Assets
-      credit_card: Credit Cards
-      loan: Loans
-      other_liability: Other Liabilities
+      depository: Dinheiro
+      investment: Investimentos
+      crypto: Cripto
+      property: Imóveis
+      vehicle: Veículos
+      other_asset: Outros Ativos
+      credit_card: Cartões de Crédito
+      loan: Empréstimos
+      other_liability: Outros Passivos
     tax_treatments:
-      taxable: Taxable
-      tax_deferred: Tax-Deferred
-      tax_exempt: Tax-Exempt
-      tax_advantaged: Tax-Advantaged
+      taxable: Tributável
+      tax_deferred: Imposto Diferido
+      tax_exempt: Isento de Impostos
+      tax_advantaged: Com Benefícios Fiscais
     tax_treatment_descriptions:
-      taxable: Gains taxed when realized
-      tax_deferred: Contributions deductible, taxed on withdrawal
-      tax_exempt: Contributions after-tax, gains not taxed
-      tax_advantaged: Special tax benefits with conditions
+      taxable: Ganhos tributados quando realizados
+      tax_deferred: Contribuições dedutíveis, tributadas no levantamento
+      tax_exempt: Contribuições após impostos, ganhos não tributados
+      tax_advantaged: Benefícios fiscais especiais com condições
     subtype_regions:
-      us: United States
-      uk: United Kingdom
-      ca: Canada
-      au: Australia
-      eu: Europe
-      in: India
-      generic: General
+      us: Estados Unidos
+      uk: Reino Unido
+      ca: Canadá
+      au: Austrália
+      eu: Europa
+      in: Índia
+      generic: Geral
     confirm_unlink:
-      title: Unlink account from provider?
-      description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
-      warning_title: What this means
-      warning_no_sync: The account will no longer sync automatically with your provider
-      warning_manual_updates: You will need to add transactions and update balances manually
-      warning_transactions_kept: All existing transactions and balances will be preserved
-      warning_can_delete: After unlinking, you will be able to delete the account if needed
-      confirm_button: Confirm and unlink
+      title: Desligar conta do fornecedor?
+      description_html: "Está prestes a desligar <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Isto irá convertê-la numa conta manual."
+      warning_title: O que isto significa
+      warning_no_sync: A conta deixará de sincronizar automaticamente com o seu fornecedor
+      warning_manual_updates: Terá de adicionar transações e atualizar saldos manualmente
+      warning_transactions_kept: Todas as transações e saldos existentes serão preservados
+      warning_can_delete: Após desligar, poderá eliminar a conta, se necessário
+      confirm_button: Confirmar e desligar
     unlink:
-      success: "Account unlinked successfully. It is now a manual account."
-      not_linked: "Account is not linked to a provider"
-      error: "Failed to unlink account: %{error}"
-      generic_error: "An unexpected error occurred. Please try again."
+      success: "Conta desligada com sucesso. Agora é uma conta manual."
+      not_linked: "A conta não está ligada a um fornecedor"
+      error: "Falha ao desligar a conta: %{error}"
+      generic_error: "Ocorreu um erro inesperado. Tente novamente."
     select_provider:
-      title: Select a provider to link
-      description: "Choose which provider you want to use to link %{account_name}"
-      already_linked: "Account is already linked to a provider"
-      no_providers: "No providers are currently configured"
+      title: Selecionar um fornecedor para ligar
+      description: "Escolha o fornecedor que pretende utilizar para ligar %{account_name}"
+      already_linked: "A conta já está ligada a um fornecedor"
+      no_providers: "Nenhum fornecedor configurado atualmente"
 
   email_confirmations:
     new:
-      invalid_token: Invalid or expired confirmation link.
-      success_login: Your email has been confirmed. Please log in with your new email
-        address.
+      invalid_token: Link de confirmação inválido ou expirado.
+      success_login: O seu e-mail foi confirmado. Inicie sessão com o seu novo endereço
+        de e-mail.

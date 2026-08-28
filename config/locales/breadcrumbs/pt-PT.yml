@@ -1,90 +1,92 @@
 ---
 pt-PT:
   breadcrumbs:
-    account_sharings: Account sharing
-    account_statements: Statement vault
+    account_sharings: Partilha de conta
+    account_statements: Arquivo de extratos
     accounts: Contas
-    ai_prompts: AI Prompts
-    api_key: API Key
-    api_keys: API Keys
+    ai_prompts: Comandos de IA
+    api_key: Chave de API
+    api_keys: Chaves de API
     appearance: Aparência
     appearances: Aparência
-    bank_sync: Bank Sync
+    bank_sync: Sincronização bancária
     binance_items: Binance
     brex_items: Brex
     budget_categories: Categorias de orçamento
     budgets: Orçamentos
     categories: Categorias
     categorize: Categorizar
-    chats: Chats
+    changelog: Novidades
+    chats: Conversas
     coinbase_items: Coinbase
     coinstats_items: CoinStats
-    credit_cards: Credit cards
-    cryptos: Crypto
-    dashboard: Dashboard
-    debug: Debug
-    debugs: Debug
-    depositories: Cash accounts
-    enable_banking_items: Enable Banking
-    exports: Exports
-    family_exports: Exports
-    family_merchants: Merchants
-    guides: Guides
-    holdings: Holdings
-    home: Home
-    hostings: Self-Hosting
+    credit_cards: Cartões de crédito
+    cryptos: Cripto
+    dashboard: Painel de controlo
+    debug: Depuração
+    debugs: Depuração
+    depositories: Contas de dinheiro
+    enable_banking_items: Ativar Banca
+    exports: Exportações
+    family_exports: Exportações
+    family_merchants: Comerciantes
+    feedback: Comentários
+    guides: Guias
+    holdings: Posições
+    home: Início
+    hostings: Autoalojamento
     ibkr_items: Interactive Brokers
-    impersonation_sessions: Impersonations
+    impersonation_sessions: Representações
     imports: Importações
     indexa_capital_items: Indexa Capital
-    intro: Intro
-    investments: Investmentos
+    intro: Introdução
+    investments: Investimentos
     invitations: Convites
     invite_codes: Códigos de convite
     kraken_items: Kraken
-    llm_usage: LLM Usage
-    llm_usages: LLM Usage
-    loans: Loans
+    llm_usage: Utilização de LLM
+    llm_usages: Utilização de LLM
+    loans: Empréstimos
     lunchflow_items: Lunch Flow
-    mcp: MCP Server
-    merchants: Merchants
+    mcp: Servidor MCP
+    merchants: Comerciantes
     mercury_items: Mercury
-    messages: Messages
-    mfa: Two-factor authentication
-    oidc_accounts: SSO accounts
+    messages: Mensagens
+    mfa: Autenticação de dois fatores
+    oidc_accounts: Contas SSO
     onboardings: Onboarding
-    other_assets: Other assets
-    other_liabilities: Other liabilities
-    payments: Payments
-    pending_duplicate_merges: Duplicate review
+    other_assets: Outros Ativos
+    other_liabilities: Outros Passivos
+    payments: Pagamentos
+    pending_duplicate_merges: Revisão de duplicados
     plaid_items: Plaid
-    plan: Plan
-    preferences: Preferences
-    profile: Profile Info
-    profiles: Profile Info
-    properties: Properties
-    providers: Providers
-    recurring_transactions: Recurring
+    plan: Plano
+    preferences: Preferências
+    profile: Informações do Perfil
+    profiles: Informações do Perfil
+    properties: Imóveis
+    providers: Fornecedores
+    recurring_transactions: Recorrentes
     redbark_items: Redbark
-    registrations: Sign up
-    reports: Reports
-    rules: Rules
-    securities: Security
-    security: Security
-    self_hosting: Self-Hosting
-    sessions: Sign in
+    registrations: Registar
+    reports: Relatórios
+    rules: Regras
+    securities: Títulos
+    security: Segurança
+    self_hosting: Autoalojamento
+    sessions: Iniciar sessão
     simplefin_items: SimpleFIN
     snaptrade_items: SnapTrade
     sophtron_items: Sophtron
-    splits: Split
-    sso_identities: SSO connections
-    sso_providers: SSO providers
-    subscriptions: Subscrições
-    tags: Tags
-    trades: Trades
-    transactions: Transacções
-    transfer_matches: Transfer matches
+    splits: Divisão
+    sso_identities: Ligações SSO
+    sso_providers: Fornecedores SSO
+    subscriptions: Subscrição
+    tags: Etiquetas
+    trades: Negociações
+    transactions: Transações
+    transfer_matches: Correspondências de transferências
     transfers: Transferências
     users: Utilizadores
-    valuations: Valuations
+    valuations: Avaliações
     vehicles: Veículos

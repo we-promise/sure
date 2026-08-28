@@ -2,24 +2,24 @@
 pt-PT:
   impersonation_sessions:
     approve:
-      success: Request approved
+      success: Pedido aprovado
     complete:
-      success: Session completed
+      success: Sessão concluída
     create:
-      success: Request sent to user. Waiting for approval.
+      success: Pedido enviado ao utilizador. A aguardar aprovação.
     join:
-      success: Joined session
+      success: Sessão iniciada
     leave:
-      success: Left session
+      success: Sessão terminada
     reject:
-      success: Request rejected
+      success: Pedido rejeitado
     super_admin_bar:
-      super_admin: Super Admin
-      jobs: Jobs
-      impersonating: Impersonating
-      leave: Leave
-      terminate: Terminate
-      join_a_session: Join a session
-      join: Join
+      super_admin: Super Administrador
+      jobs: Trabalhos
+      impersonating: A Representar
+      leave: Sair
+      terminate: Terminar
+      join_a_session: Iniciar uma sessão
+      join: Entrar
       uuid_placeholder: UUID
-      request_impersonation: Request Impersonation
+      request_impersonation: Pedir Representação

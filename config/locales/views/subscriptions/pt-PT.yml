@@ -1,23 +1,24 @@
+---
 pt-PT:
   subscriptions:
-    self_hosted_alert: "%{product_name} is not available in self-hosted mode."
+    self_hosted_alert: "%{product_name} não está disponível no modo self-hosted."
     upgrade:
-      already_contributing: You are already contributing. Thank you!
-      page_title: "Upgrade"
-      account_settings: "Account Settings"
-      sign_out: "Sign out"
-      contribute_and_support_sure: "Contribute and support Sure"
-      cta: "Continue supporting the development of this codebase!"
+      already_contributing: Já está a contribuir. Obrigado!
+      page_title: "Atualizar"
+      account_settings: "Definições da conta"
+      sign_out: "Terminar sessão"
+      contribute_and_support_sure: "Contribuir e apoiar o Sure"
+      cta: "Continue a apoiar o desenvolvimento desta base de código!"
       header:
-        support: "Support"
+        support: "Apoiar"
         sure: "Sure"
-        today: "today"
-      redirect_to_stripe: "In the next step, you'll be redirected to Stripe which handles credit cards for us."
-      trialing: "Your data will be deleted in %{days} days"
-      trial_over: "Your trial is over"
+        today: "hoje"
+      redirect_to_stripe: "No passo seguinte, será redirecionado para o Stripe, que processa os cartões de crédito por nós."
+      trialing: "Os seus dados serão eliminados em %{days} dias"
+      trial_over: "O seu período experimental terminou"
     create:
-      welcome: "Welcome to Sure!"
-      trial_already_used: "You have already started or completed a trial. Please upgrade to continue."
+      welcome: "Bem-vindo ao Sure!"
+      trial_already_used: "Já iniciou ou concluiu um período experimental. Atualize para continuar."
     success:
-      welcome_with_contribution: "Welcome to Sure!  Your contribution is appreciated."
-      contribution_failed: "Something went wrong processing your contribution. Please try again."
+      welcome_with_contribution: "Bem-vindo ao Sure! A sua contribuição é apreciada."
+      contribution_failed: "Ocorreu um erro ao processar a sua contribuição. Tente novamente."

@@ -2,19 +2,21 @@
 pt-PT:
   cryptos:
     edit:
-      edit: Edit %{account}
+      edit: Editar %{account}
     form:
-      subtype_label: Account type
-      subtype_prompt: Select account type
-      subtype_none: None
-      tax_treatment_label: Tax Treatment
-      tax_treatment_hint: Most cryptocurrency is held in taxable accounts. Select a different option if held in a tax-advantaged account.
+      subtype_label: Tipo de conta
+      subtype_prompt: Selecione o tipo de conta
+      subtype_none: Nenhum
+      tax_treatment_label: Tratamento Fiscal
+      tax_treatment_hint: A maioria das criptomoedas é mantida em contas tributáveis.
+        Selecione uma opção diferente se estiver mantida numa conta com benefícios
+        fiscais.
     new:
-      title: Enter account balance
+      title: Introduza o saldo da conta
     subtypes:
       wallet:
-        short: Wallet
-        long: Crypto Wallet
+        short: Carteira
+        long: Carteira de Criptomoedas
       exchange:
         short: Exchange
-        long: Crypto Exchange
+        long: Exchange de Criptomoedas

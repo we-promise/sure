@@ -6,6 +6,6 @@ pt-PT:
         transaction:
           attributes:
             attachments:
-              too_many: "cannot exceed %{max} files per transaction"
-              too_large: "file %{index} is too large (maximum %{max_mb}MB)"
-              invalid_format: "file %{index} has unsupported format (%{file_format})"
+              too_many: "não é possível exceder %{max} ficheiros por transação"
+              too_large: "O ficheiro %{index} é demasiado grande (máximo de %{max_mb}MB)"
+              invalid_format: "O ficheiro %{index} possui um formato não suportado (%{file_format})"

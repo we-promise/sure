@@ -2,6 +2,6 @@
 pt-PT:
   other_liabilities:
     edit:
-      edit: Edit %{account}
+      edit: Editar %{account}
     new:
-      title: Enter liability details
+      title: Introduzir detalhes do passivo

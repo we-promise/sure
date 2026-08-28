@@ -6,4 +6,4 @@ pt-PT:
         time_series/value:
           attributes:
             value:
-              must_be_a_money_or_numeric: must be a Money or Numeric
+              must_be_a_money_or_numeric: deve ser um valor monetário ou numérico

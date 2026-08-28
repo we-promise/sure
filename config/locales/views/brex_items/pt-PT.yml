@@ -1,277 +1,277 @@
 ---
 pt-PT:
   brex_items:
-    default_connection_name: Brex Connection
+    default_connection_name: Ligação da Brex
     account_metadata:
       provider: Brex
       separator: " • "
     kinds:
-      cash: Cash
-      card: Card
+      cash: Dinheiro
+      card: Cartão
     statuses:
-      ACTIVE: Active
-      active: Active
-      CLOSED: Closed
-      closed: Closed
-      frozen: Frozen
-      FROZEN: Frozen
+      ACTIVE: Ativa
+      active: Ativa
+      CLOSED: Fechada
+      closed: Fechada
+      frozen: Congelada
+      FROZEN: Congelada
     create:
-      success: Brex connection created successfully
-    default_card_name: Brex Card
+      success: Ligação da Brex criada com sucesso
+    default_card_name: Cartão Brex
     default_cash_name: "Brex Cash %{id}"
     destroy:
-      success: Brex connection removed
+      success: Ligação da Brex removida
     index:
-      title: Brex Connections
+      title: Ligações da Brex
     institution_summary:
-      none: No institutions connected
+      none: Nenhuma instituição ligada
       one: "%{name}"
       count:
-        one: "%{count} institution"
-        other: "%{count} institutions"
+        one: "%{count} instituição"
+        other: "%{count} instituições"
     sync_status:
-      no_accounts: No accounts found
+      no_accounts: Nenhuma conta encontrada
       all_synced:
-        one: "%{count} account synced"
-        other: "%{count} accounts synced"
-      partial_setup: "%{synced} synced, %{pending} need setup"
+        one: "%{count} conta sincronizada"
+        other: "%{count} contas sincronizadas"
+      partial_setup: "%{synced} sincronizadas, %{pending} precisam de configuração"
     api_error:
-      common_issues: "Common issues:"
-      expired_credentials: Generate a new API token from Brex.
-      expired_credentials_label: "Expired credentials:"
-      heading: Unable to connect to Brex
-      invalid_token: Check your API token in Provider Settings.
-      invalid_token_label: "Invalid API token:"
-      network: Check your internet connection.
-      network_label: "Network issue:"
-      permissions: Ensure your token has the required read-only account and transaction scopes.
-      permissions_label: "Insufficient permissions:"
-      service: Brex API may be temporarily unavailable.
-      service_label: "Service down:"
-      settings_link: Check Provider Settings
-      title: Brex Connection Error
+      common_issues: "Problemas comuns:"
+      expired_credentials: Gere um novo token de API na Brex.
+      expired_credentials_label: "Credenciais expiradas:"
+      heading: Não é possível ligar à Brex
+      invalid_token: Verifique o seu token de API nas Definições do Fornecedor.
+      invalid_token_label: "Token de API inválido:"
+      network: Verifique a sua ligação à internet.
+      network_label: "Problema de rede:"
+      permissions: Certifique-se de que o seu token tenha os âmbitos de só leitura necessários para conta e transações.
+      permissions_label: "Permissões insuficientes:"
+      service: A API da Brex pode estar temporariamente indisponível.
+      service_label: "Serviço indisponível:"
+      settings_link: Verificar Definições do Fornecedor
+      title: Erro de ligação com a Brex
     errors:
-      unexpected_error: An unexpected error occurred. Please try again later.
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
     entries:
-      default_name: Brex transaction
+      default_name: Transação da Brex
     loading:
-      loading_message: Loading Brex accounts...
-      loading_title: Loading
+      loading_message: A carregar contas da Brex...
+      loading_title: A carregar
     link_accounts:
       all_already_linked:
-        one: "The selected account (%{names}) is already linked"
-        other: "All %{count} selected accounts are already linked: %{names}"
-      api_error: "API error: %{message}"
+        one: "A conta selecionada (%{names}) já está ligada"
+        other: "Todas as %{count} contas selecionadas já estão ligadas: %{names}"
+      api_error: "Erro da API: %{message}"
       invalid_account_names:
-        one: "Cannot link account with blank name"
-        other: "Cannot link %{count} accounts with blank names"
-      invalid_account_type: Unsupported Brex account type
-      link_failed: Failed to link accounts
-      no_accounts_selected: Please select at least one account
-      no_api_token: Brex API token not found. Please configure it in Provider Settings.
-      partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} account(s) were already linked, %{invalid_count} account(s) had invalid names"
-      partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
-      select_connection: Choose a Brex connection before linking accounts.
+        one: "Não é possível ligar uma conta com o nome em branco"
+        other: "Não é possível ligar %{count} contas com os nomes em branco"
+      invalid_account_type: Tipo de conta da Brex não suportado
+      link_failed: Não foi possível ligar as contas
+      no_accounts_selected: Selecione pelo menos uma conta
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      partial_invalid: "%{created_count} conta(s) ligada(s) com sucesso, %{already_linked_count} conta(s) já estavam ligadas, %{invalid_count} conta(s) tinham nomes inválidos"
+      partial_success: "%{created_count} conta(s) ligada(s) com sucesso. %{already_linked_count} conta(s) já estavam ligadas: %{already_linked_names}"
+      select_connection: Escolha uma ligação da Brex antes de ligar contas.
       success:
-        one: "Successfully linked %{count} account"
-        other: "Successfully linked %{count} accounts"
+        one: "%{count} conta ligada com sucesso"
+        other: "%{count} contas ligadas com sucesso"
     brex_item:
-      accounts_need_setup: Accounts need setup
-      delete: Delete connection
-      deletion_in_progress: deletion in progress...
-      error: Error
-      no_accounts_description: This connection has no linked accounts yet.
-      no_accounts_title: No accounts
-      setup_action: Set Up New Accounts
-      setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported Brex accounts."
-      setup_needed: New accounts ready to set up
-      status: "Synced %{timestamp} ago"
-      status_never: Never synced
-      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
-      syncing: Syncing...
+      accounts_need_setup: As contas precisam de configuração
+      delete: Eliminar ligação
+      deletion_in_progress: a eliminar...
+      error: Erro
+      no_accounts_description: Esta ligação ainda não tem contas ligadas.
+      no_accounts_title: Sem contas
+      setup_action: Configurar novas contas
+      setup_description: "%{linked} de %{total} contas ligadas. Escolha os tipos de conta para as suas contas da Brex recém-importadas."
+      setup_needed: Novas contas prontas para configurar
+      status: "Sincronizado há %{timestamp}"
+      status_never: Nunca sincronizado
+      status_with_summary: "Sincronizado há %{timestamp} - %{summary}"
+      syncing: A sincronizar...
       total: Total
-      unlinked: Unlinked
+      unlinked: Não ligada
     provider_panel:
-      accounts_link: Accounts
-      add_connection: Add Brex connection
-      base_url_label: Base URL (optional)
+      accounts_link: Contas
+      add_connection: Adicionar ligação da Brex
+      base_url_label: URL base (opcional)
       base_url_placeholder: https://api.brex.com
-      configured_html: "Configured and ready to use. Visit the %{accounts_link} tab to manage and set up accounts."
-      connection_name_label: Connection name
-      connection_name_placeholder: Business checking
-      default_connection_name: Brex Connection
-      disconnect_label: "Disconnect %{name}"
-      disconnect_confirm: "Disconnect %{name}?"
+      configured_html: "Configurado e pronto a usar. Aceda ao separador %{accounts_link} para gerir e configurar contas."
+      connection_name_label: Nome da ligação
+      connection_name_placeholder: Conta à ordem empresarial
+      default_connection_name: Ligação da Brex
+      disconnect_label: "Desligar %{name}"
+      disconnect_confirm: "Desligar %{name}?"
       encryption_warning:
-        title: Database encryption is not configured
-        message: Configure Active Record encryption keys before adding Brex tokens in production. Without encryption keys, Sure stores Brex provider credentials and snapshots in plaintext like other provider records.
+        title: A encriptação da base de dados não está configurada
+        message: Configure as chaves de encriptação do Active Record antes de adicionar tokens da Brex em produção. Sem chaves de encriptação, o Sure armazena as credenciais e os instantâneos do fornecedor Brex em texto não encriptado, tal como outros registos de fornecedores.
       instructions:
-        copy_token_html: "Copy the token and add it as a named connection below. Sure stores the token only for syncing this family."
-        create_token: "Create an API token with these read-only scopes: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
-        open_tokens: Go to the Brex developer/API token settings for the company you want to connect
-        sign_in_html: "Visit %{link} and log in to the account you want to connect"
-      keep_token_placeholder: Leave blank to keep the current token
-      not_configured: Not configured
-      sandbox_note_html: "Use a separate named connection for each Brex company/API token you want to sync. Leave Base URL blank for production. Staging is limited to Brex-approved testing and does not work with customer tokens."
-      setup_accounts: Set up accounts
-      setup_title: "Setup instructions:"
-      sync: Sync
+        copy_token_html: "Copie o token e adicione-o abaixo como uma ligação nomeada. O Sure armazena o token apenas para sincronizar esta família."
+        create_token: "Crie um token de API com estes âmbitos de só leitura: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
+        open_tokens: Aceda às definições de tokens de programador/API da Brex da empresa que pretende ligar
+        sign_in_html: "Visite %{link} e inicie sessão na conta que pretende ligar"
+      keep_token_placeholder: Deixe em branco para manter o token atual
+      not_configured: Não configurado
+      sandbox_note_html: "Utilize uma ligação nomeada separada para cada empresa/token de API da Brex que pretende sincronizar. Deixe o URL base em branco para produção. O ambiente de staging está limitado a testes aprovados pela Brex e não funciona com tokens de clientes."
+      setup_accounts: Configurar contas
+      setup_title: "Instruções de configuração:"
+      sync: Sincronizar
       token_label: Token
-      token_placeholder: Paste token here
-      update_connection: Update connection
+      token_placeholder: Cole o token aqui
+      update_connection: Atualizar ligação
     provider_connection:
-      default_description: Connect to your Brex account
+      default_description: Ligar à sua conta da Brex
       default_name: Brex
-      description: "Connect using %{name}"
+      description: "Ligar via %{name}"
       name: "Brex - %{name}"
     select_accounts:
-      accounts_selected: accounts selected
-      api_error: "API error: %{message}"
-      cancel: Cancel
-      configure_name_in_brex: Cannot import - please configure account name in Brex
-      description: Select the accounts you want to link to your %{product_name} account.
-      link_accounts: Link selected accounts
-      no_accounts_found: No accounts found. Please check your API token configuration.
-      no_api_token: Brex API token not found. Please configure it in Provider Settings.
-      no_credentials_configured: Please configure your Brex API token first in Provider Settings.
-      no_name_placeholder: "(No name)"
-      select_connection: Choose a Brex connection in Provider Settings.
-      title: Select Brex Accounts
-      unexpected_error: An unexpected error occurred. Please try again later.
+      accounts_selected: contas selecionadas
+      api_error: "Erro da API: %{message}"
+      cancel: Cancelar
+      configure_name_in_brex: Não é possível importar - configure o nome da conta na Brex
+      description: Selecione as contas que pretende ligar à sua conta do %{product_name}.
+      link_accounts: Ligar contas selecionadas
+      no_accounts_found: Nenhuma conta encontrada. Verifique a configuração do seu token de API.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      no_credentials_configured: Configure primeiro o seu token de API da Brex nas Definições do Fornecedor.
+      no_name_placeholder: "(Sem nome)"
+      select_connection: Escolha uma ligação da Brex nas Definições do Fornecedor.
+      title: Selecionar contas da Brex
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
     select_existing_account:
-      account_already_linked: This account is already linked to a provider
-      all_accounts_already_linked: All Brex accounts are already linked
-      api_error: "API error: %{message}"
-      cancel: Cancel
-      configure_name_in_brex: Cannot import - please configure account name in Brex
-      description: Select a Brex account to link with this account. Transactions will be synced and deduplicated automatically.
-      link_account: Link account
-      no_account_specified: No account specified
-      no_accounts_found: No Brex accounts found. Please check your API token configuration.
-      no_api_token: Brex API token not found. Please configure it in Provider Settings.
-      no_credentials_configured: Please configure your Brex API token first in Provider Settings.
-      no_name_placeholder: "(No name)"
-      select_connection: Choose a Brex connection in Provider Settings.
-      title: "Link %{account_name} with Brex"
-      unexpected_error: An unexpected error occurred. Please try again later.
+      account_already_linked: Esta conta já está ligada a um fornecedor
+      all_accounts_already_linked: Todas as contas da Brex já estão ligadas
+      api_error: "Erro da API: %{message}"
+      cancel: Cancelar
+      configure_name_in_brex: Não é possível importar - configure o nome da conta na Brex
+      description: Selecione uma conta da Brex para ligar a esta conta. As transações serão sincronizadas e deduplicadas automaticamente.
+      link_account: Ligar conta
+      no_account_specified: Nenhuma conta especificada
+      no_accounts_found: Nenhuma conta da Brex encontrada. Verifique a configuração do seu token de API.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      no_credentials_configured: Configure primeiro o seu token de API da Brex nas Definições do Fornecedor.
+      no_name_placeholder: "(Sem nome)"
+      select_connection: Escolha uma ligação da Brex nas Definições do Fornecedor.
+      title: "Ligar %{account_name} à Brex"
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
     setup_required:
-      description: Before you can link Brex accounts, you need to configure your Brex API token.
-      heading: API Token Not Configured
-      settings_link: Go to Provider Settings
-      setup_steps: "Setup steps:"
+      description: Antes de poder ligar contas da Brex, precisa de configurar o seu token de API da Brex.
+      heading: Token de API não configurado
+      settings_link: Ir para Definições do Fornecedor
+      setup_steps: "Etapas de configuração:"
       steps:
-        enter_token: Enter your Brex API token
-        find_section_html: "Find the <strong>Brex</strong> section"
-        open_settings_html: "Go to <strong>Settings > Providers</strong>"
-        return_to_link: Return here to link your accounts
-      title: Brex Setup Required
+        enter_token: Introduza o seu token de API da Brex
+        find_section_html: "Encontre a secção <strong>Brex</strong>"
+        open_settings_html: "Aceda a <strong>Definições > Fornecedores</strong>"
+        return_to_link: Volte aqui para ligar as suas contas
+      title: Configuração da Brex necessária
     subtype_select:
       placeholder:
-        subtype: Select subtype
-        type: Select type
+        subtype: Selecione o subtipo
+        type: Selecione o tipo
     link_existing_account:
-      account_already_linked: This account is already linked to a provider
-      api_error: "API error: %{message}"
-      invalid_account_name: Cannot link account with blank name
-      missing_parameters: Missing required parameters
-      no_account_specified: No account specified
-      no_api_token: Brex API token not found. Please configure it in Provider Settings.
-      provider_account_already_linked: This Brex account is already linked to another account
-      provider_account_not_found: Brex account not found
-      select_connection: Choose a Brex connection before linking accounts.
-      success: "Successfully linked %{account_name} with Brex"
+      account_already_linked: Esta conta já está ligada a um fornecedor
+      api_error: "Erro da API: %{message}"
+      invalid_account_name: Não é possível ligar uma conta com o nome em branco
+      missing_parameters: Parâmetros obrigatórios em falta
+      no_account_specified: Nenhuma conta especificada
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      provider_account_already_linked: Esta conta da Brex já está ligada a outra conta
+      provider_account_not_found: Conta da Brex não encontrada
+      select_connection: Escolha uma ligação da Brex antes de ligar contas.
+      success: "%{account_name} ligada com sucesso à Brex"
     setup_accounts:
-      account_type_label: "Account Type:"
-      all_accounts_linked: "All your Brex accounts have already been set up."
-      api_error: "API error: %{message}"
-      fetch_failed: "Failed to Fetch Accounts"
-      no_accounts_to_setup: "No Accounts to Set Up"
-      no_api_token: Brex API token not found. Please configure it in Provider Settings.
+      account_type_label: "Tipo de conta:"
+      all_accounts_linked: "Todas as suas contas da Brex já foram configuradas."
+      api_error: "Erro da API: %{message}"
+      fetch_failed: "Não foi possível obter as contas"
+      no_accounts_to_setup: "Nenhuma conta para configurar"
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
       account_types:
-        skip: Skip this account
-        depository: Checking or Savings Account
-        credit_card: Credit Card
-        investment: Investment Account
-        loan: Loan or Mortgage
-        other_asset: Other Asset
+        skip: Ignorar esta conta
+        depository: Conta à ordem ou poupança
+        credit_card: Cartão de crédito
+        investment: Conta de investimento
+        loan: Empréstimo ou hipoteca
+        other_asset: Outro ativo
       subtype_labels:
-        depository: "Account Subtype:"
+        depository: "Subtipo de conta:"
         credit_card: ""
-        investment: "Investment Type:"
-        loan: "Loan Type:"
+        investment: "Tipo de investimento:"
+        loan: "Tipo de empréstimo:"
         other_asset: ""
       subtype_messages:
-        credit_card: "Credit cards will be automatically set up as credit card accounts."
-        other_asset: "No additional options needed for Other Assets."
+        credit_card: "Os cartões de crédito serão configurados automaticamente como contas de cartão de crédito."
+        other_asset: "Não são necessárias opções adicionais para Outros ativos."
       subtypes:
         depository:
-          checking: Checking
-          savings: Savings
-          hsa: Health Savings Account
-          cd: Certificate of Deposit
-          money_market: Money Market
+          checking: Conta à ordem
+          savings: Poupança
+          hsa: Conta Poupança Saúde
+          cd: Certificado de Depósito
+          money_market: Mercado Monetário
         investment:
-          brokerage: Brokerage
-          pension: Pension
-          retirement: Retirement
+          brokerage: Corretagem
+          pension: Pensão
+          retirement: Reforma
           "401k": "401(k)"
           roth_401k: "Roth 401(k)"
           "403b": "403(b)"
           tsp: Thrift Savings Plan
-          "529_plan": "529 Plan"
-          hsa: Health Savings Account
-          mutual_fund: Mutual Fund
-          ira: Traditional IRA
+          "529_plan": "Plano 529"
+          hsa: Conta Poupança Saúde
+          mutual_fund: Fundo de Investimento
+          ira: IRA tradicional
           roth_ira: Roth IRA
-          angel: Angel
+          angel: Investimento-anjo
         loan:
-          mortgage: Mortgage
-          student: Student Loan
-          auto: Auto Loan
-          other: Other Loan
-      balance: Balance
-      cancel: Cancel
-      choose_account_type: "Choose the correct account type for each Brex account:"
-      create_accounts: Create Accounts
-      creating_accounts: Creating Accounts...
-      historical_data_range: "Historical Data Range:"
-      subtitle: Choose the correct account types for your imported accounts
-      sync_start_date_help: Select how far back you want to sync transaction history. Maximum 3 years of history available.
-      sync_start_date_label: "Start syncing transactions from:"
-      title: Set Up Your Brex Accounts
+          mortgage: Hipoteca
+          student: Empréstimo estudantil
+          auto: Crédito automóvel
+          other: Outro empréstimo
+      balance: Saldo
+      cancel: Cancelar
+      choose_account_type: "Escolha o tipo de conta correto para cada conta da Brex:"
+      create_accounts: Criar contas
+      creating_accounts: A criar contas...
+      historical_data_range: "Intervalo de dados históricos:"
+      subtitle: Escolha os tipos de conta corretos para as suas contas importadas
+      sync_start_date_help: Selecione até que ponto no passado pretende sincronizar o histórico de transações. Há no máximo 3 anos de histórico disponíveis.
+      sync_start_date_label: "Começar a sincronizar transações a partir de:"
+      title: Configure as suas contas da Brex
     complete_account_setup:
-      all_skipped: "All accounts were skipped. No accounts were created."
-      creation_failed: "Failed to create accounts: %{error}"
-      creation_failed_count: "Failed to create %{count} account(s)."
-      no_accounts: "No accounts to set up."
-      partial_skipped: "Successfully created %{created_count} account(s); %{skipped_count} account(s) were skipped."
-      partial_success: "Successfully created %{created_count} account(s), but %{failed_count} account(s) failed."
-      success: "Successfully created %{count} account(s)."
-      unexpected_error: An unexpected error occurred.
+      all_skipped: "Todas as contas foram ignoradas. Nenhuma conta foi criada."
+      creation_failed: "Não foi possível criar as contas: %{error}"
+      creation_failed_count: "Não foi possível criar %{count} conta(s)."
+      no_accounts: "Nenhuma conta para configurar."
+      partial_skipped: "%{created_count} conta(s) criada(s) com sucesso; %{skipped_count} conta(s) foram ignoradas."
+      partial_success: "%{created_count} conta(s) criada(s) com sucesso, mas %{failed_count} conta(s) falharam."
+      success: "%{count} conta(s) criada(s) com sucesso."
+      unexpected_error: Ocorreu um erro inesperado.
     sync:
-      success: Sync started
+      success: Sincronização iniciada
     syncer:
       account_processing_failed:
-        one: "%{count} Brex account failed while processing."
-        other: "%{count} Brex accounts failed while processing."
+        one: "%{count} conta da Brex falhou durante o processamento."
+        other: "%{count} contas da Brex falharam durante o processamento."
       account_sync_failed:
-        one: "%{count} Brex account sync could not be scheduled."
-        other: "%{count} Brex account syncs could not be scheduled."
+        one: "Não foi possível agendar a sincronização de %{count} conta da Brex."
+        other: "Não foi possível agendar a sincronização de %{count} contas da Brex."
       accounts_need_setup:
-        one: "%{count} account needs setup..."
-        other: "%{count} accounts need setup..."
+        one: "%{count} conta precisa de configuração..."
+        other: "%{count} contas precisam de configuração..."
       accounts_failed:
-        one: "%{count} Brex account failed to import."
-        other: "%{count} Brex accounts failed to import."
-      calculating_balances: Calculating balances...
-      checking_account_configuration: Checking account configuration...
-      credentials_invalid: Invalid Brex API token or account permissions
-      failed: Sync failed. Please try again or contact support.
-      import_failed: Brex import failed.
-      importing_accounts: Importing accounts from Brex...
-      processing_transactions: Processing transactions...
+        one: "Não foi possível importar %{count} conta da Brex."
+        other: "Não foi possível importar %{count} contas da Brex."
+      calculating_balances: A calcular saldos...
+      checking_account_configuration: A verificar a configuração da conta...
+      credentials_invalid: Token de API da Brex inválido ou permissões de conta insuficientes
+      failed: A sincronização falhou. Tente novamente ou contacte o suporte.
+      import_failed: A importação da Brex falhou.
+      importing_accounts: A importar contas da Brex...
+      processing_transactions: A processar transações...
       transactions_failed:
-        one: "%{count} Brex account had transaction import failures."
-        other: "%{count} Brex accounts had transaction import failures."
+        one: "%{count} conta da Brex teve falhas na importação de transações."
+        other: "%{count} contas da Brex tiveram falhas na importação de transações."
     update:
-      success: Brex connection updated
+      success: Ligação da Brex atualizada

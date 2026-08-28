@@ -2,41 +2,41 @@
 pt-PT:
   plaid_items:
     create:
-      success: Account linked successfully.  Please wait for accounts to sync.
+      success: Conta ligada com sucesso.  Por favor, aguarde a sincronização das contas.
     destroy:
-      success: Accounts scheduled for deletion.
+      success: Contas agendadas para eliminação.
     errors:
-      link_token_generic: We couldn't open Plaid right now. Please try again, and
-        if the problem persists check the server logs for details.
-      link_token_with_message: "Plaid couldn't open the connection: %{message}"
+      link_token_generic: Não conseguimos abrir o Plaid neste momento. Tente novamente,
+        e se o problema persistir verifique os registos do servidor para obter detalhes.
+      link_token_with_message: "O Plaid não conseguiu abrir a ligação: %{message}"
     plaid_item:
-      add_accounts: Add accounts
-      add_new: Add new connection
-      confirm_accept: Delete institution
-      confirm_body: This will permanently delete all the accounts in this group and
-        all associated data.
-      confirm_title: Delete institution?
-      connection_lost: Connection lost
-      connection_lost_description: This connection is no longer valid. You'll need
-        to delete this connection and add it again to continue syncing data.
-      delete: Delete
-      deletion_in_progress: (deletion in progress...)
-      error: Error occurred while syncing data
-      no_accounts_description: We could not load any accounts from this financial
-        institution.
-      no_accounts_title: No accounts found
-      requires_update: Reconnect
-      status: Last synced %{timestamp} ago
-      status_never: Requires data sync
-      syncing: Syncing...
-      update: Update
+      add_accounts: Adicionar contas
+      add_new: Adicionar nova ligação
+      confirm_accept: Eliminar instituição
+      confirm_body: Isto eliminará permanentemente todas as contas deste grupo e
+        todos os dados associados.
+      confirm_title: Eliminar instituição?
+      connection_lost: Ligação perdida
+      connection_lost_description: Esta ligação já não é válida. Terá de eliminar
+        esta ligação e adicioná-la novamente para continuar a sincronizar dados.
+      delete: Eliminar
+      deletion_in_progress: (a eliminar...)
+      error: Ocorreu um erro durante a sincronização de dados
+      no_accounts_description: Não conseguimos carregar nenhuma conta desta instituição
+        financeira.
+      no_accounts_title: Nenhuma conta encontrada
+      requires_update: Ligar novamente
+      status: Última sincronização há %{timestamp}
+      status_never: Requer sincronização de dados
+      syncing: A sincronizar...
+      update: Atualizar
     select_existing_account:
-      no_available_accounts: No available Plaid accounts to link. Please connect a new Plaid account first.
-      title: "Link %{account_name} to Plaid"
-      description: Select a Plaid account to link to your existing account
-      cancel: Cancel
-      link_account: Link account
+      no_available_accounts: Não existem contas do Plaid por ligar disponíveis. Ligue primeiro uma nova conta do Plaid.
+      title: "Ligar %{account_name} ao Plaid"
+      description: Selecione uma conta do Plaid para ligar à sua conta existente
+      cancel: Cancelar
+      link_account: Ligar conta
     link_existing_account:
-      invalid_account: Invalid Plaid account selected
-      already_linked: This Plaid account is already linked
-      success: Account successfully linked to Plaid
+      invalid_account: Conta do Plaid inválida selecionada
+      already_linked: Esta conta do Plaid já está ligada
+      success: Conta ligada com sucesso ao Plaid

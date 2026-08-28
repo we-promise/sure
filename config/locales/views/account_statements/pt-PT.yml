@@ -2,116 +2,116 @@
 pt-PT:
   account_statements:
     account_tab:
-      coverage_title: Statement coverage
-      coverage_description: Historical months backed by uploaded statements and balance checks.
+      coverage_title: Cobertura de extratos
+      coverage_description: Meses históricos suportados por extratos carregados e verificações de saldo.
       coverage_range: "%{start} - %{end}"
-      empty: No statements linked to this account yet.
-      open_inbox: Inbox
-      statements_title: Statements
-      year_label: Coverage year
+      empty: Ainda não há extratos ligados a esta conta.
+      open_inbox: Caixa de entrada
+      statements_title: Extratos
+      year_label: Ano de cobertura
     balance:
-      unknown: Unknown
+      unknown: Desconhecido
     coverage:
       status:
-        ambiguous: Ambiguous
-        covered: Covered
-        duplicate: Duplicate
-        mismatched: Mismatched
-        missing: Missing
-        not_expected: Not expected
+        ambiguous: Ambíguo
+        covered: Coberto
+        duplicate: Duplicado
+        mismatched: Divergente
+        missing: Em falta
+        not_expected: Não esperado
     create:
       duplicates:
-        one: 1 duplicate statement was skipped.
-        other: "%{count} duplicate statements were skipped."
-      invalid_file_type: Upload a PDF, CSV, or XLSX statement under the size limit.
-      no_files: Select at least one statement file.
+        one: 1 extrato duplicado foi ignorado.
+        other: "%{count} extratos duplicados foram ignorados."
+      invalid_file_type: Carregue um extrato em PDF, CSV ou XLSX dentro do limite de tamanho.
+      no_files: Selecione pelo menos um ficheiro de extrato.
       success:
-        one: 1 statement uploaded.
-        other: "%{count} statements uploaded."
+        one: 1 extrato carregado.
+        other: "%{count} extratos carregados."
     destroy:
-      failure: Statement could not be deleted.
-      success: Statement deleted.
+      failure: Não foi possível eliminar o extrato.
+      success: Extrato eliminado.
     form:
-      account_upload: Upload statement
-      files_hint: PDF, CSV, or XLSX. %{max_size}MB max per file.
-      files_label: Statement files
-      inbox_upload: Upload
+      account_upload: Carregar extrato
+      files_hint: PDF, CSV ou XLSX. Máx. %{max_size} MB por ficheiro.
+      files_label: Ficheiros de extrato
+      inbox_upload: Carregar
     index:
-      account_label: Account
-      confidence: "%{confidence} match"
-      empty_linked: No linked statements yet.
-      empty_unmatched: The statement inbox is clear.
-      leave_unmatched: Leave unmatched
-      linked_title: Linked statements
-      no_suggestion: No suggestion
-      storage_used: Storage used
-      title: Statement Vault
-      unmatched_title: Unmatched inbox
-      upload_description: Upload statements to the inbox, or choose an account to link immediately.
-      upload_title: Upload statements
+      account_label: Conta
+      confidence: "Correspondência de %{confidence}"
+      empty_linked: Ainda não há extratos ligados.
+      empty_unmatched: A caixa de entrada de extratos está vazia.
+      leave_unmatched: Deixar sem atribuição
+      linked_title: Extratos ligados
+      no_suggestion: Sem sugestão
+      storage_used: Armazenamento utilizado
+      title: Cofre de extratos
+      unmatched_title: Caixa de entrada sem atribuição
+      upload_description: Carregue extratos para a caixa de entrada ou escolha uma conta para ligar imediatamente.
+      upload_title: Carregar extratos
     link:
-      no_account: Choose an account before linking this statement.
-      success: Linked statement to %{account}.
+      no_account: Escolha uma conta antes de ligar este extrato.
+      success: Extrato ligado a %{account}.
     period:
-      unknown: Period unknown
+      unknown: Período desconhecido
     reconciliation:
       checks:
-        closing_balance: Closing balance
-        opening_balance: Opening balance
-        period_movement: Period movement
-        unknown_check: Unknown check
-      matched: Matched
-      mismatched: Mismatched
-      unavailable: Not checked
+        closing_balance: Saldo de fecho
+        opening_balance: Saldo de abertura
+        period_movement: Movimento do período
+        unknown_check: Verificação desconhecida
+      matched: Correspondente
+      mismatched: Divergente
+      unavailable: Não verificado
     reject:
-      success: Statement match rejected.
+      success: Correspondência de extrato rejeitada.
     show:
-      account_label: Account
-      account_last4_hint: Account last four
-      account_name_hint: Account name hint
-      closing_balance: Closing balance
-      currency: Currency
-      delete: Delete
-      difference: Difference
-      download: Download
-      institution_name_hint: Institution hint
-      ledger_amount: Sure ledger
-      linked_to: Linked to %{account}.
-      linking_title: Account link
-      link_suggestion: Link suggestion
-      metadata_title: Statement metadata
-      no_suggestion: No account suggestion yet.
-      opening_balance: Opening balance
-      period_end_on: Period end
-      period_start_on: Period start
-      reconciliation_title: Reconciliation
-      reconciliation_unavailable: Add a statement period and opening or closing balance, then make sure Sure has balance history for those dates.
-      reject: Reject
-      save: Save statement
-      statement_amount: Statement
-      suggested_account: Suggested account is %{account} (%{confidence} confidence).
-      title: Statement
-      unlink: Unlink
-      unmatched_account: Unmatched inbox
-      unknown_value: Unknown
+      account_label: Conta
+      account_last4_hint: Últimos quatro dígitos da conta
+      account_name_hint: Sugestão de nome da conta
+      closing_balance: Saldo de fecho
+      currency: Moeda
+      delete: Eliminar
+      difference: Diferença
+      download: Descarregar
+      institution_name_hint: Sugestão da instituição
+      ledger_amount: Registo do Sure
+      linked_to: Ligado a %{account}.
+      linking_title: Ligação de conta
+      link_suggestion: Sugestão de ligação
+      metadata_title: Metadados do extrato
+      no_suggestion: Ainda não há sugestão de conta.
+      opening_balance: Saldo de abertura
+      period_end_on: Fim do período
+      period_start_on: Início do período
+      reconciliation_title: Reconciliação
+      reconciliation_unavailable: Adicione um período de extrato e um saldo de abertura ou de fecho e certifique-se de que o Sure tem histórico de saldos para essas datas.
+      reject: Rejeitar
+      save: Guardar extrato
+      statement_amount: Extrato
+      suggested_account: A conta sugerida é %{account} (confiança de %{confidence}).
+      title: Extrato
+      unlink: Desligar
+      unmatched_account: Caixa de entrada sem atribuição
+      unknown_value: Desconhecido
     status:
-      linked: Linked
-      rejected: Rejected
-      unmatched: Unmatched
+      linked: Ligado
+      rejected: Rejeitado
+      unmatched: Sem atribuição
     table:
-      account: Account
-      actions: Actions
-      download: Download
-      edit: Edit
-      file: File
-      link_suggestion: Link suggestion
-      period: Period
-      reconciliation: Reconciliation
-      reject: Reject suggestion
-      suggestion: Suggestion
-      unlink: Unlink
-      view: View
+      account: Conta
+      actions: Ações
+      download: Descarregar
+      edit: Editar
+      file: Ficheiro
+      link_suggestion: Sugestão de ligação
+      period: Período
+      reconciliation: Reconciliação
+      reject: Rejeitar sugestão
+      suggestion: Sugestão
+      unlink: Desligar
+      view: Ver
     unlink:
-      success: Statement moved back to the unmatched inbox.
+      success: Extrato devolvido à caixa de entrada sem atribuição.
     update:
-      success: Statement updated.
+      success: Extrato atualizado.

@@ -2,54 +2,54 @@
 pt-PT:
   concerns:
     self_hostable:
-      redis_configured: "Redis is now configured properly! You can now setup your Sure application."
+      redis_configured: "O Redis está agora configurado corretamente! Pode agora configurar a sua aplicação Sure."
   shared:
-    preview: Preview
+    preview: Pré-visualizar
     dot_separator: "·"
     sync_toast:
-      message: "New data available"
-      refresh: "Refresh"
+      message: "Novos dados disponíveis"
+      refresh: "Atualizar"
     confirm_modal:
-      accept: Confirm
-      body_html: "<p>You will not be able to undo this decision</p>"
-      cancel: Cancel
-      title: Are you sure?
+      accept: Confirmar
+      body_html: "<p>Não poderá desfazer esta decisão</p>"
+      cancel: Cancelar
+      title: Tem a certeza?
     money_field:
-      label: Amount
+      label: Montante
     exchange_rate_tabs:
-      calculate_rate_tab: Calculate FX rate
-      convert_tab: Convert with FX rate
-      destination_amount: Destination amount
-      exchange_rate: Exchange rate
-      exchange_rate_help: Choose how to enter the amount.
+      calculate_rate_tab: Calcular taxa de câmbio
+      convert_tab: Converter com taxa de câmbio
+      destination_amount: Montante de destino
+      exchange_rate: Taxa de câmbio
+      exchange_rate_help: Escolha como pretende introduzir o montante.
     syncing_notice:
-      syncing: Syncing accounts data...
-    require_admin: "Only admins can perform this action"
+      syncing: A sincronizar dados das contas...
+    require_admin: "Apenas administradores podem efetuar esta ação"
     custom_confirm:
-      default_title: "Are you sure?"
-      default_body: "This is not reversible."
-      default_btn_text: "Confirm"
-      resource_deletion_title: "Delete %{resource}?"
-      resource_deletion_body: "Are you sure you want to delete %{resource}? This is not reversible."
-      resource_deletion_btn_text: "Delete %{resource}"
+      default_title: "Tem a certeza?"
+      default_body: "Esta ação não é reversível."
+      default_btn_text: "Confirmar"
+      resource_deletion_title: "Eliminar %{resource}?"
+      resource_deletion_body: "Tem a certeza de que pretende eliminar %{resource}? Esta ação não é reversível."
+      resource_deletion_btn_text: "Eliminar %{resource}"
     family_moniker:
-      group_plural: Groups
-      group_singular: Group
-      plural: Families
-      singular: Family
+      group_plural: Grupos
+      group_singular: Grupo
+      plural: Famílias
+      singular: Família
     trend_change:
-      no_change: "no change"
-    cancel: Cancel
+      no_change: "sem alteração"
+    cancel: Cancelar
     transaction_tabs:
-      expense: Expense
-      income: Income
-      transfer: Transfer
+      expense: Despesa
+      income: Rendimento
+      transfer: Transferência
     sidekiq_health_banner:
-      title: Some data may be out of date
-      body: "Background jobs aren't being processed, so balances, net worth, and account syncs may be stale or missing."
-      cta: View system health
+      title: Alguns dados podem estar desatualizados
+      body: "Os trabalhos em segundo plano não estão a ser processados, pelo que os saldos, o património líquido e as sincronizações de contas podem estar obsoletos ou em falta."
+      cta: Ver estado do sistema
       reasons:
-        redis_unreachable: "The app can't reach Redis. Check your REDIS_URL and that Redis is running."
-        no_worker_processes: "No Sidekiq worker process is connected. Start the worker container or systemd unit."
-        stale_heartbeat: "The Sidekiq worker hasn't reported a heartbeat recently. It may be stuck or crashed."
-        queue_backed_up: "The oldest enqueued job has been waiting beyond the latency budget. The worker is alive but falling behind."
+        redis_unreachable: "A aplicação não consegue contactar o Redis. Verifique a sua REDIS_URL e se o Redis está em execução."
+        no_worker_processes: "Nenhum processo de worker Sidekiq está ligado. Inicie o contentor do worker ou a unidade systemd."
+        stale_heartbeat: "O worker Sidekiq não reportou um heartbeat recentemente. Pode estar bloqueado ou ter falhado."
+        queue_backed_up: "O trabalho mais antigo enfileirado está à espera para além do orçamento de latência. O worker está ativo, mas está a ficar para trás."
