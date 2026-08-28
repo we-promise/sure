@@ -47,7 +47,7 @@ class BinanceItem < ApplicationRecord
       source: self.class.name,
       provider_key: "binance",
       family: family,
-      account_provider: binance_accounts.filter_map(&:account_provider).first,
+      account_provider: binance_accounts.includes(:account_provider).filter_map(&:account_provider).first,
       metadata: { binance_item_id: id, error_class: e.class.name, error: e.message }
     )
     Rails.logger.error "BinanceItem #{id} - Failed to import: #{e.message}"

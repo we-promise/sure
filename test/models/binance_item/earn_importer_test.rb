@@ -45,14 +45,33 @@ class BinanceItem::EarnImporterTest < ActiveSupport::TestCase
     assert_equal "1.5", result[:assets].first[:total]
   end
 
-  test "returns empty assets when both APIs fail" do
-    @provider.stubs(:get_simple_earn_flexible).raises(Provider::Binance::ApiError, "error")
-    @provider.stubs(:get_simple_earn_locked).raises(Provider::Binance::ApiError, "error")
+  # Both sub-requests rescue to nil, so a double failure used to be reported as
+  # a successful import of no positions — and the caller decides from these
+  # results whether the whole wallet is empty.
+  test "returns empty assets when both APIs fail, and says they failed" do
+    @provider.stubs(:get_simple_earn_flexible).raises(Provider::Binance::ApiError, "flexible down")
+    @provider.stubs(:get_simple_earn_locked).raises(Provider::Binance::ApiError, "locked down")
 
     result = BinanceItem::EarnImporter.new(@item, provider: @provider).import
 
     assert_equal "earn", result[:source]
     assert_equal [], result[:assets]
     assert_equal({ "flexible" => nil, "locked" => nil }, result[:raw])
+    assert_includes result[:error].to_s, "flexible down"
+    assert_includes result[:error].to_s, "locked down"
+  end
+
+  # One side answering is still an answer: an account with only flexible
+  # positions must not be reported as a failure.
+  test "one side failing is not a failure" do
+    @provider.stubs(:get_simple_earn_flexible).returns(
+      { "rows" => [ { "asset" => "BTC", "totalAmount" => "1.0" } ] }
+    )
+    @provider.stubs(:get_simple_earn_locked).raises(Provider::Binance::ApiError, "locked down")
+
+    result = BinanceItem::EarnImporter.new(@item, provider: @provider).import
+
+    assert_nil result[:error]
+    assert_equal [ "BTC" ], result[:assets].map { |a| a[:symbol] }
   end
 end

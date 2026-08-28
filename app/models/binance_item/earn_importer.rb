@@ -11,8 +11,21 @@ class BinanceItem::EarnImporter
   end
 
   def import
+    @errors = []
     flexible_raw = fetch_flexible
     locked_raw = fetch_locked
+
+    # Both sub-requests rescue to nil, so a double failure came back looking
+    # exactly like "no Earn positions". The caller decides from these results
+    # whether the wallet is empty, so it has to be told the difference.
+    if flexible_raw.nil? && locked_raw.nil?
+      return {
+        assets: [],
+        raw: { "flexible" => nil, "locked" => nil },
+        source: "earn",
+        error: @errors.uniq.join("; ").presence || "simple earn unavailable"
+      }
+    end
 
     assets = merge_earn_assets(
       parse_flexible(flexible_raw),
@@ -34,6 +47,7 @@ class BinanceItem::EarnImporter
     def fetch_flexible
       provider.get_simple_earn_flexible
     rescue => e
+      @errors << e.message
       Rails.logger.warn "BinanceItem::EarnImporter #{binance_item.id} - flexible failed: #{e.message}"
       nil
     end
@@ -41,6 +55,7 @@ class BinanceItem::EarnImporter
     def fetch_locked
       provider.get_simple_earn_locked
     rescue => e
+      @errors << e.message
       Rails.logger.warn "BinanceItem::EarnImporter #{binance_item.id} - locked failed: #{e.message}"
       nil
     end

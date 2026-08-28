@@ -30,6 +30,13 @@ class BinanceItem::Importer
       raise AllRequestsFailed, results.filter_map { |result| result[:error] }.uniq.join("; ")
     end
 
+    # A source that failed tells us nothing about what it holds, and the
+    # holdings processor removes anything missing from this list. Writing only
+    # the sources that answered would therefore delete live positions on a
+    # transient error or a permission-scoped key. Their last known assets are
+    # carried instead: stale until the source answers again, which beats gone.
+    all_assets += carried_over_assets(results)
+
     # An emptied wallet still has to be written down. Returning here left the
     # previous payload in place, and the holdings processor reads that payload —
     # so assets already sold were re-imported as today's holdings on every sync
@@ -66,6 +73,27 @@ class BinanceItem::Importer
 
     def tagged_assets(result)
       result[:assets].map { |a| a.merge(source: result[:source]) }
+    end
+
+    def carried_over_assets(results)
+      failed = results.filter_map { |result| result[:source] if result[:error].present? }
+      return [] if failed.empty?
+
+      previous = binance_item.binance_accounts.find_by(account_type: "combined")&.raw_payload&.dig("assets")
+      return [] if previous.blank?
+
+      carried = previous
+        .map(&:deep_symbolize_keys)
+        .select { |asset| failed.include?(asset[:source]) }
+
+      if carried.any?
+        Rails.logger.warn(
+          "BinanceItem::Importer #{binance_item.id} - carrying #{carried.size} asset(s) " \
+          "from unavailable source(s): #{failed.join(', ')}"
+        )
+      end
+
+      carried
     end
 
     def calculate_total_usd(assets)

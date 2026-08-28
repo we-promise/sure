@@ -72,6 +72,39 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # A source that failed tells us nothing about what it holds. Writing only the
+  # sources that answered would hand the holdings processor a list missing every
+  # margin position, and it removes what is missing — so a transient error, or a
+  # key without margin permission, would delete live positions.
+  test "a source that failed keeps its last known assets" do
+    stub_margin_result([ { symbol: "ETH", free: "2.0", locked: "0.0", total: "2.0" } ])
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_equal [ "BTC", "ETH" ], payload_symbols.sort
+
+    stub_failed_result("margin")
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    assert_equal [ "BTC", "ETH" ], payload_symbols.sort,
+                 "the unavailable source's positions were dropped"
+    assert_equal "margin", payload_assets.find { |a| a["symbol"] == "ETH" }["source"]
+  end
+
+  # Carried only while the source is silent: once it answers again, what it says
+  # is what stands, including an asset it no longer reports.
+  test "a source that answers again overrides what was carried" do
+    stub_margin_result([ { symbol: "ETH", free: "2.0", locked: "0.0", total: "2.0" } ])
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    stub_failed_result("margin")
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_includes payload_symbols, "ETH"
+
+    stub_margin_result([])
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    assert_equal [ "BTC" ], payload_symbols, "the carried asset outlived the source coming back"
+  end
+
   # One call still answering means the picture is trustworthy, even if it is
   # only part of one. Only a complete outage tells us nothing.
   test "a partial outage still records what did answer" do
@@ -110,6 +143,14 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
   end
 
   private
+
+    def payload_assets
+      @item.binance_accounts.first.reload.raw_payload["assets"]
+    end
+
+    def payload_symbols
+      payload_assets.map { |a| a["symbol"] }.uniq
+    end
 
     def stub_failed_result(source)
       klass = { "spot" => BinanceItem::SpotImporter, "margin" => BinanceItem::MarginImporter,
