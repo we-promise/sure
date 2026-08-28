@@ -38,9 +38,11 @@
           <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
         <% end %>
         <%# Partial spend: only offered on a one-off goal that is still running
-            and has something to spend. A reserve is drawn down and refilled,
-            not consumed — the model refuses it outright. %>
-        <% if @goal.one_off? && @goal.active? && @goal.current_balance.to_d.positive? %>
+            and has something THIS READER can spend. A reserve is drawn down and
+            refilled, not consumed — the model refuses it outright. Same
+            question the lifecycle panel asks, off the same scoped list, so the
+            two doors to this dialog cannot disagree. %>
+        <% if @goal.spendable_within?(eligible_consumption_accounts.map(&:id)) %>
           <% menu.with_item(variant: "link", text: t(".consume"), icon: "hand-coins",
                             href: consume_goal_path(@goal), data: { turbo_frame: :modal }) %>
         <% end %>
@@ -165,7 +167,9 @@
       <% end %>
     </div>
 
-    <%= render Goals::LifecyclePanelComponent.new(goal: @goal) %>
+    <%= render Goals::LifecyclePanelComponent.new(
+          goal: @goal, viewer_account_ids: eligible_consumption_accounts.map(&:id)
+        ) %>
   </section>
 
   <% if @goal.linked_accounts.any? %>
