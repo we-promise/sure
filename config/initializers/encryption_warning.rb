@@ -7,27 +7,39 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 
 Rails.application.config.after_initialize do
   app_mode = Rails.application.config.app_mode
-  next unless app_mode.self_hosted?
 
-  if !ActiveRecordEncryptionConfig.ready?
-    Rails.logger.warn(<<~WARN)
-      [SECURITY] ActiveRecord Encryption is NOT configured. Sensitive data
-      (API keys, provider/bank tokens, MFA secrets, and PII) are being stored
-      UNENCRYPTED at rest. To enable encryption, set the following keys in your Rails credentials or environment variables:
-        ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-        ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-        ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-      Generate a set with: bin/rails db:encryption:init
-    WARN
+  # Scoped to self-hosted only: this warning is about AR encryption not
+  # being configured, which is only ever this app's own responsibility to
+  # set up on a self-hosted install (managed instances are operated by the
+  # Sure team with their own credential provisioning).
+  if app_mode.self_hosted?
+    if !ActiveRecordEncryptionConfig.ready?
+      Rails.logger.warn(<<~WARN)
+        [SECURITY] ActiveRecord Encryption is NOT configured. Sensitive data
+        (API keys, provider/bank tokens, MFA secrets, and PII) are being stored
+        UNENCRYPTED at rest. To enable encryption, set the following keys in your Rails credentials or environment variables:
+          ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+        Generate a set with: bin/rails db:encryption:init
+      WARN
+    end
   end
 
-  # Deliberately NOT chained as `elsif` onto the check above:
-  # using_known_compromised_secret_key_base? is a fact about SECRET_KEY_BASE
-  # itself (session cookies, Setting's own encryptor - see
-  # app/models/setting.rb), independent of whether ActiveRecord Encryption
-  # is configured at all or where its keys come from. Suppressing it
-  # whenever AR encryption has explicit keys would hide a real compromise of
-  # sessions/Settings just because AR encryption itself isn't affected.
+  # Deliberately NOT nested inside the `if app_mode.self_hosted?` block
+  # above (a prior version of this file gated the whole `after_initialize`
+  # body on a single `next unless app_mode.self_hosted?`, which silently
+  # suppressed this check in managed mode too - jjmata caught this on
+  # #3221's version of this same file): using_known_compromised_secret_key_base?
+  # is a fact about SECRET_KEY_BASE itself (session cookies, Setting's own
+  # encryptor - see app/models/setting.rb), independent of whether
+  # ActiveRecord Encryption is configured at all, where its keys come from,
+  # or which app_mode this install runs in - a managed instance spun up
+  # from compose.example.yml (e.g. for staging/POC) and never rotated is
+  # just as exposed as a self-hosted one. Suppressing it whenever AR
+  # encryption has explicit keys, or whenever the app isn't self-hosted,
+  # would hide a real compromise of sessions/Settings just because AR
+  # encryption itself isn't affected.
   if ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
     if ActiveRecordEncryptionConfig.explicitly_configured?
       Rails.logger.warn(<<~WARN)

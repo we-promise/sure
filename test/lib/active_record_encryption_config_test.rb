@@ -122,4 +122,19 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
     refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
   end
+
+  # Regression test for a gap CodeRabbit flagged: a present credentials block
+  # with every individual key blank had present_count == 0, so the old
+  # `present_count.positive? && ...` shape treated it the same as an absent
+  # block (not partial) - silently skipping both the raise and self-hosted
+  # auto-generation, since config/application.rb's `.present?` check on the
+  # block itself already treats it as configured either way.
+  test "treats a present credentials block with every key blank as partial" do
+    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+  end
 end
