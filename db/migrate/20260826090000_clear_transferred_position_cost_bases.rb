@@ -27,6 +27,7 @@ class ClearTransferredPositionCostBases < ActiveRecord::Migration[7.2]
           WHERE trades.security_id = holdings.security_id
             AND entries.account_id = holdings.account_id
             AND trades.investment_activity_label = 'Transfer'
+            AND trades.qty > 0
             AND entries.date <= holdings.date
         )
     SQL
