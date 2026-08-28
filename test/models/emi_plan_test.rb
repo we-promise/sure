@@ -106,8 +106,8 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2026, 9, 1), Date.new(2026, 10, 1), Date.new(2026, 11, 1) ], dates
   end
 
-  test "foreclose! removes future installments and settles remaining principal" do
-    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
+  test "foreclose! retains every unpaid principal amount in its settlement" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 12, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
 
     # First installment is in the past (posted), the rest are future.
     posted_count = plan.posted_installments.count
@@ -115,13 +115,15 @@ class EmiPlanTest < ActiveSupport::TestCase
     assert_operator posted_count, :>, 0
     assert_operator future_count, :>, 0
 
-    future_principal = plan.remaining_installments.sum(&:amount)
+    future_principal = plan.remaining_installments.sum do |installment|
+      plan.amortization_schedule.find { |row| row[:number] == installment.emi_installment_number }[:principal]
+    end
 
     plan.foreclose!
 
     # Posted installments stay untouched, future ones are gone, and — since
-    # some installments already posted — a settlement entry appears for the
-    # principal that would otherwise have vanished from budget totals.
+    # some installments already posted — a principal-only settlement retains
+    # money that would otherwise have vanished from budget totals.
     assert_equal posted_count + 1, plan.installment_entries.count
     assert_equal "foreclosed", plan.reload.status
 
@@ -190,6 +192,17 @@ class EmiPlanTest < ActiveSupport::TestCase
     plan.foreclose!
 
     assert_equal "emi_purchase", @entry.reload.transaction.kind
+  end
+
+  test "refuses deleting an EMI parent so its installments cannot be orphaned" do
+    plan = EmiPlan.build!(entry: @entry, interest_rate: 0, tenure_months: 3, processing_fee: 0, start_date: Date.current - 1.month)
+    installment_ids = plan.installment_entries.pluck(:id)
+
+    refute @entry.destroy
+
+    assert @entry.persisted?
+    assert_equal installment_ids.sort, plan.reload.installment_entries.pluck(:id).sort
+    assert_equal plan.id, EmiPlan.find(plan.id).id
   end
 
   test "foreclose! creates no settlement entry when nothing is outstanding" do
