@@ -1,0 +1,30 @@
+<%# locals: (form:) %>
+<div data-controller="list-filter">
+  <%= render DS::SearchInput.new(
+        variant: :embedded,
+        placeholder: t(".filter_goals"),
+        aria_label: t(".filter_goals"),
+        data: {
+          list_filter_target: "input",
+          action: "input->list-filter#filter"
+        }
+      ) %>
+  <div class="my-2" id="list" data-list-filter-target="list">
+    <% Current.family.goals.alphabetically.each do |goal| %>
+      <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= goal.name %>">
+        <%= form.check_box :goals,
+                           {
+                             multiple: true,
+                             checked: @q[:goals]&.include?(goal.id.to_s),
+                             class: "checkbox checkbox--light"
+                           },
+                           goal.id,
+                           nil %>
+        <%= form.label :goals, value: goal.id, class: "text-sm text-primary flex items-center gap-2" do %>
+          <%= render Goals::AvatarComponent.new(name: goal.name, color: Goals::AvatarComponent.color_for(goal.name), size: "sm") %>
+          <%= goal.name %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

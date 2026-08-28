@@ -8,7 +8,8 @@ module TransactionsHelper
       { key: "amount_filter", label: t("transactions.search.filters.amount"), icon: "hash" },
       { key: "category_filter", label: t("transactions.search.filters.category"), icon: "shapes" },
       { key: "tag_filter", label: t("transactions.search.filters.tag"), icon: "tags" },
-      { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" }
+      { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" },
+      { key: "goal_filter", label: t("transactions.search.filters.goal"), icon: "target" }
     ]
   end
 

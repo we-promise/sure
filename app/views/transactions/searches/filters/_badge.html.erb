@@ -35,6 +35,16 @@
                                           end %>"></div>
       <p><%= t(".#{param_value.downcase}") %></p>
     </div>
+  <% elsif param_key == "goals" %>
+    <div class="flex items-center gap-2">
+      <%= icon "target", size: "sm" %>
+      <%# The value on the wire is the goal's id, not its name — unlike
+          merchants/tags/categories, a goal's name is not unique per family, so
+          the filter has to key on id. The badge is the one place that id would
+          otherwise leak into view; a goal deleted after the filter was applied
+          falls back to the id rather than raising. %>
+      <p><%= Current.family.goals.find_by(id: param_value)&.name || param_value %></p>
+    </div>
   <% elsif param_key == "status" %>
     <div class="flex items-center gap-2 px-1">
       <%= icon(param_value.downcase == "pending" ? "clock" : "check", size: "sm") %>

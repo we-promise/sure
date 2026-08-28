@@ -14,6 +14,7 @@ class Transaction::Search
   attribute :categories, array: true
   attribute :merchants, array: true
   attribute :tags, array: true
+  attribute :goals, array: true
   attribute :active_accounts_only, :boolean, default: true
 
   attr_reader :family, :accessible_account_ids
@@ -38,6 +39,7 @@ class Transaction::Search
       query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
+      query = apply_goal_filter(query, goals)
       query = EntrySearch.apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
@@ -190,6 +192,30 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       query.joins(:tags).where(tags: { name: tags })
+    end
+
+    # Two doors to the same money: an outflow attributed via `consume!`, and an
+    # inflow a pledge matched. `extra @>` for the first — containment, since the
+    # GIN index on `transactions.extra` is jsonb_ops and would not serve
+    # equality on an extracted field — and a plain id list for the second,
+    # which already has a real foreign key (`goal_pledges.matched_transaction_id`).
+    #
+    # Ids rather than names: unlike merchants and tags, a goal's name is not
+    # unique per family, so matching on it could pull in a namesake's spending.
+    def apply_goal_filter(query, goal_ids)
+      return query unless goal_ids.present?
+
+      consumed_sql = goal_ids.map do |id|
+        ActiveRecord::Base.sanitize_sql_array([ "transactions.extra @> ?", { goal: { consumed_goal_id: id } }.to_json ])
+      end.join(" OR ")
+
+      pledged_transaction_ids = GoalPledge.where(goal_id: goal_ids, status: "matched")
+                                          .where.not(matched_transaction_id: nil)
+                                          .pluck(:matched_transaction_id)
+
+      query.where(
+        ActiveRecord::Base.sanitize_sql_array([ "(#{consumed_sql}) OR transactions.id IN (?)", pledged_transaction_ids ])
+      )
     end
 
     def apply_status_filter(query, statuses)
