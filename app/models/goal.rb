@@ -4,6 +4,19 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
+  # States in which a goal has let go of its money: `Goal.pooled_allocations_for`
+  # leaves it out of the backing math, so its links reserve nothing and the
+  # account it pointed at is free again.
+  #
+  # Read by three places that must agree — the shared pool, GoalAccount's
+  # exclusivity check, and the restore guard below. Keeping them on one constant
+  # is what stops the double-counting hole from reopening the day this set
+  # grows: adding a state here makes every one of them release together.
+  #
+  # `completed` belongs here for the same reason `archived` does: completing a
+  # goal hands back the earmark, so its links must stop reserving too.
+  RELEASED_STATES = %w[archived completed].freeze
+
   validates :icon, inclusion: { in: ICONS, allow_nil: true }
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }, allow_nil: true
 
@@ -106,8 +119,6 @@ class Goal < ApplicationRecord
       super("goal consumption refused: #{reason}")
     end
   end
-
-  RELEASED_STATES = %w[archived completed].freeze
 
   # A one-off goal is reached once and then closed; a maintained one is a
   # floor to hold — an emergency fund is not an achievement to file away, it
@@ -537,8 +548,6 @@ class Goal < ApplicationRecord
       link.lock!
       stamp_consumption!(transaction) if transaction
 
-      # A whole-account link reserves no fixed slice, so there is nothing to
-      # shrink — it already takes only what the account has left.
       if link.allocated_amount.present?
         # Refused rather than clamped. Clamping released only what the link
         # held while `consumed_amount` took the full figure, so the two sides
@@ -549,6 +558,32 @@ class Goal < ApplicationRecord
         end
 
         link.update!(allocated_amount: link.allocated_amount.to_d - amount)
+      else
+        # A whole-account link has no slice to shrink, so `consumed_amount`
+        # would be added to a backing that has not moved: the goal reads 6,000
+        # of 5,000 until the real transaction lands and the balance catches up.
+        # A fixed earmark never has that window, because shrinking it caps the
+        # backing straight away.
+        #
+        # Spending settles what the link claims. It stops taking "whatever is
+        # there" and takes what the goal still needs after this spend.
+        #
+        # Deliberately NOT "what it backs, minus the amount". That depends on
+        # whether the money has already left the account, and the app cannot
+        # know: a spend recorded before the sync lands needs the subtraction,
+        # the same spend recorded after it has already had one, and taking it
+        # twice reports 4,000 of a 5,000 goal that is whole. Capping at what
+        # is left to reach is the same answer in both orders, with nothing to
+        # infer.
+        backed = backing_within([ link.account_id ]).to_d
+
+        # Same refusal a fixed earmark gives, for the same reason: the link
+        # cannot have supplied money it never backed. `still_needed` cannot go
+        # negative — the target check above has already refused that.
+        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+
+        still_needed = target_amount.to_d - consumed_amount.to_d - amount
+        link.update!(allocated_amount: [ backed, still_needed ].min)
       end
 
       update!(consumed_amount: consumed_amount.to_d + amount)
