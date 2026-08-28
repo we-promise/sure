@@ -383,6 +383,18 @@ class RecurringTransaction::ScheduleTest < ActiveSupport::TestCase
     assert_nil schedule.first_occurrence_after(Date.new(2026, 10, 15))
   end
 
+  test "a future-anchored after_count plan stays out of windows that end before it" do
+    schedule = build_schedule(
+      rules: [ rule(frequency: "monthly", day_of_month: 15) ],
+      anchor_date: Date.new(2026, 10, 15),
+      end_mode: "after_count", end_after_count: 3
+    )
+    assert_equal [], schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 9, 30)),
+      "the anchor occurrence is beyond the window and must not leak into it"
+    assert_equal [ Date.new(2026, 10, 15) ],
+                 schedule.occurrences_between(Date.new(2026, 8, 1), Date.new(2026, 10, 31))
+  end
+
   test "after_count counts an anchor occurrence adjusted before the anchor date" do
     # Aug 15 2026 is a Saturday, so "before" moves the first payment to
     # Friday Aug 14 -- a day before the anchor. It is still the plan's first

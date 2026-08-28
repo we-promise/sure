@@ -108,7 +108,10 @@ class RecurringTransaction
       return [] if start_date > end_date
 
       if end_mode == "after_count"
-        lifetime_pairs(through: end_date).select { |pair| pair.due_on >= start_date }
+        # Both bounds: lifetime_pairs computes through the anchor even when
+        # the anchor sits past end_date, so a future-anchored plan would
+        # otherwise leak its first occurrence into a window that ends today.
+        lifetime_pairs(through: end_date).select { |pair| pair.due_on >= start_date && pair.due_on <= end_date }
       else
         adjusted_pairs(start_date, end_date)
       end

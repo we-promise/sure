@@ -25,6 +25,17 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     @allocator = Allocator.new(@occurrence)
   end
 
+  test "a currency mismatch reads as a sentence, not a missing translation" do
+    allocation = RecurringAllocation.new(
+      recurring_occurrence: @occurrence, state: :confirmed, source: :user_confirmed,
+      allocated_amount: 10, currency: "EUR", paid_on: Date.current
+    )
+
+    assert_not allocation.valid?
+    message = allocation.errors.full_messages_for(:currency).join
+    assert_no_match(/translation missing/i, message)
+  end
+
   test "a price rise does not re-target an occurrence that has already been paid against" do
     @occurrence.update!(expected_amount: nil) # inheriting from the series
     @allocator.allocate!(entry: entry_for(500))
