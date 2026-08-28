@@ -39,49 +39,20 @@
       cancellation already recorded. These lived only on the Subscriptions
       tab, which meant they were invisible from every other route to the
       same bill. %>
-  <% trial = series.trial_ends_on.present? && series.trial_ends_on >= Date.current %>
-  <% renews = series.renews_on.present? && series.renews_on >= Date.current %>
-  <% if trial || renews || series.cancelled_on.present? %>
-    <div class="flex flex-wrap items-center gap-2">
-      <% if trial %>
-        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-warning/10 text-warning">
-          <%= t("bills.detail.trial_chip", date: l(series.trial_ends_on, format: :short)) %>
-        </span>
-      <% end %>
-      <% if renews %>
-        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-primary">
-          <%= t("bills.detail.renews_chip", date: l(series.renews_on, format: :short)) %>
-        </span>
-      <% end %>
-      <% if series.cancelled_on.present? %>
-        <span class="inline-flex px-1.5 py-0.5 rounded text-xs bg-surface-inset text-subdued">
-          <%= t("bills.detail.cancelled_chip", date: l(series.cancelled_on, format: :short)) %>
-        </span>
-      <% end %>
-    </div>
-  <% end %>
+  <%= render "bills/state_chips", series: series %>
 
   <%# Why this bill matches what it matches, in words rather than engine terms. %>
   <div class="space-y-1.5">
     <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.rules") %></p>
     <div class="flex flex-wrap gap-1.5">
-      <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1">
-        <%= t("bills.detail.rule_named", name: series.merchant&.name.presence || series.name) %>
-      </span>
-      <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1 privacy-sensitive">
-        <% if series.has_amount_variance? %>
-          <%= t("bills.detail.rule_amount_range", min: format_money(series.expected_amount_min_money), max: format_money(series.expected_amount_max_money)) %>
-        <% else %>
-          <%= format_money(Money.new(series.amount.abs, series.currency)) %>
-        <% end %>
-      </span>
-      <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1">
-        <%= frequency_label(series) %>
-      </span>
+      <%= render DS::Pill.new(label: t("bills.detail.rule_named", name: series.merchant&.name.presence || series.name), tone: :neutral, marker: false) %>
+      <% amount_label = series.has_amount_variance? ?
+           t("bills.detail.rule_amount_range", min: format_money(series.expected_amount_min_money), max: format_money(series.expected_amount_max_money)) :
+           format_money(Money.new(series.amount.abs, series.currency)) %>
+      <span class="privacy-sensitive"><%= render DS::Pill.new(label: amount_label, tone: :neutral, marker: false) %></span>
+      <%= render DS::Pill.new(label: frequency_label(series), tone: :neutral, marker: false) %>
       <% if series.account %>
-        <span class="text-xs text-primary bg-container-inset rounded-full px-2.5 py-1">
-          <%= series.account.name %>
-        </span>
+        <%= render DS::Pill.new(label: series.account.name, tone: :neutral, marker: false) %>
       <% end %>
     </div>
 
