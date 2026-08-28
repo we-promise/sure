@@ -34,6 +34,6 @@ class Admin::FamiliesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to admin_users_url
-    assert_equal I18n.t("admin.families.destroy.family_has_active_subscription"), flash[:alert]
+    assert_equal "Could not cancel active Stripe subscription. Please cancel it manually before deleting the family.", flash[:alert]
   end
 end
