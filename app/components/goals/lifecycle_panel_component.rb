@@ -8,8 +8,13 @@
 class Goals::LifecyclePanelComponent < ApplicationComponent
   attr_reader :goal
 
-  def initialize(goal:)
+  # `viewer_account_ids` are the goal's accounts THIS READER can reach, worked
+  # out once in the controller and shared with the overflow menu. Defaulting to
+  # none rather than to every account: a caller that forgets them withholds the
+  # spend offer, which is the safe way to be wrong about a permission.
+  def initialize(goal:, viewer_account_ids: [])
     @goal = goal
+    @viewer_account_ids = viewer_account_ids
   end
 
   # Order is load-bearing, so it is stated once, here.
@@ -70,6 +75,17 @@ class Goals::LifecyclePanelComponent < ApplicationComponent
 
     :none
   end
+
+  # Using the money is the step that normally comes *before* closing — the
+  # close hint says so itself, "Do this once you have actually spent it" — and
+  # until now the only way to say so was an entry in the overflow menu, at the
+  # exact moment the page stops offering any other action. Adding money had a
+  # button on this page; using it had none.
+  #
+  # Offered beside closing, never instead of it: plenty of goals are closed
+  # without anything being recorded, and this must not read as a step to clear
+  # first. Same condition as the menu entry, which stays where it is.
+  def offer_recording_a_spend? = goal.spendable_within?(@viewer_account_ids)
 
   # --- projection ---
 

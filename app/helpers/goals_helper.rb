@@ -35,8 +35,21 @@ module GoalsHelper
   # they reserve no fixed slice. That is the right reading here — what they
   # do claim is guarded separately, at write time, by GoalAccount.
   def earmarked_by_other_goals(account, pooled:, current_goal: nil)
-    (pooled[account.id] || [])
-      .reject { |row| current_goal&.persisted? && row[:goal_id] == current_goal.id }
-      .sum { |row| row[:allocated_amount].to_d }
+    other_goal_rows(account, pooled, current_goal).sum { |row| row[:allocated_amount].to_d }
   end
+
+  # A whole-account link carries a nil allocation, so it contributes zero to
+  # the sum above — "nothing else claims this account" and "another goal
+  # claims all of it" look identical from that figure alone. They are not:
+  # the second refuses a blank allocation at the door
+  # (`GoalAccount#whole_account_link_must_be_exclusive`).
+  def whole_account_claimed_by_other_goals?(account, pooled:, current_goal: nil)
+    other_goal_rows(account, pooled, current_goal).any? { |row| row[:allocated_amount].nil? }
+  end
+
+  private
+    def other_goal_rows(account, pooled, current_goal)
+      (pooled[account.id] || [])
+        .reject { |row| current_goal&.persisted? && row[:goal_id] == current_goal.id }
+    end
 end
