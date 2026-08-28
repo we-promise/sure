@@ -46,15 +46,21 @@ class Goal < ApplicationRecord
   # A target_amount edit is in the list because in this mode the amount is
   # derived, not typed: without it the form could persist an arbitrary figure
   # under a "six months of expenses" label until the next monthly refresh.
-  before_save :apply_months_of_expenses_target,
-              if: -> {
-                months_of_expenses_target? && (
-                  new_record? ||
-                  will_save_change_to_target_months? ||
-                  will_save_change_to_target_mode? ||
-                  will_save_change_to_target_amount?
-                )
-              }
+  # before_VALIDATION, not before_save. `target_amount` is required and must be
+  # positive, and those run before any save callback — so a reserve whose
+  # amount is derived arrived at validation empty and was refused before the
+  # callback that fills it ever ran. The form makes the field read-only in this
+  # mode, so there was no way to satisfy the validation by hand either: the
+  # months mode could not be created from the UI at all.
+  before_validation :apply_months_of_expenses_target,
+                    if: -> {
+                      months_of_expenses_target? && (
+                        new_record? ||
+                        target_months_changed? ||
+                        target_mode_changed? ||
+                        target_amount_changed?
+                      )
+                    }
 
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
@@ -1151,7 +1157,7 @@ class Goal < ApplicationRecord
       # the reserve already had. Same reasoning as the refresh job — a stale
       # floor beats a wrong one, and this one would be wearing a label saying
       # it was computed.
-      self.target_amount = target_amount_in_database if will_save_change_to_target_amount? && !new_record?
+      self.target_amount = target_amount_in_database if target_amount_changed? && !new_record?
     end
 
     # target_months only means something for a reserve on the months basis.
