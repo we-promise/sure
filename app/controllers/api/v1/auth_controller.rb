@@ -185,6 +185,18 @@ module Api
 
         email = cached[:email]
 
+        # Server-side duplicate guard: this endpoint must never create a
+        # second account for an email that already has one. The DB unique
+        # index and AR uniqueness validation both compare against the
+        # *encrypted* column value, so they don't catch a collision with an
+        # existing legacy plaintext row - only the compatibility lookup
+        # does (see User.find_by_email). The mobile client is expected to
+        # call sso_link instead once it sees this error.
+        if User.find_by_email(email).present?
+          render json: { error: "An account with this email already exists. Please sign in to link it instead.", account_exists: true }, status: :conflict
+          return
+        end
+
         # Check for a pending invitation for this email
         invitation = Invitation.pending.find_by(email: email)
 

@@ -105,6 +105,35 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
   end
 
+  # Guards against reintroducing an `exists?`/`find_by` preflight ahead of
+  # `authenticate_by` (see #3190 review): Rails' `authenticate_by` performs a
+  # dummy password digest when the identifier isn't found, specifically so a
+  # nonexistent email costs the same as a wrong password and doesn't leak
+  # account existence via response timing. If a preflight check decides
+  # whether to call `authenticate_by` at all, a missing email skips the
+  # digest entirely and becomes distinguishable from a real one.
+  test "User.authenticate_by_email always calls authenticate_by unconditionally, including for a nonexistent email" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    User.expects(:authenticate_by).with(email: "no-such-user@example.com", password: "whatever").once.returns(nil)
+
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
+  end
+
+  test "User.authenticate_by_email calls authenticate_by before falling back for a legacy plaintext row" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update!(password: "correct-horse-battery-staple")
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    User.expects(:authenticate_by).with(email: "legacy-plaintext@example.com", password: "correct-horse-battery-staple").once.returns(nil)
+
+    assert_equal user, User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "correct-horse-battery-staple")
+  end
+
   test "deterministic find_by matches a legacy plaintext row for downcase attributes without a model-level normalizes declaration" do
     skip "Encryption not configured" unless Invitation.encryption_ready? && InviteCode.encryption_ready?
 

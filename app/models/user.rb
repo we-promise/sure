@@ -105,22 +105,29 @@ class User < ApplicationRecord
 
     # `authenticate_by` (Rails' timing-safe login helper) has the same
     # not-yet-backfilled-row blind spot internally, since it looks the
-    # record up via `find_by(email:)`. Only fall back to #find_by_email +
-    # a direct #authenticate check when that deterministic lookup itself
-    # misses (i.e. a legacy plaintext row) - if it finds the row but the
-    # password is wrong, `authenticate_by` already returned nil correctly
-    # and re-checking via the fallback would run a second, redundant
-    # bcrypt digest on every ordinary failed login for an already-migrated
-    # user, undermining the timing-safety guarantee `authenticate_by` exists
-    # to provide.
+    # record up via `find_by(email:)`. It must be called unconditionally
+    # (never behind an `exists?`/`find_by` preflight) so it always pays its
+    # dummy password digest for a missing identifier - that's what makes a
+    # nonexistent email cost the same as a wrong password and resist
+    # account-enumeration-via-timing. Only fall back to #find_by_email + a
+    # direct #authenticate check when the encrypted lookup itself missed
+    # (i.e. a legacy plaintext row, or truly no such user) - if it found the
+    # row but the password was wrong, re-checking via the fallback would run
+    # a second, redundant bcrypt digest on every ordinary failed login for an
+    # already-migrated user, undermining the same timing-safety guarantee.
     def authenticate_by_email(email:, password:)
       normalized = email.to_s.strip.downcase
 
-      if exists?(email: normalized)
-        authenticate_by(email: normalized, password: password)
-      else
-        find_by_email(normalized)&.then { |user| user if user.authenticate(password) }
-      end
+      user = authenticate_by(email: normalized, password: password)
+      return user if user
+
+      # authenticate_by returned nil either because the encrypted lookup
+      # missed, or because it found the row and the password was wrong. Only
+      # the former should reach the legacy-plaintext fallback below - if the
+      # encrypted lookup found the user, don't re-check.
+      return nil if exists?(email: normalized)
+
+      find_by_email(normalized)&.then { |user| user if user.authenticate(password) }
     end
 
     def human_attribute_name(attribute, options = {})
