@@ -112,20 +112,35 @@ en:
         cost_estimates_title: "About Cost Estimates"
         cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
+      prompt_field:
+        placeholder: Leave blank to use the built-in default shown below.
+        reset: Reset to default
+        reset_confirm: Discard your custom prompt and go back to the built-in default?
+        status_custom: Using your custom prompt
+        status_default: Using the built-in default
+        view_default: Built-in default
       show:
         page_title: AI Prompts
-        openai_label: OpenAI
         disable_ai: Disable AI Assistant
-        prompt_instructions: Prompt Instructions
+        intro: These prompts apply to your family only. Leave a field blank to use the built-in default.
+        json_shape_warning: If you point Sure at a custom OpenAI-compatible endpoint, keep the example JSON block and its top-level key intact — the response parser relies on them when the endpoint cannot enforce a schema.
+        save: Save prompts
         main_system_prompt:
           title: Main System Prompt
           subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+          label: Chat system prompt
         transaction_categorizer:
           title: Transaction Categorizer
           subtitle: AI automatically categorizes your transactions based on your defined categories
+          openai_label: OpenAI prompt
+          anthropic_label: Anthropic prompt
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+          openai_label: OpenAI prompt
+          anthropic_label: Anthropic prompt
+      update:
+        success: AI prompts updated
     payments:
       show:
         page_title: Payments

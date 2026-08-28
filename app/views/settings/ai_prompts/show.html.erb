@@ -13,96 +13,56 @@
   </div>
 <% end %>
 
-<div class="bg-container rounded-xl shadow-border-xs p-4">
-  <div class="rounded-xl bg-container-inset space-y-1 p-1">
-    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary">
-      <p><%= t(".openai_label") %></p>
-    </div>
+<%= styled_form_with model: @family,
+                     url: settings_ai_prompts_path,
+                     method: :patch,
+                     class: "space-y-4" do |form| %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="bg-container rounded-lg space-y-4">
+      <p class="text-xs text-secondary"><%= t(".intro") %></p>
 
-    <div class="bg-container rounded-lg shadow-border-xs">
-      <div class="space-y-4 p-4">
-        <!-- Main System Prompt Section -->
-        <div class="space-y-3">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-surface-inset flex justify-center items-center">
-              <%= icon "message-circle" %>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-primary"><%= t(".main_system_prompt.title") %></p>
-              <p class="text-xs text-secondary"><%= t(".main_system_prompt.subtitle") %></p>
-            </div>
-          </div>
+      <%= render layout: "settings/ai_prompts/prompt_section",
+                 locals: { icon_name: "message-circle",
+                           title: t(".main_system_prompt.title"),
+                           subtitle: t(".main_system_prompt.subtitle") } do %>
+        <%= render "settings/ai_prompts/prompt_field",
+                   form: form, family: @family, key: :chat_system,
+                   label: t(".main_system_prompt.label"), warning: nil %>
+      <% end %>
 
-          <div class="pl-12 space-y-2">
-            <details class="group">
-              <summary class="flex items-center gap-2 cursor-pointer">
-                <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
-                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
-              </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
-              <div class="mt-2 px-3 py-2 bg-surface border border-primary rounded-lg">
-                <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:instructions] %></pre>
-              </div>
-            </details>
-          </div>
-        </div>
+      <div class="border-t border-primary"></div>
 
-        <div class="border-t border-primary"></div>
+      <%= render layout: "settings/ai_prompts/prompt_section",
+                 locals: { icon_name: "brain",
+                           title: t(".transaction_categorizer.title"),
+                           subtitle: t(".transaction_categorizer.subtitle") } do %>
+        <%= render "settings/ai_prompts/prompt_field",
+                   form: form, family: @family, key: :categorizer_openai,
+                   label: t(".transaction_categorizer.openai_label"),
+                   warning: t(".json_shape_warning") %>
+        <%= render "settings/ai_prompts/prompt_field",
+                   form: form, family: @family, key: :categorizer_anthropic,
+                   label: t(".transaction_categorizer.anthropic_label"), warning: nil %>
+      <% end %>
 
-        <!-- Auto-Categorization Section -->
-        <div class="space-y-3">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-surface-inset flex justify-center items-center">
-              <%= icon "brain" %>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-primary"><%= t(".transaction_categorizer.title") %></p>
-              <p class="text-xs text-secondary"><%= t(".transaction_categorizer.subtitle") %></p>
-            </div>
-          </div>
+      <div class="border-t border-primary"></div>
 
-          <div class="pl-12 space-y-2">
-            <details class="group">
-              <summary class="flex items-center gap-2 cursor-pointer">
-                <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
-                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
-              </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
-              <div class="mt-2 px-3 py-2 bg-surface border border-primary rounded-lg">
-                <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_categorizer]&.instructions || Provider::Openai::AutoCategorizer.new(nil).instructions %></pre>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="border-t border-primary"></div>
-
-        <!-- Merchant Detection Section -->
-        <div class="space-y-3">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-surface-inset flex justify-center items-center">
-              <%= icon "store" %>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-primary"><%= t(".merchant_detector.title") %></p>
-              <p class="text-xs text-secondary"><%= t(".merchant_detector.subtitle") %></p>
-            </div>
-          </div>
-
-          <div class="pl-12 space-y-2">
-            <details class="group">
-              <summary class="flex items-center gap-2 cursor-pointer">
-                <span class="text-xs font-medium text-primary uppercase"><%= t(".prompt_instructions") %></span>
-                <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
-              </summary>
-              <pre class="whitespace-pre-wrap text-xs font-mono text-primary">[<%= Provider::Openai::DEFAULT_MODEL %>]</pre>
-              <div class="mt-2 px-3 py-2 bg-surface border border-primary rounded-lg">
-                <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= @assistant_config[:auto_merchant]&.instructions || Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions %></pre>
-              </div>
-            </details>
-          </div>
-        </div>
-      </div>
+      <%= render layout: "settings/ai_prompts/prompt_section",
+                 locals: { icon_name: "store",
+                           title: t(".merchant_detector.title"),
+                           subtitle: t(".merchant_detector.subtitle") } do %>
+        <%= render "settings/ai_prompts/prompt_field",
+                   form: form, family: @family, key: :merchant_openai,
+                   label: t(".merchant_detector.openai_label"),
+                   warning: t(".json_shape_warning") %>
+        <%= render "settings/ai_prompts/prompt_field",
+                   form: form, family: @family, key: :merchant_anthropic,
+                   label: t(".merchant_detector.anthropic_label"), warning: nil %>
+      <% end %>
     </div>
   </div>
-</div>
+
+  <div class="flex justify-end">
+    <%= form.submit t(".save") %>
+  </div>
+<% end %>
