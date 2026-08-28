@@ -14,15 +14,16 @@ class ClearTransferredPositionCostBasesMigrationTest < ActiveSupport::TestCase
     # Everything already there is an ordinary purchase; the transfer under test
     # is the only one.
     @account.trades.update_all(investment_activity_label: "Buy")
-    @holding.update_columns(
-      cost_basis: 100, cost_basis_source: "calculated", cost_basis_locked: false
-    )
+    # Left empty so `avg_cost` reports the computed figure rather than a stored
+    # one; each test stores what the migration is then asked to judge.
+    @holding.update_columns(cost_basis: nil, cost_basis_source: nil, cost_basis_locked: false)
   end
 
   test "a position transferred in loses the figure the app worked out" do
     transfer(qty: 5)
 
-    assert_nil computed_basis, "the runtime already treats this position as unknowable"
+    assert_nil @holding.reload.avg_cost, "the runtime already treats this position as unknowable"
+    store_calculated_basis
 
     run_migration
 
@@ -37,7 +38,8 @@ class ClearTransferredPositionCostBasesMigrationTest < ActiveSupport::TestCase
   test "a position transferred out keeps it" do
     transfer(qty: -5)
 
-    assert_not_nil computed_basis, "the runtime keeps the basis after an outbound transfer"
+    assert_not_nil @holding.reload.avg_cost, "the runtime keeps the basis after an outbound transfer"
+    store_calculated_basis
 
     run_migration
 
@@ -47,7 +49,7 @@ class ClearTransferredPositionCostBasesMigrationTest < ActiveSupport::TestCase
 
   test "a figure the user asserted is not the app's to discard" do
     transfer(qty: 5)
-    @holding.update_columns(cost_basis_source: "manual")
+    @holding.update_columns(cost_basis: 100, cost_basis_source: "manual")
 
     run_migration
 
@@ -55,10 +57,8 @@ class ClearTransferredPositionCostBasesMigrationTest < ActiveSupport::TestCase
   end
 
   private
-    # The computed path, not `avg_cost`: that one returns the stored figure
-    # first, which is exactly the figure this migration exists to remove.
-    def computed_basis
-      @holding.send(:calculate_avg_cost)
+    def store_calculated_basis
+      @holding.update_columns(cost_basis: 100, cost_basis_source: "calculated")
     end
 
     def transfer(qty:)
