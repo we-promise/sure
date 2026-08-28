@@ -423,6 +423,14 @@ class Goal < ApplicationRecord
       .sum { |account| account_amount_for(account) }
   end
 
+  # Whether this reader can record a spend against this goal. Two doors lead to
+  # the same dialog — the lifecycle panel and the overflow menu — and they have
+  # to agree: offering it on the strength of money the reader cannot reach ends
+  # in a dialog with nothing to pick and a refusal on submit.
+  def spendable_within?(account_ids)
+    one_off? && active? && backing_within(account_ids).to_d.positive?
+  end
+
   def account_backing(account)
     Money.new(account_amount_for(account), currency)
   end
