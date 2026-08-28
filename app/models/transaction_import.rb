@@ -34,9 +34,12 @@ class TransactionImport < Import
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
         # This ensures identical rows within the CSV are all imported as separate transactions
         #
-        # include_provider_entries only when the CSV row has a name: without it,
-        # date+amount would match unrelated provider rows. Named rows still skip
-        # already-synced overlap (e.g. Enable Banking's ~90-day window).
+        # Only rows carrying a real CSV name may claim a provider-synced entry.
+        # A blank name cell falls back to default_row_name, so row.name is never
+        # actually blank -- gating on presence alone would always be true and let
+        # a placeholder row match a provider entry on date+amount+placeholder.
+        # Named rows still skip already-synced overlap (Enable Banking's ~90-day
+        # window); placeholder rows only reconcile against manual/CSV entries.
         adapter = Account::ProviderImportAdapter.new(mapped_account)
         duplicate_entry = adapter.find_duplicate_transaction(
           date: row.date_iso,
@@ -44,7 +47,7 @@ class TransactionImport < Import
           currency: effective_currency,
           name: row.name,
           exclude_entry_ids: claimed_entry_ids,
-          include_provider_entries: row.name.present?
+          include_provider_entries: csv_provided_name?(row)
         )
 
         if duplicate_entry
@@ -126,4 +129,11 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  private
+    # True only when the row's name came from the CSV rather than the
+    # default_row_name placeholder substituted for a blank cell.
+    def csv_provided_name?(row)
+      row.name.present? && row.name != default_row_name
+    end
 end

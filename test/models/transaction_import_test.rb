@@ -318,7 +318,11 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert account.entries.exists?(date: Date.new(2024, 1, 2), name: "Older History", import_locked: true)
   end
 
-  test "blank-name CSV rows do not skip unrelated provider-synced transactions" do
+  # A blank name cell is replaced by Import#default_row_name ("Imported item"),
+  # so the placeholder is what reaches dedupe. Naming the provider entry with the
+  # same placeholder is the only way date+amount+name can collide, and it is the
+  # case the csv_provided_name? gate exists to stop.
+  test "placeholder-name CSV rows do not claim provider-synced transactions" do
     account = accounts(:connected)
     assert account.linked?
 
@@ -326,7 +330,7 @@ class TransactionImportTest < ActiveSupport::TestCase
       date: Date.new(2024, 1, 1),
       amount: 100,
       currency: "USD",
-      name: "Coffee Shop",
+      name: @import.send(:default_row_name),
       external_id: "enablebanking_txn_blank_name",
       source: "enable_banking",
       entryable: Transaction.new
