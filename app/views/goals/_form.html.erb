@@ -125,6 +125,7 @@
                the server decides the locale and the client applies it. %>
            data-goal-earmark-locale-value="<%= I18n.locale %>"
            data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
+           data-goal-earmark-whole-balance-alone-value="<%= t("goals.form.earmark.whole_balance_alone") %>"
            data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
            data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
@@ -136,7 +137,8 @@
               <% linked_ga = linked_allocation_by_account[account.id] %>
               <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
                    data-balance="<%= account.balance.to_d %>"
-                   data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>">
+                   data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>"
+                   data-whole-account-claimed="<%= whole_account_claimed_by_other_goals?(account, pooled: pooled_allocations, current_goal: goal) %>">
               <div class="flex items-center gap-3">
                 <label class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
                   <%= check_box_tag "goal[account_ids][]",

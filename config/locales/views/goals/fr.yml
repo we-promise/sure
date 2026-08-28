@@ -49,6 +49,7 @@ fr:
         headroom: "Il reste {left} affectables sur ce compte."
         prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
         whole_balance: Ce compte financera le solde restant après les autres affectations.
+        whole_balance_alone: "Cet objectif utilisera tout le solde de ce compte."
       fields:
         target_mode: Comment le solde cible est fixé
         target_months: Mois de dépenses
