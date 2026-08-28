@@ -2,6 +2,12 @@
 
 # Orchestrates all Binance sub-importers and upserts a single combined BinanceAccount.
 class BinanceItem::Importer
+  # Every sub-importer swallows its own error and answers with an empty asset
+  # list, so "the wallet is empty" and "nothing could be fetched" arrive here
+  # looking identical. Raising on the second keeps the sync honest instead of
+  # reporting a successful import of nothing.
+  class AllRequestsFailed < StandardError; end
+
   attr_reader :binance_item, :binance_provider
 
   def initialize(binance_item, binance_provider:)
@@ -17,9 +23,20 @@ class BinanceItem::Importer
     earn_result   = BinanceItem::EarnImporter.new(binance_item, provider: binance_provider).import
     futures_result = BinanceItem::FuturesImporter.new(binance_item, provider: binance_provider).import
 
-    all_assets = tagged_assets(spot_result) + tagged_assets(margin_result) + tagged_assets(earn_result) + tagged_assets(futures_result)
+    results = [ spot_result, margin_result, earn_result, futures_result ]
+    all_assets = results.flat_map { |result| tagged_assets(result) }
 
-    return { success: true, assets_imported: 0, total_usd: 0 } if all_assets.empty?
+    if results.all? { |result| result[:error].present? }
+      raise AllRequestsFailed, results.filter_map { |result| result[:error] }.uniq.join("; ")
+    end
+
+    # An emptied wallet still has to be written down. Returning here left the
+    # previous payload in place, and the holdings processor reads that payload —
+    # so assets already sold were re-imported as today's holdings on every sync
+    # and never went away. Only skipped when there is nothing to correct yet.
+    if all_assets.empty? && binance_item.binance_accounts.find_by(account_type: "combined").nil?
+      return { success: true, assets_imported: 0, total_usd: 0 }
+    end
 
     total_usd = calculate_total_usd(all_assets)
 

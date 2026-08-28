@@ -56,6 +56,49 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # Each sub-importer swallows its own error and answers with an empty asset
+  # list, so a total outage reached the upsert looking exactly like an emptied
+  # wallet. It reported success, left the previous payload in place, and the
+  # holdings processor re-imported that payload as today's holdings — so an
+  # asset already sold came back on every sync.
+  test "a total outage is not an empty wallet" do
+    stub_failed_result("spot")
+    stub_failed_result("margin")
+    stub_failed_result("earn")
+    stub_failed_result("futures")
+
+    assert_raises BinanceItem::Importer::AllRequestsFailed do
+      BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    end
+  end
+
+  # One call still answering means the picture is trustworthy, even if it is
+  # only part of one. Only a complete outage tells us nothing.
+  test "a partial outage still records what did answer" do
+    stub_failed_result("margin")
+    stub_failed_result("earn")
+    stub_failed_result("futures")
+
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    assert_equal [ "BTC" ], @item.binance_accounts.first.raw_payload["assets"].map { |a| a["symbol"] }
+  end
+
+  # The wallet an existing account was built from can legitimately empty out,
+  # and that has to be written down: the holdings processor reads this payload,
+  # so leaving the old one behind kept the sold assets alive indefinitely.
+  test "emptying a wallet is recorded rather than skipped" do
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_equal [ "BTC" ], @item.binance_accounts.first.raw_payload["assets"].map { |a| a["symbol"] }
+
+    stub_spot_result([])
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    ba = @item.binance_accounts.first.reload
+    assert_empty ba.raw_payload["assets"], "the emptied wallet kept its old asset list"
+    assert_equal 0, ba.current_balance.to_d
+  end
+
   test "stores source breakdown in raw_payload" do
     BinanceItem::Importer.new(@item, binance_provider: @provider).import
 
@@ -67,6 +110,14 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
   end
 
   private
+
+    def stub_failed_result(source)
+      klass = { "spot" => BinanceItem::SpotImporter, "margin" => BinanceItem::MarginImporter,
+                "earn" => BinanceItem::EarnImporter, "futures" => BinanceItem::FuturesImporter }.fetch(source)
+      klass.any_instance.stubs(:import).returns(
+        { assets: [], raw: nil, source: source, error: "boom" }
+      )
+    end
 
     def stub_spot_result(assets)
       BinanceItem::SpotImporter.any_instance.stubs(:import).returns(
