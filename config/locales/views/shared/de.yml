@@ -23,6 +23,9 @@ de:
       default_body: Das lässt sich nicht rückgängig machen.
       default_btn_text: Bestätigen
       default_title: Bist du sicher?
+      resource_deletion_title: "%{resource} löschen?"
+      resource_deletion_body: "Bist du sicher, dass du %{resource} löschen möchtest? Das lässt sich nicht rückgängig machen."
+      resource_deletion_btn_text: "%{resource} löschen"
     family_moniker:
       group_plural: Gruppen
       group_singular: Gruppe

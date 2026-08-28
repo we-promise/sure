@@ -22,6 +22,31 @@ class CustomConfirmTest < ActiveSupport::TestCase
     assert_equal "Delete Rule", data[:confirmText]
   end
 
+  test "defines the German resource-deletion copy without falling back to English" do
+    keys = %w[
+      resource_deletion_title
+      resource_deletion_body
+      resource_deletion_btn_text
+    ]
+
+    keys.each do |key|
+      value = I18n.t("shared.custom_confirm.#{key}", locale: :de, fallback: false, default: nil, resource: "Testregel")
+
+      assert value.present?, "de is missing shared.custom_confirm.#{key}"
+    end
+  end
+
+  test "serializes localized German resource-deletion copy and escapes its HTML body" do
+    data = I18n.with_locale(:de) do
+      CustomConfirm.for_resource_deletion("testregel & freunde").to_data_attribute
+    end
+
+    assert_equal "Testregel & Freunde löschen?", data[:title]
+    assert_equal "Bist du sicher, dass du testregel &amp; freunde löschen möchtest? Das lässt sich nicht rückgängig machen.", data[:body]
+    assert_equal "Testregel & Freunde löschen", data[:confirmText]
+    assert_not_includes data[:body], "testregel & freunde"
+  end
+
   # These back ~40 call sites across the app, so a locale that ships the
   # sibling `default_*` copy should ship these too. Locales without a
   # `custom_confirm` block at all are left out on purpose — adding one would
