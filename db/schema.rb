@@ -2027,6 +2027,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.string "account_type"
     t.decimal "available_balance", precision: 19, scale: 4
     t.datetime "balance_date"
+    t.string "balance_sign_override"
     t.datetime "created_at", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4

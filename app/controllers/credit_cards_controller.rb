@@ -14,7 +14,10 @@ class CreditCardsController < ApplicationController
     super
     # Only apply provider settings once the account update succeeded (redirect);
     # a failed update renders :edit and must not persist the flag.
-    update_enable_banking_settings if response.redirect?
+    if response.redirect?
+      update_enable_banking_settings
+      update_simplefin_settings
+    end
   end
 
   private
@@ -34,5 +37,20 @@ class CreditCardsController < ApplicationController
       if provider_account.saved_change_to_treat_balance_as_available_credit?
         provider_account.enable_banking_item.sync_later
       end
+    end
+
+    def update_simplefin_settings
+      simplefin_params = params.permit(account: { simplefin: [ :balance_sign_override ] })
+        .dig(:account, :simplefin)
+      return if simplefin_params.blank?
+
+      provider_account = @account.provider_account_for("SimplefinAccount")
+      return unless provider_account.present?
+
+      override = simplefin_params[:balance_sign_override]
+      override = nil unless override.in?(%w[credit debt])
+      provider_account.update!(balance_sign_override: override)
+
+      provider_account.simplefin_item.sync_later if provider_account.saved_change_to_balance_sign_override?
     end
 end

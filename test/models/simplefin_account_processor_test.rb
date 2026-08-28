@@ -28,6 +28,46 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("123.45"), acct.reload.balance
   end
 
+  test "credit override preserves an ambiguous provider balance as a credit" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Credit balance",
+      account_id: "cc_credit_override",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("-25"),
+      available_balance: BigDecimal("0"),
+      balance_sign_override: "credit"
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("-25"), acct.reload.balance
+  end
+
+  test "debt override preserves an ambiguous provider balance as debt" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Debt balance",
+      account_id: "cc_debt_override",
+      currency: "USD",
+      account_type: "credit",
+      current_balance: BigDecimal("-25"),
+      available_balance: BigDecimal("0"),
+      balance_sign_override: "debt"
+    )
+
+    acct = accounts(:credit_card)
+    acct.update!(simplefin_account: sfin_acct)
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("25"), acct.reload.balance
+  end
+
   test "does not invert balance for asset accounts (depository)" do
     sfin_acct = SimplefinAccount.create!(
       simplefin_item: @item,
