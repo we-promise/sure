@@ -40,6 +40,19 @@ module Entries
       assert_includes html, entry_reconciliation_statement_label(statement)
     end
 
+    test "surfaces the statement filename through DS::Tooltip, not a raw title attribute" do
+      statement = create_statement(filename: "march-statement.pdf")
+      entry = create_transaction(account: @account, source: "plaid")
+      entry.mark_reconciled!(statement: statement)
+
+      html = render(partial: "entries/reconciliation_status", locals: { entry: entry.reload })
+
+      assert_includes html, "march-statement.pdf"
+      assert_includes html, 'role="tooltip"'
+      assert_includes html, "DS--tooltip"
+      assert_no_match(/title="march-statement\.pdf"/, html)
+    end
+
     test "shows reconciled without statement when evidence was removed" do
       statement = create_statement
       entry = create_transaction(account: @account)

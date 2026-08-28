@@ -30,11 +30,18 @@
             <dt class="text-secondary shrink-0"><%= t("entries.reconciliation.statement_label") %></dt>
             <dd class="text-primary text-right min-w-0">
               <% if statement.present? %>
-                <%= link_to entry_reconciliation_statement_label(statement),
-                      account_statement_path(statement),
-                      class: "text-primary hover:text-primary-hover underline underline-offset-2 truncate inline-block max-w-full",
-                      data: { turbo_frame: "_top" },
-                      title: statement.filename %>
+                <%# The visible label is the period range when the statement has
+                    one, so the filename is additive context. It goes through
+                    DS::Tooltip rather than a raw title= attribute (DS rule 1).
+                    Default as: :button keeps it keyboard-reachable — the
+                    tooltip is a sibling of the link, not inside it. %>
+                <span class="inline-flex items-center gap-1 max-w-full">
+                  <%= link_to entry_reconciliation_statement_label(statement),
+                        account_statement_path(statement),
+                        class: "text-primary hover:text-primary-hover underline underline-offset-2 truncate",
+                        data: { turbo_frame: "_top" } %>
+                  <%= render DS::Tooltip.new(text: statement.filename, html_class: "shrink-0") %>
+                </span>
               <% else %>
                 <span class="text-secondary"><%= t("entries.reconciliation.no_statement") %></span>
               <% end %>
