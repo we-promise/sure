@@ -131,9 +131,28 @@ class TransactionImport < Import
   end
 
   private
-    # True only when the row's name came from the CSV rather than the
-    # default_row_name placeholder substituted for a blank cell.
+    # True when the row's name came from the CSV rather than the
+    # default_row_name placeholder substituted for a blank cell. A row whose
+    # name cell literally holds the placeholder text still counts as provided,
+    # so it reconciles against provider-synced history like any other named row.
     def csv_provided_name?(row)
-      row.name.present? && row.name != default_row_name
+      return false if row.name.blank?
+      return true unless row.name == default_row_name
+
+      csv_name_cells[row.source_row_number].present?
+    end
+
+    # Maps source_row_number (1-based, assigned in Import#generate_rows_from_csv)
+    # to the raw name cell, so a supplied placeholder is distinguishable from a
+    # blank one. Empty without a CSV behind the import, which keeps the
+    # conservative "not provided" answer.
+    def csv_name_cells
+      @csv_name_cells ||= if raw_file_str.blank?
+        {}
+      else
+        csv_rows.each_with_index.to_h do |csv_row, index|
+          [ index + 1, csv_value(csv_row, name_col_label, "name") ]
+        end
+      end
     end
 end
