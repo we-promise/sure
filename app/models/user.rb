@@ -255,7 +255,9 @@ class User < ApplicationRecord
 
     def ensure_not_last_super_admin
       return unless check_last_super_admin_invariant_failed?
-      errors.add(:base, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+
+      attribute = role_changed? ? :role : :base
+      errors.add(attribute, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
     end
 
     def ensure_not_last_super_admin_on_destroy
@@ -326,16 +328,54 @@ class User < ApplicationRecord
   def transfer_to_family!(new_family, role: self.role)
     transaction do
       lock!
-      if owned_accounts.any?
-        errors.add(:base, :cannot_transfer_with_accounts, message: "Users with existing accounts cannot be transferred to another family.")
-        raise ActiveRecord::RecordInvalid, self
-      end
+
+      accounts_to_move = owned_accounts.to_a
+      provider_items_to_move = provider_items_for_transfer(accounts_to_move)
+      moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
 
       account_shares.delete_all
 
-      update!(family: new_family, role: role)
+      update!(family: new_family, role: role, default_account: moving_default_account ? default_account : nil)
+
+      accounts_to_move.each do |account|
+        account.update!(family: new_family)
+      end
+
+      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+
+      provider_items_to_move.each do |provider_item|
+        provider_item.update!(family: new_family)
+      end
+
       new_family.auto_share_existing_accounts_with(self)
     end
+  end
+
+  def provider_items_for_transfer(accounts_to_move)
+    account_ids_to_move = accounts_to_move.map(&:id)
+    provider_items = accounts_to_move.flat_map do |account|
+      account.account_providers.includes(:provider).filter_map do |account_provider|
+        provider_item_for(account_provider.provider)
+      end
+    end.uniq
+
+    provider_items.each do |provider_item|
+      linked_account_ids = provider_item.accounts.map(&:id)
+      next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    provider_items
+  end
+
+  def provider_item_for(provider)
+    item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
+      association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
+    end
+
+    provider.public_send(item_association.name) if item_association
   end
 
   def purge

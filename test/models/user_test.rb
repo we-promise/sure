@@ -799,7 +799,7 @@ class UserTest < ActiveSupport::TestCase
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
-    User.destroy_all
+    User.connection.disable_referential_integrity { User.delete_all }
 
     assert_equal :super_admin, User.role_for_new_family_creator
   end
