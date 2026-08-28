@@ -21,7 +21,7 @@
         <%= t(".summary",
               total: goal.consumed_amount_money.format(precision: 0),
               listed: Money.new(listed_total, goal.currency).format(precision: 0),
-              count: entries.size) %>
+              transactions: t(".transactions", count: entries.size)) %>
         <% if unaccounted.positive? %>
           <span class="text-subdued">
             <%= t(".unaccounted", amount: Money.new(unaccounted, goal.currency).format(precision: 0)) %>
@@ -42,9 +42,26 @@
             <%= entry.account.name %>
           </p>
         </div>
-        <span class="text-sm text-primary tabular-nums privacy-sensitive shrink-0">
-          <%= Money.new(entry.amount, entry.currency).format %>
-        </span>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-sm text-primary tabular-nums privacy-sensitive">
+            <%= Money.new(entry.amount, entry.currency).format %>
+          </span>
+          <%# The way back. Attributing is one click on a panel the app raises
+              unprompted; without this, a misread suggestion moved a financial
+              figure for good. %>
+          <%= render DS::Button.new(
+                text: t(".detach"),
+                href: release_consumption_goal_path(goal, transaction_id: entry.entryable_id),
+                method: :delete,
+                variant: :ghost,
+                size: :sm,
+                confirm: CustomConfirm.new(
+                  title: t(".confirm_detach_title"),
+                  body: t(".confirm_detach_body", amount: Money.new(entry.amount, entry.currency).format),
+                  btn_text: t(".confirm_detach_cta")
+                )
+              ) %>
+        </div>
       </li>
     <% end %>
   </ul>

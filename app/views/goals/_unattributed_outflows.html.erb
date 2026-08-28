@@ -39,7 +39,12 @@
                 method: :post,
                 params: { transaction_id: entry.entryable_id },
                 variant: :secondary,
-                size: :sm
+                size: :sm,
+                confirm: CustomConfirm.new(
+                  title: t(".confirm_title"),
+                  body: t(".confirm_body", amount: Money.new(entry.amount, entry.currency).format, goal: goal.name),
+                  btn_text: t(".confirm_cta")
+                )
               ) %>
         </div>
       </li>

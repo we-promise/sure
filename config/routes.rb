@@ -432,6 +432,7 @@ Rails.application.routes.draw do
       # spent more than once, so the write is a POST, not a PATCH on the goal.
       get :consume
       post :consume, action: :record_consumption, as: nil
+      delete "consumed/:transaction_id", action: :release_consumption, as: :release_consumption
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do

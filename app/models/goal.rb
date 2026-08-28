@@ -697,6 +697,44 @@ class Goal < ApplicationRecord
     end
   public
 
+  # Undo an attribution. `consume!` is a one-click action on a panel the app
+  # raises unprompted, and until now it had no way back: a misread suggestion
+  # moved a financial figure for good.
+  #
+  # The account's earmark is deliberately NOT restored. Releasing it would sweep
+  # the balance back under the goal on the app's own initiative, which is the
+  # thing #3219 settled against — re-earmarking is the user's decision, the same
+  # one they made the first time. The confirmation says so rather than leaving
+  # it to be discovered.
+  def release_consumption!(transaction)
+    raise ConsumptionRefused.new(:not_active) unless active?
+
+    # Same order `consume!` takes — goal, then transaction. Reversing it would
+    # deadlock the two against each other, and only under load.
+    with_lock do
+      transaction.with_lock do
+        claimed = transaction.extra&.dig("goal", "consumed_goal_id")
+        raise ConsumptionRefused.new(:not_claimed_by_this_goal) unless claimed == id
+
+        amount = transaction.entry.amount.to_d
+        # The column carries a >= 0 check constraint; refusing here turns what
+        # would be a 500 into something the user can read.
+        raise ConsumptionRefused.new(:release_exceeds_consumed) if consumed_amount.to_d - amount < 0
+
+        extra = transaction.extra.deep_dup
+        extra["goal"]&.delete("consumed_goal_id")
+        extra.delete("goal") if extra["goal"]&.empty?
+        transaction.update!(extra: extra)
+
+        update!(consumed_amount: consumed_amount.to_d - amount)
+      end
+    end
+
+    reload
+    reset_state_dependent_caches!
+    self
+  end
+
   # The spends attributed to this goal, as entries. `consumed_amount` is a bare
   # number with nothing behind it, so this is the only way a reader can check
   # it, remember what it was for, or notice an attribution they did not mean.
