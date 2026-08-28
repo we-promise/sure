@@ -172,6 +172,7 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#mobile-settings-nav"
+    assert_select "form[action='#{perform_merge_categories_path}'] button[type='submit']"
   end
 
   test "merge renders without the settings layout for modal frame requests" do
