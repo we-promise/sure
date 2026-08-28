@@ -35,6 +35,76 @@ module ActiveRecordEncryptionConfig
   # models the install's last backfill never actually covered.
   CURRENT_BACKFILL_VERSION = 1
 
+  # Single source of truth for which models/fields security:backfill_encryption
+  # covers, keyed by the same symbol the task's `results` hash uses. Model
+  # names are strings (not bare constants) and resolved via constantize only
+  # from the task itself (after full Rails boot, via its :environment
+  # dependency) - this file is `require`d from config/initializers/
+  # active_record_encryption.rb, before autoloading is available, so a bare
+  # constant reference here would raise NameError at boot.
+  #
+  # test/lib/tasks/security_backfill_test.rb asserts this stays in exact sync
+  # with each model's real `encrypts` declarations, so a future field added
+  # to a model's `encrypts` list without a matching manifest update (the
+  # SnaptradeAccount#raw_balances_payload gap, previously) fails CI instead
+  # of silently shipping a field the backfill - and thus the legacy-plaintext
+  # fallback gating - never actually covers. Bump CURRENT_BACKFILL_VERSION
+  # whenever this changes. Session is deliberately excluded: its backfill
+  # (lib/tasks/security_backfill.rake#backfill_sessions) also hashes
+  # ip_address into ip_address_digest, which isn't a 1:1 encrypted copy of an
+  # existing field the way every entry below is.
+  BACKFILL_MANIFEST = {
+    users: [ "User", %i[otp_secret email unconfirmed_email first_name last_name] ],
+    invitations: [ "Invitation", %i[token email] ],
+    invite_codes: [ "InviteCode", %i[token] ],
+    mobile_devices: [ "MobileDevice", %i[device_id] ],
+    plaid_items: [ "PlaidItem", %i[access_token raw_payload raw_institution_payload] ],
+    simplefin_items: [ "SimplefinItem", %i[access_url raw_payload raw_institution_payload] ],
+    lunchflow_items: [ "LunchflowItem", %i[api_key raw_payload raw_institution_payload] ],
+    enable_banking_items: [ "EnableBankingItem", %i[client_certificate session_id raw_payload raw_institution_payload] ],
+    akahu_items: [ "AkahuItem", %i[app_token user_token raw_payload raw_institution_payload] ],
+    binance_items: [ "BinanceItem", %i[api_key api_secret raw_payload] ],
+    brex_items: [ "BrexItem", %i[token raw_payload raw_institution_payload] ],
+    coinbase_items: [ "CoinbaseItem", %i[api_key api_secret raw_payload raw_institution_payload] ],
+    coinstats_items: [ "CoinstatsItem", %i[api_key raw_payload raw_institution_payload] ],
+    ibkr_items: [ "IbkrItem", %i[query_id token raw_payload] ],
+    indexa_capital_items: [ "IndexaCapitalItem", %i[password api_token username document raw_payload raw_institution_payload] ],
+    kraken_items: [ "KrakenItem", %i[api_key api_secret raw_payload] ],
+    mercury_items: [ "MercuryItem", %i[token raw_payload raw_institution_payload] ],
+    onchain_wallet_items: [ "OnchainWalletItem", %i[etherscan_api_key] ],
+    questrade_items: [ "QuestradeItem", %i[refresh_token raw_payload raw_institution_payload] ],
+    redbark_items: [ "RedbarkItem", %i[api_key raw_payload raw_institution_payload] ],
+    snaptrade_items: [ "SnaptradeItem", %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload] ],
+    sophtron_items: [ "SophtronItem", %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload] ],
+    trading212_items: [ "Trading212Item", %i[api_key api_secret raw_instruments_payload] ],
+    up_items: [ "UpItem", %i[access_token raw_payload raw_institution_payload] ],
+    wise_items: [ "WiseItem", %i[token raw_payload] ],
+    plaid_accounts: [ "PlaidAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload] ],
+    simplefin_accounts: [ "SimplefinAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
+    lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload] ],
+    enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload] ],
+    snaptrade_accounts: [ "SnaptradeAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload] ],
+    coinbase_accounts: [ "CoinbaseAccount", %i[raw_payload raw_transactions_payload] ],
+    coinstats_accounts: [ "CoinstatsAccount", %i[raw_payload raw_transactions_payload] ],
+    mercury_accounts: [ "MercuryAccount", %i[raw_payload raw_transactions_payload] ],
+    akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload] ],
+    binance_accounts: [ "BinanceAccount", %i[raw_payload raw_transactions_payload] ],
+    brex_accounts: [ "BrexAccount", %i[raw_payload raw_transactions_payload] ],
+    ibkr_accounts: [ "IbkrAccount", %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload] ],
+    indexa_capital_accounts: [ "IndexaCapitalAccount", %i[raw_payload raw_holdings_payload raw_activities_payload] ],
+    kraken_accounts: [ "KrakenAccount", %i[raw_payload raw_transactions_payload] ],
+    onchain_wallet_accounts: [ "OnchainWalletAccount", %i[raw_payload raw_movements_payload] ],
+    questrade_accounts: [ "QuestradeAccount", %i[raw_payload raw_holdings_payload raw_activities_payload raw_balances_payload] ],
+    redbark_accounts: [ "RedbarkAccount", %i[raw_payload raw_transactions_payload] ],
+    sophtron_accounts: [ "SophtronAccount", %i[raw_payload raw_transactions_payload] ],
+    trading212_accounts: [ "Trading212Account", %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload] ],
+    up_accounts: [ "UpAccount", %i[raw_payload raw_transactions_payload] ],
+    wise_accounts: [ "WiseAccount", %i[raw_payload raw_transactions_payload] ],
+    api_keys: [ "ApiKey", %i[display_key] ],
+    sso_providers: [ "SsoProvider", %i[client_secret] ],
+    sso_identity_blocks: [ "SsoIdentityBlock", %i[identity_label] ]
+  }.freeze
+
   module_function
 
   def complete_env?(env = ENV)
@@ -63,10 +133,64 @@ module ActiveRecordEncryptionConfig
     false
   end
 
+  # Unlike partial_env? (ENV vars), a present-but-incomplete Rails credentials
+  # block does NOT fall through to auto-generation from SECRET_KEY_BASE - see
+  # config/initializers/active_record_encryption.rb's `elsif ... &&
+  # !Rails.application.credentials.active_record_encryption.present?` guard.
+  # Left unchecked this silently disables encryption entirely (ready? / thus
+  # every model's `encrypts` declaration goes false) instead of failing loudly
+  # like the equivalent partial-ENV case does.
+  def partial_credentials?(credentials = Rails.application.credentials)
+    config = credentials.active_record_encryption
+    return false unless config.present?
+
+    present_count = CONFIG_KEYS.count { |key| config.public_send(key).present? }
+    present_count.positive? && present_count < CONFIG_KEYS.count
+  rescue NoMethodError
+    false
+  end
+
+  def missing_credential_keys(credentials = Rails.application.credentials)
+    config = credentials.active_record_encryption
+    return CONFIG_KEYS.dup unless config.present?
+
+    CONFIG_KEYS.reject { |key| config.public_send(key).present? }
+  rescue NoMethodError
+    CONFIG_KEYS.dup
+  end
+
+  def partial_credentials_message(credentials = Rails.application.credentials)
+    "Active Record encryption Rails credentials are partially configured. Missing: #{missing_credential_keys(credentials).join(', ')}"
+  end
+
   def runtime_configured?(config = Rails.application.config.active_record.encryption)
     CONFIG_KEYS.all? { |key| config.public_send(key).present? }
   rescue NoMethodError
     false
+  end
+
+  # Applies a resolved set of AR encryption keys to both the Rails config
+  # object (for anything that reads it directly, e.g. runtime_configured?)
+  # AND, if it's already been initialized, the live ActiveRecord::Encryption
+  # engine config - mirroring the same belt-and-suspenders pattern this file
+  # documents for support_unencrypted_data/extend_queries in config/
+  # initializers/active_record_encryption.rb. Necessary because touching
+  # ActiveRecord::Base.connection (as backfill_completed? does, earlier in
+  # that same initializer) fires AR's one-time on_load(:active_record_
+  # encryption_configuration) snapshot into ActiveRecord::Encryption.config
+  # before these keys are known - Rails.application.config.active_record.
+  # encryption.* alone is therefore insufficient; the engine itself needs
+  # patching directly regardless of when that snapshot fired.
+  def apply_keys!(primary_key:, deterministic_key:, key_derivation_salt:, config: Rails.application.config.active_record.encryption)
+    config.primary_key = primary_key
+    config.deterministic_key = deterministic_key
+    config.key_derivation_salt = key_derivation_salt
+
+    return unless defined?(ActiveRecord::Encryption)
+
+    ActiveRecord::Encryption.config.primary_key = primary_key
+    ActiveRecord::Encryption.config.deterministic_key = deterministic_key
+    ActiveRecord::Encryption.config.key_derivation_salt = key_derivation_salt
   end
 
   def explicitly_configured?
@@ -77,15 +201,20 @@ module ActiveRecordEncryptionConfig
     explicitly_configured? || runtime_configured?
   end
 
-  # Only meaningful for the auto-derived path: explicit env vars or Rails
-  # credentials (explicitly_configured?) take precedence over SECRET_KEY_BASE
-  # in config/initializers/active_record_encryption.rb, so an install that
-  # set its own encryption keys but happens to still have this SECRET_KEY_BASE
-  # value (e.g. never bothered rotating it because it isn't the key source)
-  # is not actually affected and should not be warned.
+  # Deliberately independent of explicitly_configured?/ready?: this is a fact
+  # about SECRET_KEY_BASE itself, not about whether Active Record Encryption's
+  # own keys happen to be derived from it. Explicit AR keys only mean AR
+  # encryption isn't affected - SECRET_KEY_BASE also signs/encrypts Rails
+  # session cookies and is the sole key source for Setting's own encryptor
+  # (app/models/setting.rb's setting_encryptor), independently of AR
+  # encryption config. A previous version of this method returned false
+  # whenever explicitly_configured? was true, which suppressed the warning
+  # in config/initializers/encryption_warning.rb entirely for installs with
+  # explicit AR keys - even though their sessions and Setting-encrypted
+  # provider/AI API keys remained trivially crackable by anyone who knows
+  # this public compromised value. See ActiveRecordEncryptionConfig#ready?
+  # for the (separate) question of whether AR encryption itself is affected.
   def using_known_compromised_secret_key_base?(secret_key_base = Rails.application.secret_key_base)
-    return false if explicitly_configured?
-
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false

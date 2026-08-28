@@ -98,9 +98,35 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     # Force the write phase of this record's backfill to fail so failed_count > 0.
     LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
 
-    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+    invoke_backfill("500", "false")
 
     assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
+  # Regression test for a gap jjmata flagged: the task computed per-model
+  # success correctly (enough to gate the completion flag above) but printed
+  # a hardcoded ok: true and always exited zero regardless, so an operator or
+  # deployment script checking only the exit code - not hand-parsing the JSON
+  # - would believe a partially-failed backfill fully succeeded.
+  test "a run with failures reports ok: false and exits non-zero" do
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Exit Status Test", api_key: "seed")
+    item.save!(validate: false)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_items SET api_key = ? WHERE id = ?", "plaintext-key", item.id ]))
+
+    LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
+
+    out, _err, exit_status = invoke_backfill("500", "false")
+
+    assert_equal 1, exit_status, "a failed backfill must exit non-zero so automation can detect it"
+    assert_equal false, JSON.parse(out.lines.last)["ok"], "a failed backfill must report ok: false, not a blanket success"
+  end
+
+  test "a clean run reports ok: true and exits zero" do
+    out, _err, exit_status = invoke_backfill("500", "true")
+
+    assert_nil exit_status, "a successful (or dry) run must not exit the process"
+    assert_equal true, JSON.parse(out.lines.last)["ok"]
   end
 
   # Regression test for a gap CodeRabbit flagged: without invalidating the flag
@@ -117,7 +143,7 @@ class SecurityBackfillTest < ActiveSupport::TestCase
 
     LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
 
-    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+    invoke_backfill("500", "false")
 
     assert_equal 0, Setting.encryption_backfill_completed_version
   end
@@ -163,4 +189,42 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       assert results.key?(key), "expected security:backfill_encryption to cover #{key}"
     end
   end
+
+  # Regression test for a gap jjmata flagged: the previous test above only
+  # checked that a `results` key exists for each of a hand-picked subset of
+  # models, not that the *fields* backfilled for a model exactly match what
+  # it actually `encrypts` - so a new encrypted field added to a model
+  # without a matching manifest update (exactly the SnaptradeAccount#
+  # raw_balances_payload gap fixed elsewhere in this file) would stay green
+  # here forever. This asserts exact parity for every model in the manifest.
+  test "backfill manifest exactly matches each model's encrypted attributes" do
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      model_class = model_class_name.constantize
+
+      assert_equal fields.sort, model_class.encrypted_attributes.to_a.sort,
+        "#{model_class_name} (results[:#{key}]) has drifted from " \
+        "ActiveRecordEncryptionConfig::BACKFILL_MANIFEST - update the manifest " \
+        "and bump CURRENT_BACKFILL_VERSION together with whatever changed " \
+        "#{model_class_name}'s `encrypts` declarations"
+    end
+  end
+
+  private
+
+    # The task now calls `exit 1` on a failed (non-dry-run) invocation.
+    # capture_io's own `return` never runs if the block it wraps raises past
+    # it, so plain `capture_io { ... invoke ... }` would make out/err
+    # unreachable for a failing run - rescue inside the block instead, so
+    # stdout is still captured and the exit status is still observable.
+    def invoke_backfill(*args)
+      exit_status = nil
+      out, err = capture_io do
+        begin
+          Rake::Task["security:backfill_encryption"].invoke(*args)
+        rescue SystemExit => e
+          exit_status = e.status
+        end
+      end
+      [ out, err, exit_status ]
+    end
 end

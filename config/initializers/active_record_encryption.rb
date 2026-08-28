@@ -54,6 +54,18 @@ require Rails.root.join("lib/active_record_encryption_config").to_s
 # ActiveRecordEncryptionConfig.backfill_completed? (lib/
 # active_record_encryption_config.rb) for why it reads the `settings` table
 # via raw SQL instead.
+#
+# The same premature-snapshot problem also applies to the actual encryption
+# keys (primary_key/deterministic_key/key_derivation_salt) configured further
+# below in this file: they're resolved from ENV/SECRET_KEY_BASE/credentials
+# AFTER the backfill_completed? call above already fired the snapshot, so
+# Rails.application.config.active_record.encryption.* alone would again be
+# necessary-but-insufficient - see ActiveRecordEncryptionConfig.apply_keys!,
+# used below, which patches ActiveRecord::Encryption.config directly for the
+# keys exactly like support_unencrypted_data/extend_queries are patched here.
+# (Rails credentials configured in config/application.rb are unaffected: that
+# file loads before this initializer runs, so its assignment lands in the
+# Rails config before backfill_completed?'s snapshot ever fires.)
 encryption_fallback_enabled = !ActiveRecordEncryptionConfig.backfill_completed?
 Rails.application.config.active_record.encryption.support_unencrypted_data = encryption_fallback_enabled
 Rails.application.config.active_record.encryption.extend_queries = encryption_fallback_enabled
@@ -137,11 +149,19 @@ if ActiveRecordEncryptionConfig.partial_env?
   raise ActiveRecordEncryptionConfig.partial_env_message
 end
 
+# A present-but-incomplete credentials.active_record_encryption block does
+# NOT fall through to auto-generation below (see the elsif's `.present?`
+# guard) - without this check it would silently disable encryption entirely
+# instead of failing loudly, unlike the equivalent partial-ENV case above.
+if ActiveRecordEncryptionConfig.partial_credentials?
+  raise ActiveRecordEncryptionConfig.partial_credentials_message
+end
+
 # If all environment variables are present, use them (works for both managed and self-hosted)
 if ActiveRecordEncryptionConfig.complete_env?
-  Rails.application.config.active_record.encryption.primary_key = primary_key
-  Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
-  Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
+  ActiveRecordEncryptionConfig.apply_keys!(
+    primary_key: primary_key, deterministic_key: deterministic_key, key_derivation_salt: key_derivation_salt
+  )
 elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.credentials.active_record_encryption.present?
   # For self-hosted instances without credentials or env vars, auto-generate keys
   # Use SECRET_KEY_BASE as the seed for deterministic key generation
@@ -154,8 +174,8 @@ elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.crede
   key_derivation_salt = Digest::SHA256.hexdigest("#{secret_base}:key_derivation_salt")[0..63]
 
   # Configure Active Record encryption
-  Rails.application.config.active_record.encryption.primary_key = primary_key
-  Rails.application.config.active_record.encryption.deterministic_key = deterministic_key
-  Rails.application.config.active_record.encryption.key_derivation_salt = key_derivation_salt
+  ActiveRecordEncryptionConfig.apply_keys!(
+    primary_key: primary_key, deterministic_key: deterministic_key, key_derivation_salt: key_derivation_salt
+  )
 end
 # If none of the above conditions are met, credentials from application.rb will be used
