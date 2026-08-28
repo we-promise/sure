@@ -412,6 +412,18 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_nil transfer.outflow_transaction.reload.category_id
   end
 
+  test "category-only update leaves existing notes unchanged" do
+    transfer = transfers(:one)
+    transfer.update!(notes: "Existing note")
+    category = users(:family_admin).family.categories.create!(name: "Existing")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_redirected_to transactions_url
+    assert_equal "Existing note", transfer.reload.notes
+    assert_equal category.id, transfer.outflow_transaction.reload.category_id
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
