@@ -54,6 +54,9 @@ jobs:
             config/locales/views/reports/vi.yml
             config/locales/views/reports/zh-CN.yml
             config/locales/views/reports/zh-TW.yml
+            test/fixtures/files/open_banking_io/envelope-kat.json
+            test/models/open_banking_io_entry/processor_test.rb
+            test/models/provider/open_banking_io/client_test.rb
 
       - name: Validate Pipelock deployment contracts
         shell: bash
