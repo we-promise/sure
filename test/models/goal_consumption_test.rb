@@ -45,8 +45,15 @@ class GoalConsumptionTest < ActiveSupport::TestCase
     assert_equal 3_750, Goal.find(sibling.id).current_balance.to_d
   end
 
-  # A whole-account link reserves no fixed slice, so there is nothing to shrink.
-  test "a whole-account link records the consumption and keeps its shape" do
+  # A whole-account link has no slice to shrink, so the consumption used to be
+  # recorded against a backing that had not moved — the goal reading 6,000 of
+  # 5,000 until the real transaction landed and the balance caught up. A fixed
+  # earmark never has that window, because shrinking it caps the backing at
+  # once.
+  #
+  # Spending settles what the link claims: it stops taking "whatever is there"
+  # and takes what is left after the spend.
+  test "spending from a whole-account link settles what it claims" do
     account = fresh_account(5_000)
     goal = @family.goals.create!(name: "Whole", target_amount: 5_000, currency: "USD") do |g|
       g.goal_accounts.build(account: account)
@@ -55,7 +62,80 @@ class GoalConsumptionTest < ActiveSupport::TestCase
     goal.consume!(1_000)
 
     assert_equal 1_000, goal.consumed_amount
-    assert_nil goal.goal_accounts.first.reload.allocated_amount
+    assert_equal 4_000, goal.goal_accounts.first.reload.allocated_amount.to_d,
+      "the link still claimed the whole account after part of it was spent"
+  end
+
+  # The figure that gave this away: held plus spent overshooting the target
+  # while the account had not moved yet.
+  test "a whole-account goal does not count the same money twice" do
+    account = fresh_account(5_000)
+    goal = @family.goals.create!(name: "Whole", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.consume!(1_000)
+
+    assert_equal 5_000, goal.current_balance.to_d + goal.consumed_amount.to_d
+  end
+
+  # The order the two events arrive in is not fixed. A spend recorded before
+  # the sync lands needs the account's fall accounted for; the same spend
+  # recorded after it has already had it, and subtracting twice reported
+  # 4,000 of a 5,000 goal that was whole. Capping at what is left to reach is
+  # the same answer either way.
+  test "it is right when the balance falls before the spend is recorded" do
+    account = fresh_account(4_000)
+    goal = @family.goals.create!(name: "Late", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.consume!(1_000)
+
+    assert_equal 5_000, goal.current_balance.to_d + goal.consumed_amount.to_d
+  end
+
+  # A goal holding more than it needs keeps counting only toward its target
+  # once it has spent something — the cap is what makes the two orders agree,
+  # and it applies the same way here.
+  test "a goal holding more than its target settles at its target" do
+    account = fresh_account(7_000)
+    goal = @family.goals.create!(name: "Over", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    goal.consume!(1_000)
+
+    assert_equal 5_000, goal.current_balance.to_d + goal.consumed_amount.to_d
+  end
+
+  # And it stays right once the spend actually lands, which is the state a
+  # fixed earmark has always handled and this one did not.
+  test "it is still right once the balance catches up" do
+    account = fresh_account(5_000)
+    goal = @family.goals.create!(name: "Whole", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    goal.consume!(1_000)
+
+    account.update!(balance: 4_000)
+    settled = Goal.find(goal.id)
+
+    assert_equal 5_000, settled.current_balance.to_d + settled.consumed_amount.to_d
+  end
+
+  # Nothing to take it from: the refusal is the same one a fixed earmark gives
+  # when the amount is larger than the slice.
+  test "spending more than the goal has left to reach is refused" do
+    account = fresh_account(1_000)
+    goal = @family.goals.create!(name: "Whole", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    error = assert_raises(Goal::ConsumptionRefused) { goal.consume!(2_000) }
+
+    assert_equal :exceeds_earmark, error.reason
+    assert_equal 0, goal.reload.consumed_amount
   end
 
   test "with several linked accounts the caller has to say which one" do
