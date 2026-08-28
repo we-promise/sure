@@ -1,0 +1,36 @@
+<%# One editable prompt. An empty textarea means the family runs the built-in
+    default, which stays visible in the disclosure below for reference. %>
+<div class="space-y-2">
+  <%= form.text_area :"ai_prompt_#{key}",
+                     label: label,
+                     rows: 12,
+                     placeholder: t(".placeholder"),
+                     spellcheck: "false",
+                     class: "form-field__input font-mono text-xs" %>
+
+  <% if warning.present? %>
+    <%= render DS::Alert.new(message: warning, variant: :warning) %>
+  <% end %>
+
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-xs text-secondary">
+      <%= family.ai_prompt_customized?(key) ? t(".status_custom") : t(".status_default") %>
+    </p>
+
+    <% if family.ai_prompt_customized?(key) %>
+      <%# A link, not a DS::Button: `button_to` would nest a <form> inside the
+          surrounding form. Turbo turns this into the PATCH that clears the field. %>
+      <%= render DS::Link.new(
+        text: t(".reset"),
+        href: settings_ai_prompts_path(family: { "ai_prompt_#{key}" => "" }),
+        data: { turbo_method: :patch, turbo_confirm: t(".reset_confirm") }
+      ) %>
+    <% end %>
+  </div>
+
+  <%= render DS::Disclosure.new(title: t(".view_default")) do %>
+    <div class="px-3 py-2 bg-surface border border-primary rounded-lg">
+      <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= family.ai_prompt_default(key) %></pre>
+    </div>
+  <% end %>
+</div>
