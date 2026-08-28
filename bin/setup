@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "etc"
 require "fileutils"
+require "yaml"
 
 # path to your application root.
 APP_ROOT = File.expand_path("..", __dir__)
@@ -24,13 +25,62 @@ def bundler_installed?(version)
   Gem::Specification.find_all_by_name("bundler", version).any?
 end
 
-def configure_bundler_for_codex!
-  return unless codex_env_setup?
+# The settings the Codex path writes, keyed and valued the way Bundler
+# serialises them into .bundle/config (`without` is stored colon-separated).
+def codex_bundle_config
+  {
+    "path" => "vendor/bundle",
+    "without" => "development:production",
+    "jobs" => Etc.nprocessors.to_s,
+    "ignore_messages" => "true"
+  }
+end
 
-  system! "bundle config set path vendor/bundle"
-  system! "bundle config set without 'development production'"
-  system! "bundle config set jobs #{Etc.nprocessors}"
-  system! "bundle config set ignore_messages true"
+def local_bundle_config
+  config_path = File.join(APP_ROOT, ".bundle/config")
+  return {} unless File.exist?(config_path)
+
+  YAML.safe_load_file(config_path) || {}
+rescue Psych::SyntaxError
+  {}
+end
+
+def configure_bundler_for_codex!
+  # `bundle config set` persists into the app's .bundle/config, so these
+  # outlive the run that wrote them. tmp/ is ephemeral -- `bin/rails tmp:clear`
+  # below deletes the marker itself -- so a checkout can drop out of Codex mode
+  # with a vendored path and a development-less bundle still in force. Undo
+  # them on the ordinary path rather than leaving the documented dev setup
+  # broken.
+  return clear_codex_bundler_config! unless codex_env_setup?
+
+  system! "bundle config set --local path vendor/bundle"
+  system! "bundle config set --local without 'development production'"
+  system! "bundle config set --local jobs #{Etc.nprocessors}"
+  system! "bundle config set --local ignore_messages true"
+end
+
+# `without` is the signature of a Codex bundle: no ordinary developer excludes
+# the development group in their own checkout, whereas `path: vendor/bundle` on
+# its own is a perfectly normal choice. Requiring `without` to match before
+# touching anything means a deliberate vendored path survives, while the
+# setting that actually breaks the documented dev setup never does.
+def codex_bundler_residue?
+  local_bundle_config["BUNDLE_WITHOUT"] == codex_bundle_config["without"]
+end
+
+# Clears only settings whose current value still matches what the Codex path
+# wrote, so anything the developer changed since is left alone.
+def clear_codex_bundler_config!
+  return unless codex_bundler_residue?
+
+  stale = codex_bundle_config.select do |name, codex_value|
+    local_bundle_config["BUNDLE_#{name.upcase}"] == codex_value
+  end
+  return if stale.empty?
+
+  puts "Clearing Codex bundler settings: #{stale.keys.join(", ")}"
+  stale.each_key { |name| system! "bundle config unset --local #{name}" }
 end
 
 FileUtils.chdir APP_ROOT do
