@@ -8,7 +8,10 @@
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
-     data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>">
+     data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>"
+     data-goal-kind-amount-label-value="<%= t("goals.form.fields.target_amount") %>"
+     data-goal-kind-balance-label-value="<%= t("goals.form.fields.target_balance") %>"
+     data-goal-kind-derivable-value="<%= goal.months_target_derivable? %>">
   <%= styled_form_with model: goal,
                        url: goal.persisted? ? goal_path(goal) : goals_path,
                        method: goal.persisted? ? :patch : :post,
@@ -76,6 +79,23 @@
                           amount_data: { goal_form_target: "amountInput", action: "input->goal-form#suggestedChanged" } %>
         <p class="<%= "hidden" unless goal.errors[:target_amount].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="amountError"><%= t("goals.form.errors.amount_required") %></p>
       </div>
+
+      <%# In months mode the balance is worked out, not typed. A read-only
+          input still reads as something to fill in, sitting beside the months
+          that are the actual question — so it is shown as what it is. Only
+          when there is spending to work it out from, though: with none, the
+          controller leaves the field above in place and this stays hidden. %>
+      <div data-goal-kind-target="amountDerived" class="hidden">
+        <p class="form-field__label"><%= t("goals.form.fields.target_balance") %></p>
+        <p class="mt-1 text-lg font-medium text-primary tabular-nums privacy-sensitive">
+          <% if goal.target_amount.to_d.positive? %>
+            <%= goal.target_amount_money.format(precision: 0) %>
+          <% else %>
+            <span class="text-subdued text-sm font-normal"><%= t("goals.form.fields.target_balance_pending") %></span>
+          <% end %>
+        </p>
+        <p class="mt-1 text-xs text-subdued"><%= t("goals.form.fields.target_balance_hint") %></p>
+      </div>
       <div data-goal-kind-target="dateField">
         <%= f.date_field :target_date,
                          label: t("goals.form.fields.target_date"),
@@ -105,6 +125,7 @@
                the server decides the locale and the client applies it. %>
            data-goal-earmark-locale-value="<%= I18n.locale %>"
            data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
+           data-goal-earmark-whole-balance-alone-value="<%= t("goals.form.earmark.whole_balance_alone") %>"
            data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
            data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
@@ -116,7 +137,8 @@
               <% linked_ga = linked_allocation_by_account[account.id] %>
               <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
                    data-balance="<%= account.balance.to_d %>"
-                   data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>">
+                   data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>"
+                   data-whole-account-claimed="<%= whole_account_claimed_by_other_goals?(account, pooled: pooled_allocations, current_goal: goal) %>">
               <div class="flex items-center gap-3">
                 <label class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
                   <%= check_box_tag "goal[account_ids][]",

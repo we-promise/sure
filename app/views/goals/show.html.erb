@@ -38,9 +38,11 @@
           <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
         <% end %>
         <%# Partial spend: only offered on a one-off goal that is still running
-            and has something to spend. A reserve is drawn down and refilled,
-            not consumed — the model refuses it outright. %>
-        <% if @goal.one_off? && @goal.active? && @goal.current_balance.to_d.positive? %>
+            and has something THIS READER can spend. A reserve is drawn down and
+            refilled, not consumed — the model refuses it outright. Same
+            question the lifecycle panel asks, off the same scoped list, so the
+            two doors to this dialog cannot disagree. %>
+        <% if @goal.spendable_within?(eligible_consumption_accounts.map(&:id)) %>
           <% menu.with_item(variant: "link", text: t(".consume"), icon: "hand-coins",
                             href: consume_goal_path(@goal), data: { turbo_frame: :modal }) %>
         <% end %>
@@ -133,7 +135,15 @@
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
     <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
-      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
+      <%# The figure the ring is drawn from — held plus already spent on the
+          goal — so the two agree. What is still sitting in each account is in
+          the funding breakdown below, which is where that question belongs. %>
+      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.progress_amount_money.format(precision: 0) %></p>
+      <% if @goal.any_consumption? %>
+        <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive">
+          <%= t(".ring.including_used", amount: @goal.consumed_amount_money.format(precision: 0)) %>
+        </p>
+      <% end %>
       <% if @goal.contributions_basis? %>
         <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.market_value", amount: @goal.market_value_money.format(precision: 0)) %></p>
       <% end %>
@@ -157,7 +167,9 @@
       <% end %>
     </div>
 
-    <%= render Goals::LifecyclePanelComponent.new(goal: @goal) %>
+    <%= render Goals::LifecyclePanelComponent.new(
+          goal: @goal, viewer_account_ids: eligible_consumption_accounts.map(&:id)
+        ) %>
   </section>
 
   <% if @goal.linked_accounts.any? %>
