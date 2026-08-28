@@ -33,7 +33,7 @@ class BinanceItem::EarnImporter
     )
 
     {
-      assets: assets,
+      assets: restore_unavailable_side(assets, flexible_ok: !flexible_raw.nil?, locked_ok: !locked_raw.nil?),
       raw: { "flexible" => flexible_raw, "locked" => locked_raw },
       source: "earn"
     }
@@ -58,6 +58,47 @@ class BinanceItem::EarnImporter
       @errors << e.message
       Rails.logger.warn "BinanceItem::EarnImporter #{binance_item.id} - locked failed: #{e.message}"
       nil
+    end
+
+    # One side failing is not the whole source failing, so the caller cannot
+    # carry the previous assets the way it does for a dead source — that would
+    # discard the side that did answer. But dropping the silent side outright
+    # removes live positions: a locked ETH holding would disappear because the
+    # flexible call happened to be the one that worked.
+    #
+    # The two amounts are kept apart on every asset, so the missing side is
+    # refilled from what it last reported and the working side stays fresh.
+    def restore_unavailable_side(assets, flexible_ok:, locked_ok:)
+      return assets if flexible_ok && locked_ok
+
+      previous = previous_earn_assets
+      return assets if previous.empty?
+
+      merged = assets.index_by { |asset| asset[:symbol] }
+
+      previous.each do |old|
+        symbol = old["symbol"]
+        current = merged[symbol]
+
+        free   = flexible_ok ? current&.dig(:free).to_d : old["free"].to_d
+        locked = locked_ok ? current&.dig(:locked).to_d : old["locked"].to_d
+        total  = free + locked
+        next if total.zero?
+
+        merged[symbol] = {
+          symbol: symbol, free: free.to_s("F"), locked: locked.to_s("F"), total: total.to_s("F")
+        }
+      end
+
+      merged.values
+    end
+
+    def previous_earn_assets
+      Array(
+        binance_item.binance_accounts
+                    .find_by(account_type: "combined")
+                    &.raw_payload&.dig("assets")
+      ).select { |asset| asset["source"] == "earn" }
     end
 
     def parse_flexible(raw)

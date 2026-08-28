@@ -74,4 +74,48 @@ class BinanceItem::EarnImporterTest < ActiveSupport::TestCase
     assert_nil result[:error]
     assert_equal [ "BTC" ], result[:assets].map { |a| a[:symbol] }
   end
+
+  # ...but it must not cost the silent side its positions. The caller carries a
+  # whole source that failed; a half-answering source slips through that, so a
+  # locked position would have vanished because the flexible call happened to
+  # be the one that worked.
+  test "the side that went silent keeps what it last reported" do
+    seed_previous_earn(symbol: "ETH", free: "1.0", locked: "3.0")
+
+    @provider.stubs(:get_simple_earn_flexible).returns(
+      { "rows" => [ { "asset" => "ETH", "totalAmount" => "2.0" } ] }
+    )
+    @provider.stubs(:get_simple_earn_locked).raises(Provider::Binance::ApiError, "locked down")
+
+    asset = BinanceItem::EarnImporter.new(@item, provider: @provider).import[:assets].first
+
+    assert_equal "2.0", asset[:free], "the side that answered was not taken fresh"
+    assert_equal "3.0", asset[:locked], "the silent side lost its position"
+    assert_equal "5.0", asset[:total]
+  end
+
+  # The reverse direction, and the case where the silent side is the only one
+  # holding the asset at all.
+  test "an asset held only on the silent side survives" do
+    seed_previous_earn(symbol: "SOL", free: "4.0", locked: "0.0")
+
+    @provider.stubs(:get_simple_earn_flexible).raises(Provider::Binance::ApiError, "flexible down")
+    @provider.stubs(:get_simple_earn_locked).returns({ "rows" => [] })
+
+    assets = BinanceItem::EarnImporter.new(@item, provider: @provider).import[:assets]
+
+    assert_equal [ "SOL" ], assets.map { |a| a[:symbol] }
+    assert_equal "4.0", assets.first[:total]
+  end
+
+  private
+    def seed_previous_earn(symbol:, free:, locked:)
+      @item.binance_accounts.create!(
+        name: "Binance", account_type: "combined", currency: "USD", current_balance: 0,
+        raw_payload: { "assets" => [
+          { "symbol" => symbol, "free" => free, "locked" => locked,
+            "total" => (free.to_d + locked.to_d).to_s("F"), "source" => "earn" }
+        ] }
+      )
+    end
 end
