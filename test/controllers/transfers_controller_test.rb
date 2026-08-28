@@ -361,6 +361,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
   end
 
+  test "update transfer category ignores category from other family" do
+    transfer = transfers(:one)
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_category = other_family.categories.create!(name: "Foreign")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: other_category.id } }
+
+    assert_redirected_to transactions_url
+    assert_nil transfer.outflow_transaction.reload.category_id, "Should not assign a category belonging to another family"
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes

@@ -223,7 +223,8 @@ class TransfersController < ApplicationController
     end
 
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      category_id = Current.family.categories.find_by(id: transfer_update_params[:category_id].presence)&.id
+      @transfer.outflow_transaction.update!(category_id: category_id)
       @transfer.update!(notes: transfer_update_params[:notes])
     end
 
