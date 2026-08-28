@@ -888,6 +888,35 @@ class GoalTest < ActiveSupport::TestCase
     assert goal.persisted?
   end
 
+  # Losing its only selection widens the reserve back to every expense, so the
+  # target has to follow. Left alone it would keep a figure worked out from
+  # spending it no longer counts, under a label saying it was computed.
+  test "losing its only category widens the reserve and its target" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(2_000)
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    goal.expense_categories = [ essentials ]
+    goal.refresh_target_from_expenses!
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+
+    essentials.destroy!
+
+    assert_equal BigDecimal("15000"), goal.reload.target_amount.to_d,
+                 "the reserve kept a target derived from spending it no longer counts"
+  end
+
+  # Destroying the goal must not send it back through a recompute on its way
+  # out — there is nothing left to recompute, and reloading it would raise.
+  test "destroying a narrowed reserve does not trip over its own selection" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ essentials ]
+
+    assert_nothing_raised { goal.destroy! }
+  end
+
   # Merging moves the reserve onto the surviving category rather than dropping
   # it: the goal said "count this spending", and the spending has moved.
   test "merging a counted category moves the reserve onto the survivor" do
@@ -931,9 +960,12 @@ class GoalTest < ActiveSupport::TestCase
     goal.goal_expense_categories.build(category: empty)
 
     assert_not goal.valid?
-    assert_includes goal.errors.attribute_names, :target_months
     assert_empty goal.errors[:target_amount],
                  "the blank derived amount was reported as if the user had left it out"
+    # The message, not just the attribute: nesting the key under the wrong one
+    # resolves to nothing, and only reading the text catches that.
+    assert_equal [ I18n.t("activerecord.errors.models.goal.attributes.target_months.no_spending_in_window") ],
+                 goal.errors[:target_months]
   end
 
   test "a fixed reserve ignores the refresh entirely" do
