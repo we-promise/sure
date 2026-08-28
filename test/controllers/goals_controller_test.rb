@@ -701,7 +701,10 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert goal.maintained?
   end
 
-  # A fixed reserve still needs one, and still says so.
+  # A fixed reserve still needs one, and still says so. Asserted on the error the
+  # form puts in front of the user, not on the status alone: a 422 for some
+  # unrelated reason would otherwise keep this green while the guard it names
+  # had quietly gone.
   test "a fixed-amount goal still requires the amount" do
     account = unclaimed_account("Fixed Pot")
 
@@ -713,6 +716,71 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+    # The paragraph is in the markup either way; `hidden` is what decides
+    # whether it is shown, so its absence is the assertion.
+    assert_select "[data-goal-form-target=amountError]:not(.hidden)", 1,
+      "the form did not surface the missing-amount error"
+  end
+
+  # The surface the user actually reads: the figure beside the ring, and the
+  # line saying part of it has been used. Asserted on the rendered page rather
+  # than the model, because the contradiction was a display bug — the model
+  # has always counted both halves.
+  test "the goal page reports the used portion as part of the total" do
+    goal = spent_goal_for_display
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("goals.show.ring.including_used",
+                                          amount: goal.consumed_amount_money.format(precision: 0))
+
+    # The headline figure specifically, not "somewhere on the page": the
+    # account balance still appears in the funding breakdown below, which is
+    # where that question belongs.
+    headline = css_select("p.text-xl.font-medium.text-primary").map(&:text).map(&:strip)
+    assert_includes headline, goal.progress_amount_money.format(precision: 0)
+    assert_not_includes headline, goal.current_balance_money.format(precision: 0)
+  end
+
+  test "a goal that has spent nothing says nothing about it" do
+    account = unclaimed_account("Quiet Pot")
+    goal = @user.family.goals.create!(name: "Quiet", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert_no_match(/already used|déjà utilisés/, response.body)
+  end
+
+
+  # The ring announced the account balance while the visible headline beside it
+  # reported the progress total: same ring, two different numbers depending on
+  # whether you could see it.
+  test "the ring announces the same total the headline shows" do
+    goal = spent_goal_for_display
+
+    get goal_url(goal)
+
+    assert_response :success
+    label = css_select("[role=progressbar]").first["aria-label"]
+    assert_includes label, goal.progress_amount_money.format
+    assert_not_includes label, goal.current_balance_money.format
+    assert_includes label, goal.consumed_amount_money.format
+  end
+
+  test "a goal with nothing used keeps the plain wording" do
+    account = unclaimed_account("Plain Pot")
+    goal = @user.family.goals.create!(name: "Plain", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get goal_url(goal)
+
+    label = css_select("[role=progressbar]").first["aria-label"]
+    assert_no_match(/already used|déjà utilisés/, label)
   end
 
   private
@@ -742,68 +810,6 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
       ActiveSupport::Notifications.unsubscribe(sub)
     end
 
-
-    # The surface the user actually reads: the figure beside the ring, and the
-    # line saying part of it has been used. Asserted on the rendered page rather
-    # than the model, because the contradiction was a display bug — the model
-    # has always counted both halves.
-    test "the goal page reports the used portion as part of the total" do
-      goal = spent_goal_for_display
-
-      get goal_url(goal)
-
-      assert_response :success
-      assert_includes response.body, I18n.t("goals.show.ring.including_used",
-                                            amount: goal.consumed_amount_money.format(precision: 0))
-
-      # The headline figure specifically, not "somewhere on the page": the
-      # account balance still appears in the funding breakdown below, which is
-      # where that question belongs.
-      headline = css_select("p.text-xl.font-medium.text-primary").map(&:text).map(&:strip)
-      assert_includes headline, goal.progress_amount_money.format(precision: 0)
-      assert_not_includes headline, goal.current_balance_money.format(precision: 0)
-    end
-
-    test "a goal that has spent nothing says nothing about it" do
-      account = unclaimed_account("Quiet Pot")
-      goal = @user.family.goals.create!(name: "Quiet", target_amount: 1_000, currency: "USD") do |g|
-        g.goal_accounts.build(account: account, allocated_amount: 1_000)
-      end
-
-      get goal_url(goal)
-
-      assert_response :success
-      assert_no_match(/already used|déjà utilisés/, response.body)
-    end
-
-
-    # The ring announced the account balance while the visible headline beside it
-    # reported the progress total: same ring, two different numbers depending on
-    # whether you could see it.
-    test "the ring announces the same total the headline shows" do
-      goal = spent_goal_for_display
-
-      get goal_url(goal)
-
-      assert_response :success
-      label = css_select("[role=progressbar]").first["aria-label"]
-      assert_includes label, goal.progress_amount_money.format
-      assert_not_includes label, goal.current_balance_money.format
-      assert_includes label, goal.consumed_amount_money.format
-    end
-
-    test "a goal with nothing used keeps the plain wording" do
-      account = unclaimed_account("Plain Pot")
-      goal = @user.family.goals.create!(name: "Plain", target_amount: 1_000, currency: "USD") do |g|
-        g.goal_accounts.build(account: account, allocated_amount: 1_000)
-      end
-
-      get goal_url(goal)
-
-      label = css_select("[role=progressbar]").first["aria-label"]
-      assert_no_match(/already used|déjà utilisés/, label)
-    end
-  private
 
     # A private account of another member, linked to the goal under test.
     def private_linked_account
