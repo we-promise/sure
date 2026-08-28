@@ -473,7 +473,17 @@ class Goal < ApplicationRecord
   # Empty means every expense counts, which is what an unconfigured reserve
   # wants and what every reserve did before this existed.
   def narrowed_to_categories?
-    expense_categories.any?
+    selected_category_ids.any?
+  end
+
+  # Read from the loaded join records rather than through the association, so it
+  # is right for a goal whose selection was built but not yet saved — a create
+  # derives its target during validation, before any child row exists.
+  def selected_category_ids
+    goal_expense_categories
+      .reject { |gec| gec.marked_for_destruction? || gec.destroyed? }
+      .filter_map(&:category_id)
+      .uniq
   end
 
   def months_of_expenses_target?
@@ -557,10 +567,10 @@ class Goal < ApplicationRecord
     # pick each subcategory separately would be a trap, and the two readings
     # cannot both be right.
     def selected_expense_category_ids
-      return nil unless narrowed_to_categories?
+      chosen = selected_category_ids
+      return nil if chosen.empty?
 
-      chosen = expense_categories.to_a
-      (chosen.map(&:id) + Category.where(parent_id: chosen.map(&:id)).pluck(:id)).uniq
+      (chosen + Category.where(parent_id: chosen).pluck(:id)).uniq
     end
 
     # The balance this reserve should hold, or nil when it cannot be computed.

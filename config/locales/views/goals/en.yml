@@ -320,13 +320,15 @@ en:
       fields:
         target_mode: How the target balance is set
         target_months: Months of expenses
-        target_months_hint: Recomputed on the 1st of each month from your median monthly spending.
+        target_months_hint: What those months actually cost, recomputed on the 1st of each month. The month in progress is not counted.
         name: Name
         name_placeholder: Emergency fund, House down payment…
         target_amount: Target amount
         target_balance: "Target balance"
+        expense_categories: Expenses counted
+        expense_categories_hint: Tick nothing to count every expense.
         target_balance_pending: "Worked out when you save"
-        target_balance_hint: "From your median monthly spending over the months above. Refreshed each month."
+        target_balance_hint: "What the months above actually cost. Refreshed on the 1st of each month."
         target_date: Target date
         color: Color
         notes: Notes (optional)

@@ -49,6 +49,7 @@ class GoalsController < ApplicationController
     @linkable_accounts = linkable_accounts_for_new
     @currently_linked_account_ids = []
     @pooled_allocations = Goal.pooled_allocations_for(Current.family)
+    @selectable_categories = selectable_categories
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
@@ -63,6 +64,9 @@ class GoalsController < ApplicationController
     allocations = submitted_allocations
     Goal.transaction do
       accounts.each { |a| @goal.goal_accounts.build(account: a, allocated_amount: allocations[a.id.to_s]) }
+      # Built before the save, so the derivation that runs during validation
+      # already knows which spending this reserve covers.
+      submitted_expense_categories.each { |c| @goal.goal_expense_categories.build(category: c) }
       @goal.save!
     end
 
@@ -74,6 +78,7 @@ class GoalsController < ApplicationController
       end
     end
   rescue ActiveRecord::RecordInvalid
+    @selectable_categories = selectable_categories
     @linkable_accounts = linkable_accounts_for_new
     # From the in-memory links, not `pluck`: nothing is persisted on a failed
     # create, so a query would come back empty and every box the user ticked
@@ -89,6 +94,7 @@ class GoalsController < ApplicationController
     @linkable_accounts = linkable_accounts_for_new
     @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
+    @selectable_categories = selectable_categories
   end
 
   def update
@@ -98,6 +104,7 @@ class GoalsController < ApplicationController
 
     if accounts_supplied && accounts.empty?
       @goal.errors.add(:base, :at_least_one_linked_account_required)
+      @selectable_categories = selectable_categories
       @linkable_accounts = linkable_accounts_for_new
       @pooled_allocations = Goal.pooled_allocations_for(Current.family)
       @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
@@ -114,6 +121,9 @@ class GoalsController < ApplicationController
     # submitted.
     Goal.transaction do
       @goal.assign_attributes(goal_update_params)
+      # Synced before the save so the recompute that follows reads the new
+      # selection rather than the one it is replacing.
+      sync_expense_categories!(@goal, submitted_expense_categories) unless params.dig(:goal, :expense_category_ids).nil?
       if accounts_supplied
         sync_linked_accounts!(@goal, accounts, submitted_allocations)
       else
@@ -129,6 +139,7 @@ class GoalsController < ApplicationController
       end
     end
   rescue ActiveRecord::RecordInvalid
+    @selectable_categories = selectable_categories
     @linkable_accounts = linkable_accounts_for_new
     @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
@@ -201,12 +212,50 @@ class GoalsController < ApplicationController
       redirect_to goals_path, alert: t("goals.errors.not_found")
     end
 
+    GOAL_ATTRIBUTES = [
+      :name, :target_amount, :target_date, :color, :icon, :notes,
+      :kind, :target_mode, :target_months, :include_uncategorized_expenses
+    ].freeze
+
     def goal_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
+      params.require(:goal).permit(*GOAL_ATTRIBUTES)
     end
 
     def goal_update_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
+      params.require(:goal).permit(*GOAL_ATTRIBUTES)
+    end
+
+    # Parents first, each followed by its children, so the picker reads as the
+    # tree the user knows rather than a flat alphabetical list.
+    def selectable_categories
+      Current.family.categories.includes(:subcategories).roots.alphabetically.flat_map do |root|
+        [ root ] + root.subcategories.sort_by(&:name)
+      end
+    end
+
+    # Scoped to the family's own categories: the ids arrive from a form and
+    # decide which spending a shared financial figure is derived from.
+    def submitted_expense_categories
+      ids = Array(params.dig(:goal, :expense_category_ids)).reject(&:blank?)
+      return [] if ids.empty?
+
+      Current.family.categories.where(id: ids).to_a
+    end
+
+    def sync_expense_categories!(goal, categories)
+      desired = categories.map(&:id).to_set
+      existing = goal.goal_expense_categories.index_by(&:category_id)
+
+      (existing.keys.to_set - desired).each { |id| existing[id].destroy! }
+      (desired - existing.keys.to_set).each { |id| goal.goal_expense_categories.create!(category_id: id) }
+
+      return if existing.keys.to_set == desired
+
+      # The loaded collection still holds the rows just destroyed, and the
+      # recompute reads it — without this it would derive from the selection it
+      # has just replaced.
+      goal.goal_expense_categories.reset
+      goal.expense_categories_changed_in_place = true
     end
 
     def lookup_accounts(ids)

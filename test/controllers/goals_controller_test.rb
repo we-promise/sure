@@ -686,7 +686,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
   # model looked fine.
   test "a months-of-expenses reserve can be created without typing an amount" do
     account = unclaimed_account("Reserve Pot")
-    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+    seed_monthly_expenses(500)
 
     assert_difference -> { Goal.count }, 1 do
       post goals_url, params: { goal: {
@@ -697,8 +697,54 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     end
 
     goal = Goal.order(created_at: :desc).first
-    assert_equal 3_000, goal.target_amount.to_d, "the floor was not derived from the months"
+    assert_equal 3_000, goal.target_amount.to_d, "the target was not derived from the months"
     assert goal.maintained?
+  end
+
+  # The categories arrive as their own parameter, so the reserve has to be built
+  # with them in hand: the derivation runs during validation, before any child
+  # row exists to read back.
+  test "a reserve created with categories counts only those" do
+    account = unclaimed_account("Narrowed Pot")
+    essentials = @user.family.categories.create!(name: "Rent", color: "#4da568", lucide_icon: "home")
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(2_000)
+
+    post goals_url, params: { goal: {
+      name: "Precaution", color: "#4da568", kind: "maintained",
+      target_mode: "months_of_expenses", target_months: "6",
+      target_amount: "", account_ids: [ account.id ],
+      expense_category_ids: [ essentials.id ]
+    } }
+
+    goal = Goal.order(created_at: :desc).first
+    assert_equal 3_000, goal.target_amount.to_d,
+                 "spending outside the chosen categories was counted"
+    assert_equal [ essentials.id ], goal.expense_categories.map(&:id)
+  end
+
+  # Clearing every box has to reach the server as an empty list, not as an
+  # absent parameter it would read as "leave the selection alone".
+  test "clearing every category widens the reserve back to all spending" do
+    account = unclaimed_account("Widened Pot")
+    essentials = @user.family.categories.create!(name: "Rent", color: "#4da568", lucide_icon: "home")
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(2_000)
+
+    post goals_url, params: { goal: {
+      name: "Precaution", color: "#4da568", kind: "maintained",
+      target_mode: "months_of_expenses", target_months: "6",
+      target_amount: "", account_ids: [ account.id ],
+      expense_category_ids: [ essentials.id ]
+    } }
+    goal = Goal.order(created_at: :desc).first
+    assert_equal 3_000, goal.target_amount.to_d
+
+    patch goal_url(goal), params: { goal: { expense_category_ids: [ "" ] } }
+
+    assert_empty goal.reload.expense_categories
+    assert_equal 15_000, goal.target_amount.to_d,
+                 "widening the reserve did not move its target"
   end
 
   # A fixed reserve still needs one, and still says so. Asserted on the error the
@@ -1010,6 +1056,22 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     # refuses a second whole-balance link on an account already claimed in
     # full — so any test that wants the default "dedicate the whole balance"
     # link needs an account of its own.
+    # One expense of `amount` in each of the last `months` complete months.
+    def seed_monthly_expenses(amount, months: 6, category: nil)
+      account = @user.family.accounts.create!(
+        accountable: Depository.new, name: "Spending #{SecureRandom.hex(3)}",
+        currency: "USD", balance: 0
+      )
+      months.times do |i|
+        account.entries.create!(
+          date: Date.current.prev_month.beginning_of_month - i.months + 5.days,
+          name: "Living cost", amount: amount, currency: "USD",
+          entryable: Transaction.new(category: category)
+        )
+      end
+      account
+    end
+
     def unclaimed_account(name)
       Account.create!(
         family: @user.family, accountable: Depository.new,

@@ -53,7 +53,7 @@ fr:
       fields:
         target_mode: Comment le solde cible est fixé
         target_months: Mois de dépenses
-        target_months_hint: Recalculé le 1er de chaque mois à partir de vos dépenses mensuelles médianes.
+        target_months_hint: Ce que ces mois ont réellement coûté, recalculé le 1er de chaque mois. Le mois en cours n'est pas compté.
         color: Couleur
         earmark_for: Affecter un montant pour %{account}
         earmark_hint: Laissez le montant vide pour dédier la totalité du solde de ce compte.
@@ -65,8 +65,10 @@ fr:
         notes_placeholder: Un rappel pour plus tard…
         target_amount: Montant cible
         target_balance: "Solde cible"
+        expense_categories: Dépenses prises en compte
+        expense_categories_hint: Ne rien cocher revient à compter toutes les dépenses.
         target_balance_pending: "Calculé à l'enregistrement"
-        target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
+        target_balance_hint: "Ce que les mois ci-dessus ont réellement coûté. Recalculé le 1er de chaque mois."
         target_date: Date cible
         whole_balance: Solde total
       save: Enregistrer les modifications
