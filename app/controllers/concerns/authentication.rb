@@ -33,16 +33,13 @@ module Authentication
     SESSION_TOUCH_INTERVAL = 1.hour
 
     def find_session_by_cookie
-      cookie_value = cookies.signed[:session_token]
-      return if cookie_value.blank?
+      session_record = Session.find_active_by_cookie(cookies.signed[:session_token])
 
-      session_record = Session.includes(:user).find_by(id: cookie_value)
-      if session_record&.user&.active? && !session_record.expired?
+      if session_record
         session_record.touch if session_record.updated_at < SESSION_TOUCH_INTERVAL.ago
         return session_record
       end
 
-      session_record&.destroy!
       cookies.delete(:session_token)
       nil
     end

@@ -2010,6 +2010,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.uuid "user_id", null: false
     t.index ["active_impersonator_session_id"], name: "index_sessions_on_active_impersonator_session_id"
     t.index ["ip_address_digest"], name: "index_sessions_on_ip_address_digest"
+    t.index ["updated_at"], name: "index_sessions_on_updated_at"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
