@@ -164,7 +164,7 @@ fr:
         keep_api_secret_placeholder: Laisser vide pour conserver la clé privée existante
         read_only_body: N’accordez pas d’autorisations de négociation, d’annulation,
           de retrait, d’exportation, de grand livre, de gain, de jalonnement ou de
-          transfert. Sure n'importe que les soldes, les holdings et les transactions
+          transfert. Sure importe uniquement les soldes, les holdings et les transactions
           au comptant.
         read_only_title: Synchronisation d'échange en lecture seule uniquement
         setup_accounts: Configurer le compte

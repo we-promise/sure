@@ -46,7 +46,9 @@ fr:
         income: Revenu
         transfer: Virement
     confirm:
-      ai_cost_no_estimate_html: Cela utilisera l’IA pour catégoriser %{count} transaction(s).
+      ai_cost_no_estimate_html:
+        one: Cela utilisera l’IA pour catégoriser %{count} transaction.
+        other: Cela utilisera l’IA pour catégoriser %{count} transactions.
       ai_cost_title: Estimation des coûts de l'IA
       ai_cost_with_estimate_html: 'Cela utilisera l’IA pour catégoriser %{count} transaction(s). Coût estimé : <span class="font-semibold">~$%{cost}</span>'
       apply_notice_html: Vous êtes sur le point d'appliquer cette règle aux <span

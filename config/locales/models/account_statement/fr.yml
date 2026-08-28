@@ -27,4 +27,4 @@ fr:
               invalid_format: doit être un fichier PDF, CSV ou XLSX
               too_large: est trop grand. La taille maximale est de %{max_mb} Mo.
             period_end_on:
-              on_or_after_start: doit être au plus tard au début de la période
+              on_or_after_start: doit être postérieure ou égale au début de la période

@@ -8,7 +8,7 @@ fr:
       connect_button: Connecter un courtier
       connected_brokerages: 'Connectés :'
       connection_description: Connectez-vous à votre courtier via SnapTrade (plus de 25 courtiers pris en charge)
-      connection_limit_info: L'offre gratuite SnapTrade autorise 5 connexions de courtier. Supprimez les connexions inutilisées pour libérer des emplacements.
+      connection_limit_info: L'offre gratuite SnapTrade autorise 20 connexions de courtier. Supprimez les connexions inutilisées pour libérer des emplacements.
       connections_error: 'Échec du chargement des connexions : %{message}'
       delete_connection: Supprimer
       delete_connection_body: Cela supprimera définitivement la connexion %{brokerage} de SnapTrade. Tous les comptes de ce courtier seront déliés. Vous devrez vous reconnecter pour synchroniser à nouveau ces comptes.
