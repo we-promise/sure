@@ -43,6 +43,14 @@
                     size: :sm,
                     data: { turbo_frame: "modal" }
                   ) %>
+                <% else %>
+                  <%= render DS::Link.new(
+                    text: t(".go_to_provider_settings"),
+                    href: settings_providers_path,
+                    variant: :primary,
+                    size: :sm,
+                    data: { turbo: false }
+                  ) %>
                 <% end %>
               </div>
             </div>

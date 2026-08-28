@@ -97,10 +97,10 @@ de:
       not_configured_status: Nicht konfiguriert
       setup_accounts: Konten einrichten
       not_configured: Interactive Brokers ist nicht konfiguriert
-      not_configured_description: Bevor Sie Interactive Brokers-Konten verknüpfen können, müssen Sie Ihre IBKR-Verbindung konfigurieren.
+      not_configured_description: Bevor du Interactive Brokers-Konten verknüpfen kannst, musst du deine IBKR-Verbindung konfigurieren.
       setup_steps_title: "Einrichtungsschritte:"
-      setup_step_1_html: "Gehen Sie zu <strong>Einstellungen → Anbieter</strong>"
-      setup_step_2_html: "Suchen Sie den Abschnitt <strong>Interactive Brokers</strong>"
-      setup_step_3: Geben Sie Ihre Flex Query-Anmeldedaten ein (Query ID und Token)
-      setup_step_4: Kehren Sie hierher zurück, um Ihre Konten zu verknüpfen
+      setup_step_1_html: "Geh zu <strong>Einstellungen → Anbieter</strong>"
+      setup_step_2_html: "Such den Abschnitt <strong>Interactive Brokers</strong>"
+      setup_step_3: Gib deine Flex Query-Anmeldedaten ein (Query ID und Token)
+      setup_step_4: Kehr hierher zurück, um deine Konten zu verknüpfen
       go_to_provider_settings: Zu den Anbieter-Einstellungen gehen

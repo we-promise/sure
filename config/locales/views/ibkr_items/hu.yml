@@ -97,10 +97,10 @@ hu:
       not_configured_status: Nincs konfigurálva
       setup_accounts: Számlák beállítása
       not_configured: Az Interactive Brokers nincs konfigurálva
-      not_configured_description: Mielőtt összekapcsolná az Interactive Brokers számlákat, konfigurálnia kell az IBKR kapcsolatot.
+      not_configured_description: Mielőtt összekapcsolnád az Interactive Brokers számlákat, konfigurálnod kell az IBKR kapcsolatot.
       setup_steps_title: "Beállítási lépések:"
-      setup_step_1_html: "Lépjen a <strong>Beállítások → Szolgáltatók</strong> részhez"
-      setup_step_2_html: "Keresse meg az <strong>Interactive Brokers</strong> részt"
-      setup_step_3: Adja meg Flex Query hitelesítő adatait (Query ID és Token)
-      setup_step_4: Térjen vissza ide a számlák összekapcsolásához
+      setup_step_1_html: "Lépj a <strong>Beállítások → Szolgáltatók</strong> részhez"
+      setup_step_2_html: "Keresd meg az <strong>Interactive Brokers</strong> részt"
+      setup_step_3: Add meg Flex Query hitelesítő adataidat (Query ID és Token)
+      setup_step_4: Térj vissza ide a számlák összekapcsolásához
       go_to_provider_settings: Ugrás a szolgáltató beállításaihoz

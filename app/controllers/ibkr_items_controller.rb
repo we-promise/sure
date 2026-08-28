@@ -96,7 +96,7 @@ class IbkrItemsController < ApplicationController
   end
 
   def select_accounts
-    ibkr_item = Current.family.ibkr_items.find_by(id: params[:ibkr_item_id])
+    ibkr_item = Current.family.ibkr_items.active.find_by(id: params[:ibkr_item_id])
 
     unless ibkr_item
       redirect_to settings_providers_path, alert: t(".not_configured")

@@ -102,6 +102,15 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Interactive Brokers is not configured.", flash[:alert]
   end
 
+  test "select_accounts with deletion-pending item redirects to settings" do
+    @ibkr_item.update!(scheduled_for_deletion: true)
+
+    get select_accounts_ibkr_items_url, params: { ibkr_item_id: @ibkr_item.id }
+
+    assert_redirected_to settings_providers_path
+    assert_equal "Interactive Brokers is not configured.", flash[:alert]
+  end
+
   test "update redirects to accounts on success" do
     patch ibkr_item_url(@ibkr_item), params: {
       ibkr_item: {
