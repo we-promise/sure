@@ -844,9 +844,10 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     get goal_url(goal)
 
     assert_response :success
-    # In the panel, not only in the menu: scoped to the celebration panel's
-    # own action row so a menu entry alone cannot satisfy it.
-    panel_links = css_select("section a[href='#{consume_goal_path(goal)}']")
+    # In the panel, not only in the menu: scoped to the celebration panel's own
+    # action row by id. `section` was not enough — the panel renders through
+    # DS::Card, which emits a <section>, so any card on the page satisfied it.
+    panel_links = css_select("#goal-celebration-actions a[href='#{consume_goal_path(goal)}']")
     assert_operator panel_links.size, :>=, 1,
       "the spend action was still only reachable through the overflow menu"
   end
@@ -857,6 +858,29 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     get goal_url(goal)
 
     assert_select "form[action=?]", complete_goal_path(goal)
+  end
+
+  # Two doors lead to the same dialog, the panel and the overflow menu, and they
+  # disagreed: the menu gated on `current_balance`, which counts every linked
+  # account including ones private to another member. A reader backed only by
+  # such an account was shown the entry, opened a dialog with nothing to pick,
+  # and was refused on submit. Asserted page-wide on purpose — neither door may
+  # offer it.
+  test "money the reader cannot reach opens no door to the spend dialog" do
+    account = Account.create!(
+      family: @user.family, owner: users(:family_member), accountable: Depository.new,
+      name: "Member Only Pot", currency: "USD", balance: 5_000
+    )
+    goal = @user.family.goals.create!(name: "Hidden", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 5_000)
+    end
+
+    get goal_url(goal)
+
+    assert_response :success
+    assert goal.current_balance.to_d.positive?, "the goal is backed, just not for this reader"
+    assert_empty css_select("a[href='#{consume_goal_path(goal)}']"),
+      "a spend was still offered against money the reader cannot see"
   end
 
   private

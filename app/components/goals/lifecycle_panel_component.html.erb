@@ -38,7 +38,7 @@
         happen in, and because closing is the one that cannot be undone by
         another click. %>
     <% if offer_recording_a_spend? || celebration_action != :none %>
-    <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+    <div id="goal-celebration-actions" class="mt-4 flex flex-wrap items-center justify-center gap-2">
       <% if offer_recording_a_spend? %>
         <%= render DS::Link.new(
           text: t("goals.show.consume"),

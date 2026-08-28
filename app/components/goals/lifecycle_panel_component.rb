@@ -8,8 +8,13 @@
 class Goals::LifecyclePanelComponent < ApplicationComponent
   attr_reader :goal
 
-  def initialize(goal:)
+  # `viewer_account_ids` are the goal's accounts THIS READER can reach, worked
+  # out once in the controller and shared with the overflow menu. Defaulting to
+  # none rather than to every account: a caller that forgets them withholds the
+  # spend offer, which is the safe way to be wrong about a permission.
+  def initialize(goal:, viewer_account_ids: [])
     @goal = goal
+    @viewer_account_ids = viewer_account_ids
   end
 
   # Order is load-bearing, so it is stated once, here.
@@ -80,19 +85,7 @@ class Goals::LifecyclePanelComponent < ApplicationComponent
   # Offered beside closing, never instead of it: plenty of goals are closed
   # without anything being recorded, and this must not read as a step to clear
   # first. Same condition as the menu entry, which stays where it is.
-  def offer_recording_a_spend?
-    return false unless goal.one_off? && goal.active?
-
-    # `current_balance` counts every linked account, private ones included.
-    # Offering the link on the strength of money this reader cannot reach
-    # sends them to a dialog with nothing to pick and a refusal on submit —
-    # the same scoping the dialog itself already applies.
-    goal.backing_within(viewer_account_ids).to_d.positive?
-  end
-
-  def viewer_account_ids
-    @viewer_account_ids ||= Current.user&.accessible_accounts&.pluck(:id) || []
-  end
+  def offer_recording_a_spend? = goal.spendable_within?(@viewer_account_ids)
 
   # --- projection ---
 

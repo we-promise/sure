@@ -125,7 +125,7 @@ class Goals::LifecyclePanelComponentTest < ViewComponent::TestCase
     # the template emitted the row anyway, which is the gap this guards.
     render_inline(component_for(goal))
 
-    assert_no_selector "div.mt-4.flex"
+    assert_no_selector "#goal-celebration-actions"
   end
 
   private
@@ -140,8 +140,11 @@ class Goals::LifecyclePanelComponentTest < ViewComponent::TestCase
       ) { |g| g.goal_accounts.build(account: pot(balance: 1_000), allocated_amount: 1_000) }
     end
 
+    # The same list the controller hands the panel and the overflow menu: the
+    # goal's accounts this reader can actually reach.
     def component_for(goal)
-      Goals::LifecyclePanelComponent.new(goal: goal)
+      visible = Current.user.accessible_accounts.where(id: goal.linked_accounts.map(&:id)).pluck(:id)
+      Goals::LifecyclePanelComponent.new(goal: goal, viewer_account_ids: visible)
     end
 
     def panel_for(goal)
