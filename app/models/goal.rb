@@ -493,9 +493,11 @@ class Goal < ApplicationRecord
     # The balance this reserve should hold, or nil when it cannot be computed.
     def months_of_expenses_amount
       return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
-      return nil unless median_monthly_expense.positive?
 
-      computed = (median_monthly_expense * target_months).round(2)
+      median = median_monthly_expense
+      return nil unless median.positive?
+
+      computed = (median * target_months).round(2)
       return nil unless computed.positive?
 
       # The median comes back in FAMILY currency; `target_amount` is stored in

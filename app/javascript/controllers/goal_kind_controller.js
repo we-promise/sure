@@ -54,10 +54,20 @@ export default class extends Controller {
       field.querySelectorAll("input").forEach((input) => { input.disabled = derived })
     })
 
+    // Only the wording changes. Assigning `textContent` would replace every
+    // child of the label, and the label carries the required-field asterisk in
+    // a span of its own — wiped on the first `refresh()`, which runs on connect
+    // for every goal form, with nothing to put it back.
     const label = maintained ? this.balanceLabelValue : this.amountLabelValue
     this.amountFieldTargets.forEach((field) => {
       const el = field.querySelector(".form-field__label")
-      if (el && label) el.textContent = label
+      if (!el || !label) return
+
+      const wording = [...el.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+      )
+      if (wording) wording.textContent = label
+      else el.prepend(document.createTextNode(label))
     })
   }
 
