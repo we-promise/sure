@@ -76,24 +76,47 @@ class BinanceItem::Importer
     end
 
     def carried_over_assets(results)
-      failed = results.filter_map { |result| result[:source] if result[:error].present? }
+      failed = results.select { |result| result[:error].present? }
       return [] if failed.empty?
 
+      # A partial failure returns normally, so it never reaches the rescue in
+      # BinanceItem#import_latest_binance_data. Without this the only trace is
+      # an application log line, and support has nothing against the connection
+      # saying part of the wallet went unread.
+      record_partial_failure(failed)
+
+      sources = failed.map { |result| result[:source] }
       previous = binance_item.binance_accounts.find_by(account_type: "combined")&.raw_payload&.dig("assets")
       return [] if previous.blank?
 
       carried = previous
         .map(&:deep_symbolize_keys)
-        .select { |asset| failed.include?(asset[:source]) }
+        .select { |asset| sources.include?(asset[:source]) }
 
       if carried.any?
         Rails.logger.warn(
           "BinanceItem::Importer #{binance_item.id} - carrying #{carried.size} asset(s) " \
-          "from unavailable source(s): #{failed.join(', ')}"
+          "from unavailable source(s): #{sources.join(', ')}"
         )
       end
 
       carried
+    end
+
+    def record_partial_failure(failed)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Binance import read only part of the wallet",
+        source: self.class.name,
+        provider_key: "binance",
+        family: binance_item.family,
+        metadata: {
+          binance_item_id: binance_item.id,
+          unavailable_sources: failed.map { |result| result[:source] },
+          errors: failed.to_h { |result| [ result[:source], result[:error] ] }
+        }
+      )
     end
 
     def calculate_total_usd(assets)

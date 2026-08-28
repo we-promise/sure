@@ -105,6 +105,22 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "BTC" ], payload_symbols, "the carried asset outlived the source coming back"
   end
 
+  # A partial failure returns normally, so it never reaches the rescue that logs
+  # a failed import. Support would otherwise have no record that part of the
+  # wallet went unread on a sync that reported success.
+  test "a source that failed is recorded against the connection" do
+    stub_failed_result("margin")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "binance", entry.provider_key
+    assert_equal [ "margin" ], entry.metadata["unavailable_sources"]
+    assert_equal @family, entry.family
+  end
+
   # One call still answering means the picture is trustworthy, even if it is
   # only part of one. Only a complete outage tells us nothing.
   test "a partial outage still records what did answer" do
