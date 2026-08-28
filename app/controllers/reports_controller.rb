@@ -521,6 +521,12 @@ class ReportsController < ApplicationController
         .where(entries: { date: @period.date_range })
         .merge(Account.included_in_reports)
         .where("trades.qty < 0")
+        # A transfer out has the same negative quantity as a sale and would be
+        # counted and listed as one. Nothing was sold, so it belongs in neither.
+        .where(
+          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
+          Trade::INTERNAL_MOVEMENT_LABELS
+        )
         .includes(:security, entry: { account: :accountable })
         .to_a
 

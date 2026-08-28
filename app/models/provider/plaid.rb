@@ -117,6 +117,11 @@ class Provider::Plaid
     TransactionSyncResponse.new(added:, modified:, removed:, cursor:)
   end
 
+  def refresh_transactions(access_token)
+    request = Plaid::TransactionsRefreshRequest.new(access_token: access_token)
+    client.transactions_refresh(request)
+  end
+
   def get_item_investments(access_token, start_date: nil, end_date: Date.current)
     start_date = start_date || MAX_HISTORY_DAYS.days.ago.to_date
     holdings, holding_securities = get_item_holdings(access_token: access_token)
