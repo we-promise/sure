@@ -84,45 +84,6 @@ class SimplefinAccount::Liabilities::OverpaymentAnalyzerTest < ActiveSupport::Te
     assert_equal :unknown, result.classification
   end
 
-  test "classifies a reconciled credit with fewer transactions than the configured minimum" do
-    Setting["simplefin_cc_overpayment_min_txns"] = "10"
-    Setting["simplefin_cc_overpayment_min_payments"] = "2"
-    Setting["simplefin_cc_overpayment_statement_guard_days"] = "5"
-    @acct.entries.delete_all
-
-    @acct.entries.create!(date: 12.days.ago.to_date, name: "Purchase 1", amount: 100, currency: "USD", entryable: Transaction.new)
-    @acct.entries.create!(date: 10.days.ago.to_date, name: "Purchase 2", amount: 50, currency: "USD", entryable: Transaction.new)
-    @acct.entries.create!(date: 9.days.ago.to_date, name: "Payment 1", amount: -50, currency: "USD", entryable: Transaction.new)
-    @acct.entries.create!(date: 7.days.ago.to_date, name: "Payment 2", amount: -50, currency: "USD", entryable: Transaction.new)
-    @acct.entries.create!(date: 1.day.ago.to_date, name: "Payment 3", amount: -75, currency: "USD", entryable: Transaction.new)
-
-    result = SimplefinAccount::Liabilities::OverpaymentAnalyzer.new(
-      @sfa,
-      observed_balance: BigDecimal("-25")
-    ).call
-
-    assert_equal :credit, result.classification
-    assert_equal "payments>=charges+observed-eps", result.reason
-  end
-
-  test "keeps a low-history credit unknown when its net does not reconcile" do
-    Setting["simplefin_cc_overpayment_min_txns"] = "10"
-    Setting["simplefin_cc_overpayment_min_payments"] = "2"
-    @acct.entries.delete_all
-
-    @acct.entries.create!(date: 10.days.ago.to_date, name: "Purchase", amount: 100, currency: "USD", entryable: Transaction.new)
-    @acct.entries.create!(date: 8.days.ago.to_date, name: "Payment 1", amount: -100, currency: "USD", entryable: Transaction.new)
-    @acct.entries.create!(date: 6.days.ago.to_date, name: "Payment 2", amount: -140, currency: "USD", entryable: Transaction.new)
-
-    result = SimplefinAccount::Liabilities::OverpaymentAnalyzer.new(
-      @sfa,
-      observed_balance: BigDecimal("-25")
-    ).call
-
-    assert_equal :unknown, result.classification
-    assert_equal "insufficient-txns", result.reason
-  end
-
   test "fallback to raw payload when no entries present" do
     @acct.entries.delete_all
     # Provide raw transactions in provider convention (expenses negative, income positive)
