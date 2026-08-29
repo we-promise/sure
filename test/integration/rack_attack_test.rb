@@ -133,6 +133,12 @@ class RackAttackTest < ActionDispatch::IntegrationTest
 
     request = throttle_request("/api/v1/auth/login", method: "POST", non_rewindable_json_body: { email: "user@example.com" })
     assert_nil api_login_email_block.call(request)
+
+    # A block that read the body and then just returned nil (e.g. on a
+    # parse error) would also pass the assertion above while leaving the
+    # controller with an exhausted stream — assert the body was never
+    # touched at all.
+    assert_equal({ "email" => "user@example.com" }, JSON.parse(request.body.read))
   end
 
   private
