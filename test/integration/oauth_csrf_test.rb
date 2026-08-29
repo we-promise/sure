@@ -26,7 +26,23 @@ class OauthCsrfTest < ActionDispatch::IntegrationTest
     application = Doorkeeper::Application.create!(
       name: "Test App", redirect_uri: "https://client.example.com/callback", scopes: "read"
     )
-    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id)
+    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id) # pipelock:ignore Credential in URL
+
+    ActionController::Base.allow_forgery_protection = true
+    delete oauth_authorized_application_path(application), params: {}
+
+    assert_response :unprocessable_entity
+    assert_not token.reload.revoked?
+  end
+
+  test "revoking an authorized application with a wrong CSRF token is rejected" do
+    user = users(:family_admin)
+    sign_in user
+
+    application = Doorkeeper::Application.create!(
+      name: "Test App", redirect_uri: "https://client.example.com/callback", scopes: "read"
+    )
+    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id) # pipelock:ignore Credential in URL
 
     ActionController::Base.allow_forgery_protection = true
     delete oauth_authorized_application_path(application), params: {}, headers: { "HTTP_X_CSRF_TOKEN" => "wrong-token" }
@@ -42,7 +58,7 @@ class OauthCsrfTest < ActionDispatch::IntegrationTest
     application = Doorkeeper::Application.create!(
       name: "Test App", redirect_uri: "https://client.example.com/callback", scopes: "read"
     )
-    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id)
+    token = Doorkeeper::AccessToken.create!(application: application, resource_owner_id: user.id) # pipelock:ignore Credential in URL
 
     ActionController::Base.allow_forgery_protection = true
     # Loading a real page first is what seeds the session's CSRF token that
@@ -66,9 +82,45 @@ class OauthCsrfTest < ActionDispatch::IntegrationTest
     )
 
     ActionController::Base.allow_forgery_protection = true
+    delete oauth_application_path(application), params: {}
+
+    assert_response :unprocessable_entity
+    assert Doorkeeper::Application.exists?(application.id)
+  end
+
+  test "deleting a registered OAuth application with a wrong CSRF token is rejected" do
+    super_admin = users(:sure_support_staff)
+    sign_in super_admin
+
+    application = Doorkeeper::Application.create!(
+      name: "Malicious-looking App", redirect_uri: "https://attacker.example.com/callback", scopes: "read"
+    )
+
+    ActionController::Base.allow_forgery_protection = true
     delete oauth_application_path(application), params: {}, headers: { "HTTP_X_CSRF_TOKEN" => "wrong-token" }
 
     assert_response :unprocessable_entity
     assert Doorkeeper::Application.exists?(application.id)
+  end
+
+  test "deleting a registered OAuth application with a valid CSRF token succeeds" do
+    super_admin = users(:sure_support_staff)
+    sign_in super_admin
+
+    application = Doorkeeper::Application.create!(
+      name: "Malicious-looking App", redirect_uri: "https://attacker.example.com/callback", scopes: "read"
+    )
+
+    ActionController::Base.allow_forgery_protection = true
+    # Loading a real page first is what seeds the session's CSRF token that
+    # the subsequent delete request extracts and carries automatically.
+    get oauth_applications_path
+    assert_response :success
+    csrf_token = css_select("meta[name=csrf-token]").first["content"]
+
+    delete oauth_application_path(application), params: { authenticity_token: csrf_token }
+
+    assert_redirected_to oauth_applications_url
+    assert_not Doorkeeper::Application.exists?(application.id)
   end
 end
