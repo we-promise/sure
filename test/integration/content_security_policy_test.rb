@@ -25,7 +25,8 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     nonce = csp[/'nonce-([0-9a-f]+)'/, 1]
     assert nonce.present?
 
-    assert_select "script[nonce=?]", nonce, minimum: 1
+    all_scripts = assert_select "script"
+    assert_select "script[nonce=?]", nonce, count: all_scripts.size
   end
 
   test "sends a restrictive Permissions-Policy header" do
