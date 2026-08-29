@@ -286,6 +286,18 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.reload.entryable.kind
   end
 
+  test "auto-matched crypto to investment transfers remain funds movement" do
+    source = accounts(:crypto)
+    destination = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: source, amount: 613)
+    inflow_entry = create_transaction(date: Date.current, account: destination, amount: -613)
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", outflow_entry.reload.entryable.kind
+    assert_equal "funds_movement", inflow_entry.reload.entryable.kind
+  end
+
   test "does not match multi-currency transfer with missing exchange rate" do
     create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "GBP")

@@ -505,6 +505,37 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(1_900, @family.currency), totals.expense_money
   end
 
+  test "does not count auto-matched investment to investment transfers as contributions" do
+    investment_account = @family.accounts.create!(
+      name: "Taxable Brokerage",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Investment.new
+    )
+    crypto_account = @family.accounts.create!(
+      name: "Crypto",
+      currency: @family.currency,
+      balance: 0,
+      accountable: Crypto.new
+    )
+
+    contribution_outflow = create_transaction(account: @checking_account, amount: 1_000, kind: "standard")
+    contribution_inflow = create_transaction(account: investment_account, amount: -1_000, kind: "standard")
+    transfer_outflow = create_transaction(account: investment_account, amount: 600, kind: "standard")
+    transfer_inflow = create_transaction(account: crypto_account, amount: -600, kind: "standard")
+
+    @family.auto_match_transfers!
+
+    assert_equal "investment_contribution", contribution_outflow.reload.entryable.kind
+    assert_equal "funds_movement", transfer_outflow.reload.entryable.kind
+    assert_equal "funds_movement", transfer_inflow.reload.entryable.kind
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal Money.new(1_000, @family.currency), totals.income_money
+    assert_equal Money.new(1_900, @family.currency), totals.expense_money
+  end
+
   test "treats pending auto-matched loan payments like confirmed transfers" do
     loan_outflow = create_transaction(account: @checking_account, amount: 500, kind: "loan_payment")
     loan_inflow = create_transaction(account: @loan_account, amount: -500, kind: "funds_movement")

@@ -59,6 +59,26 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     assert_equal category.id, outflow.reload.entryable.category_id
   end
 
+  test "does not use a category from a pending contribution match" do
+    family = Family.create!(name: "Migration pending category family")
+    source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
+    destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
+    category = family.categories.create!(name: "Renamed investment category", color: "#0d9488", lucide_icon: "trending-up")
+
+    pending_outflow = create_transaction(account: source, amount: 50, kind: "investment_contribution", category: category)
+    pending_inflow = create_transaction(account: destination, amount: -50, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: pending_outflow.entryable, inflow_transaction: pending_inflow.entryable, status: "pending")
+
+    confirmed_outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
+    confirmed_inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: confirmed_outflow.entryable, inflow_transaction: confirmed_inflow.entryable, status: "confirmed")
+
+    CategorizeMatchedInvestmentContributions.new.up
+
+    assert_equal category.id, pending_outflow.reload.entryable.category_id
+    assert_nil confirmed_outflow.reload.entryable.category_id
+  end
+
   test "reuses a renamed category referenced by another contribution" do
     family = Family.create!(name: "Migration renamed category family")
     source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)

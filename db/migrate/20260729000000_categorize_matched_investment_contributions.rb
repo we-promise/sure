@@ -4,6 +4,11 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
   # Keep this migration independent from the current Category/Family models.
   # The family helper can create, rename, and delete categories, which is not
   # appropriate while a historical data migration is running.
+  # Snapshot of the category's display names at migration authoring time. The
+  # supported locales nb, pt-BR, and ro currently fall back to English for this
+  # key, so their label is intentionally represented by "Investment Contributions".
+  # Keep this list static: replaying a historical migration must not depend on
+  # today's I18n files or Category model behavior.
   INVESTMENT_CONTRIBUTION_CATEGORY_NAMES = [
     "Investment Contributions",
     "Contributions aux investissements",
@@ -38,6 +43,9 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
            AND entries.entryable_type = 'Transaction'
           JOIN accounts ON accounts.id = entries.account_id
           JOIN categories ON categories.id = transactions.category_id
+          JOIN transfers
+            ON transfers.outflow_transaction_id = transactions.id
+           AND transfers.status = 'confirmed'
           WHERE transactions.kind = 'investment_contribution'
             AND transactions.category_id IS NOT NULL
             AND categories.family_id = accounts.family_id
