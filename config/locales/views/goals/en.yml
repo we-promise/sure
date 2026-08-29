@@ -117,11 +117,12 @@ en:
         transaction_not_found: That outflow is no longer available to attribute.
         no_linked_account: This goal has no funding account left.
     consumed_outflows:
-      confirm_detach_cta: Detach it
+      confirm_detach_cta: Yes, take it back
       confirm_detach_body: "%{amount} goes back to counting against this goal. The account's earmark is not restored — set it again yourself if you want it back."
-      confirm_detach_title: Detach this spend?
+      confirm_detach_title: Take this back?
       detach: Not this
-      heading: What this goal paid for
+      heading: Transactions
+      open_in_transactions: Open in Transactions
       summary: "%{total} used · %{listed} across %{transactions}"
       transactions:
         one: 1 transaction

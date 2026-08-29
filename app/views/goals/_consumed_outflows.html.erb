@@ -35,7 +35,12 @@
     <% entries.each do |entry| %>
       <li class="flex items-center justify-between gap-3 rounded-lg bg-surface-inset px-3 py-2">
         <div class="min-w-0">
-          <p class="text-sm text-primary truncate"><%= entry.name %></p>
+          <%# entry_path, not plain text: the same link the Transactions page
+              itself uses to open the detail drawer, so a misattributed spend
+              can be inspected without leaving the goal. %>
+          <%= link_to entry.name, entry_path(entry),
+                      data: { turbo_frame: "drawer", turbo_prefetch: false },
+                      class: "text-sm text-primary truncate hover:underline block" %>
           <p class="text-xs text-secondary tabular-nums privacy-sensitive">
             <%= l(entry.date, format: :long) %>
             <span aria-hidden="true"><%= t("shared.dot_separator") %></span>
@@ -65,4 +70,15 @@
       </li>
     <% end %>
   </ul>
+
+  <%# Not "view all" — the list above already holds everything; this changes
+      the interface the same data is read through, it does not extend it. Same
+      goal filter Transaction::Search already applies. %>
+  <%= render DS::Link.new(
+        text: t(".open_in_transactions"),
+        variant: "outline",
+        full_width: true,
+        href: transactions_path(q: { goals: [ goal.id ] }),
+        frame: :_top
+      ) %>
 </div>

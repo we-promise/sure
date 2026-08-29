@@ -203,11 +203,12 @@ fr:
         transaction_not_found: Cette sortie n'est plus disponible.
         no_linked_account: Cet objectif n'a plus de compte de financement.
     consumed_outflows:
-      confirm_detach_cta: Détacher
+      confirm_detach_cta: Oui, la reprendre
       confirm_detach_body: "%{amount} redeviennent à financer sur cet objectif. L'affectation du compte n'est pas rétablie — remettez-la vous-même si vous la voulez."
-      confirm_detach_title: Détacher cette dépense ?
+      confirm_detach_title: Reprendre cette dépense ?
       detach: Pas celle-ci
-      heading: Ce que cet objectif a payé
+      heading: Transactions
+      open_in_transactions: Ouvrir dans Transactions
       summary: "%{total} utilisés · %{listed} sur %{transactions}"
       transactions:
         one: 1 opération
