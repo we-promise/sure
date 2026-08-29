@@ -86,7 +86,7 @@
                                     id: "q_status_confirmed",
                                     class: "checkbox checkbox--light",
                                     form: "entries-search",
-                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                                    data: { controller: "submit-form", submit_form_form_id_value: "entries-search", action: "change->submit-form#submit" } %>
                   <%= label_tag "q_status_confirmed", t("accounts.show.activity.confirmed"), class: "text-sm text-primary" %>
                 </div>
                 <div class="flex items-center gap-3">
@@ -96,7 +96,7 @@
                                     id: "q_status_pending",
                                     class: "checkbox checkbox--light",
                                     form: "entries-search",
-                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
+                                    data: { controller: "submit-form", submit_form_form_id_value: "entries-search", action: "change->submit-form#submit" } %>
                   <%= label_tag "q_status_pending", t("accounts.show.activity.pending"), class: "text-sm text-primary" %>
                 </div>
               </div>
