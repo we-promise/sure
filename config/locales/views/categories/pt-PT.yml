@@ -31,25 +31,25 @@ pt-PT:
       categories_incomes: Categorias de rendimentos
       delete_all: Eliminar tudo
       empty: Nenhuma categoria encontrada
-      merge: Fundir categorias
+      merge: Unir categorias
       new: Nova categoria
     merge:
-      title: Fundir categorias
-      description: Selecione uma categoria de destino e as categorias a fundir nela. As transações e linhas de orçamento correspondentes serão movidas para o destino.
-      target_label: Fundir em (destino)
+      title: Unir categorias
+      description: Selecione uma categoria de destino e as categorias a unir. As transações e linhas de orçamento correspondentes serão movidas para o destino.
+      target_label: Unir em (destino)
       select_target: Selecionar categoria de destino...
-      sources_label: Categorias a fundir
+      sources_label: Categorias a unir
       sources_hint: As categorias selecionadas serão eliminadas depois de as suas transações e linhas de orçamento serem movidas para o destino. Não selecione o destino como origem.
-      submit: Fundir selecionadas
+      submit: Unir selecionadas
     menu:
       loading: A carregar...
     new:
       new_category: Nova categoria
     perform_merge:
       success:
-        one: "%{count} categoria fundida com sucesso"
-        other: "%{count} categorias fundidas com sucesso"
-      no_categories_selected: Nenhuma categoria selecionada para fundir
+        one: "%{count} categoria unida com sucesso"
+        other: "%{count} categorias unidas com sucesso"
+      no_categories_selected: Nenhuma categoria selecionada para unir
       target_not_found: Categoria de destino não encontrada
       invalid_categories: Categorias selecionadas inválidas
       target_selected_as_source: Escolha categorias diferentes para o destino e as origens.

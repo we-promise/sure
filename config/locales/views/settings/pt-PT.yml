@@ -161,23 +161,23 @@ pt-PT:
         dashboard_two_column_title: Disposição de duas colunas
         dashboard_two_column_description: Apresenta os widgets do painel de controlo em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
         split_grouped_title: Agrupar transações divididas
-        split_grouped_description: Mostra as transações divididas agrupadas sob o registo principal na lista de transações. Quando desativado, as divisões filhas aparecem como linhas individuais.
+        split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
     preferences:
       show:
         country: País
         currency: Moeda
-        date_format: Formato de data
+        date_format: Formato da data
         general_subtitle: Configure as suas preferências
         general_title: Geral
         default_period: Período predefinido
-        default_account_order: Ordem de conta predefinida
+        default_account_order: Ordem predefinida das contas
         language: Idioma
         language_auto: Idioma do navegador
         page_title: Preferências
         timezone: Fuso horário
-        translations_notice: Tenha em atenção que ainda estamos a trabalhar nas traduções para vários idiomas.
+        translations_notice: Tenha em consideração que ainda estamos a trabalhar nas traduções para vários idiomas.
         budget_title: Orçamento
-        budget_subtitle: Configure o comportamento dos seus orçamentos
+        budget_subtitle: Configure o funcionamento dos seus orçamentos
         month_start_day: O mês do orçamento começa em
         month_start_day_hint: Defina quando começa o seu mês orçamental (por exemplo, no dia do salário)
         month_start_day_warning: Os seus orçamentos e cálculos MTD utilizarão este dia de início personalizado em vez do dia 1 de cada mês.
@@ -193,8 +193,8 @@ pt-PT:
           none: Sem acesso
           read_only: Apenas ver
           read_write: Pode editar
-        currencies_title: "Moedas do %{moniker}"
-        currencies_subtitle: Escolha quais as moedas que aparecem nos campos de dinheiro do seu %{moniker}
+        currencies_title: "%{moniker} - Moedas"
+        currencies_subtitle: Escolha quais as moedas que aparecem nos campos de dinheiro da sua %{moniker}
         base_currency_label: Moeda base
         base_currency_badge: Moeda base
         additional_currencies_label: Moedas adicionais
@@ -211,7 +211,7 @@ pt-PT:
           other: "%{count} selecionadas"
         save_currencies: Guardar moedas
         sharing_title: "Partilha do %{moniker}"
-        sharing_subtitle: "Controle a forma como as contas são partilhadas no seu %{moniker}"
+        sharing_subtitle: "Controle a forma como as contas são partilhadas na sua %{moniker}"
         sharing_default_label: Partilha predefinida para novas contas
         sharing_shared: Partilhar com todos os membros
         sharing_private: Manter privado por predefinição
@@ -248,9 +248,9 @@ pt-PT:
         danger_zone_title: Zona de Perigo
         delete_account: Eliminar conta
         delete_account_warning: Eliminar a sua conta removerá permanentemente todos
-          os seus dados e não pode ser desfeito.
+          os seus dados. Esta ação não pode ser anulada.
         reset_account: Repor conta
-        reset_account_warning: Repor a sua conta eliminará todas as suas contas, categorias, comerciantes, etiquetas e outros dados, mas manterá a sua conta de utilizador intacta.
+        reset_account_warning: Repor a sua conta eliminará todas as suas contas financeiras, categorias, comerciantes, etiquetas e outros dados, mas manterá a sua conta de utilizador intacta.
         reset_account_with_sample_data: Repor e pré-carregar
         reset_account_with_sample_data_warning: Elimine todos os seus dados existentes e carregue depois novos dados de exemplo para poder explorar um ambiente pré-preenchido.
         email: Email
@@ -267,19 +267,19 @@ pt-PT:
         last_name: Apelido
         page_title: Informações do Perfil
         pending: Pendente
-        profile_subtitle: Personalize a forma como aparece no %{product_name}
+        profile_subtitle: Personalize a sua apresentação no %{product_name}
         profile_title: Pessoal
         remove_invitation: Remover Convite
         remove_member: Remover Membro
         resend_confirmation_link: solicitar um novo email de confirmação
         save: Guardar
-        unconfirmed_email_notice_html: Solicitou a alteração do seu email para %{email}. Aceda ao seu email e confirme para que a alteração produza efeito. Se não recebeu o email, verifique a sua pasta de spam ou %{resend_link}.
+        unconfirmed_email_notice_html: Solicitou a alteração do seu email para %{email}. Aceda ao seu email e confirme para que a alteração produza efeito. Se não recebeu o email, verifique a pasta de spam ou %{resend_link}.
     securities:
       show:
         page_title: Segurança
         encryption_warning:
           title: Faltam as chaves de encriptação
-          intro: "Os dados sensíveis (chaves de API, tokens de fornecedores, segredos de MFA e PII) estão a ser armazenados não encriptados em repouso. Para ativar a encriptação, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
+          intro: "Os dados sensíveis (chaves de API, tokens de fornecedores, segredos de MFA e PII) estão a ser armazenados sem encriptação. Para ativar a encriptação, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
           keys:
             - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
             - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
@@ -290,16 +290,16 @@ pt-PT:
         enable_mfa: Ativar 2FA
         disable_mfa: Desativar 2FA
         disable_mfa_confirm: Tem a certeza de que pretende desativar a autenticação de dois fatores?
-        sso_title: Contas Ligadas
-        sso_subtitle: Gira as suas ligações de contas de início de sessão único
+        sso_title: Contas associadas
+        sso_subtitle: Ligações às suas contas SSO
         sso_disconnect: Desligar
         sso_last_used: Última utilização
         sso_never: Nunca
         sso_no_email: Sem email
-        sso_no_identities: Sem contas SSO ligadas
-        sso_connect_hint: Termine a sessão e inicie-a novamente com um fornecedor SSO para ligar uma conta.
+        sso_no_identities: Sem contas SSO associadas
+        sso_connect_hint: Termine a sessão e inicie-a novamente com um serviço SSO para ligar uma conta.
         sso_confirm_title: Desligar Conta?
-        sso_confirm_body: Tem a certeza de que pretende desligar a sua conta %{provider}? Pode voltar a ligá-la mais tarde ao iniciar sessão com esse fornecedor novamente.
+        sso_confirm_body: Tem a certeza de que pretende desligar a sua conta %{provider}? Pode voltar a ligá-la mais tarde ao iniciar sessão com esse serviço novamente.
         sso_confirm_button: Desligar
         sso_warning_message: Este é o seu único método de início de sessão. Deve definir uma palavra-passe nas suas definições de segurança antes de desligar, caso contrário poderá ficar bloqueado na sua conta.
     mcp:
@@ -373,7 +373,7 @@ pt-PT:
       not_authorized: Não autorizado
       bank_sync:
         page_title: Sincronização bancária
-        lede: Ligue contas externas para que transações, saldos e posições fluam automaticamente para o Sure.
+        lede: Associe as suas contas externas para sincronizar automaticamente transações, saldos e posições com o Sure.
       status:
         ok: Ligado
         warn: Requer ação

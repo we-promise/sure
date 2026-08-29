@@ -23,7 +23,7 @@ pt-PT:
       remove_default: Remover predefinição
       default_label: Predefinida
       delete: Eliminar conta
-      sharing: Partilha
+      sharing: Partilhar
     chart:
       data_not_available: Dados não disponíveis para o período selecionado
     create:
@@ -131,8 +131,8 @@ pt-PT:
       success: "Conta %{type} atualizada"
     sidebar:
       missing_data: Faltam dados históricos
-      missing_data_description: "%{product} utiliza fornecedores de terceiros para obter taxas de câmbio históricas, preços de títulos e muito mais. Estes dados são necessários para calcular com precisão os saldos históricos das contas."
-      configure_providers: Configure aqui os seus fornecedores.
+      missing_data_description: "%{product} utiliza fontes externas para obter taxas de câmbio históricas, preços de títulos e muito mais. Estes dados são necessários para calcular com precisão os saldos históricos das contas."
+      configure_providers: Configure aqui as fontes externas.
       tabs:
         all: Tudo
         assets: Ativos

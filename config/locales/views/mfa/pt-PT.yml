@@ -21,14 +21,14 @@ pt-PT:
       page_title: Configuração da Autenticação de Dois Fatores
       scan_description: Utilize uma aplicação de autenticação como o Google Authenticator ou o 1Password
         para ler este código QR
-      scan_title: 1. Leia o Código QR
+      scan_title: 1. Ler o Código QR
       secret_description: Se não conseguir ler o código QR, introduza esta chave secreta manualmente
         na sua aplicação de autenticação
       secret_title: Código de Introdução Manual
       title: Configurar Autenticação de Dois Fatores
       verify_button: Verificar e Ativar 2FA
       verify_description: Introduza o código de 6 dígitos da sua aplicação de autenticação
-      verify_title: 2. Introduza o Código de Verificação
+      verify_title: 2. Introduzir o Código de Verificação
     verify:
       description: Introduza o código da sua aplicação de autenticação para continuar
       or: ou
