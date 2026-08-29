@@ -20,6 +20,6 @@ module CategoriesHelper
   end
 
   def family_categories
-    [ Category.uncategorized ].concat(Current.family.categories.alphabetically)
+    [ Category.uncategorized ].concat(Current.family.categories.alphabetically_by_hierarchy)
   end
 end
