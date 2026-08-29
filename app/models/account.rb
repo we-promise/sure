@@ -49,6 +49,7 @@ class Account < ApplicationRecord
     return Money.new(0, currency) if balance_type == :non_cash && accountable_type != "Loan"
 
     total = entries.excluding_pending.excluding_split_parents
+      .where(entryable_type: "Transaction")
       .where("entries.date > ?", Date.current)
       .sum do |entry|
         converted = begin

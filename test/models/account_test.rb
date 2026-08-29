@@ -615,6 +615,12 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal property.balance_money, property.projected_balance_money
   end
 
+  test "scheduled_entries_total_money ignores future-dated valuations and trades" do
+    create_valuation(account: @account, amount: 999_999, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+  end
+
   test "projected_balance_money equals balance_money when nothing is scheduled" do
     assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
     assert_equal @account.balance_money, @account.projected_balance_money
