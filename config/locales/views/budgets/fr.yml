@@ -45,7 +45,7 @@ fr:
     show:
       budgeted: Budgétisé
       category: Catégorie
-      left: à gauche
+      left: restant
       monthly_average_spending: Dépenses moyennes mensuelles
       monthly_median_spending: Dépenses médianes mensuelles
       no_transactions: Aucune transaction trouvée pour cette période budgétaire.
@@ -97,7 +97,7 @@ fr:
       fresh_button: Repartir de zéro
       title: Configurez votre budget
     edit:
-      autosuggest_description: Cela sera basé sur l’historique des transactions. L'IA peut faire des erreurs, vérifiez avant de continuer.
+      autosuggest_description: Cela sera basé sur l'historique des transactions. L'IA peut faire des erreurs, vérifiez avant de continuer.
       autosuggest_title: Suggestion automatique de revenus et de budget de dépenses
       budgeted_spending: Dépenses budgétisées
       continue: Continuer

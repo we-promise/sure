@@ -110,7 +110,7 @@ fr:
       past_due: Échu
       pending_count:
         one: 1 en attente
-        other: "%{count} en en attente"
+        other: "%{count} en attente"
       pending_pledge: Promesse en attente
     index:
       archived_section:
