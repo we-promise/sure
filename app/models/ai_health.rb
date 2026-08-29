@@ -19,8 +19,8 @@ class AiHealth
               :embedding_endpoint, :embedding_model, :embedding_dimensions,
               :pgvector_extension_available, :pgvector_extension_enabled,
               :pgvector_table_available, :qdrant_endpoint, :llm_probe,
-              :pdf_text_extraction_probe, :pdf_vision_processing_probe,
-              :vector_store_probe, :embedding_probe
+              :function_calling_probe, :pdf_text_extraction_probe,
+              :pdf_vision_processing_probe, :vector_store_probe, :embedding_probe
 
   def initialize(run_probes: true, force_probes: false)
     @run_probes = run_probes
@@ -46,6 +46,20 @@ class AiHealth
     return :not_configured unless llm_configured?
 
     llm_probe.status
+  end
+
+  # The assistant only answers through function calls, so an endpoint that
+  # serves plain chat but rejects the `tools` parameter still cannot power it.
+  # Reading the two probes together is what separates "this model has no
+  # function calling" from "this endpoint is down".
+  def function_calling_status
+    return :unavailable unless llm_configured?
+    return :not_checked unless run_probes?
+    return :supported if function_calling_probe.passing?
+    return :not_used if function_calling_probe.failure_code == :no_tool_call
+    return :unsupported if llm_probe.passing? && function_calling_probe.failure_code != :timeout
+
+    :failing
   end
 
   def llm_fallback?
@@ -93,7 +107,8 @@ class AiHealth
   end
 
   def last_checked_at
-    [ llm_probe, pdf_text_extraction_probe, pdf_vision_processing_probe, vector_store_probe, embedding_probe ]
+    [ llm_probe, function_calling_probe, pdf_text_extraction_probe, pdf_vision_processing_probe, vector_store_probe,
+      embedding_probe ]
       .filter_map(&:checked_at)
       .max
   end
@@ -159,6 +174,7 @@ class AiHealth
 
     def load_probes
       @llm_probe = llm_configured? ? Probe.not_checked : Probe.not_configured
+      @function_calling_probe = llm_configured? ? Probe.not_checked : Probe.not_configured
       @pdf_text_extraction_probe = llm_configured? && @pdf_text_extraction_capable ? Probe.not_checked : Probe.not_configured
       @pdf_vision_processing_probe = llm_configured? && @pdf_vision_processing_capable ? Probe.not_checked : Probe.not_configured
       @vector_store_probe = vector_store_adapter.present? ? Probe.not_checked : Probe.not_configured
@@ -168,6 +184,13 @@ class AiHealth
       probe = Probe.new(force: @force_probes)
       if llm_configured?
         @llm_probe = probe.llm(
+          provider: @effective_llm_protocol,
+          endpoint: @llm_raw_endpoint,
+          access_token: @llm_access_token,
+          model: llm_model,
+          openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+        )
+        @function_calling_probe = probe.function_calling(
           provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,

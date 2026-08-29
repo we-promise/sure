@@ -19,6 +19,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     Setting.stubs(:anthropic_base_url).returns(nil)
     Setting.stubs(:anthropic_model).returns(nil)
     AiHealth::Probe.any_instance.stubs(:llm).returns(probe_result(:passing))
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(probe_result(:passing))
@@ -109,6 +110,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
     AiHealth::Probe.any_instance.expects(:llm).never
+    AiHealth::Probe.any_instance.expects(:function_calling).never
     AiHealth::Probe.any_instance.expects(:pdf_text_extraction).never
     AiHealth::Probe.any_instance.expects(:pdf_vision_processing).never
     AiHealth::Probe.any_instance.expects(:openai_vector_store).never
@@ -154,6 +156,45 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/use pgvector with a separate embeddings endpoint/, response.body)
     assert_match(/Live check failed/, response.body)
     assert_no_match(/local-token|uri-secret|query-secret/, response.body)
+  end
+
+  test "AI status names the missing function-calling support behind an unhelpful chat error" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(
+      probe_result(:failing, failure_code: :request_failed, http_status: 404)
+    )
+
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "router-secret",
+      "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1",
+      "OPENAI_MODEL" => "tngtech/deepseek-r1t2-chimera:free"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_select "[data-testid='function-calling-status']", text: /Not supported by the effective provider/
+    assert_match(/The model does not support function calling/, response.body)
+    assert_match(/Function-calling failure reason/, response.body)
+    assert_no_match(/router-secret/, response.body)
+  end
+
+  test "AI status separates a model that ignores tools from one that cannot use them" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(
+      probe_result(:failing, failure_code: :no_tool_call)
+    )
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_select "[data-testid='function-calling-status']", text: /Tools accepted, but the model called none/
+    assert_match(/answered without calling the tool it was asked to call/, response.body)
+    assert_no_match(/The model does not support function calling/, response.body)
   end
 
   test "AI status reports text and vision PDF probes separately" do

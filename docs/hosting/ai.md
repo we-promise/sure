@@ -1082,6 +1082,28 @@ ollama list  # See what's installed
 ollama pull model-name  # Install a model
 ```
 
+### Chat Fails With a Bare "404" (Model Without Function Calling)
+
+**Symptom:** The assistant answers every message with an unexplained `404` (or
+another opaque provider error), while the same endpoint and model work for
+auto-categorization.
+
+**Cause:** The assistant reads accounts, transactions, and holdings through
+function calls, so every chat request carries a `tools` payload. A model
+without function-calling support rejects it — OpenRouter answers `404` for
+models such as `tngtech/deepseek-r1t2-chimera:free`.
+
+**Confirm it:** Open **System health → AI status**
+(`/admin/system_health?tab=ai`). **Function calling (tools)** reports *Not
+supported by the effective provider/model* when the endpoint served the plain
+chat check but rejected the same request carrying tools, and *Tools accepted,
+but the model called none* when the model answered with text instead of
+calling the tool.
+
+**Fix:** Set `OPENAI_MODEL` to a model your provider documents as supporting
+tools/function calling — for example `nvidia/nemotron-nano-9b-v2:free` on
+OpenRouter's free tier — then run the checks again.
+
 ### "Fixed prompt tokens exceed context budget"
 
 **Symptom:** Auto-categorization or merchant detection fails immediately with an error like:
@@ -1408,6 +1430,9 @@ live checks against the effective configuration:
 
 - OpenAI-compatible and Anthropic providers must return the configured model
   from their models API.
+- The configured model must complete one trivial function call, sent the way
+  the assistant sends its own tools. A model that serves plain chat but rejects
+  or ignores the `tools` parameter cannot answer questions about your data.
 - The hosted OpenAI vector-store adapter must answer a list request without
   creating or changing a store.
 - The pgvector adapter must have its extension enabled, its chunks table

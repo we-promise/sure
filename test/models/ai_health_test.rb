@@ -42,7 +42,66 @@ class AiHealthTest < ActiveSupport::TestCase
     end
   end
 
+  test "a rejected tools request on a live endpoint reads as missing function-calling support" do
+    health = probed_health(llm: :passing, function_calling: failing_result(:request_failed, http_status: 404))
+
+    assert_equal :unsupported, health.function_calling_status
+  end
+
+  test "a model that answers without calling the tool is reported separately" do
+    health = probed_health(llm: :passing, function_calling: failing_result(:no_tool_call))
+
+    assert_equal :not_used, health.function_calling_status
+  end
+
+  test "function calling is not blamed when the endpoint itself is down or slow" do
+    down = probed_health(llm: :failing, function_calling: failing_result(:request_failed))
+    slow = probed_health(llm: :passing, function_calling: failing_result(:timeout))
+
+    assert_equal :failing, down.function_calling_status
+    assert_equal :failing, slow.function_calling_status
+  end
+
+  test "function calling is only checked alongside the other live probes" do
+    with_openai_endpoint("https://openrouter.ai/api/v1") do |health|
+      assert_equal :not_checked, health.function_calling_status
+    end
+  end
+
   private
+    def probed_health(llm:, function_calling:)
+      AiHealth::Probe.any_instance.stubs(:llm).returns(result(llm))
+      AiHealth::Probe.any_instance.stubs(:function_calling).returns(function_calling)
+      AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(result(:passing))
+
+      ClimateControl.modify(
+        AI_ENVIRONMENT.merge(
+          "OPENAI_ACCESS_TOKEN" => "test-token",
+          "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1",
+          "OPENAI_MODEL" => "test-model"
+        )
+      ) { AiHealth.new }
+    end
+
+    def result(status)
+      AiHealth::Probe::Result.new(
+        status: status,
+        checked_at: Time.current,
+        failure_code: nil,
+        http_status: nil
+      )
+    end
+
+    def failing_result(failure_code, http_status: nil)
+      AiHealth::Probe::Result.new(
+        status: :failing,
+        checked_at: Time.current,
+        failure_code: failure_code,
+        http_status: http_status
+      )
+    end
+
     def with_openai_endpoint(endpoint)
       ClimateControl.modify(
         AI_ENVIRONMENT.merge(

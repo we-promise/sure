@@ -14,6 +14,20 @@ class AiHealth
     DEFAULT_TIMEOUT = 5
     EMBEDDING_TEST_INPUT = "Sure AI health check"
     CHAT_TEST_INPUT = "Reply with OK."
+    FUNCTION_CALL_TEST_INPUT = "Call the sure_health_check tool with status set to ok."
+    FUNCTION_CALL_TEST_TOOL = {
+      name: "sure_health_check",
+      description: "Records the result of a Sure health check. Always call this tool.",
+      schema: {
+        type: "object",
+        properties: {
+          status: { type: "string", description: "Always the literal string \"ok\"." }
+        },
+        required: [ "status" ],
+        additionalProperties: false
+      }
+    }.freeze
+    FUNCTION_CALL_MAX_RESPONSE_TOKENS = 256
     PDF_TEST_INSTITUTION = "SUREHEALTHCHECKBANK"
     PDF_TEST_LINES = [
       "Bank Statement",
@@ -86,6 +100,37 @@ class AiHealth
         end
 
         raise Failure, :model_not_available unless model_available
+      end
+    end
+
+    # The assistant reads financial data exclusively through function calls, so
+    # a model that rejects or ignores the `tools` parameter cannot power chat
+    # even when the plain check above passes. Providers report this
+    # inconsistently — OpenRouter answers a bare 404 — so ask the configured
+    # model for one trivial tool call and report what came back.
+    def function_calling(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+      run(
+        component: "function_calling",
+        provider_key: provider,
+        endpoint: endpoint,
+        model: model,
+        credential: access_token,
+        verification: :tool_call
+      ) do
+        tool_called = case provider
+        when :openai
+          if openai_compatible
+            openai_chat_tool_call?(access_token:, endpoint:, model:)
+          else
+            openai_responses_tool_call?(access_token:, endpoint:, model:)
+          end
+        when :anthropic
+          anthropic_tool_call?(access_token:, endpoint:, model:)
+        else
+          raise Failure, :unsupported_provider
+        end
+
+        raise Failure, :no_tool_call unless tool_called
       end
     end
 
@@ -262,6 +307,76 @@ class AiHealth
         )
 
         response.is_a?(Hash) && response["choices"].is_a?(Array) && response["choices"].any?
+      end
+
+      def openai_chat_tool_call?(access_token:, endpoint:, model:)
+        response = openai_client(access_token:, endpoint:).chat(
+          parameters: {
+            model: model,
+            messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ],
+            tools: [ { type: "function", function: openai_test_tool } ]
+          }
+        )
+
+        raise Failure, :invalid_response unless response.is_a?(Hash) && response["choices"].is_a?(Array)
+
+        response.dig("choices", 0, "message", "tool_calls").present?
+      end
+
+      def openai_responses_tool_call?(access_token:, endpoint:, model:)
+        response = openai_client(access_token:, endpoint:).responses.create(
+          parameters: {
+            model: model,
+            input: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ],
+            tools: [ { type: "function" }.merge(openai_test_tool) ]
+          }
+        )
+
+        raise Failure, :invalid_response unless response.is_a?(Hash) && response["output"].is_a?(Array)
+
+        response["output"].any? { |item| item["type"] == "function_call" }
+      end
+
+      def anthropic_tool_call?(access_token:, endpoint:, model:)
+        message = anthropic_client(access_token:, endpoint:).messages.create(
+          model: model,
+          max_tokens: FUNCTION_CALL_MAX_RESPONSE_TOKENS,
+          messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ],
+          tools: [ anthropic_test_tool ]
+        )
+
+        Array(message.content).any? { |block| block_type(block) == "tool_use" }
+      end
+
+      # Mirrors the tool payload `Provider::Openai` sends for assistant
+      # functions, `strict` included, so an endpoint that only chokes on strict
+      # schemas is caught here rather than in chat.
+      def openai_test_tool
+        {
+          name: FUNCTION_CALL_TEST_TOOL[:name],
+          description: FUNCTION_CALL_TEST_TOOL[:description],
+          parameters: FUNCTION_CALL_TEST_TOOL[:schema],
+          strict: true
+        }
+      end
+
+      # Anthropic names the schema differently and rejects OpenAI's `strict`.
+      def anthropic_test_tool
+        {
+          name: FUNCTION_CALL_TEST_TOOL[:name],
+          description: FUNCTION_CALL_TEST_TOOL[:description],
+          input_schema: FUNCTION_CALL_TEST_TOOL[:schema]
+        }
+      end
+
+      def block_type(block)
+        raw = if block.respond_to?(:type)
+          block.type
+        elsif block.is_a?(Hash)
+          block[:type] || block["type"]
+        end
+
+        raw.to_s
       end
 
       def valid_pdf_result?(result)
