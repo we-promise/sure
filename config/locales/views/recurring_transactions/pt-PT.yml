@@ -22,7 +22,7 @@ pt-PT:
       automatic_description: "A identificação automática também é executada após:"
       triggers:
         - Importações de CSV concluídas (transações, negociações, contas, etc.)
-        - Qualquer sincronização de fornecedor concluída (Plaid, SimpleFIN, etc.)
+        - Qualquer sincronização de serviço concluída (Plaid, SimpleFIN, etc.)
     identified: Identificados %{count} padrões de transações recorrentes
     cleaned_up: Limpadas %{count} transações recorrentes obsoletas
     marked_inactive: Transação recorrente marcada como inativa

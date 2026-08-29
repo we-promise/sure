@@ -13,8 +13,8 @@ pt-PT:
       failed: Não foi possível autenticar através do OpenID Connect.
     failure:
       failed: Não foi possível autenticar.
-      sso_provider_unavailable: "O fornecedor SSO está atualmente indisponível. Tente novamente mais tarde ou contacte um administrador."
-      sso_invalid_response: "Foi recebida uma resposta inválida do fornecedor SSO. Tente novamente."
+      sso_provider_unavailable: "O serviço SSO está atualmente indisponível. Tente novamente mais tarde ou contacte um administrador."
+      sso_invalid_response: "Foi recebida uma resposta inválida do serviço SSO. Tente novamente."
       sso_failed: "A autenticação de início de sessão único falhou. Tente novamente."
     mobile_sso_start:
       redirecting_html: "A redirecionar para o início de sessão... <a href=\"%{url}\">Clique aqui</a> se não for redirecionado."

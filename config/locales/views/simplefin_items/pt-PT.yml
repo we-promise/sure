@@ -130,7 +130,7 @@ pt-PT:
       link_account: Ligar conta
       no_accounts_found: "Nenhuma conta SimpleFIN encontrada para este %{moniker}."
       wait_for_sync: Se acabou de ligar ou sincronizar, tente novamente após a conclusão da sincronização.
-      check_provider_health: Verifique se a sua ligação SimpleFIN está saudável em Definições → Fornecedores.
+      check_provider_health: Verifique se a sua ligação SimpleFIN está saudável em Definições → Serviços.
       unlink_to_move: Para mover uma ligação, desligue-a primeiro no menu de ações da conta.
       all_accounts_already_linked: Todas as contas SimpleFIN parecem já estar ligadas.
       currently_linked_to: "Atualmente ligada a: %{account_name}"
@@ -139,7 +139,7 @@ pt-PT:
       success: Conta ligada com sucesso ao SimpleFIN
       errors:
         only_manual: Apenas contas manuais podem ser ligadas
-        different_provider: Esta conta está ligada a um fornecedor diferente. Desligue-a desse fornecedor primeiro e, em seguida, ligue-a ao SimpleFIN.
+        different_provider: Esta conta está ligada a um serviço diferente. Desligue-a desse serviço primeiro e, em seguida, ligue-a ao SimpleFIN.
         invalid_simplefin_account: Conta SimpleFIN inválida selecionada
     dismiss_replacement_suggestion:
       dismissed: Sugestão de substituição dispensada

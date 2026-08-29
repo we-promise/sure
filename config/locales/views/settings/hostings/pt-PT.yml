@@ -20,11 +20,11 @@ pt-PT:
       show:
         general: Definições Gerais
         ai_assistant: Assistente de IA
-        financial_data_providers: Fornecedores de Dados Financeiros
-        property_valuation_providers: Fornecedores de Avaliação de Imóveis
+        financial_data_providers: Serviços de Dados Financeiros
+        property_valuation_providers: Serviços de Avaliação de Imóveis
         sync_settings: Definições de Sincronização
         invites: Códigos de Convite
-        title: Serviços externos
+        title: Self-Hosting
         danger_zone: Zona de Perigo
         clear_cache: Limpar cache de dados
         clear_cache_warning: Limpar a cache de dados removerá todas as taxas de câmbio, preços de títulos, saldos de contas e outros dados. Isto não eliminará contas, transações, categorias ou outros dados pertencentes ao utilizador.
@@ -32,12 +32,12 @@ pt-PT:
           title: Limpar a cache de dados?
           body: Tem a certeza de que pretende limpar a cache de dados? Isto removerá todas as taxas de câmbio, preços de títulos, saldos de contas e outros dados. Esta ação não pode ser desfeita.
       provider_selection:
-        exchange_rate_title: Fornecedor de Taxas de Câmbio
-        exchange_rate_description: Selecione um único fornecedor para obter taxas de câmbio de moedas.
-        exchange_rate_provider_label: Fornecedor de Taxas de Câmbio
-        securities_title: Fornecedores de Valores Mobiliários
-        securities_description: Ative um ou mais fornecedores para obter preços de ações, ETFs e fundos de investimento. Ao pesquisar, todos os fornecedores ativados são consultados e os resultados são combinados.
-        env_configured_message: A seleção de fornecedor está desativada porque estão definidas variáveis de ambiente. Para ativar a seleção aqui, remova essas variáveis de ambiente da sua configuração.
+        exchange_rate_title: Serviço de Taxas de Câmbio
+        exchange_rate_description: Selecione um único serviço para obter taxas de câmbio de moedas.
+        exchange_rate_provider_label: Serviço de Taxas de Câmbio
+        securities_title: Serviços de Valores Mobiliários
+        securities_description: Ative um ou mais serviços para obter preços de ações, ETFs e fundos de investimento. Ao pesquisar, todos os serviços ativados são consultados e os resultados são combinados.
+        env_configured_message: A seleção de serviço está desativada porque estão definidas variáveis de ambiente. Para ativar a seleção aqui, remova essas variáveis de ambiente da sua configuração.
         twelve_data_hint: requer chave de API, 800 créditos/dia
         yahoo_finance_hint: gratuito, sem necessidade de chave de API
         requires_api_key: requer chave de API
@@ -60,7 +60,7 @@ pt-PT:
           frankfurter: Frankfurter
       assistant_settings:
         title: Assistente de IA
-        description: Escolha como o assistente de chat responde. O incorporado utiliza diretamente o seu fornecedor de LLM configurado. O externo delega num agente de IA remoto que pode invocar as ferramentas financeiras da Sure via MCP.
+        description: Escolha como o assistente de chat responde. O incorporado utiliza diretamente o seu serviço de AI configurado. O externo delega num agente de IA remoto que pode invocar as ferramentas financeiras da Sure via MCP.
         type_label: Tipo de assistente
         type_builtin: Incorporado (LLM direto)
         type_external: Externo (agente remoto)
@@ -71,13 +71,13 @@ pt-PT:
         env_configured_external: Configurado com sucesso através de variáveis de ambiente.
         url_label: URL do Endpoint
         url_placeholder: "https://your-agent-host/v1/chat"
-        url_help: O URL completo do endpoint da API do seu agente. O seu fornecedor de agente dar-lhe-á isto.
+        url_help: O URL completo do endpoint da API do seu agente. O seu serviço de agente dar-lhe-á isto.
         token_label: Token de API
-        token_placeholder: Introduza o token do seu fornecedor de agente
+        token_placeholder: Introduza o token do seu serviço de agente
         token_help: O token de autenticação fornecido pelo seu agente externo. É enviado como um token Bearer com cada pedido.
         agent_id_label: ID do Agente (Opcional)
         agent_id_placeholder: "main (predefinição)"
-        agent_id_help: Roteia para um agente específico quando o fornecedor aloja vários. Deixe em branco para o predefinido.
+        agent_id_help: Roteia para um agente específico quando o serviço aloja vários. Deixe em branco para o predefinido.
         disconnect_title: Ligação externa
         disconnect_description: Remova a ligação ao assistente externo e volte ao assistente incorporado.
         disconnect_button: Desligar
@@ -97,16 +97,16 @@ pt-PT:
         high_res_label: Ativar logótipos de alta resolução
         high_res_description: Quando ativado, os logótipos serão obtidos com resolução de 120x120 em vez de 40x40. Isto fornece imagens mais nítidas em ecrãs high-DPI.
       llm_provider_selector:
-        title: Fornecedor de IA
+        title: Serviço de IA
         description: Escolha o modelo de IA utilizado pelo chat. As operações em lote, como a categorização de transações, a deteção de comerciantes e o processamento de PDFs, utilizam atualmente a OpenAI. 
         env_configured_message: Configurado com sucesso através da variável de ambiente LLM_PROVIDER.
-        provider_label: Fornecedor de LLM ativo
+        provider_label: Serviço de AI ativo
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
-        provider_help: A mudança de fornecedor tem efeito no próximo chat. Configure abaixo as credenciais do fornecedor ativo.
+        provider_help: A mudança de serviço tem efeito no próximo chat. Configure abaixo as credenciais do serviço ativo.
         not_configured_hint: "Adicione uma chave de API de %{provider} abaixo para a ativar."
         data_retention_heading: Tratamento de dados
-        data_retention: As entradas da API não são utilizadas para treinar modelos por predefinição; as APIs alojadas dos fornecedores retêm dados durante ~30 dias para confiança e segurança. Os endpoints personalizados ou autoalojados seguem a sua própria política.
+        data_retention: As entradas da API não são utilizadas para treinar modelos por predefinição; as APIs alojadas dos serviços retêm dados durante ~30 dias para confiança e segurança. Os endpoints personalizados ou autoalojados seguem a sua própria política.
       anthropic_settings:
         title: Anthropic (Claude)
         description: Introduza a sua chave de API da Anthropic. Opcionalmente, aponte a Base URL para o AWS Bedrock ou GCP Vertex.
@@ -119,7 +119,7 @@ pt-PT:
         model_placeholder: "claude-sonnet-4-6 (predefinição)"
         model_help: Utilizado para o chat e o processamento de PDF. As operações em lote (categorização, deteção de comerciantes) usam a Haiku por predefinição para poupar custos.
       openai_settings:
-        description: Introduza o token de acesso e configure opcionalmente um fornecedor personalizado compatível com OpenAI
+        description: Introduza o token de acesso e configure opcionalmente um serviço personalizado compatível com OpenAI
         env_configured_message: Configurado com sucesso através de variáveis de ambiente.
         access_token_label: Token de Acesso
         access_token_placeholder: Introduza o seu token de acesso aqui
@@ -142,7 +142,7 @@ pt-PT:
         max_items_per_call_label: Máx. de Itens por Lote (Opcional)
         max_items_per_call_help: "Limite superior para os lotes de categorização automática / deteção de comerciantes. Predefinição: 25. Lotes maiores são automaticamente divididos para caberem na janela de contexto."
         ai_response_timeout_heading: Tempo Limite de Resposta do Chat
-        ai_response_timeout_description: Quanto tempo o chat espera pelo assistente antes de mostrar um erro de "sem resposta". Aumente isto se executar um modelo local em hardware lento — as respostas dos fornecedores compatíveis com OpenAI não são transmitidas em fluxo e as rondas de chamadas de ferramentas não mostram nada, pelo que o chat pode permanecer em "A pensar…" durante toda a vez.
+        ai_response_timeout_description: Quanto tempo o chat espera pelo assistente antes de mostrar um erro de "sem resposta". Aumente isto se executar um modelo local em hardware lento — as respostas dos serviços compatíveis com OpenAI não são transmitidas em fluxo e as rondas de chamadas de ferramentas não mostram nada, pelo que o chat pode permanecer em "A pensar…" durante toda a vez.
         ai_response_timeout_label: Tempo Limite de Resposta em Segundos (Opcional)
         ai_response_timeout_help: "Predefinição: 90. Isto cobre toda a vez, por isso dimensione-o como uma soma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, mais o tempo de execução e de fila da ferramenta. Reduzir ASSISTANT_MAX_TOOL_CALL_ITERATIONS diminui o tamanho necessário e é, muitas vezes, a melhor alavanca em hardware lento."
         title: OpenAI
@@ -201,7 +201,7 @@ pt-PT:
         step_1_html: 'Visite <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> e crie uma conta gratuita.'
         step_2_html: 'Vá para o seu <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> para encontrar o seu token de API.'
         step_3: Copie o seu token de API e cole-o abaixo.
-        rate_limit_warning: "O nível gratuito da EODHD está limitado a 20 chamadas de API por dia. É melhor utilizado como fornecedor suplementar para ETFs da UE que não estão disponíveis noutros fornecedores."
+        rate_limit_warning: "O nível gratuito da EODHD está limitado a 20 chamadas de API por dia. É melhor utilizado como serviço suplementar para ETFs da UE que não estão disponíveis noutros serviços."
       alpha_vantage_settings:
         title: Alpha Vantage
         description: Introduza a chave de API da Alpha Vantage. Suporta ETFs da UE na London Stock Exchange, XETRA e noutras bolsas.
@@ -211,8 +211,8 @@ pt-PT:
         show_details: "(mostrar detalhes)"
         step_1_html: 'Visite <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> e obtenha a sua chave de API gratuita.'
         step_2: Copie a chave de API e cole-a abaixo.
-        rate_limit_warning: "O nível gratuito da Alpha Vantage está limitado a 25 chamadas de API por dia. É melhor utilizado como fornecedor suplementar para ETFs da UE que não estão disponíveis noutros fornecedores."
-        no_health_check_note: "A verificação de estado da ligação não está disponível para este fornecedor devido ao limite de pedidos estrito."
+        rate_limit_warning: "O nível gratuito da Alpha Vantage está limitado a 25 chamadas de API por dia. É melhor utilizado como serviço suplementar para ETFs da UE que não estão disponíveis noutros serviços."
+        no_health_check_note: "A verificação de estado da ligação não está disponível para este serviço devido ao limite de pedidos estrito."
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} chamadas diárias da API utilizadas (%{percentage})"
         description: Introduza a chave de API fornecida pela Twelve Data
@@ -256,4 +256,4 @@ pt-PT:
         auto_sync_time_description: Defina a hora para a sincronização automática.
         include_pending_label: Incluir transações pendentes
         include_pending_description: Quando ativada, a opção permite importar automaticamente as transações pendentes (não liquidadas) e reconciliá-las quando forem registadas. Desative-a se o seu banco fornecer informações pouco fiáveis sobre transações pendentes.
-        env_configured_message: Esta definição está desativada porque está definida uma variável de ambiente do fornecedor (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING). Remova-a para ativar esta definição.
+        env_configured_message: Esta definição está desativada porque está definida uma variável de ambiente do serviço (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING). Remova-a para ativar esta definição.

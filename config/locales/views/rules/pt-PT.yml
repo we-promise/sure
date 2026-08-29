@@ -46,8 +46,8 @@ pt-PT:
       ai_cost_with_estimate_html: "Isto utilizará IA para categorizar %{count} transação(ões). Custo estimado: <span class=\"font-semibold\">~$%{cost}</span>"
       ai_cost_no_estimate_html: "Isto utilizará IA para categorizar %{count} transação(ões)."
       cost_unavailable_model: "Indisponível estimativa de custo para o modelo \"%{model}\"."
-      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum fornecedor de LLM configurado).
-      cost_warning: Poderão ocorrer custos; verifique junto do fornecedor do modelo os preços mais atualizados.
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de AI configurado).
+      cost_warning: Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais atualizados.
       view_usage_history: Ver histórico de utilização
       confirm_changes: Confirmar alterações
     actions:
@@ -68,8 +68,8 @@ pt-PT:
       ai_cost_message: Isto utilizará IA para categorizar até %{transactions} transações.
       estimated_cost: "Custo estimado: ~$%{cost}"
       cost_unavailable_model: Indisponível estimativa de custo para o modelo "%{model}".
-      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum fornecedor de LLM configurado).
-      cost_warning: Poderão ocorrer custos; verifique junto do fornecedor do modelo os preços mais atualizados.
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de AI configurado).
+      cost_warning: Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais atualizados.
       view_usage: Ver histórico de utilização
     recent_runs:
       title: Execuções recentes

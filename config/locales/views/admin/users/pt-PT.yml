@@ -4,7 +4,7 @@ pt-PT:
     users:
       index:
         title: "Gestão de Utilizadores"
-        description: "Gerencie as funções de utilizador da sua instância. Os super administradores podem aceder às definições do fornecedor SSO e à gestão de utilizadores."
+        description: "Gerencie as funções de utilizador da sua instância. Os super administradores podem aceder às definições do serviço SSO e à gestão de utilizadores."
         section_title: "Famílias / Grupos"
         you: "(Você)"
         trial_ends_at: "Fim do período experimental"
@@ -48,7 +48,7 @@ pt-PT:
           guest: "Experiência centrada no assistente com permissões intencionalmente restritas para fluxos de trabalho introdutórios."
           member: "Acesso básico de utilizador. Pode gerir as suas próprias contas, transações e definições."
           admin: "Administrador da família. Pode aceder a definições avançadas como chaves de API, importações e avisos de IA."
-          super_admin: "Administrador da instância. Pode gerir fornecedores de SSO, funções de utilizador e representar utilizadores para apoio."
+          super_admin: "Administrador da instância. Pode gerir serviços de SSO, funções de utilizador e representar utilizadores para apoio."
         invitations:
           pending_label: "Convidado (pendente)"
           expires: "Expira em %{date}"

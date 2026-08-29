@@ -55,7 +55,7 @@ pt-PT:
       success:
         one: "%{count} conta ligada com sucesso"
         other: "%{count} contas ligadas com sucesso"
-      no_credentials_configured: "Configure primeiro o seu ID de utilizador e a sua chave de acesso da API da Sophtron nas Definições do Fornecedor."
+      no_credentials_configured: "Configure primeiro o seu ID de utilizador e a sua chave de acesso da API da Sophtron nas Definições do Serviço."
       no_accounts_found: Nenhuma conta encontrada. Verifique a configuração da sua chave de API.
       no_access_key: A chave de acesso da Sophtron não está configurada. Configure-a nas Definições.
       no_user_id: O ID de utilizador da Sophtron não está configurado. Configure-o nas Definições.
@@ -121,7 +121,7 @@ pt-PT:
       preload_accounts: pré-carregar contas
       api_error: "Erro de ligação com a API"
       unexpected_error: "Ocorreu um erro inesperado"
-      no_credentials_configured: "Configure primeiro o seu ID de utilizador e a sua chave de acesso da API da Sophtron nas Definições do Fornecedor."
+      no_credentials_configured: "Configure primeiro o seu ID de utilizador e a sua chave de acesso da API da Sophtron nas Definições do Serviço."
       no_accounts_found: Nenhuma conta encontrada. Verifique a configuração da sua chave de API.
       no_access_key: A chave de acesso da Sophtron não está configurada. Configure-a nas Definições.
       no_user_id: O ID de utilizador da Sophtron não está configurado. Configure-o nas Definições.
@@ -136,12 +136,12 @@ pt-PT:
       no_accounts_found: Nenhuma conta encontrada. Verifique a configuração da sua chave de API.
       no_access_key: A chave de acesso da Sophtron não está configurada. Configure-a nas Definições.
       no_user_id: O ID de utilizador da Sophtron não está configurado. Configure-o nas Definições.
-      no_credentials_configured: "Configure primeiro o seu ID de utilizador e a sua chave de acesso da API da Sophtron nas Definições do Fornecedor."
+      no_credentials_configured: "Configure primeiro o seu ID de utilizador e a sua chave de acesso da API da Sophtron nas Definições do Serviço."
       no_institution_connected: Ligue primeiro uma instituição bancária à Sophtron.
       no_name_placeholder: "(Sem nome)"
       title: Selecionar contas da Sophtron
     select_existing_account:
-      account_already_linked: Esta conta já está ligada a um fornecedor
+      account_already_linked: Esta conta já está ligada a um serviço
       all_accounts_already_linked: Todas as contas da Sophtron já estão ligadas
       api_error: "Erro de ligação com a API"
       cancel: Cancelar
@@ -157,7 +157,7 @@ pt-PT:
       title: "Ligar %{account_name} à Sophtron"
       unexpected_error: "Ocorreu um erro inesperado"
     link_existing_account:
-      account_already_linked: Esta conta já está ligada a um fornecedor
+      account_already_linked: Esta conta já está ligada a um serviço
       api_error: "Erro de ligação com a API"
       unexpected_error: "Ocorreu um erro inesperado"
       invalid_account_name: Não é possível ligar uma conta com o nome em branco
@@ -227,12 +227,12 @@ pt-PT:
     sophtron_setup_required:
       title: Configuração da Sophtron necessária
       message: >
-        Para concluir a configuração da sua ligação da Sophtron, aceda à página de Definições do Fornecedor e siga as instruções para autorizar e configurar a sua ligação da Sophtron.
-      go_to_provider_settings: Ir para Definições do Fornecedor
+        Para concluir a configuração da sua ligação da Sophtron, aceda à página de Definições do Serviço e siga as instruções para autorizar e configurar a sua ligação da Sophtron.
+      go_to_provider_settings: Ir para Definições do Serviço
       heading: "ID de utilizador e chave de acesso não configurados"
       description: "Antes de poder ligar contas da Sophtron, precisa de configurar o seu ID de utilizador e a sua chave de acesso da Sophtron."
       setup_steps_title: "Etapas de configuração:"
-      step_1_html: "Aceda a <strong>Definições → Fornecedores de sincronização bancária</strong>"
+      step_1_html: "Aceda a <strong>Definições → Serviços de sincronização bancária</strong>"
       step_2_html: "Encontre a secção <strong>Sophtron</strong>"
       step_3_html: "Introduza o seu ID de utilizador e a sua chave de acesso da Sophtron"
       step_4: "Volte aqui para ligar as suas contas"
@@ -241,8 +241,8 @@ pt-PT:
       unable_to_connect: "Não é possível ligar à Sophtron"
       institution_unable_to_connect: "Não é possível ligar à instituição"
       common_issues_title: "Problemas comuns:"
-      incorrect_user_id: "ID de utilizador incorreto: Verifique o seu ID de utilizador nas Definições do Fornecedor"
-      invalid_access_key: "Chave de acesso inválida: Verifique a sua chave de acesso nas Definições do Fornecedor"
+      incorrect_user_id: "ID de utilizador incorreto: Verifique o seu ID de utilizador nas Definições do Serviço"
+      invalid_access_key: "Chave de acesso inválida: Verifique a sua chave de acesso nas Definições do Serviço"
       expired_credentials: "Credenciais expiradas: Gere um novo ID de utilizador e uma nova chave de acesso na Sophtron"
       network_issue: "Problema de rede: Verifique a sua ligação à internet"
       service_down: "Serviço indisponível: A API da Sophtron pode estar temporariamente indisponível"
@@ -250,7 +250,7 @@ pt-PT:
       verification_code: "Código de verificação: Certifique-se de que o código mais recente foi introduzido antes de expirar"
       institution_timeout: "Tempo limite da instituição: A página de acesso do banco não foi concluída a tempo"
       unsupported_mfa: "Suporte a MFA: A Sophtron pode não suportar o fluxo de verificação atual desta instituição"
-      check_provider_settings: "Verificar Definições do Fornecedor"
+      check_provider_settings: "Verificar Definições do Serviço"
       try_again: "Tentar ligar novamente"
     select_option: "Selecionar %{type}"
     subtype: "subtipo"

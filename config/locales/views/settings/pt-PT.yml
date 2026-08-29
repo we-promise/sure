@@ -61,13 +61,13 @@ pt-PT:
           category: "Categoria"
           level: "Nível"
           source: "Origem"
-          provider: "Fornecedor"
+          provider: "Serviço"
           start_date: "De"
           end_date: "Até"
           family_id: "ID da família"
           account_id: "ID da conta"
           user_id: "ID do utilizador"
-          account_provider_id: "ID do fornecedor da conta"
+          account_provider_id: "ID do serviço da conta"
           submit: "Filtrar"
           reset: "Repor"
         table:
@@ -110,7 +110,7 @@ pt-PT:
         failed: "Falhadas"
         no_usage_data: "Não foram encontrados dados de utilização para o período selecionado"
         cost_estimates_title: "Sobre as Estimativas de Custo"
-        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos fornecedores, incluindo os preços da OpenAI a partir de julho de 2026. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
+        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, incluindo os preços da OpenAI a partir de julho de 2026. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
     ai_prompts:
       show:
         page_title: Prompts de IA
@@ -210,8 +210,8 @@ pt-PT:
           one: "%{count} selecionada"
           other: "%{count} selecionadas"
         save_currencies: Guardar moedas
-        sharing_title: "Partilha do %{moniker}"
-        sharing_subtitle: "Controle a forma como as contas são partilhadas na sua %{moniker}"
+        sharing_title: "%{moniker} - Partilha"
+        sharing_subtitle: "Controle a forma como as contas são partilhadas dentro da sua %{moniker}"
         sharing_default_label: Partilha predefinida para novas contas
         sharing_shared: Partilhar com todos os membros
         sharing_private: Manter privado por predefinição
@@ -279,7 +279,7 @@ pt-PT:
         page_title: Segurança
         encryption_warning:
           title: Faltam as chaves de encriptação
-          intro: "Os dados sensíveis (chaves de API, tokens de fornecedores, segredos de MFA e PII) estão a ser armazenados sem encriptação. Para ativar a encriptação, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
+          intro: "Os dados sensíveis (chaves de API, tokens de serviços, segredos de MFA e PII) estão a ser armazenados sem encriptação. Para ativar a encriptação, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
           keys:
             - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
             - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
@@ -334,10 +334,10 @@ pt-PT:
       general_section_title: Geral
       imports_label: Importações
       exports_label: Exportações
-      llm_usage_label: Utilização de LLM
+      llm_usage_label: Utilização de AI
       logout: Terminar sessão
       merchants_label: Comerciantes
-      providers_label: Fornecedores
+      providers_label: Serviços
       guides_label: Guias
       other_section_title: Mais
       preferences_label: Preferências
@@ -346,8 +346,8 @@ pt-PT:
       rules_label: Regras
       mcp_label: MCP
       security_label: Segurança
-      self_hosting_label: Serviços externos
-      sso_providers_label: Fornecedores SSO
+      self_hosting_label: Self-Hosting
+      sso_providers_label: Serviços SSO
       statement_vault_label: Arquivo de Extratos
       system_health_label: Estado do sistema
       tags_label: Etiquetas
@@ -368,7 +368,7 @@ pt-PT:
       change: Alterar foto
     providers:
       update:
-        updated_successfully: Definições do fornecedor atualizadas com sucesso
+        updated_successfully: Definições do serviço atualizadas com sucesso
         no_changes: Não foram feitas alterações
       not_authorized: Não autorizado
       bank_sync:
@@ -383,10 +383,10 @@ pt-PT:
         beta: Beta
         alpha: Alpha
       drawer_trust_statement: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro e as suas credenciais são armazenadas encriptadas."
-      drawer_trust_statement_encryption_unconfigured: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro. Configure chaves de encriptação explícitas antes de armazenar credenciais de fornecedores em produção."
+      drawer_trust_statement_encryption_unconfigured: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro. Configure chaves de encriptação explícitas antes de armazenar credenciais de serviços em produção."
       provider_setup_encryption_warning:
         title: Faltam as chaves de encriptação
-        message: "Esta instalação autoalojada não configurou chaves de encriptação explícitas do Active Record. Configure primary_key, deterministic_key e key_derivation_salt antes de guardar credenciais de fornecedores em produção."
+        message: "Esta instalação autoalojada não configurou chaves de encriptação explícitas do Active Record. Configure primary_key, deterministic_key e key_derivation_salt antes de guardar credenciais de serviços em produção."
       setup_steps:
         eyebrow: Configuração
         need_help: "Precisa de ajuda?"
@@ -394,7 +394,7 @@ pt-PT:
       groups:
         your_connections: As suas ligações
         available: Disponível
-        empty_available: Todos os fornecedores disponíveis estão ligados.
+        empty_available: Todos os serviços disponíveis estão ligados.
       health_strip:
         connected: ligado
         needs_attention: requer atenção
@@ -409,7 +409,7 @@ pt-PT:
           other: Necessário novo consentimento em %{count} dias
         last_synced: Sincronizado há %{time}
       sync_all: Sincronizar tudo
-      sync_all_in_progress: A sincronizar todos os fornecedores ligados…
+      sync_all_in_progress: A sincronizar todos os serviços ligados…
       sync_all_recently: Sincronização já em curso. Tente novamente daqui a um momento.
       sync_provider: Sincronizar agora
       sync_provider_in_progress: Sincronização iniciada.
@@ -437,14 +437,14 @@ pt-PT:
         plaid: Ligue milhares de instituições financeiras dos EUA via Plaid.
         plaid_eu: Ligue instituições financeiras europeias via Plaid (PSD2 / Open Banking).
       search_filters:
-        aria_label: Pesquisar fornecedores
-        placeholder: Pesquisar fornecedores
+        aria_label: Pesquisar serviços
+        placeholder: Pesquisar serviços
         chips:
           all: Tudo
           bank: Bancos
           crypto: Cripto
           investment: Investimentos
-      empty_filter: Nenhum fornecedor corresponde ao seu filtro.
+      empty_filter: Nenhum serviço corresponde ao seu filtro.
       clear_filter: Limpar filtros
       encryption_error:
         title: Faltam as chaves de encriptação
@@ -584,7 +584,7 @@ pt-PT:
         step_3: "Cole abaixo as suas credenciais e ligue."
       plaid_eu_panel:
         step_1_html: "Abra %{link} e copie o seu EU Client ID e Secret Key."
-      not_found: Fornecedor não encontrado.
+      not_found: Serviço não encontrado.
       sync_provider_no_items: Sem ligações disponíveis para sincronizar.
       ibkr_panel:
         steps:

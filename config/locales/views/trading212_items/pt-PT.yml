@@ -75,7 +75,7 @@ pt-PT:
     select_existing_account:
       title: Associar conta Trading 212
       no_accounts_available: Ainda não existem contas Trading 212 por associar.
-      run_sync_hint: "Execute uma sincronização em Definições > Fornecedores depois de guardar a sua chave de API."
+      run_sync_hint: "Execute uma sincronização em Definições > Serviços depois de guardar a sua chave de API."
       wait_for_sync: Aguarde que a sincronização de deteção de contas termine.
       balance: Saldo
       link: Associar

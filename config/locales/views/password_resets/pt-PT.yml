@@ -1,7 +1,7 @@
 ---
 pt-PT:
   password_resets:
-    disabled: A reposição de palavra-passe através do Sure está desativada. Reponha a sua palavra-passe através do seu fornecedor de identidade.
+    disabled: A reposição de palavra-passe através do Sure está desativada. Reponha a sua palavra-passe através do seu serviço de identidade.
     sso_only_user: A sua conta utiliza SSO para autenticação. Contacte o seu administrador para gerir as suas credenciais.
     edit:
       title: Repor palavra-passe

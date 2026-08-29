@@ -13,7 +13,7 @@ pt-PT:
         one: "%{count} instituição"
         other: "%{count} instituições"
     errors:
-      provider_not_configured: "O fornecedor IndexaCapital não está configurado"
+      provider_not_configured: "O serviço IndexaCapital não está configurado"
 
     sync:
       status:
@@ -82,7 +82,7 @@ pt-PT:
         other: "Não é possível associar %{count} contas com nomes em branco"
       link_failed: "Falha ao associar contas"
       no_accounts_selected: "Selecione pelo menos uma conta"
-      no_api_key: "Credenciais IndexaCapital não encontradas. Configure-as nas Definições do fornecedor."
+      no_api_key: "Credenciais IndexaCapital não encontradas. Configure-as nas Definições do serviço."
       partial_invalid: "Associadas com sucesso %{created_count} conta(s), %{already_linked_count} já estavam associadas, %{invalid_count} conta(s) tinham nomes inválidos"
       partial_success: "Associadas com sucesso %{created_count} conta(s). %{already_linked_count} conta(s) já estavam associadas: %{already_linked_names}"
       success:
@@ -120,12 +120,12 @@ pt-PT:
       link_accounts: "Associar contas selecionadas"
       no_accounts_found: "Não foram encontradas contas. Verifique as suas credenciais IndexaCapital."
       no_api_key: "As credenciais IndexaCapital não estão configuradas. Configure-as nas Definições."
-      no_credentials_configured: "Configure primeiro as suas credenciais IndexaCapital nas Definições do fornecedor."
+      no_credentials_configured: "Configure primeiro as suas credenciais IndexaCapital nas Definições do serviço."
       no_name_placeholder: "(Sem nome)"
       title: "Selecionar contas IndexaCapital"
 
     select_existing_account:
-      account_already_linked: "Esta conta já está associada a um fornecedor"
+      account_already_linked: "Esta conta já está associada a um serviço"
       all_accounts_already_linked: "Todas as contas IndexaCapital já estão associadas"
       api_error: "Erro de API: %{message}"
       balance_label: "Saldo:"
@@ -142,20 +142,20 @@ pt-PT:
       no_accounts: "Não foram encontradas contas IndexaCapital por associar."
       no_accounts_found: "Não foram encontradas contas IndexaCapital. Verifique as suas credenciais."
       no_api_key: "As credenciais IndexaCapital não estão configuradas. Configure-as nas Definições."
-      no_credentials_configured: "Configure primeiro as suas credenciais IndexaCapital nas Definições do fornecedor."
+      no_credentials_configured: "Configure primeiro as suas credenciais IndexaCapital nas Definições do serviço."
       no_name_placeholder: "(Sem nome)"
-      settings_link: "Aceder às definições do fornecedor"
+      settings_link: "Aceder às definições do serviço"
       subtitle: "Escolha uma conta IndexaCapital"
       title: "Associar %{account_name} com IndexaCapital"
 
     link_existing_account:
-      account_already_linked: "Esta conta já está associada a um fornecedor"
+      account_already_linked: "Esta conta já está associada a um serviço"
       api_error: "Erro de API: %{message}"
       invalid_account_name: "Não é possível associar uma conta com nome em branco"
       provider_account_already_linked: "Esta conta IndexaCapital já está associada a outra conta"
       provider_account_not_found: "Conta IndexaCapital não encontrada"
       missing_parameters: "Parâmetros obrigatórios em falta"
-      no_api_key: "Credenciais IndexaCapital não encontradas. Configure-as nas Definições do fornecedor."
+      no_api_key: "Credenciais IndexaCapital não encontradas. Configure-as nas Definições do serviço."
       success: "%{account_name} associada com sucesso à IndexaCapital"
 
     setup_accounts:
@@ -236,4 +236,4 @@ pt-PT:
       success: "%{count} conta(s) criada(s) com sucesso."
 
     preload_accounts:
-      no_credentials_configured: "Configure primeiro as suas credenciais IndexaCapital nas Definições do fornecedor."
+      no_credentials_configured: "Configure primeiro as suas credenciais IndexaCapital nas Definições do serviço."

@@ -2,16 +2,16 @@
 pt-PT:
   coinstats_items:
     create:
-      success: Ligação ao fornecedor CoinStats configurada com sucesso.
+      success: Ligação ao serviço CoinStats configurada com sucesso.
       default_name: Ligação CoinStats
       errors:
         validation_failed: "Falha na validação: %{message}."
     update:
-      success: Ligação ao fornecedor CoinStats atualizada com sucesso.
+      success: Ligação ao serviço CoinStats atualizada com sucesso.
       errors:
         validation_failed: "Falha na validação: %{message}."
     destroy:
-      success: Eliminação da ligação ao fornecedor CoinStats agendada.
+      success: Eliminação da ligação ao serviço CoinStats agendada.
     link_wallet:
       success: "%{count} carteira(s) de criptomoedas associada(s) com sucesso."
       missing_params: "Parâmetros obrigatórios em falta: endereço e blockchain."
@@ -40,12 +40,12 @@ pt-PT:
       exchange_select_blank: Selecione uma bolsa
       exchange_label: Bolsa
       link_exchange_submit: Associar bolsa
-      not_configured_title: Ligação ao fornecedor CoinStats não configurada
-      not_configured_message: Para associar uma carteira ou bolsa de criptomoedas, tem primeiro de configurar a ligação ao fornecedor CoinStats.
-      not_configured_step1_html: Aceda a <strong>Definições → Fornecedores</strong>
-      not_configured_step2_html: Localize o fornecedor <strong>CoinStats</strong>
-      not_configured_step3_html: Siga as <strong>instruções de configuração</strong> fornecidas para concluir a configuração do fornecedor
-      go_to_settings: Aceder às definições do fornecedor
+      not_configured_title: Ligação ao serviço CoinStats não configurada
+      not_configured_message: Para associar uma carteira ou bolsa de criptomoedas, tem primeiro de configurar a ligação ao serviço CoinStats.
+      not_configured_step1_html: Aceda a <strong>Definições → Serviços</strong>
+      not_configured_step2_html: Localize o serviço <strong>CoinStats</strong>
+      not_configured_step3_html: Siga as <strong>instruções de configuração</strong> fornecidas para concluir a configuração do serviço
+      go_to_settings: Aceder às definições do serviço
       setup_instructions: "Instruções de configuração:"
       step1_html: Aceda ao <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Painel da API pública CoinStats</a> para obter uma chave de API.
       step2: Introduza a sua chave de API abaixo e clique em Configurar.

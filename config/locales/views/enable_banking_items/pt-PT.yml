@@ -92,11 +92,11 @@ pt-PT:
       not_configured: Ligação Enable Banking não configurada
       not_configured_description: Antes de poder associar contas Enable Banking, precisa de configurar a sua ligação Enable Banking.
       setup_steps_title: "Passos de configuração:"
-      setup_step_1_html: "Aceda a <strong>Definições → Fornecedores</strong>"
+      setup_step_1_html: "Aceda a <strong>Definições → Serviços</strong>"
       setup_step_2_html: "Encontre a secção <strong>Enable Banking</strong>"
       setup_step_3: Introduza as suas credenciais Enable Banking
       setup_step_4: Volte aqui para associar as suas contas
-      go_to_provider_settings: Aceder às definições do fornecedor
+      go_to_provider_settings: Aceder às definições do serviço
     reauthorize:
       invalid_redirect: O URL de autorização recebido é inválido. Tente novamente.
       reauthorization_failed: Falha na reautorização

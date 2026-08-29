@@ -34,7 +34,7 @@ pt-PT:
     guides: Guias
     holdings: Posições
     home: Início
-    hostings: Serviços externos
+    hostings: Self-Hosting
     ibkr_items: Interactive Brokers
     impersonation_sessions: Representações
     imports: Importações
@@ -44,8 +44,8 @@ pt-PT:
     invitations: Convites
     invite_codes: Códigos de convite
     kraken_items: Kraken
-    llm_usage: Utilização de LLM
-    llm_usages: Utilização de LLM
+    llm_usage: Utilização de AI
+    llm_usages: Utilização de AI
     loans: Empréstimos
     lunchflow_items: Lunch Flow
     mcp: Servidor MCP
@@ -65,7 +65,7 @@ pt-PT:
     profile: Informações do Perfil
     profiles: Informações do Perfil
     properties: Imóveis
-    providers: Fornecedores
+    providers: Serviços
     recurring_transactions: Recorrentes
     redbark_items: Redbark
     registrations: Registar
@@ -73,14 +73,14 @@ pt-PT:
     rules: Regras
     securities: Títulos
     security: Segurança
-    self_hosting: Serviços externos
+    self_hosting: Self-Hosting
     sessions: Iniciar sessão
     simplefin_items: SimpleFIN
     snaptrade_items: SnapTrade
     sophtron_items: Sophtron
     splits: Divisão
     sso_identities: Ligações SSO
-    sso_providers: Fornecedores SSO
+    sso_providers: Serviços SSO
     subscriptions: Subscrição
     tags: Etiquetas
     trades: Negociações

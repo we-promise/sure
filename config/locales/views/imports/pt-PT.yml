@@ -102,7 +102,7 @@ pt-PT:
         account_label: Conta
         name_label: Designação
         note_label: Nota
-        no_security_provider_warning: O fornecedor de preços de valores mobiliários não está configurado.  As suas importações de negociações funcionarão, mas a Sure não preencherá o histórico de preços.  Vá às suas definições para configurar isto.
+        no_security_provider_warning: O serviço de preços de valores mobiliários não está configurado.  As suas importações de negociações funcionarão, mas a Sure não preencherá o histórico de preços.  Vá às suas definições para configurar isto.
         date_format_label: Formato de data
         apply_configuration: Aplicar configuração
       category_import:
@@ -214,16 +214,16 @@ pt-PT:
         upload_csv_button: Carregar CSV
         paste_csv_placeholder: Cole aqui o conteúdo do seu ficheiro CSV
         download_sample_csv: Descarregar um CSV de exemplo
-        to_see_format: para ver o formato de CSV exigido
+        to_see_format: para consultar o formato de CSV exigido
         qif_title: Carregar ficheiro QIF
         qif_description: Selecione a conta a que este ficheiro QIF pertence e carregue a sua exportação .qif do Quicken.
         qif_account_label: Conta
         qif_account_placeholder: Selecione uma conta…
-        qif_file_prompt: para adicionar o seu ficheiro QIF aqui
+        qif_file_prompt: para adicionar o seu ficheiro QIF
         qif_file_hint: apenas ficheiros .qif
         qif_submit: Carregar QIF
         browse: Explorar
-        csv_file_prompt: para adicionar o seu ficheiro CSV aqui
+        csv_file_prompt: para adicionar o seu ficheiro CSV
         description: Cole ou carregue o seu ficheiro CSV abaixo.  Reveja as instruções
           na tabela abaixo antes de começar.
         instructions_1: Abaixo está um exemplo de CSV com as colunas disponíveis para importação.
@@ -494,8 +494,8 @@ pt-PT:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "O processamento falhou: %{error}"
       errors:
-        provider_not_configured: Fornecedor de IA não configurado
-        provider_no_pdf_support: O fornecedor de IA não suporta o processamento de PDF
+        provider_not_configured: Serviço de IA não configurado
+        provider_no_pdf_support: O serviço de IA não suporta o processamento de PDF
       ready_for_review_title: Pronto para Revisão
       ready_for_review_description:
         one: "%{count} transação do seu extrato ainda não está nesta conta. Reveja-a e publique-a para a adicionar."

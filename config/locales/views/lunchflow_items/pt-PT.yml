@@ -6,24 +6,24 @@ pt-PT:
       unable_to_connect: Não foi possível ligar ao Lunch Flow
       common_issues: "Problemas comuns:"
       invalid_api_key_label: Chave de API inválida
-      invalid_api_key_desc: Verifique a sua chave de API nas Definições do fornecedor
+      invalid_api_key_desc: Verifique a sua chave de API nas Definições do serviço
       expired_credentials_label: Credenciais expiradas
       expired_credentials_desc: Gere uma nova chave de API a partir do Lunch Flow
       network_issue_label: Problema de rede
       network_issue_desc: Verifique a sua ligação à internet
       service_down_label: Serviço indisponível
       service_down_desc: A API do Lunch Flow pode estar temporariamente indisponível
-      check_provider_settings: Verificar definições do fornecedor
+      check_provider_settings: Verificar definições do serviço
     setup_required:
       title: Configuração do Lunch Flow necessária
       api_key_not_configured: Chave de API não configurada
       api_key_description: Antes de poder associar contas Lunch Flow, precisa de configurar a sua chave de API Lunch Flow.
       setup_steps_title: "Passos de configuração:"
-      setup_step_1_html: "Aceda a <strong>Definições → Fornecedores</strong>"
+      setup_step_1_html: "Aceda a <strong>Definições → Serviços</strong>"
       setup_step_2_html: "Encontre a secção <strong>Lunch Flow</strong>"
       setup_step_3: Introduza a sua chave de API Lunch Flow
       setup_step_4: Volte aqui para associar as suas contas
-      go_to_provider_settings: Aceder às definições do fornecedor
+      go_to_provider_settings: Aceder às definições do serviço
     create:
       success: Ligação Lunch Flow criada com sucesso
     destroy:
@@ -76,7 +76,7 @@ pt-PT:
       no_name_placeholder: "(Sem nome)"
       title: Selecionar contas Lunch Flow
     select_existing_account:
-      account_already_linked: Esta conta já está associada a um fornecedor
+      account_already_linked: Esta conta já está associada a um serviço
       all_accounts_already_linked: Todas as contas Lunch Flow já estão associadas
       api_error: "Erro de API: %{message}"
       cancel: Cancelar
@@ -89,7 +89,7 @@ pt-PT:
       no_name_placeholder: "(Sem nome)"
       title: "Associar %{account_name} com Lunch Flow"
     link_existing_account:
-      account_already_linked: Esta conta já está associada a um fornecedor
+      account_already_linked: Esta conta já está associada a um serviço
       api_error: "Erro de API: %{message}"
       invalid_account_name: Não é possível associar uma conta com nome em branco
       lunchflow_account_already_linked: Esta conta Lunch Flow já está associada a outra conta

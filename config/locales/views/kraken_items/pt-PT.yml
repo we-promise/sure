@@ -14,7 +14,7 @@ pt-PT:
     destroy:
       success: Ligação da Kraken agendada para eliminação.
     select_accounts:
-      select_connection: Escolha uma ligação da Kraken nas Definições do Fornecedor.
+      select_connection: Escolha uma ligação da Kraken nas Definições do Serviço.
       no_credentials_configured: Adicione as credenciais da API da Kraken antes de configurar as contas.
     link_accounts:
       select_connection: Escolha uma ligação da Kraken antes de ligar contas.
@@ -29,7 +29,7 @@ pt-PT:
       success: Ligado com sucesso à conta da Kraken
       select_connection: Escolha uma ligação da Kraken antes de ligar contas.
       errors:
-        only_manual: Apenas contas manuais de exchange de criptomoedas sem uma ligação de fornecedor existente podem ser ligadas à Kraken
+        only_manual: Apenas contas manuais de exchange de criptomoedas sem uma ligação de serviço existente podem ser ligadas à Kraken
         invalid_kraken_account: Conta da Kraken inválida
         kraken_account_already_linked: Esta conta da Kraken já está ligada
     setup_accounts:

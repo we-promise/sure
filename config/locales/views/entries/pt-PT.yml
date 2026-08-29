@@ -17,7 +17,7 @@ pt-PT:
     protection:
       tooltip: Protegido contra sincronização
       title: Protegido contra sincronização
-      description: As suas edições neste registo não serão sobrescritas pela sincronização do fornecedor.
+      description: As suas edições neste registo não serão sobrescritas pela sincronização do serviço.
       locked_fields_label: "Campos bloqueados:"
       unlock_button: Permitir que a sincronização atualize
       unlock_confirm: Permitir que a sincronização atualize este registo? As suas alterações podem ser sobrescritas na próxima sincronização.

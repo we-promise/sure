@@ -65,7 +65,7 @@ pt-PT:
     select_existing_account:
       title: Ligar conta da Interactive Brokers
       no_accounts_available: Ainda não há contas da Interactive Brokers por ligar disponíveis.
-      run_sync_hint: "Execute uma sincronização em Definições > Fornecedores após atualizar a sua consulta Flex."
+      run_sync_hint: "Execute uma sincronização em Definições > Serviços após atualizar a sua consulta Flex."
       wait_for_sync: Aguarde a conclusão da sincronização de descoberta de contas.
       balance: Saldo
       link: Ligar

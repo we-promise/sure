@@ -6,7 +6,7 @@ pt-PT:
       unable_to_connect: Não foi possível ligar ao Mercury
       common_issues: "Problemas comuns:"
       invalid_api_token_label: Token de API inválido
-      invalid_api_token_desc: Verifique o seu token de API nas Definições do fornecedor
+      invalid_api_token_desc: Verifique o seu token de API nas Definições do serviço
       expired_credentials_label: Credenciais expiradas
       expired_credentials_desc: Gere um novo token de API a partir do Mercury
       insufficient_permissions_label: Permissões insuficientes
@@ -15,17 +15,17 @@ pt-PT:
       network_issue_desc: Verifique a sua ligação à internet
       service_down_label: Serviço indisponível
       service_down_desc: A API do Mercury pode estar temporariamente indisponível
-      check_provider_settings: Verificar definições do fornecedor
+      check_provider_settings: Verificar definições do serviço
     setup_required:
       title: Configuração do Mercury necessária
       api_token_not_configured: Token de API não configurado
       api_token_description: Antes de poder associar contas Mercury, precisa de configurar o seu token de API Mercury.
       setup_steps_title: "Passos de configuração:"
-      setup_step_1_html: "Aceda a <strong>Definições > Fornecedores</strong>"
+      setup_step_1_html: "Aceda a <strong>Definições > Serviços</strong>"
       setup_step_2_html: "Encontre a secção <strong>Mercury</strong>"
       setup_step_3: Introduza o seu token de API Mercury
       setup_step_4: Volte aqui para associar as suas contas
-      go_to_provider_settings: Aceder às definições do fornecedor
+      go_to_provider_settings: Aceder às definições do serviço
     create:
       success: Ligação Mercury criada com sucesso
     destroy:
@@ -45,7 +45,7 @@ pt-PT:
         other: "Não é possível associar %{count} contas com nomes em branco"
       link_failed: Falha ao associar contas
       no_accounts_selected: Selecione pelo menos uma conta
-      no_api_token: Token de API Mercury não encontrado. Configure-o nas Definições do fornecedor.
+      no_api_token: Token de API Mercury não encontrado. Configure-o nas Definições do serviço.
       partial_invalid: "Associadas com sucesso %{created_count} conta(s), %{already_linked_count} já estavam associadas, %{invalid_count} conta(s) tinham nomes inválidos"
       partial_success: "Associadas com sucesso %{created_count} conta(s). %{already_linked_count} conta(s) já estavam associadas: %{already_linked_names}"
       select_connection: Escolha uma ligação Mercury antes de associar contas.
@@ -104,12 +104,12 @@ pt-PT:
       link_accounts: Associar contas selecionadas
       no_accounts_found: Não foram encontradas contas. Verifique a configuração do seu token de API.
       no_api_token: O token de API do Mercury não está configurado. Configure-o nas Definições.
-      no_credentials_configured: Configure primeiro o seu token de API Mercury nas Definições do fornecedor.
+      no_credentials_configured: Configure primeiro o seu token de API Mercury nas Definições do serviço.
       no_name_placeholder: "(Sem nome)"
-      select_connection: Escolha uma ligação Mercury nas Definições do fornecedor.
+      select_connection: Escolha uma ligação Mercury nas Definições do serviço.
       title: Selecionar contas Mercury
     select_existing_account:
-      account_already_linked: Esta conta já está associada a um fornecedor
+      account_already_linked: Esta conta já está associada a um serviço
       all_accounts_already_linked: Todas as contas Mercury já estão associadas
       api_error: "Erro de API: %{message}"
       cancel: Cancelar
@@ -119,18 +119,18 @@ pt-PT:
       no_account_specified: Nenhuma conta especificada
       no_accounts_found: Não foram encontradas contas Mercury. Verifique a configuração do seu token de API.
       no_api_token: O token de API do Mercury não está configurado. Configure-o nas Definições.
-      no_credentials_configured: Configure primeiro o seu token de API Mercury nas Definições do fornecedor.
+      no_credentials_configured: Configure primeiro o seu token de API Mercury nas Definições do serviço.
       no_name_placeholder: "(Sem nome)"
-      select_connection: Escolha uma ligação Mercury nas Definições do fornecedor.
+      select_connection: Escolha uma ligação Mercury nas Definições do serviço.
       title: "Associar %{account_name} com Mercury"
     link_existing_account:
-      account_already_linked: Esta conta já está associada a um fornecedor
+      account_already_linked: Esta conta já está associada a um serviço
       api_error: "Erro de API: %{message}"
       invalid_account_name: Não é possível associar uma conta com nome em branco
       mercury_account_already_linked: Esta conta Mercury já está associada a outra conta
       mercury_account_not_found: Conta Mercury não encontrada
       missing_parameters: Parâmetros obrigatórios em falta
-      no_api_token: Token de API Mercury não encontrado. Configure-o nas Definições do fornecedor.
+      no_api_token: Token de API Mercury não encontrado. Configure-o nas Definições do serviço.
       select_connection: Escolha uma ligação Mercury antes de associar contas.
       success: "%{account_name} associada com sucesso ao Mercury"
     setup_accounts:
@@ -204,5 +204,5 @@ pt-PT:
     mercury_item_selection_error_payload:
       select_connection: Escolha uma ligação Mercury antes de carregar as contas.
     render_mercury_item_selection_failure:
-      select_connection: Escolha uma ligação Mercury nas Definições do fornecedor.
-      no_credentials_configured: Configure primeiro o seu token de API Mercury nas Definições do fornecedor.
+      select_connection: Escolha uma ligação Mercury nas Definições do serviço.
+      no_credentials_configured: Configure primeiro o seu token de API Mercury nas Definições do serviço.

@@ -55,7 +55,7 @@ pt-PT:
       delete_subtitle: Esta ação não pode ser anulada
       delete_title: Eliminar Negociação
       details: Detalhes
-      provider_disabled_warning: "Atualizações de preço suspensas — o fornecedor %{provider} está desativado. Reative-o nas Definições ou remapeie a posição para outro fornecedor."
+      provider_disabled_warning: "Atualizações de preço suspensas — o serviço %{provider} está desativado. Reative-o nas Definições ou remapeie a posição para outro serviço."
       exclude_subtitle: Esta negociação não será incluída nos relatórios e cálculos
       exclude_title: Excluir das análises
       no_category: Sem categoria

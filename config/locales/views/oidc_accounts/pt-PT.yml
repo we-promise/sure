@@ -29,7 +29,7 @@ pt-PT:
       title: Concluir a Sua Conta
       heading: Criar a Sua Conta
       description: Confirme os seus dados para concluir a criação da conta com a sua identidade %{provider}.
-      email_label: E-mail (do fornecedor SSO)
+      email_label: E-mail (do serviço SSO)
       first_name_label: Primeiro Nome
       first_name_placeholder: Introduza o seu primeiro nome
       last_name_label: Apelido

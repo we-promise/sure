@@ -64,7 +64,7 @@ pt-PT:
       title: Associar contas Akahu
       description: Escolha as contas Akahu a adicionar.
       no_accounts_found: Não foram encontradas contas Akahu por associar.
-      no_credentials_configured: Configure a Akahu nas definições do fornecedor primeiro.
+      no_credentials_configured: Configure a Akahu nas definições do serviço primeiro.
       cancel: Cancelar
       link_accounts: Associar contas
     link_accounts:
@@ -72,20 +72,20 @@ pt-PT:
         one: Associada 1 conta Akahu.
         other: "Associadas %{count} contas Akahu."
       no_accounts_selected: Selecione pelo menos uma conta.
-      no_credentials_configured: Configure a Akahu nas definições do fornecedor primeiro.
+      no_credentials_configured: Configure a Akahu nas definições do serviço primeiro.
       unsupported_account_type: A Akahu não suporta esse tipo de conta.
       link_failed: Não foi associada nenhuma conta.
     select_existing_account:
       title: "Associar conta Akahu a %{account_name}"
       description: Escolha uma conta Akahu por associar para ligar a esta conta.
       no_accounts_found: Não foram encontradas contas Akahu por associar.
-      no_credentials_configured: Configure a Akahu nas definições do fornecedor primeiro.
-      account_already_linked: Esta conta já está associada a um fornecedor.
+      no_credentials_configured: Configure a Akahu nas definições do serviço primeiro.
+      account_already_linked: Esta conta já está associada a um serviço.
       cancel: Cancelar
       link_account: Associar conta
     link_existing_account:
       success: "Conta Akahu associada a %{account_name}."
-      account_already_linked: Esta conta já está associada a um fornecedor.
+      account_already_linked: Esta conta já está associada a um serviço.
       akahu_account_already_linked: Esta conta Akahu já está associada.
     setup_accounts:
       title: Configurar contas Akahu

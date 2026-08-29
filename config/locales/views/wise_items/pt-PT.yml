@@ -131,7 +131,7 @@ pt-PT:
       title: Selecionar Saldo da Wise
       description: Selecione o saldo em moeda da Wise que pretende associar à sua conta %{product_name}.
       no_accounts_found: Todos os saldos da Wise já estão associados a contas Sure.
-      no_connection: Não foi encontrada nenhuma ligação à Wise. Associe a Wise nas Definições do Fornecedor primeiro.
+      no_connection: Não foi encontrada nenhuma ligação à Wise. Associe a Wise nas Definições do Serviço primeiro.
       link_account: Associar saldo
       cancel: Cancelar
     select_existing_account:

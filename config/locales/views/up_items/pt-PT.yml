@@ -54,7 +54,7 @@ pt-PT:
       title: Associar contas Up
       description: Escolha as contas Up a adicionar.
       no_accounts_found: Não foram encontradas contas Up por associar.
-      no_credentials_configured: Configure a Up nas definições do fornecedor primeiro.
+      no_credentials_configured: Configure a Up nas definições do serviço primeiro.
       cancel: Cancelar
       link_accounts: Associar contas
     link_accounts:
@@ -62,20 +62,20 @@ pt-PT:
         one: Associada 1 conta Up.
         other: "Associadas %{count} contas Up."
       no_accounts_selected: Selecione pelo menos uma conta.
-      no_credentials_configured: Configure a Up nas definições do fornecedor primeiro.
+      no_credentials_configured: Configure a Up nas definições do serviço primeiro.
       unsupported_account_type: A Up não suporta esse tipo de conta.
       link_failed: Não foi associada nenhuma conta.
     select_existing_account:
       title: "Associar conta Up a %{account_name}"
       description: Escolha uma conta Up por associar para ligar a esta conta.
       no_accounts_found: Não foram encontradas contas Up por associar.
-      no_credentials_configured: Configure a Up nas definições do fornecedor primeiro.
-      account_already_linked: Esta conta já está associada a um fornecedor.
+      no_credentials_configured: Configure a Up nas definições do serviço primeiro.
+      account_already_linked: Esta conta já está associada a um serviço.
       cancel: Cancelar
       link_account: Associar conta
     link_existing_account:
       success: "Conta Up associada a %{account_name}."
-      account_already_linked: Esta conta já está associada a um fornecedor.
+      account_already_linked: Esta conta já está associada a um serviço.
       up_account_already_linked: Esta conta Up já está associada.
       no_account_selected: Selecione uma conta Up para associar.
     setup_accounts:

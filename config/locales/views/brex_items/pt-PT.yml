@@ -40,7 +40,7 @@ pt-PT:
       expired_credentials: Gere um novo token de API na Brex.
       expired_credentials_label: "Credenciais expiradas:"
       heading: Não é possível ligar à Brex
-      invalid_token: Verifique o seu token de API nas Definições do Fornecedor.
+      invalid_token: Verifique o seu token de API nas Definições do Serviço.
       invalid_token_label: "Token de API inválido:"
       network: Verifique a sua ligação à internet.
       network_label: "Problema de rede:"
@@ -48,7 +48,7 @@ pt-PT:
       permissions_label: "Permissões insuficientes:"
       service: A API da Brex pode estar temporariamente indisponível.
       service_label: "Serviço indisponível:"
-      settings_link: Verificar Definições do Fornecedor
+      settings_link: Verificar Definições do Serviço
       title: Erro de ligação com a Brex
     errors:
       unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
@@ -68,7 +68,7 @@ pt-PT:
       invalid_account_type: Tipo de conta da Brex não suportado
       link_failed: Não foi possível ligar as contas
       no_accounts_selected: Selecione pelo menos uma conta
-      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Serviço.
       partial_invalid: "%{created_count} conta(s) ligada(s) com sucesso, %{already_linked_count} conta(s) já estavam ligadas, %{invalid_count} conta(s) tinham nomes inválidos"
       partial_success: "%{created_count} conta(s) ligada(s) com sucesso. %{already_linked_count} conta(s) já estavam ligadas: %{already_linked_names}"
       select_connection: Escolha uma ligação da Brex antes de ligar contas.
@@ -104,7 +104,7 @@ pt-PT:
       disconnect_confirm: "Desligar %{name}?"
       encryption_warning:
         title: A encriptação da base de dados não está configurada
-        message: Configure as chaves de encriptação do Active Record antes de adicionar tokens da Brex em produção. Sem chaves de encriptação, o Sure armazena as credenciais e os instantâneos do fornecedor Brex em texto não encriptado, tal como outros registos de fornecedores.
+        message: Configure as chaves de encriptação do Active Record antes de adicionar tokens da Brex em produção. Sem chaves de encriptação, o Sure armazena as credenciais e os instantâneos do serviço Brex em texto não encriptado, tal como outros registos de serviços.
       instructions:
         copy_token_html: "Copie o token e adicione-o abaixo como uma ligação nomeada. O Sure armazena o token apenas para sincronizar esta família."
         create_token: "Crie um token de API com estes âmbitos de só leitura: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
@@ -132,14 +132,14 @@ pt-PT:
       description: Selecione as contas que pretende ligar à sua conta do %{product_name}.
       link_accounts: Ligar contas selecionadas
       no_accounts_found: Nenhuma conta encontrada. Verifique a configuração do seu token de API.
-      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
-      no_credentials_configured: Configure primeiro o seu token de API da Brex nas Definições do Fornecedor.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Serviço.
+      no_credentials_configured: Configure primeiro o seu token de API da Brex nas Definições do Serviço.
       no_name_placeholder: "(Sem nome)"
-      select_connection: Escolha uma ligação da Brex nas Definições do Fornecedor.
+      select_connection: Escolha uma ligação da Brex nas Definições do Serviço.
       title: Selecionar contas da Brex
       unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
     select_existing_account:
-      account_already_linked: Esta conta já está ligada a um fornecedor
+      account_already_linked: Esta conta já está ligada a um serviço
       all_accounts_already_linked: Todas as contas da Brex já estão ligadas
       api_error: "Erro da API: %{message}"
       cancel: Cancelar
@@ -148,21 +148,21 @@ pt-PT:
       link_account: Ligar conta
       no_account_specified: Nenhuma conta especificada
       no_accounts_found: Nenhuma conta da Brex encontrada. Verifique a configuração do seu token de API.
-      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
-      no_credentials_configured: Configure primeiro o seu token de API da Brex nas Definições do Fornecedor.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Serviço.
+      no_credentials_configured: Configure primeiro o seu token de API da Brex nas Definições do Serviço.
       no_name_placeholder: "(Sem nome)"
-      select_connection: Escolha uma ligação da Brex nas Definições do Fornecedor.
+      select_connection: Escolha uma ligação da Brex nas Definições do Serviço.
       title: "Ligar %{account_name} à Brex"
       unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
     setup_required:
       description: Antes de poder ligar contas da Brex, precisa de configurar o seu token de API da Brex.
       heading: Token de API não configurado
-      settings_link: Ir para Definições do Fornecedor
+      settings_link: Ir para Definições do Serviço
       setup_steps: "Etapas de configuração:"
       steps:
         enter_token: Introduza o seu token de API da Brex
         find_section_html: "Encontre a secção <strong>Brex</strong>"
-        open_settings_html: "Aceda a <strong>Definições > Fornecedores</strong>"
+        open_settings_html: "Aceda a <strong>Definições > Serviços</strong>"
         return_to_link: Volte aqui para ligar as suas contas
       title: Configuração da Brex necessária
     subtype_select:
@@ -170,12 +170,12 @@ pt-PT:
         subtype: Selecione o subtipo
         type: Selecione o tipo
     link_existing_account:
-      account_already_linked: Esta conta já está ligada a um fornecedor
+      account_already_linked: Esta conta já está ligada a um serviço
       api_error: "Erro da API: %{message}"
       invalid_account_name: Não é possível ligar uma conta com o nome em branco
       missing_parameters: Parâmetros obrigatórios em falta
       no_account_specified: Nenhuma conta especificada
-      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Serviço.
       provider_account_already_linked: Esta conta da Brex já está ligada a outra conta
       provider_account_not_found: Conta da Brex não encontrada
       select_connection: Escolha uma ligação da Brex antes de ligar contas.
@@ -186,7 +186,7 @@ pt-PT:
       api_error: "Erro da API: %{message}"
       fetch_failed: "Não foi possível obter as contas"
       no_accounts_to_setup: "Nenhuma conta para configurar"
-      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Fornecedor.
+      no_api_token: Token de API da Brex não encontrado. Configure-o nas Definições do Serviço.
       account_types:
         skip: Ignorar esta conta
         depository: Conta à ordem ou poupança

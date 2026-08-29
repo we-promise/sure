@@ -107,7 +107,7 @@ pt-PT:
       payee: "Beneficiário"
       description: "Descrição"
       memo: "Memorando"
-      provider_extras: "Extras do fornecedor"
+      provider_extras: "Extras do serviço"
       transfer_or_debt_payment: "Transferência ou Pagamento de Dívida?"
       open_matcher: "Abrir correspondente"
       convert: "Converter"
