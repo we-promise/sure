@@ -86,7 +86,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(@account)
 
     assert_response :success
-    assert_select "[data-controller='tooltip']"
+    assert_select "[data-controller='DS--tooltip']"
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do

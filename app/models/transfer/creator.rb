@@ -40,8 +40,7 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    source_account.sync_later
-    destination_account.sync_later
+    transfer.sync_account_later
 
     transfer
   end
