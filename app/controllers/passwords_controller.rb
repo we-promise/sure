@@ -4,6 +4,7 @@ class PasswordsController < ApplicationController
 
   def update
     if Current.user.update(password_params)
+      SecurityAuditLog.log_password_changed!(user: Current.user, request: request)
       redirect_to root_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity

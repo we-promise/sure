@@ -38,6 +38,7 @@ class PasswordResetsController < ApplicationController
     end
 
     if @user.update(password_params)
+      SecurityAuditLog.log_password_changed!(user: @user, request: request)
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity

@@ -48,12 +48,16 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_equal 8, rendered_codes.length
     assert rendered_codes.all? { |code| code.match?(/\A[0-9a-f]{16}\z/) }
     assert_empty rendered_codes & @user.otp_backup_codes
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_enabled")
   end
 
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid" }
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid" }
+    end
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
@@ -292,6 +296,8 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
     assert_empty @user.webauthn_credentials
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
   end
 
   private

@@ -56,6 +56,9 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     existing.reload
     refute existing.revoked?
     assert_includes new_key.scopes, "read_write"
+
+    log = SecurityAuditLog.where(user: @user, event_type: "api_key_created").last
+    assert_equal new_key.id, log.metadata["api_key_id"]
   end
 
   test "create rejects blank name" do
@@ -166,6 +169,25 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     key2.reload
     assert key1.revoked?
     refute key2.revoked?
+
+    log = SecurityAuditLog.where(user: @user, event_type: "api_key_revoked").last
+    assert_equal key1.id, log.metadata["api_key_id"]
+  end
+
+  test "destroy of a nonexistent key does not write an audit log" do
+    other_user = users(:family_member)
+    other_user.api_keys.destroy_all
+    other_key = ApiKey.create!(
+      user: other_user,
+      name: "Other User Key",
+      display_key: "other_user_key_456",
+      scopes: [ "read" ]
+    )
+
+    assert_no_difference "SecurityAuditLog.count" do
+      delete settings_api_key_path(other_key)
+    end
+    assert_response :not_found
   end
 
   test "destroy cannot revoke demo monitoring key" do
