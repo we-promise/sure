@@ -101,6 +101,13 @@
     <%= render "unattributed_outflows", goal: @goal, outflows: @unattributed_outflows %>
   <% end %>
 
+  <%# Right below the question it answers, not after the ring, the projection
+      chart and funding accounts — on a phone that gap was three screens of
+      scrolling between "was this spent on X?" and "here is what X paid for". %>
+  <% if @consumed_entries.any? || @goal.any_consumption? %>
+    <%= render "consumed_outflows", goal: @goal, entries: @consumed_entries %>
+  <% end %>
+
   <% if @goal.paused? %>
     <%= render DS::Alert.new(variant: "info", title: t("goals.show.paused_banner.title")) do %>
       <p class="text-secondary"><%= t("goals.show.paused_banner.body") %></p>
@@ -176,10 +183,6 @@
     <%= render DS::Card.new do %>
       <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal) %>
     <% end %>
-  <% end %>
-
-  <% if @consumed_entries.any? || @goal.any_consumption? %>
-    <%= render "consumed_outflows", goal: @goal, entries: @consumed_entries %>
   <% end %>
 
   <% if @goal.notes.present? %>
