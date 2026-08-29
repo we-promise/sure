@@ -411,8 +411,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       provider: :openai,
       endpoint: endpoint,
       access_token: "token",
-      model: "tools-model",
-      openai_compatible: true
+      model: "tools-model"
     )
 
     assert result.passing?
@@ -433,8 +432,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       provider: :openai,
       endpoint: endpoint,
       access_token: "token",
-      model: "chat-only-model",
-      openai_compatible: true
+      model: "chat-only-model"
     )
 
     assert result.failing?
@@ -455,8 +453,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       provider: :openai,
       endpoint: endpoint,
       access_token: "token",
-      model: "tngtech/deepseek-r1t2-chimera:free",
-      openai_compatible: true
+      model: "tngtech/deepseek-r1t2-chimera:free"
     )
 
     assert result.failing?
@@ -464,7 +461,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal 404, result.http_status
   end
 
-  test "function-calling probe uses the responses endpoint for hosted OpenAI" do
+  test "function-calling probe uses the responses endpoint when the assistant would" do
     request = stub_request(:post, "https://api.openai.example.test/v1/responses")
               .with { |req|
                 tool = JSON.parse(req.body).dig("tools", 0)
@@ -481,7 +478,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       provider: :openai,
       endpoint: "https://api.openai.example.test/v1",
       access_token: "token",
-      model: "gpt-4.1"
+      model: "gpt-4.1",
+      use_responses_endpoint: true
     )
 
     assert result.passing?

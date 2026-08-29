@@ -4,6 +4,7 @@ class AiHealthTest < ActiveSupport::TestCase
   AI_ENVIRONMENT = %w[
     OPENAI_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_MODEL
     ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY VECTOR_STORE_PROVIDER
+    OPENAI_SUPPORTS_RESPONSES_ENDPOINT
   ].index_with(nil).freeze
 
   setup do
@@ -42,10 +43,25 @@ class AiHealthTest < ActiveSupport::TestCase
     end
   end
 
-  test "a rejected tools request on a live endpoint reads as missing function-calling support" do
+  test "a refused tools request on a live endpoint reads as missing function-calling support" do
     health = probed_health(llm: :passing, function_calling: failing_result(:request_failed, http_status: 404))
 
     assert_equal :unsupported, health.function_calling_status
+  end
+
+  test "a service that fell over is not read as a model without function calling" do
+    [
+      failing_result(:request_failed, http_status: 429),
+      failing_result(:request_failed, http_status: 500),
+      failing_result(:request_failed, http_status: 401),
+      failing_result(:request_failed),
+      failing_result(:invalid_response)
+    ].each do |probe_result|
+      health = probed_health(llm: :passing, function_calling: probe_result)
+
+      assert_equal :failing, health.function_calling_status,
+        "#{probe_result.failure_code} #{probe_result.http_status} should not blame the model"
+    end
   end
 
   test "a model that answers without calling the tool is reported separately" do
@@ -60,6 +76,29 @@ class AiHealthTest < ActiveSupport::TestCase
 
     assert_equal :failing, down.function_calling_status
     assert_equal :failing, slow.function_calling_status
+  end
+
+  test "function calling is probed through the API the assistant would use" do
+    {
+      { "OPENAI_URI_BASE" => nil } => true,
+      { "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1" } => false,
+      { "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "true" } => true,
+      { "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "false" } => false
+    }.each do |environment, use_responses_endpoint|
+      AiHealth::Probe.any_instance.stubs(:llm).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(result(:passing))
+      AiHealth::Probe.any_instance.expects(:function_calling)
+                     .with(has_entry(use_responses_endpoint: use_responses_endpoint))
+                     .returns(result(:passing))
+
+      ClimateControl.modify(
+        AI_ENVIRONMENT.merge(
+          "OPENAI_ACCESS_TOKEN" => "test-token",
+          "OPENAI_MODEL" => "test-model"
+        ).merge(environment)
+      ) { AiHealth.new }
+    end
   end
 
   test "function calling is only checked alongside the other live probes" do

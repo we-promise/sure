@@ -107,22 +107,24 @@ class AiHealth
     # a model that rejects or ignores the `tools` parameter cannot power chat
     # even when the plain check above passes. Providers report this
     # inconsistently — OpenRouter answers a bare 404 — so ask the configured
-    # model for one trivial tool call and report what came back.
-    def function_calling(provider:, endpoint:, access_token:, model:, openai_compatible: false)
+    # model for one trivial tool call and report what came back. The caller
+    # picks the OpenAI API, because `Provider::Openai#supports_responses_endpoint?`
+    # can be overridden: probing the route chat does not take proves nothing.
+    def function_calling(provider:, endpoint:, access_token:, model:, use_responses_endpoint: false)
       run(
         component: "function_calling",
         provider_key: provider,
         endpoint: endpoint,
         model: model,
         credential: access_token,
-        verification: :tool_call
+        verification: use_responses_endpoint ? :responses_tool_call : :chat_tool_call
       ) do
         tool_called = case provider
         when :openai
-          if openai_compatible
-            openai_chat_tool_call?(access_token:, endpoint:, model:)
-          else
+          if use_responses_endpoint
             openai_responses_tool_call?(access_token:, endpoint:, model:)
+          else
+            openai_chat_tool_call?(access_token:, endpoint:, model:)
           end
         when :anthropic
           anthropic_tool_call?(access_token:, endpoint:, model:)

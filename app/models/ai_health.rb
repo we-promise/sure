@@ -7,6 +7,9 @@ require "uri"
 class AiHealth
   OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1".freeze
   ANTHROPIC_DEFAULT_ENDPOINT = "https://api.anthropic.com".freeze
+  # 4xx statuses that mean "not now" or "not you" rather than "not this
+  # request": a retry or a fixed credential clears them.
+  TRANSIENT_HTTP_STATUSES = [ 401, 403, 408, 429 ].freeze
   OPENAI_COMPATIBLE_PROVIDER_DOMAINS = {
     openrouter: %w[openrouter.ai],
     together: %w[together.ai together.xyz],
@@ -57,7 +60,7 @@ class AiHealth
     return :not_checked unless run_probes?
     return :supported if function_calling_probe.passing?
     return :not_used if function_calling_probe.failure_code == :no_tool_call
-    return :unsupported if llm_probe.passing? && function_calling_probe.failure_code != :timeout
+    return :unsupported if llm_probe.passing? && tools_request_refused?
 
     :failing
   end
@@ -144,6 +147,8 @@ class AiHealth
       @llm_model = effective_model(provider_for_details)
       @llm_endpoint = endpoint(provider_for_details)
       @llm_request_timeout = request_timeout(provider_for_details)
+      @openai_uses_responses_endpoint = @effective_llm_protocol == :openai &&
+        safely(false) { @llm_provider.supports_responses_endpoint? }
       @pdf_processing_capable = safely(false) do
         @llm_provider&.supports_pdf_processing?(model: llm_model)
       end
@@ -195,7 +200,7 @@ class AiHealth
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,
           model: llm_model,
-          openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+          use_responses_endpoint: @openai_uses_responses_endpoint
         )
         if @pdf_text_extraction_capable
           @pdf_text_extraction_probe = probe.pdf_text_extraction(
@@ -238,6 +243,16 @@ class AiHealth
 
     def run_probes?
       @run_probes
+    end
+
+    # A refusal is a status the service chose to answer with, not one it fell
+    # over on: rate limits, server errors, dropped connections, and unreadable
+    # bodies say nothing about tool support, and blaming the model for them
+    # would send the operator hunting for a new one over a transient blip.
+    def tools_request_refused?
+      status = function_calling_probe.http_status.to_i
+
+      status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
     end
 
     def pdf_probe_status(probe, capable:)
