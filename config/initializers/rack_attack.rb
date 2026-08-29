@@ -58,7 +58,25 @@ class Rack::Attack
   # oidc_account/create_link and api/v1/auth/sso_link are password checks
   # gating account linking, not sign-in — easy to miss by grepping routes.rb
   # for "session"/"login"/"password" alone.
-  credential_guess_email = ->(request) { request.params["email"].to_s.downcase.strip.presence }
+  # request.params only exposes query/form parameters — Rack::Attack runs
+  # ahead of Rails' JSON parameter parsing, so JSON API clients (the
+  # documented format for api/v1/auth/login and .../sso_link) would otherwise
+  # bypass the email throttle entirely. Peek at the JSON body without
+  # consuming it, so the controller still gets a fresh, unread input stream.
+  json_request_email = ->(request) do
+    next nil unless request.media_type == "application/json"
+
+    body = request.body.read
+    request.body.rewind
+    JSON.parse(body)["email"]
+  rescue JSON::ParserError, TypeError
+    nil
+  end
+
+  credential_guess_email = ->(request) {
+    email = request.params["email"].presence || json_request_email.call(request)
+    email.to_s.downcase.strip.presence
+  }
 
   throttle("logins/ip", limit: 10, period: 1.minute) do |request|
     request.ip if request.post? && request.path == "/sessions"

@@ -94,15 +94,43 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil api_login_block.call(sso_link_request)
   end
 
+  test "api login and sso-link email throttles discriminate JSON bodies, the documented mobile format" do
+    api_login_email_block = Rack::Attack.throttles["api_login/email"].block
+    api_sso_link_email_block = Rack::Attack.throttles["api_sso_link/email"].block
+
+    api_login_request = throttle_request("/api/v1/auth/login", method: "POST",
+      json_body: { email: " User@Example.com ", password: "secret" })
+    assert_equal "user@example.com", api_login_email_block.call(api_login_request)
+
+    sso_link_request = throttle_request("/api/v1/auth/sso_link", method: "POST",
+      json_body: { email: " User@Example.com ", password: "secret" })
+    assert_equal "user@example.com", api_sso_link_email_block.call(sso_link_request)
+
+    # The controller must still be able to read the body after Rack::Attack
+    # inspected it — this is what proves the peek rewinds rather than
+    # consuming the input stream.
+    assert_equal({ "email" => " User@Example.com ", "password" => "secret" }, JSON.parse(api_login_request.body.read))
+
+    malformed_request = throttle_request("/api/v1/auth/login", method: "POST", json_body_raw: "not json")
+    assert_nil api_login_email_block.call(malformed_request)
+  end
+
   private
 
-    def throttle_request(path, method: "GET", params: {}, session: {})
+    def throttle_request(path, method: "GET", params: {}, session: {}, json_body: nil, json_body_raw: nil)
       # Rack::MockRequest.env_for doesn't set REMOTE_ADDR, so #ip is nil
       # unless set explicitly — asserting against a real value here (rather
       # than comparing to request.ip, which could trivially be nil on both
       # sides) is what actually proves the ip-based discriminator extracts
       # something.
-      env = Rack::MockRequest.env_for(path, method: method, params: params, "REMOTE_ADDR" => "203.0.113.5")
+      opts = { method: method, params: params, "REMOTE_ADDR" => "203.0.113.5" }
+
+      if json_body || json_body_raw
+        opts[:input] = json_body_raw || json_body.to_json
+        opts["CONTENT_TYPE"] = "application/json"
+      end
+
+      env = Rack::MockRequest.env_for(path, opts)
       env["rack.session"] = session
       Rack::Attack::Request.new(env)
     end
