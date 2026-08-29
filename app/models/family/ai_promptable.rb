@@ -49,7 +49,7 @@ module Family::AiPromptable
   end
 
   def ai_prompt_customized?(key)
-    ai_prompt_overrides[key.to_s].present?
+    ai_prompt(key).present?
   end
 
   private

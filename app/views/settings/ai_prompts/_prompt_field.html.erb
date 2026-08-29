@@ -1,36 +1,63 @@
-<%# One editable prompt. An empty textarea means the family runs the built-in
-    default, which stays visible in the disclosure below for reference. %>
-<div class="space-y-2">
-  <%= form.text_area :"ai_prompt_#{key}",
-                     label: label,
-                     rows: 12,
-                     placeholder: t(".placeholder"),
-                     spellcheck: "false",
-                     class: "form-field__input font-mono text-xs" %>
-
-  <% if warning.present? %>
-    <%= render DS::Alert.new(message: warning, variant: :warning) %>
+<%# locals: form:, family:, prompts: [{ key:, label: (single-prompt only) }], textarea_id:
+    Shared textarea for provider prompts. Pre-fills with the family override
+    or built-in default. Saving an unedited default acts as a reset in the controller.
+    Provider labels are derived from the key suffix (_openai / _anthropic). %>
+<% multi = prompts.size > 1 %>
+<% initial = prompts.first %>
+<% provider_label = ->(key) { key.to_s.end_with?("openai") ? t(".provider_openai") : t(".provider_anthropic") } %>
+<% reset_confirm = { title: t(".reset_confirm_title"), body: t(".reset_confirm_body") }.to_json %>
+<div class="space-y-2"
+     data-controller="ai-prompt-editor"
+     data-action="dropdown:select->ai-prompt-editor#change"
+     data-ai-prompt-editor-reset-confirm-value="<%= reset_confirm %>"
+     data-ai-prompt-editor-status-custom-value="<%= t(".status_custom") %>"
+     data-ai-prompt-editor-status-default-value="<%= t(".status_default") %>">
+  <% prompts.each do |prompt| %>
+    <%= form.hidden_field :"ai_prompt_#{prompt[:key]}",
+                          value: family.ai_prompt(prompt[:key]),
+                          data: { "ai-prompt-editor-target": "prompt",
+                                  key: prompt[:key],
+                                  default: family.ai_prompt_default(prompt[:key]) } %>
   <% end %>
 
-  <div class="flex items-center justify-between gap-3">
-    <p class="text-xs text-secondary">
-      <%= family.ai_prompt_customized?(key) ? t(".status_custom") : t(".status_default") %>
-    </p>
-
-    <% if family.ai_prompt_customized?(key) %>
-      <%# A link, not a DS::Button: `button_to` would nest a <form> inside the
-          surrounding form. Turbo turns this into the PATCH that clears the field. %>
-      <%= render DS::Link.new(
-        text: t(".reset"),
-        href: settings_ai_prompts_path(family: { "ai_prompt_#{key}" => "" }),
-        data: { turbo_method: :patch, turbo_confirm: t(".reset_confirm") }
-      ) %>
+  <div class="flex items-end <%= multi ? "justify-between gap-3" : "justify-end" %>">
+    <% if multi %>
+      <div class="w-48 sm:w-56">
+        <%= render DS::Select.new(
+          form: form,
+          method: :"#{textarea_id}_provider",
+          items: prompts.map { |prompt| { value: prompt[:key].to_s, label: provider_label.call(prompt[:key]) } },
+          selected: initial[:key].to_s,
+          label: t(".provider_label"),
+          html_options: { data: { "ai-prompt-editor-target": "provider" } }
+        ) %>
+      </div>
     <% end %>
+
+    <%= render DS::Button.new(
+      text: t(".reset"),
+      variant: :primary,
+      disabled: !family.ai_prompt_customized?(initial[:key]),
+      data: {
+        "ai-prompt-editor-target": "reset",
+        action: "ai-prompt-editor#reset"
+      }
+    ) %>
   </div>
 
-  <%= render DS::Disclosure.new(title: t(".view_default")) do %>
-    <div class="px-3 py-2 bg-surface border border-primary rounded-lg">
-      <pre class="whitespace-pre-wrap text-xs font-mono text-primary"><%= family.ai_prompt_default(key) %></pre>
+  <div class="form-field">
+    <div class="form-field__body">
+      <label for="<%= textarea_id %>" class="form-field__label"><%= multi ? t(".prompt_label") : initial[:label] %></label>
+      <textarea id="<%= textarea_id %>"
+                rows="12"
+                spellcheck="false"
+                class="form-field__input font-mono text-xs"
+                data-ai-prompt-editor-target="textarea"
+                data-action="input->ai-prompt-editor#update"><%= family.ai_prompt(initial[:key]) || family.ai_prompt_default(initial[:key]) %></textarea>
     </div>
-  <% end %>
+  </div>
+
+  <p class="text-xs text-secondary mt-1" data-ai-prompt-editor-target="status">
+    <%= family.ai_prompt_customized?(initial[:key]) ? t(".status_custom") : t(".status_default") %>
+  </p>
 </div>
