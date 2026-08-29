@@ -43,6 +43,75 @@ class Rack::Attack
     request.ip if request.path.start_with?("/admin/")
   end
 
+  # --- Credential-guessing surfaces (security audit #1087, finding H4) ---
+  # Every endpoint in the app that checks a password, TOTP code, or backup
+  # code against a stored value (enumerated by grepping for
+  # User.authenticate_by/#authenticate/#verify_otp? across app/controllers —
+  # #verify_otp? covers both TOTP and backup codes internally, so there's no
+  # separate backup-code endpoint to add). Each is throttled by BOTH ip and
+  # a credential-identifying discriminator (email, or the MFA step-up's
+  # session-bound user id) so an attacker can't bypass by rotating IPs
+  # against one target, nor by spraying many emails from one IP — either
+  # throttle firing blocks the request, since Rack::Attack requires ALL
+  # matching throttles to pass.
+  #
+  # oidc_account/create_link and api/v1/auth/sso_link are password checks
+  # gating account linking, not sign-in — easy to miss by grepping routes.rb
+  # for "session"/"login"/"password" alone.
+  credential_guess_email = ->(request) { request.params["email"].to_s.downcase.strip.presence }
+
+  throttle("logins/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/sessions"
+  end
+
+  throttle("logins/email", limit: 10, period: 1.minute) do |request|
+    credential_guess_email.call(request) if request.post? && request.path == "/sessions"
+  end
+
+  # MFA step-up has no email param — the pending user is looked up from
+  # session[:mfa_user_id], so that's the discriminator instead.
+  throttle("mfa/verify/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/mfa/verify"
+  end
+
+  throttle("mfa/verify/user", limit: 10, period: 1.minute) do |request|
+    if request.post? && request.path == "/mfa/verify"
+      request.session[:mfa_user_id]
+    end
+  end
+
+  throttle("password_resets/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/password_reset"
+  end
+
+  throttle("password_resets/email", limit: 10, period: 1.minute) do |request|
+    credential_guess_email.call(request) if request.post? && request.path == "/password_reset"
+  end
+
+  throttle("oidc_account_link/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/oidc_account/create_link"
+  end
+
+  throttle("oidc_account_link/email", limit: 10, period: 1.minute) do |request|
+    credential_guess_email.call(request) if request.post? && request.path == "/oidc_account/create_link"
+  end
+
+  throttle("api_login/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/api/v1/auth/login"
+  end
+
+  throttle("api_login/email", limit: 10, period: 1.minute) do |request|
+    credential_guess_email.call(request) if request.post? && request.path == "/api/v1/auth/login"
+  end
+
+  throttle("api_sso_link/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && request.path == "/api/v1/auth/sso_link"
+  end
+
+  throttle("api_sso_link/email", limit: 10, period: 1.minute) do |request|
+    credential_guess_email.call(request) if request.post? && request.path == "/api/v1/auth/sso_link"
+  end
+
   # The background jobs console lives under /settings (so its polling GET
   # isn't throttled), but its mutation is destructive and super-admin only —
   # rate limit it independently.
