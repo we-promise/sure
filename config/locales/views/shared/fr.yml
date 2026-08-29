@@ -14,7 +14,7 @@ fr:
     custom_confirm:
       default_body: Ceci n’est pas réversible.
       default_btn_text: Confirmer
-      default_title: Êtes-vous sûr?
+      default_title: Êtes-vous sûr ?
       resource_deletion_title: "Supprimer %{resource} ?"
       resource_deletion_body: "Êtes-vous sûr de vouloir supprimer %{resource} ? Ceci n’est pas réversible."
       resource_deletion_btn_text: "Supprimer %{resource}"
