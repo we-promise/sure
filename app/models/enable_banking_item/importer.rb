@@ -473,6 +473,10 @@ class EnableBankingItem::Importer
 
       all_transactions = all_transactions + tag_as_pending(pending_transactions)
 
+      # Drop the merchant-side twin of each card purchase before content dedup,
+      # so the customer-side row is the one that reaches the snapshot.
+      all_transactions = discard_merchant_card_twins(all_transactions)
+
       # Deduplicate API response: Enable Banking sometimes returns the same logical
       # transaction with different entry_reference IDs in the same response.
       # Remove content-level duplicates before storing. (Issue #954)
@@ -551,6 +555,96 @@ class EnableBankingItem::Importer
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
+    end
+
+    # ISO 20022 bank transaction code families for card payments.
+    CUSTOMER_CARD_CODE = "CCRD".freeze # Customer Card Transactions - the cardholder's view
+    MERCHANT_CARD_CODE = "MCRD".freeze # Merchant Card Transactions - the merchant's view
+
+    # Some ASPSPs book a single card purchase twice: once as PMNT-CCRD-* (the
+    # cardholder's view) and once as PMNT-MCRD-* (the merchant's view). N26 does
+    # this for point-of-sale card payments. Both rows are booked in the same
+    # instant, both carry status BOOK and each gets its own entry_reference, so
+    # the pending->booked reconciliation never fires and the
+    # content dedup below only catches the pairs whose counterparty name happens
+    # to match on both rows - the rest reach the append-only snapshot and are
+    # never removed again.
+    #
+    # Group by the fields both rows report identically and, wherever CCRD and
+    # MCRD rows coexist, discard MCRD rows down to the number of CCRD rows. The
+    # rule is deliberately an accounting one rather than "one row per group": two
+    # identical purchases on the same day arrive as 2 CCRD + 2 MCRD and must keep
+    # both CCRD rows.
+    #
+    # bank_transaction_code only picks the survivor, it never matches on its own:
+    # unpaired MCRD rows (adjustments, MCRD/OTHR) are legitimate movements and
+    # are kept. Two CCRD rows are never collapsed into each other here, which is
+    # what makes this safe for the over-merge reported in #2720.
+    def discard_merchant_card_twins(transactions)
+      groups = Hash.new { |hash, key| hash[key] = [] }
+
+      transactions.each_with_index do |tx, index|
+        tx = tx.with_indifferent_access
+        code = tx.dig(:bank_transaction_code, :code)
+        next unless [ CUSTOMER_CARD_CODE, MERCHANT_CARD_CODE ].include?(code)
+
+        groups[build_card_twin_key(tx)] << [ index, code ]
+      end
+
+      discarded_indexes = Set.new
+
+      groups.each_value do |members|
+        customer_rows = members.count { |(_, code)| code == CUSTOMER_CARD_CODE }
+        next if customer_rows.zero?
+
+        merchant_indexes = members.filter_map { |(index, code)| index if code == MERCHANT_CARD_CODE }
+
+        # Which MCRD rows are discarded when the group holds more of them than
+        # CCRD rows is response order, i.e. arbitrary: the payload carries no
+        # signal that pairs a particular MCRD row with a particular CCRD one.
+        # It only decides which entry_reference and which spelling of the
+        # counterparty the surviving merchant-side row keeps, and both
+        # candidates are equally valid on those counts. The count is what
+        # matters here, not the identity.
+        discarded_indexes.merge(merchant_indexes.first(customer_rows))
+      end
+
+      return transactions if discarded_indexes.empty?
+
+      Rails.logger.info(
+        "EnableBankingItem::Importer - Discarded #{discarded_indexes.size} merchant-side (MCRD) " \
+        "card twin(s) from API response (#{transactions.count} → #{transactions.count - discarded_indexes.size} transactions)"
+      )
+
+      transactions.reject.with_index { |_, index| discarded_indexes.include?(index) }
+    end
+
+    # Grouping key that brings the cardholder's row (CCRD) and the merchant's row
+    # (MCRD) of one card purchase together. It uses only fields that are always
+    # present and that both rows carry identically.
+    #
+    # Whether the row is pending is part of the key, so a booked row is never
+    # discarded in favour of a pending one. The pending->booked reconciliation
+    # above cannot pair a CCRD row with an MCRD row - they carry different
+    # entry_references and different fingerprints - so a pending CCRD row and a
+    # booked MCRD row can otherwise land in the same group, and discarding the
+    # booked row there would leave the purchase represented by a pending row only.
+    #
+    # creditor.name is deliberately excluded: the two rows spell the counterparty
+    # differently (case-only differences, an extra order reference on the
+    # cardholder's row, character substitutions), so including it would leave
+    # genuine pairs unmatched. remittance_information, merchant_category_code and
+    # transaction_id are excluded because the ASPSPs that exhibit this behaviour
+    # do not populate them.
+    def build_card_twin_key(tx)
+      [
+        tx[:booking_date],
+        tx[:value_date],
+        tx.dig(:transaction_amount, :amount),
+        tx.dig(:transaction_amount, :currency),
+        tx[:credit_debit_indicator],
+        tx[:_pending].present?
+      ].map(&:to_s).join("\x1F")
     end
 
     # Deduplicate transactions from the Enable Banking API response.
