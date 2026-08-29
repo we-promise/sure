@@ -598,6 +598,220 @@ class GoalTest < ActiveSupport::TestCase
     assert_not @goal.valid?
   end
 
+  # --- Lot B3a: reserves to maintain ---
+
+  test "a reserve is funded at its floor and depleted below it" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    assert_equal :funded, goal.status
+
+    goal.linked_accounts.first.update!(balance: 4_500)
+    assert_equal :depleted, Goal.find(goal.id).status
+  end
+
+  # `complete` releases the earmark. For a reserve that is the opposite of the
+  # point, so the transition is refused outright rather than hidden in the UI.
+  test "a reserve cannot be completed" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+
+    assert_not goal.may_complete?
+    assert_raises(AASM::InvalidTransition) { goal.complete! }
+    assert_equal "active", goal.reload.state
+    assert_nil goal.completed_amount
+  end
+
+  test "a one_off goal at its target can still be completed" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    goal.update!(kind: "one_off")
+
+    assert goal.may_complete?
+  end
+
+  # monthly_target_amount and pace both derive from target_date, which a
+  # reserve does not have — "save X/month to catch up" would be advice about
+  # a deadline that does not exist.
+  test "a depleted reserve is never behind pace" do
+    goal = reserve_goal(balance: 1_000, target: 6_000)
+
+    assert_equal :depleted, goal.status
+    assert_not goal.behind_pace?
+  end
+
+  # ACTIVE_DISPLAY_STATUS_RANK falls back to 4 for anything unranked, so a
+  # missing :depleted entry would sort a drained reserve dead last.
+  # Named so the alphabetical tie-break works AGAINST the reserve: only the
+  # rank can put it first. Unranked, :depleted would fall back to 4 and land
+  # behind the open-ended goal's 2.
+  test "a depleted reserve sorts ahead of a goal that needs nothing" do
+    drained = reserve_goal(balance: 100, target: 6_000, name: "Zzz drained")
+    open_ended = @family.goals.create!(
+      name: "Aaa open ended", target_amount: 1_000, currency: "USD"
+    ) do |g|
+      g.goal_accounts.build(account: Account.create!(
+        family: @family, accountable: Depository.new,
+        name: "Open Ended Pot", currency: "USD", balance: 900
+      ))
+    end
+
+    sorted = Goal.active_display_sort([ open_ended, drained ])
+
+    assert_equal :depleted, drained.status
+    assert_equal :no_target_date, open_ended.status
+    assert_equal drained.id, sorted.first.id,
+                 "a reserve below its floor must not sort below a goal that needs nothing"
+  end
+
+  # The reserve keeps reserving: a withdrawal creates a shortfall, it does not
+  # release the earmark the way completing a one-off does.
+  test "a withdrawal leaves a reserve's earmark in place" do
+    goal = reserve_goal(balance: 6_000, target: 6_000, allocated: 6_000)
+    account = goal.linked_accounts.first
+
+    assert_equal BigDecimal("6000"), account.goal_earmarked_total
+
+    account.update!(balance: 4_000)
+    account.reload
+
+    assert_equal BigDecimal("6000"), account.goal_earmarked_total,
+                 "a reserve holds its earmark whatever the balance does"
+    assert_equal :depleted, Goal.find(goal.id).status
+    assert_equal BigDecimal("2000"), Goal.find(goal.id).remaining_amount.to_d
+  end
+
+  # --- Lot B3b: a floor expressed in months of expenses ---
+
+  test "months mode is only for a reserve, and needs a number of months" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+
+    goal.target_mode = "months_of_expenses"
+    assert_not goal.valid?, "months mode without target_months must be refused"
+
+    goal.target_months = 6
+    assert goal.valid?, goal.errors.full_messages.to_sentence
+
+    goal.kind = "one_off"
+    assert_not goal.valid?, "a one-off goal has no months-of-expenses floor"
+  end
+
+  test "target_months without months mode is refused" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+    goal.target_months = 6
+
+    assert_not goal.valid?
+  end
+
+  # target_amount stays the source of truth — the aggregates that read it must
+  # keep working with no knowledge of the mode.
+  test "refreshing the floor moves every figure that reads target_amount" do
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!
+
+    refreshed = Goal.find(goal.id)
+    assert_equal BigDecimal("3000"), refreshed.target_amount.to_d
+    assert_equal :funded, refreshed.status
+    assert_equal 100, refreshed.progress_percent
+  end
+
+  # A family with no spending history computes a floor of zero, which would
+  # both break the target_amount > 0 constraint and read as "your reserve is
+  # complete". The figure the user has been saving against stands.
+  test "a zero median leaves the floor untouched" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
+
+    assert_nil goal.refresh_target_from_expenses!
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+  end
+
+  # A reserve created in months mode must be right immediately: waiting for
+  # the 1st would make the feature's first impression its least convincing.
+  test "creating a months-mode reserve computes its floor straight away" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    account = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "Fresh Reserve Pot", currency: "USD", balance: 100
+    )
+
+    goal = @family.goals.create!(
+      name: "Fresh reserve", target_amount: 1, currency: "USD",
+      kind: "maintained", target_mode: "months_of_expenses", target_months: 6
+    ) { |g| g.goal_accounts.build(account: account) }
+
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+  end
+
+  test "changing the number of months recomputes the floor at once" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+
+    goal.update!(target_months: 3)
+    assert_equal BigDecimal("1500"), goal.reload.target_amount.to_d
+  end
+
+  # The monthly job owns the cadence: an unrelated edit must not quietly move
+  # a financial figure the user has been saving against.
+  test "renaming a months-mode reserve leaves its floor alone" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+
+    IncomeStatement.any_instance.unstub(:median_expense)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("900"))
+    goal.update!(name: "Renamed reserve")
+
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d,
+                 "only the job, or a change of months, may move the floor"
+  end
+
+  test "a fixed reserve ignores the refresh entirely" do
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+
+    assert_nil goal.refresh_target_from_expenses!
+    assert_equal BigDecimal("1000"), goal.reload.target_amount.to_d
+  end
+
+  # The form asks this BEFORE the user has picked a kind or a number of months,
+  # to decide whether to keep offering the amount field. So it must answer for
+  # the family alone, not for what this goal happens to be right now.
+  test "derivability is answered for the family, whatever the goal is set to" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+
+    assert goal.months_target_derivable?,
+           "a one-off with no months set still has spending to derive from"
+  end
+
+  # With nothing to derive from, the typed amount is the only way to give the
+  # reserve a target. The form has to be told, or it hides the only field that
+  # would let the user do it.
+  test "a family with no spending history can derive nothing" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+
+    assert_not goal.months_target_derivable?
+  end
+
+  test "derivability follows the goal's currency, not the family's" do
+    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    goal = reserve_goal(balance: 3_000, target: 1_000)
+    goal.stubs(:currency).returns("EUR")
+    Money.any_instance.stubs(:exchange_to).raises(
+      Money::ConversionError.new(from_currency: "USD", to_currency: "EUR", date: Date.current)
+    )
+
+    assert_not goal.months_target_derivable?,
+               "no rate for the day means no figure to show, so the field must stay"
+  end
+
   test "account free_to_earmark subtracts non-archived fixed earmarks" do
     account = Account.create!(family: @family, accountable: Depository.new, name: "Headroom Savings", currency: "USD", balance: 5_000)
     @family.goals.create!(name: "Earmarker", target_amount: 10_000, currency: "USD") do |g|
@@ -862,7 +1076,207 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil Goal.where(id: goal.id).pick(:completed_amount)
   end
 
+  # --- Review follow-ups on the reserves lot ---
+
+  test "a released goal cannot be turned into a reserve without reopening" do
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: standoff_account)
+    end
+    goal.complete!
+
+    goal.reload.kind = "maintained"
+
+    assert_not goal.valid?
+    assert_includes goal.errors[:kind], "Reopen this goal before turning it into a reserve."
+  end
+
+  test "reopening first lets the conversion through" do
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: standoff_account)
+    end
+    goal.complete!
+    goal.reload.reopen!
+
+    assert goal.reload.update(kind: "maintained"), goal.errors.full_messages.to_sentence
+  end
+
+  # The form hides the date for a reserve, so one can only arrive through a
+  # conversion or a crafted request. Either way it must not survive: a stored
+  # deadline would drive a pace the reserve does not have.
+  test "a reserve drops any target date it is given" do
+    goal = reserve_goal(balance: 3_000, target: 6_000)
+
+    assert goal.update(target_date: 6.months.from_now.to_date), goal.errors.full_messages.to_sentence
+    assert_nil goal.reload.target_date
+  end
+
+  test "converting a dated goal into a reserve clears its deadline" do
+    goal = @family.goals.create!(
+      name: "Trip", target_amount: 5_000, currency: "USD", target_date: 6.months.from_now.to_date
+    ) { |g| g.goal_accounts.build(account: standoff_account) }
+
+    goal.update!(kind: "maintained")
+
+    assert_nil goal.reload.target_date
+  end
+
+  test "a drained reserve gets a status callout telling it what is missing" do
+    goal = reserve_goal(balance: 4_000, target: 6_000)
+
+    assert_equal :depleted, goal.status
+    assert_includes goal.status_callout_context.to_s, "2,000"
+  end
+
+  test "a reserve at its level has no callout to make" do
+    goal = reserve_goal(balance: 6_000, target: 6_000)
+
+    assert_equal :funded, goal.status
+    assert_nil goal.status_callout_context
+  end
+
+  # Setting state and kind in one write skips the `reopen` transition, so
+  # `completed_amount` never thaws. Reading the in-memory state let that
+  # through: the goal looked already-reopened while its frozen snapshot
+  # survived, and an active reserve reported it forever.
+  test "reopening and converting in a single write is refused" do
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: standoff_account)
+    end
+    goal.complete!
+    frozen = goal.reload.completed_amount
+
+    assert_not goal.update(state: "active", kind: "maintained")
+    assert_includes goal.errors[:kind], "Reopen this goal before turning it into a reserve."
+    assert_equal "completed", goal.reload.state
+    assert_equal frozen, goal.reload.completed_amount
+  end
+
+
+  # A reserve holds a level: there is no finish line to project toward and no
+  # target to have "hit". It does not reach the projection panel today, but
+  # this method reads as the single source of truth for that subtitle.
+  test "a reserve is never told it has hit a target" do
+    reserve = @family.goals.create!(
+      name: "Precaution", target_amount: 1_000, currency: @family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: attention_pot(1_000), allocated_amount: 1_000) }
+
+    assert_equal :funded, reserve.status
+    assert_equal I18n.t("goals.show.projection.reserve"), reserve.projection_summary
+  end
+
+  # `needs_attention?` names the pair once. Three places were spelling it out
+  # and the Plan card had already fallen behind, leaving a depleted reserve
+  # with an amber pill beside a neutral progress bar.
+  test "a depleted reserve wants attention just as a goal off its pace does" do
+    reserve = @family.goals.create!(
+      name: "Precaution", target_amount: 6_000, currency: @family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: attention_pot(1_000), allocated_amount: 1_000) }
+
+    assert_equal :depleted, reserve.status
+    assert reserve.needs_attention?
+  end
+
+  test "a funded reserve wants nothing" do
+    reserve = @family.goals.create!(
+      name: "Precaution", target_amount: 1_000, currency: @family.currency, kind: "maintained"
+    ) { |g| g.goal_accounts.build(account: attention_pot(1_000), allocated_amount: 1_000) }
+
+    assert_not reserve.needs_attention?
+  end
+
+  # --- months-of-expenses review follow-ups ---
+
+  # The median comes back in FAMILY currency; target_amount is stored in the
+  # GOAL's. A EUR reserve in a USD family would otherwise read a 3,000 dollar
+  # floor as 3,000 euros, and rewrite it that way every month.
+  test "a reserve in another currency gets its floor converted" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "EUR pot", currency: "EUR", balance: 1_000)
+    goal = @family.goals.create!(
+      name: "Precaution", target_amount: 1_000, currency: "EUR",
+      kind: "maintained", target_mode: "months_of_expenses", target_months: 6
+    ) { |g| g.goal_accounts.build(account: account, allocated_amount: 1_000) }
+
+    # 500/month family currency x 6 months = 3,000, at a rate of 0.9 = 2,700.
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+    Money.any_instance.stubs(:exchange_to).returns(Money.new(2_700, "EUR"))
+
+    goal.update!(target_amount: 1)
+
+    assert_equal 2_700, goal.reload.target_amount.to_d
+  end
+
+  # The floor is derived in this mode. Without this the edit form could
+  # persist an arbitrary figure under a "six months of expenses" label until
+  # the next monthly refresh.
+  test "a typed amount cannot stand in for a derived floor" do
+    goal = months_based_reserve
+    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+
+    goal.update!(target_amount: 99)
+
+    assert_equal 3_000, goal.reload.target_amount.to_d
+  end
+
+  # Nothing to derive from and a typed figure on its way in: a stale floor
+  # beats a wrong one wearing a computed label.
+  test "with no spending history a typed amount does not replace the floor" do
+    goal = months_based_reserve
+    IncomeStatement.any_instance.stubs(:median_expense).returns(0)
+
+    goal.update!(target_amount: 99)
+
+    assert_equal 3_000, goal.reload.target_amount.to_d
+  end
+
+
+  # The ring is drawn from `progress_percent`, which counts money held plus
+  # money already spent on the goal. The headline figure showed only the first
+  # half, so a goal that had spent part of its savings sat at a 100% ring
+  # beside "3,000 of 5,000" — the two disagreeing on the same card, with
+  # nothing to say which one to believe.
+  test "the headline figure agrees with the ring after a spend" do
+    goal = spent_goal
+
+    assert_equal 100, goal.progress_percent
+    assert_equal 5_000, goal.progress_amount_money.amount.to_d,
+      "the figure beside the ring still reported the account balance"
+  end
+
+  # The amount is part of the total above it, never a second figure beside it:
+  # a reader should have nothing to add up.
+  test "what was used is reported as part of the total, and only when there is some" do
+    goal = spent_goal
+
+    assert goal.any_consumption?
+    assert_equal 2_000, goal.consumed_amount_money.amount.to_d
+    assert_equal goal.progress_amount_money.amount.to_d,
+                 goal.current_balance.to_d + goal.consumed_amount_money.amount.to_d
+  end
+
+  test "a goal that has spent nothing says nothing about it" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "Quiet pot", currency: @family.currency, balance: 1_000)
+    goal = @family.goals.create!(name: "Quiet", target_amount: 1_000, currency: @family.currency) do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    assert_not goal.any_consumption?
+  end
+
   private
+
+    # 5,000 saved, 2,000 of it since spent on the thing itself.
+    def spent_goal
+      account = Account.create!(family: @family, accountable: Depository.new,
+                                name: "Spent pot #{SecureRandom.hex(3)}",
+                                currency: @family.currency, balance: 5_000)
+      goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: @family.currency) do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 5_000)
+      end
+      goal.consume!(2_000)
+      goal
+    end
 
     # Its own account, so the shared-pool haircut does not make the frozen
     # figure depend on what the fixtures happen to claim.
@@ -873,6 +1287,23 @@ class GoalTest < ActiveSupport::TestCase
       @family.goals.create!(name: "Trip", target_amount: 4_000, currency: @family.currency) do |g|
         g.goal_accounts.build(account: account, allocated_amount: 4_000)
       end
+    end
+
+    def attention_pot(balance)
+      Account.create!(family: @family, accountable: Depository.new,
+                      name: "Pot #{SecureRandom.hex(3)}",
+                      currency: @family.currency, balance: balance)
+  end
+
+    def months_based_reserve
+      account = Account.create!(family: @family, accountable: Depository.new,
+                                name: "Reserve pot #{SecureRandom.hex(3)}",
+                                currency: @family.currency, balance: 3_000)
+      IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+      @family.goals.create!(
+        name: "Precaution", target_amount: 3_000, currency: @family.currency,
+        kind: "maintained", target_mode: "months_of_expenses", target_months: 6
+      ) { |g| g.goal_accounts.build(account: account, allocated_amount: 3_000) }
     end
     # A fresh account: the fixtures deliberately carry three goals holding
     # whole-account links on `depository`, a legacy overlap the exclusivity
@@ -888,5 +1319,35 @@ class GoalTest < ActiveSupport::TestCase
       @family.goals.create!(name: name, target_amount: 5_000, currency: "USD") do |goal|
         goal.goal_accounts.build(account: account)
       end
+    end
+
+    def reserve_goal(balance:, target:, allocated: nil, name: "Emergency reserve")
+      account = Account.create!(
+        family: @family, accountable: Depository.new,
+        name: "#{name} Pot", currency: "USD", balance: balance
+      )
+      @family.goals.create!(name: name, target_amount: target, currency: "USD", kind: "maintained") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: allocated)
+      end
+    end
+
+    # :funded and paused both used to rank 3, so a paused goal whose name sorted
+    # first jumped ahead of a reserve that was whole.
+    test "a paused goal sorts behind a funded reserve whatever its name" do
+      pot = ->(name) {
+        Account.create!(family: @family, accountable: Depository.new, name: name,
+                        currency: @family.currency, balance: 2_000)
+      }
+      reserve = @family.goals.create!(
+        name: "Zeta reserve", target_amount: 1_000, currency: @family.currency, kind: "maintained"
+      ) { |g| g.goal_accounts.build(account: pot.call("Zeta pot"), allocated_amount: 1_000) }
+      paused = @family.goals.create!(
+        name: "Alpha goal", target_amount: 1_000, currency: @family.currency
+      ) { |g| g.goal_accounts.build(account: pot.call("Alpha pot"), allocated_amount: 1_000) }
+      paused.pause!
+
+      sorted = Goal.active_display_sort([ paused, reserve ])
+
+      assert_equal [ reserve.id, paused.id ], sorted.map(&:id)
     end
 end

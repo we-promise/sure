@@ -176,7 +176,12 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
   private
 
     def sign_out
-      @user.sessions.each { |s| delete session_path(s) }
+      # Deleting sessions through the controller de-authenticates the request the
+      # moment our own session dies, so every later delete in the loop is a
+      # silent no-op and whichever sessions sort after it survive. The order is
+      # unspecified, which made every suite that signs out this way flaky.
+      # Teardown hygiene is not the behavior under test, so destroy directly.
+      @user.sessions.destroy_all
     end
 
     # POST /transactions/categorize

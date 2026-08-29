@@ -59,6 +59,44 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/detail unavailable/i, captured_output[:error_detail])
   end
 
+  test "text mode exercises only text extraction" do
+    expected = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: "Synthetic PDF",
+      document_type: "other",
+      extracted_data: {}
+    )
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :text
+    )
+    processor.expects(:process_with_text_extraction).returns(expected)
+    processor.expects(:process_with_vision).never
+
+    assert_equal expected, processor.process
+  end
+
+  test "vision mode exercises only vision processing" do
+    expected = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: "Synthetic PDF",
+      document_type: "other",
+      extracted_data: {}
+    )
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :vision
+    )
+    processor.expects(:process_with_text_extraction).never
+    processor.expects(:process_with_vision).returns(expected)
+
+    assert_equal expected, processor.process
+  end
+
   private
     def build_processor(error, trace)
       client = mock
