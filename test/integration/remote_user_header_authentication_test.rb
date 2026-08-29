@@ -33,7 +33,8 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
   end
 
   test "header authentication refuses to create the instance's first account" do
-    User.destroy_all
+    # destroy_all cannot remove the last active super admin, so bypass callbacks.
+    User.connection.disable_referential_integrity { User.delete_all }
 
     assert_no_difference -> { User.count } do
       get root_url, headers: { HEADER_NAME => JIT_EMAIL }
