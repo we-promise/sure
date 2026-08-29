@@ -50,7 +50,7 @@ Rails.application.configure do
     # order would put "content_security_policy.rb" first and crash boot with
     # NoMethodError on nil).
     posthog_host = Rails.configuration.x.posthog.host
-    if Rails.env.production? && Rails.configuration.x.posthog.api_key.present?
+    if Rails.env.production? && Rails.configuration.x.posthog.enabled
       posthog_assets_host = posthog_host.sub(".i.posthog.com", "-assets.i.posthog.com")
       policy.script_src  :self, plaid_cdn_host, posthog_host, posthog_assets_host
       policy.connect_src :self, plaid_api_host, posthog_host, posthog_assets_host
