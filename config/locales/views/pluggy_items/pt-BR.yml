@@ -16,6 +16,7 @@ pt-BR:
     errors:
       provider_not_configured: "O provedor Pluggy não está configurado"
       invalid_item_id: "A conexão do Pluggy não pertence a esta família."
+      encryption_required: "As credenciais do Pluggy exigem que a criptografia do Active Record esteja configurada."
 
     # Syncer status messages
     sync:
@@ -50,6 +51,9 @@ pt-BR:
       connect_widget_button: "Abrir Pluggy Connect"
       connect_widget_note: "Uma nova janela será aberta para autenticação."
       error_retry_hint: "Se esse erro persistir, reinicie o item no seu painel do Pluggy (exclua e reconecte), e tente novamente."
+      encryption_warning:
+        title: "A criptografia não está configurada"
+        message: "Configure a criptografia do Active Record antes de salvar as credenciais do Pluggy."
       status_not_configured: "Não configurado"
       fields:
         client_id:

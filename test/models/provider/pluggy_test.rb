@@ -92,16 +92,14 @@ class Provider::PluggyTest < ActiveSupport::TestCase
     end
   end
 
-  # avoidDuplicates policy (fix for ITEM_USER_ALREADY_EXISTS after a Docker -v
-  # wipe that orphans the Pluggy-side item). The SDK derives the flag from
-  # `item_id` presence so callers can stay agnostic: CREATE (item_id blank) ->
-  # avoidDuplicates:false lets the widget RE-BIND a surviving upstream item
-  # instead of 400-ing; UPDATE (item_id present) -> true preserves the re-auth
-  # dedup safety net. An explicit `avoid_duplicates:` override still wins.
+  # Pluggy's avoidDuplicates=false allows re-binding an orphaned upstream item
+  # after local data loss (e.g. Docker volume wipe). CREATE mode (item_id nil)
+  # uses false to enable this recovery; UPDATE mode (item_id present) uses true
+  # to prevent duplicate connections for the same institution.
   # Uses mocha's `regexp_matches` (not a bare /regex/) for the `body:` kwarg
   # so the matcher machinery — not bare-Regexp detection — handles kwargs
   # (same path as the `kind_of(String)` /connect_token stub above at l75).
-  test "connect_token sends avoidDuplicates:false in CREATE mode (item_id blank) so a surviving Pluggy item re-binds instead of 400 ITEM_USER_ALREADY_EXISTS" do
+  test "connect_token sends avoidDuplicates:false by default in CREATE mode" do
     Provider::Pluggy.expects(:send_with_auth).with(
       :post, "/connect_token",
       client_id: "c", client_secret: "s",

@@ -121,17 +121,11 @@ class Provider::Pluggy
     # Task 3: connect_token + item lifecycle. All route through `send_with_auth`
     # so they inherit the cached-key + 401 retry seam.
     #
-    # `avoid_duplicates` default is `nil` (NOT `true`) so the SDK can derive the
-    # flag from `item_id` presence and callers stay agnostic. This fixes
-    # ITEM_USER_ALREADY_EXISTS after a Docker `-v` wipe that orphans the
-    # Pluggy-side item (the wipe clears Sure's `pluggy_items` row but the
-    # upstream bank-credential item survives). With `avoidDuplicates: true` in
-    # CREATE mode (blank `item_id`), Pluggy's dup-check on the *institution bank
-    # credentials* the user types into the widget matches the orphan and 400s.
-    # Deriving `false` in CREATE mode lets the widget RE-BIND the surviving
-    # upstream item instead of 400-ing; deriving `true` in UPDATE mode (item_id
-    # present) preserves the re-auth dedup safety net. An explicit
-    # `avoid_duplicates:` override still wins.
+    # Derive `avoidDuplicates` from `item_id` presence:
+    # - CREATE mode (item_id nil): avoidDuplicates = false (allows Pluggy to re-bind
+    #   an orphaned upstream item after local data loss, e.g. Docker volume wipe)
+    # - UPDATE mode (item_id present): avoidDuplicates = true (prevents duplicate
+    #   connections for the same institution)
     def connect_token(client_id:, client_secret:, client_user_id:, webhook_url:, redirect_url:, avoid_duplicates: nil, item_id: nil)
       effective_avd = avoid_duplicates.nil? ? item_id.present? : avoid_duplicates
       body = {

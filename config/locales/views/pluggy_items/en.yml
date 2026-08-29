@@ -16,6 +16,7 @@ en:
     errors:
       provider_not_configured: "Pluggy provider is not configured"
       invalid_item_id: "The Pluggy connection does not belong to this family."
+      encryption_required: "Pluggy credentials require Active Record Encryption to be configured."
 
     # Syncer status messages
     sync:
@@ -50,6 +51,9 @@ en:
       connect_widget_button: "Open Pluggy Connect"
       connect_widget_note: "A new window will open for authentication."
       error_retry_hint: "If this error keeps appearing, restart the item in your Pluggy dashboard (delete and reconnect it), then try again."
+      encryption_warning:
+        title: "Encryption is not configured"
+        message: "Configure Active Record Encryption before saving Pluggy credentials."
       status_not_configured: "Not configured"
       fields:
         client_id:

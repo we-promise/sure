@@ -1,6 +1,6 @@
 <%= link_to connect_path,
             class: "bg-container shadow-border-xs hover:bg-surface-inset rounded-xl p-4 flex flex-col gap-2.5 text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
-            data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data) do %>
+            data: { turbo_frame: "drawer", turbo_method: :post, turbo_prefetch: "false" }.merge(filter_data) do %>
   <div class="flex items-start gap-2.5">
     <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 <%= logo_bg %>">
       <span class="text-xs font-bold text-inverse"><%= logo_text %></span>

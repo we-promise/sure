@@ -135,7 +135,7 @@ class Settings::ProvidersController < ApplicationController
         # discovery call to make here. The SDK derives `avoid_duplicates` from
         # `item_id` presence, so the re-auth path is reached only when the id was
         # already persisted.
-        if @connect_item&.credentials_configured?
+        if @connect_item&.credentials_configured? && request.post?
           # `avoid_duplicates:` is intentionally OMITTED: the SDK derives the flag
           # from `item_id` presence (nil -> CREATE: false, present -> UPDATE:
           # true). Hardcoding `true` here forced CREATE-mode tokens to send
@@ -164,6 +164,11 @@ class Settings::ProvidersController < ApplicationController
             @error_message = e.message
           end
         end
+      end
+
+      if provider_key == "pluggy" && request.post?
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Turbo-Cache-Control"] = "no-cache"
       end
 
       return render :connect_form

@@ -370,6 +370,7 @@ Rails.application.routes.draw do
       collection do
         post :sync_all
         post ":provider_key/sync", action: :sync, as: :sync_provider
+        post ":provider_key/connect_form", action: :connect_form, as: :post_connect_form
         get ":provider_key/connect_form", action: :connect_form, as: :connect_form
       end
     end

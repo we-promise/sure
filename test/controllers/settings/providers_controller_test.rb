@@ -117,7 +117,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       item_id: nil
     ).returns("create-token")
 
-    get connect_form_settings_providers_url(provider_key: "pluggy")
+    post post_connect_form_settings_providers_url(provider_key: "pluggy")
 
     assert_response :success
   end
@@ -142,7 +142,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       Provider::Pluggy::AuthenticationError.new("Invalid credentials", :unauthorized)
     )
 
-    get connect_form_settings_providers_url(provider_key: "pluggy")
+    post post_connect_form_settings_providers_url(provider_key: "pluggy")
 
     assert_response :success
     assert_includes response.body, "Invalid credentials"
