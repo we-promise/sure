@@ -45,6 +45,10 @@ Rails.application.configure do
     # add them when analytics are actually configured (self-hosted installs
     # rarely set POSTHOG_KEY) so the default policy stays as tight as
     # possible for the common case.
+    # config/initializers/00_posthog.rb sets Rails.configuration.x.posthog —
+    # the "00_" prefix forces it to load before this file (plain alphabetical
+    # order would put "content_security_policy.rb" first and crash boot with
+    # NoMethodError on nil).
     posthog_host = Rails.configuration.x.posthog.host
     if Rails.env.production? && Rails.configuration.x.posthog.api_key.present?
       posthog_assets_host = posthog_host.sub(".i.posthog.com", "-assets.i.posthog.com")
