@@ -35,6 +35,7 @@ class Transaction < ApplicationRecord
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
   after_save :clear_merchant_unlinked_association, if: :merchant_id_previously_changed?
+  after_save :touch_entry_for_refund_change, if: :saved_change_to_refund?
 
   # Accessors for exchange_rate stored in extra jsonb field
   def exchange_rate
@@ -395,6 +396,13 @@ class Transaction < ApplicationRecord
       return if entry.amount.blank? || entry.amount.negative?
 
       errors.add(:refund, "requires a negative transaction amount")
+    end
+
+    # Analytics caches are versioned from Entry#updated_at, while refund lives
+    # on Transaction. Touch the entry whenever the flag changes so a toggle
+    # invalidates search and income-statement caches immediately.
+    def touch_entry_for_refund_change
+      entry.touch if entry&.persisted?
     end
 
     def validate_attachments

@@ -63,6 +63,24 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports the refund flag in NDJSON transactions" do
+    refund = @account.entries.create!(
+      date: Date.parse("2024-05-02"),
+      amount: -25,
+      name: "Refund",
+      currency: "USD",
+      entryable: Transaction.new(refund: true)
+    ).entryable
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      record = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }.find do |line|
+        line["type"] == "Transaction" && line.dig("data", "id") == refund.id
+      end
+
+      assert_equal true, record.dig("data", "refund")
+    end
+  end
+
   test "exports attachment manifest metadata without binary payloads" do
     entry = @account.entries.create!(
       name: "Receipt Transaction",

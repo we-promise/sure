@@ -30,7 +30,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
-  validate :refund_must_have_negative_amount, if: -> { transaction? && entryable.refund? }
+  validate :refund_must_have_negative_amount, if: -> { transaction? && entryable&.refund? }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -454,7 +454,8 @@ class Entry < ApplicationRecord
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
           merchant_id: entryable.try(:merchant_id),
-          kind: entryable.try(:kind)
+          kind: entryable.try(:kind),
+          refund: entryable.try(:refund?) || false
         )
 
         child_entries.create!(

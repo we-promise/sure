@@ -93,12 +93,20 @@ class IncomeStatement::FamilyStats
             #{IncomeStatement::ClassificationSql.reclassify_by_sign} as classification,
             ABS(total) as total
           FROM period_totals
+        ),
+        reaggregated_totals AS (
+          -- A period can contain both regular income and an over-refund. Once
+          -- the latter is reclassified, combine them before calculating
+          -- medians/averages so that month contributes exactly one income row.
+          SELECT period, classification, SUM(total) as total
+          FROM corrected_totals
+          GROUP BY period, classification
         )
         SELECT
           classification,
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
           AVG(total) as avg
-        FROM corrected_totals
+        FROM reaggregated_totals
         GROUP BY classification;
       SQL
     end

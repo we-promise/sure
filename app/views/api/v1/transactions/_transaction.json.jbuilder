@@ -12,7 +12,10 @@ amount_money = transaction.entry.amount_money
 conversion_factor = amount_money.currency.minor_unit_conversion
 amount_cents = (amount_money.amount * conversion_factor).round(0).to_i.abs
 json.amount_cents amount_cents
-json.signed_amount_cents(transaction.entry.classification == "income" ? amount_cents : -amount_cents)
+# This reflects the ledger/cash-flow sign, not the analytics classification.
+# Refunds are expense-classified for reporting, but still increase the account
+# balance and must therefore be positive here.
+json.signed_amount_cents(transaction.entry.amount.negative? ? amount_cents : -amount_cents)
 
 json.currency transaction.entry.currency
 json.name transaction.entry.name

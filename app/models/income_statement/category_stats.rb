@@ -97,13 +97,18 @@ class IncomeStatement::CategoryStats
             #{IncomeStatement::ClassificationSql.reclassify_by_sign} as classification,
             ABS(total) as total
           FROM period_totals
+        ),
+        reaggregated_totals AS (
+          SELECT category_id, period, classification, SUM(total) as total
+          FROM corrected_totals
+          GROUP BY category_id, period, classification
         )
         SELECT
           category_id,
           classification,
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
           AVG(total) as avg
-        FROM corrected_totals
+        FROM reaggregated_totals
         GROUP BY category_id, classification;
       SQL
     end

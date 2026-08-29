@@ -174,7 +174,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid, description: 'Category ID' },
               merchant_id: { type: :string, format: :uuid, description: 'Merchant ID' },
               nature: { type: :string, enum: %w[income expense inflow outflow], description: 'Transaction nature (determines sign)' },
-              kind: { type: :string, enum: %w[standard funds_movement cc_payment loan_payment one_time investment_contribution], description: 'Transaction kind (defaults to standard)' },
               refund: { type: :boolean, nullable: true, description: 'Mark as refund to offset original expense' },
               external_id: { type: :string, description: 'Optional external idempotency key scoped to account and source' },
               source: { type: :string, description: 'Optional source namespace for external_id. Requires external_id and defaults to api when external_id is provided' },
@@ -217,6 +216,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
               date: Date.current.to_s,
               amount: 25.00,
               name: 'Refund for groceries',
+              nature: 'inflow',
               refund: true
             }
           }
@@ -337,7 +337,6 @@ RSpec.describe 'API V1 Transactions', type: :request do
               category_id: { type: :string, format: :uuid },
               merchant_id: { type: :string, format: :uuid },
               nature: { type: :string, enum: %w[income expense inflow outflow] },
-              kind: { type: :string, enum: %w[standard funds_movement cc_payment loan_payment one_time investment_contribution] },
               refund: { type: :boolean, nullable: true },
               tag_ids: {
                 type: :array,

@@ -666,6 +666,30 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Transaction Name", response_data["name"]
   end
 
+  test "returns validation_failed when a positive transaction is marked as a refund" do
+    @transaction.entry.update!(amount: 50)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { refund: true } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_not @transaction.reload.refund?
+  end
+
+  test "reports a refund signed amount using its ledger sign" do
+    refund = create_transaction(account: @account, amount: -50, refund: true).entryable
+
+    get api_v1_transaction_url(refund), headers: api_headers(@api_key)
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 5_000, body["signed_amount_cents"]
+    assert_equal "expense", body["classification"]
+    assert_equal true, body["refund"]
+  end
+
   test "should reject update with read-only API key" do
     update_params = {
       transaction: {

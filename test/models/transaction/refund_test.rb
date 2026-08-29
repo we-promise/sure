@@ -78,4 +78,16 @@ class Transaction::RefundTest < ActiveSupport::TestCase
     assert positive.persisted?
     assert negative.persisted?
   end
+
+  test "splitting a refund preserves the refund classification on each child" do
+    entry = create_transaction(account: @checking_account, amount: -50, refund: true, category: @groceries)
+
+    children = entry.split!([
+      { name: "Refund item one", amount: -20, category_id: @groceries.id },
+      { name: "Refund item two", amount: -30, category_id: @groceries.id }
+    ])
+
+    assert children.all? { |child| child.transaction.refund? }
+    assert children.all? { |child| child.classification == "expense" }
+  end
 end

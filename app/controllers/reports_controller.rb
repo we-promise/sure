@@ -426,7 +426,9 @@ class ReportsController < ApplicationController
 
       # Helper to process an entry (transaction or trade)
       process_entry = ->(category, entry, is_trade, is_refund: false) do
-        type = entry.classification
+        # Keep the report's historic zero-amount behavior while assigning
+        # refunds to the expense bucket for netting.
+        type = is_refund ? "expense" : (entry.amount > 0 ? "expense" : "income")
         begin
           unsigned_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
@@ -769,7 +771,7 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
-        type = entry.classification
+        type = transaction.refund? ? "expense" : (entry.amount > 0 ? "expense" : "income")
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 

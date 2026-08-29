@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus";
 // active segment without navigating (the href is a progressive-enhancement
 // fallback). Transfer is a plain link to the transfer form.
 export default class extends Controller {
-  static targets = ["tab", "natureField", "refundFields"];
+  static targets = ["tab", "natureField", "refundFields", "refundCheckbox"];
 
   connect() {
     this.toggleRefundFields();
@@ -32,6 +32,8 @@ export default class extends Controller {
 
   toggleRefundFields() {
     if (!this.hasRefundFieldsTarget) return;
-    this.refundFieldsTarget.classList.toggle("hidden", this.natureFieldTarget.value !== "inflow");
+    const isIncome = this.natureFieldTarget.value === "inflow";
+    this.refundFieldsTarget.classList.toggle("hidden", !isIncome);
+    if (!isIncome && this.hasRefundCheckboxTarget) this.refundCheckboxTarget.checked = false;
   }
 }
