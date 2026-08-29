@@ -130,8 +130,8 @@ pt-PT:
     update:
       success: "Conta %{type} atualizada"
     sidebar:
-      missing_data: Faltam dados históricos
-      missing_data_description: "%{product} utiliza fontes externas para obter taxas de câmbio históricas, preços de títulos e muito mais. Estes dados são necessários para calcular com precisão os saldos históricos das contas."
+      missing_data: Dados históricos em falta
+      missing_data_description: "%{product} utiliza fontes externas para obter dados históricos, como taxas de câmbio, preços de títulos, entre outros, para calcular com precisão os saldos históricos das contas."
       configure_providers: Configure aqui as fontes externas.
       tabs:
         all: Tudo

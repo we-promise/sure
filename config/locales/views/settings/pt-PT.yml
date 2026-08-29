@@ -87,8 +87,8 @@ pt-PT:
           account_provider: "account_provider=%{value}"
     llm_usages:
       show:
-        page_title: "Utilização de LLM e Custos"
-        subtitle: "Acompanhe a sua utilização de IA e os custos estimados"
+        page_title: "Utilização e custos dos modelos de IA"
+        subtitle: "Acompanhe a utilização da IA e os custos previstos"
         start_date: "Data de início"
         end_date: "Data de fim"
         filter: "Filtrar"
@@ -156,10 +156,10 @@ pt-PT:
         disable_modal_click_outside_description: Impede que os modais fechem ao clicar fora. Útil para evitar perder alterações não guardadas acidentalmente.
         transactions_title: Transações
         transactions_subtitle: Personalize como as transações são apresentadas
-        dashboard_title: Painel de controlo
-        dashboard_subtitle: Personalize como o painel de controlo é apresentado
+        dashboard_title: Visão geral
+        dashboard_subtitle: Personalize a apresentação da sua visão geral
         dashboard_two_column_title: Disposição de duas colunas
-        dashboard_two_column_description: Apresenta os widgets do painel de controlo em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
+        dashboard_two_column_description: Apresenta os widgets da visão geral em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
         split_grouped_title: Agrupar transações divididas
         split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
     preferences:
@@ -346,9 +346,9 @@ pt-PT:
       rules_label: Regras
       mcp_label: MCP
       security_label: Segurança
-      self_hosting_label: Autoalojamento
+      self_hosting_label: Serviços externos
       sso_providers_label: Fornecedores SSO
-      statement_vault_label: Cofre de Extratos
+      statement_vault_label: Arquivo de Extratos
       system_health_label: Estado do sistema
       tags_label: Etiquetas
       transactions_section_title: Transações

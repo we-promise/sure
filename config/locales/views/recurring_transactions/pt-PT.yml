@@ -5,16 +5,16 @@ pt-PT:
     upcoming: Próximas Transações Recorrentes
     projected: Projetado
     recurring: Recorrente
-    expected_today: "Esperada hoje"
+    expected_today: "Prevista hoje"
     expected_in:
-      one: "Esperada em %{count} dia"
-      other: "Esperada em %{count} dias"
+      one: "Prevista em %{count} dia"
+      other: "Prevista em %{count} dias"
     day_of_month: Dia %{day} do mês
     identify_patterns: Identificar Padrões
-    cleanup_stale: Limpar Obsoletas
+    cleanup_stale: Limpar transações obsoletas
     settings:
       enable_label: Ativar Transações Recorrentes
-      enable_description: Detecta automaticamente padrões de transações recorrentes e mostra as próximas transações projetadas.
+      enable_description: Deteta automaticamente padrões de transações recorrentes e apresenta as próximas transações previstas.
     settings_updated: Definições de transações recorrentes atualizadas
     info:
       title: Deteção Automática de Padrões
@@ -32,7 +32,7 @@ pt-PT:
     marked_as_recurring: Transação marcada como recorrente
     already_exists: Já existe uma transação recorrente manual para este padrão
     creation_failed: Falha ao criar a transação recorrente. Verifique os detalhes da transação e tente novamente.
-    unexpected_error: Ocorreu um erro inesperado ao criar a transação recorrente
+    unexpected_error: Ocorreu um erro ao criar a transação recorrente
     amount_range: "Intervalo: %{min} a %{max}"
     empty:
       title: Nenhuma transação recorrente encontrada
@@ -40,7 +40,7 @@ pt-PT:
     table:
       merchant: Designação
       amount: Montante
-      expected_day: Dia Esperado
+      expected_day: Dia Previsto
       next_date: Próxima Data
       last_occurrence: Última Ocorrência
       status: Estado

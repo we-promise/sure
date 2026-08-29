@@ -7,7 +7,7 @@ pt-PT:
       edit: Editar
       re_apply_rule: Reaplicar regra
       delete: Eliminar
-      then: ENTÃO
+      then: THEN
       and_more_conditions:
         one: e mais 1 condição
         other: e mais %{count} condições
@@ -25,7 +25,7 @@ pt-PT:
       add_action: Adicionar ação
       all_past_and_future: Todos os %{resource} passados e futuros
       starting_from: A partir de
-      then: ENTÃO
+      then: THEN
     index:
       page_title: Regras
       delete_all_rules: Eliminar todas as regras

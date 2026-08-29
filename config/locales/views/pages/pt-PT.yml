@@ -39,9 +39,9 @@ pt-PT:
       placeholder: O conteúdo dos termos de serviço será apresentado aqui.
     dashboard:
       welcome: "Bem-vindo(a) de volta, %{name}"
-      subtitle: "Veja como estão as suas finanças"
+      subtitle: "Acompanhe a evolução das suas finanças"
       new: "Novo"
-      sections_aria_label: "Secções do painel de controlo"
+      sections_aria_label: "Secções da Visão Geral"
       drag_to_reorder: "Arraste para reordenar a secção"
       toggle_section: "Alternar a visibilidade da secção"
       widget_size:
@@ -58,7 +58,7 @@ pt-PT:
         title: Património líquido
       no_account_empty_state:
         new_account: Nova conta
-        no_account_subtitle: Como ainda não foram adicionadas contas, não existem dados para apresentar. Adicione as suas primeiras contas para começar a ver os dados do painel de controlo.
+        no_account_subtitle: Ainda não adicionou nenhuma conta, por isso não existem dados para apresentar. Adicione as suas primeiras contas para começar a ver os dados na visão geral.
         no_account_title: Ainda sem contas
       balance_sheet:
         title: "Balanço"
@@ -106,12 +106,12 @@ pt-PT:
         no_investments: "Sem contas de investimento"
         add_investment: "Adicione uma conta de investimento para acompanhar a sua carteira"
       money_flow:
-        title: "Dinheiro a entrar / sair"
+        title: "Rendimentos e Despesas"
         date_range: "%{start_date} a %{end_date}"
         month_picker_aria_label: "Selecionar mês"
         filter_accounts: "Filtrar contas (%{count})"
         filter_accounts_all: "Todas as contas"
-        period_scope_hint: "Apresenta os meses que escolher aqui — independentemente do período de tempo do painel de controlo no topo."
+        period_scope_hint: "Apresenta os meses selecionados aqui, independentemente do período definido no topo da visão geral."
         search_accounts: "Procurar contas"
         apply: "Aplicar"
         balance: "Saldo de transações"

@@ -36,7 +36,7 @@ pt-PT:
     invalid_date_range: "A data final não pode ser anterior à data inicial. As datas foram trocadas."
     summary:
       total_income: Rendimento Total
-      total_expenses: Despesas Totais
+      total_expenses: Despesa Total
       net_savings: Poupança Líquida
       budget_performance: Desempenho do Orçamento
       vs_previous: vs. período anterior
@@ -66,7 +66,7 @@ pt-PT:
       savings_rate: Taxa de Poupança
       current: atual
       avg_monthly_income: Rendimento Mensal Médio
-      avg_monthly_expenses: Despesas Mensais Médias
+      avg_monthly_expenses: Despesa Mensal Média
       avg_monthly_savings: Poupança Mensal Média
       no_data: Sem dados de tendências disponíveis
       spending_patterns: Padrões de Gastos

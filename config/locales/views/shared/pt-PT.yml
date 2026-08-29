@@ -4,7 +4,7 @@ pt-PT:
     self_hostable:
       redis_configured: "O Redis está agora configurado corretamente! Pode agora configurar a sua aplicação Sure."
   shared:
-    preview: Pré-visualizar
+    preview: Preview
     dot_separator: "·"
     sync_toast:
       message: "Novos dados disponíveis"

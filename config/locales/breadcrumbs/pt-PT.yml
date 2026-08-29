@@ -22,7 +22,7 @@ pt-PT:
     coinstats_items: CoinStats
     credit_cards: Cartões de crédito
     cryptos: Cripto
-    dashboard: Painel de controlo
+    dashboard: Visão geral
     debug: Depuração
     debugs: Depuração
     depositories: Contas de dinheiro
@@ -34,7 +34,7 @@ pt-PT:
     guides: Guias
     holdings: Posições
     home: Início
-    hostings: Autoalojamento
+    hostings: Serviços externos
     ibkr_items: Interactive Brokers
     impersonation_sessions: Representações
     imports: Importações
@@ -73,7 +73,7 @@ pt-PT:
     rules: Regras
     securities: Títulos
     security: Segurança
-    self_hosting: Autoalojamento
+    self_hosting: Serviços externos
     sessions: Iniciar sessão
     simplefin_items: SimpleFIN
     snaptrade_items: SnapTrade

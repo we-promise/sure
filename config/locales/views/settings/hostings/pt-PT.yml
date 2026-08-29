@@ -24,7 +24,7 @@ pt-PT:
         property_valuation_providers: Fornecedores de Avaliação de Imóveis
         sync_settings: Definições de Sincronização
         invites: Códigos de Convite
-        title: Autoalojamento
+        title: Serviços externos
         danger_zone: Zona de Perigo
         clear_cache: Limpar cache de dados
         clear_cache_warning: Limpar a cache de dados removerá todas as taxas de câmbio, preços de títulos, saldos de contas e outros dados. Isto não eliminará contas, transações, categorias ou outros dados pertencentes ao utilizador.
@@ -98,7 +98,7 @@ pt-PT:
         high_res_description: Quando ativado, os logótipos serão obtidos com resolução de 120x120 em vez de 40x40. Isto fornece imagens mais nítidas em ecrãs high-DPI.
       llm_provider_selector:
         title: Fornecedor de IA
-        description: Escolha qual o LLM que alimenta o chat de IA. As operações em lote (categorização de transações, deteção de comerciantes e processamento de PDF) utilizam atualmente sempre a OpenAI.
+        description: Escolha o modelo de IA utilizado pelo chat. As operações em lote, como a categorização de transações, a deteção de comerciantes e o processamento de PDFs, utilizam atualmente a OpenAI. 
         env_configured_message: Configurado com sucesso através da variável de ambiente LLM_PROVIDER.
         provider_label: Fornecedor de LLM ativo
         provider_openai: OpenAI
@@ -237,23 +237,23 @@ pt-PT:
         invalid_llm_budget: "%{field} tem de ser um número inteiro ≥ %{minimum}."
         invalid_anthropic_base_url: A URL Base da Anthropic tem de ser um URL http(s).
         anthropic_model_required_for_base_url: O Modelo da Anthropic é obrigatório quando está definida uma URL Base personalizada.
-        scheduler_sync_failed: As definições foram guardadas, mas falhou a atualização do agendamento de sincronização. Tente novamente ou verifique os registos do servidor.
+        scheduler_sync_failed: As definições foram guardadas, mas não foi possível atualizar o agendamento da sincronização. Tente novamente ou consulte os registos do servidor.
       disconnect_external_assistant:
         external_assistant_disconnected: Assistente externo desligado
       clear_cache:
-        cache_cleared: A cache de dados foi limpa. Isto pode demorar alguns momentos a concluir.
-      not_authorized: Não está autorizado a efetuar esta ação
+        cache_cleared: A cache de dados foi limpa. A operação pode demorar alguns momentos.
+      not_authorized: Não está autorizado a efetuar esta operação
       ensure_admin:
-        not_authorized: Não está autorizado a efetuar esta ação
+        not_authorized: Não está autorizado a efetuar esta operação
       ensure_super_admin_for_onboarding:
-        not_authorized: Não está autorizado a efetuar esta ação
+        not_authorized: Não está autorizado a efetuar esta operação
       sync_auto_sync_scheduler!:
-        scheduler_sync_failed: As definições foram guardadas, mas falhou a atualização do agendamento de sincronização. Tente novamente ou verifique os registos do servidor.
+        scheduler_sync_failed: As definições foram guardadas, mas não foi possível atualizar o agendamento da sincronização. Tente novamente ou consulte os registos do servidor.
       sync_settings:
         auto_sync_label: Ativar sincronização automática
-        auto_sync_description: Quando ativado, todas as contas serão sincronizadas automaticamente diariamente à hora especificada.
+        auto_sync_description: Quando ativada, todas as contas serão sincronizadas automaticamente todos os dias à hora especificada.
         auto_sync_time_label: Hora de sincronização (HH:MM)
-        auto_sync_time_description: Especifique a hora do dia em que a sincronização automática deve ocorrer.
+        auto_sync_time_description: Defina a hora para a sincronização automática.
         include_pending_label: Incluir transações pendentes
-        include_pending_description: Quando ativado, as transações pendentes (não liquidadas) serão importadas e reconciliadas automaticamente quando forem registadas. Desative se o seu banco fornecer dados de pendências não fiáveis.
+        include_pending_description: Quando ativada, a opção permite importar automaticamente as transações pendentes (não liquidadas) e reconciliá-las quando forem registadas. Desative-a se o seu banco fornecer informações pouco fiáveis sobre transações pendentes.
         env_configured_message: Esta definição está desativada porque está definida uma variável de ambiente do fornecedor (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING). Remova-a para ativar esta definição.
