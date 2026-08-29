@@ -7,6 +7,10 @@ pt-PT:
       close: "Fechar"
   global:
     expand: "Expandir"
+  mcp:
+    errors:
+      invalid_session_id: "ID de sessão MCP inválido"
+      unsupported_protocol_version: "Versão de protocolo MCP não suportada: %{version}"
   activerecord:
     errors:
       messages:

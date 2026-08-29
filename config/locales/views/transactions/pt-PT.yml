@@ -130,7 +130,6 @@ pt-PT:
     mark_recurring_title: Transação Recorrente
     potential_duplicate_title: Possível duplicado detetado
     potential_duplicate_description: Esta transação pendente pode ser a mesma que a transação efetuada abaixo. Nesse caso, funda-as para evitar dupla contagem.
-    merge_duplicate: Sim, fundir
     keep_both: Não, manter ambos
     split_parent_row:
       split_label: "Dividir"

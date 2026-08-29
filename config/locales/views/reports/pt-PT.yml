@@ -186,7 +186,7 @@ pt-PT:
       step1: "Vá para Definições → Chaves de API"
       step2: "Crie uma nova chave de API com permissão de \"leitura\""
       step3: Copie a chave de API
-      step4: "Adicione-a a este URL como: ?api_key=YOUR_KEY"
+      step4: "Adicione-a a este URL como: ?api_key=<chave>"
       example: Exemplo
       then_use: Depois utilize o URL completo com =IMPORTDATA() no Google Sheets.
       open_sheets: Abrir o Google Sheets
