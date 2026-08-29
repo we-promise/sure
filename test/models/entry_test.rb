@@ -34,14 +34,16 @@ class EntryTest < ActiveSupport::TestCase
   end
 
   test "scheduled? is true only for entries dated after today" do
-    account = accounts(:depository)
+    travel_to Date.new(2026, 5, 5) do
+      account = accounts(:depository)
 
-    future_entry = create_transaction(account: account, date: 1.day.from_now.to_date)
-    today_entry = create_transaction(account: account, date: Date.current)
-    past_entry = create_transaction(account: account, date: 1.day.ago.to_date)
+      future_entry = create_transaction(account: account, date: 1.day.from_now.to_date)
+      today_entry = create_transaction(account: account, date: Date.current)
+      past_entry = create_transaction(account: account, date: 1.day.ago.to_date)
 
-    assert future_entry.scheduled?
-    assert_not today_entry.scheduled?
-    assert_not past_entry.scheduled?
+      assert future_entry.scheduled?
+      assert_not today_entry.scheduled?
+      assert_not past_entry.scheduled?
+    end
   end
 end

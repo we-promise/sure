@@ -39,6 +39,33 @@ class Account < ApplicationRecord
 
   monetize :balance, :cash_balance
 
+  # Sum of scheduled (future-dated) entries, signed and converted the same way
+  # Balance::BaseCalculator#signed_entry_flows treats real flows -- so the
+  # projection stays consistent with what the balance will actually become
+  # once these entries land. Non-cash valuation-only accounts (Property,
+  # Vehicle, etc.) ignore transactions entirely for balance purposes, same as
+  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?.
+  def scheduled_entries_total_money
+    return Money.new(0, currency) if balance_type == :non_cash && accountable_type != "Loan"
+
+    total = entries.excluding_pending.excluding_split_parents
+      .where("entries.date > ?", Date.current)
+      .sum do |entry|
+        converted = begin
+          entry.amount_money.exchange_to(currency, date: entry.date).amount
+        rescue Money::ConversionError
+          entry.amount
+        end
+        asset? ? -converted : converted
+      end
+
+    Money.new(total, currency)
+  end
+
+  def projected_balance_money
+    balance_money + scheduled_entries_total_money
+  end
+
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   VISIBLE_STATUSES = %w[draft active].freeze

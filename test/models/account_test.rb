@@ -590,4 +590,33 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
+
+  test "projected_balance_money nets scheduled entries against an asset account's balance" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date) # expense, decreases balance
+    create_transaction(account: @account, amount: -50, date: 5.days.from_now.to_date) # income, increases balance
+
+    assert_equal Money.new(-150, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(4850, "USD"), @account.projected_balance_money
+  end
+
+  test "projected_balance_money keeps the sign for a liability account (expense increases debt)" do
+    credit_card = accounts(:credit_card)
+    create_transaction(account: credit_card, amount: 200, date: 3.days.from_now.to_date) # expense, increases debt
+
+    assert_equal Money.new(200, "USD"), credit_card.scheduled_entries_total_money
+    assert_equal Money.new(1200, "USD"), credit_card.projected_balance_money
+  end
+
+  test "projected_balance_money ignores transactions on non-cash valuation-only accounts" do
+    property = accounts(:property)
+    create_transaction(account: property, amount: 5000, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), property.scheduled_entries_total_money
+    assert_equal property.balance_money, property.projected_balance_money
+  end
+
+  test "projected_balance_money equals balance_money when nothing is scheduled" do
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal @account.balance_money, @account.projected_balance_money
+  end
 end
