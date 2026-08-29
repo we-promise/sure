@@ -4,6 +4,11 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
+  # How many confirmed spends the compact card on the goal page shows before
+  # handing off to "Open in Transactions". A goal open for years can carry
+  # dozens; a card embedded mid-page is not the place to render all of them.
+  CONSUMED_DISPLAY_LIMIT = 5
+
   # States in which a goal has let go of its money: `Goal.pooled_allocations_for`
   # leaves it out of the backing math, so its links reserve nothing and the
   # account it pointed at is free again.

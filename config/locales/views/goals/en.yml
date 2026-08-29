@@ -121,7 +121,10 @@ en:
       confirm_detach_body: "%{amount} goes back to counting against this goal. The account's earmark is not restored — set it again yourself if you want it back."
       confirm_detach_title: Take this back?
       detach: Not this
-      heading: Transactions
+      heading: What this goal paid for
+      more_in_transactions:
+        one: "+1 more in Transactions"
+        other: "+%{count} more in Transactions"
       open_in_transactions: Open in Transactions
       summary: "%{total} used · %{listed} across %{transactions}"
       transactions:

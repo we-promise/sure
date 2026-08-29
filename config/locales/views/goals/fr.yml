@@ -207,7 +207,10 @@ fr:
       confirm_detach_body: "%{amount} redeviennent à financer sur cet objectif. L'affectation du compte n'est pas rétablie — remettez-la vous-même si vous la voulez."
       confirm_detach_title: Reprendre cette dépense ?
       detach: Pas celle-ci
-      heading: Transactions
+      heading: Ce que cet objectif a payé
+      more_in_transactions:
+        one: "+1 de plus dans Transactions"
+        other: "+%{count} de plus dans Transactions"
       open_in_transactions: Ouvrir dans Transactions
       summary: "%{total} utilisés · %{listed} sur %{transactions}"
       transactions:
