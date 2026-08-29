@@ -1,29 +1,29 @@
 <%# This dialog is used as an override to the browser's confirm API when submitting forms with data-turbo-confirm %>
 <%# See confirm_dialog_controller.js and _htmldoc.html.erb  %>
-<%= render DS::Dialog.new(id: "confirm-dialog", auto_open: false, data: { controller: "confirm-dialog" }, width: "sm", disable_frame: true) do |dialog| %>
+<%= render DS::Dialog.new(id: "confirm-dialog", auto_open: false, data: { controller: "confirm-dialog" }, disable_frame: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="font-medium text-primary" data-confirm-dialog-target="title"><%= t(".are_you_sure") %></h3>
+      <%= dialog.close_button %>
+    </div>
+
+    <p class="text-sm text-secondary" data-confirm-dialog-target="subtitle"><%= t(".cannot_be_undone") %></p>
+  <% end %>
+
   <% dialog.with_body do %>
-    <form method="dialog" class="space-y-4">
-      <div class="space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <h3 class="font-medium text-primary" data-confirm-dialog-target="title"><%= t(".are_you_sure") %></h3>
-          <%= icon("x", as_button: true, type: "submit", value: "cancel") %>
-        </div>
-
-        <p class="text-sm text-secondary" data-confirm-dialog-target="subtitle"><%= t(".cannot_be_undone") %></p>
-      </div>
-
+    <form method="dialog">
       <div>
         <% ["primary", "outline-destructive", "destructive"].each do |variant| %>
           <%= render DS::Button.new(
-          text: t(".confirm"),
-          variant: variant,
-          type: :submit,
-          autofocus: true,
-          full_width: true,
-          value: "confirm",
-          data: { variant: variant, confirm_dialog_target: "confirmButton" },
-          hidden: true,
-        ) %>
+            text: t(".confirm"),
+            variant: variant,
+            type: :submit,
+            autofocus: true,
+            full_width: true,
+            value: "confirm",
+            data: { variant: variant, confirm_dialog_target: "confirmButton" },
+            hidden: true,
+          ) %>
         <% end %>
       </div>
     </form>
