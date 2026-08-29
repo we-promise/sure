@@ -15,7 +15,7 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
   end
 
   test "log_api_key_created! records the api key id, name, and scopes" do
-    api_key = ApiKey.create!(user: @user, name: "Test Key", display_key: "test_key_#{SecureRandom.hex(8)}", scopes: [ "read" ])
+    api_key = ApiKey.create!(user: @user, name: "Test Key", display_key: "test_key_#{SecureRandom.hex(8)}", scopes: [ "read" ]) # pipelock:ignore
 
     log = SecurityAuditLog.log_api_key_created!(user: @user, api_key: api_key, request: @request)
 
