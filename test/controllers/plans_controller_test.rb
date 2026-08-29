@@ -8,6 +8,35 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
+
+  # The status pill beside this bar was already amber for a depleted reserve
+  # while the bar itself stayed neutral: the same goal reported as needing
+  # attention and not, an inch apart.
+  #
+  # Counted rather than matched: a fixture goal is already off its pace, so
+  # the markup is on the page either way and a presence check passes without
+  # the fix.
+  test "the goals card bars a depleted reserve in warning colour" do
+    bar = /h-full bg-warning rounded-full/
+
+    get plan_url
+    before = response.body.scan(bar).size
+
+    family = @user.family
+    account = Account.create!(family: family, accountable: Depository.new,
+                              name: "Reserve pot", currency: family.currency, balance: 1_000)
+    family.goals.create!(name: "Precaution", target_amount: 6_000,
+                         currency: family.currency, kind: "maintained") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get plan_url
+
+    assert_response :success
+    assert_equal before + 1, response.body.scan(bar).size,
+                 "the depleted reserve's bar stayed neutral"
+  end
+
   test "redirects users without preview access to budgets" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 

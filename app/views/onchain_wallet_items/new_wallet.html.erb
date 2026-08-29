@@ -5,6 +5,18 @@
     <div class="space-y-4">
       <%= render "onchain_wallet_items/price_provider_warning" %>
 
+      <%# Shown here rather than as a permanent banner on the settings page:
+          the question it answers — can Sure spend my coins? — is asked at the
+          moment of pasting an address, and a banner one has already read twice
+          stops being read at all. %>
+      <%= render DS::Alert.new(
+            variant: :info,
+            message: safe_join([
+              content_tag(:p, t("settings.providers.onchain_wallet_panel.keyless_title"), class: "font-medium"),
+              content_tag(:p, t("settings.providers.onchain_wallet_panel.keyless_body"), class: "mt-1")
+            ])
+          ) %>
+
       <% if @error_message.present? %>
         <%= render DS::Alert.new(message: @error_message, variant: :error) %>
       <% end %>
