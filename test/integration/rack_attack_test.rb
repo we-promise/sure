@@ -115,9 +115,33 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil api_login_email_block.call(malformed_request)
   end
 
+  test "json email extraction tolerates non-object JSON payloads without raising" do
+    api_login_email_block = Rack::Attack.throttles["api_login/email"].block
+
+    null_request = throttle_request("/api/v1/auth/login", method: "POST", json_body_raw: "null")
+    assert_nil api_login_email_block.call(null_request)
+
+    array_request = throttle_request("/api/v1/auth/login", method: "POST", json_body_raw: "[1,2,3]")
+    assert_nil api_login_email_block.call(array_request)
+  end
+
+  test "json email extraction skips a non-rewindable rack.input instead of raising or consuming the body" do
+    # Rack 3 no longer requires rack.input to be rewindable (streaming
+    # servers may not buffer it) — simulate that by using an input object
+    # that only implements #read, not #rewind.
+    api_login_email_block = Rack::Attack.throttles["api_login/email"].block
+
+    request = throttle_request("/api/v1/auth/login", method: "POST", non_rewindable_json_body: { email: "user@example.com" })
+    assert_nil api_login_email_block.call(request)
+  end
+
   private
 
-    def throttle_request(path, method: "GET", params: {}, session: {}, json_body: nil, json_body_raw: nil)
+    NonRewindableInput = Struct.new(:io) do
+      def read(*args) = io.read(*args)
+    end
+
+    def throttle_request(path, method: "GET", params: {}, session: {}, json_body: nil, json_body_raw: nil, non_rewindable_json_body: nil)
       # Rack::MockRequest.env_for doesn't set REMOTE_ADDR, so #ip is nil
       # unless set explicitly — asserting against a real value here (rather
       # than comparing to request.ip, which could trivially be nil on both
@@ -127,6 +151,9 @@ class RackAttackTest < ActionDispatch::IntegrationTest
 
       if json_body || json_body_raw
         opts[:input] = json_body_raw || json_body.to_json
+        opts["CONTENT_TYPE"] = "application/json"
+      elsif non_rewindable_json_body
+        opts[:input] = NonRewindableInput.new(StringIO.new(non_rewindable_json_body.to_json))
         opts["CONTENT_TYPE"] = "application/json"
       end
 

@@ -64,11 +64,15 @@ class Rack::Attack
   # bypass the email throttle entirely. Peek at the JSON body without
   # consuming it, so the controller still gets a fresh, unread input stream.
   json_request_email = ->(request) do
-    next nil unless request.media_type == "application/json"
+    # Rack 3 no longer requires rack.input to be rewindable — bail out
+    # without reading if the server's input stream can't be rewound, rather
+    # than consuming a body the controller can never get back.
+    next nil unless request.media_type == "application/json" && request.body.respond_to?(:rewind)
 
     body = request.body.read
     request.body.rewind
-    JSON.parse(body)["email"]
+    payload = JSON.parse(body)
+    payload["email"] if payload.is_a?(Hash)
   rescue JSON::ParserError, TypeError
     nil
   end
