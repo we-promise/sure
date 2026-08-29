@@ -184,7 +184,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def category_for(event, label)
-      return if label.in?(%w[Contribution Withdrawal Interest Dividend])
+      return if label.in?([ t("contribution"), t("withdrawal"), t("interest"), t("dividend") ])
 
       @category_matcher.category_for([ event[:title], event[:subtitle] ].compact.join(" "))
     end
