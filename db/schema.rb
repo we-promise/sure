@@ -2323,6 +2323,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.uuid "family_id", null: false
     t.string "first_name"
     t.text "goals", default: [], array: true
+    t.datetime "last_login_at"
     t.string "last_name"
     t.uuid "last_viewed_chat_id"
     t.string "locale"
@@ -2335,6 +2336,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.string "role", default: "member", null: false
     t.datetime "rule_prompt_dismissed_at"
     t.boolean "rule_prompts_disabled", default: false
+    t.integer "sessions_count", default: 0, null: false
     t.datetime "set_onboarding_goals_at"
     t.datetime "set_onboarding_preferences_at"
     t.boolean "show_ai_sidebar", default: true

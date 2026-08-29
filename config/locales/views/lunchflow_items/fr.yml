@@ -12,8 +12,8 @@ fr:
       network_issue_label: Problème de réseau
       service_down_desc: L'API Lunch Flow peut être temporairement indisponible
       service_down_label: Service en panne
-      title: Erreur de connexion au flux de déjeuner
-      unable_to_connect: Impossible de se connecter à Lunch Flow
+      title: Erreur de connexion à Lunchflow
+      unable_to_connect: Impossible de se connecter à Lunchflow
     complete_account_setup:
       all_skipped: Tous les comptes ont été ignorés. Aucun compte n'a été créé.
       creation_failed: 'Échec de la création des comptes : %{error}'
@@ -177,7 +177,7 @@ fr:
       setup_step_3: Entrez votre clé API Lunch Flow
       setup_step_4: Revenez ici pour lier vos comptes
       setup_steps_title: 'Étapes de configuration :'
-      title: Configuration du flux de déjeuner requise
+      title: Configuration de Lunchflow requise
     sync:
       success: Synchronisation démarrée
     update:
