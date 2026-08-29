@@ -117,10 +117,10 @@ en:
         transaction_not_found: That outflow is no longer available to attribute.
         no_linked_account: This goal has no funding account left.
     consumed_outflows:
-      confirm_detach_cta: Yes, take it back
+      confirm_detach_cta: Yes, undo it
       confirm_detach_body: "%{amount} goes back to counting against this goal. The account's earmark is not restored — set it again yourself if you want it back."
-      confirm_detach_title: Take this back?
-      detach: Not this
+      confirm_detach_title: Undo this attribution?
+      detach: Undo
       heading: What this goal paid for
       more_in_transactions:
         one: "+1 more in Transactions"
@@ -136,10 +136,10 @@ en:
     unattributed_outflows:
       heading: Money left these accounts
       body: If any of this was spent on %{goal}, say so and it stops counting against the target.
-      attribute: This was it
+      attribute: Attribute
       confirm_body: "%{amount} will count as spent on %{goal} instead of counting against it. This can be undone."
-      confirm_cta: Yes, it was
-      confirm_title: Was this spent on this goal?
+      confirm_cta: Yes, attribute it
+      confirm_title: Attribute this spend?
     show:
       edit: Edit
       consume: I used some of this money

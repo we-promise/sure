@@ -203,10 +203,10 @@ fr:
         transaction_not_found: Cette sortie n'est plus disponible.
         no_linked_account: Cet objectif n'a plus de compte de financement.
     consumed_outflows:
-      confirm_detach_cta: Oui, la reprendre
+      confirm_detach_cta: Oui, annuler
       confirm_detach_body: "%{amount} redeviennent à financer sur cet objectif. L'affectation du compte n'est pas rétablie — remettez-la vous-même si vous la voulez."
-      confirm_detach_title: Reprendre cette dépense ?
-      detach: Pas celle-ci
+      confirm_detach_title: Annuler cette attribution ?
+      detach: Annuler
       heading: Ce que cet objectif a payé
       more_in_transactions:
         one: "+1 de plus dans Transactions"
@@ -222,10 +222,10 @@ fr:
     unattributed_outflows:
       heading: De l'argent est sorti de ces comptes
       body: Si une partie a servi à %{goal}, dites-le et elle cessera de compter comme un retard.
-      attribute: C'était ça
+      attribute: Attribuer
       confirm_body: "%{amount} compteront comme dépensés pour %{goal} au lieu de compter contre. C'est réversible."
-      confirm_cta: Oui, c'était ça
-      confirm_title: Cette dépense était-elle pour cet objectif ?
+      confirm_cta: Oui, l'attribuer
+      confirm_title: Attribuer cette dépense ?
     show:
       archive: Archiver
       archived_banner:
