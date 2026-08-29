@@ -2,27 +2,27 @@
 pt-PT:
   insights:
     notification:
-      title: Nova informação financeira
+      title: Novo indicador financeiro
       body: Abra a Sure para rever a sua informação de IA mais recente.
     index:
-      title: Informações
+      title: Indicadores
       subtitle: O que está a acontecer nas suas finanças, atualizado todas as noites.
-      refresh: Verificar novas informações
+      refresh: Verificar novos indicadores
       empty:
-        title: Ainda não existem informações
-        description: As informações aparecem aqui assim que houver atividade suficiente nas suas contas. São atualizadas automaticamente todas as noites.
+        title: Ainda não existem indicadores
+        description: Os indicadores aparecem aqui assim que houver atividade suficiente nas suas contas. São atualizados automaticamente todas as noites.
     refresh:
-      queued: Estamos a gerar novas informações. Volte dentro de um minuto.
+      queued: Estamos a gerar novos indicadores. Volte dentro de um minuto.
       checking: A verificar…
     card:
-      acknowledged: "Informação dispensada"
+      acknowledged: "Indicador dispensado"
       acknowledge: Percebido
       acknowledge_title: Ocultar isto até os números mudarem
-      new: Nova
+      new: Novo
     feed:
-      view_all: Ver todas as informações
+      view_all: Ver todos os indicadores
       header: Mais recentes
-      header_new: Novas
+      header_new: Novos
       acknowledge_aria: "Percebido: %{title}"
     types:
       spending_anomaly: Gastos

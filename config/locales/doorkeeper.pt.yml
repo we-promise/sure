@@ -31,10 +31,10 @@ pt-PT:
       form:
         error: 'Oops! Verifique o formulário em caso de possíveis erros.'
       help:
-        confidential: 'Application will be used where the client secret can be kept confidential. Native mobile apps and Single Page Apps are considered non-confidential.'
-        redirect_uri: 'Use one line per URI'
-        blank_redirect_uri: "Leave it blank if you configured your provider to use Client Credentials, Resource Owner Password Credentials or any other grant type that doesn't require redirect URI."
-        scopes: 'Separate scopes with spaces. Leave blank to use the default scopes.'
+        confidential: 'A aplicação será utilizada em situações em que o segredo do cliente possa ser mantido confidencial. As aplicações móveis nativas e as Single Page Apps são consideradas não confidenciais.'
+        redirect_uri: 'Utilize uma linha por URI'
+        blank_redirect_uri: "Deixe em branco se configurou o seu serviço para utilizar Client Credentials, Resource Owner Password Credentials ou qualquer outro tipo de concessão que não exija um URI de redirecionamento."
+        scopes: 'Separe os âmbitos com espaços. Deixe em branco para utilizar os âmbitos predefinidos.'
       edit:
         title: 'Editar aplicação'
       index:
@@ -52,9 +52,9 @@ pt-PT:
       show:
         title: 'Aplicação: %{name}'
         application_id: 'UID'
-        secret: 'Secret'
-        secret_hashed: 'Secret hashed'
-        scopes: 'Scopes'
+        secret: 'Segredo'
+        secret_hashed: 'Segredo com hash'
+        scopes: 'Âmbitos'
         confidential: 'Confidencial'
         callback_urls: 'URLs de Callback'
         actions: 'Ações'
@@ -68,72 +68,72 @@ pt-PT:
         title: 'Ocorreu um erro'
         go_back: 'Voltar'
       new:
-        title: 'Authorization required'
-        prompt: 'Authorize %{client_name} to use your account?'
-        able_to: 'This application will be able to'
+        title: 'Autorização necessária'
+        prompt: 'Autorizar %{client_name} a utilizar a sua conta?'
+        able_to: 'Esta aplicação poderá'
       show:
-        title: 'Authorization code'
-        authorization_code_label: 'Authorization Code:'
-        copy_instructions: 'Copy this code and paste it into the application.'
+        title: 'Código de autorização'
+        authorization_code_label: 'Código de autorização:'
+        copy_instructions: 'Copie este código e cole-o na aplicação.'
       form_post:
-        title: 'Submit this form'
+        title: 'Submeter este formulário'
 
     authorized_applications:
       confirmations:
-        revoke: 'Are you sure?'
+        revoke: 'Tem a certeza?'
       buttons:
-        revoke: 'Revoke'
+        revoke: 'Revogar'
       index:
-        title: 'Your authorized applications'
-        application: 'Application'
-        created_at: 'Created At'
+        title: 'As suas aplicações autorizadas'
+        application: 'Aplicação'
+        created_at: 'Criada em'
         date_format: '%Y-%m-%d %H:%M:%S'
 
     pre_authorization:
-      status: 'Pre-authorization'
+      status: 'Pré-autorização'
 
     errors:
       messages:
         # Common error messages
         invalid_request:
-          unknown: 'The request is missing a required parameter, includes an unsupported parameter value, or is otherwise malformed.'
-          missing_param: 'Missing required parameter: %{value}.'
-          request_not_authorized: 'Request need to be authorized. Required parameter for authorizing request is missing or invalid.'
-          invalid_code_challenge: 'Code challenge is required.'
-        invalid_redirect_uri: "The requested redirect uri is malformed or doesn't match client redirect URI."
-        unauthorized_client: 'The client is not authorized to perform this request using this method.'
-        access_denied: 'The resource owner or authorization server denied the request.'
-        invalid_scope: 'The requested scope is invalid, unknown, or malformed.'
+          unknown: 'O pedido está em falta de um parâmetro obrigatório, inclui um valor de parâmetro não suportado ou está, de outro modo, malformado.'
+          missing_param: 'Parâmetro obrigatório em falta: %{value}.'
+          request_not_authorized: 'O pedido precisa de ser autorizado. O parâmetro obrigatório para autorizar o pedido está em falta ou é inválido.'
+          invalid_code_challenge: 'É necessário um code challenge.'
+        invalid_redirect_uri: "O URI de redirecionamento pedido está malformado ou não corresponde ao URI de redirecionamento do cliente."
+        unauthorized_client: 'O cliente não está autorizado a realizar este pedido com este método.'
+        access_denied: 'O proprietário do recurso ou o servidor de autorização negou o pedido.'
+        invalid_scope: 'O âmbito pedido é inválido, desconhecido ou malformado.'
         invalid_code_challenge_method:
-          zero: 'The authorization server does not support PKCE as there are no accepted code_challenge_method values.'
-          one: 'The code_challenge_method must be %{challenge_methods}.'
-          other: 'The code_challenge_method must be one of %{challenge_methods}.'
-        server_error: 'The authorization server encountered an unexpected condition which prevented it from fulfilling the request.'
-        temporarily_unavailable: 'The authorization server is currently unable to handle the request due to a temporary overloading or maintenance of the server.'
+          zero: 'O servidor de autorização não suporta PKCE porque não existem valores code_challenge_method aceites.'
+          one: 'O code_challenge_method tem de ser %{challenge_methods}.'
+          other: 'O code_challenge_method tem de ser um de %{challenge_methods}.'
+        server_error: 'O servidor de autorização encontrou uma condição inesperada que o impediu de cumprir o pedido.'
+        temporarily_unavailable: 'O servidor de autorização está atualmente impossibilitado de processar o pedido devido a uma sobrecarga temporária ou a manutenção do servidor.'
 
         # Configuration error messages
-        credential_flow_not_configured: 'Resource Owner Password Credentials flow failed due to Doorkeeper.configure.resource_owner_from_credentials being unconfigured.'
-        resource_owner_authenticator_not_configured: 'Resource Owner find failed due to Doorkeeper.configure.resource_owner_authenticator being unconfigured.'
-        admin_authenticator_not_configured: 'Access to admin panel is forbidden due to Doorkeeper.configure.admin_authenticator being unconfigured.'
+        credential_flow_not_configured: 'O fluxo Resource Owner Password Credentials falhou porque o Doorkeeper.configure.resource_owner_from_credentials não está configurado.'
+        resource_owner_authenticator_not_configured: 'A pesquisa de Resource Owner falhou porque o Doorkeeper.configure.resource_owner_authenticator não está configurado.'
+        admin_authenticator_not_configured: 'O acesso ao painel de administração é proibido porque o Doorkeeper.configure.admin_authenticator não está configurado.'
 
         # Access grant errors
-        unsupported_response_type: 'The authorization server does not support this response type.'
-        unsupported_response_mode: 'The authorization server does not support this response mode.'
+        unsupported_response_type: 'O servidor de autorização não suporta este tipo de resposta.'
+        unsupported_response_mode: 'O servidor de autorização não suporta este modo de resposta.'
 
         # Access token errors
-        invalid_client: 'Client authentication failed due to unknown client, no client authentication included, or unsupported authentication method.'
-        invalid_grant: 'The provided authorization grant is invalid, expired, revoked, does not match the redirection URI used in the authorization request, or was issued to another client.'
-        unsupported_grant_type: 'The authorization grant type is not supported by the authorization server.'
+        invalid_client: 'A autenticação do cliente falhou devido a um cliente desconhecido, à ausência de autenticação do cliente ou a um método de autenticação não suportado.'
+        invalid_grant: 'A concessão de autorização fornecida é inválida, expirou, foi revogada, não corresponde ao URI de redirecionamento utilizado no pedido de autorização ou foi emitida para outro cliente.'
+        unsupported_grant_type: 'O tipo de concessão de autorização não é suportado pelo servidor de autorização.'
 
         invalid_token:
-          revoked: "The access token was revoked"
-          expired: "The access token expired"
-          unknown: "The access token is invalid"
+          revoked: "O token de acesso foi revogado"
+          expired: "O token de acesso expirou"
+          unknown: "O token de acesso é inválido"
         revoke:
-          unauthorized: "You are not authorized to revoke this token"
+          unauthorized: "Não está autorizado a revogar este token"
 
         forbidden_token:
-          missing_scope: 'Access to this resource requires scope "%{oauth_scopes}".'
+          missing_scope: 'O acesso a este recurso exige o âmbito "%{oauth_scopes}".'
 
     flash:
       applications:
@@ -151,7 +151,7 @@ pt-PT:
       admin:
         title: 'Doorkeeper'
         nav:
-          oauth2_provider: 'Provider OAuth2'
+          oauth2_provider: 'Serviço OAuth2'
           applications: 'Aplicações'
           home: 'Início'
       application:
