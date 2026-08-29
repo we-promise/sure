@@ -84,7 +84,7 @@ fr:
         completion: achèvement
         cost_by_model: Coût par modèle
         cost_by_operation: Coût par opération
-        cost_estimates_description: "Les coûts sont estimés d’après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
+        cost_estimates_description: "Les coûts sont estimés d'après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
         cost_estimates_title: À propos des estimations de coûts
         end_date: Date de fin
         failed: Échec
@@ -203,16 +203,16 @@ fr:
       show:
         confirm_delete:
           body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
-          title: Supprimer le compte?
+          title: Supprimer le compte ?
         confirm_remove_invitation:
-          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email}?
+          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email} ?
           title: Supprimer l'invitation
         confirm_remove_member:
-          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte?
+          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte ?
           title: Supprimer le membre
         confirm_reset:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
-          title: Réinitialiser le compte?
+          title: Réinitialiser le compte ?
         confirm_reset_with_sample_data:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
           title: Réinitialiser le compte et charger des données d'exemple ?

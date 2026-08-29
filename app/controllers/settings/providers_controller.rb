@@ -2,6 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
 
   def show
     @breadcrumbs = [
@@ -153,6 +154,11 @@ class Settings::ProvidersController < ApplicationController
       redirect_to root_path, alert: t("settings.providers.not_authorized")
     end
 
+    def set_encryption_warning_context
+      @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
+        !ActiveRecordEncryptionConfig.explicitly_configured?
+    end
+
     # Reload provider configurations after settings update
     def reload_provider_configs(updated_fields)
       # Build a set of provider keys that had fields updated
@@ -195,6 +201,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
+      { key: "onchain_wallet", title: "On-chain wallets", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "trading212",     title: "Trading 212",     turbo_id: "trading212", partial: "trading212_panel" },
@@ -220,6 +227,7 @@ class Settings::ProvidersController < ApplicationController
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
+      "onchain_wallet" => "OnchainWalletItem",
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
       "ibkr"           => "IbkrItem",
@@ -256,6 +264,8 @@ class Settings::ProvidersController < ApplicationController
         @binance_items = Current.family.binance_items.active.ordered
       when "kraken"
         @kraken_items = Current.family.kraken_items.active.ordered
+      when "onchain_wallet"
+        @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       when "snaptrade"
         @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       when "ibkr"
@@ -299,6 +309,7 @@ class Settings::ProvidersController < ApplicationController
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
+      @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
@@ -330,6 +341,7 @@ class Settings::ProvidersController < ApplicationController
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
+        "onchain_wallet" => @onchain_wallet_items,
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,
         "ibkr"           => @ibkr_items,

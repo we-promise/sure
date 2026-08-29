@@ -74,7 +74,8 @@ class Holding::ReverseCalculator
           price: price.price,
           currency: price.currency,
           amount: qty * price.price,
-          cost_basis: cost_basis_for(security_id, date, price.currency)
+          cost_basis: cost_basis_for(security_id, date, price.currency),
+          cost_basis_unknown: transferred_by?(security_id, date)
         )
       end.compact
     end
@@ -86,12 +87,24 @@ class Holding::ReverseCalculator
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
       @cost_basis_memo = {}
       @fx_rate_memo = {}
+      # First date a transfer landed on each security. From that day on the
+      # position contains units acquired at a price nothing here knows, so it
+      # has no cost basis — before it, the purchases still stand on their own.
+      @first_transfer_dates = {}
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
         trade = trade_entry.entryable
         next unless trade.qty > 0
 
         security_id = trade.security_id
+
+        if trade.investment_activity_label == Trade::TRANSFER_LABEL
+          @first_transfer_dates[security_id] ||= trade_entry.date
+          next
+        end
+
+        # Lots stay in their own currency; cost_basis_for converts using the
+        # holding's native price currency and memoizes by [security, currency, count].
         @cost_basis_buys[security_id] << {
           date: trade_entry.date,
           qty: trade.qty,
@@ -106,7 +119,14 @@ class Holding::ReverseCalculator
       end
     end
 
+    def transferred_by?(security_id, date)
+      first = @first_transfer_dates[security_id]
+      first.present? && first <= date
+    end
+
     def cost_basis_for(security_id, date, currency)
+      return nil if transferred_by?(security_id, date)
+
       buy_count = buy_count_as_of(security_id, date)
       return nil if buy_count.nil? || buy_count.zero?
 

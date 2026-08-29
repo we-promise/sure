@@ -25,6 +25,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
+  has_many :push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -217,7 +218,7 @@ class User < ApplicationRecord
   # SSO-only users have OIDC identities but no local password.
   # They cannot use password reset or local login.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil? && oidc_identities.any?
   end
 
   # Check if user has a local password set (can authenticate locally)
@@ -230,10 +231,88 @@ class User < ApplicationRecord
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
+
+  # Super Admin Invariant
+  validate :ensure_not_last_super_admin, if: :losing_super_admin_privileges?
+  before_destroy :ensure_not_last_super_admin_on_destroy
+
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
-    update active: false, email: deactivated_email
+    return true unless active?
+
+    transaction do
+      update(active: false, email: deactivated_email)
+    end || false
+  end
+
+  private
+
+    def losing_super_admin_privileges?
+      (role_changed? && role_was == "super_admin" && role != "super_admin") ||
+        (active_changed? && active_was == true && !active && role == "super_admin")
+    end
+
+    def ensure_not_last_super_admin
+      return unless check_last_super_admin_invariant_failed?
+
+      attribute = role_changed? ? :role : :base
+      errors.add(attribute, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+    end
+
+    def ensure_not_last_super_admin_on_destroy
+      return unless role == "super_admin" && active?
+
+      if check_last_super_admin_invariant_failed?
+        errors.add(:base, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+        throw(:abort)
+      end
+    end
+
+    def check_last_super_admin_invariant_failed?
+      # Lock all active super admins in a consistent order to prevent deadlocks
+      locked_ids = User.where(role: :super_admin, active: true).order(:id).lock.pluck(:id)
+      locked_ids.size <= 1 && locked_ids.include?(id)
+    end
+
+  public
+
+  # Permanent removal of another user, initiated by a super admin from the
+  # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
+  # (which reassigns owned accounts, or destroys the family when this is its
+  # last member) for the heavy data cleanup, but additionally revokes every
+  # live authentication vector *synchronously* so there is no window in which
+  # the removed user can keep acting or re-authenticate before the async purge
+  # runs. Returns false (with errors populated) when the user cannot be
+  # deactivated, e.g. an admin who still has co-members in their family.
+  def permanently_remove!
+    was_active = active?
+    removed = transaction do
+      identity_label = email
+      raise ActiveRecord::Rollback unless deactivate
+
+      SsoIdentityBlock.block_all!(oidc_identities, identity_label: identity_label)
+      revoke_all_credentials!
+      true
+    end || false
+
+    purge_later if removed && !was_active
+    removed
+  end
+
+  # Destroys every credential/session that can authenticate as this user.
+  # Web sessions and the SSO identity re-auth path (OidcIdentity lookup by
+  # provider+uid) are not gated on #active?, so they must be torn down here for
+  # revocation to be immediate; the async purge would otherwise leave a window.
+  def revoke_all_credentials!
+    Doorkeeper::AccessToken
+      .where(resource_owner_id: id, revoked_at: nil)
+      .update_all(revoked_at: Time.current)
+    sessions.destroy_all
+    api_keys.destroy_all
+    mobile_devices.destroy_all
+    webauthn_credentials.destroy_all
+    oidc_identities.destroy_all
   end
 
   def can_deactivate
@@ -244,6 +323,59 @@ class User < ApplicationRecord
 
   def purge_later
     UserPurgeJob.perform_later(self)
+  end
+
+  def transfer_to_family!(new_family, role: self.role)
+    transaction do
+      lock!
+
+      accounts_to_move = owned_accounts.to_a
+      provider_items_to_move = provider_items_for_transfer(accounts_to_move)
+      moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      account_shares.delete_all
+
+      update!(family: new_family, role: role, default_account: moving_default_account ? default_account : nil)
+
+      accounts_to_move.each do |account|
+        account.update!(family: new_family)
+      end
+
+      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+
+      provider_items_to_move.each do |provider_item|
+        provider_item.update!(family: new_family)
+      end
+
+      new_family.auto_share_existing_accounts_with(self)
+    end
+  end
+
+  def provider_items_for_transfer(accounts_to_move)
+    account_ids_to_move = accounts_to_move.map(&:id)
+    provider_items = accounts_to_move.flat_map do |account|
+      account.account_providers.includes(:provider).filter_map do |account_provider|
+        provider_item_for(account_provider.provider)
+      end
+    end.uniq
+
+    provider_items.each do |provider_item|
+      linked_account_ids = provider_item.accounts.map(&:id)
+      next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    provider_items
+  end
+
+  def provider_item_for(provider)
+    item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
+      association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
+    end
+
+    provider.public_send(item_association.name) if item_association
   end
 
   def purge

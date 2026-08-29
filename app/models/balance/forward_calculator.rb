@@ -102,7 +102,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     # full recalculation to pick them up. Includes native holding currencies
     # (after manual/multi-currency holdings keep security-price FX).
     def multi_currency_account?
-      account.entries.where.not(currency: account.currency).exists? ||
+      account.entries.excluding_pending.where.not(currency: account.currency).exists? ||
         account.holdings.where.not(currency: account.currency).exists? ||
         account.currency != account.family.currency
     end
@@ -135,7 +135,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
 
     def calc_end_date
-      [ account.entries.order(:date).last&.date, account.holdings.order(:date).last&.date ].compact.max || Date.current
+      [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"

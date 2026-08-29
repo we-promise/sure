@@ -7,6 +7,7 @@ class Family < ApplicationRecord
   include Trading212Connectable
   include QuestradeConnectable
   include RedbarkConnectable
+  include OnchainWalletConnectable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -291,6 +292,15 @@ class Family < ApplicationRecord
     Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
   end
 
+  # Merchant names already associated with this family (via any provider, or a
+  # manually created FamilyMerchant) -- used to recognize a merchant embedded in
+  # noisy provider text (e.g. Enable Banking's remittance lines) without
+  # inventing a new one from scratch. Deliberately excludes recently-unlinked
+  # merchants (unlike available_merchants), since those were explicitly removed.
+  def known_merchant_names
+    (assigned_merchants.pluck(:name) + merchants.pluck(:name)).uniq
+  end
+
   def assigned_merchants_for(user)
     merchant_ids = Transaction.joins(:entry)
       .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
@@ -330,9 +340,10 @@ class Family < ApplicationRecord
     AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
   end
 
-  # Memoized per user: the layout renders the sidebar for desktop and mobile
-  # (each with three tab panels), so one request asks for the balance sheet
-  # many times; rebuilding it repeats the account/sync/exchange-rate queries.
+  # Memoized per user: the layout renders the account sidebar on every page
+  # (mobile + desktop, each with 3 tabs), so a single request can ask for the
+  # balance sheet many times. Rebuilding it repeats the account/sync/exchange-
+  # rate queries it depends on.
   def balance_sheet(user: Current.user)
     @balance_sheets ||= {}
     @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
@@ -409,8 +420,10 @@ class Family < ApplicationRecord
     end
   end
 
+  # Memoized per user for the same reason as #balance_sheet above.
   def investment_statement(user: Current.user)
-    InvestmentStatement.new(self, user: user)
+    @investment_statements ||= {}
+    @investment_statements[user&.id] ||= InvestmentStatement.new(self, user: user)
   end
 
   def eu?
@@ -480,10 +493,49 @@ class Family < ApplicationRecord
 
   # Used for invalidating entry related aggregation queries
   def entries_cache_version
-    @entries_cache_version ||= begin
-      ts = entries.maximum(:updated_at)
-      ts.present? ? ts.to_i : 0
-    end
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f || 0}"
+  end
+
+  # Used for invalidating caches keyed on entries (e.g. the transactions
+  # index's uncategorized count). Unlike #entries_cache_version, includes
+  # .count so a hard-deleted entry busts the cache even when it didn't hold
+  # the current max updated_at, and uses full-precision timestamps so two
+  # updates within the same second still produce distinct versions.
+  def entries_version
+    "#{entries.count}-#{entries.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches keyed on recurring transactions (e.g. the
+  # transactions index's projected recurring list). See #entries_version for
+  # why .count is included alongside the timestamp.
+  def recurring_transactions_version
+    "#{recurring_transactions.count}-#{recurring_transactions.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches whose results depend on which accounts are
+  # active/draft vs. disabled (e.g. AccountsController#toggle_active changes
+  # nothing on entries, but changes which entries `uncategorized_transactions`
+  # considers accessible).
+  def accounts_status_version
+    "#{accounts.count}-#{accounts.maximum(:updated_at)&.to_f}"
+  end
+
+  # Used for invalidating caches that render merchant name/logo for recurring
+  # transactions (e.g. the transactions index's projected recurring list).
+  # Recurring detection copies `transaction.merchant_id` (see
+  # RecurringTransaction::Identifier), which can point at either a
+  # family-owned FamilyMerchant or a shared ProviderMerchant -- editing either
+  # (e.g. a manual rename, or ProviderMerchant::Enhancer updating a shared
+  # provider merchant's name/logo) doesn't touch `recurring_transactions`.
+  # Scoped to only the merchants actually referenced by this family's
+  # recurring transactions, rather than all family merchants, so unrelated
+  # merchant edits don't bust the cache unnecessarily.
+  def recurring_transaction_merchants_version
+    merchant_ids = recurring_transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id)
+    return "0-" if merchant_ids.empty?
+
+    scope = Merchant.where(id: merchant_ids)
+    "#{scope.count}-#{scope.maximum(:updated_at)&.to_f}"
   end
 
   def self_hoster?

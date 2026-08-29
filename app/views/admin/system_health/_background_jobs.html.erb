@@ -1,0 +1,103 @@
+<div class="space-y-4">
+  <% unless health.healthy? %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.alert.title"),
+      message: t("shared.sidekiq_health_banner.reasons.#{health.reason}"),
+      variant: :warning,
+      live: :polite
+    ) %>
+  <% end %>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-lg font-semibold mb-1"><%= t("admin.system_health.show.status_section_title") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t("admin.system_health.show.status_section_description") %></p>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.status") %></dt>
+        <dd class="text-primary font-medium">
+          <% if health.healthy? %>
+            <span class="text-success"><%= t("admin.system_health.show.values.healthy") %></span>
+          <% else %>
+            <span class="text-warning"><%= t("admin.system_health.show.values.unhealthy") %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.processes") %></dt>
+        <dd class="text-primary font-medium"><%= health.processes_count %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.last_heartbeat") %></dt>
+        <dd class="text-primary font-medium">
+          <% if health.last_heartbeat_at %>
+            <%= t("admin.system_health.show.values.time_ago", time_ago: time_ago_in_words(health.last_heartbeat_at)) %>
+          <% else %>
+            <%= t("admin.system_health.show.values.never") %>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.max_queue_latency") %></dt>
+        <dd class="text-primary font-medium">
+          <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(health.max_queue_latency, precision: 1)) %>
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-lg font-semibold mb-1"><%= t("admin.system_health.show.counters_section_title") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t("admin.system_health.show.counters_section_description") %></p>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.enqueued") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.enqueued_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.retries") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.retry_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.failed") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.failed_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.processed_total") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.processed_count) %></dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <h2 class="text-lg font-semibold mb-1"><%= t("admin.system_health.show.queues_section_title") %></h2>
+    <p class="text-sm text-secondary mb-4"><%= t("admin.system_health.show.queues_section_description") %></p>
+
+    <% breakdown = health.queue_breakdown %>
+    <% if breakdown.empty? %>
+      <p class="text-sm text-secondary"><%= t("admin.system_health.show.values.no_queues") %></p>
+    <% else %>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-secondary border-b border-primary">
+            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.queue") %></th>
+            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.size") %></th>
+            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.latency") %></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-primary">
+          <% breakdown.each do |name, size, latency| %>
+            <tr>
+              <td class="py-2 text-primary"><%= name %></td>
+              <td class="py-2 text-primary"><%= number_with_delimiter(size) %></td>
+              <td class="py-2 text-primary">
+                <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  </div>
+</div>

@@ -11,6 +11,10 @@ class Holding::ForwardCalculator
     # buys are O(1), and memoize FX rates by [from, to, date] across lots/days.
     @cost_basis_memo = {}
     @fx_rate_memo = {}
+    # Securities whose position has taken in a transfer. A coin moved in was
+    # acquired at a price nothing here knows, and averaging the purchases alone
+    # would apply their price to units that never cost it.
+    @transferred_security_ids = Set.new
   end
 
   def calculate
@@ -77,7 +81,8 @@ class Holding::ForwardCalculator
           price: price.price,
           currency: price.currency,
           amount: qty * price.price,
-          cost_basis: cost_basis_for(security_id, price.currency)
+          cost_basis: cost_basis_for(security_id, price.currency),
+          cost_basis_unknown: @transferred_security_ids.include?(security_id)
         )
       end.compact
     end
@@ -89,6 +94,15 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         next unless trade.qty > 0 # Only track buys
 
+        # A transfer is not a purchase: it contributes no cost and it makes the
+        # whole position unknowable, not just its own units.
+        if trade.investment_activity_label == Trade::TRANSFER_LABEL
+          @transferred_security_ids << trade.security_id
+          next
+        end
+
+        # Store the lot in its own currency; conversion happens in cost_basis_for,
+        # which knows the holding's native price currency and memoizes the rates.
         @cost_basis_tracker[trade.security_id] << {
           qty: trade.qty,
           price: trade.price,
@@ -101,6 +115,8 @@ class Holding::ForwardCalculator
     # Returns the current cost basis for a security in the holding currency, or nil if no buys recorded
     # or a cross-currency buy cannot be converted.
     def cost_basis_for(security_id, currency)
+      return nil if @transferred_security_ids.include?(security_id)
+
       buys = @cost_basis_tracker[security_id]
       return nil if buys.empty?
 

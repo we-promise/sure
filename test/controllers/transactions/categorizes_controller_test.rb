@@ -26,6 +26,23 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show groups subcategories immediately after their parent in the category select" do
+    create_transaction(account: @account, name: "Starbucks")
+    get transactions_categorize_url
+
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    option_values = doc.css("select[name='category_id'] option").map { |node| node["value"] }
+
+    parent_index = option_values.index(categories(:food_and_drink).id)
+    child_index = option_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
   test "show renders full dates so multi-year lists are unambiguous" do
     create_transaction(account: @account, name: "Starbucks", date: Date.new(2024, 7, 8))
 
@@ -159,7 +176,12 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
   private
 
     def sign_out
-      @user.sessions.each { |s| delete session_path(s) }
+      # Deleting sessions through the controller de-authenticates the request the
+      # moment our own session dies, so every later delete in the loop is a
+      # silent no-op and whichever sessions sort after it survive. The order is
+      # unspecified, which made every suite that signs out this way flaky.
+      # Teardown hygiene is not the behavior under test, so destroy directly.
+      @user.sessions.destroy_all
     end
 
     # POST /transactions/categorize
