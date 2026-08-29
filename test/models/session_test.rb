@@ -30,23 +30,17 @@ class SessionTest < ActiveSupport::TestCase
     stale = @user.sessions.create!
     stale.update_column(:updated_at, Session::INACTIVITY_TIMEOUT.ago - 1.day)
 
-    # `with_lock` reloads the row under a `SELECT ... FOR UPDATE`. Simulate a
-    # concurrent request refreshing the session in that window: by the time
-    # the lock is acquired and the block below runs, updated_at is no longer
-    # stale, so the recheck inside `clean` must skip the destroy.
-    original_with_lock = Session.instance_method(:with_lock)
-    Session.define_method(:with_lock) do |&block|
-      Session.where(id: id).update_all(updated_at: Time.current)
-      reload
-      block.call
-    end
+    # Simulate a concurrent request refreshing the session between the initial
+    # stale-session query and the row lock inside `clean`: stub `updated_at`
+    # so the recheck sees a fresh timestamp, while leaving the real
+    # `with_lock` (and its `SELECT ... FOR UPDATE` reload) in place so the
+    # locked recheck path is actually exercised.
+    Session.any_instance.stubs(:updated_at).returns(Time.current)
 
     deleted_count = Session.clean
 
     assert_equal 0, deleted_count
     assert Session.exists?(stale.id)
-  ensure
-    Session.define_method(:with_lock, original_with_lock)
   end
 
   test "find_active_by_cookie returns nil for a blank cookie" do
