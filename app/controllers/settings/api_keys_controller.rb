@@ -32,6 +32,7 @@ class Settings::ApiKeysController < ApplicationController
     @api_key.key = @plain_key
 
     if @api_key.save
+      SecurityAuditLog.log_api_key_created!(user: Current.user, api_key: @api_key, request: request)
       flash[:notice] = t(".success")
       redirect_to settings_api_key_path(@api_key, newly_created: true)
     else
@@ -41,6 +42,7 @@ class Settings::ApiKeysController < ApplicationController
 
   def destroy
     @api_key.revoke!
+    SecurityAuditLog.log_api_key_revoked!(user: Current.user, api_key: @api_key, request: request)
     flash[:notice] = t(".revoked_successfully")
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
     flash[:alert] = t(".revoke_failed")
