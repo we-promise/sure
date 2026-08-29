@@ -669,12 +669,17 @@ class Account < ApplicationRecord
       if Current.user.present? && Current.user.family_id == family_id
         self.owner = Current.user
       else
-        self.owner = family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+        self.owner =
+          family&.users&.where(role: "admin")&.order(:created_at)&.first ||
+          family&.users&.where(role: "super_admin")&.order(:created_at)&.first ||
+          family&.users&.order(:created_at)&.first
       end
     end
 
     def owner_belongs_to_family
-      return if User.where(id: owner_id, family_id: family_id).exists?
+      owner_user = User.lock.find_by(id: owner_id)
+      return if owner_user&.family_id == family_id
+
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
     end
 
