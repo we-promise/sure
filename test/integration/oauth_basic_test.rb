@@ -43,7 +43,7 @@ class OauthBasicTest < ActionDispatch::IntegrationTest
   test "doorkeeper configuration is properly set up" do
     # Test that Doorkeeper is configured and working
     assert Doorkeeper.configuration.present?, "Doorkeeper configuration should exist"
-    assert_equal 1.year, Doorkeeper.configuration.access_token_expires_in
+    assert_equal 2.hours, Doorkeeper.configuration.access_token_expires_in
     assert_equal "read", Doorkeeper.configuration.default_scopes.first.to_s
   end
 end
