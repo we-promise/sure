@@ -67,7 +67,7 @@ fr:
         format_label: Formater
         leave_empty: Laisser vide
         name_label: Nom
-        no_security_provider_warning: Le fournisseur de prix de sécurité n'est pas configuré.  Vos importations commerciales fonctionneront, mais bien sûr, elles ne rempliront pas l'historique des prix.  Veuillez accéder à vos paramètres pour configurer cela.
+        no_security_provider_warning: Le fournisseur de prix des titres n'est pas configuré. Vos importations de transactions boursières fonctionneront, mais Sure ne remplira pas l'historique des prix. Veuillez accéder à vos paramètres pour configurer cela.
         note_label: Remarque
         price_label: Prix
         quantity_label: Quantité
@@ -280,7 +280,7 @@ fr:
       rejected_transfers: Transferts rejetés
       rules: Règles
       tags: Balises
-      trades: Métiers
+      trades: Transactions boursières
       transactions: Opérations
       transfers: Transferts
       valuations: Évaluations
@@ -345,9 +345,11 @@ fr:
       processing_failed_with_message: "%{message}"
       processing_title: Traitement de votre PDF
       publish_transactions:
-        one: Publier la transaction %{count}
-        other: Publier %{count} Transactions
-      ready_for_review_description: Nous avons extrait %{count} transactions de votre relevé. Examinez-les et publiez-les pour les ajouter à votre compte.
+        one: Publier %{count} transaction
+        other: Publier %{count} transactions
+      ready_for_review_description:
+        one: "Nous avons extrait %{count} transaction de votre relevé. Examinez-la et publiez-la pour l'ajouter."
+        other: "Nous avons extrait %{count} transactions de votre relevé. Examinez-les et publiez-les pour les ajouter."
       ready_for_review_title: Prêt pour l'examen
       review_transactions: Examiner les transactions
       save_account: Enregistrer

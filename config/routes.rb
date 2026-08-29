@@ -141,8 +141,6 @@ Rails.application.routes.draw do
       get :manage
       get :review_tokens
       post :update_tokens
-      get :edit_wallet
-      patch :change_address
       delete :disconnect_wallet
       delete :disconnect_asset
     end
@@ -416,7 +414,9 @@ Rails.application.routes.draw do
     post :copy_previous, on: :member
     get :picker, on: :collection
 
-    resources :budget_categories, only: %i[index show update]
+    resources :budget_categories, only: %i[index show update] do
+      post :move, on: :collection
+    end
   end
 
   resources :goals do
@@ -427,6 +427,12 @@ Rails.application.routes.draw do
       patch :archive
       patch :unarchive
       patch :reopen
+      # Two actions on one path rather than one action branching on the verb:
+      # HEAD routes like GET but `request.get?` is false for it, so a branch
+      # would send a HEAD request down the write path. A goal can be partly
+      # spent more than once, so the write is a POST, not a PATCH on the goal.
+      get :consume
+      post :consume, action: :record_consumption, as: nil
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
@@ -883,7 +889,7 @@ Rails.application.routes.draw do
     end
     resources :sso_identity_blocks, only: [ :destroy ]
     resources :invitations, only: [ :destroy ]
-    resources :families, only: [] do
+    resources :families, only: [ :destroy ] do
       member do
         delete :invitations, to: "invitations#destroy_all"
       end

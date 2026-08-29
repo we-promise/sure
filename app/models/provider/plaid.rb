@@ -42,20 +42,21 @@ class Provider::Plaid
     raise JWT::VerificationError, "Invalid webhook body hash" unless ActiveSupport::SecurityUtils.secure_compare(expected_hash, actual_hash)
   end
 
-  def get_link_token(user_id:, webhooks_url:, redirect_url:, accountable_type: nil, access_token: nil)
+  def get_link_token(user_id:, webhooks_url:, redirect_url:, accountable_type: nil, access_token: nil, account_selection_enabled: false)
     request_params = {
       user: { client_user_id: user_id },
       client_name: "Sure Finances",
       country_codes: country_codes,
       language: "en",
       webhook: webhooks_url,
-      redirect_uri: redirect_url,
-      transactions: { days_requested: MAX_HISTORY_DAYS }
+      redirect_uri: redirect_url
     }
 
     if access_token.present?
       request_params[:access_token] = access_token
+      request_params[:update] = { account_selection_enabled: true } if account_selection_enabled
     else
+      request_params[:transactions] = { days_requested: MAX_HISTORY_DAYS }
       request_params[:products] = [ get_primary_product(accountable_type) ]
       request_params[:additional_consented_products] = get_additional_consented_products(accountable_type)
     end
@@ -114,6 +115,11 @@ class Provider::Plaid
     end
 
     TransactionSyncResponse.new(added:, modified:, removed:, cursor:)
+  end
+
+  def refresh_transactions(access_token)
+    request = Plaid::TransactionsRefreshRequest.new(access_token: access_token)
+    client.transactions_refresh(request)
   end
 
   def get_item_investments(access_token, start_date: nil, end_date: Date.current)

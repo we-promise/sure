@@ -49,11 +49,13 @@
                   </p>
                 </div>
 
+                <%# Icon-only: this repeats once per asset, and a column of
+                    labelled buttons is not how this app renders a list. %>
                 <%= render DS::Button.new(
-                      text: t(".disconnect_asset"),
-                      icon: "unlink",
-                      variant: :outline_destructive,
+                      variant: :icon,
                       size: :sm,
+                      icon: "unlink",
+                      title: t(".disconnect_asset"),
                       href: disconnect_asset_onchain_wallet_item_path(@onchain_wallet_item),
                       method: :delete,
                       params: { onchain_wallet_account_id: onchain_account.id },
@@ -63,33 +65,29 @@
             <% end %>
           </ul>
 
-          <div class="flex flex-wrap items-center gap-2">
-            <%= render DS::Link.new(
-                  text: t(".review_tokens"),
-                  icon: "list-checks",
-                  variant: "secondary",
-                  href: review_tokens_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, address: address),
-                  frame: :modal
-                ) %>
+          <%# A menu rather than a row of labelled buttons: these actions
+              repeat for every tracked address, and accounts/_account.html.erb
+              renders its own per-row actions the same way. %>
+          <div class="flex items-center justify-end">
+            <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+              <% menu.with_item(
+                   variant: "link",
+                   text: t(".review_tokens"),
+                   icon: "list-checks",
+                   href: review_tokens_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, address: address),
+                   data: { turbo_frame: :modal }
+                 ) %>
 
-            <%= render DS::Link.new(
-                  text: t(".change_address"),
-                  icon: "pencil",
-                  variant: "secondary",
-                  href: edit_wallet_onchain_wallet_item_path(@onchain_wallet_item, chain: chain, address: address),
-                  frame: :modal
-                ) %>
-
-            <%= render DS::Button.new(
-                  text: t(".disconnect_wallet"),
-                  icon: "trash-2",
-                  variant: :outline_destructive,
-                  size: :sm,
-                  href: disconnect_wallet_onchain_wallet_item_path(@onchain_wallet_item),
-                  method: :delete,
-                  params: { chain: chain, address: address },
-                  confirm: t(".disconnect_wallet_confirm")
-                ) %>
+              <% menu.with_item(
+                   variant: "button",
+                   text: t(".disconnect_wallet"),
+                   icon: "trash-2",
+                   href: disconnect_wallet_onchain_wallet_item_path(@onchain_wallet_item),
+                   method: :delete,
+                   params: { chain: chain, address: address },
+                   confirm: t(".disconnect_wallet_confirm")
+                 ) %>
+            <% end %>
           </div>
         </section>
       <% end %>
