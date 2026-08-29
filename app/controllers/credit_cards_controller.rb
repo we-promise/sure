@@ -26,15 +26,12 @@ class CreditCardsController < ApplicationController
         .dig(:account, :enable_banking)
       return if eb_params.blank?
 
-      provider_account = @account.provider_account_for("EnableBankingAccount")
-      return unless provider_account.present?
-
-      provider_account.update!(
-        treat_balance_as_available_credit: ActiveModel::Type::Boolean.new.cast(eb_params[:treat_balance_as_available_credit])
-      )
-
-      # Re-sync so the balance is reinterpreted right away instead of on the next scheduled sync
-      if provider_account.saved_change_to_treat_balance_as_available_credit?
+      update_provider_setting(
+        provider_type: "EnableBankingAccount",
+        attribute: :treat_balance_as_available_credit,
+        value: ActiveModel::Type::Boolean.new.cast(eb_params[:treat_balance_as_available_credit])
+      ) do |provider_account|
+        # Re-sync so the balance is reinterpreted right away instead of on the next scheduled sync
         provider_account.enable_banking_item.sync_later
       end
     end
@@ -44,13 +41,21 @@ class CreditCardsController < ApplicationController
         .dig(:account, :simplefin)
       return if simplefin_params.blank?
 
-      provider_account = @account.provider_account_for("SimplefinAccount")
-      return unless provider_account.present?
-
       override = simplefin_params[:balance_sign_override]
       override = nil unless override.in?(%w[credit debt])
-      provider_account.update!(balance_sign_override: override)
 
-      provider_account.simplefin_item.sync_later if provider_account.saved_change_to_balance_sign_override?
+      update_provider_setting(
+        provider_type: "SimplefinAccount",
+        attribute: :balance_sign_override,
+        value: override
+      ) { |provider_account| provider_account.simplefin_item.sync_later }
+    end
+
+    def update_provider_setting(provider_type:, attribute:, value:)
+      provider_account = @account.provider_account_for(provider_type)
+      return unless provider_account.present?
+
+      provider_account.update!(attribute => value)
+      yield provider_account if provider_account.saved_change_to_attribute?(attribute)
     end
 end
