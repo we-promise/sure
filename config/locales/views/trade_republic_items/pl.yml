@@ -59,9 +59,22 @@ pl:
       success: "Pomyślnie połączono rachunek z Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "Pomyślnie utworzono %{count} konto Trade Republic."
+        other: "Pomyślnie utworzono %{count} kont Trade Republic."
+      none_created: "Nie utworzono żadnych kont."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Nie udało się w pełni skonfigurować jednego wybranego konta Trade Republic. Sprawdź dziennik debugowania i spróbuj ponownie."
+        other: "Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic. Sprawdź dziennik debugowania i spróbuj ponownie."
+    activities:
+      labels:
+        contribution: Wpłata
+        withdrawal: Wypłata
+        interest: Odsetki
+        dividend: Dywidenda
+        card_payment: Płatność kartą
+        cash_withdrawal: Wypłata gotówki
+        card_fee: Opłata za kartę
+        card_refund: Zwrot na kartę
+        tax_refund: Zwrot podatku
+        buy: Kupno
+        sell: Sprzedaż

@@ -29,25 +29,25 @@ fr:
           one: "%{count} position"
           other: "%{count} positions"
         unpriced:
-          one: "%{count} without current price"
-          other: "%{count} without current price"
+          one: "%{count} sans prix actuel"
+          other: "%{count} sans prix actuel"
         events:
-          one: "%{count} activity"
-          other: "%{count} activities"
+          one: "%{count} activité"
+          other: "%{count} activités"
         unknown:
-          one: "%{count} unknown activity"
-          other: "%{count} unknown activities"
+          one: "%{count} activité inconnue"
+          other: "%{count} activités inconnues"
         expenses:
-          one: "%{count} expense in the last 30 days (%{amount})"
-          other: "%{count} expenses in the last 30 days (%{amount})"
-        reconciliation: "%{matched}/%{total} account balances reconciled"
-        sync_history: Recent syncs
+          one: "%{count} dépense au cours des 30 derniers jours (%{amount})"
+          other: "%{count} dépenses au cours des 30 derniers jours (%{amount})"
+        reconciliation: "%{matched}/%{total} soldes de comptes rapprochés"
+        sync_history: Synchronisations récentes
         sync_status:
-          completed: Completed
-          failed: Failed
-          pending: Pending
-          syncing: Syncing
-          stale: Stale
+          completed: Terminée
+          failed: Échouée
+          pending: En attente
+          syncing: Synchronisation
+          stale: Obsolète
     setup_accounts:
       page_title: "Configurer le compte Trade Republic"
       subtitle: "Lier votre compte d’investissement Trade Republic."
@@ -85,9 +85,22 @@ fr:
       success: "Compte lié avec succès à Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "%{count} compte Trade Republic a été créé avec succès."
+        other: "%{count} comptes Trade Republic ont été créés avec succès."
+      none_created: "Aucun compte n'a été créé."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Un compte Trade Republic sélectionné n'a pas pu être entièrement configuré. Consultez le journal de débogage et réessayez."
+        other: "%{count} comptes Trade Republic sélectionnés n'ont pas pu être entièrement configurés. Consultez le journal de débogage et réessayez."
+    activities:
+      labels:
+        contribution: Versement
+        withdrawal: Retrait
+        interest: Intérêts
+        dividend: Dividende
+        card_payment: Paiement par carte
+        cash_withdrawal: Retrait d'espèces
+        card_fee: Frais de carte
+        card_refund: Remboursement par carte
+        tax_refund: Remboursement d'impôt
+        buy: Achat
+        sell: Vente

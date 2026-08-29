@@ -59,9 +59,22 @@ nb:
       success: "Kontoen ble koblet til Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "%{count} Trade Republic-konto ble opprettet."
+        other: "%{count} Trade Republic-kontoer ble opprettet."
+      none_created: "Ingen kontoer ble opprettet."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Én valgt Trade Republic-konto kunne ikke fullføres. Sjekk feilsøkingsloggen og prøv igjen."
+        other: "%{count} valgte Trade Republic-kontoer kunne ikke fullføres. Sjekk feilsøkingsloggen og prøv igjen."
+    activities:
+      labels:
+        contribution: Innskudd
+        withdrawal: Uttak
+        interest: Rente
+        dividend: Utbytte
+        card_payment: Kortbetaling
+        cash_withdrawal: Kontantuttak
+        card_fee: Kortgebyr
+        card_refund: Kortrefusjon
+        tax_refund: Skatterefusjon
+        buy: Kjøp
+        sell: Salg

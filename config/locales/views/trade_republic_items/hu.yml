@@ -65,3 +65,16 @@ hu:
       partial_failure:
         one: "Egy kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
         other: "%{count} kiválasztott Trade Republic-fiók beállítása nem fejeződött be. Ellenőrizd a hibakeresési naplót, majd próbáld újra."
+    activities:
+      labels:
+        contribution: Befizetés
+        withdrawal: Kifizetés
+        interest: Kamat
+        dividend: Osztalék
+        card_payment: Kártyás fizetés
+        cash_withdrawal: Készpénzfelvétel
+        card_fee: Kártyadíj
+        card_refund: Kártyás visszatérítés
+        tax_refund: Adó-visszatérítés
+        buy: Vétel
+        sell: Eladás

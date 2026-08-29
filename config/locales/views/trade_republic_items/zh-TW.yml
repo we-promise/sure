@@ -26,28 +26,28 @@ zh-TW:
         title: "資料品質與同步詳細資料"
         repair: "修復匯入的資料"
         positions:
-          one: "%{count} position"
-          other: "%{count} positions"
+          one: "%{count} 個持倉"
+          other: "%{count} 個持倉"
         unpriced:
-          one: "%{count} without current price"
-          other: "%{count} without current price"
+          one: "%{count} 個沒有目前價格"
+          other: "%{count} 個沒有目前價格"
         events:
-          one: "%{count} activity"
-          other: "%{count} activities"
+          one: "%{count} 筆活動"
+          other: "%{count} 筆活動"
         unknown:
-          one: "%{count} unknown activity"
-          other: "%{count} unknown activities"
+          one: "%{count} 筆未知活動"
+          other: "%{count} 筆未知活動"
         expenses:
-          one: "%{count} expense in the last 30 days (%{amount})"
-          other: "%{count} expenses in the last 30 days (%{amount})"
-        reconciliation: "%{matched}/%{total} account balances reconciled"
-        sync_history: Recent syncs
+          one: "過去 30 天 %{count} 筆支出（%{amount}）"
+          other: "過去 30 天 %{count} 筆支出（%{amount}）"
+        reconciliation: "%{matched}/%{total} 個帳戶餘額已核對"
+        sync_history: 最近同步
         sync_status:
-          completed: Completed
-          failed: Failed
-          pending: Pending
-          syncing: Syncing
-          stale: Stale
+          completed: 已完成
+          failed: 失敗
+          pending: 待處理
+          syncing: 同步中
+          stale: 已過期
     setup_accounts:
       page_title: "設定 Trade Republic 帳戶"
       subtitle: "連結您的 Trade Republic 投資帳戶。"
@@ -85,9 +85,22 @@ zh-TW:
       success: "已成功連結至 Trade Republic 帳戶。"
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "已成功建立 %{count} 個 Trade Republic 帳戶。"
+        other: "已成功建立 %{count} 個 Trade Republic 帳戶。"
+      none_created: "未建立任何帳戶。"
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "無法完整設定所選的一個 Trade Republic 帳戶。請檢查除錯記錄並重試。"
+        other: "無法完整設定所選的 %{count} 個 Trade Republic 帳戶。請檢查除錯記錄並重試。"
+    activities:
+      labels:
+        contribution: 入金
+        withdrawal: 出金
+        interest: 利息
+        dividend: 股息
+        card_payment: 刷卡付款
+        cash_withdrawal: 提領現金
+        card_fee: 卡片費用
+        card_refund: 卡片退款
+        tax_refund: 退稅
+        buy: 買入
+        sell: 賣出

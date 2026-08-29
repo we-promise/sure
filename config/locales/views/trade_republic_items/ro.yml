@@ -67,3 +67,16 @@ ro:
         one: "Un cont Trade Republic selectat nu a putut fi configurat complet. Verifică jurnalul de depanare și încearcă din nou."
         few: "%{count} conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
         other: "%{count} de conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
+    activities:
+      labels:
+        contribution: Contribuție
+        withdrawal: Retragere
+        interest: Dobândă
+        dividend: Dividend
+        card_payment: Plată cu cardul
+        cash_withdrawal: Retragere numerar
+        card_fee: Comision card
+        card_refund: Rambursare pe card
+        tax_refund: Rambursare fiscală
+        buy: Cumpărare
+        sell: Vânzare

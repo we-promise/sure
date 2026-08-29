@@ -91,3 +91,16 @@ tr:
       partial_failure:
         one: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
         other: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
+    activities:
+      labels:
+        contribution: Para yatırma
+        withdrawal: Para çekme
+        interest: Faiz
+        dividend: Temettü
+        card_payment: Kart ödemesi
+        cash_withdrawal: Nakit çekme
+        card_fee: Kart ücreti
+        card_refund: Kart iadesi
+        tax_refund: Vergi iadesi
+        buy: Alış
+        sell: Satış

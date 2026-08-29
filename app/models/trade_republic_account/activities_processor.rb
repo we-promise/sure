@@ -10,16 +10,6 @@ class TradeRepublicAccount::ActivitiesProcessor
     @category_matcher = TradeRepublicAccount::CategoryMatcher.new(trade_republic_account.trade_republic_item.family)
   end
 
-  private
-
-    def i18n_scope
-      "trade_republic_items.activities.labels"
-    end
-
-    def t(key, **options)
-      I18n.t(key, scope: i18n_scope, **options)
-    end
-
   def process
     return { trades: 0, transactions: 0 } unless account.present?
 
@@ -45,6 +35,14 @@ class TradeRepublicAccount::ActivitiesProcessor
   end
 
   private
+
+    def i18n_scope
+      "trade_republic_items.activities.labels"
+    end
+
+    def t(key, **options)
+      I18n.t(key, scope: i18n_scope, **options)
+    end
 
     def account
       @trade_republic_account.current_account

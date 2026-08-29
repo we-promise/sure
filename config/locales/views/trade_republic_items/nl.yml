@@ -59,9 +59,22 @@ nl:
       success: "Rekening succesvol aan Trade Republic gekoppeld."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "%{count} Trade Republic-rekening is aangemaakt."
+        other: "%{count} Trade Republic-rekeningen zijn aangemaakt."
+      none_created: "Er zijn geen rekeningen aangemaakt."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Eén geselecteerde Trade Republic-rekening kon niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
+        other: "%{count} geselecteerde Trade Republic-rekeningen konden niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
+    activities:
+      labels:
+        contribution: Storting
+        withdrawal: Opname
+        interest: Rente
+        dividend: Dividend
+        card_payment: Kaartbetaling
+        cash_withdrawal: Geldopname
+        card_fee: Kaartkosten
+        card_refund: Kaartterugbetaling
+        tax_refund: Belastingteruggaaf
+        buy: Koop
+        sell: Verkoop

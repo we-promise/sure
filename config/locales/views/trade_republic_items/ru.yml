@@ -59,9 +59,22 @@ ru:
       success: "Счёт успешно связан с Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "Успешно создан %{count} счёт Trade Republic."
+        other: "Успешно создано %{count} счетов Trade Republic."
+      none_created: "Счета не созданы."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Не удалось полностью настроить один выбранный счёт Trade Republic. Проверьте журнал отладки и повторите попытку."
+        other: "Не удалось полностью настроить %{count} выбранных счетов Trade Republic. Проверьте журнал отладки и повторите попытку."
+    activities:
+      labels:
+        contribution: Пополнение
+        withdrawal: Вывод средств
+        interest: Проценты
+        dividend: Дивиденды
+        card_payment: Оплата картой
+        cash_withdrawal: Снятие наличных
+        card_fee: Комиссия по карте
+        card_refund: Возврат на карту
+        tax_refund: Налоговый возврат
+        buy: Покупка
+        sell: Продажа

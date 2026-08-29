@@ -65,3 +65,16 @@ it:
       partial_failure:
         one: "Non è stato possibile completare un conto Trade Republic selezionato. Controlla il registro di debug e riprova."
         other: "Non è stato possibile completare %{count} conti Trade Republic selezionati. Controlla il registro di debug e riprova."
+    activities:
+      labels:
+        contribution: Versamento
+        withdrawal: Prelievo
+        interest: Interessi
+        dividend: Dividendo
+        card_payment: Pagamento con carta
+        cash_withdrawal: Prelievo di contanti
+        card_fee: Commissione carta
+        card_refund: Rimborso carta
+        tax_refund: Rimborso fiscale
+        buy: Acquisto
+        sell: Vendita

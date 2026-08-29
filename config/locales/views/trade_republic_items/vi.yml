@@ -26,28 +26,28 @@ vi:
         title: "Chất lượng dữ liệu và chi tiết đồng bộ"
         repair: "Sửa dữ liệu đã nhập"
         positions:
-          one: "%{count} position"
-          other: "%{count} positions"
+          one: "%{count} vị thế"
+          other: "%{count} vị thế"
         unpriced:
-          one: "%{count} without current price"
-          other: "%{count} without current price"
+          one: "%{count} chưa có giá hiện tại"
+          other: "%{count} chưa có giá hiện tại"
         events:
-          one: "%{count} activity"
-          other: "%{count} activities"
+          one: "%{count} hoạt động"
+          other: "%{count} hoạt động"
         unknown:
-          one: "%{count} unknown activity"
-          other: "%{count} unknown activities"
+          one: "%{count} hoạt động không xác định"
+          other: "%{count} hoạt động không xác định"
         expenses:
-          one: "%{count} expense in the last 30 days (%{amount})"
-          other: "%{count} expenses in the last 30 days (%{amount})"
-        reconciliation: "%{matched}/%{total} account balances reconciled"
-        sync_history: Recent syncs
+          one: "%{count} khoản chi trong 30 ngày qua (%{amount})"
+          other: "%{count} khoản chi trong 30 ngày qua (%{amount})"
+        reconciliation: "%{matched}/%{total} số dư tài khoản đã được đối soát"
+        sync_history: Các lần đồng bộ gần đây
         sync_status:
-          completed: Completed
-          failed: Failed
-          pending: Pending
-          syncing: Syncing
-          stale: Stale
+          completed: Hoàn tất
+          failed: Thất bại
+          pending: Đang chờ
+          syncing: Đang đồng bộ
+          stale: Cũ
     setup_accounts:
       page_title: "Thiết lập tài khoản Trade Republic"
       subtitle: "Liên kết tài khoản đầu tư Trade Republic."
@@ -85,9 +85,22 @@ vi:
       success: "Đã liên kết tài khoản với Trade Republic."
     complete_account_setup:
       success:
-        one: "Successfully created %{count} Trade Republic account."
-        other: "Successfully created %{count} Trade Republic accounts."
-      none_created: "No accounts were created."
+        one: "Đã tạo thành công %{count} tài khoản Trade Republic."
+        other: "Đã tạo thành công %{count} tài khoản Trade Republic."
+      none_created: "Không có tài khoản nào được tạo."
       partial_failure:
-        one: "One selected Trade Republic account could not be completed. Check the debug log and try again."
-        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+        one: "Không thể hoàn tất một tài khoản Trade Republic đã chọn. Kiểm tra nhật ký gỡ lỗi và thử lại."
+        other: "Không thể hoàn tất %{count} tài khoản Trade Republic đã chọn. Kiểm tra nhật ký gỡ lỗi và thử lại."
+    activities:
+      labels:
+        contribution: Nạp tiền
+        withdrawal: Rút tiền
+        interest: Tiền lãi
+        dividend: Cổ tức
+        card_payment: Thanh toán bằng thẻ
+        cash_withdrawal: Rút tiền mặt
+        card_fee: Phí thẻ
+        card_refund: Hoàn tiền thẻ
+        tax_refund: Hoàn thuế
+        buy: Mua
+        sell: Bán
