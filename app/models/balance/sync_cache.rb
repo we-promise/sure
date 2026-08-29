@@ -43,30 +43,15 @@ class Balance::SyncCache
         # large amount of ActiveModel::Attribute allocations during sync.
         # to_a materializes independent instances; no AR identity map is active during sync,
         # so callers holding a reference to the same association will never see these mutations.
-        # On a missing historical rate, drop the entry from the cache instead of
-        # relabeling a source-currency nominal as account.currency.
-        new_amount =
-          begin
-            e.amount_money.exchange_to(
-              account.currency,
-              date: e.date,
-              custom_rate: custom_rate
-            ).amount
-          rescue Money::ConversionError
-            DebugLogEntry.capture(
-              category: "balance",
-              level: "warn",
-              source: self.class.name,
-              account: account,
-              message: "Dropped entry #{e.id}: no FX rate to convert to #{account.currency} on #{e.date}",
-              metadata: { entry_id: e.id, currency: e.currency, target_currency: account.currency, date: e.date }
-            )
-            next nil
-          end
+        new_amount = e.amount_money.exchange_to(
+          account.currency,
+          date: e.date,
+          custom_rate: custom_rate
+        ).amount
 
         e.amount = new_amount
         e.currency = account.currency
         e
-      end.compact
+      end
     end
 end
