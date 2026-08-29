@@ -305,6 +305,14 @@ class Entry < ApplicationRecord
     external_id.present?
   end
 
+  # A manually entered entry dated after today (e.g. an upcoming bill or
+  # expected paycheck). Scheduled entries are excluded from balance
+  # calculations until their date arrives -- see Balance::SyncCache and
+  # Balance::ForwardCalculator#calc_end_date.
+  def scheduled?
+    date > Date.current
+  end
+
   # Reconciliation state, following the Quicken uncleared / cleared / reconciled
   # model. Only the last state is stored -- see AddReconciliationToEntries.
   #

@@ -86,6 +86,23 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_not_includes calculated.map(&:date), 1.day.ago.to_date
   end
 
+  test "scheduled (future-dated) transactions do not affect materialized balances" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 },
+        { type: "transaction", date: 1.day.from_now.to_date, amount: -5000 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_equal 1200, calculated.last.balance
+    assert_equal 2.days.ago.to_date, calculated.map(&:date).max
+    assert_not_includes calculated.map(&:date), 1.day.from_now.to_date
+  end
+
   test "calculation start date ignores a pending entry before the opening anchor" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
