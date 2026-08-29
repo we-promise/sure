@@ -180,7 +180,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     other_key = ApiKey.create!(
       user: other_user,
       name: "Other User Key",
-      display_key: "other_user_key_456",
+      display_key: "other_user_key_#{SecureRandom.hex(8)}",
       scopes: [ "read" ]
     )
 
