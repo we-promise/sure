@@ -163,7 +163,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
     AiHealth::Probe.any_instance.stubs(:function_calling).returns(
-      probe_result(:failing, failure_code: :request_failed, http_status: 404)
+      probe_result(:failing, failure_code: :tools_refused, http_status: 404)
     )
 
     with_ai_environment(

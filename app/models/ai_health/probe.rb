@@ -28,6 +28,10 @@ class AiHealth
       }
     }.freeze
     FUNCTION_CALL_MAX_RESPONSE_TOKENS = 256
+    # 4xx statuses that mean "not now" or "not you" rather than "not this
+    # request": a retry, a payment, or a fixed credential clears them, so they
+    # are never worth re-asking without the tools.
+    TRANSIENT_HTTP_STATUSES = [ 401, 402, 403, 408, 429 ].freeze
     PDF_TEST_INSTITUTION = "SUREHEALTHCHECKBANK"
     PDF_TEST_LINES = [
       "Bank Statement",
@@ -312,12 +316,15 @@ class AiHealth
       end
 
       def openai_chat_tool_call?(access_token:, endpoint:, model:)
-        response = openai_client(access_token:, endpoint:).chat(
-          parameters: {
-            model: model,
-            messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ],
-            tools: [ { type: "function", function: openai_test_tool } ]
-          }
+        client = openai_client(access_token:, endpoint:)
+        parameters = {
+          model: model,
+          messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ]
+        }
+
+        response = confirming_tools_refusal(
+          tools: -> { client.chat(parameters: parameters.merge(tools: [ { type: "function", function: openai_test_tool } ])) },
+          control: -> { client.chat(parameters: parameters) }
         )
 
         raise Failure, :invalid_response unless response.is_a?(Hash) && response["choices"].is_a?(Array)
@@ -326,12 +333,15 @@ class AiHealth
       end
 
       def openai_responses_tool_call?(access_token:, endpoint:, model:)
-        response = openai_client(access_token:, endpoint:).responses.create(
-          parameters: {
-            model: model,
-            input: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ],
-            tools: [ { type: "function" }.merge(openai_test_tool) ]
-          }
+        client = openai_client(access_token:, endpoint:)
+        parameters = {
+          model: model,
+          input: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ]
+        }
+
+        response = confirming_tools_refusal(
+          tools: -> { client.responses.create(parameters: parameters.merge(tools: [ { type: "function" }.merge(openai_test_tool) ])) },
+          control: -> { client.responses.create(parameters: parameters) }
         )
 
         raise Failure, :invalid_response unless response.is_a?(Hash) && response["output"].is_a?(Array)
@@ -340,14 +350,46 @@ class AiHealth
       end
 
       def anthropic_tool_call?(access_token:, endpoint:, model:)
-        message = anthropic_client(access_token:, endpoint:).messages.create(
+        client = anthropic_client(access_token:, endpoint:)
+        parameters = {
           model: model,
           max_tokens: FUNCTION_CALL_MAX_RESPONSE_TOKENS,
-          messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ],
-          tools: [ anthropic_test_tool ]
+          messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ]
+        }
+
+        message = confirming_tools_refusal(
+          tools: -> { client.messages.create(**parameters, tools: [ anthropic_test_tool ]) },
+          control: -> { client.messages.create(**parameters) }
         )
 
         Array(message.content).any? { |block| block_type(block) == "tool_use" }
+      end
+
+      # A client error can mean "your tools payload" or "your request, tools or
+      # not" — an invalid schema, a route the endpoint does not serve, a model
+      # it will not run. Asking again without the tools is the only
+      # provider-agnostic way to tell those apart: if the same request lands
+      # once the tools come off, the tools are what was turned down. Reading
+      # the error text for the word "tool" instead would only ever fit the
+      # provider whose wording it was written against.
+      def confirming_tools_refusal(tools:, control:)
+        tools.call
+      rescue StandardError => error
+        raise error unless client_error?(error)
+
+        begin
+          control.call
+        rescue StandardError
+          raise error
+        end
+
+        raise Failure, :tools_refused
+      end
+
+      def client_error?(error)
+        status = http_status(error).to_i
+
+        status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
       end
 
       # Mirrors the tool payload `Provider::Openai` sends for assistant

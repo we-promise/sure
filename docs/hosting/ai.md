@@ -1101,8 +1101,10 @@ but the model called none* when the model answered with text instead of
 calling the tool.
 
 **Fix:** Set `OPENAI_MODEL` to a model your provider documents as supporting
-tools/function calling — for example `nvidia/nemotron-nano-9b-v2:free` on
-OpenRouter's free tier — then run the checks again.
+tools/function calling — see [For Chat Assistant](#for-chat-assistant) above —
+then run the checks again. Free tiers are a poor place to look: providers
+commonly log their prompts and completions for training, and the assistant
+sends your accounts, transactions, and holdings in every tool call.
 
 ### "Fixed prompt tokens exceed context budget"
 

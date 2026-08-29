@@ -43,19 +43,20 @@ class AiHealthTest < ActiveSupport::TestCase
     end
   end
 
-  test "a refused tools request on a live endpoint reads as missing function-calling support" do
-    health = probed_health(llm: :passing, function_calling: failing_result(:request_failed, http_status: 404))
+  test "a confirmed tools refusal reads as missing function-calling support" do
+    health = probed_health(llm: :passing, function_calling: failing_result(:tools_refused, http_status: 404))
 
     assert_equal :unsupported, health.function_calling_status
   end
 
   test "a service that fell over is not read as a model without function calling" do
     [
+      failing_result(:request_failed, http_status: 422),
       failing_result(:request_failed, http_status: 429),
       failing_result(:request_failed, http_status: 500),
-      failing_result(:request_failed, http_status: 401),
       failing_result(:request_failed),
-      failing_result(:invalid_response)
+      failing_result(:invalid_response),
+      failing_result(:timeout)
     ].each do |probe_result|
       health = probed_health(llm: :passing, function_calling: probe_result)
 
@@ -70,12 +71,10 @@ class AiHealthTest < ActiveSupport::TestCase
     assert_equal :not_used, health.function_calling_status
   end
 
-  test "function calling is not blamed when the endpoint itself is down or slow" do
-    down = probed_health(llm: :failing, function_calling: failing_result(:request_failed))
-    slow = probed_health(llm: :passing, function_calling: failing_result(:timeout))
+  test "a refusal still reads as unsupported when the plain LLM check is failing too" do
+    health = probed_health(llm: :failing, function_calling: failing_result(:tools_refused))
 
-    assert_equal :failing, down.function_calling_status
-    assert_equal :failing, slow.function_calling_status
+    assert_equal :unsupported, health.function_calling_status
   end
 
   test "function calling is probed through the API the assistant would use" do

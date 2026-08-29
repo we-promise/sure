@@ -439,12 +439,17 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal :no_tool_call, result.failure_code
   end
 
-  test "function-calling probe keeps the status a provider returns for a rejected tools request" do
+  test "function-calling probe confirms a refusal by re-asking without the tools" do
     endpoint = "https://openrouter.example.test/api/v1"
-    stub_request(:post, "#{endpoint}/chat/completions").to_return(
+    stub_tools_request(endpoint).to_return(
       status: 404,
       headers: { "Content-Type" => "application/json" },
       body: { error: { message: "No endpoints found that support tool use." } }.to_json
+    )
+    control = stub_control_request(endpoint).to_return(
+      status: 200,
+      headers: { "Content-Type" => "application/json" },
+      body: { choices: [ { message: { content: "ok" } } ] }.to_json
     )
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
@@ -457,8 +462,52 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     )
 
     assert result.failing?
+    assert_equal :tools_refused, result.failure_code
+    assert_requested control
+  end
+
+  test "function-calling probe does not blame the tools for a client error the request gets either way" do
+    endpoint = "https://models.example.test/v1"
+    stub_tools_request(endpoint).to_return(status: 422, body: "{}", headers: { "Content-Type" => "application/json" })
+    control = stub_control_request(endpoint).to_return(
+      status: 422,
+      body: "{}",
+      headers: { "Content-Type" => "application/json" }
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "picky-model"
+    )
+
+    assert result.failing?
     assert_equal :request_failed, result.failure_code
-    assert_equal 404, result.http_status
+    assert_equal 422, result.http_status
+    assert_requested control
+  end
+
+  test "function-calling probe does not re-ask when the service said not now" do
+    endpoint = "https://models.example.test/v1"
+    stub_tools_request(endpoint).to_return(status: 429, body: "{}", headers: { "Content-Type" => "application/json" })
+    control = stub_control_request(endpoint)
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "busy-model"
+    )
+
+    assert result.failing?
+    assert_equal :request_failed, result.failure_code
+    assert_equal 429, result.http_status
+    assert_not_requested control
   end
 
   test "function-calling probe uses the responses endpoint when the assistant would" do
@@ -504,4 +553,13 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.passing?
   end
+
+  private
+    def stub_tools_request(endpoint)
+      stub_request(:post, "#{endpoint}/chat/completions").with { |request| JSON.parse(request.body).key?("tools") }
+    end
+
+    def stub_control_request(endpoint)
+      stub_request(:post, "#{endpoint}/chat/completions").with { |request| !JSON.parse(request.body).key?("tools") }
+    end
 end

@@ -7,9 +7,6 @@ require "uri"
 class AiHealth
   OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1".freeze
   ANTHROPIC_DEFAULT_ENDPOINT = "https://api.anthropic.com".freeze
-  # 4xx statuses that mean "not now" or "not you" rather than "not this
-  # request": a retry or a fixed credential clears them.
-  TRANSIENT_HTTP_STATUSES = [ 401, 403, 408, 429 ].freeze
   OPENAI_COMPATIBLE_PROVIDER_DOMAINS = {
     openrouter: %w[openrouter.ai],
     together: %w[together.ai together.xyz],
@@ -53,14 +50,14 @@ class AiHealth
 
   # The assistant only answers through function calls, so an endpoint that
   # serves plain chat but rejects the `tools` parameter still cannot power it.
-  # Reading the two probes together is what separates "this model has no
-  # function calling" from "this endpoint is down".
+  # The probe confirms which of the two happened before reporting, so a model
+  # is only ever blamed for a refusal the service actually made.
   def function_calling_status
     return :unavailable unless llm_configured?
     return :not_checked unless run_probes?
     return :supported if function_calling_probe.passing?
     return :not_used if function_calling_probe.failure_code == :no_tool_call
-    return :unsupported if llm_probe.passing? && tools_request_refused?
+    return :unsupported if function_calling_probe.failure_code == :tools_refused
 
     :failing
   end
@@ -243,16 +240,6 @@ class AiHealth
 
     def run_probes?
       @run_probes
-    end
-
-    # A refusal is a status the service chose to answer with, not one it fell
-    # over on: rate limits, server errors, dropped connections, and unreadable
-    # bodies say nothing about tool support, and blaming the model for them
-    # would send the operator hunting for a new one over a transient blip.
-    def tools_request_refused?
-      status = function_calling_probe.http_status.to_i
-
-      status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
     end
 
     def pdf_probe_status(probe, capable:)

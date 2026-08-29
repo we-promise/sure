@@ -154,6 +154,7 @@ en:
           failure_codes:
             model_not_available: The configured model was not returned by the provider
             no_tool_call: The model answered without calling the health-check tool
+            tools_refused: The service served the same request without tools and refused it with them
             invalid_response: The service returned an unexpected response
             dimensions_mismatch: The embedding vector dimensions do not match the configured dimensions
             extension_not_enabled: The PostgreSQL vector extension is not enabled
