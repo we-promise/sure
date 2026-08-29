@@ -616,7 +616,14 @@ class Goal < ApplicationRecord
         # Same refusal a fixed earmark gives, for the same reason: the link
         # cannot have supplied money it never backed. `still_needed` cannot go
         # negative — the target check above has already refused that.
-        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+        #
+        # Not when a transaction says so, though. `backed` reads the account's
+        # balance NOW, and a recorded outflow has already been taken out of it:
+        # spend 4,000 of a 5,000 account and `backed` is 1,000, so attributing
+        # the very transaction the app itself surfaced was refused — and refused
+        # by an earmark the user never set. The target check above is the real
+        # ceiling, and it still holds.
+        raise ConsumptionRefused.new(:exceeds_earmark) if transaction.nil? && amount > backed
 
         still_needed = target_amount.to_d - consumed_amount.to_d - amount
         link.update!(allocated_amount: [ backed, still_needed ].min)
