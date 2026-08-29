@@ -106,6 +106,10 @@ module Admin
         changes << :role if @user.saved_change_to_role?
         changes << :password if @user.saved_change_to_password_digest?
 
+        if changes.include?(:password)
+          SecurityAuditLog.log_password_changed!(user: @user, request: request, actor: Current.user)
+        end
+
         success_key = case changes
         when [ :role, :password ] then ".success_role_and_password"
         when [ :password ]        then ".success_password"

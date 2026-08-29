@@ -28,7 +28,7 @@ class SecurityAuditLog < ApplicationRecord
         event_type: "api_key_created",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
-        metadata: { api_key_id: api_key.id, name: api_key.name, scopes: api_key.scopes }
+        metadata: identity_snapshot(user).merge(api_key_id: api_key.id, name: api_key.name, scopes: api_key.scopes)
       )
     end
 
@@ -38,7 +38,7 @@ class SecurityAuditLog < ApplicationRecord
         event_type: "api_key_revoked",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
-        metadata: { api_key_id: api_key.id, name: api_key.name }
+        metadata: identity_snapshot(user).merge(api_key_id: api_key.id, name: api_key.name)
       )
     end
 
@@ -47,7 +47,8 @@ class SecurityAuditLog < ApplicationRecord
         user: user,
         event_type: "mfa_enabled",
         ip_address: request.remote_ip,
-        user_agent: request.user_agent&.truncate(500)
+        user_agent: request.user_agent&.truncate(500),
+        metadata: identity_snapshot(user)
       )
     end
 
@@ -56,17 +57,36 @@ class SecurityAuditLog < ApplicationRecord
         user: user,
         event_type: "mfa_disabled",
         ip_address: request.remote_ip,
-        user_agent: request.user_agent&.truncate(500)
+        user_agent: request.user_agent&.truncate(500),
+        metadata: identity_snapshot(user)
       )
     end
 
-    def log_password_changed!(user:, request:)
+    # actor is the user who performed the change when it wasn't the account
+    # owner themselves (e.g. a super admin resetting another user's password
+    # from Admin::UsersController). Self-service changes (PasswordsController,
+    # PasswordResetsController) leave it nil.
+    def log_password_changed!(user:, request:, actor: nil)
+      metadata = identity_snapshot(user)
+      metadata[:actor_user_id] = actor.id if actor && actor.id != user.id
+
       create!(
         user: user,
         event_type: "password_changed",
         ip_address: request.remote_ip,
-        user_agent: request.user_agent&.truncate(500)
+        user_agent: request.user_agent&.truncate(500),
+        metadata: metadata
       )
     end
+
+    private
+
+      # The user_id column is nullified (not cascaded) when the user is
+      # deleted, so it alone can't identify who a row was about afterward.
+      # Snapshotting the email into metadata keeps that identity legible to
+      # an investigator even after the account is gone.
+      def identity_snapshot(user)
+        { user_email: user.email }
+      end
   end
 end
