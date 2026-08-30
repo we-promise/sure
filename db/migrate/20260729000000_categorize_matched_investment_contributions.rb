@@ -27,7 +27,9 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
     "Інвестиційні внески",
     "Внески в інвестиції"
   ].freeze
+
   def up
+    quoted_names = INVESTMENT_CONTRIBUTION_CATEGORY_NAMES.map { |name| connection.quote(name) }.join(", ")
     quoted_updated_at = connection.quote(Time.current)
 
     say_with_time "Categorizing confirmed matched investment contributions" do
