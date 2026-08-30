@@ -83,12 +83,20 @@ class EnableBankingAccount::CardTwinCandidates
         .to_a
 
       stored, orphaned = entries.partition { |entry| snapshot_external_ids.include?(entry.external_id) }
-      survivors_by_key = stored.group_by { |entry| sibling_key(entry) }
 
-      orphaned.filter_map do |entry|
+      # Claimed one-to-one: a twin pair is one merchant-side row per cardholder
+      # row, so each survivor absorbs at most one duplicate. Sharing a survivor
+      # would let the second removal overwrite the category, tags and notes the
+      # first one moved onto it, and would leave the other survivor with nothing.
+      # More duplicates than survivors is not a twin pattern, so the surplus is
+      # left alone rather than guessed at.
+      survivors_by_key = stored.group_by { |entry| sibling_key(entry) }
+      survivors_by_key.each_value { |survivors| survivors.sort_by! { |entry| [ entry.created_at, entry.id ] } }
+
+      orphaned.sort_by { |entry| [ entry.created_at, entry.id ] }.filter_map do |entry|
         next if entry.transaction.pending?
 
-        survivor = survivors_by_key[sibling_key(entry)]&.min_by { |candidate| [ candidate.created_at, candidate.id ] }
+        survivor = survivors_by_key[sibling_key(entry)]&.shift
         next if survivor.nil?
 
         build_candidate(entry, survivor)

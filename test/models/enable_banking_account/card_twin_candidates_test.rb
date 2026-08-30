@@ -228,6 +228,61 @@ class EnableBankingAccount::CardTwinCandidatesTest < ActiveSupport::TestCase
     assert_nil survivor_transaction.reload.category_id
   end
 
+  # Each surviving row absorbs at most one duplicate. Sharing a survivor would let
+  # the second removal overwrite the category/tags/notes the first moved onto it.
+  test "pairs each duplicate with its own surviving row" do
+    customer_1 = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_1", creditor: "ACME Mktp*K4T9QX2")
+    merchant_1 = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_1", creditor: "ACME Mktp")
+    customer_2 = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_2", creditor: "ACME Mktp*P8W1ZR5")
+    merchant_2 = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_2", creditor: "ACME Mktp")
+
+    import!([ customer_1, merchant_1, customer_2, merchant_2 ])
+    apply_fix!([ customer_1, customer_2 ])
+
+    survivors = @eba.card_twin_candidates.map { |c| c.survivor.external_id }
+
+    assert_equal 2, survivors.size
+    assert_equal survivors.uniq, survivors
+    assert_equal [ "enable_banking_ccrd_1", "enable_banking_ccrd_2" ], survivors.sort
+  end
+
+  test "leaves an unpaired duplicate alone when the survivors run out" do
+    customer = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_1", creditor: "ACME Mktp*K4T9QX2")
+    merchant_1 = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_1", creditor: "ACME Mktp")
+    merchant_2 = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_2", creditor: "ACME Mktp Ltd")
+
+    import!([ customer, merchant_1, merchant_2 ])
+    apply_fix!([ customer ])
+
+    candidates = @eba.card_twin_candidates.to_a
+
+    assert_equal 1, candidates.size
+    assert_equal "enable_banking_ccrd_1", candidates.sole.survivor.external_id
+  end
+
+  test "does not carry a second duplicate's category onto an already-updated survivor" do
+    customer_1 = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_1", creditor: "ACME Mktp*K4T9QX2")
+    merchant_1 = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_1", creditor: "ACME Mktp")
+    customer_2 = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_2", creditor: "ACME Mktp*P8W1ZR5")
+    merchant_2 = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_2", creditor: "ACME Mktp")
+
+    import!([ customer_1, merchant_1, customer_2, merchant_2 ])
+    apply_fix!([ customer_1, customer_2 ])
+
+    groceries = @family.categories.create!(name: "Groceries")
+    shopping = @family.categories.create!(name: "Shopping")
+    @account.entries.find_by!(external_id: "enable_banking_mcrd_1").entryable.update!(category: groceries)
+    @account.entries.find_by!(external_id: "enable_banking_mcrd_2").entryable.update!(category: shopping)
+
+    @eba.card_twin_candidates.each(&:remove!)
+
+    categories = [ "enable_banking_ccrd_1", "enable_banking_ccrd_2" ].map do |external_id|
+      @account.entries.find_by!(external_id: external_id).entryable.category
+    end
+
+    assert_equal [ groceries, shopping ].map(&:name).sort, categories.map(&:name).sort
+  end
+
   private
     def row(code:, sub_code:, ref:, creditor:, amount: "5.12", pending: false)
       base = {
