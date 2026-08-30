@@ -43,7 +43,7 @@ class Settings::WebauthnCredentialsController < ApplicationController
       user_presence: true
     )
 
-    Current.user.webauthn_credentials.create!(
+    stored_credential = Current.user.webauthn_credentials.create!(
       nickname: webauthn_credential_name,
       credential_id: credential.id,
       public_key: credential.public_key,
@@ -51,13 +51,17 @@ class Settings::WebauthnCredentialsController < ApplicationController
       transports: webauthn_credential_transports
     )
 
+    SecurityAuditLog.log_webauthn_credential_added!(user: Current.user, credential: stored_credential, request: request)
+
     render json: { redirect_url: settings_security_path }
   rescue WebAuthn::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, ActionController::BadRequest, ActionController::ParameterMissing
     render json: { error: t("webauthn_credentials.failure") }, status: :unprocessable_entity
   end
 
   def destroy
-    Current.user.webauthn_credentials.find(params[:id]).destroy!
+    credential = Current.user.webauthn_credentials.find(params[:id])
+    credential.destroy!
+    SecurityAuditLog.log_webauthn_credential_removed!(user: Current.user, credential: credential, request: request)
     redirect_to settings_security_path, notice: t("webauthn_credentials.success")
   end
 

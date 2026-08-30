@@ -13,6 +13,8 @@ class SecurityAuditLog < ApplicationRecord
     mfa_enabled
     mfa_disabled
     password_changed
+    webauthn_credential_added
+    webauthn_credential_removed
   ].freeze
 
   validates :event_type, presence: true, inclusion: { in: EVENT_TYPES }
@@ -59,6 +61,26 @@ class SecurityAuditLog < ApplicationRecord
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
         metadata: identity_snapshot(user)
+      )
+    end
+
+    def log_webauthn_credential_added!(user:, credential:, request:)
+      create!(
+        user: user,
+        event_type: "webauthn_credential_added",
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent&.truncate(500),
+        metadata: identity_snapshot(user).merge(credential_id: credential.id, nickname: credential.nickname)
+      )
+    end
+
+    def log_webauthn_credential_removed!(user:, credential:, request:)
+      create!(
+        user: user,
+        event_type: "webauthn_credential_removed",
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent&.truncate(500),
+        metadata: identity_snapshot(user).merge(credential_id: credential.id, nickname: credential.nickname)
       )
     end
 

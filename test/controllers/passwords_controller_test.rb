@@ -27,4 +27,14 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_response :unprocessable_entity
   end
+
+  test "rolls back the password change when the audit log write fails" do
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+    original_digest = @user.password_digest
+
+    patch password_path, params: { user: { password: "newtestpassword817983172", password_confirmation: "newtestpassword817983172" } }
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
 end

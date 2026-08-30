@@ -41,12 +41,20 @@ class Settings::ApiKeysController < ApplicationController
   end
 
   def destroy
-    @api_key.revoke!
-    SecurityAuditLog.log_api_key_revoked!(user: Current.user, api_key: @api_key, request: request)
+    begin
+      @api_key.revoke!
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+      flash[:alert] = t(".revoke_failed")
+      return redirect_to settings_api_keys_path
+    end
+
+    begin
+      SecurityAuditLog.log_api_key_revoked!(user: Current.user, api_key: @api_key, request: request)
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.error("[Settings::ApiKeys] Failed to write audit log for revoked key #{@api_key.id}: #{e.message}")
+    end
+
     flash[:notice] = t(".revoked_successfully")
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
-    flash[:alert] = t(".revoke_failed")
-  ensure
     redirect_to settings_api_keys_path
   end
 
