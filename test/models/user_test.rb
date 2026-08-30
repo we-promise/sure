@@ -815,6 +815,48 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "super_admin", User.role_for_new_family_creator(fallback_role: "super_admin")
   end
 
+  test "first user role lock makes concurrent family creators deterministic" do
+    User.connection.disable_referential_integrity { User.delete_all }
+    first_user_saved = Queue.new
+
+    first_creator = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        ActiveRecord::Base.transaction do
+          User.lock_first_user_role!
+          user = User.create!(
+            email: "concurrent-first@example.com",
+            password: user_password_test,
+            family: Family.create!,
+            role: User.role_for_new_family_creator
+          )
+          first_user_saved << user.id
+          sleep 0.1
+        end
+      end
+    end
+
+    first_user_saved.pop
+    second_creator = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        ActiveRecord::Base.transaction do
+          User.lock_first_user_role!
+          User.create!(
+            email: "concurrent-second@example.com",
+            password: user_password_test,
+            family: Family.create!,
+            role: User.role_for_new_family_creator
+          )
+        end
+      end
+    end
+
+    [ first_creator, second_creator ].each(&:join)
+
+    assert_equal 1, User.where(role: :super_admin).count
+    assert User.find_by(email: "concurrent-first@example.com").super_admin?
+    assert User.find_by(email: "concurrent-second@example.com").admin?
+  end
+
   # Preview features preference tests
   test "preview_features_enabled? defaults to false" do
     @user.update!(preferences: {})
