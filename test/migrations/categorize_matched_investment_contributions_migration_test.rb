@@ -10,7 +10,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     family = families(:empty)
     source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
     destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
-    category = family.categories.create!(name: Category.investment_contributions_name, color: "#0d9488", lucide_icon: "trending-up")
+    category = family.categories.create!(name: Category.investment_contributions_name, color: "#0d9488", lucide_icon: "trending-up", default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY)
     confirmed_outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
     confirmed_inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
     Transfer.create!(outflow_transaction: confirmed_outflow.entryable, inflow_transaction: confirmed_inflow.entryable, status: "confirmed")
@@ -100,7 +100,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     family = Family.create!(name: "Migration with duplicate categories")
     source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
     destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
-    category = family.categories.create!(name: Category.investment_contributions_name, color: "#0d9488", lucide_icon: "trending-up")
+    category = family.categories.create!(name: Category.investment_contributions_name, color: "#0d9488", lucide_icon: "trending-up", default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY)
     duplicate_name = Category.all_investment_contributions_names.find { |name| name != category.name }
     assert_not_nil duplicate_name
     duplicate_category = family.categories.create!(name: duplicate_name, color: "#0d9488", lucide_icon: "trending-up")

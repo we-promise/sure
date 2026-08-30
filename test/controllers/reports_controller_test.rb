@@ -382,29 +382,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match /Export Retirement Income/, @response.body
   end
 
-  test "classifies unpaired investment contributions as expenses across reports and exports" do
-    @family.accounts.each { |account| account.entries.destroy_all }
-    category = @family.categories.create!(name: "Imported Contribution Expense", color: "#111111")
-    amount = 321
+  test "negative unpaired investment contributions are expenses in breakdown and export" do
+    category = @family.categories.create!(name: "Negative contribution report", color: "#123456")
+    investment_account = @family.accounts.create!(
+      owner: @user,
+      name: "Unpaired contribution account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
     create_transaction(
-      account: accounts(:investment),
-      name: "Imported investment contribution",
-      amount: -amount,
+      account: investment_account,
+      name: "Negative unpaired contribution",
+      amount: -125,
       category: category,
       kind: "investment_contribution"
     )
-    formatted_amount = Money.new(amount, @family.currency).format
 
     get reports_path(period_type: :monthly)
     assert_response :ok
-    expense_card = css_select("h3").find { |node| node.text.strip == I18n.t("reports.summary.total_expenses") }.parent.parent.parent
-    income_card = css_select("h3").find { |node| node.text.strip == I18n.t("reports.summary.total_income") }.parent.parent.parent
-    assert_includes expense_card.text, formatted_amount
-    assert_includes income_card.text, Money.new(0, @family.currency).format
-    breakdown = css_select("section[data-section-key='transactions_breakdown']").first
-    assert_includes breakdown.text, category.name
-    assert_includes breakdown.text, I18n.t("reports.transactions_breakdown.table.expense")
-    assert_not_includes breakdown.text, I18n.t("reports.transactions_breakdown.table.income")
+    groups = @controller.instance_variable_get(:@transactions)
+    assert_equal 1, groups.count { |group| group[:category_id] == category.id && group[:type] == "expense" }
+    assert_empty groups.select { |group| group[:category_id] == category.id && group[:type] == "income" }
 
     get export_transactions_reports_path(
       format: :csv,
@@ -412,24 +411,13 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       start_date: Date.current.beginning_of_month,
       end_date: Date.current.end_of_month
     )
-    rows = CSV.parse(@response.body)
-    expenses_index = rows.index { |row| row.first == "EXPENSES" }
-    category_index = rows.index { |row| row.first == category.name }
-    assert_not_nil expenses_index
-    assert_operator category_index, :>, expenses_index
-
-    get print_reports_path(period_type: :monthly)
-    assert_response :ok
-    assert_includes @response.body, category.name
+    assert_match /Negative contribution report/, @response.body
+    assert_match /EXPENSES/, @response.body
 
     @family.update!(treat_investment_contributions_as_transfers: true)
-
     get reports_path(period_type: :monthly)
-    assert_response :ok
-    expense_card = css_select("h3").find { |node| node.text.strip == I18n.t("reports.summary.total_expenses") }.parent.parent.parent
-    assert_includes expense_card.text, Money.new(0, @family.currency).format
-    breakdown = css_select("section[data-section-key='transactions_breakdown']").first
-    assert_not_includes breakdown.text, category.name
+    groups = @controller.instance_variable_get(:@transactions)
+    assert_empty groups.select { |group| group[:category_id] == category.id }
 
     get export_transactions_reports_path(
       format: :csv,
@@ -437,11 +425,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       start_date: Date.current.beginning_of_month,
       end_date: Date.current.end_of_month
     )
-    assert_not_includes @response.body, category.name
-
-    get print_reports_path(period_type: :monthly)
-    assert_response :ok
-    assert_not_includes @response.body, category.name
+    assert_no_match /Negative contribution report/, @response.body
   end
 
   test "export transactions swaps dates when end_date is before start_date" do

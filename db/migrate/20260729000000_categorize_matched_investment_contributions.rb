@@ -24,11 +24,10 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
     "Investeringsbijdragen",
     "Befektetési befizetések",
     "Đóng góp đầu tư",
-    "Інвестиційні внески"
+    "Інвестиційні внески",
+    "Внески в інвестиції"
   ].freeze
-
   def up
-    quoted_names = INVESTMENT_CONTRIBUTION_CATEGORY_NAMES.map { |name| connection.quote(name) }.join(", ")
     quoted_updated_at = connection.quote(Time.current)
 
     say_with_time "Categorizing confirmed matched investment contributions" do
@@ -55,8 +54,12 @@ class CategorizeMatchedInvestmentContributions < ActiveRecord::Migration[7.2]
             categories.family_id,
             categories.id AS category_id
           FROM categories
-          WHERE categories.name IN (#{quoted_names})
-          ORDER BY categories.family_id, categories.created_at ASC, categories.id ASC
+          WHERE categories.default_key = 'investment_contributions'
+             OR categories.name IN (#{quoted_names})
+          ORDER BY categories.family_id,
+                   (categories.default_key = 'investment_contributions') DESC,
+                   categories.created_at ASC,
+                   categories.id ASC
         ), family_categories AS (
           SELECT family_id, category_id
           FROM categorized_categories

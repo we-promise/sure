@@ -118,6 +118,21 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "investment_contributions_category reuses a renamed legacy category" do
+    family = families(:dylan_family)
+    family.categories.where(name: Category.all_investment_contributions_names).destroy_all
+    renamed_category = family.categories.create!(
+      name: "Long-term investing",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    result = family.investment_contributions_category
+
+    assert_equal renamed_category.id, result.id
+    assert_equal Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY, result.default_key
+  end
+
   test "investment_contributions_category merges multiple locale variants" do
     family = families(:dylan_family)
     family.update!(locale: "en")

@@ -21,7 +21,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
           source_account = transfer.outflow_transaction.entry.account
           destination_account = transfer.inflow_transaction.entry.account
-          outflow_kind = Transfer.kind_for_account(source_account, destination_account)
+         outflow_kind = Transfer.kind_for_account(source_account, destination_account)
           outflow_attrs = { kind: outflow_kind }
 
           if outflow_kind == "investment_contribution"

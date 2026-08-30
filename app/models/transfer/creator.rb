@@ -138,7 +138,7 @@ class Transfer::Creator
     end
 
     def outflow_transaction_kind
-      Transfer.kind_for_account(source_account, destination_account)
+     Transfer.kind_for_account(source_account, destination_account)
     end
 
     def name_prefix
