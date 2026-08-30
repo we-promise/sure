@@ -89,7 +89,7 @@ class Rack::Attack
   # throttle in this section for a scripted attacker who appends any
   # extension, while User.authenticate_by (etc.) still runs unthrottled.
   # Match the optional format suffix explicitly instead.
-  credential_guess_path = ->(request, path) { request.path.match?(/\A#{Regexp.escape(path)}(\.\w+)?\z/) }
+  credential_guess_path = ->(request, path) { request.path.match?(/\A#{Regexp.escape(path)}(?:\.[^.\/?]+)?\z/) }
 
   throttle("logins/ip", limit: 10, period: 1.minute) do |request|
     request.ip if request.post? && credential_guess_path.call(request, "/sessions")

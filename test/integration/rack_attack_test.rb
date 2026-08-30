@@ -134,6 +134,12 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     api_login_request = throttle_request("/api/v1/auth/login.json", method: "POST")
     assert_equal "203.0.113.5", api_login_block.call(api_login_request)
 
+    # Rails' actual default segment matcher for `(.:format)` is `[^./?]+`,
+    # not `\w+` — it permits hyphens (and other punctuation), so a format
+    # value like "rate-limit" is a real route match, not just a hypothetical.
+    hyphenated_format_request = throttle_request("/api/v1/auth/login.rate-limit", method: "POST")
+    assert_equal "203.0.113.5", api_login_block.call(hyphenated_format_request)
+
     # A path that merely starts with the throttled path, without being a
     # format suffix, must still be ignored.
     unrelated_request = throttle_request("/sessions_other", method: "POST", params: { "email" => "user@example.com" })
