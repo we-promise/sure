@@ -24,6 +24,11 @@ en:
       default_label: Default
       delete: Delete account
       sharing: Sharing
+    card_twin_cleanups:
+      create:
+        success:
+          one: "1 duplicate removed."
+          other: "%{count} duplicates removed."
     chart:
       data_not_available: Data not available for the selected period
     create:
