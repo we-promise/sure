@@ -49,6 +49,35 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
     assert_nil log.metadata["actor_user_id"]
   end
 
+  test "log_webauthn_credential_added! records the credential id and nickname" do
+    credential = @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "credential-added-test",
+      public_key: "public-key"
+    )
+
+    log = SecurityAuditLog.log_webauthn_credential_added!(user: @user, credential: credential, request: @request)
+
+    assert_equal "webauthn_credential_added", log.event_type
+    assert_equal credential.id, log.metadata["credential_id"]
+    assert_equal "YubiKey", log.metadata["nickname"]
+    assert_equal @user.email, log.metadata["user_email"]
+  end
+
+  test "log_webauthn_credential_removed! records the credential id and nickname" do
+    credential = @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "credential-removed-test",
+      public_key: "public-key"
+    )
+
+    log = SecurityAuditLog.log_webauthn_credential_removed!(user: @user, credential: credential, request: @request)
+
+    assert_equal "webauthn_credential_removed", log.event_type
+    assert_equal credential.id, log.metadata["credential_id"]
+    assert_equal "YubiKey", log.metadata["nickname"]
+  end
+
   test "survives its user being deleted, preserving the user's email in metadata" do
     disposable_user = User.create!(
       email: "disposable-audit-test@example.com",

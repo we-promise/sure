@@ -48,6 +48,35 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     assert @user.reload.webauthn_id.present?
   end
 
+  test "creating a credential writes an audit log entry" do
+    options = registration_options
+    credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
+
+    assert_difference "SecurityAuditLog.count", 1 do
+      post settings_webauthn_credentials_path, params: {
+        webauthn_credential: { nickname: "MacBook Touch ID" },
+        credential: credential
+      }, as: :json
+    end
+
+    log = SecurityAuditLog.last
+    stored_credential = @user.webauthn_credentials.reload.last
+    assert_equal "webauthn_credential_added", log.event_type
+    assert_equal stored_credential.id, log.metadata["credential_id"]
+    assert_equal "MacBook Touch ID", log.metadata["nickname"]
+  end
+
+  test "a rejected registration does not write an audit log" do
+    registration_options
+
+    assert_no_difference "SecurityAuditLog.count" do
+      post settings_webauthn_credentials_path, params: {
+        webauthn_credential: { nickname: "Malformed" },
+        credential: []
+      }, as: :json
+    end
+  end
+
   test "uses configured relying party id and allowed origin" do
     with_webauthn_config(rp_id: "example.test", allowed_origins: [ "https://app.example.test" ]) do
       client = WebAuthn::FakeClient.new("https://app.example.test")
@@ -151,6 +180,10 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     end
 
     assert_redirected_to settings_security_path
+
+    log = SecurityAuditLog.where(user: @user, event_type: "webauthn_credential_removed").last
+    assert_equal credential.id, log.metadata["credential_id"]
+    assert_equal "YubiKey", log.metadata["nickname"]
   end
 
   private

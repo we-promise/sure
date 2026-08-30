@@ -41,6 +41,17 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "rolls back the password change when the audit log write fails" do
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+    original_digest = @user.password_digest
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "password", password_confirmation: "password" } }
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
+  end
+
   test "all actions redirect when password features are disabled" do
     AuthConfig.stubs(:password_features_enabled?).returns(false)
 

@@ -174,6 +174,22 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     assert_equal key1.id, log.metadata["api_key_id"]
   end
 
+  test "destroy still revokes and reports success when the audit log write fails" do
+    key = ApiKey.create!(
+      user: @user,
+      name: "Key One",
+      display_key: "key_one_audit_fail_123",
+      scopes: [ "read" ]
+    )
+    SecurityAuditLog.stubs(:log_api_key_revoked!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    delete settings_api_key_path(key)
+
+    assert_redirected_to settings_api_keys_path
+    assert_equal I18n.t("settings.api_keys.destroy.revoked_successfully"), flash[:notice]
+    assert key.reload.revoked?
+  end
+
   test "destroy of a nonexistent key does not write an audit log" do
     other_user = users(:family_member)
     other_user.api_keys.destroy_all
