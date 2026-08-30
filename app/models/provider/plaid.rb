@@ -3,6 +3,12 @@ class Provider::Plaid
 
   SUPPORTED_PLAID_PRODUCTS = %w[transactions investments liabilities].freeze
   MAX_HISTORY_DAYS = Rails.env.development? ? 90 : 730
+  # Plaid's documented max for investments/transactions/get. Omitting count defaults to 100 and
+  # forces many rapid pages — the path that trips INVESTMENTS_LIMIT (#2827).
+  INVESTMENTS_TRANSACTIONS_PAGE_SIZE = 500
+  INVESTMENTS_PAGE_INTERVAL_SECONDS = 1.0
+  INVESTMENTS_RATE_LIMIT_MAX_RETRIES = 5
+  INVESTMENTS_RATE_LIMIT_ERROR_CODES = %w[INVESTMENTS_LIMIT RATE_LIMIT_EXCEEDED].freeze
 
   def initialize(config, region: :us)
     @client = Plaid::PlaidApi.new(
@@ -125,7 +131,28 @@ class Provider::Plaid
   def get_item_investments(access_token, start_date: nil, end_date: Date.current)
     start_date = start_date || MAX_HISTORY_DAYS.days.ago.to_date
     holdings, holding_securities = get_item_holdings(access_token: access_token)
-    transactions, transaction_securities = get_item_investment_transactions(access_token: access_token, start_date:, end_date:)
+
+    begin
+      transactions, transaction_securities = get_item_investment_transactions(access_token: access_token, start_date:, end_date:)
+    rescue Plaid::ApiError => e
+      # Holdings already succeeded. Prefer returning what we have over failing the whole Item sync
+      # (which previously left "No accounts found" despite a healthy Item — #2827).
+      raise unless investments_rate_limited?(e)
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Plaid investments/transactions/get rate-limited; continuing with holdings only",
+        source: "Provider::Plaid#get_item_investments",
+        provider_key: "plaid",
+        metadata: {
+          error_code: plaid_error_code(e),
+          http_status: e.respond_to?(:code) ? e.code : nil
+        }
+      )
+
+      return InvestmentsResponse.new(holdings:, transactions: [], securities: holding_securities || [])
+    end
 
     merged_securities = ((holding_securities || []) + (transaction_securities || [])).uniq { |s| s.security_id }
 
@@ -170,19 +197,51 @@ class Provider::Plaid
           access_token: access_token,
           start_date: start_date.to_s,
           end_date: end_date.to_s,
-          options: { offset: offset }
+          options: {
+            count: INVESTMENTS_TRANSACTIONS_PAGE_SIZE,
+            offset: offset
+          }
         )
 
-        response = client.investments_transactions_get(request)
+        response = fetch_investments_transactions_page(request)
 
         transactions += response.investment_transactions
         securities += response.securities
 
         break if transactions.length >= response.total_investment_transactions
         offset = transactions.length
+        sleep INVESTMENTS_PAGE_INTERVAL_SECONDS
       end
 
       [ transactions, securities ]
+    end
+
+    def fetch_investments_transactions_page(request)
+      attempts = 0
+
+      begin
+        client.investments_transactions_get(request)
+      rescue Plaid::ApiError => e
+        attempts += 1
+        raise unless investments_rate_limited?(e) && attempts <= INVESTMENTS_RATE_LIMIT_MAX_RETRIES
+
+        sleep(2**attempts)
+        retry
+      end
+    end
+
+    def investments_rate_limited?(error)
+      return true if error.respond_to?(:code) && error.code.to_i == 429
+
+      INVESTMENTS_RATE_LIMIT_ERROR_CODES.include?(plaid_error_code(error))
+    end
+
+    def plaid_error_code(error)
+      return nil unless error.respond_to?(:response_body) && error.response_body.present?
+
+      JSON.parse(error.response_body)["error_code"]
+    rescue JSON::ParserError
+      nil
     end
 
     def get_primary_product(accountable_type)
