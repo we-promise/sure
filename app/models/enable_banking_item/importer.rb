@@ -588,7 +588,10 @@ class EnableBankingItem::Importer
         code = tx.dig(:bank_transaction_code, :code)
         next unless [ CUSTOMER_CARD_CODE, MERCHANT_CARD_CODE ].include?(code)
 
-        groups[build_card_twin_key(tx)] << [ index, code ]
+        key = build_card_twin_key(tx)
+        next if key.nil?
+
+        groups[key] << [ index, code ]
       end
 
       discarded_indexes = Set.new
@@ -633,8 +636,8 @@ class EnableBankingItem::Importer
     end
 
     # Grouping key that brings the cardholder's row (CCRD) and the merchant's row
-    # (MCRD) of one card purchase together. It uses only fields that are always
-    # present and that both rows carry identically.
+    # (MCRD) of one card purchase together. It uses only fields that both rows
+    # carry identically.
     #
     # Whether the row is pending is part of the key, so a booked row is never
     # discarded in favour of a pending one. The pending->booked reconciliation
@@ -650,9 +653,19 @@ class EnableBankingItem::Importer
     # transaction_id are excluded because the ASPSPs that exhibit this behaviour
     # do not populate them.
     def build_card_twin_key(tx)
+      booking_date = tx[:booking_date]
+      value_date = tx[:value_date]
+      transaction_date = tx[:transaction_date]
+
+      # A booked row always carries booking_date, but pending rows often carry
+      # only transaction_date. With no date at all there is nothing left to tell
+      # two purchases apart, so pairing would be a guess - leave those rows be.
+      return nil if booking_date.blank? && value_date.blank? && transaction_date.blank?
+
       [
-        tx[:booking_date],
-        tx[:value_date],
+        booking_date,
+        value_date,
+        transaction_date,
         tx.dig(:transaction_amount, :amount),
         tx.dig(:transaction_amount, :currency),
         tx[:credit_debit_indicator],

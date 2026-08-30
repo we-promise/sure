@@ -266,6 +266,45 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "keeps rows whose only date is transaction_date and it differs" do
+    # A booked row always carries booking_date, but pending rows often do not.
+    # If the key ignores transaction_date, every dateless row of the same amount
+    # falls into one group and unrelated rows get paired.
+    transactions = [
+      merchant_card_purchase(entry_reference: "ref_mcrd", booking_date: nil, value_date: nil, transaction_date: "2026-02-12"),
+      customer_card_purchase(entry_reference: "ref_ccrd", booking_date: nil, value_date: nil, transaction_date: "2026-02-11")
+    ]
+
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
+
+    assert_equal 2, result.count
+  end
+
+  test "pairs on transaction_date when booking and value dates are absent" do
+    transactions = [
+      merchant_card_purchase(entry_reference: "ref_mcrd", booking_date: nil, value_date: nil, transaction_date: "2026-02-11"),
+      customer_card_purchase(entry_reference: "ref_ccrd", booking_date: nil, value_date: nil, transaction_date: "2026-02-11")
+    ]
+
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
+
+    assert_equal 1, result.count
+    assert_equal "ref_ccrd", result.first[:entry_reference]
+  end
+
+  test "never pairs rows that carry no date at all" do
+    # With no date there is nothing left to tell two purchases apart, so pairing
+    # would be a guess. Leave both rows alone.
+    transactions = [
+      merchant_card_purchase(entry_reference: "ref_mcrd", booking_date: nil, value_date: nil),
+      customer_card_purchase(entry_reference: "ref_ccrd", booking_date: nil, value_date: nil)
+    ]
+
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
+
+    assert_equal 2, result.count
+  end
+
   test "keeps a refund that mirrors a purchase of the same amount on the same day" do
     transactions = [
       merchant_card_purchase(entry_reference: "ref_mcrd", credit_debit_indicator: "CRDT"),
