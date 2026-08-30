@@ -123,6 +123,91 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
     assert_equal 1, entry.metadata["discarded_count"]
   end
 
+  test "removes a twin already stored in the snapshot when new transactions arrive" do
+    # Accounts that synced before this change already hold both halves in
+    # raw_transactions_payload. The stored MCRD row keeps re-creating the
+    # duplicate entry, so filtering only the freshly fetched rows fixes nothing
+    # for them.
+    @enable_banking_account.update!(raw_transactions_payload: [
+      merchant_card_purchase(entry_reference: "ref_mcrd").deep_stringify_keys,
+      customer_card_purchase(entry_reference: "ref_ccrd").deep_stringify_keys
+    ])
+
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(transaction_status: "BOOK"))
+      .returns([ customer_card_purchase(entry_reference: "ref_new", booking_date: "2026-03-05", value_date: "2026-03-05") ])
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(transaction_status: "PDNG"))
+      .returns([])
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(Date.new(2026, 1, 1))
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    stored = @enable_banking_account.raw_transactions_payload.map { |tx| tx["entry_reference"] }
+    assert_equal [ "ref_ccrd", "ref_new" ], stored.sort
+  end
+
+  test "removes a stored twin even when the sync brings nothing new" do
+    # A quiet account re-fetches the same window and produces no new rows. The
+    # snapshot still has to be rewritten, or the stored twin survives forever.
+    @enable_banking_account.update!(raw_transactions_payload: [
+      merchant_card_purchase(entry_reference: "ref_mcrd").deep_stringify_keys,
+      customer_card_purchase(entry_reference: "ref_ccrd").deep_stringify_keys
+    ])
+
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(transaction_status: "BOOK"))
+      .returns([ merchant_card_purchase(entry_reference: "ref_mcrd"), customer_card_purchase(entry_reference: "ref_ccrd") ])
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(transaction_status: "PDNG"))
+      .returns([])
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(Date.new(2026, 1, 1))
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal 1, @enable_banking_account.raw_transactions_payload.count
+    assert_equal "ref_ccrd", @enable_banking_account.raw_transactions_payload.first["entry_reference"]
+  end
+
+  test "removes a stored twin when the sync fetches no transactions at all" do
+    # A dormant account whose incremental window comes back empty. The stored
+    # snapshot is re-processed on every sync regardless of what was fetched, so
+    # without rewriting it here the stored MCRD row keeps re-creating its entry.
+    @enable_banking_account.update!(raw_transactions_payload: [
+      merchant_card_purchase(entry_reference: "ref_mcrd").deep_stringify_keys,
+      customer_card_purchase(entry_reference: "ref_ccrd").deep_stringify_keys
+    ])
+
+    @importer.stubs(:fetch_paginated_transactions).returns([])
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(Date.new(2026, 1, 1))
+
+    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    @enable_banking_account.reload
+    assert_equal 1, @enable_banking_account.raw_transactions_payload.count
+    assert_equal "ref_ccrd", @enable_banking_account.raw_transactions_payload.first["entry_reference"]
+  end
+
+  test "treats a stored row flagged pending in extra as pending when pairing" do
+    # Freshly fetched rows carry _pending; rows already in the snapshot carry
+    # extra.enable_banking.pending. Both have to count, or a booked row gets
+    # discarded in favour of a stored pending one.
+    transactions = [
+      merchant_card_purchase(entry_reference: "ref_mcrd").deep_stringify_keys,
+      customer_card_purchase(entry_reference: "ref_ccrd")
+        .merge(extra: { enable_banking: { pending: true } }).deep_stringify_keys
+    ]
+
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
+
+    assert_equal 2, result.count
+  end
+
   test "discards the merchant-side MCRD twin and keeps the customer-side CCRD" do
     transactions = [
       merchant_card_purchase(entry_reference: "ref_mcrd"),

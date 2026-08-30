@@ -490,6 +490,7 @@ class EnableBankingItem::Importer
       existing_transactions = enable_banking_account.raw_transactions_payload.to_a
 
       removed_pending = false
+      new_transactions = []
 
       unless include_pending
         removed_pending = existing_transactions.reject! do |tx|
@@ -538,14 +539,28 @@ class EnableBankingItem::Importer
           ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
           ext_id.present? && !existing_ids.include?(ext_id)
         end
+      end
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
-        end
-      elsif removed_pending
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
-          existing_transactions
-        )
+      # The stored half of the snapshot has never been filtered. Accounts that
+      # synced before the twin discard landed still hold both rows of every card
+      # purchase, and neither pass above reaches them: new_transactions excludes
+      # what is already stored, and the incremental window never asks for those
+      # dates again. Filtering the merged snapshot is what stops the stored MCRD
+      # row from re-creating its entry on every sync.
+      #
+      # This does not remove the duplicate entries already created - nothing on
+      # the Enable Banking import path deletes transactions, the processor only
+      # upserts. What it buys is that deleting the duplicate by hand finally
+      # sticks instead of coming back with the next sync.
+      merged_transactions = discard_merchant_card_twins(
+        existing_transactions + new_transactions,
+        enable_banking_account,
+        stage: :stored_snapshot
+      )
+      twins_removed = merged_transactions.size != existing_transactions.size + new_transactions.size
+
+      if new_transactions.any? || removed_pending || twins_removed
+        enable_banking_account.upsert_enable_banking_transactions_snapshot!(merged_transactions)
       end
 
       { success: true, transactions_count: transactions_count }
@@ -591,7 +606,7 @@ class EnableBankingItem::Importer
     # unpaired MCRD rows (adjustments, MCRD/OTHR) are legitimate movements and
     # are kept. Two CCRD rows are never collapsed into each other here, which is
     # what makes this safe for the over-merge reported in #2720.
-    def discard_merchant_card_twins(transactions, enable_banking_account)
+    def discard_merchant_card_twins(transactions, enable_banking_account, stage: :api_response)
       groups = Hash.new { |hash, key| hash[key] = [] }
 
       transactions.each_with_index do |tx, index|
@@ -626,10 +641,12 @@ class EnableBankingItem::Importer
 
       return transactions if discarded_indexes.empty?
 
+      origin = stage == :stored_snapshot ? "stored transactions snapshot" : "API response"
+
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "info",
-        message: "Discarded merchant-side (MCRD) card twin(s) from the API response",
+        message: "Discarded merchant-side (MCRD) card twin(s) from the #{origin}",
         source: self.class.name,
         provider_key: "enable_banking",
         family: enable_banking_item.family,
@@ -638,6 +655,7 @@ class EnableBankingItem::Importer
           enable_banking_item_id: enable_banking_item.id,
           enable_banking_account_id: enable_banking_account.id,
           uid: enable_banking_account.uid,
+          stage: stage,
           discarded_count: discarded_indexes.size,
           transactions_before: transactions.count,
           transactions_after: transactions.count - discarded_indexes.size
@@ -681,8 +699,18 @@ class EnableBankingItem::Importer
         tx.dig(:transaction_amount, :amount),
         tx.dig(:transaction_amount, :currency),
         tx[:credit_debit_indicator],
-        tx[:_pending].present?
+        card_row_pending?(tx)
       ].map(&:to_s).join("\x1F")
+    end
+
+    # Freshly fetched rows carry the pending flag in :_pending; rows read back
+    # from the stored snapshot carry it under extra.enable_banking.pending (the
+    # shape EnableBankingEntry::Processor writes). Both spellings have to count,
+    # or merging fresh rows with stored ones groups the two halves of one
+    # purchase inconsistently and a booked row gets discarded in favour of a
+    # pending one.
+    def card_row_pending?(tx)
+      (tx[:_pending] || tx.dig(:extra, :enable_banking, :pending)).present?
     end
 
     # Deduplicate transactions from the Enable Banking API response.
