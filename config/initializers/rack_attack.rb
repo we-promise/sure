@@ -82,56 +82,65 @@ class Rack::Attack
     email.to_s.downcase.strip.presence
   }
 
+  # None of the routes below are declared `format: false`, so Rails' default
+  # `(.:format)` segment means e.g. "/sessions.json" still reaches
+  # SessionsController#create even though request.path for that request is
+  # "/sessions.json". Exact string equality would silently skip every
+  # throttle in this section for a scripted attacker who appends any
+  # extension, while User.authenticate_by (etc.) still runs unthrottled.
+  # Match the optional format suffix explicitly instead.
+  credential_guess_path = ->(request, path) { request.path.match?(/\A#{Regexp.escape(path)}(\.\w+)?\z/) }
+
   throttle("logins/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if request.post? && request.path == "/sessions"
+    request.ip if request.post? && credential_guess_path.call(request, "/sessions")
   end
 
   throttle("logins/email", limit: 10, period: 1.minute) do |request|
-    credential_guess_email.call(request) if request.post? && request.path == "/sessions"
+    credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/sessions")
   end
 
   # MFA step-up has no email param — the pending user is looked up from
   # session[:mfa_user_id], so that's the discriminator instead.
   throttle("mfa/verify/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if request.post? && request.path == "/mfa/verify"
+    request.ip if request.post? && credential_guess_path.call(request, "/mfa/verify")
   end
 
   throttle("mfa/verify/user", limit: 10, period: 1.minute) do |request|
-    if request.post? && request.path == "/mfa/verify"
+    if request.post? && credential_guess_path.call(request, "/mfa/verify")
       request.session[:mfa_user_id]
     end
   end
 
   throttle("password_resets/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if request.post? && request.path == "/password_reset"
+    request.ip if request.post? && credential_guess_path.call(request, "/password_reset")
   end
 
   throttle("password_resets/email", limit: 10, period: 1.minute) do |request|
-    credential_guess_email.call(request) if request.post? && request.path == "/password_reset"
+    credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/password_reset")
   end
 
   throttle("oidc_account_link/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if request.post? && request.path == "/oidc_account/create_link"
+    request.ip if request.post? && credential_guess_path.call(request, "/oidc_account/create_link")
   end
 
   throttle("oidc_account_link/email", limit: 10, period: 1.minute) do |request|
-    credential_guess_email.call(request) if request.post? && request.path == "/oidc_account/create_link"
+    credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/oidc_account/create_link")
   end
 
   throttle("api_login/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if request.post? && request.path == "/api/v1/auth/login"
+    request.ip if request.post? && credential_guess_path.call(request, "/api/v1/auth/login")
   end
 
   throttle("api_login/email", limit: 10, period: 1.minute) do |request|
-    credential_guess_email.call(request) if request.post? && request.path == "/api/v1/auth/login"
+    credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/login")
   end
 
   throttle("api_sso_link/ip", limit: 10, period: 1.minute) do |request|
-    request.ip if request.post? && request.path == "/api/v1/auth/sso_link"
+    request.ip if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
   throttle("api_sso_link/email", limit: 10, period: 1.minute) do |request|
-    credential_guess_email.call(request) if request.post? && request.path == "/api/v1/auth/sso_link"
+    credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
   # The background jobs console lives under /settings (so its polling GET

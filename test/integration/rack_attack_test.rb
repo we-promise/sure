@@ -115,6 +115,31 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil api_login_email_block.call(malformed_request)
   end
 
+  test "credential-guessing throttles still match when the path carries a format extension" do
+    # None of these routes are declared `format: false`, so Rails' default
+    # `(.:format)` segment means e.g. "/sessions.json" still reaches
+    # SessionsController#create even though request.path for that request is
+    # "/sessions.json", not "/sessions". A throttle keyed on exact string
+    # equality would silently let a scripted attacker brute-force every
+    # credential-guessing endpoint unthrottled just by appending an
+    # extension.
+    ip_block = Rack::Attack.throttles["logins/ip"].block
+    email_block = Rack::Attack.throttles["logins/email"].block
+
+    request = throttle_request("/sessions.json", method: "POST", params: { "email" => "user@example.com" })
+    assert_equal "203.0.113.5", ip_block.call(request)
+    assert_equal "user@example.com", email_block.call(request)
+
+    api_login_block = Rack::Attack.throttles["api_login/ip"].block
+    api_login_request = throttle_request("/api/v1/auth/login.json", method: "POST")
+    assert_equal "203.0.113.5", api_login_block.call(api_login_request)
+
+    # A path that merely starts with the throttled path, without being a
+    # format suffix, must still be ignored.
+    unrelated_request = throttle_request("/sessions_other", method: "POST", params: { "email" => "user@example.com" })
+    assert_nil ip_block.call(unrelated_request)
+  end
+
   test "json email extraction tolerates non-object JSON payloads without raising" do
     api_login_email_block = Rack::Attack.throttles["api_login/email"].block
 
