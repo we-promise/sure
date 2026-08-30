@@ -106,6 +106,10 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      card_twin_notice:
+        one: "1 card purchase was imported twice by your bank and is still duplicated here."
+        other: "%{count} card purchases were imported twice by your bank and are still duplicated here."
+      card_twin_notice_action: "Review duplicates"
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       tabs:
         activity: Activity

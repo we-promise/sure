@@ -15,6 +15,22 @@
       </div>
     <% end %>
 
+    <% if card_twin_candidate_count.positive? %>
+      <div class="px-3">
+        <%= render DS::Alert.new(
+          message: t("accounts.show.card_twin_notice", count: card_twin_candidate_count),
+          variant: :warning
+        ) %>
+        <%= render DS::Link.new(
+          text: t("accounts.show.card_twin_notice_action"),
+          href: account_card_twin_cleanup_path(account),
+          variant: :secondary,
+          size: "sm",
+          class: "mt-2"
+        ) %>
+      </div>
+    <% end %>
+
     <div data-testid="account-details">
       <% if tabs.count > 1 %>
         <%= render DS::Tabs.new(active_tab: active_tab, url_param_key: "tab") do |tabs_container| %>

@@ -72,6 +72,18 @@ class UI::AccountPage < ApplicationComponent
     @fx_coverage_start_date = result
   end
 
+  # Duplicate merchant-side card rows left in the database from before the twin
+  # filter landed. Memoized because the check parses the account's stored
+  # snapshot, which is not free on a long history.
+  def card_twin_candidate_count
+    return @card_twin_candidate_count if defined?(@card_twin_candidate_count)
+
+    @card_twin_candidate_count = EnableBankingAccount
+      .joins(:account_provider)
+      .where(account_providers: { account_id: account.id })
+      .sum { |enable_banking_account| enable_banking_account.card_twin_candidates.size }
+  end
+
   def tab_content_for(tab)
     case tab
     when :activity
