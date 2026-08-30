@@ -178,6 +178,11 @@ module Api
           return
         end
 
+        unless user.active?
+          render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
+          return
+        end
+
         if user.otp_required?
           render json: { error: "MFA users should sign in with email and password", mfa_required: true }, status: :unauthorized
           return
