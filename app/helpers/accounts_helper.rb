@@ -4,6 +4,16 @@ module AccountsHelper
     render "accounts/summary_card", title: title, content: content
   end
 
+  # Human list of what a card twin removal would carry onto the surviving row.
+  # Lives here rather than in the template so the view holds no domain logic.
+  def candidate_carried_fields(candidate)
+    fields = []
+    fields << t("accounts.card_twin_cleanups.show.carried_category", name: candidate.category.name) if candidate.category.present?
+    fields << t("accounts.card_twin_cleanups.show.carried_tags", count: candidate.tag_ids.size) if candidate.tag_ids.any?
+    fields << t("accounts.card_twin_cleanups.show.carried_notes") if candidate.notes.present?
+    fields
+  end
+
   def sync_path_for(account)
     # Always use the account sync path, which handles syncing all providers
     sync_account_path(account)

@@ -60,6 +60,31 @@ class Accounts::CardTwinCleanupsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "blocked rows arrive unticked" do
+    # A Transfer is only valid across two accounts of the same family.
+    inflow = accounts(:credit_card).entries.create!(
+      name: "Inflow", date: orphan_entry.date, amount: -orphan_entry.amount,
+      currency: orphan_entry.currency, entryable: Transaction.new
+    )
+    Transfer.create!(
+      inflow_transaction: inflow.entryable,
+      outflow_transaction: orphan_entry.entryable,
+      amount: orphan_entry.amount.abs
+    )
+
+    get account_card_twin_cleanup_url(@account)
+
+    assert_response :success
+    assert_select "input[type=checkbox][value=?]:not([checked])", orphan_entry.id
+  end
+
+  test "unblocked rows arrive ticked" do
+    get account_card_twin_cleanup_url(@account)
+
+    assert_response :success
+    assert_select "input[type=checkbox][value=?][checked]", orphan_entry.id
+  end
+
   private
     def setup_pair!
       customer = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_1", creditor: "ACME Mktp*K4T9QX2")

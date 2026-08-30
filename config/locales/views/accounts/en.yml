@@ -29,6 +29,30 @@ en:
         success:
           one: "1 duplicate removed."
           other: "%{count} duplicates removed."
+      show:
+        title: "Review duplicate card transactions"
+        empty: "No duplicates found on this account."
+        explanation: "Your bank recorded these card purchases twice, once from your side and once from the shop's. Sure now imports only one copy, so these are leftovers from before. Removing them doesn't change anything your bank sends in future."
+        keeps: "keeps %{name}"
+        selected_count: "%{selected} selected · %{kept} kept"
+        selected_label: "selected"
+        kept_label: "kept"
+        blocker_transfer: "Part of a transfer. Removing this deletes the transfer on both accounts."
+        blocker_attachment:
+          one: "Has 1 attachment. The file is deleted with the row."
+          other: "Has %{count} attachments. The files are deleted with the row."
+        carried_over: "%{fields} move to the row that stays."
+        carried_category: "Category %{name}"
+        carried_tags:
+          one: "1 tag"
+          other: "%{count} tags"
+        carried_notes: "the notes"
+        unticked_explanation:
+          one: "1 row is unticked because removing it would destroy something that can't be moved to the row that stays. Tick it only if you're sure."
+          other: "%{count} rows are unticked because removing them would destroy something that can't be moved to the row that stays. Tick them only if you're sure."
+        cancel: "Cancel"
+        submit: "Remove selected"
+        confirm: "Remove the selected duplicates? This can't be undone."
     chart:
       data_not_available: Data not available for the selected period
     create:
