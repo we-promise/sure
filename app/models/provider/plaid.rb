@@ -201,7 +201,16 @@ class Provider::Plaid
     def get_additional_consented_products(accountable_type)
       return [] if eu?
 
-      SUPPORTED_PLAID_PRODUCTS - [ get_primary_product(accountable_type) ]
+      # Request liability products only when the account being linked is itself a
+      # liability (CreditCard/Loan). Plaid's Link filters out any institution that
+      # does not support every requested product, so requesting `liabilities` on
+      # e.g. an Investment link hides institutions like E*TRADE that don't offer it.
+      case get_primary_product(accountable_type)
+      when "liabilities"
+        SUPPORTED_PLAID_PRODUCTS - [ "liabilities" ]
+      else
+        SUPPORTED_PLAID_PRODUCTS - [ get_primary_product(accountable_type), "liabilities" ]
+      end
     end
 
     def eu?
