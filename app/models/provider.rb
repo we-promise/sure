@@ -13,7 +13,8 @@ class Provider
     def as_json
       {
         message: message,
-        details: details
+        details: details,
+        failure_code: failure_code
       }
     end
   end
@@ -50,9 +51,12 @@ class Provider
         self.class::Error.new(
           error.message,
           details: error.response&.dig(:body),
+          failure_code: error.failure_code if error.respond_to?(:failure_code)
         )
       else
-        self.class::Error.new(error.message)
+        error.respond_to?(:failure_code) ?
+          self.class::Error.new(error.message, failure_code: error.failure_code) :
+          self.class::Error.new(error.message)
       end
     end
 end

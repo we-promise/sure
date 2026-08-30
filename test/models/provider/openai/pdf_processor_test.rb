@@ -106,10 +106,9 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       processing_mode: :vision
     )
 
-    # Simulate poppler-utils not being installed: system() fails and the
-    # binary lookup is empty.
-    processor.stubs(:system).returns(false)
-    processor.stubs(:binary_missing?).returns(true)
+    # Simulate poppler-utils not being installed: Kernel#system returns `nil`
+    # (the executable cannot be started) rather than `false`.
+    processor.stubs(:system).returns(nil)
 
     error = assert_raises(Provider::Openai::Error) do
       processor.send(:convert_pdf_to_images)
@@ -129,10 +128,10 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       processing_mode: :vision
     )
 
-    # Binary is installed, but pdftoppm exits non-zero on bad input:
-    # keep the pre-existing "return no pages" behavior (no coded error).
+    # Binary is installed, but pdftoppm exits non-zero on bad input (system
+    # returns `false`): keep the pre-existing "return no pages" behavior (no
+    # coded error).
     processor.stubs(:system).returns(false)
-    processor.stubs(:binary_missing?).returns(false)
 
     assert_equal [], processor.send(:convert_pdf_to_images)
   end

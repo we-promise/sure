@@ -212,12 +212,14 @@ class Provider::Openai::PdfProcessor
         pdf_path = File.join(tmpdir, "input.pdf")
         File.binwrite(pdf_path, pdf_content)
 
-        # Render via pdftoppm (poppler-utils).
+        # Render via pdftoppm (poppler-utils). Kernel#system returns `nil` when
+        # the executable cannot be started (binary not installed) and `false`
+        # when it runs but exits non-zero (present but rejected the input).
         output_prefix = File.join(tmpdir, "page")
         rendered = system("pdftoppm", "-png", "-r", "150", pdf_path, output_prefix)
-        raise binary_missing_error if rendered == false && binary_missing?
+        raise binary_missing_error if rendered.nil?
 
-        # Read all generated images
+        # Read all generated images (empty array when pdftoppm exited non-zero)
         image_files = Dir.glob(File.join(tmpdir, "page-*.png")).sort
         image_files.map do |img_path|
           Base64.strict_encode64(File.binread(img_path))
@@ -230,14 +232,9 @@ class Provider::Openai::PdfProcessor
       []
     end
 
-    # Distinguishes "pdftoppm not installed" from "pdftoppm rejected the
-    # input" so the admin AI status page can show a concrete, actionable
-    # failure reason instead of a generic service error.
-    def binary_missing?
-      which = `command -v pdftoppm 2>/dev/null`.to_s.strip
-      which.empty?
-    end
-
+    # Coded error for the "pdftoppm not installed" case so the admin AI status
+    # page can show a concrete, actionable failure reason instead of a generic
+    # service error.
     def binary_missing_error
       Provider::Openai::Error.new(
         "Could not convert PDF to images: pdftoppm (poppler-utils) is not installed",
