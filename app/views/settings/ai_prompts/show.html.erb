@@ -17,51 +17,41 @@
                      url: settings_ai_prompts_path,
                      method: :patch,
                      class: "space-y-4" do |form| %>
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <div class="bg-container rounded-lg space-y-4">
-      <p class="text-xs text-secondary"><%= t(".intro") %></p>
+  <%= render layout: "settings/ai_prompts/prompt_section",
+             locals: { icon_name: "message-circle",
+                       title: t(".main_system_prompt.title"),
+                       subtitle: t(".main_system_prompt.subtitle") } do %>
+    <%= render "settings/ai_prompts/prompt_field",
+               form: form, family: @family,
+               prompts: [ { key: :chat_system, label: t(".main_system_prompt.label") } ],
+               textarea_id: "family_ai_prompt_chat_system" %>
+  <% end %>
 
-      <%= render layout: "settings/ai_prompts/prompt_section",
-                 locals: { icon_name: "message-circle",
-                           title: t(".main_system_prompt.title"),
-                           subtitle: t(".main_system_prompt.subtitle") } do %>
-        <%= render "settings/ai_prompts/prompt_field",
-                   form: form, family: @family,
-                   prompts: [ { key: :chat_system, label: t(".main_system_prompt.label") } ],
-                   textarea_id: "family_ai_prompt_chat_system" %>
-      <% end %>
+  <%= render layout: "settings/ai_prompts/prompt_section",
+             locals: { icon_name: "brain",
+                       title: t(".transaction_categorizer.title"),
+                       subtitle: t(".transaction_categorizer.subtitle") } do %>
+    <%= render "settings/ai_prompts/prompt_field",
+               form: form, family: @family,
+               prompts: [
+                 { key: :categorizer_openai },
+                 { key: :categorizer_anthropic }
+               ],
+               textarea_id: "family_ai_prompt_categorizer" %>
+  <% end %>
 
-      <div class="border-t border-primary"></div>
-
-      <%= render layout: "settings/ai_prompts/prompt_section",
-                 locals: { icon_name: "brain",
-                           title: t(".transaction_categorizer.title"),
-                           subtitle: t(".transaction_categorizer.subtitle") } do %>
-        <%= render "settings/ai_prompts/prompt_field",
-                   form: form, family: @family,
-                   prompts: [
-                     { key: :categorizer_openai },
-                     { key: :categorizer_anthropic }
-                   ],
-                   textarea_id: "family_ai_prompt_categorizer" %>
-      <% end %>
-
-      <div class="border-t border-primary"></div>
-
-      <%= render layout: "settings/ai_prompts/prompt_section",
-                 locals: { icon_name: "store",
-                           title: t(".merchant_detector.title"),
-                           subtitle: t(".merchant_detector.subtitle") } do %>
-        <%= render "settings/ai_prompts/prompt_field",
-                   form: form, family: @family,
-                   prompts: [
-                     { key: :merchant_openai },
-                     { key: :merchant_anthropic }
-                   ],
-                   textarea_id: "family_ai_prompt_merchant" %>
-      <% end %>
-    </div>
-  </div>
+  <%= render layout: "settings/ai_prompts/prompt_section",
+             locals: { icon_name: "store",
+                       title: t(".merchant_detector.title"),
+                       subtitle: t(".merchant_detector.subtitle") } do %>
+    <%= render "settings/ai_prompts/prompt_field",
+               form: form, family: @family,
+               prompts: [
+                 { key: :merchant_openai },
+                 { key: :merchant_anthropic }
+               ],
+               textarea_id: "family_ai_prompt_merchant" %>
+  <% end %>
 
   <div class="flex justify-end">
     <%= form.submit t(".save") %>

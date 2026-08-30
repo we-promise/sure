@@ -125,8 +125,6 @@ en:
       show:
         page_title: AI Prompts
         disable_ai: Disable AI Assistant
-        intro: These prompts apply to your family only.
-        prompt_instructions: Prompt instructions
         save: Save prompts
         main_system_prompt:
           title: Main System Prompt
