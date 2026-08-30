@@ -32,5 +32,4 @@ class EntryTest < ActiveSupport::TestCase
 
     assert_not_nil category.reload.last_used_at
   end
-
 end
