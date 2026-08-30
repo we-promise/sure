@@ -25,6 +25,23 @@ class EnableBankingAccount::CardTwinCandidates
     def blocked? = blockers.any?
 
     def transfers_anything? = category.present? || tag_ids.any? || notes.present?
+
+    # Carries whatever the survivor can accept across, then destroys the
+    # duplicate. Marking the survivor user_modified mirrors
+    # Transaction#merge_with_duplicate!, so a later sync does not revert what was
+    # just moved onto it.
+    def remove!
+      ApplicationRecord.transaction do
+        survivor_transaction = survivor.transaction
+
+        survivor_transaction.update!(category: category) if category.present?
+        survivor_transaction.update!(tag_ids: tag_ids) if tag_ids.any?
+        survivor.update!(notes: notes) if notes.present?
+        survivor.mark_user_modified! if transfers_anything?
+
+        entry.destroy!
+      end
+    end
   end
 
   def initialize(enable_banking_account)

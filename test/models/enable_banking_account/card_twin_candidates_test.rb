@@ -187,6 +187,47 @@ class EnableBankingAccount::CardTwinCandidatesTest < ActiveSupport::TestCase
     refute candidate.transfers_anything?
   end
 
+  test "copies category, tags and notes to the survivor then destroys the duplicate" do
+    setup_pair!
+    tag = @family.tags.create!(name: "Reimbursable")
+    category = @family.categories.create!(name: "Groceries")
+    orphan_transaction.update!(category: category, tag_ids: [ tag.id ])
+    orphan_entry.update!(notes: "split with a friend")
+    orphan_id = orphan_entry.id
+
+    assert_difference "Entry.count", -1 do
+      @eba.card_twin_candidates.to_a.sole.remove!
+    end
+
+    assert_nil Entry.find_by(id: orphan_id)
+    survivor_entry.reload
+    assert_equal category, survivor_transaction.category
+    assert_equal [ tag.id ], survivor_transaction.tag_ids
+    assert_equal "split with a friend", survivor_entry.notes
+    assert survivor_entry.user_modified?
+  end
+
+  test "does not mark the survivor user_modified when nothing was copied" do
+    setup_pair!
+
+    @eba.card_twin_candidates.to_a.sole.remove!
+
+    refute survivor_entry.reload.user_modified?
+  end
+
+  test "leaves a protected survivor untouched" do
+    setup_pair!
+    category = @family.categories.create!(name: "Groceries")
+    orphan_transaction.update!(category: category)
+    survivor_entry.update!(user_modified: true)
+
+    assert_difference "Entry.count", -1 do
+      @eba.card_twin_candidates.to_a.sole.remove!
+    end
+
+    assert_nil survivor_transaction.reload.category_id
+  end
+
   private
     def row(code:, sub_code:, ref:, creditor:, amount: "5.12", pending: false)
       base = {
