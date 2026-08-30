@@ -317,7 +317,8 @@ class AiHealth
       end
 
       def failure_code(error)
-        return error.failure_code if error.respond_to?(:failure_code)
+        code = error.failure_code if error.respond_to?(:failure_code)
+        return code if code
 
         error.is_a?(Faraday::TimeoutError) || error.is_a?(Timeout::Error) ? :timeout : :request_failed
       end

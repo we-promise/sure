@@ -97,6 +97,46 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal expected, processor.process
   end
 
+  test "convert_pdf_to_images raises a coded error when the pdftoppm binary is missing" do
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :vision
+    )
+
+    # Simulate poppler-utils not being installed: system() fails and the
+    # binary lookup is empty.
+    processor.stubs(:system).returns(false)
+    processor.stubs(:binary_missing?).returns(true)
+
+    error = assert_raises(Provider::Openai::Error) do
+      processor.send(:convert_pdf_to_images)
+    end
+
+    assert_equal :render_missing_binary, error.failure_code
+    assert_match(/poppler-utils/, error.message)
+  end
+
+  test "convert_pdf_to_images still degrades to [] when pdftoppm is present but rejects the PDF" do
+    Rails.logger.stubs(:error)
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :vision
+    )
+
+    # Binary is installed, but pdftoppm exits non-zero on bad input:
+    # keep the pre-existing "return no pages" behavior (no coded error).
+    processor.stubs(:system).returns(false)
+    processor.stubs(:binary_missing?).returns(false)
+
+    assert_equal [], processor.send(:convert_pdf_to_images)
+  end
+
   private
     def build_processor(error, trace)
       client = mock

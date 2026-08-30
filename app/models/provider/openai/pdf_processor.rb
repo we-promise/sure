@@ -212,9 +212,10 @@ class Provider::Openai::PdfProcessor
         pdf_path = File.join(tmpdir, "input.pdf")
         File.binwrite(pdf_path, pdf_content)
 
-        # Convert PDF to PNG images using pdftoppm
+        # Render via pdftoppm (poppler-utils).
         output_prefix = File.join(tmpdir, "page")
-        system("pdftoppm", "-png", "-r", "150", pdf_path, output_prefix)
+        rendered = system("pdftoppm", "-png", "-r", "150", pdf_path, output_prefix)
+        raise binary_missing_error if rendered == false && binary_missing?
 
         # Read all generated images
         image_files = Dir.glob(File.join(tmpdir, "page-*.png")).sort
@@ -222,9 +223,26 @@ class Provider::Openai::PdfProcessor
           Base64.strict_encode64(File.binread(img_path))
         end
       end
+    rescue Provider::Openai::Error
+      raise
     rescue => e
       Rails.logger.error("Failed to convert PDF to images: #{e.message}")
       []
+    end
+
+    # Distinguishes "pdftoppm not installed" from "pdftoppm rejected the
+    # input" so the admin AI status page can show a concrete, actionable
+    # failure reason instead of a generic service error.
+    def binary_missing?
+      which = `command -v pdftoppm 2>/dev/null`.to_s.strip
+      which.empty?
+    end
+
+    def binary_missing_error
+      Provider::Openai::Error.new(
+        "Could not convert PDF to images: pdftoppm (poppler-utils) is not installed",
+        failure_code: :render_missing_binary
+      )
     end
 
     def parse_response_generic(response)
