@@ -10,7 +10,7 @@ fr:
       overwrite_confirm_title: Écraser le coût de revient ?
       per_share: par action
       save: Enregistrer
-      set: Ensemble
+      set: Définir
       set_cost_basis_header: Définir le coût de revient pour %{ticker} (%{qty} actions)
       total_cost_basis_label: Coût de revient total
       unknown: "--"
