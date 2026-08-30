@@ -342,3 +342,88 @@ For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings �
 
 - Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
 - Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.
+
+## Reverse-proxy authentication
+
+Sure can be configured to trust a request header set by an upstream reverse proxy and use it to log a user in automatically (passwordless). This is intended to be used in conjunction with separate authorization software running in front of Sure. Self-hosted only — managed deployments ignore the configuration.
+
+For more information and examples, see https://doc.traefik.io/traefik/middlewares/http/forwardauth/ or similar documentation for your HTTP proxy and authentication software.
+
+Configure the Sure environment with the name of the header that carries the authenticated user's email. Only that one setting is required; the shared secret below is optional, but strongly recommended and treated as part of the baseline configuration here:
+```txt
+REMOTE_USER_HEADER_EMAIL="Remote-Email"
+REMOTE_USER_SHARED_SECRET="<generate-with-openssl-rand-hex-32>"
+# Widen the source-IP allowlist if your proxy isn't on loopback
+# REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
+# Log in existing users only, never create new ones
+# REMOTE_USER_ALLOW_JIT=false
+# Where "Log out" should send users
+# REMOTE_USER_LOGOUT_URL="https://auth.example.com/logout"
+```
+
+Generate the secret with `openssl rand -hex 32` (or any equivalent CSPRNG output) and configure your reverse proxy to send the same value on every forwarded request, in the header named by `REMOTE_USER_SHARED_SECRET_HEADER` — which defaults to `X-Remote-User-Secret`, so you only need to set it if your proxy can't use that name. The "Shared-secret header" section below covers what you give up by leaving the secret unset.
+
+ !! NOTE!! this allows unchallenged (passwordless) login via simple HTTP headers. Only use this method if you have a proxy in front of Sure that is applying the authentication challenge, *AND THE SURE HTTP SERVER IS NOT ACCESSIBLE DIRECTLY*.
+
+**Your proxy must strip or overwrite the email header on inbound requests.** This is the failure mode that actually bites people, and it is not covered by the warning above. If your proxy passes through a client-supplied `Remote-Email` instead of setting it from its own authentication result, then anyone who can reach the proxy can send that header themselves and log in as anybody. In nginx that means setting `proxy_set_header Remote-Email $your_auth_result;` unconditionally on every location, never conditionally. Note that the default loopback allowlist is the *most* exposed configuration for the common single-host nginx+puma install: the proxy peer is loopback, and so is every other process on that host.
+
+Leave nginx's `underscores_in_headers` directive at its default of `off`. Rack folds dashed and underscored header names onto the same environment key, so if a client sends `Remote_Email` and your proxy sets `Remote-Email`, the two values arrive joined. Dropping underscored client headers keeps that from happening.
+
+Three more things worth knowing before you enable this:
+
+- Any account is assumable by email, including an existing `super_admin` with a full password. The header is the only credential this path checks, so whatever your proxy asserts, Sure believes. This is inherent to header authentication, but it means the blast radius of a proxy misconfiguration is your admin account, not just a fresh empty household.
+- App-level MFA is not enforced here. A user who enabled TOTP or a passkey in Sure will be logged straight in by the header without being asked for it, because the header path has no way to challenge and no local password to fall back on. Your proxy must own the second factor. The other two login paths (local password and OIDC) still enforce MFA normally.
+- The header authenticates Sure's browser UI only. `/api/v1` and `/mcp` do not honor it; those endpoints retain their own API-key, OAuth, or MCP authentication.
+
+### Shared-secret header
+
+Strongly recommended alongside the IP allowlist. The IP gate alone assumes the immediate peer is fully under your control; the shared secret protects against scenarios where it isn't — shared Docker bridge networks where any sidecar container shares the proxy's IP range, multi-tenant hosts, or a peer compromise where the attacker can already speak from inside the trusted range.
+
+When `REMOTE_USER_SHARED_SECRET` is set, the proxy must echo the same value in a sibling header on every request; mismatches and missing headers are rejected with a constant-time compare:
+```txt
+REMOTE_USER_SHARED_SECRET="<generate-with-openssl-rand-hex-32>"
+REMOTE_USER_SHARED_SECRET_HEADER="X-Remote-User-Secret"
+```
+`REMOTE_USER_SHARED_SECRET_HEADER` defaults to `X-Remote-User-Secret` and only needs setting if your proxy can't use that name. Leaving `REMOTE_USER_SHARED_SECRET` unset disables the check and leaves the IP allowlist as the only gate — not recommended.
+
+### Source-IP allowlist
+
+Sure honors the header only when the immediate peer (`REMOTE_ADDR`) is in this list. The default is loopback (`127.0.0.0/8,::1/128`) — fail-closed by design, so a misconfigured deployment surfaces a broken login at first test rather than silently default-opening. If your proxy lives on a different host or container, override it:
+```txt
+REMOTE_USER_TRUSTED_PROXIES="10.0.0.5,172.18.0.0/16"
+```
+Setting the variable replaces the default. A set-but-empty or unparseable value resolves to an empty allowlist — every request is treated as outside it and the header is ignored. Individual entries that don't parse as an IP or CIDR are dropped, and both cases are logged once at startup.
+
+Trust the narrowest address possible. Setting a Docker bridge CIDR such as `172.18.0.0/16` trusts every container attached to that bridge, not only the authentication proxy; use the shared-secret gate as an additional control if a single proxy address is not stable.
+
+An IPv4-mapped IPv6 peer (`::ffff:10.0.0.5`, which is what a dual-stack nginx or Docker front-end often produces) is normalized to its IPv4 form before the comparison, so `10.0.0.0/24` matches it as you'd expect. You don't need to list both forms.
+
+### Account creation
+
+The header path refuses to create the instance's first account. Register the initial admin at `/registration`; that preserves the normal `super_admin` bootstrap. Afterward, a header-asserted email with no matching account gets an `admin` user and a new empty household. To turn that off and let the header log in only accounts that already exist:
+```txt
+REMOTE_USER_ALLOW_JIT=false
+```
+The existing `AUTH_JIT_MODE=link_only` and `ALLOWED_OIDC_DOMAINS` settings also apply to this path, so an instance already restricting SSO account creation gets the same restriction here without extra configuration.
+
+A pending invitation always wins over these settings, the same way it does for OIDC. If you invite someone and they then arrive through the proxy, they join the household they were invited to with the role from the invitation, rather than landing in a new empty one.
+
+### Signing out
+
+Clearing Sure's session does nothing on its own while the proxy keeps asserting the header — the next page load signs the user straight back in. Point Sure at your proxy's sign-out endpoint so the "Log out" button ends the session that actually matters:
+```txt
+REMOTE_USER_LOGOUT_URL="https://auth.example.com/logout"
+```
+It must be an `http://` or `https://` URL; anything else is ignored and logged at startup. With it unset, logging out clears the local session and returns to the login page, and the next navigation re-authenticates from the header.
+
+### Revoking access
+
+Revoke at the proxy. Deactivating a user in Sure queues `UserPurgeJob`, which destroys the record, and once it's gone Sure cannot tell that email apart from a brand-new one — so with JIT creation enabled the person gets a fresh empty household on their next request. Sure does refuse to log in a deactivated account it can still see, but the durable control is `REMOTE_USER_ALLOW_JIT=false` plus removing the user from whatever your proxy authenticates against.
+
+### Troubleshooting
+
+Every rejected header is logged with a `[remote_user_header]` prefix and a reason, so a login that silently returns to the sign-in page is diagnosable from the application log:
+```bash
+grep remote_user_header log/production.log
+```
+Startup logs the config-level problems from the same prefix: an unparseable allowlist entry, an empty allowlist, a missing shared secret, `REMOTE_USER_HEADER_EMAIL` set on a non-self-hosted instance, and an invalid logout URL.
