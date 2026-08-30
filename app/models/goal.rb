@@ -627,6 +627,13 @@ class Goal < ApplicationRecord
         # ceiling, and it still holds.
         raise ConsumptionRefused.new(:exceeds_earmark) if transaction.nil? && amount > backed
 
+        # The bypass above only holds if `amount` is what the transaction
+        # actually moved — trusted from callers otherwise, a mismatched pair
+        # would silently over-attribute past what the account backs, with no
+        # defense left once `transaction` is non-nil. Enforced here rather
+        # than trusted, matching this file's fat-model conventions.
+        raise ConsumptionRefused.new(:exceeds_earmark) if transaction && amount != transaction.entry.amount.to_d
+
         still_needed = target_amount.to_d - consumed_amount.to_d - amount
         link.update!(allocated_amount: [ backed, still_needed ].min)
       end

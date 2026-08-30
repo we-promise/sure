@@ -32,6 +32,21 @@ class GoalConsumptionEarmarkTest < ActiveSupport::TestCase
     assert_raises(Goal::ConsumptionRefused) { goal.consume!(3_800) }
   end
 
+  # The bypass only holds because the caller is trusted to pass the amount the
+  # transaction actually moved. A mismatched pair must not slip past the
+  # ceiling `backed` exists to enforce.
+  test "an amount that does not match the transaction is refused, even with a transaction" do
+    account = fresh_account(5_000)
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account) # whole-account link
+    end
+    entry = spend(account, 3_800, 5.days.ago)
+    account.update!(balance: 1_200) # the spend already happened
+
+    assert_raises(Goal::ConsumptionRefused) { goal.consume!(4_500, transaction: entry.entryable) }
+    assert_equal BigDecimal("0"), goal.reload.consumed_amount
+  end
+
   # The target is still the real ceiling either way.
   test "a transaction bigger than the target is still refused" do
     account = fresh_account(5_000)
