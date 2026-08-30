@@ -23,10 +23,18 @@ export default class extends Controller {
   }
 
   refresh() {
-    if (!this.hasCountTarget) return
-
     const selected = this.checkboxTargets.filter((checkbox) => checkbox.checked).length
     const kept = this.checkboxTargets.length - selected
+
+    // Keep the master checkbox honest once individual boxes are unticked. Pages
+    // that drive this controller with a plain checkbox (no selectAll target) are
+    // unaffected.
+    if (this.hasSelectAllTarget) {
+      this.selectAllTarget.checked = selected > 0 && kept === 0
+      this.selectAllTarget.indeterminate = selected > 0 && kept > 0
+    }
+
+    if (!this.hasCountTarget) return
 
     this.countTarget.textContent = `${selected} ${this.selectedLabelValue} · ${kept} ${this.keptLabelValue}`
   }

@@ -10,7 +10,7 @@ class Accounts::CardTwinCleanupsController < ApplicationController
   def create
     # The form is not trusted: the candidate set is re-derived here and the
     # submitted ids are only ever used to narrow it.
-    selected_ids = Array(params.dig(:card_twin_cleanup, :entry_ids)).map(&:to_s).to_set
+    selected_ids = Array(card_twin_cleanup_params[:entry_ids]).map(&:to_s).to_set
     removable = candidates.select { |candidate| selected_ids.include?(candidate.entry.id) }
 
     ApplicationRecord.transaction do
@@ -23,6 +23,10 @@ class Accounts::CardTwinCleanupsController < ApplicationController
   end
 
   private
+    def card_twin_cleanup_params
+      params.fetch(:card_twin_cleanup, {}).permit(entry_ids: [])
+    end
+
     def set_account
       @account = Current.family.accounts.writable_by(Current.user).find(params[:account_id])
     end

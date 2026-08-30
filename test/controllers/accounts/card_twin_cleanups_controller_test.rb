@@ -85,6 +85,19 @@ class Accounts::CardTwinCleanupsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][value=?][checked]", orphan_entry.id
   end
 
+  test "create tolerates a malformed selection" do
+    Account.any_instance.stubs(:sync_later)
+
+    assert_no_difference "Entry.count" do
+      post account_card_twin_cleanup_url(@account),
+           params: { card_twin_cleanup: { entry_ids: { "0" => orphan_entry.id } } }
+      assert_redirected_to account_url(@account)
+
+      post account_card_twin_cleanup_url(@account)
+      assert_redirected_to account_url(@account)
+    end
+  end
+
   private
     def setup_pair!
       customer = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_1", creditor: "ACME Mktp*K4T9QX2")

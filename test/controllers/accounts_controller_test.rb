@@ -642,6 +642,35 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", account_card_twin_cleanup_path(account)
   end
 
+
+  test "hides the card twin notice from a read-only viewer" do
+    account = accounts(:depository)
+    item = EnableBankingItem.create!(
+      family: @user.family, name: "Test Bank", country_code: "DE", application_id: "app",
+      client_certificate: "cert", session_id: "sess", session_expires_at: 1.day.from_now
+    )
+    enable_banking_account = EnableBankingAccount.create!(
+      enable_banking_item: item, name: "Test Account",
+      uid: "hash_twin_read_only", account_id: "uuid-twin-read-only", currency: "EUR"
+    )
+    AccountProvider.create!(account: account, provider: enable_banking_account)
+
+    customer = card_row(ref: "ccrd_1", code: "CCRD", sub_code: "POSD", creditor: "ACME Mktp*K4T9QX2")
+    merchant = card_row(ref: "mcrd_1", code: "MCRD", sub_code: "UPCT", creditor: "ACME Mktp")
+    enable_banking_account.update!(raw_transactions_payload: [ customer, merchant ])
+    EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process
+    enable_banking_account.update!(raw_transactions_payload: [ customer ])
+
+    viewer = users(:family_member)
+    account_shares(:depository_shared_with_member).update!(permission: "read_only")
+    sign_in viewer
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "a[href=?]", account_card_twin_cleanup_path(account), count: 0
+  end
+
   private
     def card_row(ref:, code:, sub_code:, creditor:)
       {

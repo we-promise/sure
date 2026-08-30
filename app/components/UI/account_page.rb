@@ -78,6 +78,10 @@ class UI::AccountPage < ApplicationComponent
   def card_twin_candidate_count
     return @card_twin_candidate_count if defined?(@card_twin_candidate_count)
 
+    # The cleanup screen only accepts accounts the user can write to, so a
+    # read-only viewer would follow the notice's link into a 404.
+    return @card_twin_candidate_count = 0 unless account.permission_for(Current.user).in?(%i[owner full_control])
+
     @card_twin_candidate_count = EnableBankingAccount
       .joins(:account_provider)
       .where(account_providers: { account_id: account.id })
