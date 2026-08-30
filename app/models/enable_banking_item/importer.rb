@@ -475,7 +475,7 @@ class EnableBankingItem::Importer
 
       # Drop the merchant-side twin of each card purchase before content dedup,
       # so the customer-side row is the one that reaches the snapshot.
-      all_transactions = discard_merchant_card_twins(all_transactions)
+      all_transactions = discard_merchant_card_twins(all_transactions, enable_banking_account)
 
       # Deduplicate API response: Enable Banking sometimes returns the same logical
       # transaction with different entry_reference IDs in the same response.
@@ -580,7 +580,7 @@ class EnableBankingItem::Importer
     # unpaired MCRD rows (adjustments, MCRD/OTHR) are legitimate movements and
     # are kept. Two CCRD rows are never collapsed into each other here, which is
     # what makes this safe for the over-merge reported in #2720.
-    def discard_merchant_card_twins(transactions)
+    def discard_merchant_card_twins(transactions, enable_banking_account)
       groups = Hash.new { |hash, key| hash[key] = [] }
 
       transactions.each_with_index do |tx, index|
@@ -611,9 +611,22 @@ class EnableBankingItem::Importer
 
       return transactions if discarded_indexes.empty?
 
-      Rails.logger.info(
-        "EnableBankingItem::Importer - Discarded #{discarded_indexes.size} merchant-side (MCRD) " \
-        "card twin(s) from API response (#{transactions.count} → #{transactions.count - discarded_indexes.size} transactions)"
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Discarded merchant-side (MCRD) card twin(s) from the API response",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          discarded_count: discarded_indexes.size,
+          transactions_before: transactions.count,
+          transactions_after: transactions.count - discarded_indexes.size
+        }
       )
 
       transactions.reject.with_index { |_, index| discarded_indexes.include?(index) }

@@ -99,13 +99,37 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
     assert_equal "ref_adjustment", @enable_banking_account.raw_transactions_payload.first["entry_reference"]
   end
 
+  test "records the discard in the debug log" do
+    # Per the repo convention, support-relevant sync diagnostics belong in
+    # DebugLogEntry so they show up in /settings/debug, not only in the raw log.
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(transaction_status: "BOOK"))
+      .returns([ merchant_card_purchase(entry_reference: "ref_mcrd"), customer_card_purchase(entry_reference: "ref_ccrd") ])
+    @importer.stubs(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entry(transaction_status: "PDNG"))
+      .returns([])
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(Date.new(2026, 1, 1))
+
+    assert_difference "DebugLogEntry.count", 1 do
+      @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync", entry.category
+    assert_equal "info", entry.level
+    assert_equal "enable_banking", entry.provider_key
+    assert_equal @account, entry.account
+    assert_equal 1, entry.metadata["discarded_count"]
+  end
+
   test "discards the merchant-side MCRD twin and keeps the customer-side CCRD" do
     transactions = [
       merchant_card_purchase(entry_reference: "ref_mcrd"),
       customer_card_purchase(entry_reference: "ref_ccrd")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 1, result.count
     assert_equal "ref_ccrd", result.first[:entry_reference]
@@ -123,7 +147,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd_2")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
     assert_equal [ "ref_ccrd_1", "ref_ccrd_2" ], result.map { |tx| tx[:entry_reference] }
@@ -138,7 +162,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd_1")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
     assert_equal [ "ref_mcrd_2", "ref_ccrd_1" ], result.map { |tx| tx[:entry_reference] }
@@ -154,7 +178,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       )
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 1, result.count
     assert_equal "ref_adjustment", result.first[:entry_reference]
@@ -168,7 +192,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd_2")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -186,7 +210,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd", _pending: true)
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -198,7 +222,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd", _pending: true)
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 1, result.count
     assert_equal "ref_ccrd", result.first[:entry_reference]
@@ -214,7 +238,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd", creditor: { name: "ACME Mktp*K4T9QX2" })
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 1, result.count
     assert_equal "ref_ccrd", result.first[:entry_reference]
@@ -226,7 +250,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -237,7 +261,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -248,7 +272,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -265,7 +289,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       )
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -276,7 +300,7 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd")
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 2, result.count
   end
@@ -287,14 +311,14 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
       customer_card_purchase(entry_reference: "ref_ccrd").deep_stringify_keys
     ]
 
-    result = @importer.send(:discard_merchant_card_twins, transactions)
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
 
     assert_equal 1, result.count
     assert_equal "ref_ccrd", result.first["entry_reference"]
   end
 
   test "returns empty array for empty input" do
-    assert_equal [], @importer.send(:discard_merchant_card_twins, [])
+    assert_equal [], @importer.send(:discard_merchant_card_twins, [], @enable_banking_account)
   end
 
   private
