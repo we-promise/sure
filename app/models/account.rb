@@ -51,9 +51,11 @@ class Account < ApplicationRecord
     total = entries.excluding_pending.excluding_split_parents
       .where(entryable_type: "Transaction")
       .where("entries.date > ?", Date.current)
+      .includes(:entryable)
       .sum do |entry|
+        custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
         converted = begin
-          entry.amount_money.exchange_to(currency, date: entry.date).amount
+          entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
         rescue Money::ConversionError
           entry.amount
         end

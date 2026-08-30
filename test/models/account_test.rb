@@ -625,4 +625,28 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
     assert_equal @account.balance_money, @account.projected_balance_money
   end
+
+  test "scheduled_entries_total_money uses custom exchange_rate when present" do
+    eur_account = @family.accounts.create!(
+      name: "EUR Checking",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    transaction = Transaction.new
+    transaction.exchange_rate = 1.10
+
+    Entry.create!(
+      account: eur_account,
+      name: "Scheduled FX expense",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: 100,
+      entryable: transaction
+    )
+
+    # 100 USD × custom_rate 1.10 = 110 EUR, negated because asset
+    assert_equal Money.new(-110, "EUR"), eur_account.scheduled_entries_total_money
+  end
 end
