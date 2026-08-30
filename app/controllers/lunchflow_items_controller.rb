@@ -441,7 +441,7 @@ class LunchflowItemsController < ApplicationController
           locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
-        render :new, status: :unprocessable_entity
+        redirect_back_or_to accounts_path, alert: @error_message
       end
     end
   end

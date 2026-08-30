@@ -225,6 +225,36 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Insight: {
+            type: :object,
+            required: %w[id type title body priority status],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string },
+              title: { type: :string },
+              body: { type: :string },
+              priority: { type: :string, enum: %w[high medium low] },
+              status: { type: :string, enum: %w[active read] },
+              generated_at: { type: :string, format: :'date-time', nullable: true }
+            }
+          },
+          InsightCollection: {
+            type: :object,
+            required: %w[insights],
+            properties: {
+              insights: { type: :array, items: { '$ref' => '#/components/schemas/Insight' } }
+            }
+          },
+          PushSubscription: {
+            type: :object,
+            required: %w[id environment platform last_registered_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              last_registered_at: { type: :string, format: :'date-time' }
+            }
+          },
           RetryResponse: {
             type: :object,
             required: %w[message message_id],
@@ -361,13 +391,14 @@ RSpec.configure do |config|
           },
           BudgetCategorySummary: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
               currency: { type: :string },
               subcategory: { type: :boolean },
               inherits_parent_budget: { type: :boolean },
+              rollover_enabled: { type: :boolean },
               budgeted_spending: { type: :string },
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
@@ -389,19 +420,22 @@ RSpec.configure do |config|
           },
           BudgetCategory: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
               currency: { type: :string },
               subcategory: { type: :boolean },
               inherits_parent_budget: { type: :boolean },
+              rollover_enabled: { type: :boolean },
               budgeted_spending: { type: :string },
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
               display_budgeted_spending_cents: { type: :integer },
               actual_spending: { type: :string },
               actual_spending_cents: { type: :integer },
+              rolled_over_amount: { type: :string },
+              rolled_over_amount_cents: { type: :integer },
               available_to_spend: { type: :string },
               available_to_spend_cents: { type: :integer },
               category: {
@@ -800,6 +834,7 @@ RSpec.configure do |config|
               notes: { type: :string, nullable: true },
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },
+              user_modified: { type: :boolean },
               classification: { type: :string },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },

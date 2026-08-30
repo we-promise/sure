@@ -57,6 +57,33 @@ class PlaidItemTest < ActiveSupport::TestCase
     assert_predicate @plaid_item.reload, :requires_update?
   end
 
+  test "get_update_link_token can enable account selection" do
+    Family.any_instance.expects(:get_link_token).with(
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: "https://example.com/accounts",
+      region: @plaid_item.plaid_region,
+      access_token: @plaid_item.access_token,
+      account_selection_enabled: true
+    ).returns("link-token")
+
+    result = @plaid_item.get_update_link_token(
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: "https://example.com/accounts",
+      account_selection_enabled: true
+    )
+
+    assert_equal "link-token", result
+  end
+
+  test "sync_later_with_follow_up queues a follow-up after an active sync" do
+    active_sync = @plaid_item.syncs.create!
+    active_sync.start!
+
+    assert_enqueued_with job: PlaidFollowUpSyncJob do
+      @plaid_item.sync_later_with_follow_up
+    end
+  end
+
   test "get_update_link_token re-raises other Plaid errors so the controller can surface them" do
     # Issue #1792: silently swallowing all Plaid errors here is what made the
     # "modal closes with nothing happening" experience so opaque.
@@ -85,5 +112,73 @@ class PlaidItemTest < ActiveSupport::TestCase
       @plaid_item.get_update_link_token(webhooks_url: "https://x", redirect_url: "https://x")
     end
     assert_predicate @plaid_item.reload, :good?
+  end
+
+  test "user sync requests a provider refresh when cooldown lease is acquired" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.expects(:write).with(
+      "plaid_item:#{@plaid_item.id}:transactions_refresh_requested",
+      true,
+      expires_in: PlaidItem::TRANSACTIONS_REFRESH_COOLDOWN,
+      unless_exist: true
+    ).returns(true)
+
+    assert_enqueued_with(job: PlaidTransactionsRefreshJob, args: [ @plaid_item ]) do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync does not duplicate a recent provider refresh request" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(false)
+
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync does not request refresh without the transactions product" do
+    @plaid_item.update!(billed_products: [ "investments" ])
+
+    Rails.cache.expects(:write).never
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync rejects provider refresh without a shared cache" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(false)
+
+    Rails.cache.expects(:write).never
+    assert_no_enqueued_jobs only: PlaidTransactionsRefreshJob do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync releases cooldown lease when refresh job is not enqueued" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(true)
+    PlaidTransactionsRefreshJob.stubs(:perform_later).returns(false)
+    Rails.cache.expects(:delete).with("plaid_item:#{@plaid_item.id}:transactions_refresh_requested")
+
+    @plaid_item.request_transactions_refresh_later
+  end
+
+  test "user sync releases cooldown lease when refresh job enqueue raises" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(true)
+    PlaidTransactionsRefreshJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    Rails.cache.expects(:delete).with("plaid_item:#{@plaid_item.id}:transactions_refresh_requested")
+
+    assert_raises RedisClient::Error do
+      @plaid_item.request_transactions_refresh_later
+    end
+  end
+
+  test "user sync preserves follow-up sync while requesting provider refresh" do
+    @plaid_item.expects(:request_transactions_refresh_later).once
+    @plaid_item.expects(:sync_later_with_follow_up).once
+
+    @plaid_item.sync_later_with_provider_refresh
   end
 end

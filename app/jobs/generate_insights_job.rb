@@ -37,11 +37,12 @@ class GenerateInsightsJob < ApplicationJob
       # broadcast below too, not just the generation.
       return unless family.preview_features_enabled?
 
-      with_advisory_lock(family_id) do
+      notifiable_insights = with_advisory_lock(family_id) do
         I18n.with_locale(family.locale) do
           result = Insight::GeneratorRegistry.new(family).generate_all
-          upsert_insights(family, result.insights)
+          created_or_resurfaced = upsert_insights(family, result.insights)
           expire_stale_insights(family, result)
+          created_or_resurfaced
         end
       end
 
@@ -49,6 +50,7 @@ class GenerateInsightsJob < ApplicationJob
       # current state, so a subscribed /insights page (waiting on its manual
       # refresh) always gets its list and button restored.
       broadcast_feed(family)
+      Array(notifiable_insights).each { |insight| DeliverInsightNotificationJob.enqueue_for(insight) }
     end
 
     def broadcast_feed(family)
@@ -84,7 +86,7 @@ class GenerateInsightsJob < ApplicationJob
     def upsert_insights(family, generated_insights)
       writer = Insight::BodyWriter.new(family)
 
-      generated_insights.each do |generated|
+      generated_insights.filter_map do |generated|
         metadata = normalize_json(generated.metadata)
         facts = normalize_json(generated.facts)
         existing = family.insights.find_by(dedup_key: generated.dedup_key)
@@ -120,22 +122,32 @@ class GenerateInsightsJob < ApplicationJob
             read_at: nil,
             dismissed_at: nil
           )
+          existing
         elsif existing.expired?
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(status: "active", facts: facts, generated_at: Time.current, read_at: nil)
+          existing.update!(title: generated.title, status: "active", facts: facts,
+                           generated_at: Time.current, read_at: nil)
+          existing
         else
           # Same signal, same numbers: don't rewrite the body (avoids an LLM
           # call) and don't undo the user's read/dismissed state. Facts still
           # refresh — they're display values (key figure, link labels), and
           # keeping them current is exactly why they're not part of the
           # material-change comparison.
-          existing.update!(facts: facts, generated_at: Time.current)
+          #
+          # The title refreshes with them. It is built from I18n and the
+          # generator's own data, not written by the model, so keeping it
+          # current costs nothing — and a title naming a goal or a category
+          # the user has since renamed is simply wrong on the page. Rename is
+          # not a reason to resurface, so status and read state stay untouched.
+          existing.update!(title: generated.title, facts: facts, generated_at: Time.current)
+          nil
         end
       rescue ActiveRecord::RecordNotUnique
         # A concurrent run created the same dedup_key first; it owns this row.
-        next
+        nil
       rescue => e
         DebugLogEntry.capture(
           category: "insights",
@@ -145,6 +157,7 @@ class GenerateInsightsJob < ApplicationJob
           family: family,
           metadata: { dedup_key: generated.dedup_key, insight_type: generated.insight_type }
         )
+        nil
       end
     end
 

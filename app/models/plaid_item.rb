@@ -27,6 +27,8 @@ class PlaidItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  TRANSACTIONS_REFRESH_COOLDOWN = 5.minutes
+
   # Get accounts from both new and legacy systems
   def accounts
     @accounts ||= plaid_accounts
@@ -36,12 +38,13 @@ class PlaidItem < ApplicationRecord
       .uniq
   end
 
-  def get_update_link_token(webhooks_url:, redirect_url:)
+  def get_update_link_token(webhooks_url:, redirect_url:, account_selection_enabled: false)
     family.get_link_token(
       webhooks_url: webhooks_url,
       redirect_url: redirect_url,
       region: plaid_region,
-      access_token: access_token
+      access_token: access_token,
+      account_selection_enabled: account_selection_enabled
     )
   rescue Plaid::ApiError => e
     error_body = begin
@@ -64,9 +67,48 @@ class PlaidItem < ApplicationRecord
     end
   end
 
+  # Queue a fresh import after an in-flight sync. Plaid Link can finish adding
+  # accounts after the active sync already fetched its account list.
+  def sync_later_with_follow_up
+    active_sync = syncs.visible.ordered.first
+    sync_later
+
+    return unless active_sync&.reload&.in_progress?
+
+    PlaidFollowUpSyncJob.set(wait: PlaidFollowUpSyncJob::RETRY_DELAY).perform_later(self, active_sync_id: active_sync.id)
+  end
+
   def destroy_later
     update!(scheduled_for_deletion: true)
     DestroyJob.perform_later(self)
+  end
+
+  def request_transactions_refresh_later
+    return unless supports_product?("transactions")
+    return unless shared_transactions_refresh_cache?
+
+    refresh_requested = Rails.cache.write(
+      transactions_refresh_cache_key,
+      true,
+      expires_in: TRANSACTIONS_REFRESH_COOLDOWN,
+      unless_exist: true
+    )
+
+    return unless refresh_requested
+
+    enqueued_job = begin
+      PlaidTransactionsRefreshJob.perform_later(self)
+    rescue
+      Rails.cache.delete(transactions_refresh_cache_key)
+      raise
+    end
+
+    Rails.cache.delete(transactions_refresh_cache_key) unless enqueued_job
+  end
+
+  def sync_later_with_provider_refresh
+    request_transactions_refresh_later
+    sync_later_with_follow_up
   end
 
   def import_latest_plaid_data
@@ -121,6 +163,19 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+    def transactions_refresh_cache_key
+      "plaid_item:#{id}:transactions_refresh_requested"
+    end
+
+    def shared_transactions_refresh_cache?
+      shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
+        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
+        Rails.cache.class.name == "SolidCache::Store"
+
+      Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
+      shared_cache
+    end
+
     def remove_plaid_item
       return unless plaid_provider.present?
 

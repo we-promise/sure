@@ -165,6 +165,28 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Groups", family.moniker_label_plural
   end
 
+  test "entries_cache_version changes when an older entry is destroyed" do
+    family = families(:dylan_family)
+    newer_entry = entries(:transaction)
+    older_entry = Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: categories(:food_and_drink)),
+      date: Date.current,
+      name: "Older duplicate",
+      amount: 42,
+      currency: "USD",
+      created_at: 2.days.ago,
+      updated_at: 2.days.ago
+    )
+
+    newer_entry.update!(updated_at: 1.day.ago)
+
+    before_destroy = family.reload.entries_cache_version
+    older_entry.destroy!
+
+    assert_not_equal before_destroy, family.reload.entries_cache_version
+  end
+
   test "default currency comes from country ISO data" do
     assert_equal "CAD", Family.default_currency_for_country("CA")
     assert_equal "EUR", Family.default_currency_for_country("DE")
@@ -426,6 +448,34 @@ class FamilyTest < ActiveSupport::TestCase
 
     assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
     assert family.save
+  end
+
+  test "balance_sheet memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.balance_sheet(user: admin)
+
+    assert_same first_call_for_admin, family.balance_sheet(user: admin),
+      "repeated calls for the same user must reuse the same BalanceSheet instance"
+
+    refute_same first_call_for_admin, family.balance_sheet(user: member),
+      "different users must not share a memoized BalanceSheet (family sharing scoping)"
+  end
+
+  test "investment_statement memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.investment_statement(user: admin)
+
+    assert_same first_call_for_admin, family.investment_statement(user: admin),
+      "repeated calls for the same user must reuse the same InvestmentStatement instance"
+
+    refute_same first_call_for_admin, family.investment_statement(user: member),
+      "different users must not share a memoized InvestmentStatement (family sharing scoping)"
   end
 
   private

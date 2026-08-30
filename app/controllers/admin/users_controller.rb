@@ -8,7 +8,7 @@ module Admin
       authorize User
       scope = policy_scope(User)
         .left_joins(family: :subscription)
-        .includes(family: :subscription)
+        .includes(:oidc_identities, family: :subscription)
 
       scope = scope.where(role: params[:role]) if params[:role].present?
       scope = apply_trial_filter(scope) if params[:trial_status].present?
@@ -28,8 +28,8 @@ module Admin
       @entries_count_by_family = Entry.joins(:account).where(accounts: { family_id: family_ids }).group("accounts.family_id").count
 
       user_ids = users.map(&:id).uniq
-      @last_login_by_user = Session.where(user_id: user_ids).group(:user_id).maximum(:created_at)
-      @sessions_count_by_user = Session.where(user_id: user_ids).group(:user_id).count
+      @last_login_by_user = User.where(id: user_ids).pluck(:id, :last_login_at).to_h
+      @sessions_count_by_user = User.where(id: user_ids).pluck(:id, :sessions_count).to_h
 
       @families_with_users = users.group_by(&:family).sort_by do |family, _users|
         -(@entries_count_by_family[family.id] || 0)
@@ -38,6 +38,9 @@ module Admin
       @invitations_by_family = Invitation.pending
         .where(family_id: family_ids)
         .group_by(&:family_id)
+
+      @families = Family.order(:name, :created_at)
+      @unused_families = Family.left_joins(:users).where(users: { id: nil }).order(:name, :created_at)
 
       @trials_expiring_in_7_days = Subscription
         .where(status: :trialing)
@@ -53,18 +56,80 @@ module Admin
     def update
       authorize @user
 
-      if @user.update(user_params)
+      if demoting_last_super_admin?
+        redirect_to admin_users_path, alert: t(".last_super_admin_error")
+        return
+      end
+
+      if membership_change_requested? && password_change_requested?
+        redirect_to admin_users_path, alert: t(".password_and_family_conflict")
+        return
+      end
+
+      if password_change_requested?
+        errors = validate_password_criteria(user_params[:password])
+        if errors.any?
+          redirect_to admin_users_path, alert: errors.join(" ")
+          return
+        end
+      end
+
+      if membership_change_requested?
+        target_family = nil
+
+        ActiveRecord::Base.transaction do
+          target_family = target_family_for_update
+
+          if target_family.nil?
+            raise ActiveRecord::Rollback
+          end
+
+          @user.transfer_to_family!(target_family, role: user_params[:role])
+        end
+
+        if target_family.nil?
+          redirect_to admin_users_path, alert: t(".family_required")
+          return
+        end
+
         Rails.logger.info(
-          "[Admin::Users] Role changed - " \
+          "[Admin::Users] Family changed - " \
+          "by_user_id=#{Current.user.id} " \
+          "target_user_id=#{@user.id} " \
+          "new_family_id=#{@user.family_id} " \
+          "new_role=#{@user.role}"
+        )
+
+        redirect_to admin_users_path, notice: t(".success_family")
+      elsif @user.update(user_update_attributes)
+        changes = []
+        changes << :role if @user.saved_change_to_role?
+        changes << :password if @user.saved_change_to_password_digest?
+
+        success_key = case changes
+        when [ :role, :password ] then ".success_role_and_password"
+        when [ :password ]        then ".success_password"
+        else                           ".success_role"
+        end
+
+        Rails.logger.info(
+          "[Admin::Users] User details changed (#{changes.join(', ')}) - " \
           "by_user_id=#{Current.user.id} " \
           "target_user_id=#{@user.id} " \
           "new_role=#{@user.role}"
         )
-        redirect_to admin_users_path, notice: t(".success")
+
+        redirect_to admin_users_path, notice: t(success_key)
       else
-        redirect_to admin_users_path, alert: t(".failure")
+        redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence.presence || t(".failure")
       end
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence
+    rescue ActiveRecord::RecordNotFound
+      redirect_to admin_users_path, alert: t(".failure")
     end
+
+
 
     def deletion
       # Same self-removal short-circuit as #destroy. UserPolicy#destroy? already
@@ -112,12 +177,69 @@ module Admin
 
     private
 
+      helper_method :family_label_for
+
       def set_user
         @user = User.find(params[:id])
       end
 
       def user_params
-        params.require(:user).permit(:role)
+        params.require(:user).permit(:role, :family_id, :new_family_name, :new_family_moniker, :password)
+      end
+
+      def user_update_attributes
+        attrs = {}
+        attrs[:role] = user_params[:role] if user_params[:role].present?
+        if user_params[:password].present? && @user.has_local_password?
+          attrs[:password] = user_params[:password]
+        end
+        attrs
+      end
+
+      def password_change_requested?
+        user_params[:password].present? && @user.has_local_password?
+      end
+
+      def validate_password_criteria(password)
+        errors = []
+        errors << t(".password_too_short") if password.length < 8
+        errors << t(".password_missing_case") unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
+        errors << t(".password_missing_number") unless password.match?(/\d/)
+        errors << t(".password_missing_special") unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
+        errors
+      end
+
+      def membership_change_requested?
+        return true if user_params[:new_family_name].to_s.strip.present?
+        return true if user_params[:family_id] == "new"
+
+        user_params[:family_id].present? && user_params[:family_id] != @user.family_id.to_s
+      end
+
+      def target_family_for_update
+        new_family_name = user_params[:new_family_name].to_s.strip
+
+        if new_family_name.present?
+          Family.create!(
+            name: new_family_name,
+            moniker: user_params[:new_family_moniker].presence || "Family"
+          )
+        elsif user_params[:family_id].present? && user_params[:family_id] != "new"
+          Family.find(user_params[:family_id])
+        end
+      end
+
+      def family_label_for(family)
+        return "" if family.nil?
+
+        family.name.presence || "#{family.moniker_label} (#{family.id.to_s.first(8)})"
+      end
+
+      def demoting_last_super_admin?
+        user_params[:role].present? &&
+          @user.super_admin? &&
+          user_params[:role] != "super_admin" &&
+          User.where(role: :super_admin).where.not(id: @user.id).none?
       end
 
       def apply_trial_filter(scope)
