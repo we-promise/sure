@@ -78,17 +78,12 @@ class User < ApplicationRecord
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
   # get the specified admin-capable fallback role.
-  FIRST_USER_ROLE_LOCK_NAMESPACE = 8_391_247
-  FIRST_USER_ROLE_LOCK_NAME = "users:first_user_role"
+  # Keep this one-key advisory lock stable across deploys so old and new app
+  # processes serialize first-user role selection on the same database lock.
+  FIRST_USER_ROLE_LOCK_KEY = 8_391_247
 
   def self.lock_first_user_role!
-    connection.execute(
-      sanitize_sql_array([
-        "SELECT pg_advisory_xact_lock(?, hashtext(?))",
-        FIRST_USER_ROLE_LOCK_NAMESPACE,
-        FIRST_USER_ROLE_LOCK_NAME
-      ])
-    )
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", FIRST_USER_ROLE_LOCK_KEY ]))
   end
 
   def self.role_for_new_family_creator(fallback_role: :admin)
