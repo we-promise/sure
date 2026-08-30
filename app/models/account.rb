@@ -187,6 +187,25 @@ class Account < ApplicationRecord
         )
         raise result.error if result.error
 
+        # When the opening balance differs from the entered current balance
+        # (a loan created with its original principal), the opening anchor is
+        # the account's only entry — the initial sync would recalculate
+        # today's balance back to it, silently discarding what the user just
+        # typed. Anchor today's balance too so both survive.
+        if initial_balance.present? && initial_balance != account.balance
+          # An explicit same-day reconciliation, not CurrentBalanceManager:
+          # for cash accounts its transaction-adjustment strategy computes a
+          # zero delta here (account.balance already holds the entered value)
+          # and would only rewrite the opening anchor, leaving today's balance
+          # unanchored for the first sync.
+          reconciliation = Account::ReconciliationManager.new(account).reconcile_balance(
+            balance: account.balance,
+            date: Date.current,
+            existing_valuation_entry: account.entries.valuations.find_by(date: Date.current)
+          )
+          raise reconciliation.error_message unless reconciliation.success?
+        end
+
         account.auto_share_with_family! if account.family.share_all_by_default?
       end
 
