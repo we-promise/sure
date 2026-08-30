@@ -123,4 +123,71 @@ class OauthCsrfTest < ActionDispatch::IntegrationTest
     assert_redirected_to oauth_applications_url
     assert_not Doorkeeper::Application.exists?(application.id)
   end
+
+  # These three tests hit POST /oauth/authorize directly — the consent-CSRF
+  # endpoint the PR description calls out as "confirmed concretely
+  # exploitable" via the plain form_tag in doorkeeper/authorizations/new.html.erb —
+  # rather than relying on AuthorizedApplicationsController/ApplicationsController
+  # coverage as a proxy for it. Doorkeeper's authorize params (client_id,
+  # redirect_uri, response_type, scope) travel on the POST request itself, not
+  # via a server-side session stash, so no separate seeding GET is required.
+  test "authorizing an OAuth application without a CSRF token is rejected" do
+    user = users(:family_admin)
+    sign_in user
+
+    application = Doorkeeper::Application.create!(
+      name: "Test App", redirect_uri: "https://client.example.com/callback", scopes: "read"
+    )
+
+    ActionController::Base.allow_forgery_protection = true
+    post oauth_authorization_path, params: {
+      client_id: application.uid, redirect_uri: application.redirect_uri, response_type: "code", scope: "read"
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal 0, Doorkeeper::AccessGrant.where(application: application).count
+  end
+
+  test "authorizing an OAuth application with a wrong CSRF token is rejected" do
+    user = users(:family_admin)
+    sign_in user
+
+    application = Doorkeeper::Application.create!(
+      name: "Test App", redirect_uri: "https://client.example.com/callback", scopes: "read"
+    )
+
+    ActionController::Base.allow_forgery_protection = true
+    post oauth_authorization_path, params: {
+      client_id: application.uid, redirect_uri: application.redirect_uri, response_type: "code", scope: "read"
+    }, headers: { "HTTP_X_CSRF_TOKEN" => "wrong-token" }
+
+    assert_response :unprocessable_entity
+    assert_equal 0, Doorkeeper::AccessGrant.where(application: application).count
+  end
+
+  test "authorizing an OAuth application with a valid CSRF token succeeds" do
+    user = users(:family_admin)
+    sign_in user
+
+    application = Doorkeeper::Application.create!(
+      name: "Test App", redirect_uri: "https://client.example.com/callback", scopes: "read"
+    )
+
+    ActionController::Base.allow_forgery_protection = true
+    # Loading the consent page first is what seeds the session's CSRF token
+    # that the subsequent authorize POST extracts and carries automatically.
+    get oauth_authorization_path, params: {
+      client_id: application.uid, redirect_uri: application.redirect_uri, response_type: "code", scope: "read"
+    }
+    assert_response :success
+    csrf_token = css_select("meta[name=csrf-token]").first["content"]
+
+    post oauth_authorization_path, params: {
+      client_id: application.uid, redirect_uri: application.redirect_uri, response_type: "code", scope: "read",
+      authenticity_token: csrf_token
+    }
+
+    assert_response :redirect
+    assert_equal 1, Doorkeeper::AccessGrant.where(application: application).count
+  end
 end
