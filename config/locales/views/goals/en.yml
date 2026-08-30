@@ -115,6 +115,8 @@ en:
         exceeds_earmark: That is more than the goal has earmarked on this account.
         transaction_already_claimed: That outflow has already been attributed.
         transaction_not_found: That outflow is no longer available to attribute.
+        not_claimed_by_this_goal: That outflow was attributed to a different goal.
+        release_exceeds_consumed: That would take this goal's recorded spend below zero.
         no_linked_account: This goal has no funding account left.
     consumed_outflows:
       confirm_detach_cta: Yes, undo it

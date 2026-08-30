@@ -677,6 +677,22 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
   end
 
+  # Regression: `release_consumption` used to fall back to a
+  # `goals.consume.errors.generic` locale key that did not exist anywhere in
+  # the repo, so this reachable-in-production refusal rendered as a raw
+  # "translation missing" string instead of something readable.
+  test "detaching more than consumed_amount can cover shows a readable message" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    goal.update_columns(consumed_amount: 100) # simulate drift
+
+    delete release_consumption_goal_url(goal, transaction_id: entry.entryable_id)
+
+    assert_redirected_to goal_url(goal)
+    assert_equal I18n.t("goals.consume.errors.release_exceeds_consumed"), flash[:alert]
+    assert_no_match(/translation missing/, flash[:alert])
+  end
+
   # Scoped through the same accessible-accounts list as attributing: a spend
   # on a linked account private to another family member is not this reader's
   # to detach, any more than it was theirs to see.

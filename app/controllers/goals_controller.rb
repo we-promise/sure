@@ -181,7 +181,7 @@ class GoalsController < ApplicationController
     @goal.release_consumption!(txn)
     redirect_to goal_path(@goal), notice: t("goals.release_consumption.success")
   rescue Goal::ConsumptionRefused => e
-    redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}", default: t("goals.consume.errors.generic"))
+    redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
   end
 
   def record_consumption

@@ -681,6 +681,10 @@ class Goal < ApplicationRecord
   # Only a goal that has actually recorded a spend says anything about it: the
   # overwhelming majority never do, and a permanent "0 used" line would be
   # noise on every card.
+  def any_consumption?
+    consumed_amount.to_d.positive?
+  end
+
   private
     # Mirrors GoalPledge#clear_matched_transaction_extra, but a goal can stamp
     # many transactions where a pledge stamps at most one, so this sweeps every
@@ -766,10 +770,6 @@ class Goal < ApplicationRecord
   # figure that looks wrong.
   def consumption_unaccounted_for(listed_total)
     [ consumed_amount.to_d - listed_total.to_d, 0.to_d ].max
-  end
-
-  def any_consumption?
-    consumed_amount.to_d.positive?
   end
 
   def progress_percent

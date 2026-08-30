@@ -121,6 +121,19 @@ class GoalConsumptionHistoryTest < ActiveSupport::TestCase
     assert_raises(Goal::ConsumptionRefused) { goal.release_consumption!(entry.entryable) }
   end
 
+  # Defensive: `consumed_amount` and its stamps should never drift, but the
+  # column carries a >= 0 check constraint, so this turns what would be a 500
+  # into something the user can read if they ever do.
+  test "releasing more than consumed_amount can cover is refused" do
+    goal, account = goal_with_account(balance: 5_000)
+    entry = spend(account, 300, 1.day.ago)
+    goal.consume!(300, transaction: entry.entryable)
+    goal.update_columns(consumed_amount: 100) # simulate drift
+
+    error = assert_raises(Goal::ConsumptionRefused) { goal.release_consumption!(entry.entryable) }
+    assert_equal :release_exceeds_consumed, error.reason
+  end
+
   test "releasing on an inactive goal is refused" do
     goal, account = goal_with_account(balance: 5_000)
     entry = spend(account, 300, 1.day.ago)

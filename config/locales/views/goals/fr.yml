@@ -201,6 +201,8 @@ fr:
         exceeds_earmark: "C'est plus que ce que l'objectif a affecté sur ce compte."
         transaction_already_claimed: Cette sortie a déjà été attribuée.
         transaction_not_found: Cette sortie n'est plus disponible.
+        not_claimed_by_this_goal: Cette sortie a été attribuée à un autre objectif.
+        release_exceeds_consumed: Cela ferait passer les dépenses enregistrées de cet objectif sous zéro.
         no_linked_account: Cet objectif n'a plus de compte de financement.
     consumed_outflows:
       confirm_detach_cta: Oui, annuler
