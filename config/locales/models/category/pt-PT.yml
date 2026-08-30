@@ -8,7 +8,7 @@ pt-PT:
       defaults:
         income: Rendimento
         food_and_drink: Comida e Bebida
-        groceries: Compras de supermercado
+        groceries: Supermercado
         shopping: Compras
         transportation: Transportes
         travel: Viagens
@@ -17,7 +17,7 @@ pt-PT:
         personal_care: Cuidados Pessoais
         home_improvement: Melhorias em Casa
         mortgage_rent: Hipoteca / Renda
-        utilities: Serviços
+        utilities: Despesas domésticas
         subscriptions: Subscrições
         insurance: Seguros
         sports_and_fitness: Desporto e Fitness
