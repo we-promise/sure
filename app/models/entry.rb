@@ -280,10 +280,6 @@ class Entry < ApplicationRecord
   end
 
   def classification
-    if entryable.is_a?(Transaction) && entryable.kind.in?(Transaction::BUDGET_EXPENSE_KINDS)
-      return "expense"
-    end
-
     amount.negative? ? "income" : "expense"
   end
 

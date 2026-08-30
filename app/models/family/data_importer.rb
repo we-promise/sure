@@ -721,7 +721,7 @@ class Family::DataImporter
     def imported_transfer_outflow_kind(transfer)
       source_account = transfer.outflow_transaction.entry.account
       destination_account = transfer.inflow_transaction.entry.account
-     Transfer.kind_for_account(source_account, destination_account)
+      Transfer.kind_for_account(source_account, destination_account)
     end
 
     def import_rejected_transfers(records)

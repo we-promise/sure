@@ -33,13 +33,4 @@ class EntryTest < ActiveSupport::TestCase
     assert_not_nil category.reload.last_used_at
   end
 
-  test "classifies negative budget transfer kinds as expenses" do
-    entry = create_transaction(
-      account: accounts(:investment),
-      amount: -500,
-      kind: "investment_contribution"
-    )
-
-    assert_equal "expense", entry.classification
-  end
 end
