@@ -557,9 +557,20 @@ class EnableBankingItem::Importer
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
     end
 
-    # ISO 20022 bank transaction code families for card payments.
+    # ISO 20022 bank transaction codes for the two halves of a card purchase.
+    # Only the point-of-sale purchase sub-codes take part in pairing: the other
+    # members of these families are separate movements that merely happen to
+    # share a family. CCRD/CWDL is a cash withdrawal, which has no merchant-side
+    # counterpart, and MCRD/DAJT and MCRD/OTHR are adjustments. Any of them can
+    # collide with an unrelated purchase on every field of the grouping key.
+    #
+    # This errs towards leaving a duplicate rather than discarding a real
+    # movement: an ASPSP that pairs some other sub-code keeps its duplicates,
+    # which is visible and recoverable, whereas discarding a genuine row is not.
     CUSTOMER_CARD_CODE = "CCRD".freeze # Customer Card Transactions - the cardholder's view
+    CUSTOMER_CARD_PURCHASE = [ CUSTOMER_CARD_CODE, "POSD" ].freeze # point-of-sale purchase
     MERCHANT_CARD_CODE = "MCRD".freeze # Merchant Card Transactions - the merchant's view
+    MERCHANT_CARD_PURCHASE = [ MERCHANT_CARD_CODE, "UPCT" ].freeze # the merchant's view of one
 
     # Some ASPSPs book a single card purchase twice: once as PMNT-CCRD-* (the
     # cardholder's view) and once as PMNT-MCRD-* (the merchant's view). N26 does
@@ -586,7 +597,8 @@ class EnableBankingItem::Importer
       transactions.each_with_index do |tx, index|
         tx = tx.with_indifferent_access
         code = tx.dig(:bank_transaction_code, :code)
-        next unless [ CUSTOMER_CARD_CODE, MERCHANT_CARD_CODE ].include?(code)
+        sub_code = tx.dig(:bank_transaction_code, :sub_code)
+        next unless [ CUSTOMER_CARD_PURCHASE, MERCHANT_CARD_PURCHASE ].include?([ code, sub_code ])
 
         key = build_card_twin_key(tx)
         next if key.nil?

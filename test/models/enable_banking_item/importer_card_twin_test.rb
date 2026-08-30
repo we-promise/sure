@@ -184,6 +184,39 @@ class EnableBankingItem::ImporterCardTwinTest < ActiveSupport::TestCase
     assert_equal "ref_adjustment", result.first[:entry_reference]
   end
 
+  test "keeps an MCRD adjustment that shares a key with a CCRD purchase" do
+    # MCRD/DAJT is an adjustment, not the merchant's view of a purchase. It can
+    # collide with an unrelated CCRD purchase on every field of the key, and
+    # discarding it would lose a real movement.
+    transactions = [
+      merchant_card_purchase(
+        entry_reference: "ref_adjustment",
+        bank_transaction_code: { code: "MCRD", sub_code: "DAJT", description: "PMNT" }
+      ),
+      customer_card_purchase(entry_reference: "ref_ccrd")
+    ]
+
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
+
+    assert_equal 2, result.count
+  end
+
+  test "keeps an MCRD purchase row that shares a key with a CCRD cash withdrawal" do
+    # CCRD/CWDL is a cash withdrawal, which has no merchant-side counterpart. It
+    # must not stand in as the CCRD half of a pair and absorb an MCRD row.
+    transactions = [
+      merchant_card_purchase(entry_reference: "ref_mcrd"),
+      customer_card_purchase(
+        entry_reference: "ref_withdrawal",
+        bank_transaction_code: { code: "CCRD", sub_code: "CWDL", description: "PMNT" }
+      )
+    ]
+
+    result = @importer.send(:discard_merchant_card_twins, transactions, @enable_banking_account)
+
+    assert_equal 2, result.count
+  end
+
   test "never merges two identical CCRD rows" do
     # Issue #2720: two legitimately distinct purchases with identical content.
     # This step must not touch them.
