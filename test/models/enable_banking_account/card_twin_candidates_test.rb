@@ -116,6 +116,77 @@ class EnableBankingAccount::CardTwinCandidatesTest < ActiveSupport::TestCase
     assert_empty @eba.card_twin_candidates.to_a
   end
 
+  test "offers category, tags and notes when the survivor has none" do
+    setup_pair!
+    tag = @family.tags.create!(name: "Reimbursable")
+    category = @family.categories.create!(name: "Groceries")
+    orphan_transaction.update!(category: category, tag_ids: [ tag.id ])
+    orphan_entry.update!(notes: "split with a friend")
+
+    candidate = @eba.card_twin_candidates.to_a.sole
+
+    assert_equal category, candidate.category
+    assert_equal [ tag.id ], candidate.tag_ids
+    assert_equal "split with a friend", candidate.notes
+    assert candidate.transfers_anything?
+  end
+
+  test "offers nothing for a field the survivor already has" do
+    setup_pair!
+    kept = @family.categories.create!(name: "Groceries")
+    other = @family.categories.create!(name: "Shopping")
+    survivor_transaction.update!(category: kept)
+    orphan_transaction.update!(category: other)
+
+    assert_nil @eba.card_twin_candidates.to_a.sole.category
+  end
+
+  test "offers nothing when the survivor is protected from sync" do
+    setup_pair!
+    category = @family.categories.create!(name: "Groceries")
+    orphan_transaction.update!(category: category)
+    survivor_entry.update!(user_modified: true)
+
+    candidate = @eba.card_twin_candidates.to_a.sole
+
+    assert_nil candidate.category
+    assert_empty candidate.tag_ids
+    refute candidate.transfers_anything?
+  end
+
+  test "flags a transfer as a blocker" do
+    setup_pair!
+    Transfer.create!(
+      inflow_transaction: counterpart_inflow.entryable,
+      outflow_transaction: orphan_transaction,
+      amount: orphan_entry.amount.abs
+    )
+
+    candidate = @eba.card_twin_candidates.to_a.sole
+
+    assert_includes candidate.blockers, :transfer
+    assert candidate.blocked?
+  end
+
+  test "flags an attachment as a blocker" do
+    setup_pair!
+    orphan_transaction.attachments.attach(
+      io: StringIO.new("receipt"), filename: "receipt.png", content_type: "image/png"
+    )
+
+    assert_includes @eba.card_twin_candidates.to_a.sole.blockers, :attachment
+  end
+
+  test "an untouched candidate is not blocked" do
+    setup_pair!
+
+    candidate = @eba.card_twin_candidates.to_a.sole
+
+    assert_empty candidate.blockers
+    refute candidate.blocked?
+    refute candidate.transfers_anything?
+  end
+
   private
     def row(code:, sub_code:, ref:, creditor:, amount: "5.12", pending: false)
       base = {
@@ -141,6 +212,29 @@ class EnableBankingAccount::CardTwinCandidatesTest < ActiveSupport::TestCase
 
     # What #3274's snapshot filter leaves behind: the merchant-side rows are gone
     # from raw_transactions_payload, their entries are not.
+    # One twin pair, post-fix: enable_banking_mcrd_1 is the orphan,
+    # enable_banking_ccrd_1 is the survivor.
+    def setup_pair!
+      customer = row(code: "CCRD", sub_code: "POSD", ref: "ccrd_1", creditor: "ACME Mktp*K4T9QX2")
+      merchant = row(code: "MCRD", sub_code: "UPCT", ref: "mcrd_1", creditor: "ACME Mktp")
+      import!([ customer, merchant ])
+      apply_fix!([ customer ])
+    end
+
+    def orphan_entry = @account.entries.find_by!(external_id: "enable_banking_mcrd_1")
+    def survivor_entry = @account.entries.find_by!(external_id: "enable_banking_ccrd_1")
+    def orphan_transaction = orphan_entry.entryable
+    def survivor_transaction = survivor_entry.entryable
+
+    # A Transfer is only valid across two accounts of the same family, so the
+    # matching inflow lives on the family's other account.
+    def counterpart_inflow
+      accounts(:credit_card).entries.create!(
+        name: "Inflow", date: orphan_entry.date, amount: -orphan_entry.amount,
+        currency: orphan_entry.currency, entryable: Transaction.new
+      )
+    end
+
     def apply_fix!(surviving_rows)
       @eba.update!(raw_transactions_payload: surviving_rows)
       @eba.reload

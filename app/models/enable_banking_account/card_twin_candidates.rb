@@ -12,7 +12,20 @@
 class EnableBankingAccount::CardTwinCandidates
   include Enumerable
 
-  Candidate = Struct.new(:entry, :survivor, keyword_init: true)
+  # category, tag_ids and notes are what would move to the surviving row rather
+  # than what the duplicate holds: they are already narrowed to fields the
+  # survivor lacks and is willing to accept.
+  #
+  # blockers are the things that cannot be carried across at all, so the UI
+  # unticks them. A transfer-linked transaction cascades
+  # (add_foreign_key "transfers", "transactions", on_delete: :cascade), which
+  # destroys the transfer and strips the link from the counterpart transaction on
+  # the other account.
+  Candidate = Struct.new(:entry, :survivor, :category, :tag_ids, :notes, :blockers, keyword_init: true) do
+    def blocked? = blockers.any?
+
+    def transfers_anything? = category.present? || tag_ids.any? || notes.present?
+  end
 
   def initialize(enable_banking_account)
     @enable_banking_account = enable_banking_account
@@ -48,7 +61,8 @@ class EnableBankingAccount::CardTwinCandidates
       entries = account.entries
         .where(source: "enable_banking", entryable_type: "Transaction", parent_entry_id: nil)
         .where.not(external_id: nil)
-        .includes(entryable: [ :category, :taggings ])
+        .includes(entryable: [ :category, :taggings, :transfer_as_inflow, :transfer_as_outflow,
+                              { attachments_attachments: :blob } ])
         .to_a
 
       stored, orphaned = entries.partition { |entry| snapshot_external_ids.include?(entry.external_id) }
@@ -60,8 +74,32 @@ class EnableBankingAccount::CardTwinCandidates
         survivor = survivors_by_key[sibling_key(entry)]&.min_by { |candidate| [ candidate.created_at, candidate.id ] }
         next if survivor.nil?
 
-        Candidate.new(entry: entry, survivor: survivor)
+        build_candidate(entry, survivor)
       end
+    end
+
+    def build_candidate(entry, survivor)
+      transaction = entry.transaction
+      blockers = []
+      # Transaction::Transferable#transfer, not the transfer_id column: the link
+      # lives on transfers.inflow_transaction_id / outflow_transaction_id, which
+      # is also what the cascading foreign key is declared on.
+      blockers << :transfer if transaction.transfer.present?
+      blockers << :attachment if transaction.attachments.attached?
+
+      # Mirrors Transaction#merge_with_duplicate! (transaction.rb:304): a
+      # survivor the user has already protected is never written to.
+      inheritable = !survivor.protected_from_sync?
+      survivor_transaction = survivor.transaction
+
+      Candidate.new(
+        entry: entry,
+        survivor: survivor,
+        category: (transaction.category if inheritable && survivor_transaction.category_id.blank?),
+        tag_ids: (inheritable && survivor_transaction.tag_ids.empty? ? transaction.tag_ids : []),
+        notes: (entry.notes.presence if inheritable && survivor.notes.blank?),
+        blockers: blockers
+      )
     end
 
     # date, amount and currency derive only from fields both halves of a twin
