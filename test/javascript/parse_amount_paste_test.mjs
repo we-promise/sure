@@ -32,23 +32,46 @@ function parseLocaleFloat(value, { separator } = {}) {
 
 // Inline the function to avoid needing a bundler for ESM imports.
 // Must be kept in sync with app/javascript/utils/parse_amount_paste.js
+// A currency symbol or code, as it appears next to a pasted amount: "$", "R$",
+// "kr", "USD". Capped at three characters so prose ("memo 500") is rejected
+// rather than silently read as an amount.
+const CURRENCY_TOKEN = "[^\\d\\s.,()+-]{1,3}"
+
+const stripCurrency = (value) =>
+  value
+    .replace(new RegExp(`^${CURRENCY_TOKEN}\\s*`), "")
+    .replace(new RegExp(`\\s*${CURRENCY_TOKEN}$`), "")
+    .trim()
+
 function parseAmountPaste(text, options = {}) {
   const trimmed = typeof text === "string" ? text.trim() : ""
   if (trimmed === "") return null
 
-  const negative = trimmed.startsWith("-") || /^\(.*\)$/.test(trimmed)
+  let rest = trimmed
+  let negative = false
 
-  const body = trimmed
-    .replace(/^[+-]/, "")
-    .replace(/^[^\d]+/, "")
-    .replace(/[^\d]+$/, "")
+  const outerSign = rest.match(/^([+-])\s*/)
+  if (outerSign) {
+    negative = outerSign[1] === "-"
+    rest = rest.slice(outerSign[0].length)
+  }
 
-  if (!/^\d[\d.,\s]*$/.test(body)) return null
+  rest = stripCurrency(rest)
 
-  const parsed = parseLocaleFloat(body, options)
+  const parenthesised = rest.match(/^\((.+)\)$/)
+  if (parenthesised) {
+    negative = true
+    rest = stripCurrency(parenthesised[1].trim())
+  }
+
+  const match = rest.match(/^([+-]?)(\d[\d.,\s]*)$/)
+  if (!match) return null
+  if (match[1] === "-") negative = true
+
+  const parsed = parseLocaleFloat(match[2], options)
   if (!Number.isFinite(parsed)) return null
 
-  return negative ? -parsed : parsed
+  return negative ? -Math.abs(parsed) : parsed
 }
 
 describe("parseAmountPaste", () => {
@@ -82,6 +105,10 @@ describe("parseAmountPaste", () => {
     it('parses "1,234.56 EUR" as 1234.56', () => {
       assert.equal(parseAmountPaste("1,234.56 EUR"), 1234.56)
     })
+
+    it('parses "R$ 1.234,56" as 1234.56', () => {
+      assert.equal(parseAmountPaste("R$ 1.234,56"), 1234.56)
+    })
   })
 
   describe("handles negatives", () => {
@@ -91,6 +118,22 @@ describe("parseAmountPaste", () => {
 
     it('parses "(1,200.00)" as -1200', () => {
       assert.equal(parseAmountPaste("(1,200.00)"), -1200)
+    })
+
+    it('parses "$-500" as -500', () => {
+      assert.equal(parseAmountPaste("$-500"), -500)
+    })
+
+    it('parses "-$500" as -500', () => {
+      assert.equal(parseAmountPaste("-$500"), -500)
+    })
+
+    it('parses "USD (1,200.00)" as -1200', () => {
+      assert.equal(parseAmountPaste("USD (1,200.00)"), -1200)
+    })
+
+    it('parses "(1,200.00) USD" as -1200', () => {
+      assert.equal(parseAmountPaste("(1,200.00) USD"), -1200)
     })
   })
 
@@ -121,6 +164,14 @@ describe("parseAmountPaste", () => {
 
     it("rejects undefined", () => {
       assert.equal(parseAmountPaste(undefined), null)
+    })
+
+    it('rejects "memo 500"', () => {
+      assert.equal(parseAmountPaste("memo 500"), null)
+    })
+
+    it('rejects "500 memo"', () => {
+      assert.equal(parseAmountPaste("500 memo"), null)
     })
   })
 })
