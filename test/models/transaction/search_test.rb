@@ -684,16 +684,16 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     # One transaction carrying two of the filtered tags.
     double_tagged = create_transaction(account: @checking_account, amount: 100, kind: "standard")
-    double_tagged.entryable << tag_a
-    double_tagged.entryable << tag_b
+    double_tagged.entryable.tags << tag_a
+    double_tagged.entryable.tags << tag_b
 
     # One transaction carrying one of the filtered tags.
     single_tagged = create_transaction(account: @checking_account, amount: 50, kind: "standard")
-    single_tagged.entryable << tag_a
+    single_tagged.entryable.tags << tag_a
 
     # One transaction carrying only a tag NOT in the filter set.
     unrelated = create_transaction(account: @checking_account, amount: 75, kind: "standard")
-    unrelated.entryable << tag_c
+    unrelated.entryable.tags << tag_c
 
     search = Transaction::Search.new(@family, filters: { tags: [ "TagA", "TagB" ] })
     result_ids = search.transactions_scope.distinct.pluck(:id)
@@ -710,11 +710,11 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     tag_b = @family.tags.create!(name: "FanB")
 
     double_tagged = create_transaction(account: @checking_account, amount: 100, kind: "standard")
-    double_tagged.entryable << tag_a
-    double_tagged.entryable << tag_b
+    double_tagged.entryable.tags << tag_a
+    double_tagged.entryable.tags << tag_b
 
     single_tagged = create_transaction(account: @checking_account, amount: 50, kind: "standard")
-    single_tagged.entryable << tag_a
+    single_tagged.entryable.tags << tag_a
 
     # Sanity: the list deduplicates — exactly 2 rows.
     list_count = Transaction::Search.new(@family, filters: { tags: [ "FanA", "FanB" ] })
@@ -738,9 +738,9 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     t3 = @family.tags.create!(name: "Triple3")
 
     triple_tagged = create_transaction(account: @checking_account, amount: 42, kind: "standard")
-    triple_tagged.entryable << t1
-    triple_tagged.entryable << t2
-    triple_tagged.entryable << t3
+    triple_tagged.entryable.tags << t1
+    triple_tagged.entryable.tags << t2
+    triple_tagged.entryable.tags << t3
 
     totals = Transaction::Search.new(@family, filters: { tags: [ "Triple1", "Triple2", "Triple3" ] }).totals
 
