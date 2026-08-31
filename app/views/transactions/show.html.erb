@@ -402,12 +402,9 @@
             </div>
           <% end %>
           <%# Which bills this transaction paid. Bills has always linked out to
-              transactions; without this the trip back was a dead end.
-              Preview-gated with the rest of the bills surface: bill_path
-              redirects users without the flag, so the links would dead-end. %>
-          <% applied_to = preview_features_enabled? ? @entry.recurring_allocations
-                                .includes(recurring_occurrence: :recurring_transaction)
-                                .reject { |allocation| allocation.recurring_occurrence.nil? } : [] %>
+              transactions; without this the trip back was a dead end. Loading
+              and preview-gating live with BillsHelper#entry_bill_allocations. %>
+          <% applied_to = entry_bill_allocations(@entry) %>
           <% if applied_to.any? %>
             <div class="p-3 space-y-2">
               <h4 class="text-sm text-primary"><%= t(".applied_to_title") %></h4>

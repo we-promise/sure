@@ -20,4 +20,17 @@ module RecurringFeatureGuardable
     def dialog_layout
       turbo_frame_request? ? false : "settings"
     end
+
+    # Turbo-stream redirects take a raw URL, so the referer has to be validated
+    # the way redirect_back_or_to already validates it for HTML: same host, or
+    # the caller's fallback.
+    def safe_return_path(fallback:)
+      referer = request.referer
+      return fallback if referer.blank?
+
+      uri = URI.parse(referer)
+      uri.host.nil? || uri.host == request.host ? referer : fallback
+    rescue URI::InvalidURIError
+      fallback
+    end
 end

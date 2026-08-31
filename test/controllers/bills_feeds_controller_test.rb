@@ -3,12 +3,13 @@ require "test_helper"
 class BillsFeedsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @family = families(:dylan_family)
+    @user = users(:family_admin)
     @family.recurring_transactions.destroy_all
     create_bill(name: "Rent", amount: 2150)
   end
 
-  test "a stored token serves the feed without a session" do
-    get bills_feed_url(token: @family.bills_feed_token!)
+  test "a member token serves the feed without a session" do
+    get bills_feed_url(token: @family.bills_feed_token_for(@user))
 
     assert_response :success
     assert_match "BEGIN:VCALENDAR", response.body
@@ -32,19 +33,47 @@ class BillsFeedsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "resetting the token revokes the old URL and the new one works" do
-    old_token = @family.bills_feed_token!
-    new_token = @family.reset_bills_feed_token!
+  # The stored family secret is the revocation root, not a credential: putting
+  # it in a URL would hand every member the whole family's obligations.
+  test "the raw family secret is not itself a feed token" do
+    get bills_feed_url(token: @family.bills_feed_token!)
+
+    assert_response :not_found
+  end
+
+  # Sharing is per account, so the feed has to honor it: a member who cannot
+  # reach an account in the app must not receive its bills by calendar.
+  test "a member's feed carries only the bills that member can reach" do
+    member = users(:family_member)
+    # The investment account is the admin's and was never shared.
+    create_bill(name: "Private Brokerage Fee", amount: 95, account: accounts(:investment))
+    create_bill(name: "Gym", amount: 30, account: nil)
+
+    get bills_feed_url(token: @family.bills_feed_token_for(member))
+
+    assert_response :success
+    assert_match "Gym", response.body
+    assert_no_match(/Private Brokerage Fee/, response.body)
+
+    get bills_feed_url(token: @family.bills_feed_token_for(@user))
+
+    assert_match "Gym", response.body
+    assert_match "Private Brokerage Fee", response.body
+  end
+
+  test "resetting the token revokes every member URL and freshly minted ones work" do
+    old_token = @family.bills_feed_token_for(@user)
+    @family.reset_bills_feed_token!
 
     get bills_feed_url(token: old_token)
     assert_response :not_found
 
-    get bills_feed_url(token: new_token)
+    get bills_feed_url(token: @family.reload.bills_feed_token_for(@user))
     assert_response :success
     assert_match "BEGIN:VCALENDAR", response.body
   end
 
-  test "the token generates lazily exactly once" do
+  test "the family secret generates lazily exactly once" do
     assert_nil @family.bills_feed_token
 
     first = @family.bills_feed_token!
@@ -56,9 +85,9 @@ class BillsFeedsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def create_bill(name:, amount:)
+    def create_bill(name:, amount:, account: accounts(:depository))
       @family.recurring_transactions.create!(
-        account: accounts(:depository),
+        account: account,
         name: name,
         amount: amount,
         dedup_scope: amount.to_s,

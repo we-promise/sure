@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require "ostruct"
 
 # Bills is used on a phone, and the app is installable as a PWA, so "fits a
 # phone" is a correctness property rather than a polish one.
@@ -26,7 +27,7 @@ class BillsMobileTest < ApplicationSystemTestCase
   test "no Bills view scrolls sideways on a phone" do
     # The AI chips render only with consent plus a provider, so without this
     # the overview would be measured without a whole strip it can carry.
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    Provider::Registry.stubs(:preferred_llm_provider).returns(OpenStruct.new)
 
     # A long name, a five-figure amount and a note: the row at its widest.
     bill = @family.recurring_transactions.create!(

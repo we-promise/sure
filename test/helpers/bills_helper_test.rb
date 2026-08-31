@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class BillsHelperTest < ActionView::TestCase
   # bills_match_reasons formats one money value, and format_money lives in
@@ -201,7 +202,106 @@ class BillsHelperTest < ActionView::TestCase
     assert_match(/overdue/i, occurrence_due_label(occurrence))
   end
 
+  # --- Prepared-data helpers extracted from the templates, so the section,
+  # pulse, detail and paycheck views render precomputed values. ---
+
+  test "ambiguous row keys mark only genuine collisions" do
+    twin_a = stub_occurrence("Twitch", 5.99, id: "a1")
+    twin_b = stub_occurrence("Twitch", 5.99, id: "a2")
+    other_tier = stub_occurrence("Twitch", 11.99, id: "b")
+
+    keys = bills_ambiguous_row_keys([ twin_a, twin_b, other_tier ])
+
+    assert_includes keys, [ "Twitch", 5.99 ]
+    assert_not_includes keys, [ "Twitch", 11.99 ]
+  end
+
+  test "pay period markers land on the first row of each period with its summed total" do
+    period = OpenStruct.new(starts_on: Date.new(2026, 9, 1), ends_on: Date.new(2026, 9, 14))
+    first_inside = stub_occurrence("Rent", 2150, id: "one", due_on: Date.new(2026, 9, 2))
+    second_inside = stub_occurrence("Power", 80, id: "two", due_on: Date.new(2026, 9, 10))
+    outside = stub_occurrence("Later", 10, id: "three", due_on: Date.new(2026, 9, 20))
+
+    markers = bills_pay_period_markers([ first_inside, second_inside, outside ], [ period ])
+
+    assert_equal [ "one" ], markers.keys
+    assert_equal 2230, markers["one"][:due_total]
+    assert_equal period, markers["one"][:period]
+  end
+
+  test "no pay periods means no markers" do
+    occurrence = stub_occurrence("Rent", 1, id: "x", due_on: Date.current)
+
+    assert_empty bills_pay_period_markers([ occurrence ], [])
+  end
+
+  test "month progress divides paid, overdue and upcoming out of one total" do
+    progress = bills_month_progress(paid: 50, remaining: 50, overdue: 25)
+
+    assert_equal 100.0, progress[:total]
+    assert_in_delta 50.0, progress[:paid_pct]
+    assert_in_delta 25.0, progress[:overdue_pct]
+    assert_in_delta 25.0, progress[:upcoming_pct]
+  end
+
+  test "an empty month draws no bar" do
+    progress = bills_month_progress(paid: nil, remaining: nil, overdue: nil)
+
+    assert_equal 0.0, progress[:total]
+    assert_equal 0, progress[:paid_pct]
+  end
+
+  test "overdue money never claims more of the bar than what remains" do
+    progress = bills_month_progress(paid: 80, remaining: 20, overdue: 500)
+
+    assert_in_delta 20.0, progress[:overdue_pct]
+    assert_in_delta 0.0, progress[:upcoming_pct]
+  end
+
+  test "matcher hints strip blanks and cast the tolerance" do
+    series = OpenStruct.new(matcher_hints: { "name_aliases" => [ "PEPSICO", "" ], "learned_tolerance_pct" => "7.5" })
+
+    hints = bills_matcher_hints(series)
+
+    assert_equal [ "PEPSICO" ], hints[:aliases]
+    assert_equal 7.5, hints[:learned_pct]
+  end
+
+  test "plan sections split the bridge from the timeline and pick the warning state" do
+    short_bridge = build_period(income: 0, due: 400, reserved: 0, leading: true, cash_on_hand: BigDecimal("100"))
+    period = build_period(income: 1200, due: 300, reserved: 100)
+
+    sections = paycheck_plan_sections([ short_bridge, period ])
+
+    assert_equal [ period ], sections[:periods]
+    assert_equal short_bridge, sections[:shortfall]
+    assert_nil sections[:bridge_note]
+  end
+
+  test "a covered bridge with items becomes the quiet note, not the warning" do
+    covered = build_period(income: 0, due: 50, reserved: 0, leading: true,
+                           cash_on_hand: BigDecimal("500"), items: [ :a_bill ])
+
+    sections = paycheck_plan_sections([ covered ])
+
+    assert_nil sections[:shortfall]
+    assert_equal covered, sections[:bridge_note]
+  end
+
+  test "no plan yields empty sections" do
+    assert_empty paycheck_plan_sections(nil)
+  end
+
   private
+
+    def stub_occurrence(name, amount, id:, due_on: Date.current)
+      OpenStruct.new(
+        id: id,
+        due_on: due_on,
+        resolved_expected_amount: amount,
+        recurring_transaction: OpenStruct.new(display_name: name)
+      )
+    end
 
     def build_occurrence(due_on:, status:)
       family = users(:family_admin).family
@@ -219,7 +319,7 @@ class BillsHelperTest < ActionView::TestCase
         closed_at: (status == "scheduled" ? nil : Time.current)
       )
     end
-    def build_period(income:, due:, reserved:, sources: [ "Payroll" ], leading: false)
+    def build_period(income:, due:, reserved:, sources: [ "Payroll" ], leading: false, cash_on_hand: nil, items: [])
       obligations = BigDecimal(due.to_s) + BigDecimal(reserved.to_s)
 
       RecurringTransaction::PaycheckPlanner::Period.new(
@@ -227,14 +327,14 @@ class BillsHelperTest < ActionView::TestCase
         ends_on: Date.new(2026, 8, 25),
         income: BigDecimal(income.to_s),
         income_sources: sources,
-        items: [],
+        items: items,
         due_total: BigDecimal(due.to_s),
         reserved_total: BigDecimal(reserved.to_s),
         obligation_total: obligations,
         remaining: BigDecimal(income.to_s) - obligations,
         leading: leading,
         final: false,
-        cash_on_hand: nil
+        cash_on_hand: cash_on_hand
       )
     end
 end

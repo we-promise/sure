@@ -26,7 +26,9 @@ module RecurringTransactionsHelper
   end
 
   def frequency_day_options
-    (1..31).map { |day| [ day.ordinalize, day ] } +
+    # localized_ordinal, not ordinalize: the bare Rails helper always emits
+    # English suffixes regardless of the active locale.
+    (1..31).map { |day| [ localized_ordinal(day), day ] } +
       [ [ t("recurring_transactions.frequency.last_day"), RecurrenceRule::LAST ] ]
   end
 

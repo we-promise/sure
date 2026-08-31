@@ -84,27 +84,16 @@ class RecurringAllocationsController < ApplicationController
         .find(params[:id])
     end
 
-    # Queue actions come from the Bills page and should land back there.
+    # Queue actions come from the Bills page and should land back there. The
+    # same-host referer check lives in RecurringFeatureGuardable#safe_return_path.
     def redirect_with_return(notice:)
       flash[:notice] = notice
-      target = safe_return_path
+      target = safe_return_path(fallback: bills_path)
 
       respond_to do |format|
         format.html { redirect_to target }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, target) }
       end
-    end
-
-    # The referer is request input: only a same-host referer may become a
-    # redirect target, matching what redirect_back_or_to enforces.
-    def safe_return_path
-      referer = request.referer
-      return bills_path if referer.blank?
-
-      uri = URI.parse(referer)
-      uri.host.nil? || uri.host == request.host ? referer : bills_path
-    rescue URI::InvalidURIError
-      bills_path
     end
 
     def find_occurrence(id)

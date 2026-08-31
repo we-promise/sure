@@ -3,6 +3,8 @@ require "test_helper"
 class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    # The declare/edit/suggestion paths sit behind the Bills preview gate.
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
     @recurring_transaction = recurring_transactions(:netflix_subscription)
     ensure_tailwind_build
@@ -156,7 +158,9 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
     end
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
 
@@ -223,7 +227,9 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
       date: Date.current - 3, amount: 622.41, currency: "USD", name: "PRIVATE BROKERAGE FEE",
       entryable: Transaction.new
     )
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     get new_recurring_transaction_url(entry_id: hidden.id), headers: { "Turbo-Frame" => "modal" }
 
@@ -898,7 +904,9 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
   test "picker never shows an account the member was not given, even on exact match" do
     hidden = picker_entry(name: "PRIVATE BROKERAGE FEE", amount: 30, account: accounts(:investment))
-    sign_in users(:family_member)
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
 
     get new_recurring_transaction_url(picker: 1, q: "PRIVATE BROKERAGE FEE"),
         headers: { "Turbo-Frame" => "modal" }
@@ -952,7 +960,144 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("recurring_transactions.pick_entry.back"), response.body
   end
 
+  # The declare, edit and suggestion paths shipped with Bills, so they honor
+  # the same preview gate as every other Bills surface. Direct URLs included:
+  # the gate is a before_action, not a matter of which buttons render.
+  test "the bills-era actions sit behind the preview gate" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    get new_recurring_transaction_url
+    assert_redirected_to root_path
+
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: { recurring_transaction: {
+        name: "Gated", amount: 10, first_due_on: Date.current.iso8601, frequency_preset: "monthly"
+      } }
+    end
+    assert_redirected_to root_path
+
+    original_name = @recurring_transaction.name
+    patch recurring_transaction_url(@recurring_transaction), params: { recurring_transaction: { name: "Renamed" } }
+    assert_redirected_to root_path
+    assert_equal original_name, @recurring_transaction.reload.name
+
+    suggestion = create_series(name: "Maybe A Bill", status: "suggested")
+    post confirm_recurring_transaction_url(suggestion)
+    assert_redirected_to root_path
+    assert suggestion.reload.suggested?
+  end
+
+  test "the pre-bills settings actions stay reachable without the preview flag" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+
+    get recurring_transactions_url
+    assert_response :success
+
+    post toggle_status_recurring_transaction_url(@recurring_transaction)
+    assert_redirected_to recurring_transactions_url
+  end
+
+  # Sharing is per account: a read-only share may SEE the series everywhere the
+  # app lists it, and must not be able to change or remove it. Mirrors
+  # RecurringOccurrencesController#ensure_series_writable.
+  test "a read-only account share can see but not mutate a series" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    # The credit card fixture is shared with the member read_only.
+    series = create_series(name: "Shared Read Only", account: accounts(:credit_card))
+    suggestion = create_series(name: "Shared Suggestion", account: accounts(:credit_card), status: "suggested")
+
+    sign_in member
+
+    # Visible: the read dialog opens. The write guard bites only on mutation.
+    get edit_recurring_transaction_url(series), headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_match "Shared Read Only", response.body
+
+    patch recurring_transaction_url(series), params: { recurring_transaction: { name: "Hijacked" } }
+    assert_response :not_found
+    assert_equal "Shared Read Only", series.reload.name
+
+    post toggle_status_recurring_transaction_url(series)
+    assert_response :not_found
+    assert series.reload.active?
+
+    post confirm_recurring_transaction_url(suggestion)
+    assert_response :not_found
+    assert suggestion.reload.suggested?
+
+    post dismiss_recurring_transaction_url(suggestion)
+    assert_response :not_found
+    assert suggestion.reload.suggested?
+
+    delete recurring_transaction_url(series)
+    assert_response :not_found
+    assert series.reload.persisted?
+  end
+
+  test "an accountless series carries no account write gate" do
+    series = create_series(name: "No Account", account: nil)
+
+    patch recurring_transaction_url(series), params: { recurring_transaction: { name: "Renamed Fine" } }
+
+    assert_response :redirect
+    assert_equal "Renamed Fine", series.reload.name
+  end
+
+  # Clearing a payment link is a statement about one bill; the opt-in copy
+  # must not blank the siblings' own links on the way through.
+  test "clearing the payment link never blanks the siblings" do
+    source = create_series(name: "Twitch Tier 1", merchant: merchants(:netflix), payment_url: "https://pay.example/1")
+    sibling = create_series(name: "Twitch Tier 2", merchant: merchants(:netflix), payment_url: "https://pay.example/keep")
+
+    patch recurring_transaction_url(source), params: {
+      apply_to_siblings: "1",
+      recurring_transaction: { payment_url: "" }
+    }
+
+    assert_response :redirect
+    assert_nil source.reload.payment_url.presence
+    assert_equal "https://pay.example/keep", sibling.reload.payment_url
+  end
+
+  test "the sibling copy skips series on accounts the user cannot write" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+
+    source = create_series(name: "Portal Bill", account: nil, merchant: merchants(:netflix))
+    # The credit card fixture is shared with the member read_only: visible,
+    # therefore inside accessible_by, and exactly what the copy must skip.
+    read_only_sibling = create_series(name: "Portal Bill RO", account: accounts(:credit_card),
+                                      merchant: merchants(:netflix), payment_url: "https://pay.example/theirs")
+
+    sign_in member
+    patch recurring_transaction_url(source), params: {
+      apply_to_siblings: "1",
+      recurring_transaction: { payment_url: "https://pay.example/mine" }
+    }
+
+    assert_response :redirect
+    assert_equal "https://pay.example/mine", source.reload.payment_url
+    assert_equal "https://pay.example/theirs", read_only_sibling.reload.payment_url
+  end
+
   private
+
+    def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil)
+      @family.recurring_transactions.create!(
+        account: account,
+        merchant: merchant,
+        name: name,
+        amount: 25,
+        dedup_scope: name,
+        currency: "USD",
+        expected_day_of_month: 5,
+        last_occurrence_date: 1.month.ago.to_date,
+        next_expected_date: 5.days.from_now.to_date,
+        status: status,
+        payment_url: payment_url
+      )
+    end
 
     def picker_entry(name:, amount:, account: accounts(:depository), merchant: nil, notes: nil, kind: nil, excluded: false)
       transaction_attrs = { merchant: merchant }

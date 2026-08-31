@@ -56,20 +56,17 @@
       <% end %>
     </div>
 
-    <%# What the app has learned from corrections. Both of these are written by
-        Allocator#learn_from_manual_attach! every time someone attaches a
-        payment by hand, and until now neither was visible anywhere: the bill
-        quietly widened what it would match and never said so. %>
-    <% aliases = Array(series.matcher_hints["name_aliases"]).compact_blank %>
-    <% learned = series.matcher_hints["learned_tolerance_pct"].to_f %>
-    <% if aliases.any? %>
+    <%# What the app has learned from corrections, prepared by
+        BillsHelper#bills_matcher_hints. %>
+    <% hints = bills_matcher_hints(series) %>
+    <% if hints[:aliases].any? %>
       <p class="text-xs text-secondary">
-        <%= t("bills.detail.rule_aliases", names: aliases.to_sentence) %>
+        <%= t("bills.detail.rule_aliases", names: hints[:aliases].to_sentence) %>
       </p>
     <% end %>
-    <% if learned.positive? %>
+    <% if hints[:learned_pct].positive? %>
       <p class="text-xs text-secondary">
-        <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(learned, precision: 1, format: "%n%")) %>
+        <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(hints[:learned_pct], precision: 1, format: "%n%")) %>
       </p>
     <% end %>
   </div>

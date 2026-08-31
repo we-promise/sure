@@ -2,6 +2,8 @@
 # create paths, editable identity and frequency, suggestion confirm/dismiss, and
 # schedule pinning on a hand-set cadence.
 class RecurringTransactionsController < ApplicationController
+  include RecurringFeatureGuardable
+
   layout "settings"
 
   # Small on purpose: the picker narrows by searching, not by paging, and a
@@ -9,7 +11,13 @@ class RecurringTransactionsController < ApplicationController
   # targets _top and cannot live inside a turbo frame).
   PICKER_SHOWN = 20
 
+  # The declare, edit and suggestion paths shipped with Bills and sit behind
+  # its preview gate like every other Bills surface. The actions that predate
+  # Bills (index, toggle_status, destroy, update_settings, identify, cleanup)
+  # keep their historical reach.
+  before_action :ensure_recurring_enabled, only: %i[new create edit update confirm dismiss]
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
+  before_action :ensure_series_writable, only: %i[update toggle_status destroy confirm dismiss]
 
   def index
     scope = Current.family.recurring_transactions
@@ -190,10 +198,9 @@ class RecurringTransactionsController < ApplicationController
         t(".success")
       end
 
-      redirect_target_url = request.referer || recurring_transactions_path
       respond_to do |format|
         format.html { redirect_back_or_to recurring_transactions_path }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, redirect_target_url) }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, safe_return_path(fallback: recurring_transactions_path)) }
       end
     else
       @sibling_count = sibling_scope.count
@@ -329,14 +336,21 @@ class RecurringTransactionsController < ApplicationController
         .to_h { |a| [ a.entry_id, a.recurring_occurrence.recurring_transaction.display_name ] }
     end
 
-    def dialog_layout
-      turbo_frame_request? ? false : "settings"
-    end
-
     def set_recurring_transaction
       @recurring_transaction = Current.family.recurring_transactions
                                       .accessible_by(Current.user)
                                       .find(params[:id])
+    end
+
+    # Reading a shared bill is fine; changing it is not. Sharing is per
+    # account, so a read-only account share must not mutate the series.
+    # Accountless series carry no account gate. Same contract as
+    # RecurringOccurrencesController#ensure_series_writable.
+    def ensure_series_writable
+      return if @recurring_transaction.account_id.nil?
+      return if Account.writable_by(Current.user).where(id: @recurring_transaction.account_id).exists?
+
+      raise ActiveRecord::RecordNotFound
     end
 
     # name, amount and account are handled by apply_editable_identity rather
@@ -442,14 +456,18 @@ class RecurringTransactionsController < ApplicationController
     # for example), and they all pay at the same portal. Opting in copies the link to
     # the caller's other bills for that merchant so the user types it once.
     #
-    # Scoped through `accessible_by` so this never writes to a bill the user cannot
-    # already see, and skipped entirely for merchant-less rows, whose only identity is
-    # a free-text name that says nothing about where to pay.
+    # Scoped to what this user can WRITE, not merely see: a series on an account
+    # shared read-only must not be rewritten by the copy, and accountless series
+    # carry no account gate. Merchant-less rows are skipped entirely, because
+    # their only identity is a free-text name that says nothing about where to pay.
     # `update_all` is deliberate: the value being copied was already normalized and
     # validated on the source record, and a row-by-row save would let an unrelated
     # pre-existing validation failure on a legacy sibling abort the whole copy.
     def apply_payment_url_to_siblings
       return 0 unless params[:apply_to_siblings] == "1"
+      # Clearing the link is a statement about this bill only: copying a blank
+      # over the siblings would erase links that were never wrong.
+      return 0 if @recurring_transaction.payment_url.blank?
 
       sibling_scope.update_all(
         payment_url: @recurring_transaction.payment_url,
@@ -466,6 +484,7 @@ class RecurringTransactionsController < ApplicationController
     def sibling_scope
       scope = Current.family.recurring_transactions
                      .accessible_by(Current.user)
+                     .where(account_id: Account.writable_by(Current.user).pluck(:id) + [ nil ])
                      .where.not(id: @recurring_transaction.id)
 
       if @recurring_transaction.merchant_id.present?

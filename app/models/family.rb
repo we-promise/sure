@@ -557,6 +557,32 @@ class Family < ApplicationRecord
     bills_feed_token
   end
 
+  # The URL a member subscribes to carries the MEMBER's identity, because the
+  # feed must honor per-account sharing: a member who can reach a subset of
+  # accounts must not receive the whole family's obligations. The family
+  # secret never appears in the URL; only a digest of it does, so rotating
+  # `bills_feed_token` still revokes every previously shared URL at once.
+  def bills_feed_token_for(user)
+    self.class.bills_feed_verifier.generate([ user.id, bills_feed_stamp! ])
+  end
+
+  def bills_feed_stamp!
+    Digest::SHA256.hexdigest(bills_feed_token!).first(16)
+  end
+
+  # Non-minting read for the verification side: a family that never rendered
+  # a feed link has no token, and a signed URL from some earlier life must
+  # not conjure one into existence to match against.
+  def bills_feed_stamp
+    return nil if bills_feed_token.blank?
+
+    Digest::SHA256.hexdigest(bills_feed_token).first(16)
+  end
+
+  def self.bills_feed_verifier
+    Rails.application.message_verifier("bills-user-feed")
+  end
+
   private
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by

@@ -178,6 +178,16 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.current + 12, @occurrence.reload.snoozed_until
   end
 
+  # until[]=... makes params.require(:until) an Array, which Date.parse
+  # rejects with TypeError rather than ArgumentError. Same user mistake, same
+  # invalid-date redirect; never a 500.
+  test "a non-scalar until parameter is an invalid date, not a 500" do
+    patch snooze_recurring_occurrence_url(@occurrence), params: { until: [ (Date.current + 12).iso8601 ] }
+
+    assert_response :redirect
+    assert_nil @occurrence.reload.snoozed_until
+  end
+
   test "override amount sets and clears the per-occurrence expectation" do
     patch override_amount_recurring_occurrence_url(@occurrence, amount: "42.50")
     assert_equal 42.50, @occurrence.reload.expected_amount

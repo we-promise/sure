@@ -1,14 +1,12 @@
 <%# locals: (title:, occurrences:, tone: :default, date_labels: false, suggestions: {}, meta: nil, pay_periods: []) %>
 <% return if occurrences.empty? %>
 
-<%# Two bills can be genuinely indistinguishable on a row -- same merchant,
-    same amount, three tiers of one subscription. Where that happens, and only
-    where it happens, the row earns a second fact to tell them apart. Adding
-    the schedule to every row instead would be nineteen copies of something
-    nobody was confused about. %>
-<% ambiguous = occurrences.group_by { |o| [ o.recurring_transaction.display_name, o.resolved_expected_amount ] }
-                          .select { |_, group| group.size > 1 }
-                          .keys.to_set %>
+<%# Where two rows would read identically, and only there, the row earns a
+    second fact to tell them apart (BillsHelper#bills_ambiguous_row_keys).
+    Adding the schedule to every row instead would be nineteen copies of
+    something nobody was confused about. %>
+<% ambiguous = bills_ambiguous_row_keys(occurrences) %>
+<% markers = bills_pay_period_markers(occurrences, pay_periods) %>
 
 <div>
   <div class="flex items-baseline justify-between gap-3 px-4 py-2">
@@ -29,18 +27,14 @@
       and phone-width in practice. The row has to size itself against the space
       it actually has. %>
   <div class="@container bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
-    <% seen_periods = Set.new %>
     <% occurrences.each do |occurrence| %>
       <%# The marker belongs to the first row of its period, so it lands
           between groups without the section having to pre-bucket the rows. %>
-      <% period_index = pay_periods.index { |p| occurrence.due_on.between?(p.starts_on, p.ends_on) } %>
-      <% if period_index && seen_periods.add?(period_index) %>
-        <% period = pay_periods[period_index] %>
+      <% if (marker = markers[occurrence.id]) %>
         <%= render "bills/pay_period_marker",
-                   period: period,
+                   period: marker[:period],
                    currency: Current.family.currency,
-                   due_total: occurrences.select { |o| o.due_on.between?(period.starts_on, period.ends_on) }
-                                         .sum { |o| o.resolved_expected_amount.abs } %>
+                   due_total: marker[:due_total] %>
       <% end %>
       <%= render "bills/occurrence",
                  occurrence: occurrence,
