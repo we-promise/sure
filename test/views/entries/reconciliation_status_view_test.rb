@@ -53,6 +53,28 @@ module Entries
       assert_no_match(/title="march-statement\.pdf"/, html)
     end
 
+    # Pins the a11y contract behind `as:`. The tooltip is a SIBLING of the
+    # statement link, so DS--tooltip's closest("summary, a") lookup finds no
+    # focusable ancestor to borrow focus from. `as: :span` would render a
+    # tabindex-less <span> and strand the tooltip for keyboard users; the
+    # default `as: :button` keeps a real focusable trigger.
+    test "statement filename tooltip keeps a keyboard-reachable trigger" do
+      statement = create_statement(filename: "march-statement.pdf")
+      entry = create_transaction(account: @account, source: "plaid")
+      entry.mark_reconciled!(statement: statement)
+
+      html = render(partial: "entries/reconciliation_status", locals: { entry: entry.reload })
+      doc = Nokogiri::HTML::DocumentFragment.parse(html)
+
+      trigger = doc.at_css('[data-controller="DS--tooltip"]')
+      assert trigger, "expected a DS::Tooltip wrapper in the reconciled panel"
+
+      assert trigger.at_css("button[type='button']"),
+        "tooltip trigger must stay focusable (as: :button) — it has no <a>/<summary> ancestor to borrow focus from"
+      assert_empty trigger.ancestors("a"),
+        "tooltip must remain a sibling of the statement link, not a descendant of it"
+    end
+
     test "shows reconciled without statement when evidence was removed" do
       statement = create_statement
       entry = create_transaction(account: @account)
