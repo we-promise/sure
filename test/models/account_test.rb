@@ -615,10 +615,30 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal property.balance_money, property.projected_balance_money
   end
 
-  test "scheduled_entries_total_money ignores future-dated valuations and trades" do
+  test "scheduled_entries_total_money ignores future-dated valuations and buy/sell trades" do
     create_valuation(account: @account, amount: 999_999, date: 3.days.from_now.to_date)
 
+    investment = accounts(:investment)
+    create_trade(securities(:aapl), account: investment, qty: 1, price: 100, date: 3.days.from_now.to_date)
+
     assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(0, "USD"), investment.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money includes future-dated interest/dividend trades" do
+    investment = accounts(:investment)
+
+    Entry.create!(
+      account: investment,
+      name: "Interest",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: -50,
+      entryable: Trade.new(qty: 0, price: 0, currency: "USD", security: securities(:aapl), investment_activity_label: "Interest")
+    )
+
+    assert_equal Money.new(50, "USD"), investment.scheduled_entries_total_money
+    assert_equal investment.balance_money + Money.new(50, "USD"), investment.projected_balance_money
   end
 
   test "projected_balance_money equals balance_money when nothing is scheduled" do
