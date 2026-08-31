@@ -45,11 +45,11 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     assert_nil outflow.reload.entryable.category_id
   end
 
-  test "uses the Ukrainian category name" do
+  test "uses the durable key for a Ukrainian category" do
     family = Family.create!(name: "Migration Ukrainian family")
     source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
     destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
-    category = family.categories.create!(name: "Інвестиційні внески", color: "#0d9488", lucide_icon: "trending-up")
+    category = family.categories.create!(name: "Інвестиційні внески", color: "#0d9488", lucide_icon: "trending-up", default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY)
     outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
     inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
@@ -57,6 +57,20 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     CategorizeMatchedInvestmentContributions.new.up
 
     assert_equal category.id, outflow.reload.entryable.category_id
+  end
+
+  test "does not infer a category from its display name" do
+    family = Family.create!(name: "Migration display name family")
+    source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
+    destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
+    family.categories.create!(name: "Інвестиційні внески", color: "#0d9488", lucide_icon: "trending-up")
+    outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
+    inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+
+    CategorizeMatchedInvestmentContributions.new.up
+
+    assert_nil outflow.reload.entryable.category_id
   end
 
   test "does not use a category from a pending contribution match" do

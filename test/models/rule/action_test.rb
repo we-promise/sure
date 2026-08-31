@@ -221,12 +221,12 @@ class Rule::ActionTest < ActiveSupport::TestCase
   end
 
   test "set_as_transfer_or_payment keeps investment to investment movement ordinary" do
-    source_entry = create_transaction(account: accounts(:investment), amount: 123)
+    source_entry = create_transaction(account: accounts(:crypto), amount: 123)
 
     action = Rule::Action.new(
       rule: @transaction_rule,
       action_type: "set_as_transfer_or_payment",
-      value: accounts(:crypto).id
+      value: accounts(:investment).id
     )
 
     action.apply(Transaction.where(id: source_entry.entryable.id))

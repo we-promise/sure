@@ -76,9 +76,9 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal category, outflow_txn.category
   end
 
-  test "keeps investment to investment matches as funds movement" do
-    outflow_entry = create_transaction(amount: 123, account: accounts(:investment))
-    inflow_entry = create_transaction(amount: -123, account: accounts(:crypto))
+  test "keeps crypto to investment matches as funds movement" do
+    outflow_entry = create_transaction(amount: 123, account: accounts(:crypto))
+    inflow_entry = create_transaction(amount: -123, account: accounts(:investment))
 
     post transaction_transfer_match_path(outflow_entry), params: {
       transfer_match: {
