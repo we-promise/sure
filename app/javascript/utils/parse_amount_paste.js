@@ -1,14 +1,21 @@
 import parseLocaleFloat from "utils/parse_locale_float"
 
-// A currency symbol or code, as it appears next to a pasted amount: "$", "R$",
-// "kr", "USD". Capped at three characters so prose ("memo 500") is rejected
-// rather than silently read as an amount.
-const CURRENCY_TOKEN = "[^\\d\\s.,()+-]{1,3}"
+// A currency marker sitting next to a pasted amount: either a symbol ("$",
+// "€", "£"), which by definition carries no letters, or a three-letter
+// uppercase ISO code ("USD", "EUR").
+//
+// Letters are otherwise excluded because a lowercase letter run is
+// indistinguishable from prose without a real currency list — and the server's
+// currency set is not available synchronously inside a paste event. That means
+// markers containing letters, such as "R$" or "kr", are not stripped and those
+// pastes fall through to the browser, which is the safe direction: accepting
+// them would also accept "fee 500".
+const CURRENCY_TOKEN = "(?:[^\\p{L}\\p{N}\\s.,()+-]{1,3}|[A-Z]{3})"
 
 const stripCurrency = (value) =>
   value
-    .replace(new RegExp(`^${CURRENCY_TOKEN}\\s*`), "")
-    .replace(new RegExp(`\\s*${CURRENCY_TOKEN}$`), "")
+    .replace(new RegExp(`^${CURRENCY_TOKEN}\\s*`, "u"), "")
+    .replace(new RegExp(`\\s*${CURRENCY_TOKEN}$`, "u"), "")
     .trim()
 
 // Parses text pasted into a money field, or returns null when the text is not

@@ -32,15 +32,22 @@ function parseLocaleFloat(value, { separator } = {}) {
 
 // Inline the function to avoid needing a bundler for ESM imports.
 // Must be kept in sync with app/javascript/utils/parse_amount_paste.js
-// A currency symbol or code, as it appears next to a pasted amount: "$", "R$",
-// "kr", "USD". Capped at three characters so prose ("memo 500") is rejected
-// rather than silently read as an amount.
-const CURRENCY_TOKEN = "[^\\d\\s.,()+-]{1,3}"
+// A currency marker sitting next to a pasted amount: either a symbol ("$",
+// "€", "£"), which by definition carries no letters, or a three-letter
+// uppercase ISO code ("USD", "EUR").
+//
+// Letters are otherwise excluded because a lowercase letter run is
+// indistinguishable from prose without a real currency list — and the server's
+// currency set is not available synchronously inside a paste event. That means
+// markers containing letters, such as "R$" or "kr", are not stripped and those
+// pastes fall through to the browser, which is the safe direction: accepting
+// them would also accept "fee 500".
+const CURRENCY_TOKEN = "(?:[^\\p{L}\\p{N}\\s.,()+-]{1,3}|[A-Z]{3})"
 
 const stripCurrency = (value) =>
   value
-    .replace(new RegExp(`^${CURRENCY_TOKEN}\\s*`), "")
-    .replace(new RegExp(`\\s*${CURRENCY_TOKEN}$`), "")
+    .replace(new RegExp(`^${CURRENCY_TOKEN}\\s*`, "u"), "")
+    .replace(new RegExp(`\\s*${CURRENCY_TOKEN}$`, "u"), "")
     .trim()
 
 function parseAmountPaste(text, options = {}) {
@@ -106,8 +113,12 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("1,234.56 EUR"), 1234.56)
     })
 
-    it('parses "R$ 1.234,56" as 1234.56', () => {
-      assert.equal(parseAmountPaste("R$ 1.234,56"), 1234.56)
+    it('parses "1,234.56 €" as 1234.56', () => {
+      assert.equal(parseAmountPaste("1,234.56 €"), 1234.56)
+    })
+
+    it('parses "£99.99" as 99.99', () => {
+      assert.equal(parseAmountPaste("£99.99"), 99.99)
     })
   })
 
@@ -172,6 +183,18 @@ describe("parseAmountPaste", () => {
 
     it('rejects "500 memo"', () => {
       assert.equal(parseAmountPaste("500 memo"), null)
+    })
+
+    it('rejects "fee 500"', () => {
+      assert.equal(parseAmountPaste("fee 500"), null)
+    })
+
+    it('rejects "500 tax"', () => {
+      assert.equal(parseAmountPaste("500 tax"), null)
+    })
+
+    it('rejects "R$ 1.234,56", since a lettered marker cannot be told from prose', () => {
+      assert.equal(parseAmountPaste("R$ 1.234,56"), null)
     })
   })
 })
