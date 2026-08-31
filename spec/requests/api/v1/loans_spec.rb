@@ -12,6 +12,15 @@ RSpec.describe 'API V1 Loans', type: :request do
     )
   end
 
+  let(:other_family) do
+    Family.create!(
+      name: 'Other Family',
+      currency: 'USD',
+      locale: 'en',
+      date_format: '%m-%d-%Y'
+    )
+  end
+
   let(:user) do
     family.users.create!(
       email: 'loan-api-user@example.com',
@@ -63,6 +72,21 @@ RSpec.describe 'API V1 Loans', type: :request do
     )
   end
 
+  let!(:inaccessible_loan_account) do
+    Account.create!(
+      family: other_family,
+      name: 'Other Family Loan',
+      balance: 500000,
+      currency: 'USD',
+      accountable: Loan.create!(
+        subtype: 'mortgage',
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: 'fixed'
+      )
+    )
+  end
+
   path '/api/v1/accounts/{account_id}/amortization_schedule' do
     parameter name: :account_id, in: :path, required: true, description: 'Loan Account ID',
               schema: { type: :string, format: :uuid }
@@ -104,7 +128,7 @@ RSpec.describe 'API V1 Loans', type: :request do
       response '403', 'insufficient permissions' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
-        let(:account_id) { SecureRandom.uuid }
+        let(:account_id) { inaccessible_loan_account.id }
 
         run_test!
       end

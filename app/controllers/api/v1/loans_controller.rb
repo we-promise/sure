@@ -6,6 +6,8 @@ class Api::V1::LoansController < Api::V1::BaseController
   before_action :ensure_read_scope
   before_action :set_loan, only: [ :amortization_schedule ]
 
+  # GET /api/v1/accounts/:account_id/amortization_schedule
+  # Returns the amortization schedule for a loan account with pagination support
   def amortization_schedule
     unless @loan.amortizable?
       return render json: { error: "not_amortizable", message: "Loan is not amortizable" }, status: :unprocessable_entity
@@ -30,29 +32,35 @@ class Api::V1::LoansController < Api::V1::BaseController
 
   private
 
+  # Load and authorize the loan account, stopping immediately on auth failure
   def set_loan
     account = Account.find(params[:account_id])
-    authorize_account!(account)
+    unless authorize_account!(account)
+      return render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
+    end
     @loan = account.accountable
     raise ActiveRecord::RecordNotFound unless @loan.is_a?(Loan)
   rescue ActiveRecord::RecordNotFound
     render json: { error: "not_found", message: "Loan not found" }, status: :not_found
   end
 
+  # Check if current user can access the given account. Returns boolean instead of rendering.
   def authorize_account!(account)
-    return if current_resource_owner.family.accounts.accessible_by(current_resource_owner).include?(account)
-    render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
+    current_resource_owner.family.accounts.accessible_by(current_resource_owner).include?(account)
   end
 
+  # Ensure the API key has read scope
   def ensure_read_scope
     authorize_scope!(:read)
   end
 
+  # Extract and validate page number from params
   def safe_page_param
     page = params[:page].to_i
     page > 0 ? page : 1
   end
 
+  # Extract and validate per_page from params, clamping to safe range
   def safe_per_page_param
     per_page = params[:per_page].to_i
     case per_page
@@ -63,6 +71,7 @@ class Api::V1::LoansController < Api::V1::BaseController
     end
   end
 
+  # Log and render error response
   def log_and_render_error(action, exception)
     Rails.logger.error "LoansController##{action} error: #{exception.message}"
     Rails.logger.error exception.backtrace.join("\n")

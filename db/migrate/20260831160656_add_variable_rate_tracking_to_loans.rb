@@ -1,4 +1,4 @@
-class AddVariableRateTrackingToLoans < ActiveRecord::Migration[7.0]
+class AddVariableRateTrackingToLoans < ActiveRecord::Migration[7.2]
   def change
     add_column :loans, :variable_rate_schedule, :jsonb, default: {}, null: false
     add_column :loans, :start_date, :date

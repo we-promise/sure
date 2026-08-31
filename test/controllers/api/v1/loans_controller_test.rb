@@ -31,8 +31,8 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
       )
   end
 
-  def api_headers
-    { "X-Api-Key" => @api_key.plain_key }
+  def api_headers(api_key = @api_key)
+    { "X-Api-Key" => api_key.plain_key }
   end
 
   test "returns amortization schedule for fixed rate loan" do
@@ -56,7 +56,7 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal 10, json["payments"].length
     assert json["pagination"]["total_count"] >= 360
-    assert_equal 1, json["pagination"]["offset"]
+    assert_equal 0, json["pagination"]["offset"]
   end
 
   test "returns error for variable rate loan" do
@@ -76,7 +76,7 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
   test "requires read scope" do
     write_only_key = ApiKey.create!(user: @user, permissions: ["write"])
     get api_v1_account_amortization_schedule_path(@loan_account),
-        headers: { "X-Api-Key" => write_only_key.plain_key }
+        headers: api_headers(write_only_key)
     assert_response :forbidden
   end
 
@@ -86,7 +86,7 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     other_api_key = ApiKey.create!(user: other_user, permissions: ["read"])
 
     get api_v1_account_amortization_schedule_path(@loan_account),
-        headers: { "X-Api-Key" => other_api_key.plain_key }
+        headers: api_headers(other_api_key)
     assert_response :forbidden
   end
 

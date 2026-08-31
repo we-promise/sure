@@ -1,3 +1,4 @@
+# Stores individual payment records for an amortization schedule
 class LoanAmortization < ApplicationRecord
   belongs_to :loan
 
@@ -5,5 +6,6 @@ class LoanAmortization < ApplicationRecord
   validates :payment_date, presence: true
   validates :payment_amount, :principal_payment, :interest_payment, :beginning_balance, :ending_balance, :interest_rate, presence: true
 
+  # Order payments by payment number
   scope :ordered, -> { order(payment_number: :asc) }
 end

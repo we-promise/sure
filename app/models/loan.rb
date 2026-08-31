@@ -15,22 +15,27 @@ class Loan < ApplicationRecord
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
 
+  # Get the monthly payment amount for this loan
   def monthly_payment
     amortization_schedule.monthly_payment
   end
 
+  # Get the original loan balance as a Money object
   def original_balance
     Money.new(account.first_valuation_amount, account.currency)
   end
 
+  # Get or create the amortization schedule calculator
   def amortization_schedule
     @amortization_schedule ||= AmortizationSchedule.new(self)
   end
 
+  # Check if this loan can be amortized
   def amortizable?
     amortization_schedule.amortizable?
   end
 
+  # Add or update a variable interest rate change on a specific date
   def add_variable_rate_change(date, rate)
     self.variable_rate_schedule ||= {}
     self.variable_rate_schedule[date.to_s] = rate
@@ -38,18 +43,22 @@ class Loan < ApplicationRecord
     save
   end
 
+  # Get all variable rate changes sorted by date
   def variable_rates
     (variable_rate_schedule || {}).sort_by { |date, _| Date.parse(date) }
   end
 
+  # Get the effective interest rate at a specific point in time
   def current_variable_rate(as_of_date = Date.current)
     rates = variable_rates.reverse
     rates.find { |date_str, _| Date.parse(date_str) <= as_of_date }&.last || interest_rate
   end
 
+  # Rebuild the persisted amortization schedule, clearing and re-generating all payment records
   def rebuild_amortization_schedule
     return unless amortizable?
 
+    @amortization_schedule = nil
     transaction do
       amortizations.destroy_all
       amortization_schedule.payments.each do |payment_data|
@@ -69,6 +78,7 @@ class Loan < ApplicationRecord
 
   private
 
+  # Find the next future date when an interest rate change occurs
   def find_next_rate_change_date
     return nil if variable_rate_schedule.blank?
     dates = variable_rate_schedule.keys.map { |d| Date.parse(d) }
