@@ -134,20 +134,22 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
-      # Uncategorized bucket = rows without a category that the dashboard
-      # reports, i.e. excluding exactly BUDGET_EXCLUDED_KINDS (the set
-      # IncomeStatement::Totals excludes from its aggregates). Excluding
-      # TRANSFER_KINDS instead hid loan_payment/investment_contribution from
-      # the list while the dashboard still showed them —
+      # Uncategorized bucket = rows without a category. Exclude only pure
+      # transfer-like kinds (funds_movement, cc_payment) which represent transfers
+      # between accounts, not uncategorized expenses/income. Preserve one_time
+      # transactions since users can still categorize them, and preserve
+      # loan_payment/investment_contribution which are legitimate uncategorized
+      # entries that align with the dashboard's uncategorized totals.
       # https://github.com/we-promise/sure/issues/2592
       uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
+      uncategorized_excluded_kinds = %w[funds_movement cc_payment]
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
         if include_uncategorized
           query = query.left_joins(:category).where(
             "categories.name IN (?) OR (#{uncategorized_condition})",
-            real_categories.presence || [], Transaction::BUDGET_EXCLUDED_KINDS
+            real_categories.presence || [], uncategorized_excluded_kinds
           )
         else
           query = query.left_joins(:category).where(categories: { name: real_categories })
@@ -156,7 +158,7 @@ class Transaction::Search
         if include_uncategorized
           query = query.left_joins(:category).where(
             "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
-            real_categories, parent_category_ids, Transaction::BUDGET_EXCLUDED_KINDS
+            real_categories, parent_category_ids, uncategorized_excluded_kinds
           )
         else
           query = query.left_joins(:category).where(
