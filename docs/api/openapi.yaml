@@ -7355,10 +7355,14 @@ paths:
                       enum:
                       - buy
                       - sell
+                      - sweep_in
+                      - sweep_out
                       - dividend
+                      - reinvestment
+                      - interest
+                      - fee
                       - deposit
                       - withdrawal
-                      - interest
                       description: Trade type (required)
                     security_id:
                       type: string
@@ -7478,14 +7482,10 @@ paths:
                       enum:
                       - buy
                       - sell
-                      - sweep_in
-                      - sweep_out
                       - dividend
-                      - reinvestment
-                      - interest
-                      - fee
                       - deposit
                       - withdrawal
+                      - interest
                     nature:
                       type: string
                       enum:
