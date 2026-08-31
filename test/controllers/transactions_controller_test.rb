@@ -713,6 +713,24 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "new renders category and merchant selectors in German" do
+    get new_transaction_url(locale: "de")
+
+    assert_response :success
+
+    assert_select "[data-controller='category-select']" do
+      assert_select "input[type='search'][placeholder=?]", "Kategorien suchen"
+      assert_select "[data-category-select-create-label-value=?]", "„__CATEGORY_NAME__“ erstellen"
+      assert_select "[data-category-select-create-error-message-value=?]", "Kategorie konnte nicht erstellt werden"
+    end
+
+    assert_select "[data-controller='merchant-select']" do
+      assert_select "input[type='search'][placeholder=?]", "Händler suchen oder erstellen"
+      assert_select "[data-merchant-select-error-message-value=?]", "Händler konnte nicht erstellt werden"
+      assert_select "[data-merchant-select-target='createForm']", text: /Erstellen/
+    end
+  end
+
   test "new groups subcategories immediately after their parent in the category select" do
     get new_transaction_url
     assert_response :success
