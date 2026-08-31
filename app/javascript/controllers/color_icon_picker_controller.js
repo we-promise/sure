@@ -44,7 +44,24 @@ export default class extends Controller {
 
     this.selectedIcon = null;
 
-    if (!this.presetColorsValue.includes(this.colorInputTarget.value)) {
+    // A goal created outside the New-goal form (API, import, a fixture) can
+    // have no color at all — `color` has no DB default and the model allows
+    // nil. Left as blank, the custom-color text field still shares
+    // `name="goal[color]"` with the preset radios and is the one whose value
+    // survives to submission regardless of which radio is checked, so ANY
+    // edit to such a goal failed the format validation on save — silently,
+    // since nothing here surfaced it. Falling back to a real preset keeps
+    // what gets submitted always valid.
+    if (!this.colorInputTarget.value) {
+      const fallback = this.presetColorsValue[0];
+      this.colorInputTarget.value = fallback;
+      this.colorPreviewTarget.style.backgroundColor = fallback;
+      this.updateAvatarColors(fallback);
+      this.updateSelectedIconColor(fallback);
+
+      const presetRadio = this.colorsSectionTarget.querySelector(`input[value="${fallback}"]`);
+      if (presetRadio) presetRadio.checked = true;
+    } else if (!this.presetColorsValue.includes(this.colorInputTarget.value)) {
       this.colorPickerRadioBtnTarget.checked = true;
     }
   }
