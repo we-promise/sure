@@ -1,13 +1,26 @@
 # frozen_string_literal: true
 
 class CoinspotItem::Importer
+  # CoinSpot's history endpoints default to the last 24 hours when `startdate`
+  # is omitted, so an initial sync with no user-configured sync_start_date
+  # would otherwise silently import almost nothing. Mirrors Wise::Importer's
+  # DEFAULT_HISTORY_DAYS fallback for the same reason.
+  DEFAULT_HISTORY_DAYS = 365
+
   attr_reader :coinspot_item, :coinspot_provider
 
+  # Initializes with the connection and an authenticated Provider::Coinspot
+  # client to fetch data with.
   def initialize(coinspot_item, coinspot_provider:)
     @coinspot_item = coinspot_item
     @coinspot_provider = coinspot_provider
   end
 
+  # Fetches every kind of CoinSpot data (balances, orders, transfers,
+  # deposits, withdrawals) and upserts it into the connection's single
+  # combined CoinspotAccount record. Marks the item as needing updated
+  # credentials on a permission failure; other errors propagate to the
+  # caller (the syncer) to classify.
   def import
     status = coinspot_provider.status
     balances = coinspot_provider.get_balances
@@ -49,13 +62,20 @@ class CoinspotItem::Importer
 
   private
 
+    # The startdate/enddate every history fetch is scoped to: the user's
+    # configured sync_start_date, or DEFAULT_HISTORY_DAYS back when unset.
+    # startdate is always present -- CoinSpot's endpoints silently default to
+    # the last 24 hours when it's omitted.
     def history_window
       {
-        startdate: coinspot_item.sync_start_date&.to_date,
+        startdate: coinspot_item.sync_start_date&.to_date || DEFAULT_HISTORY_DAYS.days.ago.to_date,
         enddate: Date.current
-      }.compact
+      }
     end
 
+    # Fetches order history via the primary endpoint, falling back to the
+    # market-order endpoint (a different shape CoinSpot uses for market-type
+    # orders) if the primary one errors.
     def fetch_order_history
       coinspot_provider.get_order_history(**history_window)
     rescue Provider::Coinspot::ApiError => e
@@ -71,6 +91,10 @@ class CoinspotItem::Importer
       coinspot_provider.get_market_order_history(**history_window)
     end
 
+    # Converts CoinSpot's balances response into the flat asset-list shape
+    # the rest of the importer works with, dropping zero-balance/zero-value
+    # entries and deriving an AUD amount from the rate when CoinSpot doesn't
+    # supply one directly.
     def parse_assets(balances)
       Array(balances["balances"]).filter_map do |entry|
         symbol, balance_data = entry.first
@@ -92,6 +116,9 @@ class CoinspotItem::Importer
       end
     end
 
+    # Finds or creates this connection's single combined CoinspotAccount
+    # record and stores the freshly-fetched balance and transaction-history
+    # payloads on it for CoinspotAccount::Processor to turn into activity.
     def upsert_coinspot_account(assets:, balances:, orders:, send_receive:, deposits:, withdrawals:, status:, total_aud:)
       coinspot_item.coinspot_accounts.find_or_initialize_by(account_id: "combined").tap do |account|
         account.assign_attributes(
@@ -119,6 +146,8 @@ class CoinspotItem::Importer
       end
     end
 
+    # Institution branding plus a snapshot of which assets were seen, stored
+    # on the account for display without re-parsing the raw payload.
     def institution_metadata(assets)
       {
         "name" => "CoinSpot",
@@ -130,11 +159,14 @@ class CoinspotItem::Importer
       }
     end
 
+    # Flags any non-AUD asset CoinSpot returned with no price, so the UI can
+    # surface which holdings' valuations are incomplete.
     def price_metadata(assets)
       missing = assets.select { |asset| asset[:price_aud].blank? && asset[:symbol] != "AUD" }.map { |asset| asset[:symbol] }
       { "coinspot" => { "missing_prices" => missing } }
     end
 
+    # Total order count across every order-history shape CoinSpot can return.
     def count_orders(orders)
       Array(orders["buyorders"]).size + Array(orders["sellorders"]).size + Array(orders["orders"]).size
     end

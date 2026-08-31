@@ -5,10 +5,19 @@ class CoinspotItem::Syncer
 
   attr_reader :coinspot_item
 
+  # Initializes with the connection to sync.
   def initialize(coinspot_item)
     @coinspot_item = coinspot_item
   end
 
+  # Drives one full sync cycle: validates credentials, imports the latest
+  # CoinSpot data, tracks which discovered accounts still need setup versus
+  # which are already linked, processes activity for the linked ones, and
+  # schedules their balance recalculation. A credential/permission failure
+  # marks the connection as needing updated credentials; any linked
+  # account's processing failure fails the whole sync (rather than
+  # completing "successfully" with only partial history imported) after
+  # capturing the failure details to DebugLogEntry.
   def perform_sync(sync)
     sync.update!(status_text: I18n.t("coinspot_item.syncer.checking_credentials")) if sync.respond_to?(:status_text)
     unless coinspot_item.credentials_configured?
@@ -75,11 +84,14 @@ class CoinspotItem::Syncer
     raise
   end
 
+  # No follow-up work needed after a sync; required by the Syncer interface.
   def perform_post_sync
   end
 
   private
 
+    # Transitions the sync record to :failed (via its state machine when
+    # available) and records the error message for display.
     def mark_failed(sync, error_message)
       sync.start! if sync.respond_to?(:may_start?) && sync.may_start?
 

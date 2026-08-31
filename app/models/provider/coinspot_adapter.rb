@@ -6,10 +6,15 @@ class Provider::CoinspotAdapter < Provider::Base
 
   Provider::Factory.register("CoinspotAccount", self)
 
+  # CoinSpot only supplies read-only exchange balances, so it can only back
+  # the combined Crypto account type.
   def self.supported_account_types
     %w[Crypto]
   end
 
+  # One connection card config per active, credentialed CoinSpot connection
+  # the family has, for the account-linking UI. A single "connect CoinSpot"
+  # card when none exist yet.
   def self.connection_configs(family:)
     return [] unless family.can_connect_coinspot?
 
@@ -19,6 +24,8 @@ class Provider::CoinspotAdapter < Provider::Base
     coinspot_items.map { |coinspot_item| connection_config_for(coinspot_item) }
   end
 
+  # Resolves and returns an authenticated Provider::Coinspot client for the
+  # given family/connection, or nil if none is configured.
   def self.build_provider(family: nil, coinspot_item_id: nil)
     return nil unless family.present?
 
@@ -32,16 +39,21 @@ class Provider::CoinspotAdapter < Provider::Base
     "coinspot"
   end
 
+  # Path to trigger a manual sync of this account's connection.
   def sync_path
     return unless item
 
     Rails.application.routes.url_helpers.sync_coinspot_item_path(item)
   end
 
+  # The CoinspotItem connection backing this account.
   def item
     provider_account.coinspot_item
   end
 
+  # CoinSpot is read-only, so holdings it no longer reports are zeroed out
+  # (see HoldingsProcessor#mark_absent_provider_holdings_zero!) rather than
+  # deleted -- the provider adapter never deletes holdings itself.
   def can_delete_holdings?
     false
   end
@@ -62,6 +74,9 @@ class Provider::CoinspotAdapter < Provider::Base
     institution_metadata_value("color")
   end
 
+  # Connection-card config for one CoinSpot connection (or the "connect new"
+  # card when coinspot_item is nil): display name/description and the paths
+  # for linking a new or existing account to it.
   def self.connection_config_for(coinspot_item)
     path_params = ->(extra = {}) do
       coinspot_item.present? ? extra.merge(coinspot_item_id: coinspot_item.id) : extra
@@ -86,6 +101,10 @@ class Provider::CoinspotAdapter < Provider::Base
   end
   private_class_method :connection_config_for
 
+  # The CoinspotItem to act on: the one explicitly given by id, or the
+  # family's single credentialed connection when there's exactly one and no
+  # id was given. Returns nil when ambiguous (multiple connections, no id)
+  # or the resolved item lacks configured credentials.
   def self.resolve_coinspot_item(family, coinspot_item_id)
     if coinspot_item_id.present?
       item = family.coinspot_items.active.credentials_configured.find_by(id: coinspot_item_id)
@@ -103,6 +122,8 @@ class Provider::CoinspotAdapter < Provider::Base
 
   private
 
+    # Institution metadata field, preferring the value cached on the account
+    # (from its last import) and falling back to the live connection.
     def institution_metadata_value(key)
       metadata = provider_account.institution_metadata || {}
       metadata[key] || item&.public_send("institution_#{key}")

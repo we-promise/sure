@@ -3,10 +3,17 @@
 class CoinspotAccount::HoldingsProcessor
   include CoinspotAccount::AudConverter
 
+  # Initializes with the CoinspotAccount whose latest balance snapshot
+  # (raw_payload) will be turned into holdings.
   def initialize(coinspot_account)
     @coinspot_account = coinspot_account
   end
 
+  # Imports every non-AUD asset in the account's latest balance snapshot as a
+  # holding, then zeroes out any previously-imported holding whose security
+  # is absent from that snapshot (sold/transferred away entirely). No-op for
+  # accounts not yet linked to a Crypto Sure account. Swallows errors rather
+  # than raising so one bad snapshot doesn't abort the wider sync.
   def process
     return unless account&.accountable_type == "Crypto"
 
@@ -21,18 +28,25 @@ class CoinspotAccount::HoldingsProcessor
 
     attr_reader :coinspot_account
 
+    # The family's base currency -- holdings are always imported in it.
     def target_currency
       coinspot_account.coinspot_item&.family&.currency
     end
 
+    # The linked Sure account holdings are imported into.
     def account
       coinspot_account.current_account
     end
 
+    # The `assets` array from the account's last-synced balance snapshot.
     def raw_assets
       coinspot_account.raw_payload&.dig("assets") || []
     end
 
+    # Resolves one raw balance-snapshot asset to a Security and imports it as
+    # a holding for today. Skips AUD (cash, not a holding) and anything
+    # missing a symbol, balance, or AUD amount. A single asset's failure is
+    # logged and skipped rather than aborting the rest of the snapshot.
     def process_asset(asset)
       symbol = asset["symbol"] || asset[:symbol]
       return if symbol.to_s.upcase == "AUD"
@@ -76,6 +90,12 @@ class CoinspotAccount::HoldingsProcessor
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # Zeroes out every previously-imported CoinSpot-owned holding whose
+    # security is no longer present in the latest balance snapshot -- the
+    # snapshot omits zero balances entirely, so without this a sold or
+    # transferred-away position would keep showing its last nonzero value
+    # (and latest_provider_holdings_snapshot_date would keep resolving to
+    # that stale snapshot indefinitely).
     def mark_absent_provider_holdings_zero!
       provider_link = coinspot_account.account_provider
       return unless provider_link
@@ -112,6 +132,8 @@ class CoinspotAccount::HoldingsProcessor
       end
     end
 
+    # Logs when a holding's amount/price was converted from AUD using a rate
+    # that wasn't for the exact requested date (or no rate at all).
     def log_stale_rate(symbol, field, rate_date)
       Rails.logger.warn(
         "CoinspotAccount::HoldingsProcessor - stale FX rate for #{field} symbol=#{symbol} rate_date=#{rate_date || "unknown"}"
