@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -467,6 +467,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_coinbase_items_on_family_id"
     t.index ["status"], name: "index_coinbase_items_on_status"
+  end
+
+  create_table "coinspot_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_id", null: false
+    t.string "account_type"
+    t.uuid "coinspot_item_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "extra", default: {}, null: false
+    t.jsonb "institution_metadata"
+    t.string "name"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "updated_at", null: false
+    t.index ["account_type"], name: "index_coinspot_accounts_on_account_type"
+    t.index ["coinspot_item_id", "account_id"], name: "index_coinspot_accounts_on_item_and_account_id", unique: true
+    t.index ["coinspot_item_id"], name: "index_coinspot_accounts_on_coinspot_item_id"
+  end
+
+  create_table "coinspot_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "api_key"
+    t.text "api_secret"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.bigint "last_nonce", default: 0, null: false
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_coinspot_items_on_family_id"
+    t.index ["status"], name: "index_coinspot_items_on_status"
   end
 
   create_table "coinstats_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2609,6 +2648,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"
+  add_foreign_key "coinspot_accounts", "coinspot_items"
+  add_foreign_key "coinspot_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
   add_foreign_key "debug_log_entries", "account_providers", on_delete: :nullify
