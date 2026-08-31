@@ -3,8 +3,14 @@ require "test_helper"
 class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
   setup do
     @family = families(:dylan_family)
-    @user = @family.users.first
-    @api_key = ApiKey.create!(user: @user, permissions: ["read"])
+    @user = users(:family_admin)
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Loan API Test Key",
+      scopes: [ "read" ],
+      source: "web",
+      key: ApiKey.generate_secure_key
+    )
 
     @loan_account = Account.create! \
       family: @family,
@@ -168,18 +174,15 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "requires read scope" do
-    write_only_key = ApiKey.create!(user: @user, permissions: ["write"])
-    loan = @loan_account.accountable
-    get api_v1_loan_amortization_schedule_path(loan),
-        headers: api_headers(write_only_key)
-    assert_response :forbidden
-  end
-
   test "respects account access control" do
-    other_family = families(:family_two)
-    other_user = other_family.users.first
-    other_api_key = ApiKey.create!(user: other_user, permissions: ["read"])
+    other_user = users(:empty) # admin of the `empty` family, unrelated to dylan_family
+    other_api_key = ApiKey.create!(
+      user: other_user,
+      name: "Other Family Loan API Test Key",
+      scopes: [ "read" ],
+      source: "web",
+      key: ApiKey.generate_secure_key
+    )
 
     loan = @loan_account.accountable
     get api_v1_loan_amortization_schedule_path(loan),

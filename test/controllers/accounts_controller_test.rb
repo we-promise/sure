@@ -617,6 +617,33 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
   end
+
+  test "schedule tab renders the full amortization schedule for an amortizable loan" do
+    loan_account = accounts(:loan)
+
+    get account_url(loan_account, tab: "schedule")
+    assert_response :success
+    assert_select "button[data-id='schedule']"
+    assert_select "table tbody tr", count: loan_account.loan.term_months
+  end
+
+  test "schedule tab is absent for a loan without an interest rate" do
+    loan_account = Account.create! \
+      family: @user.family,
+      name: "No Rate Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "other",
+        interest_rate: nil,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    get account_url(loan_account)
+    assert_response :success
+    assert_select "button[data-id='schedule']", count: 0
+  end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
@@ -666,32 +693,5 @@ class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
     assert_response :success
     refute_includes @response.body, setup_accounts_simplefin_item_path(item)
     refute_includes @response.body, "Link existing accounts"
-  end
-
-  test "schedule tab renders the full amortization schedule for an amortizable loan" do
-    loan_account = accounts(:loan)
-
-    get account_url(loan_account, tab: "schedule")
-    assert_response :success
-    assert_select "button[data-id='schedule']"
-    assert_select "table tbody tr", count: loan_account.loan.term_months
-  end
-
-  test "schedule tab is absent for a loan without an interest rate" do
-    loan_account = Account.create! \
-      family: @user.family,
-      name: "No Rate Loan",
-      balance: 500000,
-      currency: "USD",
-      accountable: Loan.create!(
-        subtype: "other",
-        interest_rate: nil,
-        term_months: 360,
-        rate_type: "fixed"
-      )
-
-    get account_url(loan_account)
-    assert_response :success
-    assert_select "button[data-id='schedule']", count: 0
   end
 end

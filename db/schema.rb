@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_31_160656) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1303,15 +1303,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.check_constraint "cache_read_tokens IS NULL OR cache_read_tokens >= 0", name: "chk_llm_usages_cache_read_tokens_non_negative"
   end
 
+  create_table "loan_amortizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "beginning_balance", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.decimal "ending_balance", precision: 19, scale: 4, null: false
+    t.decimal "interest_payment", precision: 19, scale: 4, null: false
+    t.decimal "interest_rate", precision: 10, scale: 3, null: false
+    t.uuid "loan_id", null: false
+    t.decimal "payment_amount", precision: 19, scale: 4, null: false
+    t.date "payment_date", null: false
+    t.integer "payment_number", null: false
+    t.decimal "principal_payment", precision: 19, scale: 4, null: false
+    t.datetime "updated_at", null: false
+    t.index ["loan_id", "payment_date"], name: "index_loan_amortizations_on_loan_id_and_payment_date"
+    t.index ["loan_id", "payment_number"], name: "index_loan_amortizations_on_loan_id_and_payment_number", unique: true
+    t.index ["loan_id"], name: "index_loan_amortizations_on_loan_id"
+  end
+
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "initial_balance", precision: 19, scale: 4
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
+    t.date "next_rate_change_date"
     t.string "rate_type"
+    t.date "start_date"
     t.string "subtype"
     t.integer "term_months"
     t.datetime "updated_at", null: false
+    t.jsonb "variable_rate_schedule", default: {}, null: false
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2505,6 +2525,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
+  add_foreign_key "loan_amortizations", "loans"
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"

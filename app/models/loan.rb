@@ -96,36 +96,36 @@ class Loan < ApplicationRecord
 
   private
 
-  # True when a change was just saved that would change the generated
-  # schedule, so the persisted amortizations table doesn't silently drift
-  # out of sync with the loan's actual terms.
-  def amortization_inputs_changed?
-    saved_change_to_interest_rate? ||
-      saved_change_to_term_months? ||
-      saved_change_to_rate_type? ||
-      saved_change_to_start_date? ||
-      saved_change_to_variable_rate_schedule?
-  end
-
-  # Find the next future date when an interest rate change occurs
-  def find_next_rate_change_date
-    return nil if variable_rate_schedule.blank?
-    dates = variable_rate_schedule.keys.map { |d| Date.parse(d) }
-    future_dates = dates.select { |d| d > Date.current }
-    future_dates.min
-  end
-
-  class << self
-    def color
-      "#D444F1"
+    # True when a change was just saved that would change the generated
+    # schedule, so the persisted amortizations table doesn't silently drift
+    # out of sync with the loan's actual terms.
+    def amortization_inputs_changed?
+      saved_change_to_interest_rate? ||
+        saved_change_to_term_months? ||
+        saved_change_to_rate_type? ||
+        saved_change_to_start_date? ||
+        saved_change_to_variable_rate_schedule?
     end
 
-    def icon
-      "hand-coins"
+    # Find the next future date when an interest rate change occurs
+    def find_next_rate_change_date
+      return nil if variable_rate_schedule.blank?
+      dates = variable_rate_schedule.keys.map { |d| Date.parse(d) }
+      future_dates = dates.select { |d| d > Date.current }
+      future_dates.min
     end
 
-    def classification
-      "liability"
+    class << self
+      def color
+        "#D444F1"
+      end
+
+      def icon
+        "hand-coins"
+      end
+
+      def classification
+        "liability"
+      end
     end
-  end
 end

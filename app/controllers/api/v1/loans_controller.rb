@@ -33,53 +33,53 @@ class Api::V1::LoansController < Api::V1::BaseController
 
   private
 
-  # Load and authorize the loan, stopping immediately on auth failure.
-  # Validates UUID shape before querying so a malformed :id renders a normal
-  # 404 instead of an unhandled 500 from an invalid Postgres UUID literal.
-  def set_loan
-    unless valid_uuid?(params[:id])
-      return render json: { error: "not_found", message: "Loan not found" }, status: :not_found
+    # Load and authorize the loan, stopping immediately on auth failure.
+    # Validates UUID shape before querying so a malformed :id renders a normal
+    # 404 instead of an unhandled 500 from an invalid Postgres UUID literal.
+    def set_loan
+      unless valid_uuid?(params[:id])
+        return render json: { error: "not_found", message: "Loan not found" }, status: :not_found
+      end
+
+      @loan = Loan.find(params[:id])
+      unless authorize_account!(@loan.account)
+        render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
+      end
+    rescue ActiveRecord::RecordNotFound
+      render json: { error: "not_found", message: "Loan not found" }, status: :not_found
     end
 
-    @loan = Loan.find(params[:id])
-    unless authorize_account!(@loan.account)
-      render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
+    # Check if current user can access the given account. Returns boolean instead of rendering.
+    def authorize_account!(account)
+      current_resource_owner.family.accounts.accessible_by(current_resource_owner).include?(account)
     end
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: "not_found", message: "Loan not found" }, status: :not_found
-  end
 
-  # Check if current user can access the given account. Returns boolean instead of rendering.
-  def authorize_account!(account)
-    current_resource_owner.family.accounts.accessible_by(current_resource_owner).include?(account)
-  end
+    # Ensure the API key has read scope
+    def ensure_read_scope
+      authorize_scope!(:read)
+    end
 
-  # Ensure the API key has read scope
-  def ensure_read_scope
-    authorize_scope!(:read)
-  end
+    # Extract and validate page number from params. Coerces via to_s first so
+    # an array/hash param (e.g. ?page[]=1) can't raise NoMethodError on #to_i.
+    def safe_page_param
+      page = params[:page].to_s.to_i
+      page > 0 ? page : 1
+    end
 
-  # Extract and validate page number from params. Coerces via to_s first so
-  # an array/hash param (e.g. ?page[]=1) can't raise NoMethodError on #to_i.
-  def safe_page_param
-    page = params[:page].to_s.to_i
-    page > 0 ? page : 1
-  end
+    # Extract and validate per_page from params, clamping to a safe range.
+    def safe_per_page_param
+      per_page = params[:per_page].to_s.to_i
+      return 25 if per_page <= 0
+      per_page.clamp(1, 100)
+    end
 
-  # Extract and validate per_page from params, clamping to a safe range.
-  def safe_per_page_param
-    per_page = params[:per_page].to_s.to_i
-    return 25 if per_page <= 0
-    per_page.clamp(1, 100)
-  end
-
-  # Log and render error response
-  def log_and_render_error(action, exception)
-    Rails.logger.error "LoansController##{action} error: #{exception.message}"
-    Rails.logger.error exception.backtrace.join("\n")
-    render json: {
-      error: "internal_server_error",
-      message: "An unexpected error occurred"
-    }, status: :internal_server_error
-  end
+    # Log and render error response
+    def log_and_render_error(action, exception)
+      Rails.logger.error "LoansController##{action} error: #{exception.message}"
+      Rails.logger.error exception.backtrace.join("\n")
+      render json: {
+        error: "internal_server_error",
+        message: "An unexpected error occurred"
+      }, status: :internal_server_error
+    end
 end

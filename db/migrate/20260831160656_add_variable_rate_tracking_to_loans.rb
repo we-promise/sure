@@ -18,7 +18,7 @@ class AddVariableRateTrackingToLoans < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    add_index :loan_amortizations, [:loan_id, :payment_number], unique: true
-    add_index :loan_amortizations, [:loan_id, :payment_date]
+    add_index :loan_amortizations, [ :loan_id, :payment_number ], unique: true
+    add_index :loan_amortizations, [ :loan_id, :payment_date ]
   end
 end
