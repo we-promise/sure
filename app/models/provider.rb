@@ -47,16 +47,20 @@ class Provider
 
     # Override to set class-level error transformation for methods using `with_provider_response`
     def default_error_transformer(error)
+      kwargs = if error.respond_to?(:failure_code) && error.failure_code
+        { failure_code: error.failure_code }
+      else
+        {}
+      end
+
       if error.is_a?(Faraday::Error)
         self.class::Error.new(
           error.message,
           details: error.response&.dig(:body),
-          failure_code: error.failure_code if error.respond_to?(:failure_code)
+          **kwargs
         )
       else
-        error.respond_to?(:failure_code) ?
-          self.class::Error.new(error.message, failure_code: error.failure_code) :
-          self.class::Error.new(error.message)
+        self.class::Error.new(error.message, **kwargs)
       end
     end
 end
