@@ -44,6 +44,11 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "Test Header Title", content_for(:header_title)
   end
 
+  test "provider sync debug log labels are localized" do
+    assert_equal I18n.t("provider_sync_summary.health.view_debug_log"), provider_sync_debug_log_label
+    assert_equal I18n.t("provider_sync_summary.health.details_in_debug_log"), provider_sync_debug_log_hint
+  end
+
   test "#sidekiq_web_available? returns true when the route is mounted" do
     named_routes = Struct.new(:defined) do
       def route_defined?(name)
