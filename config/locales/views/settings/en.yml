@@ -427,6 +427,7 @@ en:
         coinbase: Import your Coinbase crypto holdings and track performance.
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        coinspot: Sync CoinSpot balances, AUD values, transfers, deposits, withdrawals, and order history using a read-only API key.
         onchain_wallet: Track self-custody Bitcoin, EVM and Solana wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
@@ -503,6 +504,28 @@ en:
         api_secret_label: Private Key
         api_secret_placeholder: Paste your Kraken private key
         keep_api_secret_placeholder: Leave blank to keep the existing private key
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      coinspot_panel:
+        step1_html: 'Go to <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API settings</a>'
+        step2: "Create an API key with read-only access to balances and history."
+        step3: "Paste the API key and secret below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant send, withdrawal, trading, or transfer permissions. Sure only imports balances, AUD values, transfers, deposits, withdrawals, and completed order history."
+        default_connection_name: CoinSpot
+        add_connection: Add CoinSpot connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main CoinSpot
+        api_key_label: API Key
+        api_key_placeholder: Paste your CoinSpot API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your CoinSpot API secret
+        keep_api_secret_placeholder: Leave blank to keep the existing API secret
         setup_accounts: Setup account
         syncing: Syncing...
         sync: Sync
