@@ -187,6 +187,8 @@ class Transaction::Search
       query.joins(:merchant).where(merchants: { name: merchants })
     end
 
+    # Filter transactions by tag name, matching any transaction that carries
+    # at least one of the given tags.
     def apply_tag_filter(query, tags)
       return query unless tags.present?
 

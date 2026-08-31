@@ -703,6 +703,8 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes result_ids, unrelated.entryable.id
   end
 
+  # Pins the exact bug from #3174: the list count and the summary count must
+  # match even when a transaction is tagged with more than one filtered tag.
   test "totals.count is not inflated when a transaction has multiple matching tags" do
     tag_a = @family.tags.create!(name: "FanA")
     tag_b = @family.tags.create!(name: "FanB")
@@ -728,6 +730,8 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(150, "USD"), totals.expense_money, "SUM must not double-count tagged rows"
   end
 
+  # Extends the invariant to a three-way tag fan-out, so a future INNER JOIN
+  # regression can't hide behind the two-tag case above.
   test "totals.count is stable when a transaction has three matching tags" do
     t1 = @family.tags.create!(name: "Triple1")
     t2 = @family.tags.create!(name: "Triple2")
