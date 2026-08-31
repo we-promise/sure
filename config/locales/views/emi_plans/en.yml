@@ -7,6 +7,7 @@ en:
       foreclosure_settlement: "%{name} — Foreclosure settlement"
     new:
       title: Convert to EMI
+      separator: "·"
       description: Split this purchase into equal monthly installments. Future installments are scheduled automatically.
       principal_label: Principal
       tenure_label: Tenure (months)

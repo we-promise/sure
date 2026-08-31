@@ -5,7 +5,7 @@
         <h2 class="text-lg font-semibold text-primary"><%= t("emi_plans.new.title") %></h2>
         <p class="text-sm text-secondary flex items-center gap-1.5">
           <span><%= @entry.name %></span>
-          <span class="text-secondary">&middot;</span>
+          <span class="text-secondary"><%= t("emi_plans.new.separator") %></span>
           <span><%= I18n.l(@entry.date, format: :long) %></span>
         </p>
       </div>
