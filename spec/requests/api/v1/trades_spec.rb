@@ -160,10 +160,17 @@ RSpec.describe 'API V1 Trades', type: :request do
             properties: {
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               date: { type: :string, format: :date, description: 'Trade date (required)' },
-              qty: { type: :number, description: 'Quantity (required for buy/sell)' },
-              price: { type: :number, description: 'Price (required for buy/sell)' },
-              amount: { type: :number, description: 'Amount (required for dividend, deposit, withdrawal, interest)' },
-              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest], description: 'Trade type (required)' },
+              qty: { type: :number, description: 'Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)' },
+              price: { type: :number, description: 'Price (required for buy/sell/sweep_in/sweep_out/reinvestment)' },
+              amount: {
+                type: :number,
+                description: 'Amount (required for dividend, deposit, withdrawal, interest, fee)'
+              },
+              type: {
+                type: :string,
+                enum: %w[buy sell sweep_in sweep_out dividend reinvestment interest fee deposit withdrawal],
+                description: 'Trade type (required)'
+              },
               security_id: { type: :string, format: :uuid, description: 'Security ID (one of security_id, ticker, manual_ticker required)' },
               ticker: { type: :string, description: 'Ticker symbol' },
               manual_ticker: { type: :string, description: 'Manual ticker for offline securities' },

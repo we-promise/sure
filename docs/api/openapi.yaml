@@ -7342,14 +7342,14 @@ paths:
                       description: Trade date (required)
                     qty:
                       type: number
-                      description: Quantity (required for buy/sell)
+                      description: Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     price:
                       type: number
-                      description: Price (required for buy/sell)
+                      description: Price (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     amount:
                       type: number
                       description: Amount (required for dividend, deposit, withdrawal,
-                        interest)
+                        interest, fee)
                     type:
                       type: string
                       enum:
@@ -7478,10 +7478,14 @@ paths:
                       enum:
                       - buy
                       - sell
+                      - sweep_in
+                      - sweep_out
                       - dividend
+                      - reinvestment
+                      - interest
+                      - fee
                       - deposit
                       - withdrawal
-                      - interest
                     nature:
                       type: string
                       enum:

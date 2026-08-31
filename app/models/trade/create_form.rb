@@ -1,6 +1,23 @@
 class Trade::CreateForm
   include ActiveModel::Model
 
+  SECURITY_TRADE_LABELS = {
+    "buy" => "Buy",
+    "sell" => "Sell",
+    "sweep_in" => "Sweep In",
+    "sweep_out" => "Sweep Out",
+    "reinvestment" => "Reinvestment"
+  }.freeze
+
+  CASH_TRADE_LABELS = {
+    "dividend" => "Dividend",
+    "interest" => "Interest",
+    "fee" => "Fee"
+  }.freeze
+
+  TRANSFER_TYPES = %w[deposit withdrawal].freeze
+  SUPPORTED_TYPES = (SECURITY_TRADE_LABELS.keys + CASH_TRADE_LABELS.keys + TRANSFER_TYPES).freeze
+
   attr_accessor :account, :date, :amount, :currency, :qty,
                 :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id
 
@@ -8,12 +25,14 @@ class Trade::CreateForm
   # Returns the model, regardless of success or failure
   def create
     case type
-    when "buy", "sell"
+    when *SECURITY_TRADE_LABELS.keys
       create_trade
     when "dividend"
       create_dividend_income
     when "interest"
       create_interest_income
+    when "fee"
+      create_fee
     when "deposit", "withdrawal"
       create_transfer
     end
@@ -45,11 +64,12 @@ class Trade::CreateForm
         return entry
       end
 
-      signed_qty = type == "sell" ? -qty.to_d : qty.to_d
+      signed_qty = sell_side_trade? ? -qty.to_d.abs : qty.to_d.abs
       signed_amount = signed_qty * price.to_d + fee.to_d
+      label = SECURITY_TRADE_LABELS.fetch(type)
 
       trade_entry = account.entries.new(
-        name: Trade.build_name(type, qty, sec.ticker),
+        name: trade_name(label, signed_qty.abs, sec.ticker),
         date: date,
         amount: signed_amount,
         currency: currency,
@@ -59,7 +79,7 @@ class Trade::CreateForm
           fee: fee.to_d,
           currency: currency,
           security: sec,
-          investment_activity_label: type.capitalize # "buy" → "Buy", "sell" → "Sell"
+          investment_activity_label: label
         )
       )
 
@@ -98,11 +118,17 @@ class Trade::CreateForm
       create_income_trade(sec: sec, label: "Interest", name: name)
     end
 
-    def create_income_trade(sec:, label:, name:)
+    def create_fee
+      sec = ticker_present? ? security : Security.cash_for(account)
+      name = sec.cash? ? "Fee" : "Fee: #{sec.ticker}"
+      create_income_trade(sec: sec, label: "Fee", name: name, amount_sign: 1)
+    end
+
+    def create_income_trade(sec:, label:, name:, amount_sign: -1)
       entry = account.entries.build(
         name: name,
         date: date,
-        amount: amount.to_d * -1,
+        amount: amount.to_d.abs * amount_sign,
         currency: currency,
         entryable: Trade.new(
           qty: 0,
@@ -120,6 +146,16 @@ class Trade::CreateForm
       end
 
       entry
+    end
+
+    def sell_side_trade?
+      %w[sell sweep_out].include?(type)
+    end
+
+    def trade_name(label, quantity, ticker)
+      return Trade.build_name(type, quantity, ticker) if %w[buy sell].include?(type)
+
+      "#{label} #{quantity.to_d.abs} shares of #{ticker}"
     end
 
     def create_transfer
