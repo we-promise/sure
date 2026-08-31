@@ -116,6 +116,7 @@ class Family < ApplicationRecord
 
   has_many :llm_usages, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  has_many :recurring_occurrences, dependent: :destroy
   has_many :insights, dependent: :destroy
 
   # Families with at least one opted-in member. Lets a job filter in one
