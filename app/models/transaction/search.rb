@@ -18,12 +18,14 @@ class Transaction::Search
 
   attr_reader :family, :accessible_account_ids
 
+  # Initialize a transaction search with optional filters and accessible accounts
   def initialize(family, filters: {}, accessible_account_ids: nil)
     @family = family
     @accessible_account_ids = accessible_account_ids
     super(filters)
   end
 
+  # Get the filtered transactions scope based on all applied filters
   def transactions_scope
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
@@ -47,9 +49,7 @@ class Transaction::Search
     end
   end
 
-  # Computes totals for the specific search
-  # Note: Excludes tax-advantaged accounts (401k, IRA, etc.) from totals calculation
-  # because those transactions are retirement savings, not daily income/expenses.
+  # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
       Rails.cache.fetch("transaction_search_totals/v2/#{cache_key_base}") do
@@ -98,6 +98,7 @@ class Transaction::Search
     end
   end
 
+  # Generate cache key based on search filters and family state
   def cache_key_base
     [
       family.id,
@@ -111,6 +112,7 @@ class Transaction::Search
   private
     Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
 
+    # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       if active_accounts_only_filter
         query.where(accounts: { status: [ "draft", "active" ] })
@@ -120,6 +122,7 @@ class Transaction::Search
     end
 
 
+    # Filter transactions by category, supporting uncategorized and budget exclusions
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
@@ -166,6 +169,7 @@ class Transaction::Search
       query
     end
 
+    # Filter transactions by type (expense, income, or transfer)
     def apply_type_filter(query, types)
       return query unless types.present?
       return query if types.sort == [ "expense", "income", "transfer" ]
@@ -188,16 +192,19 @@ class Transaction::Search
       end
     end
 
+    # Filter transactions by merchant name
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
       query.joins(:merchant).where(merchants: { name: merchants })
     end
 
+    # Filter transactions by tag name
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       query.joins(:tags).where(tags: { name: tags })
     end
 
+    # Filter transactions by status (pending or confirmed)
     def apply_status_filter(query, statuses)
       return query unless statuses.present?
       return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
