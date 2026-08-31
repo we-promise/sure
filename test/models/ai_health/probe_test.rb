@@ -27,6 +27,30 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "timeout honors AI_HEALTH_PROBE_TIMEOUT and falls back for missing or non-positive values" do
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "42") do
+      assert_equal 42, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: nil) do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "0") do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "-3") do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "not-a-number") do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    assert_equal AiHealth::Probe.timeout, @probe.send(:timeout)
+  end
+
   test "OpenAI-compatible LLM probe calls chat completions instead of the models endpoint" do
     endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
     request = stub_request(:post, "#{endpoint}/chat/completions")

@@ -322,13 +322,13 @@ class AiHealth
       end
     end
 
-    # Timeout applied to the admin "live checks" probes. Mirrors Probe#timeout
-    # so System Health reports the exact bound the probes use. Deliberately
-    # distinct from request_timeout, which bounds the LLM calls the app makes
-    # during normal use (chat, PDF import).
+    # Timeout applied to the admin "live checks" probes. Delegates to
+    # Probe.timeout so System Health reports the exact bound the probes use,
+    # guaranteeing the two can never drift. Deliberately distinct from
+    # request_timeout, which bounds the LLM calls the app makes during
+    # normal use (chat, PDF import).
     def probe_request_timeout_value
-      seconds = ENV.fetch("AI_HEALTH_PROBE_TIMEOUT", Probe::DEFAULT_TIMEOUT).to_i
-      seconds.positive? ? seconds : Probe::DEFAULT_TIMEOUT
+      Probe.timeout
     end
 
     def openai_uri_base

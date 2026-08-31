@@ -175,7 +175,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Synthetic PDF check failed/, response.body)
     assert_match(/Vision\/native failure reason/, response.body)
     assert_match(/unexpected response/, response.body)
-    assert_no_match(/«redacted:sk-…»/, response.body)
+    assert_no_match(/sk-secret-openai/, response.body)
   end
 
   test "AI status surfaces LLM and probe request timeouts as distinct values" do
@@ -185,7 +185,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     # OPENAI_REQUEST_TIMEOUT bounds real LLM calls the app makes (chat, PDF
     # import). AI_HEALTH_PROBE_TIMEOUT only bounds the admin "live checks".
     with_ai_environment(
-      "OPENAI_ACCESS_TOKEN" => "«redacted:…»",
+      "OPENAI_ACCESS_TOKEN" => "local-token",
       "OPENAI_REQUEST_TIMEOUT" => "300",
       "AI_HEALTH_PROBE_TIMEOUT" => "5"
     ) do
@@ -200,6 +200,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_operator llm_label, :<, probe_label, "LLM timeout row should appear before the probe timeout row"
     assert response.body[llm_label, 400].include?("300s"), "LLM timeout value (300s) missing near its label"
     assert response.body[probe_label, 400].include?("5s"), "probe timeout value (5s) missing near its label"
+    assert_no_match(/local-token/, response.body)
   end
 
   test "AI status does not probe PDF processing when it is explicitly disabled" do

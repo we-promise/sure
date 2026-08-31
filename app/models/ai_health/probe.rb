@@ -54,6 +54,16 @@ class AiHealth
       Result.new(status: :not_configured, checked_at: nil, failure_code: nil, http_status: nil)
     end
 
+    # Seconds each probe request is allowed to run. Single source of truth:
+    # both the probes (instance methods below) and AiHealth's System Health
+    # reporting resolve the effective timeout through here so the two can
+    # never drift. Honors AI_HEALTH_PROBE_TIMEOUT; falls back to
+    # DEFAULT_TIMEOUT when unset or non-positive.
+    def self.timeout
+      seconds = ENV.fetch("AI_HEALTH_PROBE_TIMEOUT", DEFAULT_TIMEOUT).to_i
+      seconds.positive? ? seconds : DEFAULT_TIMEOUT
+    end
+
     def initialize(force: false, cache: Rails.cache)
       @force = force
       @cache = cache
@@ -312,8 +322,7 @@ class AiHealth
       end
 
       def timeout
-        seconds = ENV.fetch("AI_HEALTH_PROBE_TIMEOUT", DEFAULT_TIMEOUT).to_i
-        seconds.positive? ? seconds : DEFAULT_TIMEOUT
+        self.class.timeout
       end
 
       def failure_code(error)
