@@ -83,7 +83,8 @@ en:
             function_calling: Function calling (tools)
             pdf_text_extraction: PDF text-extraction path
             pdf_vision_processing: PDF vision/native path
-            request_timeout: Request timeout
+            llm_request_timeout: LLM request timeout
+            probe_request_timeout: Health-check probe timeout
             openai_credentials: OpenAI credentials
             openai_compatible_credentials: OpenAI-compatible API credentials
             anthropic_credentials: Anthropic credentials

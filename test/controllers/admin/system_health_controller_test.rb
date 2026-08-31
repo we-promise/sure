@@ -220,6 +220,31 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/sk-secret-openai/, response.body)
   end
 
+  test "AI status surfaces LLM and probe request timeouts as distinct values" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    # OPENAI_REQUEST_TIMEOUT bounds real LLM calls the app makes (chat, PDF
+    # import). AI_HEALTH_PROBE_TIMEOUT only bounds the admin "live checks".
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "local-token",
+      "OPENAI_REQUEST_TIMEOUT" => "300",
+      "AI_HEALTH_PROBE_TIMEOUT" => "5"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    llm_label = response.body.index("LLM request timeout")
+    probe_label = response.body.index("Health-check probe timeout")
+    assert llm_label, "expected an 'LLM request timeout' label on the AI status page"
+    assert probe_label, "expected a 'Health-check probe timeout' label on the AI status page"
+    assert_operator llm_label, :<, probe_label, "LLM timeout row should appear before the probe timeout row"
+    assert response.body[llm_label, 400].include?("300s"), "LLM timeout value (300s) missing near its label"
+    assert response.body[probe_label, 400].include?("5s"), "probe timeout value (5s) missing near its label"
+    assert_no_match(/local-token/, response.body)
+  end
+
   test "AI status does not probe PDF processing when it is explicitly disabled" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
