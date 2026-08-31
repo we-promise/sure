@@ -1,6 +1,8 @@
 require "test_helper"
 
 class WorkerAiHealthTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @cache = ActiveSupport::Cache::MemoryStore.new
   end
@@ -149,7 +151,7 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
   private
     def passing_snapshot(overrides = {})
       WorkerAiHealth::Snapshot.new(
-        {
+        **{
           process_identity: "host:1",
           hostname: "host",
           pid: 1,

@@ -481,7 +481,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
     def worker_snapshot(overrides = {})
       WorkerAiHealth::Snapshot.new(
-        {
+        **{
           process_identity: "worker:1",
           hostname: "worker",
           pid: 1,
