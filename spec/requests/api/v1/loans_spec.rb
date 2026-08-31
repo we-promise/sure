@@ -72,6 +72,21 @@ RSpec.describe 'API V1 Loans', type: :request do
     )
   end
 
+  let!(:non_amortizable_loan_account) do
+    Account.create!(
+      family: family,
+      name: 'No Rate Loan',
+      balance: 500000,
+      currency: 'USD',
+      accountable: Loan.create!(
+        subtype: 'other',
+        interest_rate: nil,
+        term_months: 360,
+        rate_type: 'fixed'
+      )
+    )
+  end
+
   let!(:inaccessible_loan_account) do
     Account.create!(
       family: other_family,
@@ -144,7 +159,7 @@ RSpec.describe 'API V1 Loans', type: :request do
       response '422', 'loan not amortizable' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
-        let(:id) { variable_loan_account.accountable.id }
+        let(:id) { non_amortizable_loan_account.accountable.id }
 
         run_test!
       end

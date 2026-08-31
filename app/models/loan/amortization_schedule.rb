@@ -1,18 +1,34 @@
 class Loan
   # Calculates amortization schedules for loans using the constant-payment method
   class AmortizationSchedule
-    attr_reader :loan, :currency
+    attr_reader :loan
 
-    # Initialize with a loan account
+    # Initialize with a loan. The loan may not have an account yet (e.g.
+    # Loan.create! is commonly called before being attached to an Account via
+    # `Account.create!(accountable: Loan.create!(...))`), so account-dependent
+    # state is resolved lazily rather than eagerly in the constructor.
     def initialize(loan)
       @loan = loan
-      @currency = loan.account.currency
       @schedule_cache = nil
     end
 
-    # Check if this loan can be amortized (positive principal, term, and a valid rate type)
+    # The loan's currency, read from its account. Only accessed once
+    # #amortizable? has confirmed an account is actually present.
+    def currency
+      @currency ||= loan.account.currency
+    end
+
+    # Check if this loan can be amortized (has an account, positive
+    # principal, term, a valid rate type, and a known interest rate).
+    # Variable-rate loans are amortizable as soon as a base interest_rate is
+    # set -- an explicit variable_rate_schedule is optional and only
+    # overrides specific periods.
     def amortizable?
-      loan.original_balance.positive? && loan.term_months.positive? && (fixed_rate? || variable_rate?)
+      loan.account.present? &&
+        loan.original_balance.positive? &&
+        loan.term_months.positive? &&
+        loan.interest_rate.present? &&
+        (fixed_rate? || variable_rate?)
     end
 
     # Check if the loan has a fixed interest rate
@@ -20,9 +36,17 @@ class Loan
       loan.rate_type == "fixed"
     end
 
-    # Check if the loan has a variable interest rate
+    # Check if the loan has a variable interest rate. A variable-rate loan
+    # doesn't need a configured variable_rate_schedule to be amortizable --
+    # it simply amortizes at the flat interest_rate until a rate change is
+    # recorded.
     def variable_rate?
-      loan.rate_type == "variable" && loan.variable_rate_schedule.present?
+      loan.rate_type == "variable"
+    end
+
+    # Check if the loan has any recorded rate changes to apply mid-schedule
+    def has_rate_changes?
+      variable_rate? && loan.variable_rate_schedule.present?
     end
 
     # Get the complete payment schedule as an array of hashes
@@ -109,7 +133,6 @@ class Loan
       rate_changes = variable_rate? ? loan.variable_rates : []
 
       # Build segments of payments grouped by interest rate
-      current_segment_rate = get_rate_at_date(current_date)
       segments = build_rate_segments(current_date, rate_changes)
 
       payment_num = 1

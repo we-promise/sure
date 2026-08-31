@@ -45,7 +45,7 @@ class LoanTest < ActiveSupport::TestCase
     assert schedule.monthly_payment.positive?
   end
 
-  test "amortization_schedule not amortizable for variable rate loan" do
+  test "amortization_schedule is amortizable for variable rate loan with a base rate" do
     loan_account = Account.create! \
       family: families(:dylan_family),
       name: "Variable Rate Loan",
@@ -59,7 +59,57 @@ class LoanTest < ActiveSupport::TestCase
       )
 
     schedule = loan_account.loan.amortization_schedule
+    assert schedule.amortizable?
+  end
+
+  test "amortization_schedule not amortizable for loan without an interest rate" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "No Rate Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "other",
+        interest_rate: nil,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    schedule = loan_account.loan.amortization_schedule
     assert_not schedule.amortizable?
+  end
+
+  test "amortizable? is false before the loan has an account" do
+    loan = Loan.create!(
+      subtype: "mortgage",
+      interest_rate: 3.5,
+      term_months: 360,
+      rate_type: "fixed"
+    )
+
+    assert_nil loan.account
+    assert_not loan.amortizable?
+    assert_equal 0, loan.amortizations.count
+  end
+
+  test "rebuild_amortization_schedule is triggered automatically when terms change" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    assert_equal 0, loan.amortizations.count
+
+    loan.update!(interest_rate: 4.0)
+    assert_equal 360, loan.amortizations.count
   end
 
   test "adds variable rate changes" do

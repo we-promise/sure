@@ -22,7 +22,7 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert @schedule.amortizable?
   end
 
-  test "schedule is not amortizable for variable rate loan" do
+  test "schedule is amortizable for variable rate loan with a base interest rate" do
     variable_loan = Account.create! \
       family: @family,
       name: "Variable Loan",
@@ -35,7 +35,50 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
       )
 
     schedule = variable_loan.loan.amortization_schedule
+    assert schedule.amortizable?
+    assert_equal 360, schedule.payment_count
+  end
+
+  test "schedule is not amortizable for variable rate loan without an interest rate" do
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan No Rate",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: nil,
+        term_months: 360
+      )
+
+    schedule = variable_loan.loan.amortization_schedule
     assert_not schedule.amortizable?
+  end
+
+  test "variable rate loan applies configured rate changes on their effective dates" do
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan With Changes",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: 3.5,
+        term_months: 360,
+        start_date: 2.years.ago.to_date
+      )
+    loan = variable_loan.loan
+    loan.add_variable_rate_change(loan.start_date, 3.5)
+    loan.add_variable_rate_change(loan.start_date + 12.months, 4.5)
+
+    schedule = loan.amortization_schedule
+    payments = schedule.payments
+
+    before_change = payments.find { |p| p[:payment_date] < loan.start_date + 12.months }
+    after_change = payments.find { |p| p[:payment_date] >= loan.start_date + 12.months }
+
+    assert_equal 3.5, before_change[:interest_rate].to_f
+    assert_equal 4.5, after_change[:interest_rate].to_f
   end
 
   test "schedule is not amortizable for zero principal" do

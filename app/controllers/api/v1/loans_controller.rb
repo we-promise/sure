@@ -1,28 +1,29 @@
 # frozen_string_literal: true
 
 class Api::V1::LoansController < Api::V1::BaseController
-  include Pagy::Backend
-
   before_action :ensure_read_scope
   before_action :set_loan, only: [ :amortization_schedule ]
 
   # GET /api/v1/loans/:id/amortization_schedule
-  # Returns the amortization schedule for a loan with pagination support
+  # Returns the amortization schedule for a loan with pagination support.
+  # Reads from the persisted, indexed amortizations table rather than
+  # recomputing (and slicing) the full in-memory schedule on every request,
+  # so cost scales with the requested page rather than the loan's term.
   def amortization_schedule
     unless @loan.amortizable?
       return render json: { error: "not_amortizable", message: "Loan is not amortizable" }, status: :unprocessable_entity
     end
 
-    schedule = @loan.amortization_schedule
+    @loan.ensure_amortization_schedule_current!
+
     limit = safe_per_page_param
     offset = (safe_page_param - 1) * limit
-    payments = schedule.payments[offset, limit] || []
 
     render :amortization_schedule, locals: {
       loan: @loan,
-      schedule: schedule,
-      payments: payments,
-      total_count: schedule.payment_count,
+      schedule: @loan.amortization_schedule,
+      payments: @loan.amortizations.ordered.offset(offset).limit(limit),
+      total_count: @loan.amortizations.count,
       limit: limit,
       offset: offset
     }
@@ -32,12 +33,17 @@ class Api::V1::LoansController < Api::V1::BaseController
 
   private
 
-  # Load and authorize the loan, stopping immediately on auth failure
+  # Load and authorize the loan, stopping immediately on auth failure.
+  # Validates UUID shape before querying so a malformed :id renders a normal
+  # 404 instead of an unhandled 500 from an invalid Postgres UUID literal.
   def set_loan
+    unless valid_uuid?(params[:id])
+      return render json: { error: "not_found", message: "Loan not found" }, status: :not_found
+    end
+
     @loan = Loan.find(params[:id])
-    account = @loan.account
-    unless authorize_account!(account)
-      return render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
+    unless authorize_account!(@loan.account)
+      render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
     end
   rescue ActiveRecord::RecordNotFound
     render json: { error: "not_found", message: "Loan not found" }, status: :not_found
@@ -53,21 +59,18 @@ class Api::V1::LoansController < Api::V1::BaseController
     authorize_scope!(:read)
   end
 
-  # Extract and validate page number from params
+  # Extract and validate page number from params. Coerces via to_s first so
+  # an array/hash param (e.g. ?page[]=1) can't raise NoMethodError on #to_i.
   def safe_page_param
-    page = params[:page].to_i
+    page = params[:page].to_s.to_i
     page > 0 ? page : 1
   end
 
-  # Extract and validate per_page from params, clamping to safe range
+  # Extract and validate per_page from params, clamping to a safe range.
   def safe_per_page_param
-    per_page = params[:per_page].to_i
-    case per_page
-    when 1..100
-      per_page
-    else
-      25
-    end
+    per_page = params[:per_page].to_s.to_i
+    return 25 if per_page <= 0
+    per_page.clamp(1, 100)
   end
 
   # Log and render error response
