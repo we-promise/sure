@@ -47,10 +47,22 @@ module Entries
 
       html = render(partial: "entries/reconciliation_status", locals: { entry: entry.reload })
 
+      doc = Nokogiri::HTML::DocumentFragment.parse(html)
+
       assert_includes html, "march-statement.pdf"
       assert_includes html, 'role="tooltip"'
       assert_includes html, "DS--tooltip"
-      assert_no_match(/title="march-statement\.pdf"/, html)
+
+      # Parsed rather than regexed: a raw title= would still be a raw title=
+      # single-quoted, unquoted, or with the filename HTML-escaped.
+      link = doc.at_css("a[href='#{account_statement_path(statement)}']")
+      assert link, "expected the statement link"
+      assert_nil link["title"], "filename must go through DS::Tooltip, not a title attribute on the link"
+
+      # Scoped to the filename, because DS::Pill renders its own title= for the
+      # state tooltip — a blanket "no title anywhere" would fail on that.
+      assert_empty doc.css("[title]").select { |el| el["title"] == statement.filename },
+        "no element may carry the filename as a raw title attribute"
     end
 
     # Pins the a11y contract behind `as:`. The tooltip is a SIBLING of the
