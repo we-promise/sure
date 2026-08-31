@@ -47,13 +47,15 @@
 
           <div class="mt-4 space-y-4">
             <div class="flex flex-wrap items-center gap-2">
-              <%= button_to sync_coinspot_item_path(item),
-                            method: :post,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                            disabled: item.syncing? do %>
-                <%= icon "refresh-cw", size: "sm" %>
-                <%= t("settings.providers.coinspot_panel.sync") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.coinspot_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_coinspot_item_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
 
               <%= render DS::Link.new(
                 text: t("settings.providers.coinspot_panel.setup_accounts"),
@@ -63,13 +65,15 @@
                 frame: :modal
               ) %>
 
-              <%= button_to coinspot_item_path(item),
-                            method: :delete,
-                            class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                            data: { turbo_confirm: t("settings.providers.coinspot_panel.disconnect_confirm", name: item.name) } do %>
-                <%= icon "trash-2", size: "sm" %>
-                <%= t("settings.providers.coinspot_panel.disconnect") %>
-              <% end %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.coinspot_panel.disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                size: :sm,
+                href: coinspot_item_path(item),
+                method: :delete,
+                confirm: t("settings.providers.coinspot_panel.disconnect_confirm", name: item.name)
+              ) %>
             </div>
 
             <%= styled_form_with model: item,

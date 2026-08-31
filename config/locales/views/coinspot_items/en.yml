@@ -82,4 +82,7 @@ en:
         one: "%{count} account needs setup"
         other: "%{count} accounts need setup"
       processing_accounts: Processing account data...
+      processing_failed:
+        one: "%{count} CoinSpot account failed to process"
+        other: "%{count} CoinSpot accounts failed to process"
       calculating_balances: Calculating balances...
