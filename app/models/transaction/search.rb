@@ -18,12 +18,14 @@ class Transaction::Search
 
   attr_reader :family, :accessible_account_ids
 
+  # Initialize a transaction search with optional filters and accessible accounts
   def initialize(family, filters: {}, accessible_account_ids: nil)
     @family = family
     @accessible_account_ids = accessible_account_ids
     super(filters)
   end
 
+  # Get the filtered transactions scope based on all applied filters
   def transactions_scope
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
@@ -47,12 +49,15 @@ class Transaction::Search
     end
   end
 
-  # Computes totals for the specific search
-  # Note: Excludes tax-advantaged accounts (401k, IRA, etc.) from totals calculation
-  # because those transactions are retirement savings, not daily income/expenses.
+  # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
-      Rails.cache.fetch("transaction_search_totals/v2/#{cache_key_base}") do
+      # v3: bumped because the Uncategorized filter's exclusion set changed
+      # (see #2592) -- without a version bump, a totals entry cached under
+      # the old logic would keep being served (same cache_key_base) after
+      # deploy, disagreeing with the (uncached) transactions_scope list
+      # until entries_cache_version next changes for that family.
+      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
@@ -98,6 +103,7 @@ class Transaction::Search
     end
   end
 
+  # Generate cache key based on search filters and family state
   def cache_key_base
     [
       family.id,
@@ -111,6 +117,7 @@ class Transaction::Search
   private
     Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
 
+    # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       if active_accounts_only_filter
         query.where(accounts: { status: [ "draft", "active" ] })
@@ -120,6 +127,7 @@ class Transaction::Search
     end
 
 
+    # Filter transactions by category, supporting uncategorized and budget exclusions
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
@@ -131,14 +139,22 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
+      # Uncategorized bucket = rows without a category. Exclude only pure
+      # transfer-like kinds (funds_movement, cc_payment) which represent transfers
+      # between accounts, not uncategorized expenses/income. Preserve one_time
+      # transactions since users can still categorize them, and preserve
+      # loan_payment/investment_contribution which are legitimate uncategorized
+      # entries that align with the dashboard's uncategorized totals.
+      # https://github.com/we-promise/sure/issues/2592
       uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
+      uncategorized_excluded_kinds = %w[funds_movement cc_payment]
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
         if include_uncategorized
           query = query.left_joins(:category).where(
             "categories.name IN (?) OR (#{uncategorized_condition})",
-            real_categories.presence || [], Transaction::TRANSFER_KINDS
+            real_categories.presence || [], uncategorized_excluded_kinds
           )
         else
           query = query.left_joins(:category).where(categories: { name: real_categories })
@@ -147,7 +163,7 @@ class Transaction::Search
         if include_uncategorized
           query = query.left_joins(:category).where(
             "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
-            real_categories, parent_category_ids, Transaction::TRANSFER_KINDS
+            real_categories, parent_category_ids, uncategorized_excluded_kinds
           )
         else
           query = query.left_joins(:category).where(
@@ -160,6 +176,7 @@ class Transaction::Search
       query
     end
 
+    # Filter transactions by type (expense, income, or transfer)
     def apply_type_filter(query, types)
       return query unless types.present?
       return query if types.sort == [ "expense", "income", "transfer" ]
@@ -182,16 +199,19 @@ class Transaction::Search
       end
     end
 
+    # Filter transactions by merchant name
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
       query.joins(:merchant).where(merchants: { name: merchants })
     end
 
+    # Filter transactions by tag name
     def apply_tag_filter(query, tags)
       return query unless tags.present?
       query.joins(:tags).where(tags: { name: tags })
     end
 
+    # Filter transactions by status (pending or confirmed)
     def apply_status_filter(query, statuses)
       return query unless statuses.present?
       return query if statuses.uniq.sort == [ "confirmed", "pending" ] # Both selected = no filter
