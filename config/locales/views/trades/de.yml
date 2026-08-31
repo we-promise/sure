@@ -26,6 +26,15 @@ de:
       sell: Verkaufen
       dividend: Dividende
       interest: Zinsen
+      contribution: Einlage
+      exchange: Umtausch
+      fee: Gebühr
+      other: Sonstige
+      reinvestment: Reinvestition
+      sweep_in: Sweep In
+      sweep_out: Sweep Out
+      transfer: Überweisung
+      withdrawal: Entnahme
       current_market_price_label: Aktueller Marktpreis
       overview: Übersicht
       purchase_price_label: Kaufpreis
