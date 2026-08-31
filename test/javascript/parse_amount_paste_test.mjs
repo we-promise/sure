@@ -32,22 +32,17 @@ function parseLocaleFloat(value, { separator } = {}) {
 
 // Inline the function to avoid needing a bundler for ESM imports.
 // Must be kept in sync with app/javascript/utils/parse_amount_paste.js
-// A currency marker sitting next to a pasted amount: either a symbol ("$",
-// "€", "£"), which by definition carries no letters, or a three-letter
-// uppercase ISO code ("USD", "EUR").
-//
-// Letters are otherwise excluded because a lowercase letter run is
-// indistinguishable from prose without a real currency list — and the server's
-// currency set is not available synchronously inside a paste event. That means
-// markers containing letters, such as "R$" or "kr", are not stripped and those
-// pastes fall through to the browser, which is the safe direction: accepting
-// them would also accept "fee 500".
-const CURRENCY_TOKEN = "(?:[^\\p{L}\\p{N}\\s.,()+-]{1,3}|[A-Z]{3})"
+// The currency symbols carried by config/currencies.yml, restricted to the
+// ones that contain no letters. A letter-bearing marker ("kr", "R$", "USD")
+// cannot be told apart from prose such as "fee 500" or "TAX 500" without
+// consulting the currency list itself, and a paste event has nothing to await,
+// so those pastes fall through to the browser untouched.
+const CURRENCY_SYMBOL = "[$£¥֏؋৳฿៛₡₦₨₩₪₫€₭₮₱₲₴₵₸₹₺₼₽₾₿﷼]"
 
 const stripCurrency = (value) =>
   value
-    .replace(new RegExp(`^${CURRENCY_TOKEN}\\s*`, "u"), "")
-    .replace(new RegExp(`\\s*${CURRENCY_TOKEN}$`, "u"), "")
+    .replace(new RegExp(`^${CURRENCY_SYMBOL}\\s*`), "")
+    .replace(new RegExp(`\\s*${CURRENCY_SYMBOL}$`), "")
     .trim()
 
 function parseAmountPaste(text, options = {}) {
@@ -100,17 +95,9 @@ describe("parseAmountPaste", () => {
     })
   })
 
-  describe("strips currency symbols and codes", () => {
+  describe("strips currency symbols", () => {
     it('parses "$1,234.56" as 1234.56', () => {
       assert.equal(parseAmountPaste("$1,234.56"), 1234.56)
-    })
-
-    it('parses "USD 500" as 500', () => {
-      assert.equal(parseAmountPaste("USD 500"), 500)
-    })
-
-    it('parses "1,234.56 EUR" as 1234.56', () => {
-      assert.equal(parseAmountPaste("1,234.56 EUR"), 1234.56)
     })
 
     it('parses "1,234.56 €" as 1234.56', () => {
@@ -119,6 +106,14 @@ describe("parseAmountPaste", () => {
 
     it('parses "£99.99" as 99.99', () => {
       assert.equal(parseAmountPaste("£99.99"), 99.99)
+    })
+
+    it('parses "₹500" as 500', () => {
+      assert.equal(parseAmountPaste("₹500"), 500)
+    })
+
+    it('parses "¥1,200" as 1200', () => {
+      assert.equal(parseAmountPaste("¥1,200"), 1200)
     })
   })
 
@@ -139,12 +134,12 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("-$500"), -500)
     })
 
-    it('parses "USD (1,200.00)" as -1200', () => {
-      assert.equal(parseAmountPaste("USD (1,200.00)"), -1200)
+    it('parses "$(1,200.00)" as -1200', () => {
+      assert.equal(parseAmountPaste("$(1,200.00)"), -1200)
     })
 
-    it('parses "(1,200.00) USD" as -1200', () => {
-      assert.equal(parseAmountPaste("(1,200.00) USD"), -1200)
+    it('parses "(1,200.00) €" as -1200', () => {
+      assert.equal(parseAmountPaste("(1,200.00) €"), -1200)
     })
   })
 
@@ -193,8 +188,32 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("500 tax"), null)
     })
 
+    it('rejects "TAX 500"', () => {
+      assert.equal(parseAmountPaste("TAX 500"), null)
+    })
+
+    it('rejects "500 TAX"', () => {
+      assert.equal(parseAmountPaste("500 TAX"), null)
+    })
+
+    it('rejects "*** 500"', () => {
+      assert.equal(parseAmountPaste("*** 500"), null)
+    })
+
+    it('rejects "500 ***"', () => {
+      assert.equal(parseAmountPaste("500 ***"), null)
+    })
+
     it('rejects "R$ 1.234,56", since a lettered marker cannot be told from prose', () => {
       assert.equal(parseAmountPaste("R$ 1.234,56"), null)
+    })
+
+    it('rejects "USD 500", since a lettered code cannot be told from prose', () => {
+      assert.equal(parseAmountPaste("USD 500"), null)
+    })
+
+    it('rejects "1,234.56 EUR", since a lettered code cannot be told from prose', () => {
+      assert.equal(parseAmountPaste("1,234.56 EUR"), null)
     })
   })
 })
