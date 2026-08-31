@@ -35,7 +35,7 @@ fr:
         months_of_expenses: Un nombre de mois de dépenses
       kinds:
         maintained:
-          hint: Un niveau à tenir, comme une épargne de précaution. Jamais clôturée.
+          hint: Un solde à maintenir, comme une épargne de précaution. Jamais clôturée.
           label: Réserve à maintenir
         one_off:
           hint: Épargner pour quelque chose, puis clôturer une fois la dépense faite.
@@ -49,8 +49,9 @@ fr:
         headroom: "Il reste {left} affectables sur ce compte."
         prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
         whole_balance: Ce compte financera le solde restant après les autres affectations.
+        whole_balance_alone: "Cet objectif utilisera tout le solde de ce compte."
       fields:
-        target_mode: Comment le seuil est fixé
+        target_mode: Comment le solde cible est fixé
         target_months: Mois de dépenses
         target_months_hint: Recalculé le 1er de chaque mois à partir de vos dépenses mensuelles médianes.
         color: Couleur
@@ -63,6 +64,9 @@ fr:
         notes: Notes (facultatif)
         notes_placeholder: Un rappel pour plus tard…
         target_amount: Montant cible
+        target_balance: "Solde cible"
+        target_balance_pending: "Calculé à l'enregistrement"
+        target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
         target_date: Date cible
         whole_balance: Solde total
       save: Enregistrer les modifications
@@ -76,6 +80,7 @@ fr:
       suggested_no_date: Définissez une date cible pour projeter la fin.
       suggested_with_date: Épargnez {monthly}/mois sur {accounts} pour l'atteindre à temps.
     goal_card:
+      including_used: "Dont %{amount} déjà utilisés"
       accounts:
         one: 1 compte
         other: "%{count} comptes"
@@ -105,7 +110,7 @@ fr:
       past_due: Échu
       pending_count:
         one: 1 en attente
-        other: "%{count} en en attente"
+        other: "%{count} en attente"
       pending_pledge: Promesse en attente
     index:
       archived_section:
@@ -188,12 +193,12 @@ fr:
       success: "%{amount} enregistrés comme utilisés."
       errors:
         non_positive: Indiquez un montant supérieur à zéro.
-        maintained: Une réserve se ponctionne et se recomplète, elle ne se dépense pas — son manque apparaît déjà sur l'objectif.
+        maintained: "Une réserve se ponctionne et se reconstitue, elle ne se dépense pas — ce qui lui manque apparaît déjà sur l'objectif."
         exceeds_target: C'est plus que ce que cet objectif visait à épargner.
         account_required: Cet objectif est financé par plusieurs comptes — indiquez celui d'où vient l'argent.
         account_not_linked: Ce compte ne finance pas cet objectif.
-        not_active: Cet objectif n'est plus actif, rien ne peut y être enregistré.
-        exceeds_earmark: C'est plus que ce que ce compte a affecté à l'objectif.
+        not_active: "Cet objectif n'est plus actif : rien ne peut y être enregistré."
+        exceeds_earmark: "C'est plus que ce que l'objectif a affecté sur ce compte."
         transaction_already_claimed: Cette sortie a déjà été attribuée.
         transaction_not_found: Cette sortie n'est plus disponible.
         no_linked_account: Cet objectif n'a plus de compte de financement.
@@ -212,7 +217,7 @@ fr:
         body: Rythme actuel %{avg}/mois · requis %{required}/mois pour atteindre votre objectif.
         title: Épargnez %{amount}/mois de plus pour rattraper le retard
       celebration:
-        body_reserve: "Votre réserve a atteint son niveau cible, %{saved} sur %{target}. Rien à faire — elle reste affectée."
+        body_reserve: "Votre réserve est à son solde cible, %{saved} sur %{target}. Rien à faire — elle reste affectée."
         heading_reserve: Réserve constituée
         body_reached: "Vous avez atteint votre cible, à %{saved} sur %{target}. Il n'est pas encore clôturé — l'argent lui reste affecté."
         close_cta: Clôturer cet objectif
@@ -289,27 +294,29 @@ fr:
         no_pace: Aucun dépôt pour le moment. Ajoutez de l'argent sur un compte lié pour démarrer la projection.
         no_target_date: Aucune date cible définie. Définissez-en une pour projeter la fin.
         on_track_html: Au rythme actuel, vous atteindrez cet objectif vers le <strong class="text-primary whitespace-nowrap">%{date}</strong>.
-        reserve: "Une réserve maintient un niveau : il n'y a pas d'échéance à projeter."
+        reserve: "Une réserve maintient un solde cible : il n'y a pas d'échéance à projeter."
         reached: Vous avez atteint l'objectif. Aucune projection nécessaire.
         today_marker: Aujourd'hui
         tooltip_projected: 'Projeté : %{amount}'
         tooltip_saved: 'Épargné : %{amount}'
         tooltip_target_relation: "%{percent}% de la cible de %{target}"
       reserve_shortfall:
-        heading: Réserve sous son niveau
-        body: "Vous détenez %{saved} sur %{target}. Complétez de %{missing} pour la ramener à son niveau."
+        heading: Réserve sous son solde cible
+        body: "Vous détenez %{saved} sur %{target}. Complétez de %{missing} pour la ramener à son solde cible."
       record_pledge_cta: Enregistrer une promesse
       reopen: Réouvrir l'objectif
       resume: Reprendre
       ring:
+        including_used: "Dont %{amount} déjà utilisés"
         aria_label: Objectif complété à %{percent}%. %{amount} sur %{target} épargnés.
+        aria_label_with_used: "Objectif à %{percent}%. %{amount} sur %{target}, dont %{used} déjà utilisés."
         market_value: Valeur de marché %{amount}
         of: sur %{target}
         of_target: de l'objectif
         saved: Épargné
         to_go: "%{amount} restant(s)"
       status_callout:
-        depleted: "il manque %{amount} — complétez pour ramener la réserve à son niveau"
+        depleted: "il manque %{amount} — complétez pour ramener la réserve à son solde cible"
         behind: épargnez %{amount}/mois de plus pour rattraper le retard
         behind_covered: les promesses en attente comblent le retard
         no_target_date: définissez une date cible pour projeter une date de fin

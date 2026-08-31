@@ -755,13 +755,13 @@ components:
           type: string
         display_budgeted_spending_cents:
           type: integer
-        rolled_over_amount:
-          type: string
-        rolled_over_amount_cents:
-          type: integer
         actual_spending:
           type: string
         actual_spending_cents:
+          type: integer
+        rolled_over_amount:
+          type: string
+        rolled_over_amount_cents:
           type: integer
         available_to_spend:
           type: string
@@ -3476,6 +3476,9 @@ paths:
       summary: Sign up a new user
       tags:
       - Auth
+      description: Creates a new user and family. The first user on a fresh instance
+        is assigned the super_admin role; later family creators are assigned an admin
+        role.
       parameters: []
       responses:
         '201':
@@ -3883,7 +3886,9 @@ paths:
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
         via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled.
+        allow_account_creation enabled. The first user on a fresh instance is assigned
+        the super_admin role; later family creators are assigned an admin-capable
+        role.
       parameters: []
       responses:
         '200':
@@ -4688,85 +4693,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/insights":
-    get:
-      summary: List proactive insights
-      tags:
-      - Insights
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: insights listed
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/InsightCollection"
-        '403':
-          description: preview features disabled
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/push_subscriptions":
-    post:
-      summary: Register an APNs device token
-      tags:
-      - Push Subscriptions
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '201':
-          description: token registered
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/PushSubscription"
-        '422':
-          description: invalid or conflicting subscription
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - token
-              - environment
-              - platform
-              properties:
-                token:
-                  type: string
-                environment:
-                  type: string
-                  enum:
-                  - sandbox
-                  - production
-                platform:
-                  type: string
-                  enum:
-                  - ios
-        required: true
-  "/api/v1/push_subscriptions/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
-    delete:
-      summary: Unregister an APNs device token
-      tags:
-      - Push Subscriptions
-      security:
-      - apiKeyAuth: []
-      responses:
-        '204':
-          description: token unregistered
   "/api/v1/family_exports":
     get:
       summary: Lists family exports
@@ -5996,6 +5922,26 @@ paths:
                   type: string
                   description: CSV imports only. Column value that marks an amount
                     as an inflow when using custom_column strategy
+  "/api/v1/insights":
+    get:
+      summary: List proactive insights
+      tags:
+      - Insights
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: insights listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/InsightCollection"
+        '403':
+          description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -6107,6 +6053,65 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/push_subscriptions":
+    post:
+      summary: Register an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: token registered
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/PushSubscription"
+        '422':
+          description: invalid or conflicting subscription
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              - environment
+              - platform
+              properties:
+                token:
+                  type: string
+                environment:
+                  type: string
+                  enum:
+                  - sandbox
+                  - production
+                platform:
+                  type: string
+                  enum:
+                  - ios
+        required: true
+  "/api/v1/push_subscriptions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Unregister an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '204':
+          description: token unregistered
   "/api/v1/recurring_transactions":
     get:
       summary: List recurring transactions

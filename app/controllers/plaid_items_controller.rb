@@ -46,7 +46,7 @@ class PlaidItemsController < ApplicationController
   end
 
   def sync
-    @plaid_item.sync_later_with_follow_up
+    @plaid_item.sync_later_with_provider_refresh
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

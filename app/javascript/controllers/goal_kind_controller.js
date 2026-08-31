@@ -1,10 +1,16 @@
 import { Controller } from "@hotwired/stimulus"
 
-// A maintained reserve has no deadline: it is a level to hold, not something
-// due on a date. Hiding the target-date field keeps a stale value from being
+// A maintained reserve has no deadline: it is a target balance to hold, not
+// something due on a date. Hiding the target-date field keeps a stale value from being
 // submitted and driving a pace the goal does not have.
 export default class extends Controller {
-  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField"]
+  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField", "amountDerived"]
+
+  static values = {
+    amountLabel: String,
+    balanceLabel: String,
+    derivable: Boolean,
+  }
 
   connect() {
     this.refresh()
@@ -26,16 +32,42 @@ export default class extends Controller {
     this.monthsFieldTargets.forEach((field) => field.classList.toggle("hidden", !months))
     if (!months) this.#clearInputs(this.monthsFieldTargets)
 
-    // In months mode the floor is derived from the family's spending, not
-    // chosen. Shown, because it is the figure the user is saving against, but
-    // not editable — the model overwrites a typed one anyway, and a field that
-    // silently discards what you put in it is worse than one you cannot type
-    // into.
+    // Three states. A one-off saves toward a target amount; a fixed reserve
+    // holds a target balance you type; a months-based reserve holds one worked
+    // out from spending, so the input gives way to the figure itself — a
+    // greyed-out input still reads as something to fill in, beside the months
+    // that are the actual question.
+    //
+    // Only where there IS spending to work one out from, though. With none the
+    // model keeps whatever was typed, so the field has to stay: it is then the
+    // only way to give the reserve a target at all.
+    const derived = months && this.derivableValue
+    this.amountFieldTargets.forEach((field) => field.classList.toggle("hidden", derived))
+    this.amountDerivedTargets.forEach((field) => field.classList.toggle("hidden", !derived))
+
+    // Disabled, not merely hidden. A `required` input is still validated by
+    // the browser while `display: none`, which then blocks a submit it cannot
+    // show the error on — the reserve became impossible to create. Disabling
+    // also keeps the typed figure out of the params, so what lands is the
+    // figure the model derived.
     this.amountFieldTargets.forEach((field) => {
-      field.querySelectorAll("input").forEach((input) => {
-        input.readOnly = months
-        input.classList.toggle("opacity-60", months)
-      })
+      field.querySelectorAll("input").forEach((input) => { input.disabled = derived })
+    })
+
+    // Only the wording changes. Assigning `textContent` would replace every
+    // child of the label, and the label carries the required-field asterisk in
+    // a span of its own — wiped on the first `refresh()`, which runs on connect
+    // for every goal form, with nothing to put it back.
+    const label = maintained ? this.balanceLabelValue : this.amountLabelValue
+    this.amountFieldTargets.forEach((field) => {
+      const el = field.querySelector(".form-field__label")
+      if (!el || !label) return
+
+      const wording = [...el.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+      )
+      if (wording) wording.textContent = label
+      else el.prepend(document.createTextNode(label))
     })
   }
 
