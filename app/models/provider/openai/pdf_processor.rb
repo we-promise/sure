@@ -205,6 +205,11 @@ class Provider::Openai::PdfProcessor
       parse_response_generic(response)
     end
 
+    # Render each PDF page to a base64-encoded PNG using pdftoppm
+    # (poppler-utils). Distinguishes "renderer binary absent" (raise a coded
+    # Provider::Openai::Error with failure_code :render_missing_binary) from
+    # "renderer ran but rejected the input" (return [] so the caller can
+    # degrade to the text-extraction path unchanged).
     def convert_pdf_to_images
       return [] if pdf_content.blank?
 

@@ -316,6 +316,11 @@ class AiHealth
         seconds.positive? ? seconds : DEFAULT_TIMEOUT
       end
 
+      # Map a probe error to a machine-readable code for the admin AI status
+      # page. Prefers an explicit `failure_code` the error carries (e.g. a
+      # provider raising for a specific reason like a missing renderer binary),
+      # then classifies Faraday/Timeout errors as :timeout, and falls back to
+      # :request_failed for everything else.
       def failure_code(error)
         code = error.failure_code if error.respond_to?(:failure_code)
         return code if code
