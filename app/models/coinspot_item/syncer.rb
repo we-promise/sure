@@ -37,7 +37,21 @@ class CoinspotItem::Syncer
     return unless linked.any?
 
     sync.update!(status_text: I18n.t("coinspot_item.syncer.processing_accounts")) if sync.respond_to?(:status_text)
-    coinspot_item.process_accounts
+    process_results = coinspot_item.process_accounts
+    processing_failures = process_results.select { |result| result[:success] == false }
+    if processing_failures.any?
+      message = I18n.t("coinspot_item.syncer.processing_failed", count: processing_failures.count)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: message,
+        source: self.class.name,
+        provider_key: "coinspot",
+        family: coinspot_item.family,
+        metadata: { coinspot_item_id: coinspot_item.id, failures: processing_failures }
+      )
+      raise StandardError, message
+    end
 
     sync.update!(status_text: I18n.t("coinspot_item.syncer.calculating_balances")) if sync.respond_to?(:status_text)
     coinspot_item.schedule_account_syncs(

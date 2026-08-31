@@ -68,7 +68,7 @@ class CoinspotAccount::Processor
       amount_aud = type == "sell" ? total_aud.abs : -total_aud.abs
 
       amount, = convert_from_aud(amount_aud, date: date)
-      price, = convert_from_aud(rate, date: date)
+      price = trade_price(amount: amount, quantity: quantity, fallback_rate: rate, date: date)
       external_id = order_external_id(order, type, symbol, date)
 
       import_adapter.import_trade(
@@ -195,6 +195,13 @@ class CoinspotAccount::Processor
 
     def raw_transactions
       coinspot_account.raw_transactions_payload || {}
+    end
+
+    def trade_price(amount:, quantity:, fallback_rate:, date:)
+      return amount.abs / quantity.abs if quantity.present? && !quantity.zero? && amount.present? && !amount.zero?
+
+      fallback_price, = convert_from_aud(fallback_rate, date: date)
+      fallback_price
     end
 
     def infer_order_type(order)

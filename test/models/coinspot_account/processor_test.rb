@@ -108,6 +108,34 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "AUD", @account.currency
   end
 
+  test "derives market order price from aud total instead of quote asset rate" do
+    @coinspot_account.update!(
+      raw_transactions_payload: {
+        "orders" => {
+          "orders" => [
+            {
+              "id" => "eth-btc-1",
+              "market" => "ETH/BTC",
+              "amount" => "2.0",
+              "audtotal" => "6000.00",
+              "rate" => "0.05",
+              "created" => "2026-01-08T10:00:00Z",
+              "type" => "buy"
+            }
+          ]
+        }
+      }
+    )
+    eth = Security.create!(ticker: "CRYPTO:ETH", name: "ETH", exchange_operating_mic: "XCSO", offline: true)
+    CoinspotAccount::SecurityResolver.stubs(:resolve).with("ETH").returns(eth)
+
+    CoinspotAccount::Processor.new(@coinspot_account).process
+
+    trade = @account.entries.find_by!(external_id: "coinspot_order_buy_ETH_2026-01-08_eth-btc-1", source: "coinspot").trade
+    assert_equal 2.to_d, trade.qty
+    assert_equal 3000.to_d, trade.price
+  end
+
   private
 
     def order_payload(id, coin, amount, audtotal, rate, fee)
