@@ -231,6 +231,8 @@ fr:
           start_date: Date de début
         merchant_filter:
           filter_merchants: Filtrer les commerçants
+        goal_filter:
+          filter_goals: Filtrer les objectifs
         status_filter:
           confirmed: Confirmée
           pending: En attente

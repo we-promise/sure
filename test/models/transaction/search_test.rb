@@ -670,4 +670,67 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes confirmed_ids, confirmed.entryable.id
     assert_not_includes pending_ids, confirmed.entryable.id
   end
+
+  # --- goal filter ---
+
+  test "search filters by goal, both attributed spends and matched pledges" do
+    savings = Account.create!(family: @family, accountable: Depository.new, name: "Savings",
+                              currency: "USD", balance: 5_000)
+    elsewhere = Account.create!(family: @family, accountable: Depository.new, name: "Elsewhere",
+                                currency: "USD", balance: 1_000)
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: savings)
+    end
+    other_goal = @family.goals.create!(name: "Other", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: elsewhere)
+    end
+
+    spend = create_transaction(account: savings, amount: 800)
+    goal.consume!(800, transaction: spend.entryable)
+
+    saving = create_transaction(account: savings, amount: -500)
+    pledge = GoalPledge.create!(goal: goal, account: savings, kind: "manual_save",
+                                amount: 500, currency: "USD", status: "open", expires_at: 7.days.from_now)
+    pledge.update!(status: "matched", matched_transaction_id: saving.entryable_id)
+
+    unrelated = create_transaction(account: savings, amount: 50)
+    other_spend = create_transaction(account: elsewhere, amount: 90)
+    other_goal.consume!(90, transaction: other_spend.entryable)
+
+    ids = Transaction::Search.new(@family, filters: { goals: [ goal.id ] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, spend.entryable.id
+    assert_includes ids, saving.entryable.id
+    assert_not_includes ids, unrelated.entryable.id
+    assert_not_includes ids, other_spend.entryable.id
+  end
+
+  # Names are not unique per family, so the filter has to key on id rather
+  # than risk pulling in a namesake's spending.
+  test "the goal filter does not cross into a namesake goal's spending" do
+    pot = Account.create!(family: @family, accountable: Depository.new, name: "Pot",
+                          currency: "USD", balance: 5_000)
+    other_pot = Account.create!(family: @family, accountable: Depository.new, name: "Other Pot",
+                                currency: "USD", balance: 1_000)
+    goal = @family.goals.create!(name: "Trip", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: pot)
+    end
+    namesake = @family.goals.create!(name: "Trip", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: other_pot)
+    end
+    spend = create_transaction(account: other_pot, amount: 90)
+    namesake.consume!(90, transaction: spend.entryable)
+
+    ids = Transaction::Search.new(@family, filters: { goals: [ goal.id ] }).transactions_scope.pluck(:id)
+
+    assert_not_includes ids, spend.entryable.id
+  end
+
+  test "an empty goal filter applies no filter at all" do
+    entry = create_transaction(account: @checking_account, amount: 100)
+
+    ids = Transaction::Search.new(@family, filters: { goals: [] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, entry.entryable.id
+  end
 end

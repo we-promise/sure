@@ -241,6 +241,7 @@ en:
         category: Category
         tag: Tag
         merchant: Merchant
+        goal: Goal
     convert_to_trade:
       title: Convert to Security Trade
       description: Convert this transaction into a trade with security details
@@ -294,6 +295,8 @@ en:
           end_date: "End date"
         merchant_filter:
           filter_merchants: Filter merchants
+        goal_filter:
+          filter_goals: Filter goals
         tag_filter:
           filter_tags: Filter tags
         amount_filter:
