@@ -175,7 +175,10 @@ class Account < ApplicationRecord
       attrs = attributes.dup
       attrs[:cash_balance] = attrs[:balance] unless attrs.key?(:cash_balance)
       account = new(attrs)
-      initial_balance = attributes.dig(:accountable_attributes, :initial_balance)&.to_d
+      # Presence is read from the raw value: a blank form field arrives as ""
+      # and would convert to a very present-looking 0.
+      raw_initial_balance = attributes.dig(:accountable_attributes, :initial_balance)
+      initial_balance = raw_initial_balance.to_d if raw_initial_balance.present?
 
       transaction do
         account.save!
@@ -192,16 +195,20 @@ class Account < ApplicationRecord
         # the account's only entry — the initial sync would recalculate
         # today's balance back to it, silently discarding what the user just
         # typed. Anchor today's balance too so both survive.
-        if initial_balance.present? && initial_balance != account.balance
-          # An explicit same-day reconciliation, not CurrentBalanceManager:
-          # for cash accounts its transaction-adjustment strategy computes a
-          # zero delta here (account.balance already holds the entered value)
-          # and would only rewrite the opening anchor, leaving today's balance
-          # unanchored for the first sync.
+        #
+        # Only when the opening anchor is on an earlier day: the opening date
+        # is user-supplied and may be today, and a same-day reconciliation
+        # would be matched to the opening anchor by date and overwrite it.
+        # On its own date the opening balance wins.
+        if initial_balance && initial_balance != account.balance && manager.opening_date < Date.current
+          # An explicit reconciliation, not CurrentBalanceManager: for cash
+          # accounts its transaction-adjustment strategy computes a zero delta
+          # here (account.balance already holds the entered value) and would
+          # only rewrite the opening anchor, leaving today's balance unanchored
+          # for the first sync.
           reconciliation = Account::ReconciliationManager.new(account).reconcile_balance(
             balance: account.balance,
-            date: Date.current,
-            existing_valuation_entry: account.entries.valuations.find_by(date: Date.current)
+            date: Date.current
           )
           raise reconciliation.error_message unless reconciliation.success?
         end
