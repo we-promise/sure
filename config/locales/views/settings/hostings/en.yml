@@ -127,6 +127,8 @@ en:
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
+        model_function_calling_help: "The AI assistant reads your data through function calls, so pick a model your provider documents as supporting tools/function calling. Models without it fail chat with an opaque provider error."
+        model_function_calling_link: Check the configured model
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
