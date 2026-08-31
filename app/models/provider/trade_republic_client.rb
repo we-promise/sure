@@ -576,20 +576,29 @@ class Provider::TradeRepublicClient
         Array(category["positions"]).map { |position| position.merge("categoryType" => category["categoryType"]) }
       end
       warnings = []
-      prices = {}
-      raw_positions.each do |position|
+      valid_positions = raw_positions.select do |position|
         isin = position["instrumentId"].presence || position["isin"]
-        next if isin.blank? || prices.key?(isin)
+        quantity = position["netSize"] || position["quantity"]
+        if isin.blank? || quantity.blank?
+          warnings << "malformed portfolio position skipped: missing #{isin.blank? ? "instrument ID" : "quantity"}"
+          false
+        else
+          true
+        end
+      end
+      prices = {}
+      valid_positions.each do |position|
+        isin = position["instrumentId"].presence || position["isin"]
+        next if prices.key?(isin)
 
         price = position_price(websocket, isin, position["categoryType"])
         prices[isin] = price if price.present?
         warnings << "price unavailable for #{isin}; position kept without valuation" if price.blank?
       end
 
-      positions = raw_positions.filter_map do |position|
+      positions = valid_positions.map do |position|
         isin = position["instrumentId"].presence || position["isin"]
         quantity = position["netSize"] || position["quantity"]
-        next if isin.blank? || quantity.blank?
         { "isin" => isin, "name" => position["name"], "category" => portfolio_category(position["categoryType"]), "quantity" => decimal_string(quantity), "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]), "price" => prices[isin] }.compact
       end
       [ positions, warnings ]

@@ -1,12 +1,5 @@
 require Rails.root.join("lib/active_record_encryption_config").to_s
 
-# Allow existing self-hosted installations to read legacy plaintext values
-# while new writes use Active Record Encryption. Set this explicitly during
-# the migration period; production deployments should disable it after the
-# security backfill has completed.
-Rails.application.config.active_record.encryption.support_unencrypted_data =
-  ActiveModel::Type::Boolean.new.cast(ENV.fetch("ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA", false))
-
 # Configure Active Record encryption keys
 # Priority order:
 # 1. Environment variables (works for both managed and self-hosted modes)

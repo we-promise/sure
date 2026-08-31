@@ -234,6 +234,25 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal [ "price unavailable for LU3176111881; position kept without valuation" ], warnings
   end
 
+  test "marks a snapshot partial when malformed positions are skipped" do
+    @client.expects(:position_price).never
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "name" => "Missing identity", "netSize" => "2" },
+          { "instrumentId" => "US0378331005", "name" => "Missing quantity" }
+        ] }
+      ]
+    })
+
+    assert_empty positions
+    assert_equal [
+      "malformed portfolio position skipped: missing instrument ID",
+      "malformed portfolio position skipped: missing quantity"
+    ], warnings
+  end
+
   test "resolves event type and preserves the signed timeline amount" do
     @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
       {
