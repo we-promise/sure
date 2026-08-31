@@ -9,10 +9,10 @@ pt-PT:
       auto_adjust: ajuste automático.
     index:
       title: Objetivos
-      subtitle: Poupe para o que mais importa.
+      subtitle: Poupe para o que realmente importa.
       new_goal: Novo objetivo
-      empty_filtered: Não existem objetivos que correspondam.
-      pending_pledges_callout: Tem contribuições prometidas por confirmar. A Sure confirmá-las-á na próxima sincronização.
+      empty_filtered: Nenhum objetivo encontrado.
+      pending_pledges_callout: Tem contribuições prometidas por confirmar. Sure confirmá-las-á na próxima sincronização.
       kpi:
         contributed_label: Contribuído · últimos 30 dias
         velocity_delta_up: "↑ %{percent}%% vs. 30 dias anteriores"
@@ -169,12 +169,14 @@ pt-PT:
         target_by: "Objetivo %{amount} até %{date}"
         target_by_past: "Objetivo %{amount} · venceu em %{date}"
       ring:
+        including_used: "Incluindo %{amount} já utilizados"
         saved: Reservado
         of: "de %{target}"
         to_go: "faltam %{amount}"
         of_target: do objetivo
         market_value: "Valor de mercado %{amount}"
         aria_label: "Objetivo %{percent}% concluído. %{amount} de %{target} reservados."
+        aria_label_with_used: "Objetivo %{percent}% concluído. %{amount} de %{target}, incluindo %{used} já utilizados."
       projection:
         heading: Projeção
         legend_saved: Reservado
@@ -259,6 +261,7 @@ pt-PT:
       no_depository_accounts: Precisa de pelo menos uma conta depositária (conta à ordem, poupança, HSA, CD, mercado monetário) antes de criar um objetivo.
       add_account: Adicionar conta
     goal_card:
+      including_used: "Incluindo %{amount} já utilizados"
       no_accounts: Sem contas associadas
       n_accounts: "%{first} +%{count}"
       left: restante
@@ -313,6 +316,7 @@ pt-PT:
         headroom: "{left} restante para reservar nesta conta."
         prorata: "Os seus objetivos nesta conta totalizam {total} para um saldo de {balance} — progredirão proporcionalmente."
         whole_balance: Esta conta financiará o que sobrar após as restantes reservas.
+        whole_balance_alone: Este objetivo utilizará o saldo total desta conta.
       fields:
         target_mode: Como é definido o nível
         target_months: Meses de despesas
@@ -320,6 +324,9 @@ pt-PT:
         name: Nome
         name_placeholder: Fundo de emergência, entrada para casa…
         target_amount: Montante do objetivo
+        target_balance: Saldo do objetivo
+        target_balance_pending: Calculado quando guardar
+        target_balance_hint: Com base na sua mediana de despesas mensais dos meses acima. Atualizado todos os meses.
         target_date: Data-alvo
         color: Cor
         notes: Notas (opcional)
