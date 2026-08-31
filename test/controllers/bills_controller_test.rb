@@ -928,10 +928,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "changed price", response.body
   end
 
-  test "the ical feed serves upcoming occurrences with the stored token and rejects garbage" do
+  test "the ical feed serves upcoming occurrences with a member token and rejects garbage" do
     create_bill(name: "Rent", amount: 2150)
 
-    get bills_feed_url(token: @family.bills_feed_token!)
+    get bills_feed_url(token: @family.bills_feed_token_for(@user))
     assert_response :success
     assert_match "BEGIN:VCALENDAR", response.body
     assert_match "Rent", response.body

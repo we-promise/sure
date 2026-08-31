@@ -61,8 +61,10 @@
   </div>
 
   <div class="flex items-center justify-end gap-3">
+    <%# Minted for THIS member: the feed applies per-account sharing, so each
+        member's URL serves only the bills they can reach in the app. %>
     <%= link_to t(".subscribe_ical"),
-          bills_feed_path(token: Current.family.bills_feed_token!),
+          bills_feed_path(token: Current.family.bills_feed_token_for(Current.user)),
           class: "text-xs text-link hover:underline" %>
     <%= button_to t(".reset_feed"),
           reset_feed_token_bills_path,

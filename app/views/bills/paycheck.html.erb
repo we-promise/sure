@@ -4,23 +4,15 @@
 
 <%= content_for :page_title, t("bills.index.title") %>
 
+<%# The bridge/period split and why the bridge never becomes a timeline row
+    live with BillsHelper#paycheck_plan_sections; this template only renders
+    the prepared sections. %>
 <%
   currency = Current.family.currency
-
-  if @plan
-    # The leading window has no income to allocate, so it is reported above the
-    # timeline rather than inside it. It is never a timeline row: those print
-    # income minus obligations as "Safe after bills", and a window that earns
-    # nothing would show that as a deficit on money already in the bank.
-    #
-    # Both states are reported. Short earns the warning; covered earns the
-    # quiet strip, because dropping it meant a bill due before payday appeared
-    # nowhere on the page built to answer exactly that.
-    bridge = @plan.find(&:bridge?)
-    periods = @plan.reject(&:bridge?)
-    shortfall = bridge if bridge&.short?
-    bridge_note = bridge if bridge && !bridge.short? && bridge.items.any?
-  end
+  sections = paycheck_plan_sections(@plan)
+  periods = sections[:periods] || []
+  shortfall = sections[:shortfall]
+  bridge_note = sections[:bridge_note]
 %>
 
 <div class="space-y-4 pb-6 lg:pb-12">

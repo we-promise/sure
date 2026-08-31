@@ -7,6 +7,93 @@ module BillsHelper
     Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
+  # Two bills can be genuinely indistinguishable on a row -- same merchant,
+  # same amount, three tiers of one subscription. The keys returned here mark
+  # exactly those collisions, so only the rows that need a second fact get one.
+  def bills_ambiguous_row_keys(occurrences)
+    occurrences.group_by { |o| [ o.recurring_transaction.display_name, o.resolved_expected_amount ] }
+               .select { |_, group| group.size > 1 }
+               .keys.to_set
+  end
+
+  # Pay-period markers keyed by the id of the FIRST occurrence inside each
+  # period, so the section template can drop a marker between groups without
+  # pre-bucketing the rows. Each marker carries its period and the summed
+  # obligations due inside it.
+  def bills_pay_period_markers(occurrences, pay_periods)
+    return {} if pay_periods.blank?
+
+    seen = Set.new
+    occurrences.each_with_object({}) do |occurrence, markers|
+      index = pay_periods.index { |p| occurrence.due_on.between?(p.starts_on, p.ends_on) }
+      next unless index && seen.add?(index)
+
+      period = pay_periods[index]
+      markers[occurrence.id] = {
+        period: period,
+        due_total: occurrences.select { |o| o.due_on.between?(period.starts_on, period.ends_on) }
+                              .sum { |o| o.resolved_expected_amount.abs }
+      }
+    end
+  end
+
+  # The month bar reads paid | overdue | still to come. Overdue money is a
+  # subset of what remains, so the slices are derived rather than three
+  # independent totals.
+  def bills_month_progress(paid:, remaining:, overdue:)
+    paid = paid.to_f
+    remaining = remaining.to_f
+    total = paid + remaining
+
+    paid_pct = total.positive? ? (paid / total * 100) : 0
+    overdue_pct = total.positive? ? ([ overdue.to_f, remaining ].min / total * 100) : 0
+
+    {
+      total: total,
+      paid_pct: paid_pct,
+      overdue_pct: overdue_pct,
+      upcoming_pct: [ 100 - paid_pct - overdue_pct, 0 ].max
+    }
+  end
+
+  # What the matcher has learned from manual corrections, prepared for display:
+  # Allocator#learn_from_manual_attach! writes both values and until they were
+  # surfaced the bill quietly widened what it would match without saying so.
+  def bills_matcher_hints(series)
+    {
+      aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
+      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f
+    }
+  end
+
+  # The paycheck plan split into what the page renders: the leading no-income
+  # bridge window (reported above the timeline, never inside it), the real
+  # periods, and which of the two bridge states applies -- short earns the
+  # warning, covered-with-items earns the quiet strip.
+  def paycheck_plan_sections(plan)
+    return {} if plan.blank?
+
+    bridge = plan.find(&:bridge?)
+
+    {
+      bridge: bridge,
+      periods: plan.reject(&:bridge?),
+      shortfall: bridge&.short? ? bridge : nil,
+      bridge_note: bridge && !bridge.short? && bridge.items.any? ? bridge : nil
+    }
+  end
+
+  # Which bills a transaction paid, prepared for the transaction drawer.
+  # Preview-gated with the rest of the bills surface: bill links would
+  # dead-end for users without the flag.
+  def entry_bill_allocations(entry)
+    return [] unless preview_features_enabled?
+
+    entry.recurring_allocations
+         .includes(recurring_occurrence: :recurring_transaction)
+         .reject { |allocation| allocation.recurring_occurrence.nil? }
+  end
+
   # The paycheck split into `[key, percent]` pairs; the caller owns the colours.
   # A short period gets two segments (covered / short) rather than three, since
   # there is no safe slice to draw.

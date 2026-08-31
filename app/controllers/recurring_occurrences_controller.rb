@@ -40,7 +40,9 @@ class RecurringOccurrencesController < ApplicationController
     until_date = Date.parse(params.require(:until))
     @occurrence.snooze!(until_date)
     redirect_after_action t(".success", date: l(until_date, format: :long))
-  rescue ArgumentError
+  # TypeError covers non-scalar params (until[]=...), which Date.parse raises
+  # on before ArgumentError gets a chance; both are the same user mistake.
+  rescue ArgumentError, TypeError
     redirect_after_action t(".invalid_date"), alert: true
   end
 

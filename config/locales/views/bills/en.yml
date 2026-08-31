@@ -9,6 +9,8 @@ en:
         other: Found %{count} possible bills. Review them below.
       none_found: No new recurring patterns found. You can add bills by hand.
       already_running: Detection is already running. Check back in a moment.
+    feed:
+      calendar_name: Sure Bills
     ai_prompts:
       due_before_paycheck: What's due before my next paycheck?
       subscriptions_up: Which subscriptions went up this year?
@@ -39,7 +41,7 @@ en:
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
       rule_aliases: "Also matches %{names}"
-      rule_learned_tolerance: "Amounts within %{percent} of the usual count as this bill"
+      rule_learned_tolerance: "Amounts within %{percent} of the usual amount match this bill"
       history_title: Last 12 months
       history_aria: Payments over the last twelve months
       key_metrics: Per year
@@ -161,7 +163,9 @@ en:
       income_paused: Paused, not planned
       income_detected: Detected automatically, does not set paydays
       income_next_payday: "next %{date}"
-      income_source_count: "%{count} income sources"
+      income_source_count:
+        one: "%{count} income source"
+        other: "%{count} income sources"
       next_on: "Next %{date}"
       no_upcoming_income: No income scheduled from here on.
       empty:

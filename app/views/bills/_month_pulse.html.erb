@@ -7,18 +7,13 @@
     It now reads as one sentence: this month, this much left, this much late,
     this much due soon, and here is what happens next. %>
 
-<%
-  paid = @paid_this_month_total&.amount.to_f
-  remaining = @remaining_this_month&.amount.to_f
-  overdue = @past_due_total&.amount.to_f
-  month_total = paid + remaining
-
-  # Overdue money is a subset of what remains, so the bar reads
-  # paid | overdue | still to come rather than three independent totals.
-  paid_pct = month_total.positive? ? (paid / month_total * 100) : 0
-  overdue_pct = month_total.positive? ? ([ overdue, remaining ].min / month_total * 100) : 0
-  upcoming_pct = [ 100 - paid_pct - overdue_pct, 0 ].max
-%>
+<%# Slice math lives with BillsHelper#bills_month_progress: the bar reads
+    paid | overdue | still to come, overdue being a subset of what remains. %>
+<% progress = bills_month_progress(
+     paid: @paid_this_month_total&.amount,
+     remaining: @remaining_this_month&.amount,
+     overdue: @past_due_total&.amount
+   ) %>
 
 <div class="bg-container rounded-xl shadow-border-xs p-5 space-y-4">
   <div class="flex items-baseline justify-between gap-3">
@@ -55,18 +50,18 @@
   </div>
 
   <%# Progress reports, it does not prompt: a 6px rule, not a centrepiece. %>
-  <% if month_total.positive? %>
+  <% if progress[:total].positive? %>
     <div class="flex h-1.5 rounded-full overflow-hidden bg-surface-inset"
          role="img"
-         aria-label="<%= t(".pulse_bar_aria", percent: paid_pct.round) %>">
-      <% if paid_pct.positive? %>
-        <div class="bg-success" style="width: <%= paid_pct.round(2) %>%"></div>
+         aria-label="<%= t(".pulse_bar_aria", percent: progress[:paid_pct].round) %>">
+      <% if progress[:paid_pct].positive? %>
+        <div class="bg-success" style="width: <%= progress[:paid_pct].round(2) %>%"></div>
       <% end %>
-      <% if overdue_pct.positive? %>
-        <div class="bg-destructive" style="width: <%= overdue_pct.round(2) %>%"></div>
+      <% if progress[:overdue_pct].positive? %>
+        <div class="bg-destructive" style="width: <%= progress[:overdue_pct].round(2) %>%"></div>
       <% end %>
-      <% if upcoming_pct.positive? %>
-        <div class="bg-secondary opacity-30" style="width: <%= upcoming_pct.round(2) %>%"></div>
+      <% if progress[:upcoming_pct].positive? %>
+        <div class="bg-secondary opacity-30" style="width: <%= progress[:upcoming_pct].round(2) %>%"></div>
       <% end %>
     </div>
   <% end %>
