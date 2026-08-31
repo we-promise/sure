@@ -87,8 +87,8 @@ RSpec.describe 'API V1 Loans', type: :request do
     )
   end
 
-  path '/api/v1/accounts/{account_id}/amortization_schedule' do
-    parameter name: :account_id, in: :path, required: true, description: 'Loan Account ID',
+  path '/api/v1/loans/{id}/amortization_schedule' do
+    parameter name: :id, in: :path, required: true, description: 'Loan ID',
               schema: { type: :string, format: :uuid }
     parameter name: :page, in: :query, type: :integer, required: false,
               description: 'Page number (default: 1)'
@@ -100,7 +100,7 @@ RSpec.describe 'API V1 Loans', type: :request do
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
-      let(:account_id) { mortgage_account.id }
+      let(:id) { mortgage_account.accountable.id }
 
       response '200', 'amortization schedule retrieved' do
         schema '$ref' => '#/components/schemas/AmortizationScheduleResponse'
@@ -128,15 +128,15 @@ RSpec.describe 'API V1 Loans', type: :request do
       response '403', 'insufficient permissions' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
-        let(:account_id) { inaccessible_loan_account.id }
+        let(:id) { inaccessible_loan_account.accountable.id }
 
         run_test!
       end
 
-      response '404', 'account not found' do
+      response '404', 'loan not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
-        let(:account_id) { SecureRandom.uuid }
+        let(:id) { SecureRandom.uuid }
 
         run_test!
       end
@@ -144,7 +144,7 @@ RSpec.describe 'API V1 Loans', type: :request do
       response '422', 'loan not amortizable' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
-        let(:account_id) { variable_loan_account.id }
+        let(:id) { variable_loan_account.accountable.id }
 
         run_test!
       end

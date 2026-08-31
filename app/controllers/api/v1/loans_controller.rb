@@ -6,8 +6,8 @@ class Api::V1::LoansController < Api::V1::BaseController
   before_action :ensure_read_scope
   before_action :set_loan, only: [ :amortization_schedule ]
 
-  # GET /api/v1/accounts/:account_id/amortization_schedule
-  # Returns the amortization schedule for a loan account with pagination support
+  # GET /api/v1/loans/:id/amortization_schedule
+  # Returns the amortization schedule for a loan with pagination support
   def amortization_schedule
     unless @loan.amortizable?
       return render json: { error: "not_amortizable", message: "Loan is not amortizable" }, status: :unprocessable_entity
@@ -32,14 +32,13 @@ class Api::V1::LoansController < Api::V1::BaseController
 
   private
 
-  # Load and authorize the loan account, stopping immediately on auth failure
+  # Load and authorize the loan, stopping immediately on auth failure
   def set_loan
-    account = Account.find(params[:account_id])
+    @loan = Loan.find(params[:id])
+    account = @loan.account
     unless authorize_account!(account)
       return render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
     end
-    @loan = account.accountable
-    raise ActiveRecord::RecordNotFound unless @loan.is_a?(Loan)
   rescue ActiveRecord::RecordNotFound
     render json: { error: "not_found", message: "Loan not found" }, status: :not_found
   end

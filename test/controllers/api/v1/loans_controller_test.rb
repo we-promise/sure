@@ -36,7 +36,8 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "returns amortization schedule for fixed rate loan" do
-    get api_v1_account_amortization_schedule_path(@loan_account), headers: api_headers
+    loan = @loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan), headers: api_headers
     assert_response :success
 
     json = JSON.parse(response.body)
@@ -48,7 +49,8 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "returns paginated payments" do
-    get api_v1_account_amortization_schedule_path(@loan_account),
+    loan = @loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan),
         params: { page: 1, per_page: 10 },
         headers: api_headers
     assert_response :success
@@ -59,8 +61,9 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, json["pagination"]["offset"]
   end
 
-  test "returns error for variable rate loan" do
-    get api_v1_account_amortization_schedule_path(@variable_loan_account),
+  test "returns error for variable rate loan without rate schedule" do
+    loan = @variable_loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan),
         headers: api_headers
     assert_response :unprocessable_entity
 
@@ -68,14 +71,29 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "not_amortizable", json["error"]
   end
 
+  test "returns amortization schedule for variable rate loan with rates" do
+    loan = @variable_loan_account.accountable
+    loan.add_variable_rate_change(Date.current - 1.year, 3.5)
+    loan.add_variable_rate_change(Date.current + 1.year, 4.0)
+
+    get api_v1_loan_amortization_schedule_path(loan), headers: api_headers
+    assert_response :success
+
+    json = JSON.parse(response.body)
+    assert json["schedule"].present?
+    assert json["payments"].present?
+  end
+
   test "requires API key authentication" do
-    get api_v1_account_amortization_schedule_path(@loan_account)
+    loan = @loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan)
     assert_response :unauthorized
   end
 
   test "requires read scope" do
     write_only_key = ApiKey.create!(user: @user, permissions: ["write"])
-    get api_v1_account_amortization_schedule_path(@loan_account),
+    loan = @loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan),
         headers: api_headers(write_only_key)
     assert_response :forbidden
   end
@@ -85,13 +103,14 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     other_user = other_family.users.first
     other_api_key = ApiKey.create!(user: other_user, permissions: ["read"])
 
-    get api_v1_account_amortization_schedule_path(@loan_account),
+    loan = @loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan),
         headers: api_headers(other_api_key)
     assert_response :forbidden
   end
 
-  test "returns 404 for non-existent account" do
-    get api_v1_account_amortization_schedule_path("00000000-0000-0000-0000-000000000000"),
+  test "returns 404 for non-existent loan" do
+    get api_v1_loan_amortization_schedule_path("00000000-0000-0000-0000-000000000000"),
         headers: api_headers
     assert_response :not_found
   end
