@@ -3,6 +3,10 @@
 module CoinspotItem::Provided
   extend ActiveSupport::Concern
 
+  # A Provider::Coinspot client authenticated with this connection's stored
+  # credentials, or nil until both are configured. Wires the client's nonce
+  # generator to the item's own monotonic counter so concurrent requests
+  # never reuse a nonce.
   def coinspot_provider
     return nil unless credentials_configured?
 

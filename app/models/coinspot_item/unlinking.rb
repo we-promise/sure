@@ -3,6 +3,12 @@
 module CoinspotItem::Unlinking
   extend ActiveSupport::Concern
 
+  # Detaches every CoinSpot account's link to its Sure account, clearing the
+  # provider reference off any holdings first so they aren't destroyed along
+  # with the link. Returns a per-account result array describing what would
+  # be (or was) unlinked; pass dry_run: true to preview without changing
+  # anything. A single account's unlink failure is captured on its result
+  # and logged rather than aborting the rest.
   def unlink_all!(dry_run: false)
     results = []
     links_by_provider_id = AccountProvider

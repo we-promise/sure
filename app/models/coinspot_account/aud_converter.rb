@@ -3,6 +3,13 @@
 module CoinspotAccount::AudConverter
   private
 
+    # Converts an AUD amount (all CoinSpot activity is reported in AUD) into
+    # the account's target currency using the exchange rate for `date`.
+    # Returns [converted_amount, approximate?, rate_date]: approximate? is
+    # true when no rate exists for the exact date (rate_date nil) or the
+    # nearest available rate came from a different date than requested.
+    # Falls back to the raw AUD amount, flagged approximate, on any failure
+    # rather than raising -- a missing FX rate shouldn't abort an import.
     def convert_from_aud(amount, date:)
       amount = amount.to_d
       target = target_currency.presence || "AUD"

@@ -54,6 +54,39 @@ class Provider::CoinspotTest < ActiveSupport::TestCase
     end
   end
 
+  test "handle response maps a 401 to an authentication error even without a classifiable message" do
+    response = mock_httparty_response(401, { "status" => "error", "message" => "unavailable" })
+
+    assert_raises(Provider::Coinspot::AuthenticationError) do
+      @provider.send(:handle_response, response)
+    end
+  end
+
+  test "handle response maps a 403 to a permission error even without a classifiable message" do
+    response = mock_httparty_response(403, { "status" => "error", "message" => "unavailable" })
+
+    assert_raises(Provider::Coinspot::PermissionError) do
+      @provider.send(:handle_response, response)
+    end
+  end
+
+  test "handle response maps a non-2xx response with a classifiable message even at a non-401/403 status" do
+    response = mock_httparty_response(400, { "message" => "Invalid key or signature" })
+
+    assert_raises(Provider::Coinspot::AuthenticationError) do
+      @provider.send(:handle_response, response)
+    end
+  end
+
+  test "handle response falls back to a generic api error for a non-2xx response with no body" do
+    response = mock_httparty_response(502, nil)
+
+    error = assert_raises(Provider::Coinspot::ApiError) do
+      @provider.send(:handle_response, response)
+    end
+    assert_match(/502/, error.message)
+  end
+
   test "handle response rejects malformed payloads" do
     response = mock_httparty_response(200, [ "not", "a", "hash" ])
 
