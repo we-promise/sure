@@ -1455,6 +1455,45 @@ timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 
+#### Verifying Worker Configuration
+
+The checks above all run from the `web` process. Most AI work — assistant
+responses, PDF processing, embeddings, auto-categorization, and merchant
+detection — actually executes in a Sidekiq `worker` process, which can differ
+from `web` in network access, DNS, proxy rules, or even which credentials it
+loaded, especially in Kubernetes deployments using workload-specific overrides
+or a Secret updated without a pod restart. A passing web check does not prove
+a worker can reach the same provider.
+
+Click **Verify worker configuration** on the AI status tab to queue an
+asynchronous check (`WorkerAiHealthCheckJob`). It runs the same live probes
+from inside whichever worker process dequeues it, and the tab lists the
+result: that worker's process identity, when it checked, whether its
+effective configuration matches what `web` resolved, and probe outcomes.
+
+A few things this does and doesn't prove:
+
+- **One check verifies one worker.** Sidekiq doesn't broadcast a job to every
+  process, so a passing result confirms the process named on it is healthy —
+  not your whole fleet. With multiple worker replicas, queue the check again
+  to sample another; each distinct process's most recent result is kept for a
+  few minutes (`WorkerAiHealth::RETENTION`), and a result older than
+  `WorkerAiHealth::STALE_AFTER` displays as **Stale** rather than pass/fail.
+- **Worker checks never reuse a web-cached result, or vice versa.** The web
+  page's probes are cached briefly (see above) so repeat page loads don't
+  re-hit providers; the worker job deliberately bypasses that shared cache so
+  its result always reflects a live call from its own network context, and
+  never leaves an entry a web request could read back as if it had checked
+  itself.
+- **Which settings need a restart depends on how they're set.** Provider,
+  model, and API-key settings changed in **Settings → Self-Hosting** are
+  stored in the database and take effect automatically for the next request
+  or queued job on both `web` and `worker` — no restart needed. Embedding
+  configuration, and anything only set through an environment variable, is
+  fixed when each container starts; changing it requires restarting or
+  recreating **both** `web` and `worker`. The AI status tab labels this
+  distinction next to the worker results.
+
 You can also check the adapter from the Rails console:
 
 ```ruby
