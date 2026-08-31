@@ -3,7 +3,7 @@ class Assistant::Function::UpdateAccount < Assistant::Function
     def name = "update_account"
 
     def description
-      "Updates a writable Sure account. Use get_accounts first to find an id with writable=true."
+      "Updates a writable Sure account. Use get_accounts for the id and get_account_types before changing subtype."
     end
   end
 
@@ -15,6 +15,7 @@ class Assistant::Function::UpdateAccount < Assistant::Function
       properties: {
         id: { type: "string", description: "Account ID from get_accounts" },
         name: { type: "string", description: "New account name" },
+        subtype: { type: [ "string", "null" ], description: "New subtype from get_account_types for the current account type, or null to clear" },
         balance: { type: "number", description: "New current balance in major currency units" },
         currency: { type: "string", description: "New ISO 4217 currency code" },
         notes: { type: [ "string", "null" ], description: "New notes, or null to clear" },
@@ -27,8 +28,13 @@ class Assistant::Function::UpdateAccount < Assistant::Function
     account = find_account(params["id"])
     return error("not_found", "Writable account not found.") unless account
 
-    changed_fields = params.keys & %w[name balance currency notes exclude_from_reports]
+    changed_fields = params.keys & %w[name subtype balance currency notes exclude_from_reports]
     return error("no_changes", "Provide at least one field to update.") if changed_fields.empty?
+
+    subtype = params["subtype"].presence
+    if params.key?("subtype") && (message = subtype_validation_message(account.accountable.class, subtype))
+      return error("invalid_subtype", message)
+    end
 
     balance_error = nil
 
@@ -46,6 +52,7 @@ class Assistant::Function::UpdateAccount < Assistant::Function
 
       attrs = {}
       attrs[:name] = params["name"].to_s.strip if params.key?("name")
+      attrs[:subtype] = subtype if params.key?("subtype")
       attrs[:currency] = params["currency"].to_s.upcase if params.key?("currency")
       attrs[:notes] = params["notes"] if params.key?("notes")
       attrs[:exclude_from_reports] = params["exclude_from_reports"] if params.key?("exclude_from_reports")
@@ -60,6 +67,7 @@ class Assistant::Function::UpdateAccount < Assistant::Function
       success: true,
       account: {
         id: account.id, name: account.name, balance: account.balance,
+        subtype: account.subtype,
         currency: account.currency, notes: account.notes,
         exclude_from_reports: account.exclude_from_reports
       },

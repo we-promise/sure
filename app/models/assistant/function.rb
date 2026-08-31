@@ -115,6 +115,23 @@ class Assistant::Function
       UuidFormat.valid?(str)
     end
 
+    def account_subtypes_for(accountable_class)
+      accountable_class.const_defined?(:SUBTYPES) ? accountable_class::SUBTYPES.keys : []
+    end
+
+    def subtype_validation_message(accountable_class, subtype)
+      return if subtype.blank?
+
+      allowed_subtypes = account_subtypes_for(accountable_class)
+      return if allowed_subtypes.include?(subtype)
+
+      if allowed_subtypes.any?
+        "subtype must be one of: #{allowed_subtypes.join(", ")} for #{accountable_class.name}."
+      else
+        "#{accountable_class.name} does not support subtypes."
+      end
+    end
+
     # To save tokens, we provide the AI metadata about the series and a flat
     # array of raw numeric values it can infer dates from. Currency is stated
     # once here instead of formatting every value; the system prompt's

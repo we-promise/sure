@@ -30,13 +30,7 @@ class Assistant::Function::CreateAccount < Assistant::Function
     return error("invalid_account_type", "account_type must be one of: #{Accountable::TYPES.join(", ")}.") unless accountable_class
 
     subtype = params["subtype"].presence
-    allowed_subtypes = accountable_class.const_defined?(:SUBTYPES) ? accountable_class::SUBTYPES.keys : []
-    if subtype && !allowed_subtypes.include?(subtype)
-      message = if allowed_subtypes.any?
-        "subtype must be one of: #{allowed_subtypes.join(", ")} for #{accountable_class.name}."
-      else
-        "#{accountable_class.name} does not support subtypes."
-      end
+    if (message = subtype_validation_message(accountable_class, subtype))
       return error("invalid_subtype", message)
     end
 

@@ -3,7 +3,7 @@ class Assistant::Function::GetAccountTypes < Assistant::Function
     def name = "get_account_types"
 
     def description
-      "Lists every Sure account type and the valid subtype values accepted by create_account."
+      "Lists every Sure account type and the valid subtype values accepted by create_account and update_account."
     end
   end
 
@@ -15,7 +15,7 @@ class Assistant::Function::GetAccountTypes < Assistant::Function
     {
       account_types: Accountable::TYPES.map do |type|
         accountable_class = Accountable.from_type(type)
-        subtypes = accountable_class.const_defined?(:SUBTYPES) ? accountable_class::SUBTYPES.keys : []
+        subtypes = account_subtypes_for(accountable_class)
 
         { type: type, subtypes: subtypes }
       end

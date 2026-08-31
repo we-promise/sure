@@ -70,6 +70,34 @@ class Assistant::Function::AccountActionsTest < ActiveSupport::TestCase
     assert account.exclude_from_reports?
   end
 
+  test "updates a writable manual account subtype from discovery" do
+    account = accounts(:depository)
+    function = Assistant::Function::UpdateAccount.new(@user)
+
+    assert_includes function.params_schema.dig(:properties, :subtype, :description), "get_account_types"
+
+    result = function.call("id" => account.id, "subtype" => "savings")
+
+    assert_equal true, result[:success]
+    assert_equal "savings", result.dig(:account, :subtype)
+    assert_equal "savings", account.reload.subtype
+  end
+
+  test "rejects an invalid subtype without changing the account" do
+    account = accounts(:depository)
+    original_subtype = account.subtype
+
+    result = Assistant::Function::UpdateAccount.new(@user).call(
+      "id" => account.id,
+      "subtype" => "brokerage"
+    )
+
+    assert_equal false, result[:success]
+    assert_equal "invalid_subtype", result[:error]
+    Depository::SUBTYPES.each_key { |subtype| assert_includes result[:message], subtype }
+    assert_equal original_subtype, account.reload.subtype
+  end
+
   test "schedules a manual account for deletion" do
     account = accounts(:depository)
     function = Assistant::Function::DeleteAccount.new(@user)
