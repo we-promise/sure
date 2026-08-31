@@ -680,8 +680,10 @@ class EnableBankingItem::Importer
     # differently (case-only differences, an extra order reference on the
     # cardholder's row, character substitutions), so including it would leave
     # genuine pairs unmatched. remittance_information, merchant_category_code and
-    # transaction_id are excluded because the ASPSPs that exhibit this behaviour
-    # do not populate them.
+    # transaction_id are excluded because an ASPSP that double-books need not
+    # populate them (N26 leaves transaction_id and merchant_category_code empty and
+    # fills remittance_information on roughly 1% of rows), so keying on any of them
+    # would break the pairing.
     def build_card_twin_key(tx)
       booking_date = tx[:booking_date]
       value_date = tx[:value_date]

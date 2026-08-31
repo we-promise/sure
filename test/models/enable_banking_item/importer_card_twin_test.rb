@@ -1,7 +1,7 @@
 require "test_helper"
 
-# N26 (and other ASPSPs exposing ISO 20022 bank transaction codes through
-# Enable Banking) emit *two* booked entries for a single card purchase:
+# An ASPSP exposing ISO 20022 bank transaction codes through Enable Banking can
+# emit *two* booked entries for a single card purchase (N26 does):
 # one from the cardholder's point of view (PMNT-CCRD-POSD) and one from the
 # merchant's point of view (PMNT-MCRD-UPCT). Both carry status BOOK and their
 # own entry_reference, so neither the pending->booked reconciliation nor the
