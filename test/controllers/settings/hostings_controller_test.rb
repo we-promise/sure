@@ -617,6 +617,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_request_timeout = nil
   end
 
+  test "shows environment backed OpenAI request timeout when field is disabled" do
+    with_self_hosting do
+      Setting.openai_request_timeout = 180
+
+      with_env_overrides("OPENAI_REQUEST_TIMEOUT" => "300") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name='setting[openai_request_timeout]'][value='300'][disabled='disabled']"
+      end
+    end
+  ensure
+    Setting.openai_request_timeout = nil
+  end
+
   test "can clear data only when admin" do
     with_self_hosting do
       sign_in users(:family_member)

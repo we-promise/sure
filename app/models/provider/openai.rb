@@ -20,6 +20,8 @@ class Provider::Openai < Provider
     ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
+  # Effective per-request HTTP timeout for OpenAI-compatible calls.
+  # Precedence matches other self-hosting settings: ENV > Setting > default.
   def self.request_timeout
     configured = ENV["OPENAI_REQUEST_TIMEOUT"].to_s.strip.to_i
     configured = Setting.openai_request_timeout.to_i unless configured.positive?
@@ -28,6 +30,7 @@ class Provider::Openai < Provider
     [ configured, MIN_REQUEST_TIMEOUT ].max
   end
 
+  # Builds a client that uses the effective request timeout for every OpenAI call.
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
