@@ -79,7 +79,7 @@ class Loan
 
     # Get the monthly payment amount (initial payment for variable-rate loans)
     def monthly_payment
-      return Money.new(0, currency) unless amortizable?
+      return nil unless amortizable?
 
       principal = loan.original_balance.amount
       start_date = loan.start_date || loan.account.opening_anchor_date
@@ -142,9 +142,8 @@ class Loan
           segment[:payment_count].times do
             break if balance <= 0
 
-            # Recalculate rate at this payment date in case it changed
-            current_rate = get_rate_at_date(current_date)
-            annual_rate = current_rate / 100.0
+            # Use the rate already computed for this segment
+            annual_rate = segment[:rate] / 100.0
             monthly_rate = annual_rate / 12.0
 
             interest = (balance * monthly_rate).round(currency_precision)
@@ -206,7 +205,12 @@ class Loan
 
         change_dates.each do |change_date|
           if change_date > current
-            payment_count = ((change_date - current) / 1.month).to_i
+            payment_count = 0
+            temp_date = current
+            while temp_date < change_date
+              payment_count += 1
+              temp_date = temp_date.next_month
+            end
             segments << {
               rate: get_rate_at_date(current),
               start_date: current,
