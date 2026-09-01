@@ -2,7 +2,10 @@
 
 class CoinspotItemsController < ApplicationController
   before_action :set_coinspot_item, only: %i[update destroy sync setup_accounts complete_account_setup]
-  before_action :require_admin!, only: %i[create select_accounts link_accounts select_existing_account link_existing_account update destroy sync setup_accounts complete_account_setup]
+  before_action :require_admin!, only: %i[
+    create select_accounts link_accounts select_existing_account link_existing_account
+    update destroy sync setup_accounts complete_account_setup
+  ]
 
   # Creates a new CoinSpot connection from the settings panel form, sets its
   # institution branding, and queues the first sync.
@@ -245,7 +248,9 @@ class CoinspotItemsController < ApplicationController
     # Also returns every credentialed connection, for the selection prompt
     # when the target is ambiguous.
     def coinspot_item_account_flow_context
-      credentialed_items = Current.family.coinspot_items.active.credentials_configured.ordered.select(&:credentials_configured?)
+      credentialed_items = Current.family.coinspot_items
+        .active.credentials_configured.ordered
+        .select(&:credentials_configured?)
       item = if params[:coinspot_item_id].present?
         credentialed_items.find { |candidate| candidate.id.to_s == params[:coinspot_item_id].to_s }
       elsif credentialed_items.one?
