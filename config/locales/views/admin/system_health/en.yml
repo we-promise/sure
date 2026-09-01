@@ -42,6 +42,12 @@ en:
             custom_openai:
               title: The hosted vector-store check failed at this custom endpoint
               message: The configured endpoint did not pass the /v1/vector_stores liveness check. Most local and OpenAI-compatible endpoints do not implement that API. Chat and PDF processing may still work; use pgvector with a separate embeddings endpoint for the usual local setup. The failure was recorded in Settings → Debug logs and Rails.logger.
+            function_calling_unsupported:
+              title: The model does not support function calling
+              message: The endpoint served a plain chat request but rejected the same request carrying the tools parameter. The AI assistant reads accounts, transactions, and holdings through function calls, so chat keeps failing — often with an unhelpful 404 — until the model is one that supports tools. Pick a model whose provider documents function-calling support. The failure was recorded in Settings → Debug logs and Rails.logger.
+            function_calling_not_used:
+              title: The model answered without calling the tool it was asked to call
+              message: The endpoint accepted the tools parameter, but the model replied with text instead of calling the health-check tool. The AI assistant cannot read financial data without tool calls, so chat may answer with nothing or with invented figures. Prefer a model whose provider documents function-calling support.
             llm_probe_failed:
               title: The LLM live check failed
               message: Sure could not verify both the configured endpoint and model. The failure was recorded in Settings → Debug logs and Rails.logger.
@@ -65,7 +71,7 @@ en:
               message: Check the adapter requirements below. For pgvector, the database must provide the vector extension or an existing vector_store_chunks table.
           llm:
             title: LLM and PDF processing
-            description: The live checks verify the configured model, then separately exercise text extraction and vision/native processing with a one-page synthetic PDF containing no customer data. Credential values are never displayed.
+            description: The live checks verify the configured model, ask it for one trivial function call the way the assistant does, then separately exercise text extraction and vision/native processing with a one-page synthetic PDF containing no customer data. Credential values are never displayed.
           vector_store:
             title: Vector store and document search
             description: The live check queries the hosted vector-store API, or tests the pgvector table and creates one short embedding without storing it.
@@ -74,9 +80,11 @@ en:
             effective_provider: Effective provider
             model: Model
             endpoint: Endpoint
+            function_calling: Function calling (tools)
             pdf_text_extraction: PDF text-extraction path
             pdf_vision_processing: PDF vision/native path
-            request_timeout: Request timeout
+            llm_request_timeout: LLM request timeout
+            probe_request_timeout: Health-check probe timeout
             openai_credentials: OpenAI credentials
             openai_compatible_credentials: OpenAI-compatible API credentials
             anthropic_credentials: Anthropic credentials
@@ -87,6 +95,7 @@ en:
             embedding_model: Embedding model
             embedding_endpoint: Embedding endpoint
             embedding_dimensions: Embedding dimensions
+            function_calling_failure_reason: Function-calling failure reason
             pdf_text_extraction_failure_reason: Text-extraction failure reason
             pdf_vision_processing_failure_reason: Vision/native failure reason
             storage_probe: pgvector storage check
@@ -118,6 +127,13 @@ en:
             not_available: Not available
             available: Available
             not_found: Not found
+          function_calling_statuses:
+            supported: Live tool call succeeded
+            unsupported: Not supported by the effective provider/model
+            not_used: Tools accepted, but the model called none
+            failing: Live check failed
+            not_checked: Not checked
+            unavailable: Unavailable until an LLM provider is configured
           pdf_statuses:
             supported: Synthetic PDF check passed
             failing: Synthetic PDF check failed
@@ -138,10 +154,13 @@ en:
             missing: Not configured
           failure_codes:
             model_not_available: The configured model was not returned by the provider
+            no_tool_call: The model answered without calling the health-check tool
+            tools_refused: The service served the same request without tools and refused it with them
             invalid_response: The service returned an unexpected response
             dimensions_mismatch: The embedding vector dimensions do not match the configured dimensions
             extension_not_enabled: The PostgreSQL vector extension is not enabled
             table_not_found: The vector_store_chunks table was not found
+            render_missing_binary: The pdftoppm renderer (poppler-utils) is not available in this container
             timeout: The service did not respond before the probe timeout
             request_failed: The service request failed
             unsupported_provider: The provider does not support this check
