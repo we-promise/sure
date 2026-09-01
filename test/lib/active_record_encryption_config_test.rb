@@ -192,4 +192,16 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
 
     refute ActiveRecordEncryptionConfig.backfill_completed?
   end
+
+  test "backfill_completed? does not deserialize disallowed Ruby objects from the stored value (CWE-502)" do
+    # Regression test for using YAML.unsafe_load/YAML.load on this raw,
+    # attacker-reachable DB value (compromised DB credentials, SQLi
+    # elsewhere, a bad manual edit): a crafted YAML payload naming an
+    # arbitrary Ruby class must be rejected by safe_load's default
+    # permitted-classes check, not instantiated.
+    malicious_yaml = "--- !ruby/object:OpenStruct {}\n"
+    ActiveRecord::Base.connection.stubs(:select_value).returns(malicious_yaml)
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
 end

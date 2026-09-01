@@ -268,7 +268,16 @@ module ActiveRecordEncryptionConfig
     )
     return false if raw_value.nil?
 
-    stored_version = YAML.respond_to?(:unsafe_load) ? YAML.unsafe_load(raw_value) : YAML.load(raw_value)
+    # safe_load, not unsafe_load/load: raw_value comes from a raw SQL read of
+    # a DB row (see comment above - this deliberately bypasses the Setting
+    # model), so it must be treated as untrusted input. unsafe_load can
+    # instantiate arbitrary Ruby objects from crafted YAML (CWE-502); anyone
+    # who can write to this row (compromised DB credentials, SQLi elsewhere,
+    # a bad manual edit) could otherwise get code execution at boot. The
+    # value is always a plain serialized Integer, which Psych's default
+    # safe_load permitted classes (Numeric, String, ...) already cover -
+    # no permitted_classes/aliases expansion needed.
+    stored_version = YAML.safe_load(raw_value)
     return false unless stored_version.is_a?(Integer)
 
     stored_version >= required_version
