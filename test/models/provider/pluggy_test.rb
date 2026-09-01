@@ -92,10 +92,10 @@ class Provider::PluggyTest < ActiveSupport::TestCase
     end
   end
 
-  # Pluggy's avoidDuplicates=false allows re-binding an orphaned upstream item
-  # after local data loss (e.g. Docker volume wipe). CREATE mode (item_id nil)
-  # uses false to enable this recovery; UPDATE mode (item_id present) uses true
-  # to prevent duplicate connections for the same institution.
+  # Pluggy's avoidDuplicates=false permits creating a new Item even when the
+  # same credentials already have one (Pluggy does NOT re-bind orphaned items).
+  # CREATE mode (item_id nil) uses false to enable this; UPDATE mode (item_id
+  # present) uses true to prevent duplicate connections for the same institution.
   # Uses mocha's `regexp_matches` (not a bare /regex/) for the `body:` kwarg
   # so the matcher machinery — not bare-Regexp detection — handles kwargs
   # (same path as the `kind_of(String)` /connect_token stub above at l75).

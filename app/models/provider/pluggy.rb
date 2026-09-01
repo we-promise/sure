@@ -122,8 +122,9 @@ class Provider::Pluggy
     # so they inherit the cached-key + 401 retry seam.
     #
     # Derive `avoidDuplicates` from `item_id` presence:
-    # - CREATE mode (item_id nil): avoidDuplicates = false (allows Pluggy to re-bind
-    #   an orphaned upstream item after local data loss, e.g. Docker volume wipe)
+    # - CREATE mode (item_id nil): avoidDuplicates = false (permits Pluggy to create
+    #   a new Item even if the same credentials already have one; does NOT re-bind
+    #   an orphaned upstream item — Pluggy does not support that)
     # - UPDATE mode (item_id present): avoidDuplicates = true (prevents duplicate
     #   connections for the same institution)
     def connect_token(client_id:, client_secret:, client_user_id:, webhook_url:, redirect_url:, avoid_duplicates: nil, item_id: nil)

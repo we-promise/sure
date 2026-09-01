@@ -13,42 +13,8 @@
     </div>
   <% end %>
 
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium"><%= t("pluggy_items.panel.setup_instructions") %></p>
-    <ol>
-      <li><%= t("pluggy_items.panel.step_1") %></li>
-      <li><%= t("pluggy_items.panel.step_2") %></li>
-      <li><%= t("pluggy_items.panel.step_3") %></li>
-    </ol>
-
-    <p class="text-primary font-medium"><%= t("pluggy_items.panel.field_descriptions") %></p>
-    <ul>
-      <li><strong><%= t("pluggy_items.panel.fields.client_id.label") %>:</strong> <%= t("pluggy_items.panel.fields.client_id.description") %> <%= t("pluggy_items.panel.required") %></li>
-      <li><strong><%= t("pluggy_items.panel.fields.client_secret.label") %>:</strong> <%= t("pluggy_items.panel.fields.client_secret.description") %> <%= t("pluggy_items.panel.required") %></li>
-    </ul>
-  </div>
-
-  <% error_msg = local_assigns[:error_message] || @error_message %>
-  <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
-      <div class="flex items-start gap-1.5">
-        <%# DS::Tooltip replaces the raw title= hover affordance flagged by DS
-            Drift Patrol — the full error is revealed on hover/focus via the
-            Stimulus tooltip controller (keyboard + touch parity), while the
-            clamped <p> keeps the actionable message visible in this setup
-            panel. %>
-        <%= render DS::Tooltip.new(text: error_msg, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
-        <p class="line-clamp-3"><%= error_msg %></p>
-      </div>
-    </div>
-    <p class="text-xs text-secondary flex items-start gap-1.5">
-      <%= icon("alert-triangle", class: "w-3.5 h-3.5 mt-0.5 shrink-0") %>
-      <span><%= t("pluggy_items.panel.error_retry_hint") %></span>
-    </p>
-  <% end %>
-
   <% unless PluggyItem.encryption_ready? %>
-    <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
+    <div class="p-4 rounded-md bg-warning/10 text-warning text-sm">
       <div class="flex items-start gap-2">
         <%= icon "shield-alert", size: "sm", class: "mt-0.5 shrink-0" %>
         <div>
@@ -57,36 +23,68 @@
         </div>
       </div>
     </div>
-  <% end %>
+  <% else %>
+    <div class="prose prose-sm text-secondary">
+      <p class="text-primary font-medium"><%= t("pluggy_items.panel.setup_instructions") %></p>
+      <ol>
+        <li><%= t("pluggy_items.panel.step_1") %></li>
+        <li><%= t("pluggy_items.panel.step_2") %></li>
+        <li><%= t("pluggy_items.panel.step_3") %></li>
+      </ol>
 
-  <%
-    # Prefer editing the active/connected record to avoid writing credentials
-    # into a stale PluggyItem that has no `pluggy_item_id`.
-    pluggy_item = Current.family.pluggy_items.where.not(pluggy_item_id: [nil, ""]).ordered.first ||
-                 Current.family.pluggy_items.where.not(client_id: [nil, ""]).ordered.first ||
-                 Current.family.pluggy_items.build(name: "Pluggy Connection")
-    is_new_record = !pluggy_item.persisted?
-  %>
+      <p class="text-primary font-medium"><%= t("pluggy_items.panel.field_descriptions") %></p>
+      <ul>
+        <li><strong><%= t("pluggy_items.panel.fields.client_id.label") %>:</strong> <%= t("pluggy_items.panel.fields.client_id.description") %> <%= t("pluggy_items.panel.required") %></li>
+        <li><strong><%= t("pluggy_items.panel.fields.client_secret.label") %>:</strong> <%= t("pluggy_items.panel.fields.client_secret.description") %> <%= t("pluggy_items.panel.required") %></li>
+      </ul>
+    </div>
 
-  <%# Credential form — always visible, mirroring the Questrade "re-arm token"
-      panel. Previously this lived in the `else` of `@connect_token.present?`,
-      which hid the "Update Configuration" form once credentials were saved
-      (prepare_show_context always mints a connect token for a credentialed
-      family), leaving no way to change client_id/client_secret. Now the widget
-      box below is the connect/re-auth trigger and this form is the
-      credential-update affordance — both rendering together. PATCHes the
-      existing credentialed PluggyItem (is_new_record=false) via
-      pluggy_item_path, which PluggyItemsController#update supports.
+    <% error_msg = local_assigns[:error_message] || @error_message %>
+    <% if error_msg.present? %>
+      <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+        <div class="flex items-start gap-1.5">
+          <%# DS::Tooltip replaces the raw title= hover affordance flagged by DS
+              Drift Patrol — the full error is revealed on hover/focus via the
+              Stimulus tooltip controller (keyboard + touch parity), while the
+              clamped <p> keeps the actionable message visible in this setup
+              panel. %>
+          <%= render DS::Tooltip.new(text: error_msg, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+          <p class="line-clamp-3"><%= error_msg %></p>
+        </div>
+      </div>
+      <p class="text-xs text-secondary flex items-start gap-1.5">
+        <%= icon("alert-triangle", class: "w-3.5 h-3.5 mt-0.5 shrink-0") %>
+        <span><%= t("pluggy_items.panel.error_retry_hint") %></span>
+      </p>
+    <% end %>
 
-      BOTH `client_id` and `client_secret` use `password_field` (NOT
-      `text_field ... type: :password`) so the decrypted credentials are NEVER
-      written into the field's `value=` attribute — `text_field` populates the
-      value from the model and leaks the plaintext into the DOM even when
-      masked, while `password_field` renders no value. The paired controller
-      update path skips a blank `client_secret` so leaving the field blank
-      preserves the stored credential (see PluggyItemsController#update). %>
-  <!-- Credential-First Flow (dev/sandbox) -->
-  <% if PluggyItem.encryption_ready? %>
+    <%
+      # Prefer editing the active/connected record to avoid writing credentials
+      # into a stale PluggyItem that has no `pluggy_item_id`.
+      pluggy_item = Current.family.pluggy_items.where.not(pluggy_item_id: [nil, ""]).ordered.first ||
+                   Current.family.pluggy_items.where.not(client_id: [nil, ""]).ordered.first ||
+                   Current.family.pluggy_items.build(name: "Pluggy Connection")
+      is_new_record = !pluggy_item.persisted?
+    %>
+
+    <%# Credential form — always visible, mirroring the Questrade "re-arm token"
+        panel. Previously this lived in the `else` of `@connect_token.present?`,
+        which hid the "Update Configuration" form once credentials were saved
+        (prepare_show_context always mints a connect token for a credentialed
+        family), leaving no way to change client_id/client_secret. Now the widget
+        box below is the connect/re-auth trigger and this form is the
+        credential-update affordance — both rendering together. PATCHes the
+        existing credentialed PluggyItem (is_new_record=false) via
+        pluggy_item_path, which PluggyItemsController#update supports.
+
+        BOTH `client_id` and `client_secret` use `password_field` (NOT
+        `text_field ... type: :password`) so the decrypted credentials are NEVER
+        written into the field's `value=` attribute — `text_field` populates the
+        value from the model and leaks the plaintext into the DOM even when
+        masked, while `password_field` renders no value. The paired controller
+        update path skips a blank `client_secret` so leaving the field blank
+        preserves the stored credential (see PluggyItemsController#update). %>
+    <!-- Credential-First Flow (dev/sandbox) -->
     <%= styled_form_with model: pluggy_item,
                           url: is_new_record ? pluggy_items_path : pluggy_item_path(pluggy_item),
                           scope: :pluggy_item,
@@ -109,79 +107,79 @@
       ) %>
     </div>
     <% end %>
-  <% end %>
 
-  <% if @connect_token.present? %>
-    <!-- Pluggy Connect Widget Flow -->
-    <div class="space-y-4">
-      <div class="p-4 bg-primary/5 rounded-lg border border-primary">
-        <h3 class="text-sm font-medium text-primary mb-2"><%= t("pluggy_items.panel.connect_widget_title") %></h3>
-        <p class="text-sm text-secondary mb-4"><%= t("pluggy_items.panel.connect_widget_description") %></p>
-        <div
-          data-controller="pluggy"
-          data-pluggy-connect-token-value="<%= @connect_token %>"
-          data-pluggy-is-update-value="<%= @connect_item&.pluggy_item_id.present? %>"
-          data-pluggy-item-id-value="<%= @connect_item&.pluggy_item_id || "" %>"
-          data-pluggy-record-id-value="<%= @connect_item&.id || "" %>">
-          <%= render DS::Button.new(
-            text: t("pluggy_items.panel.connect_widget_button"),
-            icon: "link",
-            variant: "primary",
-            type: "button",
-            data: { action: "click->pluggy#open" }
-          ) %>
-          <p class="text-xs text-secondary mt-2"><%= t("pluggy_items.panel.connect_widget_note") %></p>
+    <% if @connect_token.present? %>
+      <!-- Pluggy Connect Widget Flow -->
+      <div class="space-y-4">
+        <div class="p-4 bg-primary/5 rounded-lg border border-primary">
+          <h3 class="text-sm font-medium text-primary mb-2"><%= t("pluggy_items.panel.connect_widget_title") %></h3>
+          <p class="text-sm text-secondary mb-4"><%= t("pluggy_items.panel.connect_widget_description") %></p>
+          <div
+            data-controller="pluggy"
+            data-pluggy-connect-token-value="<%= @connect_token %>"
+            data-pluggy-is-update-value="<%= @connect_item&.pluggy_item_id.present? %>"
+            data-pluggy-item-id-value="<%= @connect_item&.pluggy_item_id || "" %>"
+            data-pluggy-record-id-value="<%= @connect_item&.id || "" %>">
+            <%= render DS::Button.new(
+              text: t("pluggy_items.panel.connect_widget_button"),
+              icon: "link",
+              variant: "primary",
+              type: "button",
+              data: { action: "click->pluggy#open" }
+            ) %>
+            <p class="text-xs text-secondary mt-2"><%= t("pluggy_items.panel.connect_widget_note") %></p>
+          </div>
         </div>
       </div>
+    <% end %>
+
+    <% items = local_assigns[:pluggy_items] || @pluggy_items || Current.family.pluggy_items.where.not(client_id: [nil, ""]) %>
+    <% credentials_configured = items&.any? %>
+    <% connected = items&.any? { |item| item.attributes["pluggy_item_id"].present? } %>
+    <div class="flex items-center gap-2">
+      <% if connected %>
+        <div class="w-2 h-2 bg-success rounded-full self-start mt-1.5"></div>
+        <div class="flex flex-col gap-2">
+          <p class="text-sm text-secondary"><%= t("pluggy_items.panel.status_connected_html", accounts_path: accounts_path).html_safe %></p>
+          <%# When a connect token is already available the "Open Pluggy Connect"
+              launcher above opens the Pluggy widget directly — no Sure
+              instruction drawer in between. Fall back to this drawer link (which
+              mints a fresh token via connect_form) only when no token is present,
+              e.g. the turbo-stream replace fired right after saving credentials. %>
+          <% if @connect_token.blank? %>
+            <%= render DS::Link.new(
+              text: t("pluggy_items.panel.connect_action"),
+              icon: "link",
+              variant: "secondary",
+              href: connect_form_settings_providers_path(provider_key: "pluggy"),
+              frame: "drawer",
+              data: { turbo_method: :post }
+            ) %>
+          <% end %>
+        </div>
+      <% elsif credentials_configured %>
+        <div class="w-2 h-2 bg-warning rounded-full"></div>
+        <div class="flex flex-col gap-2">
+          <p class="text-sm text-secondary"><%= t("pluggy_items.panel.status_credentials_only") %></p>
+          <%# Same token-presence gate as the connected branch above: the widget
+              launcher is the direct trigger when a token is available; the drawer
+              link only shows when this render has no token (post-credential-save
+              turbo-stream replace). %>
+          <% if @connect_token.blank? %>
+            <%= render DS::Link.new(
+              text: t("pluggy_items.panel.connect_action"),
+              icon: "link",
+              variant: "primary",
+              href: connect_form_settings_providers_path(provider_key: "pluggy"),
+              frame: "drawer",
+              data: { turbo_method: :post }
+            ) %>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+        <p class="text-sm text-secondary"><%= t("pluggy_items.panel.status_not_configured") %></p>
+      <% end %>
     </div>
   <% end %>
-
-  <% items = local_assigns[:pluggy_items] || @pluggy_items || Current.family.pluggy_items.where.not(client_id: [nil, ""]) %>
-  <% credentials_configured = items&.any? %>
-  <% connected = items&.any? { |item| item.attributes["pluggy_item_id"].present? } %>
-  <div class="flex items-center gap-2">
-    <% if connected %>
-      <div class="w-2 h-2 bg-success rounded-full self-start mt-1.5"></div>
-      <div class="flex flex-col gap-2">
-        <p class="text-sm text-secondary"><%= t("pluggy_items.panel.status_connected_html", accounts_path: accounts_path).html_safe %></p>
-        <%# When a connect token is already available the "Open Pluggy Connect"
-            launcher above opens the Pluggy widget directly — no Sure
-            instruction drawer in between. Fall back to this drawer link (which
-            mints a fresh token via connect_form) only when no token is present,
-            e.g. the turbo-stream replace fired right after saving credentials. %>
-        <% if @connect_token.blank? %>
-          <%= render DS::Link.new(
-            text: t("pluggy_items.panel.connect_action"),
-            icon: "link",
-            variant: "secondary",
-            href: connect_form_settings_providers_path(provider_key: "pluggy"),
-            frame: "drawer",
-            data: { turbo_method: :post }
-          ) %>
-        <% end %>
-      </div>
-    <% elsif credentials_configured %>
-      <div class="w-2 h-2 bg-warning rounded-full"></div>
-      <div class="flex flex-col gap-2">
-        <p class="text-sm text-secondary"><%= t("pluggy_items.panel.status_credentials_only") %></p>
-        <%# Same token-presence gate as the connected branch above: the widget
-            launcher is the direct trigger when a token is available; the drawer
-            link only shows when this render has no token (post-credential-save
-            turbo-stream replace). %>
-        <% if @connect_token.blank? %>
-          <%= render DS::Link.new(
-            text: t("pluggy_items.panel.connect_action"),
-            icon: "link",
-            variant: "primary",
-            href: connect_form_settings_providers_path(provider_key: "pluggy"),
-            frame: "drawer",
-            data: { turbo_method: :post }
-          ) %>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t("pluggy_items.panel.status_not_configured") %></p>
-    <% end %>
-  </div>
 </div>

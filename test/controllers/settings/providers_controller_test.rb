@@ -98,7 +98,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     # Regression guard for the ITEM_USER_ALREADY_EXISTS fix. connect_form must NOT
     # pass `avoid_duplicates: true` to the SDK when there is no connected item
     # (CREATE mode); the SDK derives `avoidDuplicates: false` from a blank
-    # `item_id` so a Pluggy-side orphan re-binds instead of 400-ing. mocha's
+    # `item_id` (Pluggy does NOT re-bind orphaned items). mocha's
     # strict kwarg match fails if the controller re-adds `avoid_duplicates: true`
     # (extra kwarg) — staying green requires the controller to OMIT it.
     family = families(:empty)
