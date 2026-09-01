@@ -537,9 +537,15 @@ class Account < ApplicationRecord
     end
 
     # Auto mode: try to fetch from institution or provider
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    if institution_domain.present?
+      # Try Brandfetch first if configured
+      if Setting.brand_fetch_client_id.present?
+        logo_size = Setting.brand_fetch_logo_size
+        return "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+      end
+
+      # Fallback: try favicon.ico directly from the domain
+      favicon_url
     elsif provider&.logo_url.present?
       provider.logo_url
     elsif logo.attached?
@@ -559,13 +565,20 @@ class Account < ApplicationRecord
       # Only fetch if we don't already have a logo attached
       return if logo.attached?
 
-      # Try to fetch from Brandfetch
+      # Try to fetch from Brandfetch first if configured
       if Setting.brand_fetch_client_id.present?
         logo_url = brandfetch_logo_url
         if logo_url.present?
           # Download and attach the logo
           LogoFetcherService.new(account: self, url: logo_url).fetch_and_attach
+          return # Successfully fetched from Brandfetch
         end
+      end
+
+      # Fallback: try to fetch favicon.ico directly from the domain
+      favicon = favicon_url
+      if favicon.present?
+        LogoFetcherService.new(account: self, url: favicon).fetch_and_attach
       end
     end
 
@@ -585,6 +598,12 @@ class Account < ApplicationRecord
 
       logo_size = Setting.brand_fetch_logo_size
       "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    end
+
+    def favicon_url
+      return nil unless institution_domain.present?
+      # Use Google's favicon service as a reliable fallback
+      "https://www.google.com/s2/favicons?domain=#{institution_domain}&sz=128"
     end
 
   public
