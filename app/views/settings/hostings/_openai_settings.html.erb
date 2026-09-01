@@ -48,6 +48,12 @@
                       inputmode: "text",
                       disabled: ENV["OPENAI_MODEL"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1">
+    <%= t(".model_function_calling_help") %>
+    <% if Current.user&.super_admin? %>
+      <%= link_to t(".model_function_calling_link"), admin_system_health_path(tab: "ai"), class: "underline" %>
+    <% end %>
+  </p>
 
   <%= form.select :openai_json_mode,
                   options_for_select(
