@@ -78,6 +78,14 @@ class User < ApplicationRecord
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
   # get the specified admin-capable fallback role.
+  # Keep this one-key advisory lock stable across deploys so old and new app
+  # processes serialize first-user role selection on the same database lock.
+  FIRST_USER_ROLE_LOCK_KEY = 8_391_247
+
+  def self.lock_first_user_role!
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", FIRST_USER_ROLE_LOCK_KEY ]))
+  end
+
   def self.role_for_new_family_creator(fallback_role: :admin)
     fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
 
@@ -218,7 +226,7 @@ class User < ApplicationRecord
   # SSO-only users have OIDC identities but no local password.
   # They cannot use password reset or local login.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil? && oidc_identities.any?
   end
 
   # Check if user has a local password set (can authenticate locally)
@@ -231,23 +239,51 @@ class User < ApplicationRecord
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
+
+  # Super Admin Invariant
+  validate :ensure_not_last_super_admin, if: :losing_super_admin_privileges?
+  before_destroy :ensure_not_last_super_admin_on_destroy
+
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
     return true unless active?
 
     transaction do
-      if super_admin?
-        active_super_admins = User.where(role: :super_admin, active: true).lock.to_a
-        if active_super_admins.one?
-          errors.add(:base, :cannot_remove_last_super_admin)
-          raise ActiveRecord::Rollback
-        end
-      end
-
       update(active: false, email: deactivated_email)
     end || false
   end
+
+  private
+
+    def losing_super_admin_privileges?
+      (role_changed? && role_was == "super_admin" && role != "super_admin") ||
+        (active_changed? && active_was == true && !active && role == "super_admin")
+    end
+
+    def ensure_not_last_super_admin
+      return unless check_last_super_admin_invariant_failed?
+
+      attribute = role_changed? ? :role : :base
+      errors.add(attribute, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+    end
+
+    def ensure_not_last_super_admin_on_destroy
+      return unless role == "super_admin" && active?
+
+      if check_last_super_admin_invariant_failed?
+        errors.add(:base, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+        throw(:abort)
+      end
+    end
+
+    def check_last_super_admin_invariant_failed?
+      # Lock all active super admins in a consistent order to prevent deadlocks
+      locked_ids = User.where(role: :super_admin, active: true).order(:id).lock.pluck(:id)
+      locked_ids.size <= 1 && locked_ids.include?(id)
+    end
+
+  public
 
   # Permanent removal of another user, initiated by a super admin from the
   # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
@@ -295,6 +331,59 @@ class User < ApplicationRecord
 
   def purge_later
     UserPurgeJob.perform_later(self)
+  end
+
+  def transfer_to_family!(new_family, role: self.role)
+    transaction do
+      lock!
+
+      accounts_to_move = owned_accounts.to_a
+      provider_items_to_move = provider_items_for_transfer(accounts_to_move)
+      moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      account_shares.delete_all
+
+      update!(family: new_family, role: role, default_account: moving_default_account ? default_account : nil)
+
+      accounts_to_move.each do |account|
+        account.update!(family: new_family)
+      end
+
+      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+
+      provider_items_to_move.each do |provider_item|
+        provider_item.update!(family: new_family)
+      end
+
+      new_family.auto_share_existing_accounts_with(self)
+    end
+  end
+
+  def provider_items_for_transfer(accounts_to_move)
+    account_ids_to_move = accounts_to_move.map(&:id)
+    provider_items = accounts_to_move.flat_map do |account|
+      account.account_providers.includes(:provider).filter_map do |account_provider|
+        provider_item_for(account_provider.provider)
+      end
+    end.uniq
+
+    provider_items.each do |provider_item|
+      linked_account_ids = provider_item.accounts.map(&:id)
+      next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    provider_items
+  end
+
+  def provider_item_for(provider)
+    item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
+      association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
+    end
+
+    provider.public_send(item_association.name) if item_association
   end
 
   def purge

@@ -103,7 +103,7 @@ fr:
       title: Politique de confidentialité
     redis_configuration_error:
       heading: Configuration Redis requise
-      page_title: Configuration Redis requise - Bien sûr
+      page_title: Configuration Redis requise - Sure
       refresh_hint: Une fois que vous avez configuré Redis, actualisez cette page pour continuer.
       refresh_page: Actualiser la page
       setup_guide_hint: Suivez notre guide de configuration complet de Docker pour configurer Redis

@@ -95,7 +95,7 @@
                     <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.user") %></th>
                     <th class="px-4 py-2 text-left text-xs font-medium text-secondary uppercase"><%= t(".table.last_login") %></th>
                     <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.session_count") %></th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.role") %></th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-secondary uppercase"><%= t(".table.actions") %></th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
@@ -107,7 +107,26 @@
                             <span class="text-sm font-medium text-primary"><%= user.initials %></span>
                           </div>
                           <div>
-                            <p class="font-medium text-primary"><%= user.display_name %></p>
+                            <div class="flex items-center gap-2">
+                              <p class="font-medium text-primary"><%= user.display_name %></p>
+                              <% if user.id == Current.user.id %>
+                                <span class="text-xs font-medium text-secondary"><%= t(".you") %></span>
+                              <% end %>
+                              <%= render DS::Pill.new(label: t(".roles.#{user.role}"), tone: user.super_admin? ? :success : :neutral) %>
+                              <% if user.oidc_identities.any? %>
+                                <% sso_providers = user.oidc_identities.map { |i| (i.provider_config&.dig(:label) || i.provider_config&.dig("label")).presence || i.provider.titleize }.uniq.join(", ") %>
+                                <% provider_tooltip = t(".auth_types.sso_provider_tooltip", providers: sso_providers) %>
+                                <% if user.sso_only? %>
+                                  <%= render DS::Pill.new(label: t(".auth_types.sso"), tone: :info) %>
+                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) %>
+                                <% else %>
+                                  <%= render DS::Pill.new(label: t(".auth_types.local_and_sso"), tone: :info) %>
+                                  <%= render DS::Tooltip.new(text: provider_tooltip, as: :span) %>
+                                <% end %>
+                              <% else %>
+                                <%= render DS::Pill.new(label: t(".auth_types.local"), tone: :neutral) %>
+                              <% end %>
+                            </div>
                             <p class="text-sm text-secondary"><%= user.email %></p>
                           </div>
                         </div>
@@ -118,34 +137,118 @@
                       <td class="px-4 py-3 text-sm text-primary text-right whitespace-nowrap">
                         <%= number_with_delimiter(@sessions_count_by_user[user.id] || 0) %>
                       </td>
-                      <td class="px-4 py-3 text-right">
-                        <% if user.id == Current.user.id %>
-                          <span class="text-sm text-secondary"><%= t(".you") %></span>
-                        <% else %>
-                          <div class="flex items-center justify-end gap-2">
-                            <%= form_with model: [:admin, user], method: :patch, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
-                              <%= form.select :role,
-                                  options_for_select([
-                                    [t(".roles.guest"), "guest"],
-                                    [t(".roles.member"), "member"],
-                                    [t(".roles.admin"), "admin"],
-                                    [t(".roles.super_admin"), "super_admin"]
-                                  ], user.role),
-                                  {},
-                                  class: "text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1",
-                                  data: { auto_submit_form_target: "auto" } %>
-                            <% end %>
-                            <% unless user.super_admin? && user.active? && @active_super_admin_count <= 1 %>
-                              <%= render DS::Button.new(
-                                    text: t(".table.remove"),
-                                    href: deletion_admin_user_path(user),
-                                    method: :get,
-                                    frame: "modal",
-                                    variant: :outline_destructive,
-                                    size: :sm
+                      <td class="px-4 py-3 text-right whitespace-nowrap">
+                        <%= render DS::Popover.new(variant: :icon, icon: "ellipsis-vertical", placement: "bottom-end", aria_label: t(".actions.manage_user")) do |popover| %>
+                          <% popover.with_custom_content do %>
+                            <% is_last_super_admin = user.super_admin? && User.where(role: :super_admin).where.not(id: user.id).none? %>
+                            <div class="p-4 w-80 space-y-4 text-left whitespace-normal">
+                              <div class="border-b border-primary pb-2">
+                                <p class="font-medium text-sm text-primary"><%= user.display_name %></p>
+                                <p class="text-xs text-secondary"><%= user.email %></p>
+                              </div>
+
+                              <%= form_with model: [:admin, user], method: :patch, class: "space-y-3" do |form| %>
+                                <div>
+                                  <%= form.label :role, t(".table.role"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                  <% if is_last_super_admin %>
+                                    <%= form.select :role,
+                                        options_for_select([[t(".roles.super_admin"), "super_admin"]], "super_admin"),
+                                        {},
+                                        disabled: true,
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container-inset text-secondary px-2 py-1.5 cursor-not-allowed" %>
+                                    <%= form.hidden_field :role, value: "super_admin" %>
+                                    <p class="text-xs text-warning mt-1 leading-normal"><%= t(".actions.last_super_admin_role_locked") %></p>
+                                  <% else %>
+                                    <%= form.select :role,
+                                        options_for_select([
+                                          [t(".roles.guest"), "guest"],
+                                          [t(".roles.member"), "member"],
+                                          [t(".roles.admin"), "admin"],
+                                          [t(".roles.super_admin"), "super_admin"]
+                                        ], user.role),
+                                        {},
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5" %>
+                                  <% end %>
+                                </div>
+
+                                <div data-controller="admin-user-family-select" class="space-y-3">
+                                  <div>
+                                    <%= form.label :family_id, t(".table.family"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                    <%= form.select :family_id,
+                                        options_for_select([
+                                          [t(".table.keep_current_family"), ""],
+                                          [t(".table.create_new_family_option"), "new"]
+                                        ] + @families.map { |family| [family_label_for(family), family.id] }, user.family_id),
+                                        {},
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5",
+                                        data: {
+                                          admin_user_family_select_target: "select",
+                                          action: "change->admin-user-family-select#toggle"
+                                        } %>
+                                  </div>
+
+                                  <div data-admin-user-family-select-target="newFamilyFields" class="hidden border-t border-primary pt-3 space-y-3">
+                                    <div>
+                                      <%= form.label :new_family_name, t(".table.new_family_name"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                      <%= form.text_field :new_family_name,
+                                          placeholder: t(".table.new_family_name_placeholder"),
+                                          class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5",
+                                          data: { admin_user_family_select_target: "nameInput" } %>
+                                    </div>
+
+                                    <div>
+                                      <%= form.label :new_family_moniker, t(".table.new_family_moniker"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                      <%= form.select :new_family_moniker,
+                                          options_for_select([[t(".family_monikers.family"), "Family"], [t(".family_monikers.group"), "Group"]], "Family"),
+                                          {},
+                                          class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5" %>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <% if user.has_local_password? %>
+                                  <div>
+                                    <%= form.label :password, t(".table.set_password"), class: "block text-xs font-medium text-secondary mb-1" %>
+                                    <%= form.password_field :password,
+                                        placeholder: t(".table.password_placeholder"),
+                                        autocomplete: "new-password",
+                                        class: "w-full text-sm rounded-lg border border-primary bg-container text-primary px-2 py-1.5" %>
+                                  </div>
+                                <% end %>
+
+                                <% if user.id == Current.user.id %>
+                                  <div class="bg-warning/10 border border-warning/20 rounded-lg p-2.5 text-xs text-warning whitespace-normal break-words leading-normal">
+                                    <p class="font-medium"><%= t(".actions.self_edit_warning") %></p>
+                                  </div>
+                                <% end %>
+
+                                <div class="pt-1">
+                                  <%= render DS::Button.new(
+                                    variant: :primary,
+                                    size: :sm,
+                                    type: "submit",
+                                    confirm: (user.id == Current.user.id ? t(".actions.self_update_confirm") : nil),
+                                    text: t(".actions.update"),
+                                    class: "w-full justify-center"
                                   ) %>
-                            <% end %>
-                          </div>
+                                </div>
+                              <% end %>
+
+                              <% unless user.id == Current.user.id || (user.super_admin? && user.active? && @active_super_admin_count <= 1) %>
+                                <div class="border-t border-primary pt-3">
+                                  <%= render DS::Button.new(
+                                        text: t(".remove"),
+                                        href: deletion_admin_user_path(user),
+                                        method: :get,
+                                        frame: "modal",
+                                        variant: :outline_destructive,
+                                        size: :sm,
+                                        class: "w-full justify-center"
+                                      ) %>
+                                </div>
+                              <% end %>
+                            </div>
+                          <% end %>
                         <% end %>
                       </td>
                     </tr>
@@ -175,7 +278,7 @@
                             <%= render DS::Button.new(
                                   text: t(".invitations.delete"),
                                   type: "submit",
-                                  variant: :outline_destructive,
+                                  variant: :destructive,
                                   size: :sm,
                                   data: {
                                     admin_invitation_delete_target: "button",
@@ -203,6 +306,36 @@
       <div class="bg-container-inset rounded-lg p-8 text-center">
         <%= icon "users", class: "w-12 h-12 mx-auto text-secondary mb-3" %>
         <p class="text-secondary"><%= t(".no_users") %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <div>
+    <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".unused_families.title") %></h2>
+
+    <% if @unused_families.any? %>
+      <div class="space-y-2">
+        <% @unused_families.each do |family| %>
+          <div class="bg-container-inset rounded-lg p-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="font-medium text-primary"><%= family.name.presence || t(".unnamed_family") %></p>
+              <p class="text-xs text-secondary"><%= t(".unused_families.family_id", id: family.id.to_s.first(8)) %></p>
+            </div>
+
+            <%= render DS::Button.new(
+              variant: :outline_destructive,
+              size: :sm,
+              href: admin_family_path(family),
+              method: :delete,
+              confirm: t(".unused_families.delete_confirm"),
+              text: t(".unused_families.delete")
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-container-inset rounded-lg p-4 text-sm text-secondary">
+        <%= t(".unused_families.empty") %>
       </div>
     <% end %>
   </div>
