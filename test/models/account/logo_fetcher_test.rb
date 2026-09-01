@@ -88,6 +88,63 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     assert_equal "image/png", @account.logo.blob.content_type
   end
 
+  test "rejects a non-image response and falls back to DuckDuckGo" do
+    Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    html_response = Net::HTTPSuccess.new("1.1", "200", "OK")
+    html_response.stubs(:body).returns("<html>rate limited</html>")
+    html_response.stubs(:content_type).returns("text/html")
+
+    ddg_success = Net::HTTPSuccess.new("1.1", "200", "OK")
+    ddg_success.stubs(:body).returns("fake-favicon-data")
+    ddg_success.stubs(:content_type).returns("image/x-icon")
+
+    bf_http = mock
+    bf_http.stubs(:use_ssl=)
+    bf_http.stubs(:open_timeout=)
+    bf_http.stubs(:read_timeout=)
+    bf_http.expects(:request).returns(html_response)
+
+    ddg_http = mock
+    ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:open_timeout=)
+    ddg_http.stubs(:read_timeout=)
+    ddg_http.expects(:request).returns(ddg_success)
+
+    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+
+    Account::LogoFetcher.new(@account).fetch_and_attach
+
+    assert @account.logo.attached?
+    assert_equal "image/x-icon", @account.logo.blob.content_type
+  end
+
+  test "does not attach a stale logo when the domain changed since enqueue" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    ddg_success = Net::HTTPSuccess.new("1.1", "200", "OK")
+    ddg_success.stubs(:body).returns("stale-favicon-data")
+    ddg_success.stubs(:content_type).returns("image/x-icon")
+
+    ddg_http = mock
+    ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:open_timeout=)
+    ddg_http.stubs(:read_timeout=)
+    ddg_http.expects(:request).returns(ddg_success)
+
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+
+    # The job was enqueued while the domain was still old.example.com
+    fetcher = Account::LogoFetcher.new(@account, expected_domain: "old.example.com")
+    @account.update!(institution_domain: "new.example.com")
+
+    fetcher.fetch_and_attach
+
+    assert_not @account.logo.attached?
+  end
+
   test "does not overwrite manual logo when logo_source is manual" do
     @account.update!(logo_source: "manual")
     @account.logo.attach(

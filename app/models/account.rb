@@ -104,6 +104,10 @@ class Account < ApplicationRecord
   }
 
   has_one_attached :logo, dependent: :purge_later
+
+  # Upper bound for logo attachments, enforced on uploads and on fetched
+  # logos in Account::LogoFetcher.
+  MAX_LOGO_BYTES = 5.megabytes
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -549,31 +553,33 @@ class Account < ApplicationRecord
     favicon_url
   end
 
-  def favicon_url
-    return nil unless institution_domain.present?
+  def favicon_url(domain = institution_domain)
+    return nil unless domain.present?
 
     # Use DuckDuckGo's privacy-friendly favicon service
-    "https://icons.duckduckgo.com/ip3/#{institution_domain}.ico"
+    "https://icons.duckduckgo.com/ip3/#{domain}.ico"
   end
 
-  def brandfetch_logo_url
-    return nil unless institution_domain.present? && Setting.brand_fetch_client_id.present?
+  def brandfetch_logo_url(domain = institution_domain)
+    return nil unless domain.present? && Setting.brand_fetch_client_id.present?
 
     logo_size = Setting.brand_fetch_logo_size
-    "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
   end
 
   def queue_logo_fetch
-    FetchLogoJob.perform_later(id)
+    # Pass the domain the queue decision was made on so Account::LogoFetcher
+    # can discard the fetch if the domain changes while the job is in flight.
+    FetchLogoJob.perform_later(id, institution_domain)
   end
 
   # Attach a logo fetched by the background job without marking it as a
   # manual upload. Attaching on an unchanged record saves the parent record,
   # so without this opt-out the save would reclassify the fetched logo as a
   # manual upload (see set_logo_source).
-  def attach_fetched_logo(attachable)
+  def attach_fetched_logo(*attachables)
     @attaching_fetched_logo = true
-    logo.attach(attachable)
+    logo.attach(*attachables)
   ensure
     @attaching_fetched_logo = false
   end

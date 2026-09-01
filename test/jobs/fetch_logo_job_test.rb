@@ -11,9 +11,9 @@ class FetchLogoJobTest < ActiveJob::TestCase
   test "delegates fetching to Account::LogoFetcher" do
     fetcher_mock = mock
     fetcher_mock.expects(:fetch_and_attach).once
-    Account::LogoFetcher.expects(:new).with(@account).returns(fetcher_mock)
+    Account::LogoFetcher.expects(:new).with(@account, expected_domain: "example.com").returns(fetcher_mock)
 
-    FetchLogoJob.perform_now(@account.id)
+    FetchLogoJob.perform_now(@account.id, "example.com")
   end
 
   test "skips when account not found" do
