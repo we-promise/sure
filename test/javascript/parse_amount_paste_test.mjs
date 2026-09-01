@@ -1,80 +1,28 @@
+import { readFile } from "node:fs/promises"
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 
-// Inline the function to avoid needing a bundler for ESM imports.
-// Must be kept in sync with app/javascript/utils/parse_locale_float.js
-function parseLocaleFloat(value, { separator } = {}) {
-  if (typeof value !== "string") return Number.parseFloat(value) || 0
+// The parser resolves "utils/parse_locale_float" through the importmap, which
+// Node has no equivalent of, so the specifier is rewritten to a file URL and
+// the module is imported as written. These cases therefore run the shipped
+// parser rather than a copy of it that could drift.
+const SOURCE_URL = new URL(
+  "../../app/javascript/utils/parse_amount_paste.js",
+  import.meta.url,
+)
+const PARSE_LOCALE_FLOAT_URL = new URL(
+  "../../app/javascript/utils/parse_locale_float.js",
+  import.meta.url,
+)
 
-  const cleaned = value.replace(/\s/g, "")
+const source = (await readFile(SOURCE_URL, "utf8")).replace(
+  '"utils/parse_locale_float"',
+  JSON.stringify(PARSE_LOCALE_FLOAT_URL.href),
+)
 
-  if (separator === ",") {
-    return Number.parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0
-  }
-  if (separator === ".") {
-    return Number.parseFloat(cleaned.replace(/,/g, "")) || 0
-  }
-
-  const lastComma = cleaned.lastIndexOf(",")
-  const lastDot = cleaned.lastIndexOf(".")
-
-  if (lastComma > lastDot) {
-    const digitsAfterComma = cleaned.length - lastComma - 1
-    if (lastDot === -1 && digitsAfterComma === 3) {
-      return Number.parseFloat(cleaned.replace(/,/g, "")) || 0
-    }
-
-    return Number.parseFloat(cleaned.replace(/\./g, "").replace(",", ".")) || 0
-  }
-
-  return Number.parseFloat(cleaned.replace(/,/g, "")) || 0
-}
-
-// Inline the function to avoid needing a bundler for ESM imports.
-// Must be kept in sync with app/javascript/utils/parse_amount_paste.js
-// The currency symbols carried by config/currencies.yml, restricted to the
-// ones that contain no letters. A letter-bearing marker ("kr", "R$", "USD")
-// cannot be told apart from prose such as "fee 500" or "TAX 500" without
-// consulting the currency list itself, and a paste event has nothing to await,
-// so those pastes fall through to the browser untouched.
-const CURRENCY_SYMBOL = "[$£¥֏؋৳฿៛₡₦₨₩₪₫€₭₮₱₲₴₵₸₹₺₼₽₾₿﷼]"
-
-const stripCurrency = (value) =>
-  value
-    .replace(new RegExp(`^${CURRENCY_SYMBOL}\\s*`), "")
-    .replace(new RegExp(`\\s*${CURRENCY_SYMBOL}$`), "")
-    .trim()
-
-function parseAmountPaste(text, options = {}) {
-  const trimmed = typeof text === "string" ? text.trim() : ""
-  if (trimmed === "") return null
-
-  let rest = trimmed
-  let negative = false
-
-  const outerSign = rest.match(/^([+-])\s*/)
-  if (outerSign) {
-    negative = outerSign[1] === "-"
-    rest = rest.slice(outerSign[0].length)
-  }
-
-  rest = stripCurrency(rest)
-
-  const parenthesised = rest.match(/^\((.+)\)$/)
-  if (parenthesised) {
-    negative = true
-    rest = stripCurrency(parenthesised[1].trim())
-  }
-
-  const match = rest.match(/^([+-]?)(\d[\d.,\s]*)$/)
-  if (!match) return null
-  if (match[1] === "-") negative = true
-
-  const parsed = parseLocaleFloat(match[2], options)
-  if (!Number.isFinite(parsed)) return null
-
-  return negative ? -Math.abs(parsed) : parsed
-}
+const { default: parseAmountPaste } = await import(
+  `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
+)
 
 describe("parseAmountPaste", () => {
   describe("parses plain and locale-formatted amounts", () => {
@@ -214,6 +162,24 @@ describe("parseAmountPaste", () => {
 
     it('rejects "1,234.56 EUR", since a lettered code cannot be told from prose', () => {
       assert.equal(parseAmountPaste("1,234.56 EUR"), null)
+    })
+  })
+
+  describe("rejects multi-cell pastes rather than joining them", () => {
+    it('rejects "100\\t200"', () => {
+      assert.equal(parseAmountPaste("100\t200"), null)
+    })
+
+    it('rejects "1,234.56\\t500"', () => {
+      assert.equal(parseAmountPaste("1,234.56\t500"), null)
+    })
+
+    it('rejects "100\\n200"', () => {
+      assert.equal(parseAmountPaste("100\n200"), null)
+    })
+
+    it('still parses "1\\u00a0234,56" as 1234.56, since a no-break space groups digits', () => {
+      assert.equal(parseAmountPaste("1\u00a0234,56"), 1234.56)
     })
   })
 })

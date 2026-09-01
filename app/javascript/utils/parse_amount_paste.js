@@ -7,6 +7,12 @@ import parseLocaleFloat from "utils/parse_locale_float"
 // so those pastes fall through to the browser untouched.
 const CURRENCY_SYMBOL = "[$£¥֏؋৳฿៛₡₦₨₩₪₫€₭₮₱₲₴₵₸₹₺₼₽₾₿﷼]"
 
+// Only the spaces that locales actually use to group digits ("1 234,56") are
+// allowed inside the number. Any other whitespace is a token boundary, not a
+// separator, so a multi-cell spreadsheet paste ("100\t200") is rejected rather
+// than concatenated into one amount.
+const GROUPED_NUMBER = /^([+-]?)(\d[\d.,\u0020\u00a0\u202f]*)$/
+
 const stripCurrency = (value) =>
   value
     .replace(new RegExp(`^${CURRENCY_SYMBOL}\\s*`), "")
@@ -19,14 +25,14 @@ const stripCurrency = (value) =>
 // parseLocaleFloat coerces anything it cannot read to 0, which is unsafe for a
 // paste: "$1,234.56", "USD 500" and "abc" would all silently overwrite the
 // field with 0. So the text is matched against a strict grammar first — an
-// optional sign, an optional currency symbol or code on either side, and a
-// number — and anything else returns null so the browser handles the paste.
+// optional sign, an optional currency symbol on either side, and a number —
+// and anything else returns null so the browser handles the paste.
 //
 // The sign is read before the currency is stripped, because it can sit on
 // either side of the symbol ("-$500", "$-500"), and because a negative that is
 // only recognised after stripping would post a debit as a credit. Amounts
 // wrapped in parentheses are negative, the convention used by most statement
-// exports, and the currency may sit outside them ("USD (1,200.00)").
+// exports, and the symbol may sit outside them ("$(1,200.00)").
 export default function parseAmountPaste(text, options = {}) {
   const trimmed = typeof text === "string" ? text.trim() : ""
   if (trimmed === "") return null
@@ -48,7 +54,7 @@ export default function parseAmountPaste(text, options = {}) {
     rest = stripCurrency(parenthesised[1].trim())
   }
 
-  const match = rest.match(/^([+-]?)(\d[\d.,\s]*)$/)
+  const match = rest.match(GROUPED_NUMBER)
   if (!match) return null
   if (match[1] === "-") negative = true
 

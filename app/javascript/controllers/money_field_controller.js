@@ -61,7 +61,9 @@ export default class extends Controller {
     if (parsed === null) return;
 
     event.preventDefault();
-    this.amountTarget.value = parsed.toFixed(this.#pastePrecision());
+    const precision = this.#pastePrecision();
+    this.amountTarget.value =
+      precision === null ? String(parsed) : parsed.toFixed(precision);
 
     // auto_submit_form listens for "change" on number inputs while validation
     // and the goal form's suggestion listen for "input", and assigning .value
@@ -74,14 +76,17 @@ export default class extends Controller {
   // rendered server-side and refreshed by updateAmount, so it tracks the live
   // currency selection without a second lookup. BTC's step arrives as
   // "1.0e-08", so the decimal count is derived numerically rather than by
-  // counting characters.
+  // counting characters. Returns null when the step declares no precision —
+  // step="any", which the trade amount, price and fee fields use — so the
+  // pasted value is written unrounded instead of being truncated to a default
+  // that would drop a sub-cent crypto price to "0.00".
   #pastePrecision() {
     if (this.hasPrecisionValue && Number.isInteger(this.precisionValue)) {
       return this.precisionValue;
     }
 
     const step = Number(this.amountTarget.step);
-    if (!Number.isFinite(step) || step <= 0) return 2;
+    if (!Number.isFinite(step) || step <= 0) return null;
 
     return Math.max(0, Math.ceil(-Math.log10(step)));
   }
