@@ -10,7 +10,8 @@ module Family::AutoTransferMatchable
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
-    include_rejected: true
+    include_rejected: true,
+    restrict_cross_currency_to_linked_accounts: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -24,6 +25,7 @@ module Family::AutoTransferMatchable
         outflow_transaction_id:,
         account_id:,
         include_rejected:,
+        restrict_cross_currency_to_linked_accounts:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -31,8 +33,19 @@ module Family::AutoTransferMatchable
   end
 
   def auto_match_transfers!(account: nil, exchange_rate_tolerance: DEFAULT_EXCHANGE_RATE_TOLERANCE)
-    # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false, exchange_rate_tolerance:)
+    # Exclude already matched transfers. Cross-currency FX-tolerance matching is
+    # restricted to provider-linked accounts ONLY on this automatic path -- a
+    # coincidental amount/FX-rate match applied here has no human reviewing it
+    # first. The manual "match as transfer" dialog goes through
+    # Transaction#transfer_match_candidates, which calls transfer_match_candidates
+    # directly without this restriction, so a user can still find and confirm a
+    # real cross-currency transfer that happens to involve a manual account.
+    candidates_scope = transfer_match_candidates(
+      account_id: account&.id,
+      include_rejected: false,
+      exchange_rate_tolerance:,
+      restrict_cross_currency_to_linked_accounts: true
+    )
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
@@ -139,13 +152,21 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
-    # The second UNION branch below (cross-currency, FX-rate-tolerance matching) requires
-    # both accounts to have a live provider connection (Plaid/SimpleFIN/account_providers).
-    # That path is a coincidence guess -- amount x FX-rate within a tolerance band, not an
-    # exact amount match -- and a manual account has no institution behind it confirming
-    # money actually moved, so an unrelated pair of round-number transactions can land inside
-    # the tolerance band purely by chance. Manual accounts still participate in the first
+    # The second UNION branch below (cross-currency, FX-rate-tolerance matching) is a
+    # coincidence guess -- amount x FX-rate within a tolerance band, not an exact amount
+    # match -- and a manual account has no institution behind it confirming money actually
+    # moved, so an unrelated pair of round-number transactions can land inside the tolerance
+    # band purely by chance. When :restrict_cross_currency_to_linked_accounts is true, that
+    # branch additionally requires both accounts to have a live provider connection
+    # (Plaid/SimpleFIN/account_providers). Manual accounts always participate in the first
     # branch's exact-amount, same-currency matching, which carries no such ambiguity.
+    #
+    # The restriction is opt-in (default false) rather than baked into the branch
+    # unconditionally: Family#auto_match_transfers! passes true because a coincidental match
+    # there is applied automatically with no human reviewing it first, but
+    # Transaction#transfer_match_candidates (the manual "match as transfer" dialog) leaves it
+    # off so a user can still find and confirm a real cross-currency transfer that happens to
+    # involve a manual account, rather than being forced into creating a duplicate.
     #
     # NOTE: this is passed through `.squish`, which collapses all whitespace (including
     # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
@@ -238,14 +259,19 @@ module Family::AutoTransferMatchable
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             (
-              inflow_accounts.plaid_account_id IS NOT NULL OR
-              inflow_accounts.simplefin_account_id IS NOT NULL OR
-              EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)
-            ) AND
-            (
-              outflow_accounts.plaid_account_id IS NOT NULL OR
-              outflow_accounts.simplefin_account_id IS NOT NULL OR
-              EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)
+              :restrict_cross_currency_to_linked_accounts = FALSE OR
+              (
+                (
+                  inflow_accounts.plaid_account_id IS NOT NULL OR
+                  inflow_accounts.simplefin_account_id IS NOT NULL OR
+                  EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)
+                ) AND
+                (
+                  outflow_accounts.plaid_account_id IS NOT NULL OR
+                  outflow_accounts.simplefin_account_id IS NOT NULL OR
+                  EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)
+                )
+              )
             )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
