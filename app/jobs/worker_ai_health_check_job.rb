@@ -52,6 +52,8 @@ class WorkerAiHealthCheckJob < ApplicationJob
       [
         ai_health.llm_probe.failure_code,
         ai_health.function_calling_probe.failure_code,
+        ai_health.pdf_text_extraction_probe.failure_code,
+        ai_health.pdf_vision_processing_probe.failure_code,
         ai_health.vector_store_probe.failure_code,
         ai_health.embedding_probe.failure_code
       ].compact.uniq

@@ -58,8 +58,8 @@ class WorkerAiHealth
     def status
       return :stale if stale?
       return :failing if failure_codes.present?
-      return :failing if llm_status == :failing || vector_store_status == :failing
-      return :failing if function_calling_status.in?(%i[unsupported failing])
+      return :failing if llm_status.in?(%i[not_configured failing]) || vector_store_status.in?(%i[not_configured failing])
+      return :failing if function_calling_status.in?(%i[unavailable unsupported failing])
 
       :passing
     end
@@ -100,7 +100,8 @@ class WorkerAiHealth
     def record!(snapshot, cache: Rails.cache)
       results = recent(cache: cache).reject { |r| r.process_identity == snapshot.process_identity }
       results = [ snapshot, *results ].first(MAX_RESULTS)
-      cache.write(CACHE_KEY, results, expires_in: RETENTION)
+      # Don't set expires_in here; let individual entries expire via checked_at time
+      cache.write(CACHE_KEY, results)
       snapshot
     end
 
@@ -109,7 +110,10 @@ class WorkerAiHealth
     # STALE_AFTER are still returned (status: :stale) so an operator can see
     # a worker went quiet rather than the section going empty.
     def recent(cache: Rails.cache)
-      Array(cache.read(CACHE_KEY)).sort_by { |r| r.checked_at || Time.at(0) }.reverse
+      results = Array(cache.read(CACHE_KEY))
+      # Filter out entries older than RETENTION
+      results = results.select { |r| r.checked_at && r.checked_at > RETENTION.ago }
+      results.sort_by { |r| r.checked_at || Time.at(0) }.reverse
     end
 
     # Stable identity for "this OS process" -- hostname:pid. Good enough to
