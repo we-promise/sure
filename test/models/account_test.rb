@@ -420,6 +420,117 @@ class AccountTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 
+  # Logo URL tests
+  test "logo_url returns Brandfetch URL when configured" do
+    Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+    @account.institution_domain = "example.com"
+    
+    expected_url = "https://cdn.brandfetch.io/example.com/icon/fallback/lettermark/w/120/h/120?c=test_client_id"
+    assert_equal expected_url, @account.logo_url
+  end
+
+  test "logo_url returns DuckDuckGo favicon when Brandfetch not configured" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    @account.institution_domain = "example.com"
+    
+    expected_url = "https://icons.duckduckgo.com/ip3/example.com.ico"
+    assert_equal expected_url, @account.logo_url
+  end
+
+  test "logo_url returns provider logo when available" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    @account.institution_domain = nil
+    # Create a mock provider and associate it
+    provider = OpenStruct.new(logo_url: "https://provider.com/logo.png")
+    @account.provider = provider
+    
+    assert_equal "https://provider.com/logo.png", @account.logo_url
+  end
+
+  test "logo_url returns attached logo URL when manual source" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    @account.institution_domain = nil
+    @account.logo.attach(
+      io: StringIO.new("fake-logo"),
+      filename: "logo.png",
+      content_type: "image/png"
+    )
+    @account.logo_source = "manual"
+    
+    assert @account.logo_url.include?("/rails/active_storage")
+  end
+
+  test "logo_url returns nil when no logo source available" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    @account.institution_domain = nil
+    @account.stubs(:provider).returns(nil)
+    
+    assert_nil @account.logo_url
+  end
+
+  # Favicon URL tests
+  test "favicon_url returns DuckDuckGo URL" do
+    @account.institution_domain = "example.com"
+    expected_url = "https://icons.duckduckgo.com/ip3/example.com.ico"
+    assert_equal expected_url, @account.favicon_url
+  end
+
+  test "favicon_url returns nil when no domain" do
+    @account.institution_domain = nil
+    assert_nil @account.favicon_url
+  end
+
+  # Domain cleaning tests
+  test "clean_institution_domain removes https://" do
+    @account.institution_domain = "https://example.com"
+    @account.valid?
+    assert_equal "example.com", @account.institution_domain
+  end
+
+  test "clean_institution_domain removes www." do
+    @account.institution_domain = "www.example.com"
+    @account.valid?
+    assert_equal "example.com", @account.institution_domain
+  end
+
+  test "clean_institution_domain removes path" do
+    @account.institution_domain = "example.com/some/path"
+    @account.valid?
+    assert_equal "example.com", @account.institution_domain
+  end
+
+  test "clean_institution_domain removes port" do
+    @account.institution_domain = "example.com:8080"
+    @account.valid?
+    assert_equal "example.com", @account.institution_domain
+  end
+
+  test "clean_institution_domain handles complex URLs" do
+    @account.institution_domain = "https://www.example.com:8080/some/path"
+    @account.valid?
+    assert_equal "example.com", @account.institution_domain
+  end
+
+  # Logo source enum tests
+  test "logo_source defaults to auto" do
+    assert_equal "auto", @account.logo_source
+  end
+
+  test "logo_source can be set to manual" do
+    @account.logo_source = "manual"
+    assert_equal "manual", @account.logo_source
+  end
+
+  test "logo_source is auto?" do
+    assert @account.auto?
+  end
+
+  test "logo_source is manual?" do
+    @account.logo_source = "manual"
+    assert @account.manual?
+  end
+
   test "destroying account moves linked statements to inbox after commit" do
     statement = AccountStatement.create_from_upload!(
       family: @family,

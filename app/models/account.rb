@@ -536,6 +536,11 @@ class Account < ApplicationRecord
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
+    # If we have an attached logo (e.g., fetched from domain or provider), use it
+    if logo.attached?
+      return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
+
     # Auto mode: try to fetch from institution or provider
     if institution_domain.present?
       # Try Brandfetch first if configured
@@ -548,10 +553,14 @@ class Account < ApplicationRecord
       favicon_url
     elsif provider&.logo_url.present?
       provider.logo_url
-    elsif logo.attached?
-      # Fallback: if logo attached but source is auto, still use it
-      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
+  end
+
+  def favicon_url
+    return nil unless institution_domain.present?
+    # Use DuckDuckGo's privacy-friendly favicon service
+    # This avoids pinging Google and is more appropriate for open-source
+    "https://icons.duckduckgo.com/ip3/#{institution_domain}.ico"
   end
 
   private
@@ -598,13 +607,6 @@ class Account < ApplicationRecord
 
       logo_size = Setting.brand_fetch_logo_size
       "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-    end
-
-    def favicon_url
-      return nil unless institution_domain.present?
-      # Use DuckDuckGo's privacy-friendly favicon service
-      # This avoids pinging Google and is more appropriate for open-source
-      "https://icons.duckduckgo.com/ip3/#{institution_domain}.ico"
     end
 
   public
