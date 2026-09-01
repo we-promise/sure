@@ -8,8 +8,9 @@ class SimplefinEntry::Processor
     eft_paid: { direction: :expense, pattern: /\AEFT\s+PAID\b/i },
     direct_deposit: { direction: :income, pattern: /\ADIRECT\s+DEPOSIT\b/i },
     check_received: { direction: :income, pattern: /\ACHECK\s+RECEIVED\b/i },
-    dividend: { direction: :income, pattern: /\ADIVIDEND\b/i }
+    dividend: { direction: :income, pattern: /\ADIVIDEND(?:\s+(?:PAYMENT|RECEIVED|INCOME|CREDIT))?\z/i }
   }.freeze
+  FIDELITY_ORGANIZATION = /\AFidelity Investments\b/i
   AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND|REINVEST)/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
@@ -176,6 +177,7 @@ class SimplefinEntry::Processor
     end
 
     def amount_normalization_rule
+      return unless fidelity_account?
       return if amount_descriptor_fields.any? { |value| value.match?(AMBIGUOUS_AMOUNT_TERMS) }
 
       @amount_normalization_rule ||= AMOUNT_NORMALIZATION_RULES.find do |_name, rule|
@@ -184,7 +186,12 @@ class SimplefinEntry::Processor
     end
 
     def amount_descriptor_fields
-      [ data[:payee], data[:description], data[:memo] ].filter_map { |value| value.to_s.strip.presence }
+      [ data[:description] ].filter_map { |value| value.to_s.strip.presence }
+    end
+
+    def fidelity_account?
+      institution_name = simplefin_account.org_data.to_h.with_indifferent_access[:name]
+      institution_name.to_s.match?(FIDELITY_ORGANIZATION)
     end
 
     def currency

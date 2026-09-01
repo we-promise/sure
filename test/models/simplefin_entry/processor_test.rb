@@ -17,6 +17,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       currency: "USD",
       current_balance: 1000,
       available_balance: 1000,
+      org_data: { name: "Fidelity Investments" },
       account: @account
     )
   end
@@ -301,7 +302,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       id: "tx_direct_deposit_1",
       amount: "-80.00",
       currency: "USD",
-      payee: "  direct   deposit payroll ",
+      description: "  direct   deposit payroll ",
       posted: Date.current.to_s
     }
 
@@ -324,7 +325,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
         id: "tx_semantic_class_#{index}",
         amount: raw_amount,
         currency: "USD",
-        memo: description,
+        description: description,
         posted: Date.current.to_s
       }
 
@@ -334,6 +335,60 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       assert_equal expected_amount, entry.amount
       assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
     end
+  end
+
+  test "leaves dividend expenses on upstream sign behavior" do
+    [ "DIVIDEND TAX", "DIVIDEND WITHHOLDING" ].each_with_index do |description, index|
+      tx = {
+        id: "tx_dividend_expense_#{index}",
+        amount: "-7.00",
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_dividend_expense_#{index}", source: "simplefin")
+      assert_equal BigDecimal("7.00"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "does not derive Fidelity transaction direction from merchant text" do
+    [ "Dividend Finance", "Direct Deposit Cafe" ].each_with_index do |payee, index|
+      tx = {
+        id: "tx_fidelity_merchant_#{index}",
+        amount: "-100.00",
+        currency: "USD",
+        payee: payee,
+        description: "PURCHASE",
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_merchant_#{index}", source: "simplefin")
+      assert_equal BigDecimal("100.00"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "does not normalize transaction signs for non-Fidelity institutions" do
+    @simplefin_account.update!(org_data: { name: "Example Credit Union" })
+    tx = {
+      id: "tx_other_institution_direct_debit",
+      amount: "25.00",
+      currency: "USD",
+      description: "DIRECT DEBIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_other_institution_direct_debit", source: "simplefin")
+    assert_equal BigDecimal("-25.00"), entry.amount
+    assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
   end
 
   test "leaves ambiguous and unmapped descriptions on upstream sign behavior" do
