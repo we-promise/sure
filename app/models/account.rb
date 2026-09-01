@@ -8,8 +8,12 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
-  # Track logo source: set to manual when user uploads a logo
-  before_save :set_logo_source, if: -> { logo.attached? && logo_source.blank? }
+  # Track logo source: a logo uploaded through logo= (form/params) is treated
+  # as a manual upload unless the save explicitly assigns a logo_source. The
+  # background fetcher attaches through attach_fetched_logo, which opts out of
+  # that (see set_logo_source and logo_upload_in_this_save?).
+  before_save :set_logo_source,
+              if: -> { logo.attached? && !@attaching_fetched_logo && logo_upload_in_this_save? }
 
   # Queue logo fetch after save to avoid blocking the save operation
   after_save_commit :queue_logo_fetch, if: :should_queue_logo_fetch?
@@ -561,6 +565,17 @@ class Account < ApplicationRecord
     FetchLogoJob.perform_later(id)
   end
 
+  # Attach a logo fetched by the background job without marking it as a
+  # manual upload. Attaching on an unchanged record saves the parent record,
+  # so without this opt-out the save would reclassify the fetched logo as a
+  # manual upload (see set_logo_source).
+  def attach_fetched_logo(attachable)
+    @attaching_fetched_logo = true
+    logo.attach(attachable)
+  ensure
+    @attaching_fetched_logo = false
+  end
+
   private
 
     def should_queue_logo_fetch?
@@ -572,7 +587,27 @@ class Account < ApplicationRecord
     end
 
     def set_logo_source
-      self.logo_source = "manual" if logo.attached? && logo_source.blank?
+      # An explicitly assigned logo_source always wins (form submissions send
+      # one). Otherwise a logo uploaded through logo= is a human upload: mark
+      # it "manual" so FetchLogoJob can never replace it with an institution
+      # logo later. The enum's "auto" default never registers as a change,
+      # which would otherwise let a default swallow an upload here.
+      return if logo_source_changed?
+
+      self.logo_source = "manual"
+    end
+
+    # True when this save carries an attachment that is not yet persisted for
+    # the account. A params upload defers its blob to the save (pending blob
+    # id nil or different from the persisted row), while a fetcher attach on
+    # an unchanged record persists immediately, making the pending and
+    # persisted blob ids equal — so an unrelated later save stays neutral.
+    def logo_upload_in_this_save?
+      persisted_blob_id =
+        ActiveStorage::Attachment.where(record_id: id, record_type: self.class.name, name: "logo").pick(:blob_id)
+      return true if persisted_blob_id.nil?
+
+      logo.blob&.id != persisted_blob_id
     end
 
     def clean_institution_domain

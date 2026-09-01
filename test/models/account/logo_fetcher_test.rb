@@ -29,6 +29,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
 
     assert @account.logo.attached?
     assert_equal "image/png", @account.logo.blob.content_type
+    assert @account.logo_source_auto?, "a fetched logo must keep logo_source auto"
   end
 
   test "falls back to DuckDuckGo when Brandfetch returns non-200" do

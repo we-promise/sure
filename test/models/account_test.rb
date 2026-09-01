@@ -530,6 +530,33 @@ class AccountTest < ActiveSupport::TestCase
     assert @account.logo_source_manual?
   end
 
+  test "uploading a logo without an explicit logo_source marks it manual" do
+    # Simulates a caller that submits a logo without choosing a source. The
+    # enum defaults logo_source to "auto", which previously swallowed
+    # set_logo_source and later let FetchLogoJob replace the upload with an
+    # institution logo.
+    @account.update!(
+      logo: { io: StringIO.new("user-upload"), filename: "logo.png", content_type: "image/png" }
+    )
+
+    assert @account.logo_source_manual?
+  end
+
+  test "saving without an upload leaves an existing logo_source untouched" do
+    # The auto fetcher attaches through attach_fetched_logo, so a plain save
+    # on an account with a fetched logo must not flip it to manual.
+    @account.attach_fetched_logo(
+      io: StringIO.new("fetched-logo"),
+      filename: "fetched.png",
+      content_type: "image/png"
+    )
+    @account.reload
+
+    @account.update!(notes: "changed")
+
+    assert @account.logo_source_auto?
+  end
+
   test "destroying account moves linked statements to inbox after commit" do
     statement = AccountStatement.create_from_upload!(
       family: @family,

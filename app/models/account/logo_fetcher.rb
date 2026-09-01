@@ -52,7 +52,7 @@ class Account::LogoFetcher
         account.reload
         return false unless account.logo_source_auto?
 
-        account.logo.attach(
+        account.attach_fetched_logo(
           io: tempfile,
           filename: "logo#{extension}",
           content_type: content_type
