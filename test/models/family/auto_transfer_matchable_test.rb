@@ -104,8 +104,11 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { @family.auto_match_transfers! }
   end
 
-  test "auto-matches multi-currency transfers" do
+  test "auto-matches multi-currency transfers between linked accounts" do
     load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
 
@@ -113,33 +116,63 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       @family.auto_match_transfers!
     end
 
-    # test match within lower 10% bound
+    # test match within lower bound of an explicitly widened tolerance
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
     create_transaction(date: Date.current, account: @credit_card, amount: -1330, currency: "CAD")
 
     assert_difference -> { Transfer.count } => 1 do
-      @family.auto_match_transfers!
+      @family.auto_match_transfers!(exchange_rate_tolerance: 0.1)
     end
 
-    # test match within upper 10% bound
+    # test match within upper bound of an explicitly widened tolerance
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1500)
     create_transaction(date: Date.current, account: @credit_card, amount: -2189, currency: "CAD")
 
     assert_difference -> { Transfer.count } => 1 do
-      @family.auto_match_transfers!
+      @family.auto_match_transfers!(exchange_rate_tolerance: 0.1)
     end
 
-    # test no match outside of slippage tolerance
+    # test no match outside of slippage tolerance, even when widened
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
     create_transaction(date: Date.current, account: @credit_card, amount: -1250, currency: "CAD")
 
     assert_difference -> { Transfer.count } => 0 do
+      @family.auto_match_transfers!(exchange_rate_tolerance: 0.1)
+    end
+  end
+
+  test "does not auto-match cross-currency transfers within the default tolerance when either account is manual" do
+    load_exchange_prices
+    # Neither @depository nor @credit_card is linked to a provider in this test,
+    # so they're both "manual" -- FX-tolerance matching should not apply to them
+    # even though the amounts fall within the default 3% tolerance.
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    link_account!(@depository)
+
+    # Still one manual leg (credit_card) -- still excluded.
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    link_account!(@credit_card)
+
+    # Both sides now linked -- the same pair matches.
+    assert_difference -> { Transfer.count } => 1 do
       @family.auto_match_transfers!
     end
   end
 
   test "only matches inflow with correct currency when duplicate amounts exist" do
     load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -500, currency: "CAD")
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -330,6 +363,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
     assert_includes sql, "JOIN exchange_rates"
+    assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
+    assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
   end
 
   # Regression tests for loan transfer kind assignment bug
@@ -381,6 +416,22 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   private
+    # Simulates a live provider connection so `Account#manual?` (and the SQL
+    # query's equivalent check) treats the account as linked. `AccountProvider`
+    # validates its polymorphic `provider` association is present, so this needs
+    # a real (if otherwise-unused) PlaidAccount row rather than an arbitrary id.
+    def link_account!(account)
+      plaid_account = PlaidAccount.create!(
+        plaid_item: plaid_items(:one),
+        plaid_id: "acc_mock_#{SecureRandom.hex(6)}",
+        name: "Linked #{account.name}",
+        plaid_type: "depository",
+        currency: account.currency,
+        current_balance: 0
+      )
+      AccountProvider.create!(account: account, provider: plaid_account)
+    end
+
     def load_exchange_prices
       rates = {
         4.days.ago.to_date => 1.36,
