@@ -1058,13 +1058,14 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_nil series.reload.account_id
 
-    post recurring_transactions_url, params: { recurring_transaction: {
-      name: "Declared On Read Only", amount: 12, first_due_on: Date.current.iso8601,
-      frequency_preset: "monthly", account_id: accounts(:credit_card).id
-    } }
-    declared = @family.recurring_transactions.find_by(name: "Declared On Read Only")
-    assert_not_nil declared
-    assert_nil declared.account_id
+    assert_no_difference "RecurringTransaction.count" do
+      post recurring_transactions_url, params: { recurring_transaction: {
+        name: "Declared On Read Only", amount: 12, first_due_on: Date.current.iso8601,
+        frequency_preset: "monthly", account_id: accounts(:credit_card).id
+      } }
+    end
+    assert_response :unprocessable_entity
+    assert_match I18n.t("recurring_transactions.create.account_invalid"), response.body
   end
 
   # Clearing a payment link is a statement about one bill; the opt-in copy

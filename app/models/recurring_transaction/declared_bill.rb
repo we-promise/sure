@@ -53,6 +53,14 @@ class RecurringTransaction
       recurring.frequency_preset = attrs[:frequency_preset]
       recurring.first_due_on = attrs[:first_due_on]
 
+      # A chosen account that does not resolve to something writable is said
+      # out loud, not silently dropped: a read-only share or a foreign id
+      # would otherwise become an accountless bill in the family currency.
+      if attrs[:account_id].present? && account.nil?
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.account_invalid"))
+        return recurring
+      end
+
       if amount.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.amount_invalid"))
         return recurring
