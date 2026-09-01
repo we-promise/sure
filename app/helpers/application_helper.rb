@@ -226,19 +226,21 @@ module ApplicationHelper
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
-  # Formats quantity with adaptive precision based on the value size.
+  # Formats a holding quantity with adaptive precision based on the value size.
   # Shows more decimal places for small quantities (common with crypto).
   #
   # @param qty [Numeric] The quantity to format
-  # @param max_precision [Integer] Maximum precision for very small numbers
+  # @param exact [Boolean] Show the full stored precision, without rounding
   # @return [String] Formatted quantity with appropriate precision
-  def format_quantity(qty)
+  def format_quantity(qty, exact: false)
     return "0" if qty.nil? || qty.zero?
 
     abs_qty = qty.abs
 
-    precision = if abs_qty >= 1
-      1     # "10.5"
+    precision = if exact
+      8     # "10.374"
+    elsif abs_qty >= 1
+      1     # "10.4"
     elsif abs_qty >= 0.01
       2     # "0.52"
     elsif abs_qty >= 0.0001

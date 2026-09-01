@@ -72,6 +72,16 @@ class AiHealth
       Result.new(status: :not_configured, checked_at: nil, failure_code: nil, http_status: nil)
     end
 
+    # Seconds each probe request is allowed to run. Single source of truth:
+    # both the probes (instance methods below) and AiHealth's System Health
+    # reporting resolve the effective timeout through here so the two can
+    # never drift. Honors AI_HEALTH_PROBE_TIMEOUT; falls back to
+    # DEFAULT_TIMEOUT when unset or non-positive.
+    def self.timeout
+      seconds = ENV.fetch("AI_HEALTH_PROBE_TIMEOUT", DEFAULT_TIMEOUT).to_i
+      seconds.positive? ? seconds : DEFAULT_TIMEOUT
+    end
+
     def initialize(force: false, cache: Rails.cache)
       @force = force
       @cache = cache
@@ -471,12 +481,17 @@ class AiHealth
       end
 
       def timeout
-        seconds = ENV.fetch("AI_HEALTH_PROBE_TIMEOUT", DEFAULT_TIMEOUT).to_i
-        seconds.positive? ? seconds : DEFAULT_TIMEOUT
+        self.class.timeout
       end
 
+      # Map a probe error to a machine-readable code for the admin AI status
+      # page. Prefers an explicit `failure_code` the error carries (e.g. a
+      # provider raising for a specific reason like a missing renderer binary),
+      # then classifies Faraday/Timeout errors as :timeout, and falls back to
+      # :request_failed for everything else.
       def failure_code(error)
-        return error.failure_code if error.respond_to?(:failure_code)
+        code = error.failure_code if error.respond_to?(:failure_code)
+        return code if code
 
         error.is_a?(Faraday::TimeoutError) || error.is_a?(Timeout::Error) ? :timeout : :request_failed
       end

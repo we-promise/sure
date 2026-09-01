@@ -153,8 +153,12 @@
         </div>
       <% end %>
       <div>
-        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.request_timeout") %></dt>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.llm_request_timeout") %></dt>
         <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.llm_request_timeout) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.probe_request_timeout") %></dt>
+        <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.probe_request_timeout) %></dd>
       </div>
       <div>
         <dt class="text-secondary">

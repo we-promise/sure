@@ -110,6 +110,12 @@ x-rails-env: &rails_env
   # an hour. The trade is that longer tool chains fail earlier, with an explicit
   # tool-call limit error rather than a timeout.
   OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-300}
+  # Health-check probes (System Health → AI Status → "Run checks") bound each
+  # probe call. Distinct from OPENAI_REQUEST_TIMEOUT, which bounds real LLM
+  # calls the app makes; the probe default is 5s. AI_HEALTH_PROBE_CACHE_TTL
+  # controls how long probe results are cached (default 60s).
+  AI_HEALTH_PROBE_TIMEOUT: ${AI_HEALTH_PROBE_TIMEOUT:-}
+  AI_HEALTH_PROBE_CACHE_TTL: ${AI_HEALTH_PROBE_CACHE_TTL:-}
   ASSISTANT_MAX_TOOL_CALL_ITERATIONS: ${ASSISTANT_MAX_TOOL_CALL_ITERATIONS:-2}
   AI_RESPONSE_TIMEOUT: ${AI_RESPONSE_TIMEOUT:-1200}
   # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)

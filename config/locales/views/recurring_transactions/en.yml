@@ -1,6 +1,25 @@
 ---
 en:
   recurring_transactions:
+    frequency_presets:
+      monthly: Monthly
+      weekly: Weekly
+      biweekly: Every 2 weeks
+      semimonthly: Twice a month
+      quarterly: Quarterly
+      semiannual: Every 6 months
+      annual: Yearly
+      custom: Custom schedule
+    frequency:
+      monthly: "Monthly on the %{day}"
+      weekly: "Weekly on %{weekday}"
+      biweekly: "Every 2 weeks on %{weekday}"
+      semimonthly: "Twice a month, the %{first} and %{second}"
+      quarterly: "Quarterly on the %{day}"
+      semiannual: "Every 6 months on the %{day}"
+      annual: "Yearly on %{month} %{day}"
+      custom: Custom schedule
+      last_day: last day
     title: Recurring Transactions
     upcoming: Upcoming Recurring Transactions
     projected: Projected
