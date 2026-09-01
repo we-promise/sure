@@ -5,7 +5,7 @@ require "test_helper"
 class Provider::CoinspotTest < ActiveSupport::TestCase
   setup do
     @provider = Provider::Coinspot.new(api_key: "test_key", api_secret: "test_secret", nonce_generator: -> { 1616492376594 })
-end
+  end
 
   test "read only requests send compact json body signed with hmac sha512" do
     expected_body = JSON.generate({ "nonce" => 1616492376594 })
