@@ -1322,18 +1322,6 @@ class Demo::Generator
       #                   :reached, :on_track, :behind, :no_target_date
       #   Edge surfaces:  past-due target_date ("was due"), open pledge
       #                   banner, matched pledge ("last pledge matched")
-      # A whole-account link (no `allocations:` entry for that account) claims
-      # 100% of the balance and is exclusive per account — only one active/
-      # paused goal may hold one on a given account at a time
-      # (GoalAccount#whole_account_link_must_be_exclusive). Every goal below
-      # used to link `primary`/`secondary` wholly, which only ever worked
-      # because they saved one at a time with nothing to conflict with yet;
-      # the moment more than one wanted the same account, `save!` started
-      # raising — crashing `rake demo_data:default` on a clean checkout, every
-      # time. Only "Long-term portfolio" keeps a whole claim on `primary`
-      # (its on_track pace needs most of that balance) — everyone else on
-      # `primary`/`secondary` gets an explicit partial earmark instead, sized
-      # to preserve the status each goal is here to demonstrate.
       goals = [
         # active · behind — secondary account only, target above its balance
         {
