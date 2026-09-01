@@ -22,6 +22,10 @@ class Entry < ApplicationRecord
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
   has_one :originated_emi_plan, class_name: "EmiPlan", foreign_key: :entry_id, dependent: :destroy
 
+  # Read side only, so a transaction can say which bills it paid. The foreign key
+  # already nullifies on delete, so this adds no lifecycle behaviour.
+  has_many :recurring_allocations, dependent: nil, inverse_of: :entry
+
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
 

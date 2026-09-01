@@ -83,7 +83,8 @@ en:
             function_calling: Function calling (tools)
             pdf_text_extraction: PDF text-extraction path
             pdf_vision_processing: PDF vision/native path
-            request_timeout: Request timeout
+            llm_request_timeout: LLM request timeout
+            probe_request_timeout: Health-check probe timeout
             openai_credentials: OpenAI credentials
             openai_compatible_credentials: OpenAI-compatible API credentials
             anthropic_credentials: Anthropic credentials
@@ -159,6 +160,7 @@ en:
             dimensions_mismatch: The embedding vector dimensions do not match the configured dimensions
             extension_not_enabled: The PostgreSQL vector extension is not enabled
             table_not_found: The vector_store_chunks table was not found
+            render_missing_binary: The pdftoppm renderer (poppler-utils) is not available in this container
             timeout: The service did not respond before the probe timeout
             request_failed: The service request failed
             unsupported_provider: The provider does not support this check

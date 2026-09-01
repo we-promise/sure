@@ -15,7 +15,7 @@ class AiHealth
   }.freeze
 
   attr_reader :selected_llm_provider, :effective_llm_provider, :llm_model,
-              :llm_endpoint, :llm_request_timeout, :openai_endpoint, :vector_store_adapter,
+              :llm_endpoint, :llm_request_timeout, :probe_request_timeout, :openai_endpoint, :vector_store_adapter,
               :embedding_endpoint, :embedding_model, :embedding_dimensions,
               :pgvector_extension_available, :pgvector_extension_enabled,
               :pgvector_table_available, :qdrant_endpoint, :llm_probe,
@@ -144,6 +144,7 @@ class AiHealth
       @llm_model = effective_model(provider_for_details)
       @llm_endpoint = endpoint(provider_for_details)
       @llm_request_timeout = request_timeout(provider_for_details)
+      @probe_request_timeout = probe_request_timeout_value
       @openai_uses_responses_endpoint = @effective_llm_protocol == :openai &&
         safely(false) { @llm_provider.supports_responses_endpoint? }
       @pdf_processing_capable = safely(false) do
@@ -344,6 +345,15 @@ class AiHealth
       else
         ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
       end
+    end
+
+    # Timeout applied to the admin "live checks" probes. Delegates to
+    # Probe.timeout so System Health reports the exact bound the probes use,
+    # guaranteeing the two can never drift. Deliberately distinct from
+    # request_timeout, which bounds the LLM calls the app makes during
+    # normal use (chat, PDF import).
+    def probe_request_timeout_value
+      Probe.timeout
     end
 
     def openai_uri_base
