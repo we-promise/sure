@@ -343,7 +343,7 @@ class AiHealth
       if provider == :anthropic
         ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       else
-        ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+        Provider::Openai.request_timeout
       end
     end
 
