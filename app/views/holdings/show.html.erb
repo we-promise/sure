@@ -96,7 +96,7 @@
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".shares_label") %></dt>
-            <dd class="text-primary"><%= format_quantity(@holding.qty, exact: true) %></dd>
+            <dd id="<%= dom_id(@holding, :shares) %>" class="text-primary"><%= format_quantity(@holding.qty, exact: true) %></dd>
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".portfolio_weight_label") %></dt>
