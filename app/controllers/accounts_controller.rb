@@ -320,7 +320,7 @@ class AccountsController < ApplicationController
     def account_params
       params.require(:account).permit(
         :name, :balance, :currency, :institution_name, :institution_domain,
-        :notes, :exclude_from_reports, :logo,
+        :notes, :exclude_from_reports, :logo, :logo_source,
         accountable_attributes: [ :subtype, :initial_balance, :opening_balance_date ]
       )
     end

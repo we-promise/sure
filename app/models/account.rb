@@ -8,6 +8,12 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
+  # Track logo source: set to manual when user uploads a logo
+  before_save :set_logo_source, if: -> { logo.attached? && logo_source != "manual" }
+
+  # Auto-fetch logo when institution domain changes (if in auto mode)
+  before_save :fetch_logo_from_domain, if: -> { logo_source == "auto" && saved_change_to_institution_domain? && institution_domain.present? }
+
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
@@ -94,6 +100,9 @@ class Account < ApplicationRecord
   has_one_attached :logo, dependent: :purge_later
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
+
+  # Track whether logo is manually uploaded or auto-fetched
+  enum logo_source: { auto: "auto", manual: "manual" }, _default: "auto"
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -520,16 +529,50 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    if logo.attached?
-      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    # Manual upload always takes precedence
+    if logo_source == "manual" && logo.attached?
+      return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
+
+    # Auto mode: try to fetch from institution or provider
+    if institution_domain.present? && Setting.brand_fetch_client_id.present?
+      logo_size = Setting.brand_fetch_logo_size
+      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
     elsif provider&.logo_url.present?
       provider.logo_url
-    elsif institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
-
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    elsif logo.attached?
+      # Fallback: if logo attached but source is auto, still use it
+      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
   end
+
+  private
+
+    def set_logo_source
+      # If logo is attached and source is not already manual, set it to manual
+      self.logo_source = "manual" if logo.attached? && logo_source != "manual"
+    end
+
+    def fetch_logo_from_domain
+      # Only fetch if we don't already have a logo attached
+      return if logo.attached?
+
+      # Try to fetch from Brandfetch
+      if Setting.brand_fetch_client_id.present?
+        logo_url = brandfetch_logo_url
+        if logo_url.present?
+          # Download and attach the logo
+          LogoFetcherService.new(account: self, url: logo_url).fetch_and_attach
+        end
+      end
+    end
+
+    def brandfetch_logo_url
+      return nil unless institution_domain.present? && Setting.brand_fetch_client_id.present?
+
+      logo_size = Setting.brand_fetch_logo_size
+      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    end
 
   def destroy_later
     transaction do

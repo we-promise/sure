@@ -1,10 +1,10 @@
-<%# locals: (account:, url:) %>
+<%# locals: (account:, url:, method: nil) %>
 
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
 
-<%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+<%= styled_form_with model: account, url: url, method: method, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <div class="grow space-y-2">
     <%= form.hidden_field :accountable_type %>
     <%= form.hidden_field :return_to, value: params[:return_to] %>
@@ -55,6 +55,14 @@
               accept: "image/*",
               class: "block w-full text-sm text-primary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold hover:file:bg-surface-hover" %>
           <p class="text-xs text-secondary"><%= t(".logo_hint") %></p>
+        </div>
+
+        <div class="flex items-center gap-4 text-sm">
+          <%= form.radio_button :logo_source, "auto", class: "h-4 w-4" %>
+          <%= form.label :logo_source_auto, t(".auto_logo"), class: "text-secondary" %>
+          
+          <%= form.radio_button :logo_source, "manual", class: "h-4 w-4" %>
+          <%= form.label :logo_source_manual, t(".manual_logo"), class: "text-secondary" %>
         </div>
 
         <%= form.text_area :notes,

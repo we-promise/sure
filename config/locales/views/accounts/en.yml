@@ -52,6 +52,8 @@ en:
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       logo_label: Custom icon
       logo_hint: Upload an image to use as this account's icon (PNG, JPG, SVG). If left blank, the institution logo will be used automatically.
+      auto_logo: Auto (from institution)
+      manual_logo: Manual (custom upload)
       exclude_from_reports: Exclude from all reports
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
