@@ -12,7 +12,7 @@ class Account < ApplicationRecord
   before_save :set_logo_source, if: -> { logo.attached? && logo_source.blank? }
 
   # Queue logo fetch after save to avoid blocking the save operation
-  after_save_commit :queue_logo_fetch, if: -> { logo_source == "auto" && institution_domain.present? && (saved_change_to_institution_domain? || new_record?) }
+  after_save_commit :queue_logo_fetch, if: :should_queue_logo_fetch?
 
   before_validation :clean_institution_domain, if: -> { institution_domain.present? }
 
@@ -531,26 +531,13 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    # Manual upload always takes precedence
-    if logo_source == "manual" && logo.attached?
-      return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
-    end
-
-    # If we have an attached logo (e.g., fetched from domain or provider), use it
     if logo.attached?
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
     # Auto mode: try to fetch from institution or provider
     if institution_domain.present?
-      # Try Brandfetch first if configured
-      if Setting.brand_fetch_client_id.present?
-        logo_size = Setting.brand_fetch_logo_size
-        return "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-      end
-
-      # Fallback: try favicon.ico directly from the domain
-      favicon_url
+      brandfetch_logo_url || favicon_url
     elsif provider&.logo_url.present?
       provider.logo_url
     end
@@ -558,42 +545,34 @@ class Account < ApplicationRecord
 
   def favicon_url
     return nil unless institution_domain.present?
+
     # Use DuckDuckGo's privacy-friendly favicon service
-    # This avoids pinging Google and is more appropriate for open-source
     "https://icons.duckduckgo.com/ip3/#{institution_domain}.ico"
   end
 
+  def brandfetch_logo_url
+    return nil unless institution_domain.present? && Setting.brand_fetch_client_id.present?
+
+    logo_size = Setting.brand_fetch_logo_size
+    "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+  end
+
   def queue_logo_fetch
-    # Queue logo fetch in background to avoid blocking the save operation
     FetchLogoJob.perform_later(id)
   end
 
   private
 
-    def set_logo_source
-      # If logo is attached and source is blank, default to manual
-      self.logo_source = "manual" if logo.attached? && logo_source.blank?
+    def should_queue_logo_fetch?
+      logo_source_auto? && institution_domain.present? && (
+        saved_change_to_institution_domain? ||
+        saved_change_to_logo_source? ||
+        !logo.attached?
+      )
     end
 
-    def fetch_logo_from_domain
-      # Only fetch if we don't already have a logo attached
-      return if logo.attached?
-
-      # Try to fetch from Brandfetch first if configured
-      if Setting.brand_fetch_client_id.present?
-        logo_url = brandfetch_logo_url
-        if logo_url.present?
-          # Download and attach the logo
-          LogoFetcherService.new(account: self, url: logo_url).fetch_and_attach
-          return # Successfully fetched from Brandfetch
-        end
-      end
-
-      # Fallback: try to fetch favicon.ico directly from the domain
-      favicon = favicon_url
-      if favicon.present?
-        LogoFetcherService.new(account: self, url: favicon).fetch_and_attach
-      end
+    def set_logo_source
+      self.logo_source = "manual" if logo.attached? && logo_source.blank?
     end
 
     def clean_institution_domain
@@ -605,13 +584,6 @@ class Account < ApplicationRecord
       domain = domain.split(":").first
       # Only update if it changed
       self.institution_domain = domain if domain != institution_domain
-    end
-
-    def brandfetch_logo_url
-      return nil unless institution_domain.present? && Setting.brand_fetch_client_id.present?
-
-      logo_size = Setting.brand_fetch_logo_size
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
     end
 
   public

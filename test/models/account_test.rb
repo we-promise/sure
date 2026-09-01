@@ -425,7 +425,7 @@ class AccountTest < ActiveSupport::TestCase
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
     @account.institution_domain = "example.com"
-    
+
     expected_url = "https://cdn.brandfetch.io/example.com/icon/fallback/lettermark/w/120/h/120?c=test_client_id"
     assert_equal expected_url, @account.logo_url
   end
@@ -433,7 +433,7 @@ class AccountTest < ActiveSupport::TestCase
   test "logo_url returns DuckDuckGo favicon when Brandfetch not configured" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     @account.institution_domain = "example.com"
-    
+
     expected_url = "https://icons.duckduckgo.com/ip3/example.com.ico"
     assert_equal expected_url, @account.logo_url
   end
@@ -441,10 +441,9 @@ class AccountTest < ActiveSupport::TestCase
   test "logo_url returns provider logo when available" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     @account.institution_domain = nil
-    # Create a mock provider and associate it
     provider = OpenStruct.new(logo_url: "https://provider.com/logo.png")
-    @account.provider = provider
-    
+    @account.stubs(:provider).returns(provider)
+
     assert_equal "https://provider.com/logo.png", @account.logo_url
   end
 
@@ -457,7 +456,7 @@ class AccountTest < ActiveSupport::TestCase
       content_type: "image/png"
     )
     @account.logo_source = "manual"
-    
+
     assert @account.logo_url.include?("/rails/active_storage")
   end
 
@@ -465,7 +464,7 @@ class AccountTest < ActiveSupport::TestCase
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     @account.institution_domain = nil
     @account.stubs(:provider).returns(nil)
-    
+
     assert_nil @account.logo_url
   end
 
