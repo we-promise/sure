@@ -265,6 +265,78 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "complete account setup respects return_to parameter" do
+    second_account = @second_item.coinspot_accounts.create!(
+      name: "CoinSpot",
+      account_id: "combined",
+      account_type: "combined",
+      currency: "AUD",
+      current_balance: 1000
+    )
+    CoinspotAccount::Processor.any_instance.stubs(:process).returns(nil)
+
+    post complete_account_setup_coinspot_item_url(@second_item), params: {
+      selected_accounts: [ second_account.id ],
+      return_to: "/accounts"
+    }
+
+    assert_redirected_to accounts_path
+  end
+
+  test "complete account setup rejects malicious return_to paths" do
+    second_account = @second_item.coinspot_accounts.create!(
+      name: "CoinSpot",
+      account_id: "combined",
+      account_type: "combined",
+      currency: "AUD",
+      current_balance: 1000
+    )
+    CoinspotAccount::Processor.any_instance.stubs(:process).returns(nil)
+
+    post complete_account_setup_coinspot_item_url(@second_item), params: {
+      selected_accounts: [ second_account.id ],
+      return_to: "//evil.example/accounts"
+    }
+
+    assert_redirected_to accounts_path
+  end
+
+  test "complete account setup rejects backslash return_to paths" do
+    second_account = @second_item.coinspot_accounts.create!(
+      name: "CoinSpot",
+      account_id: "combined",
+      account_type: "combined",
+      currency: "AUD",
+      current_balance: 1000
+    )
+    CoinspotAccount::Processor.any_instance.stubs(:process).returns(nil)
+
+    post complete_account_setup_coinspot_item_url(@second_item), params: {
+      selected_accounts: [ second_account.id ],
+      return_to: "\\evil"
+    }
+
+    assert_redirected_to accounts_path
+  end
+
+  test "complete account setup rejects encoded separator return_to paths" do
+    second_account = @second_item.coinspot_accounts.create!(
+      name: "CoinSpot",
+      account_id: "combined",
+      account_type: "combined",
+      currency: "AUD",
+      current_balance: 1000
+    )
+    CoinspotAccount::Processor.any_instance.stubs(:process).returns(nil)
+
+    post complete_account_setup_coinspot_item_url(@second_item), params: {
+      selected_accounts: [ second_account.id ],
+      return_to: "/%2Fevil"
+    }
+
+    assert_redirected_to accounts_path
+  end
+
   private
 
     def manual_crypto_exchange_account
