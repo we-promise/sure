@@ -539,12 +539,14 @@ class Account < ApplicationRecord
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
-    # Auto mode: try to fetch from institution or provider
-    if institution_domain.present?
-      brandfetch_logo_url || favicon_url
-    elsif provider&.logo_url.present?
-      provider.logo_url
-    end
+    # Auto mode: Brandfetch first when configured, then the linked provider's
+    # own logo — account-specific, so it must outrank the generic favicon —
+    # then a favicon fallback. Account::LogoFetcher mirrors this priority.
+    brandfetch = brandfetch_logo_url
+    return brandfetch if brandfetch.present?
+    return provider.logo_url if provider&.logo_url.present?
+
+    favicon_url
   end
 
   def favicon_url

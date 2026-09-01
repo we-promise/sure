@@ -447,6 +447,15 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "https://provider.com/logo.png", @account.logo_url
   end
 
+  test "logo_url prefers provider logo over favicon fallback" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    @account.institution_domain = "example.com"
+    provider = OpenStruct.new(logo_url: "https://provider.com/logo.png")
+    @account.stubs(:provider).returns(provider)
+
+    assert_equal "https://provider.com/logo.png", @account.logo_url
+  end
+
   test "logo_url returns attached logo URL when manual source" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     @account.institution_domain = nil

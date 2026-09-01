@@ -64,6 +64,30 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     assert_equal "image/x-icon", @account.logo.blob.content_type
   end
 
+  test "fetches the provider logo before the favicon fallback" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    provider = OpenStruct.new(logo_url: "https://provider.example.com/logo.png")
+    @account.stubs(:provider).returns(provider)
+
+    provider_response = Net::HTTPSuccess.new("1.1", "200", "OK")
+    provider_response.stubs(:body).returns("provider-logo-data")
+    provider_response.stubs(:content_type).returns("image/png")
+
+    provider_http = mock
+    provider_http.stubs(:use_ssl=)
+    provider_http.stubs(:open_timeout=)
+    provider_http.stubs(:read_timeout=)
+    provider_http.expects(:request).returns(provider_response)
+
+    Net::HTTP.stubs(:new).with("provider.example.com", 443).returns(provider_http)
+    Net::HTTP.expects(:new).with("icons.duckduckgo.com", 443).never
+
+    Account::LogoFetcher.new(@account).fetch_and_attach
+
+    assert @account.logo.attached?
+    assert_equal "image/png", @account.logo.blob.content_type
+  end
+
   test "does not overwrite manual logo when logo_source is manual" do
     @account.update!(logo_source: "manual")
     @account.logo.attach(

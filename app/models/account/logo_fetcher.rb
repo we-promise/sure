@@ -12,18 +12,15 @@ class Account::LogoFetcher
   end
 
   def fetch_and_attach
-    return unless @account.institution_domain.present?
-    return unless @account.logo_source_auto?
+    return unless account.logo_source_auto?
+    return unless account.institution_domain.present?
 
-    # Try Brandfetch first if configured
-    if @account.brandfetch_logo_url.present?
-      attached = fetch_from_url(@account.brandfetch_logo_url)
-      return if attached
-    end
-
-    # Fallback: try DuckDuckGo favicon
-    if @account.favicon_url.present?
-      fetch_from_url(@account.favicon_url)
+    # Same priority as Account#logo_url: Brandfetch when configured, then the
+    # linked provider's own logo (beats the generic favicon), then a favicon.
+    # Stop at the first candidate that yields a usable image.
+    [ account.brandfetch_logo_url, account.provider&.logo_url, account.favicon_url ].each do |url|
+      next if url.blank?
+      return if fetch_from_url(url)
     end
   end
 
