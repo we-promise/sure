@@ -168,6 +168,35 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "transfer_match_candidates does not restrict cross-currency matches to linked accounts by default" do
+    load_exchange_prices
+    # Neither account is linked. auto_match_transfers! would exclude this pair
+    # (see the test above), but a direct transfer_match_candidates call -- what
+    # the manual "match as transfer" dialog uses via
+    # Transaction#transfer_match_candidates -- must still surface it so a user
+    # can find and confirm a real cross-currency transfer involving a manual
+    # account, instead of being forced into creating a duplicate transaction.
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    candidate_pairs = @family.transfer_match_candidates.map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "the manual match dialog can still find a cross-currency counterpart on a manual account" do
+    load_exchange_prices
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    # Transaction#transfer_match_candidates is what TransferMatchesController#new
+    # uses to populate the "match an existing transaction" selector.
+    candidates = inflow.transaction.transfer_match_candidates
+    assert_includes candidates.map(&:outflow_transaction_id), outflow.entryable_id
+  end
+
   test "only matches inflow with correct currency when duplicate amounts exist" do
     load_exchange_prices
     link_account!(@depository)
@@ -365,6 +394,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "JOIN exchange_rates"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
+    assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
   end
 
   # Regression tests for loan transfer kind assignment bug
