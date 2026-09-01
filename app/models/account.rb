@@ -11,8 +11,8 @@ class Account < ApplicationRecord
   # Track logo source: set to manual when user uploads a logo
   before_save :set_logo_source, if: -> { logo.attached? && logo_source != "manual" }
 
-  # Auto-fetch logo when institution domain changes or is set on new account (if in auto mode)
-  before_save :fetch_logo_from_domain, if: -> { logo_source == "auto" && institution_domain.present? && (saved_change_to_institution_domain? || new_record?) }
+  # Queue logo fetch after save to avoid blocking the save operation
+  after_save_commit :queue_logo_fetch, if: -> { logo_source == "auto" && institution_domain.present? && (saved_change_to_institution_domain? || new_record?) }
 
   before_validation :clean_institution_domain, if: -> { institution_domain.present? }
 
@@ -561,6 +561,11 @@ class Account < ApplicationRecord
     # Use DuckDuckGo's privacy-friendly favicon service
     # This avoids pinging Google and is more appropriate for open-source
     "https://icons.duckduckgo.com/ip3/#{institution_domain}.ico"
+  end
+
+  def queue_logo_fetch
+    # Queue logo fetch in background to avoid blocking the save operation
+    FetchLogoJob.perform_later(id)
   end
 
   private
