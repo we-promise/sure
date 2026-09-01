@@ -573,7 +573,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :accounts, only: %i[index new show destroy], shallow: true do
+  resources :accounts, only: %i[index new create edit update show destroy], shallow: true do
     member do
       post :sync
       get :sparkline

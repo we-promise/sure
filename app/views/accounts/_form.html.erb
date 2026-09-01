@@ -49,6 +49,14 @@
             label: t(".institution_domain_label"),
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
 
+        <div class="space-y-2">
+          <%= form.label :logo, t(".logo_label"), class: "text-sm text-primary" %>
+          <%= form.file_field :logo,
+              accept: "image/*",
+              class: "block w-full text-sm text-primary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold hover:file:bg-surface-hover" %>
+          <p class="text-xs text-secondary"><%= t(".logo_hint") %></p>
+        </div>
+
         <%= form.text_area :notes,
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
