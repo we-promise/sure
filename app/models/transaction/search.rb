@@ -142,12 +142,12 @@ class Transaction::Search
       # Uncategorized bucket = rows without a category. Exclude only pure
       # transfer-like kinds (funds_movement, cc_payment) which represent transfers
       # between accounts, not uncategorized expenses/income. Preserve one_time
-      # transactions since users can still categorize them, and preserve
-      # loan_payment/investment_contribution which are legitimate uncategorized
-      # entries that align with the dashboard's uncategorized totals.
-      # https://github.com/we-promise/sure/issues/2592
+      # Exclude transfer kinds that the dashboard's uncategorized totals exclude
+      # (funds_movement, one_time, cc_payment), but preserve loan_payment and
+      # investment_contribution which are budget-tracked transfers that align with
+      # the dashboard's uncategorized entries. https://github.com/we-promise/sure/issues/2592
       uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
-      uncategorized_excluded_kinds = %w[funds_movement cc_payment]
+      uncategorized_excluded_kinds = Transaction::BUDGET_EXCLUDED_KINDS
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
