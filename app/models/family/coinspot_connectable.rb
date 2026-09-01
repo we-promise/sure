@@ -18,7 +18,7 @@ module Family::CoinspotConnectable
   # institution branding, and queues the first sync.
   def create_coinspot_item!(api_key:, api_secret:, item_name: nil)
     item = coinspot_items.create!(
-      name: item_name || I18n.t("coinspot_items.create.default_name"),
+      name: item_name.presence || I18n.t("coinspot_items.create.default_name"),
       api_key: api_key,
       api_secret: api_secret
     )

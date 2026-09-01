@@ -143,6 +143,7 @@ class CoinspotItemsController < ApplicationController
   def complete_account_setup
     selected_accounts = Array(params[:selected_accounts]).reject(&:blank?)
     created_accounts = []
+    failed_accounts = 0
 
     selected_accounts.each do |coinspot_account_id|
       coinspot_account = @coinspot_item.coinspot_accounts.find_by(id: coinspot_account_id)
@@ -158,7 +159,16 @@ class CoinspotItemsController < ApplicationController
 
       CoinspotAccount::Processor.new(coinspot_account.reload).process
     rescue StandardError => e
-      Rails.logger.error("Failed to setup account for CoinspotAccount #{coinspot_account_id}: #{e.message}")
+      failed_accounts += 1
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to setup account for CoinspotAccount: #{e.message}",
+        source: self.class.name,
+        provider_key: "coinspot",
+        family: @coinspot_item.family,
+        metadata: { coinspot_account_id: coinspot_account_id, error_class: e.class.name }
+      )
     end
 
     @coinspot_item.update!(pending_account_setup: unlinked_accounts_for(@coinspot_item).exists?)
@@ -168,6 +178,8 @@ class CoinspotItemsController < ApplicationController
       t(".success", count: created_accounts.count)
     elsif selected_accounts.empty?
       t(".none_selected")
+    elsif failed_accounts == selected_accounts.count
+      t(".setup_failed", count: failed_accounts)
     else
       t(".no_accounts")
     end

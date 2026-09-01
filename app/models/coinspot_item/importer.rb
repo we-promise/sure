@@ -75,20 +75,60 @@ class CoinspotItem::Importer
 
     # Fetches order history via the primary endpoint, falling back to the
     # market-order endpoint (a different shape CoinSpot uses for market-type
-    # orders) if the primary one errors.
+    # orders) if the primary one errors. Partitions the date range into
+    # 30-day windows to ensure all records are fetched (API returns max 500).
     def fetch_order_history
-      coinspot_provider.get_order_history(**history_window)
+      orders_by_id = {}
+      window_start = history_window[:startdate]
+      window_end = history_window[:enddate]
+
+      while window_start <= window_end
+        current_window_end = [window_start + 29.days, window_end].min
+        window_orders = fetch_orders_for_window(
+          startdate: window_start,
+          enddate: current_window_end
+        )
+
+        Array(window_orders).each do |order|
+          order_id = order["id"] || order[:id]
+          orders_by_id[order_id] = order if order_id
+        end
+
+        window_start = current_window_end + 1.day
+      end
+
+      { "buyorders" => orders_by_id.values }
+    end
+
+    private
+
+    def fetch_orders_for_window(startdate:, enddate:)
+      response = coinspot_provider.get_order_history(startdate: startdate, enddate: enddate)
+      Array(response["buyorders"])
     rescue Provider::Coinspot::ApiError => e
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "warn",
-        message: "CoinSpot order history failed; trying market order history: #{e.message}",
+        message: "CoinSpot order history failed for window #{startdate}-#{enddate}; trying market order history: #{e.message}",
         source: self.class.name,
         provider_key: "coinspot",
         family: coinspot_item.family,
         metadata: { coinspot_item_id: coinspot_item.id, error_class: e.class.name }
       )
-      coinspot_provider.get_market_order_history(**history_window)
+
+      response = coinspot_provider.get_market_order_history(startdate: startdate, enddate: enddate)
+      Array(response["buyorders"])
+    rescue Provider::Coinspot::ApiError => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "CoinSpot order history failed for window #{startdate}-#{enddate}: #{e.message}",
+        source: self.class.name,
+        provider_key: "coinspot",
+        family: coinspot_item.family,
+        metadata: { coinspot_item_id: coinspot_item.id, error_class: e.class.name }
+      )
+      []
     end
 
     # Converts CoinSpot's balances response into the flat asset-list shape

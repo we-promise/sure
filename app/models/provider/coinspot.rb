@@ -27,7 +27,7 @@ class Provider::Coinspot
   def initialize(api_key:, api_secret:, nonce_generator: nil)
     @api_key = api_key # pipelock:ignore user-supplied CoinSpot credential kept in memory for signed requests
     @api_secret = api_secret # pipelock:ignore user-supplied CoinSpot credential kept in memory for signed requests
-    @nonce_generator = nonce_generator || -> { Process.clock_gettime(Process::CLOCK_REALTIME, :millisecond).to_s }
+    @nonce_generator = nonce_generator || -> { Process.clock_gettime(Process::CLOCK_REALTIME, :millisecond).to_i }
   end
 
   # Confirms the credentials are valid and the API is reachable.
@@ -42,8 +42,8 @@ class Provider::Coinspot
 
   # Completed buy/sell order history, optionally scoped to a date range.
   def get_order_history(startdate: nil, enddate: nil)
-    read_only_post("/my/orders/history", date_params(startdate: startdate, enddate: enddate))
-  end
+    read_only_post("/my/orders/completed", date_params(startdate: startdate, enddate: enddate))
+end
 
   # Completed market-order history -- a fallback CoinSpot exposes separately
   # from the primary order-history endpoint for market-type orders.
@@ -82,7 +82,7 @@ class Provider::Coinspot
     # Posts a signed request to CoinSpot's read-only API and returns the
     # parsed, successful response body, raising a classified error otherwise.
     def read_only_post(path, params = {})
-      request_params = { "nonce" => nonce_generator.call.to_s }.merge(stringify_params(params))
+      request_params = { "nonce" => nonce_generator.call }.merge(stringify_params(params))
       body = JSON.generate(request_params)
 
       response = self.class.post(

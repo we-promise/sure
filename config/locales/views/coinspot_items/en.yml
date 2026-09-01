@@ -50,6 +50,9 @@ en:
         other: "Imported %{count} accounts"
       none_selected: No accounts selected
       no_accounts: No accounts to import
+      setup_failed:
+        one: "Failed to import %{count} account"
+        other: "Failed to import %{count} accounts"
     coinspot_item:
       provider_name: CoinSpot
       syncing: Syncing...

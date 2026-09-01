@@ -79,7 +79,15 @@ class CoinspotItem::Syncer
     mark_failed(sync, e.message)
     raise
   rescue StandardError => e
-    Rails.logger.error "CoinspotItem::Syncer - unexpected error during sync: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}"
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Unexpected error during CoinSpot sync: #{e.message}",
+      source: self.class.name,
+      provider_key: "coinspot",
+      family: coinspot_item.family,
+      metadata: { error_class: e.class.name, backtrace: e.backtrace&.first(5) }
+    )
     mark_failed(sync, e.message)
     raise
   end
