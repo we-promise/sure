@@ -650,6 +650,16 @@ class Provider::YahooFinance < Provider
       symbol = query.to_s.strip.upcase
       return [] if symbol.blank? || symbol.include?(" ") || !symbol.match?(/\A[A-Z0-9.\-]{1,20}\z/)
 
+      # Require an exchange-qualified symbol (e.g. "VAN0111AU.AX"), not a bare
+      # one (e.g. "XYZ"). A bare ticker missing from Yahoo's search index would
+      # normally mean "no match" -- but the chart endpoint resolves bare tickers
+      # too, and some of those are real, unrelated securities (e.g. "XYZ" is
+      # NYSE-listed Block, Inc.), which would surface as a surprising spurious
+      # match for what the user actually typed. A plain, indexable ticker like
+      # that already resolves via the primary search above; this fallback exists
+      # for suffixed, non-US-style symbols the index has gaps for.
+      return [] unless symbol.match?(/\A[A-Z0-9\-]+\.[A-Z0-9\-]+\z/)
+
       throttle_request
       data = fetch_authenticated_chart(symbol, { "interval" => "1d", "range" => "5d" })
       return [] if data.dig("chart", "error").present?

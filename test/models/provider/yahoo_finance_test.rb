@@ -566,7 +566,26 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
     @provider.stubs(:throttle_request)
 
-    response = @provider.search_securities("NOTAREALSYMBOL")
+    response = @provider.search_securities("NOTAREAL.XX")
+
+    assert response.success?
+    assert_equal [], response.data
+  end
+
+  test "search_securities does not attempt a direct chart fallback for a bare (non-exchange-qualified) symbol" do
+    empty_search_response = mock
+    empty_search_response.stubs(:body).returns('{"quotes":[]}')
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(empty_search_response)
+
+    # "XYZ" is a real, unrelated NYSE ticker (Block, Inc.) that the chart
+    # endpoint would happily resolve -- but a bare symbol missing from Yahoo's
+    # own search index should not surface a surprising spurious match. If the
+    # fallback fired here, this would raise (unstubbed method call) rather
+    # than silently pass.
+    @provider.expects(:fetch_cookie_and_crumb).never
+
+    response = @provider.search_securities("XYZ")
 
     assert response.success?
     assert_equal [], response.data
