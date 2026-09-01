@@ -4,7 +4,7 @@ pt-PT:
     users:
       index:
         title: "Gestão de Utilizadores"
-        description: "Administração de utilizadores, funções, grupos e contas na sua instância. Os superadministradores também têm acesso às definições dos serviços SSO e às opções de gestão de utilizadores."
+        description: "Gestão das funções dos utilizadores, da associação a famílias/grupos e da remoção de contas na sua instância. Os superadministradores podem aceder às definições dos serviços SSO e à gestão de utilizadores."
         section_title: "Famílias / Grupos"
         you: "(Você)"
         trial_ends_at: "Fim do período experimental"
@@ -84,7 +84,7 @@ pt-PT:
           title: "Famílias/grupos não utilizados"
           family_id: "ID da família: %{id}"
           delete: "Eliminar família não utilizada"
-          delete_confirm: "Tem a certeza de que pretende eliminar esta família/grupo não utilizada(o)? Esta ação é irreversível."
+          delete_confirm: "Tem a certeza de que pretende eliminar esta família ou este grupo que não está a ser utilizado? Esta ação é irreversível."
           empty: "Não foram encontradas famílias/grupos não utilizados."
       update:
         success_role: "Função de utilizador atualizada com sucesso."
