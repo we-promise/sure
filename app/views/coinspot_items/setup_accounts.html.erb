@@ -20,6 +20,7 @@
                     turbo_frame: "_top"
                   },
                   class: "space-y-6" do |form| %>
+      <%= hidden_field_tag :return_to, params[:return_to] %>
       <div class="space-y-4">
         <div class="bg-surface border border-primary p-4 rounded-lg">
           <div class="flex items-start gap-3">

@@ -142,6 +142,7 @@ class CoinspotItemsController < ApplicationController
   # instead of left half-set-up.
   def complete_account_setup
     selected_accounts = Array(params[:selected_accounts]).reject(&:blank?)
+    return_to = safe_return_to_path(params[:return_to])
     created_accounts = []
     failed_accounts = 0
 
@@ -150,11 +151,11 @@ class CoinspotItemsController < ApplicationController
       next unless coinspot_account
 
       coinspot_account.with_lock do
-        next if coinspot_account.account_provider.present?
-
-        account = Account.create_from_coinspot_account(coinspot_account)
-        provider_link = coinspot_account.ensure_account_provider!(account)
-        provider_link ? created_accounts << account : account.destroy!
+        if coinspot_account.account_provider.blank?
+          account = Account.create_from_coinspot_account(coinspot_account)
+          provider_link = coinspot_account.ensure_account_provider!(account)
+          provider_link ? created_accounts << account : account.destroy!
+        end
       end
 
       CoinspotAccount::Processor.new(coinspot_account.reload).process
@@ -184,7 +185,7 @@ class CoinspotItemsController < ApplicationController
       t(".no_accounts")
     end
 
-    redirect_to accounts_path, notice: notice, status: :see_other
+    redirect_to return_to || accounts_path, notice: notice, status: :see_other
   end
 
   private
@@ -287,19 +288,30 @@ class CoinspotItemsController < ApplicationController
     end
 
     # Validates params[:return_to] is a same-origin relative path before
-    # using it as a redirect target, rejecting anything with a scheme or
-    # host (open-redirect protection) or that doesn't start with "/".
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
+    # using it as a redirect target, rejecting anything with a scheme, host,
+    # backslashes, control characters, or encoded separators (open-redirect protection).
+    def safe_return_to_path(value = nil)
+      return_value = value || params[:return_to]
+      return nil if return_value.blank?
 
-      value = params[:return_to].to_s
-      uri = URI.parse(value)
-      return nil if uri.scheme.present?
-      return nil if uri.host.present?
-      return nil unless value.start_with?("/")
+      return_to = return_value.to_s.strip
+      return nil unless return_to.start_with?("/")
+      return nil if return_to[1] == "/" || return_to[1] == "\\"
+      return nil if return_to.include?("\\") || return_to.match?(/[[:cntrl:]]/)
+      return nil if encoded_path_separator?(return_to)
 
-      value
-    rescue URI::InvalidURIError
+      uri = URI.parse(return_to)
+      return nil unless uri.relative?
+
+      Rails.application.routes.recognize_path(uri.path, method: :get)
+
+      return_to
+    rescue URI::InvalidURIError, ActionController::RoutingError
       nil
+    end
+
+    def encoded_path_separator?(return_to)
+      encoded_second_character = return_to[1, 3]
+      %w[%2F %5C].include?(encoded_second_character)
     end
 end
