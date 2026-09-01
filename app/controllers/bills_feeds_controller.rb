@@ -20,6 +20,12 @@ class BillsFeedsController < ApplicationController
     family = user&.family
     raise ActiveRecord::RecordNotFound unless family && stamp.present? && stamp == family.bills_feed_stamp
 
+    # Preview-gated like every other bills surface. Sessionless, so the gate
+    # reads the member the token names: opting out of preview features (or the
+    # family switching recurring off) kills retained URLs immediately, not
+    # only after a token reset.
+    raise ActiveRecord::RecordNotFound unless user.preview_features_enabled? && !family.recurring_transactions_disabled?
+
     occurrences = family.recurring_occurrences
                         .open_status
                         .joins(:recurring_transaction)

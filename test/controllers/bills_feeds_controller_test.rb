@@ -4,6 +4,8 @@ class BillsFeedsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @family = families(:dylan_family)
     @user = users(:family_admin)
+    # The feed is preview-gated on the member the token names.
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family.recurring_transactions.destroy_all
     create_bill(name: "Rent", amount: 2150)
   end
@@ -45,6 +47,7 @@ class BillsFeedsControllerTest < ActionDispatch::IntegrationTest
   # reach an account in the app must not receive its bills by calendar.
   test "a member's feed carries only the bills that member can reach" do
     member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
     # The investment account is the admin's and was never shared.
     create_bill(name: "Private Brokerage Fee", amount: 95, account: accounts(:investment))
     create_bill(name: "Gym", amount: 30, account: nil)
@@ -71,6 +74,30 @@ class BillsFeedsControllerTest < ActionDispatch::IntegrationTest
     get bills_feed_url(token: @family.reload.bills_feed_token_for(@user))
     assert_response :success
     assert_match "BEGIN:VCALENDAR", response.body
+  end
+
+  # The feed is sessionless, so the preview gate has to travel with the token:
+  # a retained calendar URL must die the moment its member opts out, not only
+  # after an explicit token reset.
+  test "a retained URL stops working when the member opts out of preview" do
+    token = @family.bills_feed_token_for(@user)
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+    get bills_feed_url(token: token)
+    assert_response :not_found
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    get bills_feed_url(token: token)
+    assert_response :success
+  end
+
+  test "the feed honors the family recurring switch" do
+    token = @family.bills_feed_token_for(@user)
+    @family.update!(recurring_transactions_disabled: true)
+
+    get bills_feed_url(token: token)
+
+    assert_response :not_found
   end
 
   test "the family secret generates lazily exactly once" do

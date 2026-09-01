@@ -427,10 +427,12 @@ class RecurringTransactionsController < ApplicationController
 
       if attrs.key?(:account_id)
         # Blank means "any account"; a present id that does not resolve must
-        # not silently detach the bill from its account.
+        # not silently detach the bill from its account. Writable, not merely
+        # visible: attaching a series to an account changes what that
+        # account's owners see, so a read-only share cannot be a destination.
         if attrs[:account_id].blank?
           @recurring_transaction.account = nil
-        elsif (account = Current.user.accessible_accounts.find_by(id: attrs[:account_id]))
+        elsif (account = Account.writable_by(Current.user).find_by(id: attrs[:account_id]))
           @recurring_transaction.account = account
         else
           @recurring_transaction.errors.add(:account, :invalid)

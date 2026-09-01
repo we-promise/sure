@@ -1044,6 +1044,29 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed Fine", series.reload.name
   end
 
+  # The destination is a write too: attaching a series to an account changes
+  # what that account's owners see, so a read-only share cannot receive one,
+  # whether by edit or at declaration.
+  test "a read-only account cannot become a series' destination" do
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    series = create_series(name: "Wandering Bill", account: nil)
+
+    sign_in member
+
+    patch recurring_transaction_url(series), params: { recurring_transaction: { account_id: accounts(:credit_card).id } }
+    assert_response :unprocessable_entity
+    assert_nil series.reload.account_id
+
+    post recurring_transactions_url, params: { recurring_transaction: {
+      name: "Declared On Read Only", amount: 12, first_due_on: Date.current.iso8601,
+      frequency_preset: "monthly", account_id: accounts(:credit_card).id
+    } }
+    declared = @family.recurring_transactions.find_by(name: "Declared On Read Only")
+    assert_not_nil declared
+    assert_nil declared.account_id
+  end
+
   # Clearing a payment link is a statement about one bill; the opt-in copy
   # must not blank the siblings' own links on the way through.
   test "clearing the payment link never blanks the siblings" do

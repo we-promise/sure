@@ -76,7 +76,10 @@ class DeclareAndPayBillTest < ApplicationSystemTestCase
     assert_text I18n.t("recurring_occurrences.show.remaining", amount: "$1,612.50")
 
     click_on I18n.t("recurring_occurrences.show.mark_paid")
-    assert_text I18n.t("recurring_occurrences.mark_paid.success")
+    # Synchronize on durable page state, not the toast: toasts auto-dismiss on
+    # their own clock and have burned CI runs before (TradesTest). The drawer's
+    # remaining-amount line vanishing proves the settle round-tripped.
+    assert_no_text I18n.t("recurring_occurrences.show.remaining", amount: "$1,612.50")
 
     bill = @family.recurring_transactions.find_by!(name: "Watson Property")
     occurrence = bill.recurring_occurrences.find_by!(due_on: due)
