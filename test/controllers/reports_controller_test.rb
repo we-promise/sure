@@ -78,6 +78,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
       "the $50 refund should net against the $200 expense ($150), not add to it ($250)"
   end
 
+  test "zero-amount transactions retain the historic income bucket in monthly exports" do
+    category = @family.categories.create!(name: "Zero Amount Refund Regression")
+    create_transaction(account: accounts(:depository), amount: 0, category: category, date: Date.current)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly)
+    assert_response :ok
+
+    rows = CSV.parse(response.body)
+    income_section = rows.index { |row| row[0] == "INCOME" }
+    category_index = rows.index { |row| row[0] == category.name }
+
+    assert income_section && category_index
+    assert_operator category_index, :>, income_section
+  end
+
   test "index with last 6 months period" do
     get reports_path(period_type: :last_6_months)
     assert_response :ok

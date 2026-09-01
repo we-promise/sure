@@ -81,6 +81,24 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "refund transactions round-trip through NDJSON export and import" do
+    @account.entries.create!(
+      date: Date.parse("2024-05-03"),
+      amount: -25,
+      name: "Refund round trip",
+      currency: "USD",
+      entryable: Transaction.new(category: @category, refund: true)
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      Family::DataImporter.new(@other_family, zip.read("all.ndjson")).import!
+    end
+
+    imported = @other_family.transactions.joins(:entry).find_by!(entries: { name: "Refund round trip" })
+    assert imported.refund?
+    assert_equal "expense", imported.entry.classification
+  end
+
   test "exports attachment manifest metadata without binary payloads" do
     entry = @account.entries.create!(
       name: "Receipt Transaction",

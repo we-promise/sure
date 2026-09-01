@@ -90,4 +90,17 @@ class Transaction::RefundTest < ActiveSupport::TestCase
     assert children.all? { |child| child.transaction.refund? }
     assert children.all? { |child| child.classification == "expense" }
   end
+
+  test "changing refund touches the entry to invalidate family entry caches" do
+    entry = create_transaction(account: @checking_account, amount: -50, category: @groceries)
+    family = @checking_account.family
+    family.entries.where.not(id: entry.id).update_all(updated_at: 2.days.ago)
+    entry.update_columns(updated_at: 1.day.ago)
+    cache_version = family.reload.entries_cache_version
+
+    entry.transaction.update!(refund: true)
+
+    assert_operator entry.reload.updated_at, :>, 1.minute.ago
+    assert_not_equal cache_version, family.reload.entries_cache_version
+  end
 end

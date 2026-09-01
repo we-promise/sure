@@ -30,4 +30,15 @@ class IncomeStatement::CategoryStatsTest < ActiveSupport::TestCase
     assert_equal 70, income.median.to_i
     assert_equal 70, income.avg.to_i
   end
+
+  test "combines reclassified refunds with income in the same category-period" do
+    create_transaction(account: @checking, amount: -3000, category: @groceries, date: Date.new(2026, 2, 15))
+    create_transaction(account: @checking, amount: -70, refund: true, category: @groceries, date: Date.new(2026, 2, 20))
+
+    income = IncomeStatement::CategoryStats.new(@family, interval: "month").call
+      .find { |stat| stat.category_id == @groceries.id && stat.classification == "income" }
+
+    assert_equal 3070, income.median.to_i
+    assert_equal 3070, income.avg.to_i
+  end
 end

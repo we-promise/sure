@@ -41,6 +41,17 @@ class IncomeStatement::FamilyStatsTest < ActiveSupport::TestCase
     assert_equal 70, income.avg.to_i
   end
 
+  test "combines income and an over-refund into one income observation per period" do
+    create_transaction(account: @checking, amount: -3000, date: Date.new(2026, 2, 15))
+    create_transaction(account: @checking, amount: -70, refund: true, category: @groceries, date: Date.new(2026, 2, 20))
+
+    income = IncomeStatement::FamilyStats.new(@family, interval: "month").call
+      .find { |stat| stat.classification == "income" }
+
+    assert_equal 3070, income.median.to_i
+    assert_equal 3070, income.avg.to_i
+  end
+
   test "matches the pre-refund behavior when no refunds are present" do
     create_transaction(account: @checking, amount: 150, category: @groceries, date: Date.new(2026, 1, 15))
     create_transaction(account: @checking, amount: 200, category: @groceries, date: Date.new(2026, 2, 15))
