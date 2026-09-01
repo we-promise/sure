@@ -50,19 +50,32 @@
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
 
         <div class="space-y-2">
-          <%= form.label :logo, t(".logo_label"), class: "text-sm text-primary" %>
-          <%= form.file_field :logo,
-              accept: "image/*",
-              class: "block w-full text-sm text-primary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold hover:file:bg-surface-hover" %>
+          <p class="text-sm text-primary"><%= t(".logo_label") %></p>
+          <% if account.logo.attached? %>
+            <div class="flex items-center gap-2 p-2 bg-surface-inset rounded-lg">
+              <%= image_tag account.logo_url, class: "w-8 h-8 rounded-full", loading: "lazy" %>
+              <span class="text-sm text-secondary"><%= t(".logo_attached") %></span>
+            </div>
+          <% end %>
+          <div class="flex items-center gap-2">
+            <%= form.file_field :logo,
+                accept: "image/*",
+                class: "hidden",
+                id: "account_logo_file" %>
+            <label for="account_logo_file" class="px-3 py-2 rounded-lg text-sm hover:bg-surface-hover border border-secondary inline-flex items-center gap-2 cursor-pointer">
+              <%= icon "image-plus", size: "sm" %>
+              <span><%= account.logo.attached? ? t(".change_logo") : t(".logo_label") %></span>
+            </label>
+          </div>
           <p class="text-xs text-secondary"><%= t(".logo_hint") %></p>
         </div>
 
         <div class="flex items-center gap-4 text-sm">
-          <%= form.radio_button :logo_source, "auto", class: "h-4 w-4" %>
-          <%= form.label :logo_source_auto, t(".auto_logo"), class: "text-secondary" %>
+          <%= form.radio_button :logo_source, "auto", id: "account_logo_source_auto", class: "h-4 w-4" %>
+          <%= form.label :logo_source_auto, t(".auto_logo"), for: "account_logo_source_auto", class: "text-secondary" %>
           
-          <%= form.radio_button :logo_source, "manual", class: "h-4 w-4" %>
-          <%= form.label :logo_source_manual, t(".manual_logo"), class: "text-secondary" %>
+          <%= form.radio_button :logo_source, "manual", id: "account_logo_source_manual", class: "h-4 w-4" %>
+          <%= form.label :logo_source_manual, t(".manual_logo"), for: "account_logo_source_manual", class: "text-secondary" %>
         </div>
 
         <%= form.text_area :notes,
