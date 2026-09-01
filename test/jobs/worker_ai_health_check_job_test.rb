@@ -120,9 +120,11 @@ class WorkerAiHealthCheckJobTest < ActiveSupport::TestCase
         embedding_endpoint: nil,
         embedding_dimensions: nil,
         llm_status: status,
-        vector_store_status: :not_configured,
+        vector_store_status: :missing,
         llm_probe: probe_result,
         function_calling_probe: probe_result,
+        pdf_text_extraction_probe: not_configured,
+        pdf_vision_processing_probe: not_configured,
         vector_store_probe: not_configured,
         embedding_probe: not_configured
       )
