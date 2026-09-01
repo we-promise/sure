@@ -22,6 +22,7 @@ class Account < ApplicationRecord
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
+  validate :validate_logo_file, if: -> { logo.attached? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
@@ -108,6 +109,12 @@ class Account < ApplicationRecord
   # Upper bound for logo attachments, enforced on uploads and on fetched
   # logos in Account::LogoFetcher.
   MAX_LOGO_BYTES = 5.megabytes
+
+  ACCEPTED_LOGO_CONTENT_TYPES = %w[
+    image/avif image/bmp image/gif image/heic image/heif image/jpeg
+    image/jpg image/png image/svg+xml image/tiff image/webp image/x-icon
+    image/vnd.microsoft.icon
+  ].freeze
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -616,6 +623,20 @@ class Account < ApplicationRecord
       return true if persisted_blob_id.nil?
 
       logo.blob&.id != persisted_blob_id
+    end
+
+    # Server-side guard for logo uploads: the form's accept="image/*" is only
+    # a picker hint, so content type and size are enforced here too.
+    def validate_logo_file
+      blob = logo.blob
+
+      if blob.content_type.present? && ACCEPTED_LOGO_CONTENT_TYPES.exclude?(blob.content_type)
+        errors.add(:logo, :invalid_type)
+      end
+
+      if blob.byte_size > MAX_LOGO_BYTES
+        errors.add(:logo, :too_large, max_megabytes: MAX_LOGO_BYTES / 1.megabyte)
+      end
     end
 
     def clean_institution_domain

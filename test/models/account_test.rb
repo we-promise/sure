@@ -566,6 +566,40 @@ class AccountTest < ActiveSupport::TestCase
     assert @account.logo_source_auto?
   end
 
+  test "rejects logo uploads with non-image content types" do
+    # The form's accept="image/*" is client-side only; a crafted request can
+    # submit anything, so the model enforces the content type too.
+    @account.logo.attach(
+      io: StringIO.new("<html><body>not an image</body></html>"),
+      filename: "page.html",
+      content_type: "text/html"
+    )
+
+    assert_not @account.valid?
+    assert @account.errors[:logo].present?
+  end
+
+  test "rejects logo uploads larger than the size limit" do
+    @account.logo.attach(
+      io: StringIO.new("x" * (Account::MAX_LOGO_BYTES + 1)),
+      filename: "huge.png",
+      content_type: "image/png"
+    )
+
+    assert_not @account.valid?
+    assert @account.errors[:logo].present?
+  end
+
+  test "accepts logo uploads with an image content type" do
+    @account.logo.attach(
+      io: StringIO.new("valid-image"),
+      filename: "logo.png",
+      content_type: "image/png"
+    )
+
+    assert @account.valid?
+  end
+
   test "destroying account moves linked statements to inbox after commit" do
     statement = AccountStatement.create_from_upload!(
       family: @family,
