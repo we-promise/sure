@@ -748,6 +748,11 @@ end
     assert_not_nil parent_index
     assert_not_nil child_index
     assert_equal parent_index + 1, child_index
+
+    child_option = wrapper.at_css("[data-category-id='#{categories(:subcategory).id}']")
+    assert_not_nil child_option, "expected the subcategory option to render"
+    assert child_option.at_css("[data-testid='category-select-subcategory-indicator']"),
+           "expected the subcategory option to show the hierarchy indicator used in Settings"
   end
 
   test "new renders a search box for account selection" do
