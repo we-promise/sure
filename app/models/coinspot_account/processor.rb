@@ -150,6 +150,8 @@ class CoinspotAccount::Processor
 
       send_fee_aud = native_fee_to_aud(transaction["sendfee"], symbol)
       import_fee(transaction, send_fee_aud, date, symbol) if send_fee_aud&.positive?
+    rescue StandardError => e
+      log_record_failure("send_receive", transaction, e)
     end
 
     # Imports every AUD deposit as account activity.
@@ -183,6 +185,20 @@ class CoinspotAccount::Processor
         source: "coinspot",
         investment_activity_label: label,
         extra: { "coinspot" => transaction.merge("type" => type) }
+      )
+    rescue StandardError => e
+      log_record_failure(type, transaction, e)
+    end
+
+    def log_record_failure(kind, record, error)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process CoinSpot #{kind} record: #{error.message}",
+        source: self.class.name,
+        provider_key: "coinspot",
+        family: coinspot_account.coinspot_item&.family,
+        metadata: { record: record, error_class: error.class.name }
       )
     end
 

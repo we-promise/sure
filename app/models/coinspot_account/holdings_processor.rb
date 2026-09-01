@@ -105,6 +105,9 @@ class CoinspotAccount::HoldingsProcessor
         next if symbol.to_s.upcase == "AUD"
         next if symbol.blank?
 
+        balance = (asset["balance"] || asset[:balance] || 0).to_d
+        next if balance.zero?
+
         CoinspotAccount::SecurityResolver.resolve(symbol)&.id
       end.to_set
 

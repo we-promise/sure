@@ -4,11 +4,11 @@ require "test_helper"
 
 class Provider::CoinspotTest < ActiveSupport::TestCase
   setup do
-    @provider = Provider::Coinspot.new(api_key: "test_key", api_secret: "test_secret", nonce_generator: -> { "1616492376594" })
-  end
+    @provider = Provider::Coinspot.new(api_key: "test_key", api_secret: "test_secret", nonce_generator: -> { 1616492376594 })
+end
 
   test "read only requests send compact json body signed with hmac sha512" do
-    expected_body = JSON.generate({ "nonce" => "1616492376594" })
+    expected_body = JSON.generate({ "nonce" => 1616492376594 })
     expected_signature = OpenSSL::HMAC.hexdigest("sha512", "test_secret", expected_body)
     response = mock_httparty_response(200, { "status" => "ok", "balances" => [] })
 
@@ -34,9 +34,9 @@ class Provider::CoinspotTest < ActiveSupport::TestCase
 
     Provider::Coinspot.expects(:post)
       .with(
-        "/api/v2/ro/my/orders/history",
+        "/api/v2/ro/my/orders/completed",
         has_entries(body: JSON.generate({
-          "nonce" => "1616492376594",
+          "nonce" => 1616492376594,
           "startdate" => "2026-01-01",
           "enddate" => "2026-01-31"
         }))
@@ -128,9 +128,6 @@ class Provider::CoinspotTest < ActiveSupport::TestCase
     end
 
     def mock_httparty_response(code, body)
-      response = mock
-      response.stubs(:code).returns(code)
-      response.stubs(:parsed_response).returns(body)
-      response
+      OpenStruct.new(code: code, parsed_response: body)
     end
 end
