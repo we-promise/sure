@@ -16,8 +16,10 @@ class FetchLogoJob < ApplicationJob
     if Setting.brand_fetch_client_id.present?
       logo_url = account.brandfetch_logo_url
       if logo_url.present?
-        LogoFetcherService.new(account: account, url: logo_url).fetch_and_attach
-        return
+        fetcher = LogoFetcherService.new(account: account, url: logo_url)
+        fetcher.fetch_and_attach
+        # Only return if we successfully attached a logo
+        return if account.logo.attached?
       end
     end
 
