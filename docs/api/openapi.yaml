@@ -755,13 +755,13 @@ components:
           type: string
         display_budgeted_spending_cents:
           type: integer
-        rolled_over_amount:
-          type: string
-        rolled_over_amount_cents:
-          type: integer
         actual_spending:
           type: string
         actual_spending_cents:
+          type: integer
+        rolled_over_amount:
+          type: string
+        rolled_over_amount_cents:
           type: integer
         available_to_spend:
           type: string
@@ -1444,8 +1444,11 @@ components:
         status:
           type: string
           enum:
+          - suggested
           - active
+          - paused
           - inactive
+          - ended
         occurrence_count:
           type: integer
           minimum: 0
@@ -1454,6 +1457,98 @@ components:
           nullable: true
         manual:
           type: boolean
+        payment_url:
+          type: string
+          nullable: true
+          description: Link to the biller portal where this bill is paid. Only http
+            and https are accepted; a bare host is stored as https.
+        autopay:
+          type: boolean
+          description: Whether this bill pays itself automatically.
+        notes:
+          type: string
+          nullable: true
+          description: Free-text notes shown alongside the bill.
+        bill_type:
+          type: string
+          enum:
+          - bill
+          - subscription
+          - installment
+          - income
+          - transfer
+          - other
+          description: What kind of obligation this is.
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        anchor_date:
+          type: string
+          format: date
+          nullable: true
+          description: Reference occurrence that phases every-N cadences.
+        weekend_adjust:
+          type: string
+          enum:
+          - none
+          - skip
+          - before
+          - after
+        end_mode:
+          type: string
+          enum:
+          - never
+          - on_date
+          - after_count
+        end_on:
+          type: string
+          format: date
+          nullable: true
+        end_after_count:
+          type: integer
+          nullable: true
+        renews_on:
+          type: string
+          format: date
+          nullable: true
+        trial_ends_on:
+          type: string
+          format: date
+          nullable: true
+        cancelled_on:
+          type: string
+          format: date
+          nullable: true
+        recurrence_rules:
+          type: array
+          description: Repetition patterns; multiple rows express semimonthly and
+            similar multi-pattern cadences. Empty means legacy monthly on expected_day_of_month.
+          items:
+            type: object
+            properties:
+              frequency:
+                type: string
+                enum:
+                - weekly
+                - monthly
+                - yearly
+              interval:
+                type: integer
+              day_of_month:
+                type: integer
+                nullable: true
+                description: "-1 means the last day of the month."
+              weekday:
+                type: integer
+                nullable: true
+              weekday_ordinal:
+                type: integer
+                nullable: true
+                description: "-1 means the last such weekday."
+              month_of_year:
+                type: integer
+                nullable: true
         expected_amount_min:
           type: string
           nullable: true
@@ -3389,6 +3484,9 @@ paths:
       summary: Sign up a new user
       tags:
       - Auth
+      description: Creates a new user and family. The first user on a fresh instance
+        is assigned the super_admin role; later family creators are assigned an admin
+        role.
       parameters: []
       responses:
         '201':
@@ -3796,7 +3894,9 @@ paths:
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
         via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled.
+        allow_account_creation enabled. The first user on a fresh instance is assigned
+        the super_admin role; later family creators are assigned an admin-capable
+        role.
       parameters: []
       responses:
         '200':
@@ -4601,85 +4701,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/insights":
-    get:
-      summary: List proactive insights
-      tags:
-      - Insights
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: insights listed
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/InsightCollection"
-        '403':
-          description: preview features disabled
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/push_subscriptions":
-    post:
-      summary: Register an APNs device token
-      tags:
-      - Push Subscriptions
-      security:
-      - apiKeyAuth: []
-      parameters: []
-      responses:
-        '201':
-          description: token registered
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/PushSubscription"
-        '422':
-          description: invalid or conflicting subscription
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - token
-              - environment
-              - platform
-              properties:
-                token:
-                  type: string
-                environment:
-                  type: string
-                  enum:
-                  - sandbox
-                  - production
-                platform:
-                  type: string
-                  enum:
-                  - ios
-        required: true
-  "/api/v1/push_subscriptions/{id}":
-    parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
-    delete:
-      summary: Unregister an APNs device token
-      tags:
-      - Push Subscriptions
-      security:
-      - apiKeyAuth: []
-      responses:
-        '204':
-          description: token unregistered
   "/api/v1/family_exports":
     get:
       summary: Lists family exports
@@ -5909,6 +5930,26 @@ paths:
                   type: string
                   description: CSV imports only. Column value that marks an amount
                     as an inflow when using custom_column strategy
+  "/api/v1/insights":
+    get:
+      summary: List proactive insights
+      tags:
+      - Insights
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: insights listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/InsightCollection"
+        '403':
+          description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -6020,6 +6061,65 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/push_subscriptions":
+    post:
+      summary: Register an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: token registered
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/PushSubscription"
+        '422':
+          description: invalid or conflicting subscription
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              - environment
+              - platform
+              properties:
+                token:
+                  type: string
+                environment:
+                  type: string
+                  enum:
+                  - sandbox
+                  - production
+                platform:
+                  type: string
+                  enum:
+                  - ios
+        required: true
+  "/api/v1/push_subscriptions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Unregister an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '204':
+          description: token unregistered
   "/api/v1/recurring_transactions":
     get:
       summary: List recurring transactions
@@ -6157,6 +6257,18 @@ paths:
                       minimum: 0
                     manual:
                       type: boolean
+                    payment_url:
+                      type: string
+                      nullable: true
+                      description: Link to the biller portal. Only http and https
+                        are accepted; a bare host is stored as https.
+                    autopay:
+                      type: boolean
+                      description: Whether this bill pays itself automatically.
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Free-text notes shown alongside the bill.
                     expected_amount_min:
                       type: number
                       nullable: true
@@ -6272,6 +6384,19 @@ paths:
                     next_expected_date:
                       type: string
                       format: date
+                    payment_url:
+                      type: string
+                      nullable: true
+                      description: Link to the biller portal. Only http and https
+                        are accepted; a bare host is stored as https. Send an empty
+                        string to clear it.
+                    autopay:
+                      type: boolean
+                      description: Whether this bill pays itself automatically.
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Free-text notes shown alongside the bill.
         required: true
     delete:
       summary: Delete recurring transaction

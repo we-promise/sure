@@ -62,6 +62,12 @@ x-rails-env: &rails_env
   OPENAI_URI_BASE: ${OPENAI_URI_BASE:-}
   LLM_CONTEXT_WINDOW: ${LLM_CONTEXT_WINDOW:-}
   OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-60}
+  # Health-check probes (System Health → AI Status → "Run checks") bound each
+  # probe call. Distinct from OPENAI_REQUEST_TIMEOUT, which bounds real LLM
+  # calls the app makes; the probe default is 5s. AI_HEALTH_PROBE_CACHE_TTL
+  # controls how long probe results are cached (default 60s).
+  AI_HEALTH_PROBE_TIMEOUT: ${AI_HEALTH_PROBE_TIMEOUT:-}
+  AI_HEALTH_PROBE_CACHE_TTL: ${AI_HEALTH_PROBE_CACHE_TTL:-}
   # Seconds the chat waits for an assistant response before showing a "no response"
   # error. This covers the whole turn, so its worst case is a sum:
   #   (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) * OPENAI_REQUEST_TIMEOUT
