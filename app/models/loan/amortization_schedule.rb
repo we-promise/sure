@@ -172,7 +172,7 @@ class Loan
               interest_payment: interest.round(currency_precision),
               beginning_balance: balance.round(currency_precision),
               ending_balance: ending_balance,
-              interest_rate: current_rate
+              interest_rate: segment[:rate]
             }
 
             balance = ending_balance
