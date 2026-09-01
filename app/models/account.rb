@@ -104,7 +104,7 @@ class Account < ApplicationRecord
   has_many :account_statements
 
   # Track whether logo is manually uploaded or auto-fetched
-  enum :logo_source, { auto: "auto", manual: "manual" }, default: "auto"
+  enum :logo_source, { auto: "auto", manual: "manual" }, default: "auto", prefix: :logo_source
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true

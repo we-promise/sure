@@ -523,12 +523,12 @@ class AccountTest < ActiveSupport::TestCase
   end
 
   test "logo_source is auto?" do
-    assert @account.auto?
+    assert @account.logo_source_auto?
   end
 
   test "logo_source is manual?" do
     @account.logo_source = "manual"
-    assert @account.manual?
+    assert @account.logo_source_manual?
   end
 
   test "destroying account moves linked statements to inbox after commit" do
