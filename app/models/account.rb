@@ -107,8 +107,9 @@ class Account < ApplicationRecord
   has_one_attached :logo, dependent: :purge_later
 
   # Upper bound for logo attachments, enforced on uploads and on fetched
-  # logos in Account::LogoFetcher.
-  MAX_LOGO_BYTES = 5.megabytes
+  # logos in Account::LogoFetcher. Matches the other upload caps (imports,
+  # account statements).
+  MAX_LOGO_BYTES = 25.megabytes
 
   ACCEPTED_LOGO_CONTENT_TYPES = %w[
     image/avif image/bmp image/gif image/heic image/heif image/jpeg
