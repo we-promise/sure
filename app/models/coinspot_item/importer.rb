@@ -83,7 +83,7 @@ class CoinspotItem::Importer
       window_end = history_window[:enddate]
 
       while window_start <= window_end
-        current_window_end = [window_start + 29.days, window_end].min
+        current_window_end = [ window_start + 29.days, window_end ].min
         window_orders = fetch_orders_for_window(
           startdate: window_start,
           enddate: current_window_end
@@ -100,8 +100,6 @@ class CoinspotItem::Importer
       { "buyorders" => orders_by_id.values }
     end
 
-    private
-
     def fetch_orders_for_window(startdate:, enddate:)
       response = coinspot_provider.get_order_history(startdate: startdate, enddate: enddate)
       Array(response["buyorders"])
@@ -117,7 +115,7 @@ class CoinspotItem::Importer
       )
 
       response = coinspot_provider.get_market_order_history(startdate: startdate, enddate: enddate)
-      Array(response["buyorders"])
+      Array(response["orders"])
     rescue Provider::Coinspot::ApiError => e
       DebugLogEntry.capture(
         category: "provider_sync_error",

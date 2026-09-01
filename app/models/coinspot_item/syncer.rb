@@ -3,6 +3,11 @@
 class CoinspotItem::Syncer
   include SyncStats::Collector
 
+  # Raised (after logging) when one or more linked accounts fail to process
+  # during a sync, so the generic StandardError rescue below doesn't also
+  # catch and re-log an already-logged failure.
+  class ProcessingFailureError < StandardError; end
+
   attr_reader :coinspot_item
 
   # Initializes with the connection to sync.
@@ -59,7 +64,7 @@ class CoinspotItem::Syncer
         family: coinspot_item.family,
         metadata: { coinspot_item_id: coinspot_item.id, failures: processing_failures }
       )
-      raise StandardError, message
+      raise ProcessingFailureError, message
     end
 
     sync.update!(status_text: I18n.t("coinspot_item.syncer.calculating_balances")) if sync.respond_to?(:status_text)
@@ -76,6 +81,9 @@ class CoinspotItem::Syncer
     end
   rescue Provider::Coinspot::AuthenticationError, Provider::Coinspot::PermissionError => e
     coinspot_item.update!(status: :requires_update)
+    mark_failed(sync, e.message)
+    raise
+  rescue ProcessingFailureError => e
     mark_failed(sync, e.message)
     raise
   rescue StandardError => e
