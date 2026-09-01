@@ -68,10 +68,11 @@
               <span><%= account.logo.attached? ? t(".change_logo") : t(".logo_label") %></span>
             </label>
           </div>
-          <p class="text-xs text-secondary"><%= t(".logo_hint") %></p>
+          <p class="text-xs text-secondary"><%= t(".logo_hint", max_size: number_to_human_size(Account::MAX_LOGO_BYTES)) %></p>
+          <p class="hidden text-xs text-destructive" data-logo-source-target="sizeError"><%= t(".logo_too_large", max_size: number_to_human_size(Account::MAX_LOGO_BYTES)) %></p>
 
           <div class="flex items-center gap-4 text-sm pt-1">
-            <%= form.hidden_field :logo_source, value: account.logo_source || "auto", data: { logo_source_target: "input" } %>
+            <%= form.hidden_field :logo_source, value: account.logo_source || "auto", data: { logo_source_target: "input", logo_source_max_size_value: Account::MAX_LOGO_BYTES } %>
 
             <%= render DS::SegmentedControl.new(full_width: false, aria_label: t(".logo_source_aria")) do |sc| %>
               <% sc.with_segment t(".auto_logo"), active: account.logo_source_auto?, data: { action: "click->logo-source#select", logo_source_source_param: "auto", logo_source_target: "segment" } %>

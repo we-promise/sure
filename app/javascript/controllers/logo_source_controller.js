@@ -1,13 +1,24 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["input", "segment"];
+  static targets = ["input", "segment", "sizeError"];
+  static values = { maxSize: Number };
 
   select(event) {
     this.#setSource(event.params.source);
   }
 
-  fileSelected() {
+  fileSelected(event) {
+    const file = event.target.files[0];
+
+    if (file && file.size > this.maxSizeValue) {
+      // Drop the selection so the oversized file is never submitted.
+      event.target.value = "";
+      this.#setSizeErrorVisible(true);
+      return;
+    }
+
+    this.#setSizeErrorVisible(false);
     // Uploading a custom file is a manual source selection.
     this.#setSource("manual");
   }
@@ -22,5 +33,11 @@ export default class extends Controller {
       segment.classList.toggle("segmented-control__segment--active", isActive);
       segment.setAttribute("aria-pressed", String(isActive));
     });
+  }
+
+  #setSizeErrorVisible(visible) {
+    if (!this.hasSizeErrorTarget) return;
+
+    this.sizeErrorTarget.classList.toggle("hidden", !visible);
   }
 }
