@@ -50,12 +50,15 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
   test "falls back to market order history when standard order history is unavailable" do
     @provider.stubs(:get_balances).returns("balances" => [])
     @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
-    @provider.expects(:get_market_order_history).returns({ "orders" => [ { "coin" => "BTC" } ] })
+    @provider.stubs(:get_market_order_history).returns({ "orders" => [ { "id" => "m1", "coin" => "BTC" } ] })
 
     result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
 
     assert_equal 1, result[:orders_imported]
-    assert_equal [ { "coin" => "BTC" } ], @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "orders")
+    assert_equal(
+      [ { "id" => "m1", "coin" => "BTC" } ],
+      @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "buyorders")
+    )
   end
 
   test "marks item requires update when permissions are invalid" do
