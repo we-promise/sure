@@ -1,5 +1,5 @@
 <div id="coinspot-providers-panel" class="space-y-4">
-  <% items = local_assigns[:coinspot_items] || @coinspot_items || Current.family.coinspot_items.active.ordered %>
+  <% items = local_assigns[:coinspot_items] || @coinspot_items %>
 
   <%= render DS::Alert.new(
         variant: :warning,
