@@ -52,7 +52,7 @@ pt-PT:
       date_label: Data
       delete: Eliminar
       fee_label: Comissão da transação
-      delete_subtitle: Esta ação não pode ser anulada
+      delete_subtitle: Esta ação é irreversível
       delete_title: Eliminar Negociação
       details: Detalhes
       provider_disabled_warning: "Atualizações de preço suspensas — o serviço %{provider} está desativado. Reative-o nas Definições ou remapeie a posição para outro serviço."

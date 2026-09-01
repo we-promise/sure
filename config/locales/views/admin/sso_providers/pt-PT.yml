@@ -48,7 +48,7 @@ pt-PT:
         success: "Serviço SSO atualizado com sucesso."
       destroy:
         success: "Serviço SSO eliminado com sucesso."
-        confirm: "Tem a certeza de que pretende eliminar este serviço? Esta ação não pode ser anulada."
+        confirm: "Tem a certeza de que pretende eliminar este serviço? Esta ação é irreversível."
       toggle:
         success_enabled: "Serviço SSO ativado com sucesso."
         success_disabled: "Serviço SSO desativado com sucesso."

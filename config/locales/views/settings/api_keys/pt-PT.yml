@@ -48,7 +48,7 @@ pt-PT:
           usage_instructions: "Inclua a sua chave de API no cabeçalho X-Api-Key ao efetuar pedidos à API do %{product_name}:"
           back_to_keys: "Voltar às Chaves de API"
           revoke_key: "Revogar Chave"
-          revoke_confirmation: "Tem a certeza de que pretende revogar esta chave de API? Esta ação não pode ser desfeita e desativará imediatamente todas as aplicações que utilizam esta chave."
+          revoke_confirmation: "Tem a certeza de que pretende revogar esta chave de API? Esta ação é irreversível e desativará imediatamente todas as aplicações que utilizam esta chave."
       new:
         title: "Criar Chave de API"
         create_new_api_key: "Criar Nova Chave de API"

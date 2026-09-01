@@ -29,7 +29,7 @@ pt-PT:
         cancel: 'Cancelar'
         authorize: 'Autorizar'
       form:
-        error: 'Oops! Verifique o formulário em caso de possíveis erros.'
+        error: 'Ups! Verifique o formulário em caso de possíveis erros.'
       help:
         confidential: 'A aplicação será utilizada em situações em que o segredo do cliente possa ser mantido confidencial. As aplicações móveis nativas e as Single Page Apps são consideradas não confidenciais.'
         redirect_uri: 'Utilize uma linha por URI'

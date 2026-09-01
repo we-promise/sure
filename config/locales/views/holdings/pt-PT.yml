@@ -59,7 +59,7 @@ pt-PT:
       current_market_price_label: Preço de Mercado Atual
       delete: Eliminar
       delete_subtitle: Isto irá eliminar a posição e todas as negociações associadas
-        nesta conta. Esta ação não pode ser anulada.
+        nesta conta. Esta ação é irreversível.
       delete_title: Eliminar posição
       edit_security: Editar título
       history: Histórico

@@ -234,7 +234,7 @@ pt-PT:
             é irreversível.
           title: Eliminar conta?
         confirm_reset:
-          body: Tem a certeza de que pretende repor a sua conta? Isto eliminará todas as suas contas, categorias, comerciantes, etiquetas e outros dados. Esta ação não pode ser desfeita.
+          body: Tem a certeza de que pretende repor a sua conta? Isto eliminará todas as suas contas, categorias, comerciantes, etiquetas e outros dados. Esta ação é irreversível.
           title: Repor conta?
         confirm_reset_with_sample_data:
           body: Tem a certeza de que pretende repor a sua conta e carregar dados de exemplo? Isto eliminará os seus dados existentes e substituí-los-á por dados de demonstração para poder explorar o Sure em segurança.
@@ -248,7 +248,7 @@ pt-PT:
         danger_zone_title: Zona de Perigo
         delete_account: Eliminar conta
         delete_account_warning: Eliminar a sua conta removerá permanentemente todos
-          os seus dados. Esta ação não pode ser anulada.
+          os seus dados. Esta ação é irreversível.
         reset_account: Repor conta
         reset_account_warning: Repor a sua conta eliminará todas as suas contas financeiras, categorias, comerciantes, etiquetas e outros dados, mas manterá a sua conta de utilizador intacta.
         reset_account_with_sample_data: Repor e pré-carregar

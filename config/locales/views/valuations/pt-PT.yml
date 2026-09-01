@@ -49,7 +49,7 @@ pt-PT:
       amount_label: Valor da conta à data
       date_label: Data
       delete: Eliminar
-      delete_subtitle: Esta ação não pode ser anulada
+      delete_subtitle: Esta ação é irreversível
       delete_title: Eliminar Registo
       details: Detalhes
       name_label: Designação

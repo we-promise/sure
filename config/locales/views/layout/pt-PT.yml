@@ -26,7 +26,7 @@ pt-PT:
         terms_of_service: Termos de Serviço
       confirm_dialog:
         are_you_sure: Tem a certeza?
-        cannot_be_undone: Esta acção não pode ser desfeita.
+        cannot_be_undone: Esta ação é irreversível.
         confirm: Confirmar
     trial:
       open_demo: Abrir demo

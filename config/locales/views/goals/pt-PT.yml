@@ -37,8 +37,8 @@ pt-PT:
             one: 1 sem prazo
             other: "%{count} sem prazo"
           paused:
-            one: 1 em pausa
-            other: "%{count} em pausa"
+            one: 1 suspenso
+            other: "%{count} suspensos"
         on_track_sub_all_good: Todos os objetivos ativos dentro do previsto
         on_track_all_caught_up: Tudo recuperado
       goals_section:
@@ -63,7 +63,7 @@ pt-PT:
         on_track: No bom caminho
         behind: Em atraso
         no_target_date: Sem prazo
-        paused: Em pausa
+        paused: Suspenso
         completed: Concluídos
     new:
       heading: Novo objetivo
@@ -78,8 +78,8 @@ pt-PT:
     destroy:
       success: Objetivo eliminado.
     pause:
-      success: Objetivo em pausa.
-      invalid_transition: O objetivo não pode ser colocado em pausa a partir do seu estado atual.
+      success: Objetivo suspenso.
+      invalid_transition: Não é possível suspender este objetivo no estado atual.
     resume:
       success: Objetivo retomado.
       invalid_transition: O objetivo não pode ser retomado a partir do seu estado atual.
@@ -208,7 +208,7 @@ pt-PT:
       confirm_delete_body: "%{name} e o histórico das suas contribuições serão removidos definitivamente. As suas contas, saldos e transações associados não são afetados. Para o conservar como registo, arquive-o em alternativa."
       confirm_delete_cta: Eliminar objetivo
       paused_banner:
-        title: Este objetivo está em pausa
+        title: Este objetivo está suspenso
         body: Retome-o para continuar a acompanhar o seu progresso.
         resume_cta: Retomar objetivo
       archived_banner:
@@ -226,7 +226,7 @@ pt-PT:
         body: "Objetivo fechado com %{saved} de %{target}. Conserve-o como registo ou arquive-o agora."
         archive_cta: Arquivar objetivo
       inactive:
-        heading_paused: Este objetivo está em pausa
+        heading_paused: Este objetivo está suspenso
         heading_archived: Este objetivo está arquivado
         body: "%{saved} de %{target} reservados até agora."
       no_target_date:
@@ -240,7 +240,7 @@ pt-PT:
       not_found: Não foi possível encontrar este objetivo. Pode ter sido eliminado.
     states:
       active: Ativo
-      paused: Em pausa
+      paused: Suspenso
       completed: Concluído
       archived: Arquivado
     status:
@@ -251,7 +251,7 @@ pt-PT:
       reached: Alcançado
       completed: Concluído
       no_target_date: Sem prazo
-      paused: Em pausa
+      paused: Suspenso
       archived: Arquivado
     empty_state:
       heading: Ainda não existem objetivos
@@ -277,7 +277,7 @@ pt-PT:
         other: "faltam %{count} dias"
       pace_with_target: "%{avg}/mês · objetivo %{target}/mês"
       pace_no_target: "%{avg}/mês em média"
-      footer_paused: Em pausa
+      footer_paused: Suspenso
       footer_archived: Arquivado
       footer_reserve_intact: Reserva intacta
       footer_reserve_short: "%{amount} para reforçar"

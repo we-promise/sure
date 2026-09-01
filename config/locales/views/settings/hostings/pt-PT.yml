@@ -30,7 +30,7 @@ pt-PT:
         clear_cache_warning: Limpar a cache de dados removerá todas as taxas de câmbio, preços de títulos, saldos de contas e outros dados. Isto não eliminará contas, transações, categorias ou outros dados pertencentes ao utilizador.
         confirm_clear_cache:
           title: Limpar a cache de dados?
-          body: Tem a certeza de que pretende limpar a cache de dados? Isto removerá todas as taxas de câmbio, preços de títulos, saldos de contas e outros dados. Esta ação não pode ser desfeita.
+          body: Tem a certeza de que pretende limpar a cache de dados? Isto removerá todas as taxas de câmbio, preços de títulos, saldos de contas e outros dados. Esta ação é irreversível.
       provider_selection:
         exchange_rate_title: Serviço de Taxas de Câmbio
         exchange_rate_description: Selecione um único serviço para obter taxas de câmbio de moedas.

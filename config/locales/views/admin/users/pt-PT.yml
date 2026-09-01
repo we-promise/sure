@@ -4,7 +4,7 @@ pt-PT:
     users:
       index:
         title: "Gestão de Utilizadores"
-        description: "Gerencie as funções de utilizador da sua instância. Os super administradores podem aceder às definições do serviço SSO e à gestão de utilizadores."
+        description: "Administração de utilizadores, funções, grupos e contas na sua instância. Os superadministradores também têm acesso às definições dos serviços SSO e às opções de gestão de utilizadores."
         section_title: "Famílias / Grupos"
         you: "(Você)"
         trial_ends_at: "Fim do período experimental"
@@ -51,8 +51,8 @@ pt-PT:
           self_edit_warning: "Alterar a sua própria função modificará os seus privilégios administrativos."
           self_update_confirm: "Tem a certeza de que pretende atualizar a função ou a família da sua própria conta?"
           last_super_admin_role_locked: "A alteração da função está bloqueada porque é o último super administrador do sistema."
-        delete_confirm: "Tem a certeza de que pretende eliminar este utilizador? Esta ação não pode ser anulada."
-        delete_confirm_last_user: "Tem a certeza de que pretende eliminar este utilizador? É o último utilizador da sua família/grupo, pelo que a eliminação removerá também toda a família/grupo e todos os dados associados. Esta ação não pode ser anulada."
+        delete_confirm: "Tem a certeza de que pretende eliminar este utilizador? Esta ação é irreversível."
+        delete_confirm_last_user: "Tem a certeza de que pretende eliminar este utilizador? É o último utilizador da sua família/grupo, pelo que a eliminação removerá também toda a família/grupo e todos os dados associados. Esta ação é irreversível."
         remove: "Eliminar utilizador"
         role_descriptions_title: "Descrições de Funções"
         removed_sso_identities:
@@ -84,7 +84,7 @@ pt-PT:
           title: "Famílias/grupos não utilizados"
           family_id: "ID da família: %{id}"
           delete: "Eliminar família não utilizada"
-          delete_confirm: "Tem a certeza de que pretende eliminar esta família/grupo não utilizada(o)? Esta ação não pode ser anulada."
+          delete_confirm: "Tem a certeza de que pretende eliminar esta família/grupo não utilizada(o)? Esta ação é irreversível."
           empty: "Não foram encontradas famílias/grupos não utilizados."
       update:
         success_role: "Função de utilizador atualizada com sucesso."
@@ -107,7 +107,7 @@ pt-PT:
         confirmation_mismatch: "O endereço de e-mail não correspondeu. O utilizador não foi removido."
       deletion:
         title: "Eliminar utilizador permanentemente"
-        warning: "Isto revoga imediatamente o acesso e agenda a eliminação permanente do utilizador e dos seus dados. Esta ação não pode ser anulada."
+        warning: "Isto revoga imediatamente o acesso e agenda a eliminação permanente do utilizador e dos seus dados. Esta ação é irreversível."
         instruction: "Escreva %{email} para confirmar."
         email_label: "E-mail do utilizador"
         cancel: "Cancelar"
@@ -117,4 +117,3 @@ pt-PT:
         family_has_active_subscription: "A família/grupo tem uma subscrição ativa e não pode ser eliminada até a subscrição ser cancelada."
         family_has_users: "A família/grupo ainda tem utilizadores e não pode ser eliminada."
         success: "Família/grupo eliminada com sucesso."
-
