@@ -279,4 +279,108 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal false, sf["pending"], "expected a non-numeric posted value to not be inferred as pending"
   end
+
+  test "normalizes a direct debit to a positive Sure expense" do
+    tx = {
+      id: "tx_direct_debit_1",
+      amount: "25.00",
+      currency: "USD",
+      description: "DIRECT DEBIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_direct_debit_1", source: "simplefin")
+    assert_equal BigDecimal("25.00"), entry.amount
+    assert_equal "direct_debit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes a direct deposit to negative Sure income" do
+    tx = {
+      id: "tx_direct_deposit_1",
+      amount: "-80.00",
+      currency: "USD",
+      payee: "  direct   deposit payroll ",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_direct_deposit_1", source: "simplefin")
+    assert_equal BigDecimal("-80.00"), entry.amount
+    assert_equal "direct_deposit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes mapped transaction classes by semantic direction" do
+    cases = [
+      [ "eft_paid", "EFT PAID UTILITY", "35.00", BigDecimal("35.00") ],
+      [ "check_received", "CHECK RECEIVED", "-120.00", BigDecimal("-120.00") ],
+      [ "dividend", "DIVIDEND PAYMENT", "-9.50", BigDecimal("-9.50") ]
+    ]
+
+    cases.each_with_index do |(normalization, description, raw_amount, expected_amount), index|
+      tx = {
+        id: "tx_semantic_class_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        memo: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_semantic_class_#{index}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "leaves ambiguous and unmapped descriptions on upstream sign behavior" do
+    cases = [
+      [ "DIRECT DEBIT REVERSAL", "10.00" ],
+      [ "DIRECT DEBIT RETURNED", "11.00" ],
+      [ "DIRECT DEBIT REVERSED", "12.00" ],
+      [ "DIRECT DEPOSIT REFUNDED", "13.00" ],
+      [ "DIVIDEND REINVESTMENT", "14.00" ],
+      [ "REINVESTMENT", "15.00" ]
+    ]
+
+    cases.each_with_index do |(description, raw_amount), index|
+      tx = {
+        id: "tx_unmapped_class_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_unmapped_class_#{index}", source: "simplefin")
+      assert_equal BigDecimal("-#{raw_amount}"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "clears stale normalization metadata when a resynced descriptor becomes ambiguous" do
+    tx = {
+      id: "tx_normalization_resync_1",
+      amount: "10.00",
+      currency: "USD",
+      description: "DIRECT DEBIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_normalization_resync_1", source: "simplefin")
+    assert_equal "direct_debit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+
+    tx[:description] = "DIRECT DEBIT REVERSAL"
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry.reload
+    assert_equal BigDecimal("-10.00"), entry.amount
+    assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
 end

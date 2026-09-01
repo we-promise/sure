@@ -2,6 +2,15 @@ require "digest/md5"
 
 class SimplefinEntry::Processor
   include CurrencyNormalizable
+
+  AMOUNT_NORMALIZATION_RULES = {
+    direct_debit: { direction: :expense, pattern: /\ADIRECT\s+DEBIT\b/i },
+    eft_paid: { direction: :expense, pattern: /\AEFT\s+PAID\b/i },
+    direct_deposit: { direction: :income, pattern: /\ADIRECT\s+DEPOSIT\b/i },
+    check_received: { direction: :income, pattern: /\ACHECK\s+RECEIVED\b/i },
+    dividend: { direction: :income, pattern: /\ADIVIDEND\b/i }
+  }.freeze
+  AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND|REINVEST)/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
   def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)
@@ -94,6 +103,8 @@ class SimplefinEntry::Processor
         sf["fx_date"] = fx_d&.to_s
       end
 
+      sf["amount_normalization"] = amount_normalization
+
       return nil if sf.empty?
       { "simplefin" => sf }
     end
@@ -144,6 +155,9 @@ class SimplefinEntry::Processor
         BigDecimal("0")
       end
 
+      return parsed_amount.abs if amount_normalization_direction == :expense
+      return -parsed_amount.abs if amount_normalization_direction == :income
+
       # SimpleFin uses banking convention (expenses negative, income positive)
       # Maybe expects opposite convention (expenses positive, income negative)
       # So we negate the amount to convert from SimpleFin to Maybe format
@@ -151,6 +165,26 @@ class SimplefinEntry::Processor
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin transaction amount: #{data[:amount].inspect} - #{e.message}"
       raise
+    end
+
+    def amount_normalization
+      amount_normalization_rule&.first&.to_s
+    end
+
+    def amount_normalization_direction
+      amount_normalization_rule&.last&.fetch(:direction)
+    end
+
+    def amount_normalization_rule
+      return if amount_descriptor_fields.any? { |value| value.match?(AMBIGUOUS_AMOUNT_TERMS) }
+
+      @amount_normalization_rule ||= AMOUNT_NORMALIZATION_RULES.find do |_name, rule|
+        amount_descriptor_fields.any? { |value| value.match?(rule.fetch(:pattern)) }
+      end
+    end
+
+    def amount_descriptor_fields
+      [ data[:payee], data[:description], data[:memo] ].filter_map { |value| value.to_s.strip.presence }
     end
 
     def currency
