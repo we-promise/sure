@@ -574,161 +574,163 @@ class Account < ApplicationRecord
       "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
     end
 
-    def destroy_later
-      transaction do
-        mark_for_deletion!
-        DestroyJob.perform_later(self)
-      end
+  public
+
+  def destroy_later
+    transaction do
+      mark_for_deletion!
+      DestroyJob.perform_later(self)
+    end
     end
 
-    # Override destroy to handle error recovery for accounts
-    def destroy
-      super
-    rescue => e
-      # If destruction fails, transition back to disabled state
-      # This provides a cleaner recovery path than the generic scheduled_for_deletion flag
-      disable! if may_disable?
-      raise e
-    end
+  # Override destroy to handle error recovery for accounts
+  def destroy
+    super
+  rescue => e
+    # If destruction fails, transition back to disabled state
+    # This provides a cleaner recovery path than the generic scheduled_for_deletion flag
+    disable! if may_disable?
+    raise e
+  end
 
-    def current_holdings
-      if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
-        holdings
-          .where.not(account_provider_id: nil)
-          .where(date: provider_snapshot_date)
-          .where.not(qty: 0)
-          .order(amount: :desc)
+  def current_holdings
+    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
+      holdings
+        .where.not(account_provider_id: nil)
+        .where(date: provider_snapshot_date)
+        .where.not(qty: 0)
+        .order(amount: :desc)
+    else
+      holdings
+        .where(currency: currency)
+        .where.not(qty: 0)
+        .where(
+          id: holdings.select("DISTINCT ON (security_id) id")
+                      .where(currency: currency)
+                      .order(:security_id, date: :desc)
+        )
+        .order(amount: :desc)
+    end
+  end
+
+  def latest_provider_holdings_snapshot_date
+    holdings.where.not(account_provider_id: nil).maximum(:date)
+  end
+
+  def start_date
+    first_entry_date = entries.minimum(:date) || Date.current
+    first_entry_date - 1.day
+  end
+
+  def lock_saved_attributes!
+    super
+    accountable.lock_saved_attributes!
+  end
+
+  def first_valuation
+    entries.valuations.order(:date).first
+  end
+
+  def first_valuation_amount
+    first_valuation&.amount_money || balance_money
+  end
+
+  # Get short version of the subtype label
+  def short_subtype_label
+    accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  # Get long version of the subtype label
+  def long_subtype_label
+    accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
+  end
+
+  def supports_default?
+    depository? || credit_card?
+  end
+
+  def eligible_for_transaction_default?
+    supports_default? && active? && !linked?
+  end
+
+  # Determines if this account supports manual trade entry
+  # Investment accounts always support trades; Crypto only if subtype is "exchange"
+  def supports_trades?
+    return true if investment?
+    return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
+    false
+  end
+
+  def traded_standard_securities
+    Security.where(id: holdings.select(:security_id))
+            .standard
+            .distinct
+            .order(:ticker)
+  end
+
+  # The balance type determines which "component" of balance is being tracked.
+  # This is primarily used for balance related calculations and updates.
+  #
+  # "Cash" = "Liquid"
+  # "Non-cash" = "Illiquid"
+  # "Investment" = A mix of both, including brokerage cash (liquid) and holdings (illiquid)
+  def balance_type
+    case accountable_type
+    when "Depository", "CreditCard"
+      :cash
+    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+      :non_cash
+    when "Investment", "Crypto"
+      :investment
+    else
+      raise "Unknown account type: #{accountable_type}"
+    end
+  end
+
+  def owned_by?(user)
+    user.present? && owner_id == user.id
+  end
+
+  def shared_with?(user)
+    return false if user.nil?
+
+    owned_by?(user) ||
+      if account_shares.loaded?
+        account_shares.any? { |s| s.user_id == user.id }
       else
-        holdings
-          .where(currency: currency)
-          .where.not(qty: 0)
-          .where(
-            id: holdings.select("DISTINCT ON (security_id) id")
-                        .where(currency: currency)
-                        .order(:security_id, date: :desc)
-          )
-          .order(amount: :desc)
+        account_shares.exists?(user: user)
       end
+  end
+
+  def shared?
+    account_shares.any?
+  end
+
+  def permission_for(user)
+    return :owner if owned_by?(user)
+    account_shares.find_by(user: user)&.permission&.to_sym
+  end
+
+  def share_with!(user, permission: "read_only", include_in_finances: true)
+    account_shares.create!(user: user, permission: permission, include_in_finances: include_in_finances)
+  end
+
+  def unshare_with!(user)
+    account_shares.where(user: user).destroy_all
+  end
+
+  def auto_share_with_family!
+    # Guests get read_only, everyone else read_write. This mirrors
+    # Family#auto_share_existing_accounts_with so a guest's permission on an
+    # account is the same whether they joined before or after it was created.
+    records = family.users.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
+      { account_id: id, user_id: user_id,
+        permission: role == "guest" ? "read_only" : "read_write",
+        include_in_finances: true, created_at: Time.current, updated_at: Time.current }
     end
 
-    def latest_provider_holdings_snapshot_date
-      holdings.where.not(account_provider_id: nil).maximum(:date)
-    end
-
-    def start_date
-      first_entry_date = entries.minimum(:date) || Date.current
-      first_entry_date - 1.day
-    end
-
-    def lock_saved_attributes!
-      super
-      accountable.lock_saved_attributes!
-    end
-
-    def first_valuation
-      entries.valuations.order(:date).first
-    end
-
-    def first_valuation_amount
-      first_valuation&.amount_money || balance_money
-    end
-
-    # Get short version of the subtype label
-    def short_subtype_label
-      accountable_class.short_subtype_label_for(subtype) || accountable_class.display_name
-    end
-
-    # Get long version of the subtype label
-    def long_subtype_label
-      accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
-    end
-
-    def supports_default?
-      depository? || credit_card?
-    end
-
-    def eligible_for_transaction_default?
-      supports_default? && active? && !linked?
-    end
-
-    # Determines if this account supports manual trade entry
-    # Investment accounts always support trades; Crypto only if subtype is "exchange"
-    def supports_trades?
-      return true if investment?
-      return accountable.supports_trades? if crypto? && accountable.respond_to?(:supports_trades?)
-      false
-    end
-
-    def traded_standard_securities
-      Security.where(id: holdings.select(:security_id))
-              .standard
-              .distinct
-              .order(:ticker)
-    end
-
-    # The balance type determines which "component" of balance is being tracked.
-    # This is primarily used for balance related calculations and updates.
-    #
-    # "Cash" = "Liquid"
-    # "Non-cash" = "Illiquid"
-    # "Investment" = A mix of both, including brokerage cash (liquid) and holdings (illiquid)
-    def balance_type
-      case accountable_type
-      when "Depository", "CreditCard"
-        :cash
-      when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
-        :non_cash
-      when "Investment", "Crypto"
-        :investment
-      else
-        raise "Unknown account type: #{accountable_type}"
-      end
-    end
-
-    def owned_by?(user)
-      user.present? && owner_id == user.id
-    end
-
-    def shared_with?(user)
-      return false if user.nil?
-
-      owned_by?(user) ||
-        if account_shares.loaded?
-          account_shares.any? { |s| s.user_id == user.id }
-        else
-          account_shares.exists?(user: user)
-        end
-    end
-
-    def shared?
-      account_shares.any?
-    end
-
-    def permission_for(user)
-      return :owner if owned_by?(user)
-      account_shares.find_by(user: user)&.permission&.to_sym
-    end
-
-    def share_with!(user, permission: "read_only", include_in_finances: true)
-      account_shares.create!(user: user, permission: permission, include_in_finances: include_in_finances)
-    end
-
-    def unshare_with!(user)
-      account_shares.where(user: user).destroy_all
-    end
-
-    def auto_share_with_family!
-      # Guests get read_only, everyone else read_write. This mirrors
-      # Family#auto_share_existing_accounts_with so a guest's permission on an
-      # account is the same whether they joined before or after it was created.
-      records = family.users.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
-        { account_id: id, user_id: user_id,
-          permission: role == "guest" ? "read_only" : "read_write",
-          include_in_finances: true, created_at: Time.current, updated_at: Time.current }
-      end
-
-      AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
-    end
+    AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
+  end
 
   private
 
