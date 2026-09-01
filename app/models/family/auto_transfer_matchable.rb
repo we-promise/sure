@@ -1,7 +1,12 @@
 module Family::AutoTransferMatchable
+  # Real-world FX slippage between a transaction's timestamp and the cached daily
+  # rate is typically 1-3%. A wider band (the previous default was 10%) turns the
+  # cross-currency branch into a coincidence match on round-number amounts.
+  DEFAULT_EXCHANGE_RATE_TOLERANCE = 0.03
+
   def transfer_match_candidates(
     date_window: 4,
-    exchange_rate_tolerance: 0.1,
+    exchange_rate_tolerance: DEFAULT_EXCHANGE_RATE_TOLERANCE,
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
@@ -25,9 +30,9 @@ module Family::AutoTransferMatchable
     ])
   end
 
-  def auto_match_transfers!(account: nil)
+  def auto_match_transfers!(account: nil, exchange_rate_tolerance: DEFAULT_EXCHANGE_RATE_TOLERANCE)
     # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
+    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false, exchange_rate_tolerance:)
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
@@ -134,6 +139,17 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
+    # The second UNION branch below (cross-currency, FX-rate-tolerance matching) requires
+    # both accounts to have a live provider connection (Plaid/SimpleFIN/account_providers).
+    # That path is a coincidence guess -- amount x FX-rate within a tolerance band, not an
+    # exact amount match -- and a manual account has no institution behind it confirming
+    # money actually moved, so an unrelated pair of round-number transactions can land inside
+    # the tolerance band purely by chance. Manual accounts still participate in the first
+    # branch's exact-amount, same-currency matching, which carries no such ambiguity.
+    #
+    # NOTE: this is passed through `.squish`, which collapses all whitespace (including
+    # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
+    # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
     def transfer_match_candidates_sql
       <<~SQL.squish
         SELECT transfer_match_candidates.*
@@ -220,7 +236,17 @@ module Family::AutoTransferMatchable
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            (
+              inflow_accounts.plaid_account_id IS NOT NULL OR
+              inflow_accounts.simplefin_account_id IS NOT NULL OR
+              EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)
+            ) AND
+            (
+              outflow_accounts.plaid_account_id IS NOT NULL OR
+              outflow_accounts.simplefin_account_id IS NOT NULL OR
+              EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)
+            )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
       SQL
