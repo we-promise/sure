@@ -56,6 +56,7 @@ en:
       change_logo: Change icon
       auto_logo: Auto (from institution)
       manual_logo: Manual (custom upload)
+      logo_source_aria: Logo source
       exclude_from_reports: Exclude from all reports
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.

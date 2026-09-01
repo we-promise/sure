@@ -70,12 +70,14 @@
           <p class="text-xs text-secondary"><%= t(".logo_hint") %></p>
         </div>
 
-        <div class="flex items-center gap-4 text-sm">
-          <%= form.radio_button :logo_source, "auto", id: "account_logo_source_auto", class: "h-4 w-4" %>
-          <%= form.label :logo_source_auto, t(".auto_logo"), for: "account_logo_source_auto", class: "text-secondary" %>
+        <div class="flex items-center gap-4 text-sm" data-controller="logo-source">
+          <%= form.radio_button :logo_source, "auto", id: "account_logo_source_auto", class: "hidden", data: { logo_source_target: "radio" } %>
+          <%= form.radio_button :logo_source, "manual", id: "account_logo_source_manual", class: "hidden", data: { logo_source_target: "radio" } %>
           
-          <%= form.radio_button :logo_source, "manual", id: "account_logo_source_manual", class: "h-4 w-4" %>
-          <%= form.label :logo_source_manual, t(".manual_logo"), for: "account_logo_source_manual", class: "text-secondary" %>
+          <%= render DS::SegmentedControl.new(full_width: false, aria_label: t(".logo_source_aria", default: "Logo source")) do |sc| %>
+            <% sc.with_segment t(".auto_logo"), active: account.logo_source == "auto", data: { action: "click->logo-source#select", logo_source_source_param: "auto" } %>
+            <% sc.with_segment t(".manual_logo"), active: account.logo_source == "manual", data: { action: "click->logo-source#select", logo_source_source_param: "manual" } %>
+          <% end %>
         </div>
 
         <%= form.text_area :notes,
