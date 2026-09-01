@@ -81,7 +81,7 @@ en:
         link_with_provider: "Link with %{provider}"
         lunchflow_entry: Link Lunch Flow account
         manual_entry: Enter account balance
-      title: How would you like to add it?
+        title: How would you like to add it?
     edit:
       title: Edit account
     show:
