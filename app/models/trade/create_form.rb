@@ -101,7 +101,8 @@ class Trade::CreateForm
 
       begin
         sec = security
-        create_income_trade(sec: sec, label: "Dividend", name: "Dividend: #{sec.ticker}")
+        label = CASH_TRADE_LABELS.fetch("dividend")
+        create_income_trade(sec: sec, label: label, name: "#{label}: #{sec.ticker}")
       rescue => e
         Rails.logger.warn("Dividend security resolution failed: #{e.class} - #{e.message}")
         entry = account.entries.build(entryable: Trade.new)
@@ -114,14 +115,16 @@ class Trade::CreateForm
     # Falls back to a synthetic cash security when none is selected.
     def create_interest_income
       sec = ticker_present? ? security : Security.cash_for(account)
-      name = sec.cash? ? "Interest" : "Interest: #{sec.ticker}"
-      create_income_trade(sec: sec, label: "Interest", name: name)
+      label = CASH_TRADE_LABELS.fetch("interest")
+      name = sec.cash? ? label : "#{label}: #{sec.ticker}"
+      create_income_trade(sec: sec, label: label, name: name)
     end
 
     def create_fee
       sec = ticker_present? ? security : Security.cash_for(account)
-      name = sec.cash? ? "Fee" : "Fee: #{sec.ticker}"
-      create_income_trade(sec: sec, label: "Fee", name: name, amount_sign: 1)
+      label = CASH_TRADE_LABELS.fetch("fee")
+      name = sec.cash? ? label : "#{label}: #{sec.ticker}"
+      create_income_trade(sec: sec, label: label, name: name, amount_sign: 1)
     end
 
     def create_income_trade(sec:, label:, name:, amount_sign: -1)
@@ -155,7 +158,7 @@ class Trade::CreateForm
     def trade_name(label, quantity, ticker)
       return Trade.build_name(type, quantity, ticker) if %w[buy sell].include?(type)
 
-      "#{label} #{quantity.to_d.abs} shares of #{ticker}"
+      "#{label} #{quantity.to_d} shares of #{ticker}"
     end
 
     def create_transfer

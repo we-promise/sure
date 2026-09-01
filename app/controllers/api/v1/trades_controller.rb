@@ -204,12 +204,12 @@ class Api::V1::TradesController < Api::V1::BaseController
       entry_params
     end
 
-    # True for sell: "sell" or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
+    # True for sell: "sell", "sweep_out", or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
     def trade_sell_from_type_or_nature?(value)
       return false if value.blank?
 
       normalized = value.to_s.downcase.strip
-      %w[sell inflow].include?(normalized)
+      %w[sell sweep_out inflow].include?(normalized)
     end
 
     def build_create_form_params(account)
