@@ -478,6 +478,28 @@ class FamilyTest < ActiveSupport::TestCase
       "different users must not share a memoized InvestmentStatement (family sharing scoping)"
   end
 
+  test "requests transaction refreshes for syncable Plaid items" do
+    family = families(:dylan_family)
+
+    PlaidItem.any_instance.expects(:request_transactions_refresh_later).once
+
+    family.request_plaid_transactions_refreshes_later(source: "TestSync")
+  end
+
+  test "records a sanitized diagnostic when a Plaid refresh cannot be enqueued" do
+    family = families(:dylan_family)
+
+    PlaidItem.any_instance.stubs(:request_transactions_refresh_later).raises(RedisClient::Error, "Redis unavailable")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      family.request_plaid_transactions_refreshes_later(source: "TestSync")
+    end
+
+    debug_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "TestSync", debug_entry.source
+    assert_equal "RedisClient::Error", debug_entry.metadata["error_class"]
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))

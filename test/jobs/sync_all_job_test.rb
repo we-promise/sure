@@ -5,24 +5,18 @@ class SyncAllJobTest < ActiveJob::TestCase
     family = families(:dylan_family)
     Family.stubs(:find_each).yields(family)
     sequence = sequence("scheduled sync")
-    PlaidItem.any_instance.expects(:request_transactions_refresh_later).in_sequence(sequence)
+    family.expects(:request_plaid_transactions_refreshes_later).with(source: "SyncAllJob").in_sequence(sequence)
     family.expects(:sync_later).in_sequence(sequence)
 
     SyncAllJob.perform_now
   end
 
-  test "scheduled sync continues when a Plaid refresh cannot be enqueued" do
+  test "scheduled sync continues after refresh orchestration" do
     family = families(:dylan_family)
     Family.stubs(:find_each).yields(family)
-    PlaidItem.any_instance.stubs(:request_transactions_refresh_later).raises(RedisClient::Error, "Redis unavailable")
+    family.stubs(:request_plaid_transactions_refreshes_later)
     family.expects(:sync_later)
 
-    assert_difference "DebugLogEntry.count", 1 do
-      SyncAllJob.perform_now
-    end
-
-    debug_entry = DebugLogEntry.order(:created_at).last
-    assert_equal "SyncAllJob", debug_entry.source
-    assert_equal "RedisClient::Error", debug_entry.metadata["error_class"]
+    SyncAllJob.perform_now
   end
 end

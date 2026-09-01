@@ -177,6 +177,22 @@ class Family < ApplicationRecord
     nil
   end
 
+  def request_plaid_transactions_refreshes_later(source:)
+    plaid_items.syncable.find_each do |plaid_item|
+      plaid_item.request_transactions_refresh_later
+    rescue => error
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Plaid transaction refresh could not be enqueued; continuing with normal sync",
+        source: source,
+        provider_key: "plaid",
+        family: self,
+        metadata: { error_class: error.class.name }
+      )
+    end
+  end
+
   def custom_enabled_currencies?
     enabled_currencies.present?
   end

@@ -6,32 +6,26 @@ class SyncAllProvidersJobTest < ActiveJob::TestCase
 
     Family.stubs(:find_by).with(id: family.id).returns(family)
     sequence = sequence("provider-wide sync")
-    PlaidItem.any_instance.expects(:request_transactions_refresh_later).in_sequence(sequence)
+    family.expects(:request_plaid_transactions_refreshes_later).with(source: "SyncAllProvidersJob").in_sequence(sequence)
     family.expects(:sync_later).in_sequence(sequence)
 
     SyncAllProvidersJob.perform_now(family.id)
   end
 
-  test "provider-wide sync continues when a Plaid refresh cannot be enqueued" do
+  test "provider-wide sync continues after refresh orchestration" do
     family = families(:dylan_family)
 
     Family.stubs(:find_by).with(id: family.id).returns(family)
-    PlaidItem.any_instance.stubs(:request_transactions_refresh_later).raises(RedisClient::Error, "Redis unavailable")
+    family.stubs(:request_plaid_transactions_refreshes_later)
     family.expects(:sync_later)
 
-    assert_difference "DebugLogEntry.count", 1 do
-      SyncAllProvidersJob.perform_now(family.id)
-    end
-
-    debug_entry = DebugLogEntry.order(:created_at).last
-    assert_equal "SyncAllProvidersJob", debug_entry.source
-    assert_equal "RedisClient::Error", debug_entry.metadata["error_class"]
+    SyncAllProvidersJob.perform_now(family.id)
   end
 
   test "provider-wide sync ignores a deleted family" do
     Family.expects(:find_by).returns(nil)
 
-    PlaidItem.any_instance.expects(:request_transactions_refresh_later).never
+    Family.any_instance.expects(:request_plaid_transactions_refreshes_later).never
 
     SyncAllProvidersJob.perform_now("missing")
   end
