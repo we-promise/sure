@@ -602,8 +602,9 @@ class Account < ApplicationRecord
 
     def favicon_url
       return nil unless institution_domain.present?
-      # Use Google's favicon service as a reliable fallback
-      "https://www.google.com/s2/favicons?domain=#{institution_domain}&sz=128"
+      # Use DuckDuckGo's privacy-friendly favicon service
+      # This avoids pinging Google and is more appropriate for open-source
+      "https://icons.duckduckgo.com/ip3/#{institution_domain}.ico"
     end
 
   public
