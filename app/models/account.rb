@@ -11,8 +11,10 @@ class Account < ApplicationRecord
   # Track logo source: set to manual when user uploads a logo
   before_save :set_logo_source, if: -> { logo.attached? && logo_source != "manual" }
 
-  # Auto-fetch logo when institution domain changes (if in auto mode)
-  before_save :fetch_logo_from_domain, if: -> { logo_source == "auto" && saved_change_to_institution_domain? && institution_domain.present? }
+  # Auto-fetch logo when institution domain changes or is set on new account (if in auto mode)
+  before_save :fetch_logo_from_domain, if: -> { logo_source == "auto" && institution_domain.present? && (saved_change_to_institution_domain? || new_record?) }
+
+  before_validation :clean_institution_domain, if: -> { institution_domain.present? }
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
@@ -565,6 +567,17 @@ class Account < ApplicationRecord
           LogoFetcherService.new(account: self, url: logo_url).fetch_and_attach
         end
       end
+    end
+
+    def clean_institution_domain
+      return unless institution_domain.present?
+
+      # Remove protocol and path, keep only domain
+      domain = institution_domain.gsub(/^https?:\/\//, "").gsub(/^www\./, "").split("/").first
+      # Remove port numbers
+      domain = domain.split(":").first
+      # Only update if it changed
+      self.institution_domain = domain if domain != institution_domain
     end
 
     def brandfetch_logo_url
