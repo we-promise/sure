@@ -9,7 +9,7 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   # Track logo source: set to manual when user uploads a logo
-  before_save :set_logo_source, if: -> { logo.attached? && logo_source != "manual" }
+  before_save :set_logo_source, if: -> { logo.attached? && logo_source.blank? }
 
   # Queue logo fetch after save to avoid blocking the save operation
   after_save_commit :queue_logo_fetch, if: -> { logo_source == "auto" && institution_domain.present? && (saved_change_to_institution_domain? || new_record?) }
@@ -571,8 +571,8 @@ class Account < ApplicationRecord
   private
 
     def set_logo_source
-      # If logo is attached and source is not already manual, set it to manual
-      self.logo_source = "manual" if logo.attached? && logo_source != "manual"
+      # If logo is attached and source is blank, default to manual
+      self.logo_source = "manual" if logo.attached? && logo_source.blank?
     end
 
     def fetch_logo_from_domain
