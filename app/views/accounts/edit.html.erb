@@ -1,6 +1,0 @@
-<%= render DS::Dialog.new do |dialog| %>
-  <% dialog.with_header(title: t(".edit.title")) %>
-  <% dialog.with_body do %>
-    <%= render "form", account: @account, url: account_path(@account), method: :patch %>
-  <% end %>
-<% end %>

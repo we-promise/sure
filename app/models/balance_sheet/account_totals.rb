@@ -22,8 +22,6 @@ class BalanceSheet::AccountTotals
       # Whether this account is excluded from financial reports, dashboards,
       # and exports.
       def exclude_from_reports? = exclude_from_reports
-      # Whether this account is shared with other users
-      def shared? = account.shared?
 
       # Allows Rails path helpers to generate URLs from the wrapper
       def to_param = account.to_param

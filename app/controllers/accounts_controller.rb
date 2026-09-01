@@ -1,7 +1,7 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default update]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   include Periodable
 
@@ -291,38 +291,9 @@ class AccountsController < ApplicationController
     end
   end
 
-  def create
-    @account = family.accounts.new(account_params)
-    if @account.save
-      redirect_to accounts_path, notice: "Account created successfully."
-    else
-      render :new
-    end
-  end
-
-  def update
-    if @account.update(account_params)
-      redirect_to account_path(@account), notice: "Account update successfully."
-    else
-      render :edit
-    end
-  end
-
-  def edit
-    @account = Current.user.accessible_accounts.find(params[:id])
-  end
-
   private
     def family
       Current.family
-    end
-
-    def account_params
-      params.require(:account).permit(
-        :name, :balance, :currency, :institution_name, :institution_domain,
-        :notes, :exclude_from_reports, :logo, :logo_source,
-        accountable_attributes: [ :subtype, :initial_balance, :opening_balance_date ]
-      )
     end
 
     # Shares the "per page" preference with TransactionsController's
