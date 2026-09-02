@@ -106,10 +106,10 @@ en:
         one: "%{count} institution"
         other: "%{count} institutions"
     rate_limited:
-      daily_refresh: "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+      daily_refresh: "You've hit SimpleFIN's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
     stale_sync:
-      last_successful: "Last successful sync was %{count} days ago. Your SimpleFin connection may need attention."
-      no_transactions: "No new transactions in %{count} days. Check your SimpleFin dashboard to ensure your bank connections are active."
+      last_successful: "Last successful sync was %{count} days ago. Your SimpleFIN connection may need attention."
+      no_transactions: "No new transactions in %{count} days. Check your SimpleFIN dashboard to ensure your bank connections are active."
     simplefin_item:
       add_new: Add new connection
       confirm_accept: Delete connection

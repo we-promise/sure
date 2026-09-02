@@ -75,7 +75,7 @@ class SimplefinItemLocalizationTest < ActiveSupport::TestCase
 
     assert_equal "Du hast das tägliche Aktualisierungslimit von SimpleFIN erreicht. Versuch es erneut, sobald die SimpleFIN Bridge die Daten aktualisiert hat (das kann bis zu 24 Stunden dauern).",
                  I18n.with_locale(:de) { @simplefin_item.rate_limited_message }
-    assert_equal "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours).",
+    assert_equal "You've hit SimpleFIN's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours).",
                  I18n.with_locale(:en) { @simplefin_item.rate_limited_message }
     assert_equal provider_error, sync.reload.error
   end
@@ -90,7 +90,7 @@ class SimplefinItemLocalizationTest < ActiveSupport::TestCase
 
       assert_equal "Die letzte erfolgreiche Synchronisierung war vor 5 Tagen. Deine SimpleFIN-Verbindung braucht möglicherweise Aufmerksamkeit.",
                    I18n.with_locale(:de) { @simplefin_item.stale_sync_status[:message] }
-      assert_equal "Last successful sync was 5 days ago. Your SimpleFin connection may need attention.",
+      assert_equal "Last successful sync was 5 days ago. Your SimpleFIN connection may need attention.",
                    I18n.with_locale(:en) { @simplefin_item.stale_sync_status[:message] }
     end
   end
@@ -115,7 +115,7 @@ class SimplefinItemLocalizationTest < ActiveSupport::TestCase
 
       assert_equal "Seit 20 Tagen gibt es keine neuen Transaktionen. Prüfe in deinem SimpleFIN-Dashboard, ob deine Bankverbindungen aktiv sind.",
                    I18n.with_locale(:de) { @simplefin_item.reload.stale_sync_status[:message] }
-      assert_equal "No new transactions in 20 days. Check your SimpleFin dashboard to ensure your bank connections are active.",
+      assert_equal "No new transactions in 20 days. Check your SimpleFIN dashboard to ensure your bank connections are active.",
                    I18n.with_locale(:en) { @simplefin_item.reload.stale_sync_status[:message] }
     end
   end
