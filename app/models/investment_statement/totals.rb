@@ -13,8 +13,8 @@ class InvestmentStatement::Totals
     {
       contributions: result["contributions"]&.to_d || 0,
       withdrawals: result["withdrawals"]&.to_d || 0,
-      dividends: 0, # Dividends come through as transactions, not trades
-      interest: 0,  # Interest comes through as transactions, not trades
+      dividends: result["dividends"]&.to_d || 0,
+      interest: result["interest"]&.to_d || 0,
       trades_count: result["trades_count"]&.to_i || 0
     }
   end
@@ -40,6 +40,13 @@ class InvestmentStatement::Totals
     # Aggregate trades by direction (buy vs sell)
     # Buys (qty > 0) = contributions (cash going out to buy securities)
     # Sells (qty < 0) = withdrawals (cash coming in from selling securities)
+    #
+    # Investment income (dividends, interest) is aggregated by activity label
+    # rather than by direction. Since #1311 these are recorded as Trades with
+    # qty: 0 and price: 0 (Trade::CreateForm#create_income_trade), so they fall
+    # outside both the qty > 0 and qty < 0 branches above and cannot be
+    # double-counted as contributions or withdrawals.
+    #
     # Missing FX rates preserve InvestmentStatement's existing 1:1 fallback.
     #
     # account_ids is already scoped to the family's visible (draft/active)
@@ -50,6 +57,8 @@ class InvestmentStatement::Totals
         SELECT
           COALESCE(SUM(CASE WHEN trades.qty > 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
           COALESCE(SUM(CASE WHEN trades.qty < 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
+          COALESCE(SUM(CASE WHEN trades.investment_activity_label = 'Dividend' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
+          COALESCE(SUM(CASE WHEN trades.investment_activity_label = 'Interest' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
           COUNT(trades.id) as trades_count
         FROM entries
         JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
