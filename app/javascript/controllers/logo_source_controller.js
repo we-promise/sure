@@ -1,8 +1,16 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["input", "segment", "sizeError", "fileInput"];
-  static values = { maxSize: Number };
+  staticTargets = [
+    "input",
+    "segment",
+    "sizeError",
+    "fileInput",
+    "fileInfo",
+    "fileName",
+    "fileSize",
+  ];
+  staticValues = { maxSize: Number };
 
   select(event) {
     this.#setSource(event.params.source);
@@ -21,12 +29,19 @@ export default class extends Controller {
       // Drop the selection so the oversized file is never submitted.
       event.target.value = "";
       this.#setSizeErrorVisible(true);
+      this.#setFileInfoVisible(false);
       return;
     }
 
     this.#setSizeErrorVisible(false);
     // Uploading a custom file is a manual source selection.
     this.#setSource("manual");
+
+    if (file) {
+      this.#updateFileInfo(file);
+    } else {
+      this.#setFileInfoVisible(false);
+    }
   }
 
   #setSource(source) {
@@ -45,5 +60,28 @@ export default class extends Controller {
     if (!this.hasSizeErrorTarget) return;
 
     this.sizeErrorTarget.classList.toggle("hidden", !visible);
+  }
+
+  #updateFileInfo(file) {
+    const humanReadable = (bytes) => {
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const maxHuman = (bytes) => {
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+    };
+
+    this.fileNameTarget.textContent = file.name;
+    this.fileSizeTarget.textContent = ` — ${humanReadable(file.size)} of ${maxHuman(this.maxSizeValue)}`;
+    this.#setFileInfoVisible(true);
+  }
+
+  #setFileInfoVisible(visible) {
+    if (!this.hasFileInfoTarget) return;
+
+    this.fileInfoTarget.classList.toggle("hidden", !visible);
   }
 }

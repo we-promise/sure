@@ -60,11 +60,11 @@
             </div>
           <% end %>
           <div class="flex items-center gap-2">
+            <%# opacity-0 (not display:none) so the file is always submitted with the form across all browsers %>
             <%= form.file_field :logo,
                 accept: "image/*",
-                class: "hidden",
+                class: "absolute opacity-0 w-0 h-0",
                 data: { logo_source_target: "fileInput", action: "change->logo-source#fileSelected" } %>
-            <%# DS::Button, not a hand-rolled label: opens the hidden file input through the controller %>
             <%= render DS::Button.new(
                   variant: :outline,
                   text: account.logo.attached? ? t(".change_logo") : t(".logo_label"),
@@ -82,6 +82,11 @@
               <% sc.with_segment t(".auto_logo"), active: account.logo_source_auto?, data: { action: "click->logo-source#select", logo_source_source_param: "auto", logo_source_target: "segment" } %>
               <% sc.with_segment t(".manual_logo"), active: account.logo_source_manual?, data: { action: "click->logo-source#select", logo_source_source_param: "manual", logo_source_target: "segment" } %>
             <% end %>
+          </div>
+
+          <div data-logo-source-target="fileInfo" class="hidden text-xs text-secondary">
+            <span data-logo-source-target="fileName"></span>
+            <span data-logo-source-target="fileSize"></span>
           </div>
         </div>
 

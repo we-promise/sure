@@ -547,9 +547,18 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    if logo.attached?
+    # A blob can be orphaned — the DB row exists but the file was never
+    # written (or was deleted). When that happens, treat the logo as
+    # absent so the auto-fetch fallback chain kicks in instead of
+    # rendering a broken image tag.
+    if logo.attached? && logo_blob_accessible?
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
+
+    # Only auto-fetch when the user hasn't pinned a manual logo. A manual
+    # logo that is missing on disk is left to the fallback icon in the view;
+    # we don't silently overwrite a user's manual choice with an auto fetch.
+    return nil unless logo_source_auto?
 
     # Auto mode: Brandfetch first when configured, then the linked provider's
     # own logo — account-specific, so it must outrank the generic favicon —
@@ -559,7 +568,7 @@ class Account < ApplicationRecord
     return provider.logo_url if provider&.logo_url.present?
 
     favicon_url
-  end
+end
 
   def favicon_url(domain = institution_domain)
     return nil unless domain.present?
@@ -600,6 +609,18 @@ class Account < ApplicationRecord
     logo.attach(*attachables)
   ensure
     @attaching_fetched_logo = false
+  end
+
+  # True when the attached logo's blob actually has its file on the backing
+  # service. ActiveStorage stores the blob row even if the disk write failed
+  # (or the file was later deleted), leaving an orphaned blob that would
+  # render a broken <img>. This guard lets logo_url fall through to the auto
+  # source chain instead.
+  def logo_blob_accessible?
+    blob = logo.blob
+    return false if blob.nil?
+
+    blob.service.exist?(blob.key)
   end
 
   private
