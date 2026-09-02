@@ -932,9 +932,14 @@ class AccountTest < ActiveSupport::TestCase
     assert logo_url.include?("/rails/active_storage/"), "logo_url should be an Active Storage blob URL"
   end
 
-  test "auto logo source ignores the attached logo" do
-    # When logo_source is "auto", the uploaded logo should be ignored
-    logo_file = uploaded_file(filename: "test_logo.png", content_type: "image/png", content: "valid-image-data")
+  test "auto logo source uses an attached fetched logo" do
+    # When logo_source is "auto", a logo successfully attached by LogoFetcher
+    # should be served before falling back to remote logo providers.
+    logo_file = uploaded_file(
+      filename: "test_logo.png",
+      content_type: "image/png",
+      content: "valid-image-data"
+    )
 
     account = Account.create_and_sync(
       {
@@ -956,13 +961,12 @@ class AccountTest < ActiveSupport::TestCase
     assert account.logo.attached?, "Logo should be attached to the account"
     assert account.logo_source_auto?, "Logo source should be auto"
 
-    # logo_url should NOT return the attached logo URL when source is auto
-    # It should return the auto-fetch fallback (brandfetch, provider, or favicon)
+    # An attached fetched logo should take priority over remote fallbacks.
     logo_url = account.logo_url
-    assert logo_url.present?, "logo_url should be present"
 
-    # Verify it's NOT the blob URL (since auto source ignores uploads)
-    assert_not logo_url.include?("/rails/active_storage/"), "logo_url should NOT be a blob URL when source is auto"
+    assert logo_url.present?, "logo_url should be present"
+    assert logo_url.include?("/rails/active_storage/"),
+      "logo_url should be the attached blob URL"
   end
 
   test "manual logo source falls back to auto-fetch when no logo attached" do

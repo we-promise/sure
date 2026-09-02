@@ -567,13 +567,18 @@ class Account < ApplicationRecord
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
-    # Auto source (or manual with no attached upload): use the auto-fetch
-    # chain. When logo_source is "auto", the uploaded logo is intentionally
-    # ignored - "Auto" should not take the upload into account.
-    # Account::LogoFetcher mirrors this priority.
+    # Auto source: if LogoFetcher successfully downloaded and attached a logo,
+    # serve that attachment before falling back to remote logo providers.
+    if logo_source_auto? && logo.attached?
+      return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
+
+    # No usable attachment: fall back to the auto-fetch chain.
     brandfetch = brandfetch_logo_url
     return brandfetch if brandfetch.present?
+
     return provider.logo_url if provider&.logo_url.present?
+
     favicon_url
   end
 
