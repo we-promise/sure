@@ -59,24 +59,31 @@ module AccountableResource
   end
 
   def update
+    # Validate non-balance attributes first, before making any balance changes.
+    # This ensures we roll back ledger changes if logo validation fails.
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    
     # Handle balance update if the value actually changed
     if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
+      # Validate remaining attributes first
+      unless @account.update(update_params)
+        @error_message = @account.errors.full_messages.join(", ")
+        render :edit, status: :unprocessable_entity
+        return
+      end
+
       result = @account.set_current_balance(account_params[:balance].to_d)
       unless result.success?
         @error_message = result.error_message
         render :edit, status: :unprocessable_entity
         return
       end
-    end
-
-    # Update remaining account attributes. Note: currency is intentionally allowed
-    # here so all account types (depositories, credit cards, loans, etc.) can
-    # have their currency changed via this shared update path.
-    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
-    unless @account.update(update_params)
-      @error_message = @account.errors.full_messages.join(", ")
-      render :edit, status: :unprocessable_entity
-      return
+    else
+      unless @account.update(update_params)
+        @error_message = @account.errors.full_messages.join(", ")
+        render :edit, status: :unprocessable_entity
+        return
+      end
     end
 
     @account.lock_saved_attributes!
