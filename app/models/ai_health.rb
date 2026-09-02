@@ -339,11 +339,12 @@ class AiHealth
       ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
     end
 
+    # Reports the timeout used by normal LLM requests for the selected provider.
     def request_timeout(provider)
       if provider == :anthropic
         ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       else
-        ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+        Provider::Openai.request_timeout
       end
     end
 
