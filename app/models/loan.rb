@@ -50,8 +50,12 @@ class Loan < ApplicationRecord
 
 
 
+  # Always a positive magnitude: a valuation/balance can be recorded with
+  # either sign depending on how it was entered or imported (Plaid, CSV,
+  # manual), but the payoff math below (payment, schedule, totals, ratios)
+  # is only meaningful as a positive principal amount.
   def original_balance
-    Money.new(account.first_valuation_amount, account.currency)
+    Money.new(account.first_valuation_amount.abs, account.currency)
   end
 
   def monthly_payment
@@ -64,7 +68,7 @@ class Loan < ApplicationRecord
     return Money.new(0, currency) if balance_amount.zero? || months.zero?
 
     balance = BigDecimal(balance_amount)
-    rate    = BigDecimal(interest_rate) / 1200
+    rate    = BigDecimal(interest_rate.to_s) / 1200
 
     payment =
       if rate.zero?
@@ -179,14 +183,20 @@ class Loan < ApplicationRecord
     }
   end
 
+  # Uses original_balance (account.first_valuation_amount), not the
+  # loan.initial_balance column: the column is a point-in-time copy set at
+  # account-creation time and never kept in sync afterward, while
+  # original_balance reflects the account's current first valuation --
+  # the same source the rest of this model and the overview view use, so
+  # this can't silently disagree with them.
   def balance_paid_ratio
-    initial = initial_balance
-    return unless initial&.positive?
+    initial = original_balance.amount
+    return unless initial.positive?
 
     current = account.balance
     return unless current
 
-    (1 - current.fdiv(initial)).clamp(0.0, 1.0)
+    (1 - current.abs.fdiv(initial)).clamp(0.0, 1.0)
   end
 
   # Donut-chart segments for the repayment-progress ring, consumed by the

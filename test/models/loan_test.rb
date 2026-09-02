@@ -31,6 +31,27 @@ class LoanTest < ActiveSupport::TestCase
 
     assert_equal 2245, loan_account.loan.monthly_payment.amount
   end
+
+  # A liability account's balance/valuation can be recorded negative
+  # depending on how it was entered or imported. All the derived analytics
+  # below must still read as positive magnitudes -- a negative monthly
+  # payment, total cost, or "over 100% repaid" ring is never correct.
+  test "normalizes a negative account balance to positive magnitudes throughout" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Negative Balance Mortgage",
+      balance: -500000,
+      currency: "USD",
+      accountable: create_loan(down_payment: 100_000)
+    loan = loan_account.loan
+
+    assert_equal 500000, loan.original_balance.amount
+    assert_equal 2245, loan.monthly_payment.amount
+    assert loan.total_cost.amount.positive?
+    assert loan.total_interest.amount.positive?
+    assert_equal 0.0, loan.balance_paid_ratio
+    assert_in_delta 5.0, loan.initial_leverage_ratio, 0.0001
+  end
   # =========================
   # months_elapsed
   # =========================
@@ -512,23 +533,16 @@ end
   end
   # ── balance_paid_ratio ────────────────────────────────────────────────────
 
-  test "balance_paid_ratio returns nil when initial_balance is nil" do
+  test "balance_paid_ratio returns nil when original_balance is zero" do
     loan = loans(:one)
-    loan.stubs(:initial_balance).returns(nil)
-
-    assert_nil loan.balance_paid_ratio
-  end
-
-  test "balance_paid_ratio returns nil when initial_balance is zero" do
-    loan = loans(:one)
-    loan.stubs(:initial_balance).returns(0)
+    loan.stubs(:original_balance).returns(Money.new(0, "USD"))
 
     assert_nil loan.balance_paid_ratio
   end
 
   test "balance_paid_ratio returns 0.0 when nothing has been repaid" do
     loan = loans(:one)
-    loan.stubs(:initial_balance).returns(100_000)
+    loan.stubs(:original_balance).returns(Money.new(100_000, "USD"))
     loan.account.stubs(:balance).returns(100_000)
 
     assert_equal 0.0, loan.balance_paid_ratio
@@ -536,7 +550,7 @@ end
 
   test "balance_paid_ratio returns correct ratio when partially repaid" do
     loan = loans(:one)
-    loan.stubs(:initial_balance).returns(100_000)
+    loan.stubs(:original_balance).returns(Money.new(100_000, "USD"))
     loan.account.stubs(:balance).returns(60_000)
 
     assert_equal 0.4, loan.balance_paid_ratio
@@ -544,7 +558,7 @@ end
 
   test "balance_paid_ratio returns 1.0 when fully repaid" do
     loan = loans(:one)
-    loan.stubs(:initial_balance).returns(100_000)
+    loan.stubs(:original_balance).returns(Money.new(100_000, "USD"))
     loan.account.stubs(:balance).returns(0)
 
     assert_equal 1.0, loan.balance_paid_ratio
@@ -552,7 +566,7 @@ end
 
   test "balance_paid_ratio clamps to 0.0 when balance exceeds initial" do
     loan = loans(:one)
-    loan.stubs(:initial_balance).returns(100_000)
+    loan.stubs(:original_balance).returns(Money.new(100_000, "USD"))
     loan.account.stubs(:balance).returns(105_000)
 
     assert_equal 0.0, loan.balance_paid_ratio
@@ -560,10 +574,21 @@ end
 
   test "balance_paid_ratio returns nil when account balance is nil" do
     loan = loans(:one)
-    loan.stubs(:initial_balance).returns(100_000)
+    loan.stubs(:original_balance).returns(Money.new(100_000, "USD"))
     loan.account.stubs(:balance).returns(nil)
 
     assert_nil loan.balance_paid_ratio
+  end
+
+  test "balance_paid_ratio normalizes a negative account balance to a positive magnitude" do
+    loan = loans(:one)
+    loan.stubs(:original_balance).returns(Money.new(100_000, "USD"))
+    # A liability's current balance can be recorded negative depending on how
+    # it was entered/imported -- this must still read as "40% repaid", not
+    # clamp to 100% the way a naive current.fdiv(initial) would.
+    loan.account.stubs(:balance).returns(-60_000)
+
+    assert_equal 0.4, loan.balance_paid_ratio
   end
 
   # =========================
