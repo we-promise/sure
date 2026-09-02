@@ -175,7 +175,9 @@ class Account::LogoFetcher
       addresses
     end
 
-    # Checks if an IP address is public (not loopback, private, link-local, multicast, or unspecified).
+    # Checks if an IP address is public (globally routable).
+    # Rejects loopback, private, link-local, shared address space (100.64.0.0/10),
+    # multicast, and unspecified addresses to prevent SSRF attacks.
     #
     # @param address [String] The IP address to check
     # @return [Boolean] true if the address is a public, globally routable address
@@ -185,6 +187,13 @@ class Account::LogoFetcher
       return false if ip.loopback?
       return false if ip.private?
       return false if ip.link_local?
+
+      # Reject shared address space (100.64.0.0/10) - RFC 6598
+      # This includes addresses like 100.64.0.1 used by cloud metadata endpoints
+      if ip.ipv4?
+        shared_space = IPAddr.new("100.64.0.0/10")
+        return false if shared_space.include?(ip)
+      end
 
       # Reject unspecified addresses (0.0.0.0, ::, etc.)
       return false if ip == IPAddr.new("0.0.0.0") || ip == IPAddr.new("::")
