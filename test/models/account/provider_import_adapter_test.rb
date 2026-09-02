@@ -346,44 +346,6 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "security is required", exception.message
   end
 
-  test "persists and merges extra metadata on trade" do
-    investment_account = accounts(:investment)
-    adapter = Account::ProviderImportAdapter.new(investment_account)
-    security = securities(:aapl)
-
-    entry = adapter.import_trade(
-      security: security,
-      quantity: 5,
-      price: 150.00,
-      amount: 750.00,
-      currency: "USD",
-      date: Date.today,
-      source: "trade_republic",
-      external_id: "trade_republic_event_evt_buy_extra",
-      extra: { trade_republic: { isin: "US0378331005", fees: "1.00" } }
-    )
-
-    assert_equal "US0378331005", entry.entryable.extra["trade_republic"]["isin"]
-    assert_equal "1.00", entry.entryable.extra["trade_republic"]["fees"]
-
-    # Re-import merges without wiping existing keys
-    updated = adapter.import_trade(
-      security: security,
-      quantity: 5,
-      price: 150.00,
-      amount: 750.00,
-      currency: "USD",
-      date: Date.today,
-      source: "trade_republic",
-      external_id: "trade_republic_event_evt_buy_extra",
-      extra: { trade_republic: { taxes: "0.50" } }
-    )
-
-    assert_equal entry.id, updated.id
-    assert_equal "US0378331005", updated.entryable.extra["trade_republic"]["isin"]
-    assert_equal "0.50", updated.entryable.extra["trade_republic"]["taxes"]
-  end
-
   test "stores account_provider_id when importing holding" do
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)

@@ -628,7 +628,7 @@ class Account::ProviderImportAdapter
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, extra: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -671,9 +671,6 @@ class Account::ProviderImportAdapter
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
-      if extra.present?
-        entry.entryable.extra = (entry.entryable.extra || {}).deep_merge(extra.deep_stringify_keys)
-      end
 
       entry.assign_attributes(
         date: date,

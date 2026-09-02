@@ -122,7 +122,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       signed_amount = is_buy ? -amount.abs : amount.abs
       price ||= amount.abs / signed_quantity.abs
 
-      import_adapter.import_trade(
+      entry = import_adapter.import_trade(
         external_id:    external_id,
         security:       security,
         quantity:       signed_quantity,
@@ -132,18 +132,25 @@ class TradeRepublicAccount::ActivitiesProcessor
         date:           date,
         name:           build_trade_name(security.ticker, signed_quantity),
         source:         "trade_republic",
-        activity_label: is_buy ? t("buy") : t("sell"),
-        extra: {
-          trade_republic: {
-            event_id: event[:id],
-            event_type: event[:eventType],
-            isin: isin,
-            fees: detail[:fees],
-            taxes: detail[:taxes],
-            provider_name: detail[:name]
-          }.compact
-        }
+        activity_label: is_buy ? t("buy") : t("sell")
       )
+
+      trade_metadata = {
+        trade_republic: {
+          event_id: event[:id],
+          event_type: event[:eventType],
+          isin: isin,
+          fees: detail[:fees],
+          taxes: detail[:taxes],
+          provider_name: detail[:name]
+        }.compact
+      }
+
+      if entry&.entryable.is_a?(Trade) && trade_metadata[:trade_republic].present?
+        existing = entry.entryable.extra || {}
+        merged = existing.deep_merge(trade_metadata.deep_stringify_keys)
+        entry.entryable.update!(extra: merged) if merged != existing
+      end
 
       true
     end
