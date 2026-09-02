@@ -687,11 +687,9 @@ class Account < ApplicationRecord
       end
     end
 
-    def clean_institution_domain
-      return unless institution_domain.present?
+      return unless read_attribute(:institution_domain).present?
 
-      value = institution_domain.strip
-      # Case-insensitive scheme check: handle HTTP://, https://, HTTP://, HTTPS://, etc.
+      value = read_attribute(:institution_domain).strip
       value = "//#{value}" unless value.match?(/\Ahttps?:\/\//i)
 
       domain = URI.parse(value).host&.downcase&.sub(/\Awww\./, "")
