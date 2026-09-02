@@ -600,6 +600,47 @@ class AccountTest < ActiveSupport::TestCase
     assert @account.valid?
   end
 
+  test "changing the domain purges the previously fetched logo" do
+    @account.update!(institution_domain: "old.example.com", logo_source: "auto")
+    @account.attach_fetched_logo(
+      io: StringIO.new("old-logo"),
+      filename: "old.png",
+      content_type: "image/png"
+    )
+    @account.reload
+    assert @account.logo.attached?
+
+    @account.update!(institution_domain: "new.example.com")
+
+    assert_not @account.reload.logo.attached?
+  end
+
+  test "a failed fetch after a domain change serves the new domain fallback, not the old logo" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    @account.update!(institution_domain: "old.example.com", logo_source: "auto")
+    @account.attach_fetched_logo(
+      io: StringIO.new("old-logo"),
+      filename: "old.png",
+      content_type: "image/png"
+    )
+
+    ddg_failure = Net::HTTPNotFound.new("1.1", "404", "Not Found")
+    ddg_failure.stubs(:body).returns(nil)
+    ddg_http = mock
+    ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:open_timeout=)
+    ddg_http.stubs(:read_timeout=)
+    ddg_http.expects(:request).returns(ddg_failure)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+
+    @account.update!(institution_domain: "new.example.com")
+    FetchLogoJob.perform_now(@account.id, "new.example.com")
+
+    assert_not @account.logo.attached?
+    assert_equal "https://icons.duckduckgo.com/ip3/new.example.com.ico", @account.logo_url
+  end
+
   test "destroying account moves linked statements to inbox after commit" do
     statement = AccountStatement.create_from_upload!(
       family: @family,

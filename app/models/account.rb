@@ -578,6 +578,16 @@ class Account < ApplicationRecord
   def queue_logo_fetch
     # Pass the domain the queue decision was made on so Account::LogoFetcher
     # can discard the fetch if the domain changes while the job is in flight.
+    #
+    # A domain change also invalidates the previously fetched logo: purge it
+    # so a failed replacement fetch falls back to the new domain's Brandfetch
+    # or favicon URL instead of serving the old institution's logo
+    # indefinitely. Only runs while logo_source is auto, so manual uploads
+    # are never touched here.
+    if saved_change_to_institution_domain? && logo.attached?
+      logo.purge
+    end
+
     FetchLogoJob.perform_later(id, institution_domain)
   end
 
