@@ -900,4 +900,94 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
+
+  test "manual logo source displays the attached logo" do
+    # When logo_source is "manual", the uploaded logo should be displayed
+    logo_file = uploaded_file(filename: "test_logo.png", content_type: "image/png", content: "valid-image-data")
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Test8",
+        balance: 1000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {},
+        logo: logo_file,
+        logo_source: "manual"
+      },
+      skip_initial_sync: true
+    )
+
+    assert account.persisted?, "Account should be created successfully"
+    assert account.logo.attached?, "Logo should be attached to the account"
+    assert account.logo_source_manual?, "Logo source should be manual"
+
+    # logo_url should return the attached logo URL
+    logo_url = account.logo_url
+    assert logo_url.present?, "logo_url should be present when logo is attached with manual source"
+
+    # Verify it's the blob URL
+    assert logo_url.include?("/rails/active_storage/"), "logo_url should be an Active Storage blob URL"
+  end
+
+  test "auto logo source ignores the attached logo" do
+    # When logo_source is "auto", the uploaded logo should be ignored
+    logo_file = uploaded_file(filename: "test_logo.png", content_type: "image/png", content: "valid-image-data")
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Test Auto Account",
+        balance: 1000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {},
+        institution_domain: "example.com",
+        logo: logo_file,
+        logo_source: "auto"
+      },
+      skip_initial_sync: true
+    )
+
+    assert account.persisted?, "Account should be created successfully"
+    assert account.logo.attached?, "Logo should be attached to the account"
+    assert account.logo_source_auto?, "Logo source should be auto"
+
+    # logo_url should NOT return the attached logo URL when source is auto
+    # It should return the auto-fetch fallback (brandfetch, provider, or favicon)
+    logo_url = account.logo_url
+    assert logo_url.present?, "logo_url should be present"
+
+    # Verify it's NOT the blob URL (since auto source ignores uploads)
+    assert_not logo_url.include?("/rails/active_storage/"), "logo_url should NOT be a blob URL when source is auto"
+  end
+
+  test "manual logo source falls back to auto-fetch when no logo attached" do
+    # When logo_source is "manual" but no logo is attached, should fallback
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Test Manual No Logo",
+        balance: 1000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {},
+        institution_domain: "example.com",
+        logo_source: "manual"
+      },
+      skip_initial_sync: true
+    )
+
+    assert account.persisted?, "Account should be created successfully"
+    assert_not account.logo.attached?, "Logo should not be attached"
+    assert account.logo_source_manual?, "Logo source should be manual"
+
+    # logo_url should return the auto-fetch fallback
+    logo_url = account.logo_url
+    assert logo_url.present?, "logo_url should be present even without attached logo"
+  end
 end
