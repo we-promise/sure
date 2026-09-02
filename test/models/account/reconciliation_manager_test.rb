@@ -108,6 +108,40 @@ class Account::ReconciliationManagerTest < ActiveSupport::TestCase
     end
   end
 
+  test "recovers from a genuine unique-index conflict even inside an outer transaction" do
+    create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
+
+    # Reproduces a real gap a reviewer found: a caller (e.g.
+    # Api::V1::ValuationsController#create) wraps reconcile_balance in its
+    # own outer transaction. Without `requires_new: true` on the internal
+    # save, a real unique-index violation here aborts that whole outer
+    # PostgreSQL transaction, and the rescue's own retry query then raises
+    # PG::InFailedSqlTransaction instead of finding the winning row - a real
+    # DB-level violation, not a stub, is needed to prove this.
+    ActiveRecord::Base.transaction do
+      winning_entry = @account.entries.create!(
+        name: "Test", amount: 1000, date: Date.current,
+        entryable: Valuation.new(kind: "reconciliation"), currency: @account.currency
+      )
+      # Force the manager to attempt a fresh INSERT despite a valuation
+      # already existing for this date, so its own #save! is the one that
+      # collides with the real unique index (rather than updating in place).
+      @manager.stubs(:find_existing_valuation_for_date).returns(nil, winning_entry)
+      # Entry's own model-level uniqueness validation (see Entry#validates
+      # :date, uniqueness: ...) would otherwise catch this same conflict
+      # first as an ordinary ActiveRecord::RecordInvalid, before the save
+      # ever reaches the database - skip it so the save actually reaches
+      # PostgreSQL and collides with the real unique index, which is what
+      # this test needs to reproduce the transaction-abort behavior.
+      Entry.any_instance.stubs(:valid?).returns(true)
+
+      result = @manager.reconcile_balance(balance: 1200, date: Date.current)
+
+      assert result.success?
+      assert_equal 1200, result.new_balance
+    end
+  end
+
   test "a RecordNotUnique with no matching valuation is reported, not silently swallowed" do
     create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
 

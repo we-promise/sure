@@ -14,9 +14,19 @@ class Account::ReconciliationManager
     prior_valuation_amount = prepared_valuation.amount_in_database
 
     unless dry_run
-      prepared_valuation.save!
-      contribution = valuation_contribution(prepared_valuation, prior_valuation_amount, old_balance_components)
-      GoalPledge::Reconciler.new(prepared_valuation, valuation_delta: contribution).run
+      # requires_new: true opens a savepoint rather than joining whatever
+      # transaction the caller may already be in (e.g.
+      # Api::V1::ValuationsController#create wraps this in its own
+      # transaction). Without it, a RecordNotUnique here would abort that
+      # entire outer transaction on PostgreSQL, and the retry lookup in the
+      # rescue below would itself fail with PG::InFailedSqlTransaction
+      # instead of finding the winning row - the savepoint keeps the failure
+      # contained to just this insert attempt.
+      ActiveRecord::Base.transaction(requires_new: true) do
+        prepared_valuation.save!
+        contribution = valuation_contribution(prepared_valuation, prior_valuation_amount, old_balance_components)
+        GoalPledge::Reconciler.new(prepared_valuation, valuation_delta: contribution).run
+      end
     end
 
     ReconciliationResult.new(
