@@ -549,15 +549,55 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :recurring_transactions, only: %i[index destroy] do
+  resources :bills, only: %i[index show] do
+    # POST for the same reason recurring_transactions#identify is: detection
+    # mutates (creates suggested series and occurrences), so it stays behind
+    # CSRF protection rather than a plain URL.
     collection do
-      match :identify, via: [ :get, :post ]
-      match :cleanup, via: [ :get, :post ]
+      post :detect
+      post :ai_review, to: "bills/ai_reviews#create"
+      post :reset_feed_token
+    end
+    member do
+      get :smart_configuration, to: "bills/smart_configurations#show"
+    end
+  end
+  get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }
+
+  resources :recurring_occurrences, only: %i[show] do
+    member do
+      post :mark_paid
+      post :skip
+      post :reopen
+      patch :snooze
+      patch :override_amount
+    end
+
+    resources :allocations, controller: :recurring_allocations, only: %i[create]
+  end
+
+  resources :recurring_allocations, only: %i[destroy] do
+    member do
+      post :confirm
+      post :reject
+    end
+  end
+
+  resources :recurring_transactions, only: %i[index new create edit update destroy] do
+    collection do
+      # POST only: all three mutate. They accepted GET while DS::Link's method
+      # option was inert, which left destructive work sitting behind a plain
+      # URL and outside CSRF protection. Every call site passes method: :post.
+      post :identify
+      post :cleanup
+      post :smart_fill, to: "recurring_transactions/smart_fills#create"
       patch :update_settings
     end
 
     member do
-      match :toggle_status, via: [ :get, :post ]
+      post :toggle_status
+      post :confirm
+      post :dismiss
     end
   end
 

@@ -103,8 +103,17 @@
   </div>
 
   <div class="pt-4 border-t border-secondary">
-    <h3 class="font-medium mb-1"><%= t(".ai_response_timeout_heading") %></h3>
-    <p class="text-xs text-secondary mb-3"><%= t(".ai_response_timeout_description") %></p>
+    <h3 class="font-medium mb-1"><%= t(".timeout_heading") %></h3>
+    <p class="text-xs text-secondary mb-3"><%= t(".timeout_description") %></p>
+
+    <%= form.number_field :openai_request_timeout,
+                          label: t(".openai_request_timeout_label"),
+                          placeholder: Provider::Openai::DEFAULT_REQUEST_TIMEOUT.to_s,
+                          value: ENV["OPENAI_REQUEST_TIMEOUT"].present? ? Provider::Openai.request_timeout : Setting.openai_request_timeout,
+                          min: Provider::Openai::MIN_REQUEST_TIMEOUT,
+                          disabled: ENV["OPENAI_REQUEST_TIMEOUT"].present?,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".openai_request_timeout_help") %></p>
 
     <%= form.number_field :ai_response_timeout,
                           label: t(".ai_response_timeout_label"),

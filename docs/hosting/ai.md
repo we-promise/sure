@@ -220,7 +220,7 @@ OPENAI_MODEL=llama3.1:13b
 # have enough prompt budget for categories + schemas before transaction rows are added.
 LLM_CONTEXT_WINDOW=8192
 
-# Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
+# Slow local models often need a longer per-request HTTP timeout once the prompt budget issue is fixed.
 OPENAI_REQUEST_TIMEOUT=180
 
 # Chained tool calls per turn. Each iteration is another call to the model, so
@@ -245,7 +245,7 @@ AI_DEBUG_MODE=true
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
-- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
+- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 
 ### Docker Compose Example
@@ -1181,7 +1181,7 @@ Keeping the full eight iterations at 300s per call would instead need `9 × 300 
 
 If `AI_RESPONSE_TIMEOUT` ends up below what the turn actually takes, you get a generic "no response" instead of the specific timeout error, and the job keeps running and burning tokens after the chat has given up.
 
-`AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Chat Response Timeout**, which takes effect without a restart. The environment variable wins if both are set. The minimum accepted value is `30`.
+`OPENAI_REQUEST_TIMEOUT` and `AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Timeouts**, which takes effect without a restart when the corresponding environment variable is not configured. Environment variables win over the settings fields. The minimum accepted chat response timeout is `30`.
 
 Restart `web` and `worker` after changing the environment variables, and make sure your Docker Compose file forwards them into the containers.
 
