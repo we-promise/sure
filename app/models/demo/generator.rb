@@ -303,7 +303,7 @@ class Demo::Generator
           insurance_rate_type: "level_term",
           initial_balance: 320_000
         ),
-        name: "Home Mortgage", balance: 0, currency: "USD"
+        name: "Home Mortgage", balance: 320_000, currency: "USD"
       )
 
       @car_loan = family.accounts.create!(
@@ -316,7 +316,7 @@ class Demo::Generator
           down_payment: 5_000,
           initial_balance: 25_000
         ),
-        name: "Car Loan", balance: 0, currency: "USD"
+        name: "Car Loan", balance: 25_000, currency: "USD"
       )
 
       @student_loan = family.accounts.create!(
@@ -328,8 +328,8 @@ class Demo::Generator
           start_date: 2.years.ago.to_date,
           initial_balance: 30_000
         ),
-        name: "Student Loan", balance: 0, currency: "USD"
-)
+        name: "Student Loan", balance: 30_000, currency: "USD"
+      )
 
       @personal_loc  = family.accounts.create!(accountable: OtherLiability.new, name: "Personal Line of Credit", balance: 0, currency: "USD")
 

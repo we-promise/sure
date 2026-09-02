@@ -287,25 +287,46 @@ class LoanTest < ActiveSupport::TestCase
 
 
   test "generate_amortization_schedule keeps insurance constant for level_term" do
-  loan = Loan.new(
-    interest_rate: 3.6,
-    insurance_rate: 0.3,
-    insurance_rate_type: "level_term",
-    term_months: 3,
-    start_date: Date.new(2024, 1, 1)
-  )
+    loan = Loan.new(
+      interest_rate: 3.6,
+      insurance_rate: 0.3,
+      insurance_rate_type: "level_term",
+      term_months: 3,
+      start_date: Date.new(2024, 1, 1)
+    )
 
-  loan.stub :original_balance, OpenStruct.new(amount: 100_000) do
-    loan.stub :monthly_payment, OpenStruct.new(amount: 10_000) do
-      schedule = loan.send(:generate_amortization_schedule)  # ← send
+    loan.stub :original_balance, OpenStruct.new(amount: 100_000) do
+      loan.stub :monthly_payment, OpenStruct.new(amount: 10_000) do
+        schedule = loan.send(:generate_amortization_schedule)
 
-      insurances = schedule.map { |r| r[:insurance] }
+        insurances = schedule.map { |r| r[:insurance] }
 
-      assert_equal insurances.first, insurances.second
-      assert_equal insurances.first, insurances.third
+        assert_equal insurances.first, insurances.second
+        assert_equal insurances.first, insurances.third
+      end
     end
   end
-end
+
+  test "generate_amortization_schedule caps final payment at remaining principal" do
+    loan = Loan.new(
+      interest_rate: 12.0,
+      term_months: 2,
+      rate_type: "fixed",
+      start_date: Date.new(2024, 1, 1)
+    )
+
+    loan.stub :original_balance, OpenStruct.new(amount: 100) do
+      loan.stub :monthly_payment, OpenStruct.new(amount: 60) do
+        schedule = loan.send(:generate_amortization_schedule)
+
+        assert_equal 2, schedule.length
+        assert_equal 60, schedule.first[:payment]
+        assert_equal 41, schedule.second[:payment]
+        assert_equal 41, schedule.second[:principal]
+        assert_equal 0, schedule.second[:remaining_balance]
+      end
+    end
+  end
   # =========================
   # total_insurance
   # =========================
@@ -344,14 +365,21 @@ end
   # total_paid
   # =========================
 
-  test "total_paid returns monthly_payment multiplied by term_months" do
+  test "total_paid returns the sum of scheduled payments" do
     loan = Loan.new(term_months: 12)
+    schedule = [
+      { payment: 1_000 },
+      { payment: 1_000 },
+      { payment: 995 }
+    ]
 
     loan.stub :monthly_payment, Money.new(1000, "USD") do
-      result = loan.total_paid
+      loan.stub :amortization_schedule, schedule do
+        result = loan.total_paid
 
-      assert_equal 12000, result.amount
-      assert_equal "USD", result.currency.iso_code
+        assert_equal 2995, result.amount
+        assert_equal "USD", result.currency.iso_code
+      end
     end
   end
 

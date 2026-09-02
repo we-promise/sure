@@ -12,9 +12,9 @@ class Loan < ApplicationRecord
   }.freeze
 
   LEVERAGE_BANDS = {
-  conservative: 0..4,
-  moderate: 4..8,
-  high: 8..
+    conservative: 0..4,
+    moderate: 4..8,
+    high: 8..
   }.freeze
 
   before_validation :set_default_start_date, on: :create
@@ -122,7 +122,8 @@ class Loan < ApplicationRecord
 
   def total_paid
     return unless (mp = monthly_payment) && term_months
-    mp * term_months
+
+    Money.new(amortization_schedule.sum { _1[:payment] }, mp.currency)
   end
 
   def total_interest
@@ -286,13 +287,15 @@ class Loan < ApplicationRecord
         base = insurance_base || balance
         insurance_amount = (base * insurance_rate_m).round(0)
 
-        principal = payment - interest
+        principal = [ payment - interest, 0 ].max
+        principal = [ principal, balance ].min
+        row_payment = principal + interest
         balance   = [ balance - principal, 0 ].max
 
         schedule << {
           month: i + 1,
           date: start_date >> i,
-          payment: payment.to_i,
+          payment: row_payment.to_i,
           interest: interest.to_i,
           principal: principal.to_i,
           insurance: insurance_amount.to_i,

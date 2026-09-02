@@ -1314,7 +1314,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.string "subtype"
     t.integer "term_months"
     t.datetime "updated_at", null: false
-    t.decimal "down_payment", precision: 15, scale: 2
+    t.decimal "down_payment", precision: 19, scale: 4
     t.date "start_date", null: false
     t.string "insurance_rate_type"
     t.decimal "insurance_rate", precision: 8, scale: 4

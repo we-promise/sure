@@ -55,17 +55,22 @@
     <% end %>
 
     <%= summary_card title: t(".type") do %>
-      <%= loan.rate_type.present? ? t(".rate_types.#{loan.rate_type}") : t(".unknown") %>
+      <div class="space-y-2">
+        <div>
+          <div class="text-xs text-secondary"><%= t(".subtype") %></div>
+          <div><%= loan.subtype.present? ? t(".subtypes.#{loan.subtype}", default: t(".unknown")) : t(".unknown") %></div>
+        </div>
+        <div>
+          <div class="text-xs text-secondary"><%= t(".rate_type") %></div>
+          <div><%= loan.rate_type.present? ? t(".rate_types.#{loan.rate_type}") : t(".unknown") %></div>
+        </div>
+      </div>
     <% end %>
 
     <%= summary_card title: t(".initial_leverage") do %>
       <% if (band = loan.leverage_band) %>
         <% ratio = loan.initial_leverage_ratio %>
-        <% color = {
-            conservative: "text-success",
-            moderate:     "text-accent",
-            high:         "text-destructive"
-          }.fetch(band) %>
+        <% color = loan_leverage_band_class(band) %>
         <div class="text-2xl font-semibold <%= color %>">
           <%= number_with_precision(ratio, precision: 1) %>x
         </div>

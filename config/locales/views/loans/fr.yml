@@ -51,6 +51,16 @@ fr:
         repayment_progress: État d'avancement du remboursement
         term: Durée
         type: Type
+        subtype: Catégorie
+        rate_type: Type de taux
+        subtypes:
+          mortgage: Prêt immobilier
+          student: Prêt étudiant
+          auto: Prêt automobile
+          home_equity: Prêt sur valeur domiciliaire
+          line_of_credit: Ligne de crédit
+          business: Prêt professionnel
+          other: Autre prêt
         rate_types:
           fixed: Fixe
           variable: Variable

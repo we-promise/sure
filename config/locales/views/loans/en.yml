@@ -51,6 +51,16 @@ en:
         repayment_progress: Repayment progress
         term: Term
         type: Type
+        subtype: Subtype
+        rate_type: Rate type
+        subtypes:
+          mortgage: Mortgage
+          student: Student Loan
+          auto: Auto Loan
+          home_equity: Home Equity Loan
+          line_of_credit: Line of Credit
+          business: Business Loan
+          other: Other Loan
         rate_types:
           fixed: Fixed
           variable: Variable
