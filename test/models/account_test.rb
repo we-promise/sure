@@ -16,6 +16,24 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "default owner prefers a family admin before a super admin" do
+    family = families(:empty)
+    admin = users(:empty)
+    super_admin = users(:sure_support_staff)
+
+    Current.reset
+
+    account = family.accounts.create!(
+      name: "Unowned test account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    assert_equal admin, account.owner
+    assert_not_equal super_admin, account.owner
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 
@@ -75,6 +93,95 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_nil opening_anchor
     assert_equal "GBP", opening_anchor.entry.currency
     assert_equal 1000, opening_anchor.entry.amount
+  end
+
+  test "create_and_sync keeps the entered current balance when it differs from the opening balance" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 20_000, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 20_000, account.valuations.opening_anchor.first.entry.amount
+    # Without a today anchor, the initial sync would walk forward from the
+    # opening valuation and overwrite the entered 8,000 with 20,000.
+    today_valuation = account.entries.valuations.find_by(date: Date.current)
+    assert_not_nil today_valuation
+    assert_equal 8_000, today_valuation.amount
+  end
+
+  test "create_and_sync leaves the opening anchor alone when the opening balance date is today" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 20_000, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true,
+      opening_balance_date: Date.current
+    )
+
+    # Both balances land on the same day, so today's balance cannot be
+    # anchored without reusing (and overwriting) the opening anchor.
+    valuations = account.entries.valuations.where(date: Date.current)
+    assert_equal 1, valuations.count
+    assert_equal 20_000, valuations.first.amount
+    assert_equal "opening_anchor", valuations.first.entryable.kind
+  end
+
+  test "create_and_sync treats a blank initial balance as absent" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: "", rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 8_000, account.valuations.opening_anchor.first.entry.amount
+    assert_nil account.entries.valuations.find_by(date: Date.current)
+  end
+
+  test "create_and_sync treats a zero initial balance as a real opening balance" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 0, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 0, account.valuations.opening_anchor.first.entry.amount
+    assert_equal 8_000, account.entries.valuations.find_by(date: Date.current)&.amount
   end
 
   test "create_and_sync uses provided opening balance date" do
@@ -549,5 +656,27 @@ class AccountTest < ActiveSupport::TestCase
 
     outflow_transaction.reload
     assert_equal "standard", outflow_transaction.kind
+  end
+
+  test "cleanup transfers preloads transaction associations" do
+    counterparty = @family.accounts.create!(
+      owner: @admin,
+      name: "Transfer counterparty",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    transfers = 3.times.map do |index|
+      create_transfer(
+        from_account: @account,
+        to_account: counterparty,
+        amount: 10 + index
+      )
+    end
+
+    queries = capture_sql_queries { @account.send(:cleanup_transfers) }
+
+    assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
+    assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
 end

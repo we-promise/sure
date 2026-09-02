@@ -320,6 +320,52 @@ class Family::DataExporter
         }.to_json
       end
 
+      # The Bills subsystem hangs off those series. Rules and occurrences need
+      # only the series; allocations, price changes and rejections also point
+      # at transactions, so the importer replays them after transactions land.
+      RecurrenceRule.joins(:recurring_transaction)
+                    .where(recurring_transactions: { family_id: @family.id })
+                    .find_each do |rule|
+        lines << { type: "RecurrenceRule", data: serialize_recurrence_rule_for_export(rule) }.to_json
+      end
+
+      @family.recurring_occurrences.find_each do |occurrence|
+        lines << {
+          type: "RecurringOccurrence",
+          data: serialize_recurring_occurrence_for_export(occurrence)
+        }.to_json
+      end
+
+      RecurringAllocation.joins(:recurring_occurrence)
+                         .where(recurring_occurrences: { family_id: @family.id })
+                         .includes(:entry)
+                         .find_each do |allocation|
+        lines << {
+          type: "RecurringAllocation",
+          data: serialize_recurring_allocation_for_export(allocation)
+        }.to_json
+      end
+
+      RecurringPriceChange.joins(:recurring_transaction)
+                          .where(recurring_transactions: { family_id: @family.id })
+                          .includes(:entry)
+                          .find_each do |change|
+        lines << {
+          type: "RecurringPriceChange",
+          data: serialize_recurring_price_change_for_export(change)
+        }.to_json
+      end
+
+      RecurringMatchRejection.joins(:recurring_transaction)
+                             .where(recurring_transactions: { family_id: @family.id })
+                             .includes(:entry)
+                             .find_each do |rejection|
+        lines << {
+          type: "RecurringMatchRejection",
+          data: serialize_recurring_match_rejection_for_export(rejection)
+        }.to_json
+      end
+
       ndjson_exportable_transactions.includes(
         :category,
         :merchant,
@@ -555,11 +601,117 @@ class Family::DataExporter
         occurrence_count: recurring_transaction.occurrence_count,
         name: recurring_transaction.name,
         manual: recurring_transaction.manual,
+        payment_url: recurring_transaction.payment_url,
+        autopay: recurring_transaction.autopay,
+        notes: recurring_transaction.notes,
         expected_amount_min: recurring_transaction.expected_amount_min,
         expected_amount_max: recurring_transaction.expected_amount_max,
         expected_amount_avg: recurring_transaction.expected_amount_avg,
+        # Bills subsystem. Without these a restored bill keeps its name and
+        # amount but loses what kind of obligation it is, what it costs to
+        # match, and every schedule detail beyond the day of the month.
+        bill_type: recurring_transaction.bill_type,
+        category_id: recurring_transaction.category_id,
+        amount_strategy: recurring_transaction.amount_strategy,
+        amount_tolerance_pct: recurring_transaction.amount_tolerance_pct,
+        notify_days_before: recurring_transaction.notify_days_before,
+        upcoming_window_days: recurring_transaction.upcoming_window_days,
+        overdue_grace_days: recurring_transaction.overdue_grace_days,
+        match_days_early: recurring_transaction.match_days_early,
+        match_days_late: recurring_transaction.match_days_late,
+        renews_on: recurring_transaction.renews_on,
+        trial_ends_on: recurring_transaction.trial_ends_on,
+        cancelled_on: recurring_transaction.cancelled_on,
+        anchor_date: recurring_transaction.anchor_date,
+        end_mode: recurring_transaction.end_mode,
+        end_on: recurring_transaction.end_on,
+        end_after_count: recurring_transaction.end_after_count,
+        weekend_adjust: recurring_transaction.weekend_adjust,
+        holiday_calendar: recurring_transaction.holiday_calendar,
+        matcher_hints: recurring_transaction.matcher_hints,
+        dedup_scope: recurring_transaction.dedup_scope,
+        replaced_by_id: recurring_transaction.replaced_by_id,
         created_at: recurring_transaction.created_at,
         updated_at: recurring_transaction.updated_at
+      }
+    end
+
+    def serialize_recurrence_rule_for_export(rule)
+      {
+        id: rule.id,
+        recurring_transaction_id: rule.recurring_transaction_id,
+        frequency: rule.frequency,
+        interval: rule.interval,
+        day_of_month: rule.day_of_month,
+        weekday: rule.weekday,
+        weekday_ordinal: rule.weekday_ordinal,
+        month_of_year: rule.month_of_year,
+        position: rule.position
+      }
+    end
+
+    def serialize_recurring_occurrence_for_export(occurrence)
+      {
+        id: occurrence.id,
+        recurring_transaction_id: occurrence.recurring_transaction_id,
+        original_due_on: occurrence.original_due_on,
+        due_on: occurrence.due_on,
+        currency: occurrence.currency,
+        expected_amount: occurrence.expected_amount,
+        status: occurrence.status,
+        snoozed_until: occurrence.snoozed_until,
+        closed_at: occurrence.closed_at,
+        closed_source: occurrence.closed_source,
+        notes: occurrence.notes
+      }
+    end
+
+    # Allocations point at an Entry, but the importer only carries a
+    # Transaction id map, so the link travels as the transaction that owns the
+    # entry. An allocation whose entry cannot be resolved still imports: its
+    # amount is the payment record, and a null entry is a shape the model
+    # supports by design.
+    def serialize_recurring_allocation_for_export(allocation)
+      entry = allocation.entry
+
+      {
+        id: allocation.id,
+        recurring_occurrence_id: allocation.recurring_occurrence_id,
+        transaction_id: entry&.entryable_type == "Transaction" ? entry.entryable_id : nil,
+        allocated_amount: allocation.allocated_amount,
+        currency: allocation.currency,
+        source_amount: allocation.source_amount,
+        source_currency: allocation.source_currency,
+        state: allocation.state,
+        source: allocation.source,
+        match_confidence: allocation.match_confidence,
+        match_signals: allocation.match_signals,
+        paid_on: allocation.paid_on
+      }
+    end
+
+    def serialize_recurring_price_change_for_export(change)
+      entry = change.entry
+
+      {
+        id: change.id,
+        recurring_transaction_id: change.recurring_transaction_id,
+        effective_on: change.effective_on,
+        previous_amount: change.previous_amount,
+        new_amount: change.new_amount,
+        currency: change.currency,
+        source: change.source,
+        transaction_id: entry&.entryable_type == "Transaction" ? entry.entryable_id : nil
+      }
+    end
+
+    def serialize_recurring_match_rejection_for_export(rejection)
+      entry = rejection.entry
+
+      {
+        id: rejection.id,
+        recurring_transaction_id: rejection.recurring_transaction_id,
+        transaction_id: entry&.entryable_type == "Transaction" ? entry.entryable_id : nil
       }
     end
 
@@ -615,6 +767,11 @@ class Family::DataExporter
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
         return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
+      end
+
+      # Map tag UUIDs to names for portability
+      if condition.condition_type == "transaction_tag"
+        return rule_operand(condition.value, type: "Tag", relation: @family.tags)
       end
 
       rule_operand(condition.value)

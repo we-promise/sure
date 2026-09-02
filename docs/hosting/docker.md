@@ -39,15 +39,21 @@ Make sure you are in the directory you just created and run the following comman
 
 ```bash
 # Download the sample compose.yml file from the GitHub repository
-curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+
+# (Optional) If you plan to use the automated database backups feature:
+mkdir -p bin
+curl --fail --location --silent --show-error --output bin/db-backup.sh https://raw.githubusercontent.com/we-promise/sure/main/bin/db-backup.sh
+chmod +x bin/db-backup.sh
 ```
 
 This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
+3. (Optionally) Fetches the backup script to `bin/db-backup.sh` and makes it executable.
 
-At this point, the only file in your current working directory should be `compose.yml`.
+At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
 ### Step 3 (optional): Configure your environment
 
@@ -63,7 +69,7 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
 #### Generate the app secret key
@@ -185,7 +191,7 @@ The first time you run the app, you will need to register a new account by hitti
 After creating your initial admin account, you can control how other people join your self-hosted instance from **Settings > Self-Hosting > Onboarding**.
 
 - **Open**: Anyone can create an account from the registration page.
-- **Invite-only**: New account creation stays enabled, but signups require a valid invite code.
+- **Invite-only**: New account creation stays enabled. Signups require a valid invite code unless you configure a default family for invite-only onboarding.
 - **Closed**: The registration page is disabled for new signups.
 
 If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.
@@ -214,22 +220,22 @@ If you find bugs or have a feature request, be sure to read through our [contrib
 
 Sure ships with a separate compose file for AI-related features: `compose.example.ai.yml`. It adds:
 
-- **Pipelock** (always on): AI agent security proxy that scans outbound LLM calls and inbound MCP traffic
-- **Ollama + Open WebUI** (optional `--profile ai`): local LLM inference
+- **Pipelock** (always on): AI agent security proxy for outbound tunnel controls and inbound MCP scanning
+- **Ollama + Open WebUI** (optional `--profile local-ai`): local LLM inference
 
 ### Using the AI compose file
 
 ```bash
 # Download both compose files
-curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
-curl -o compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
-curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
+curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl --fail --location --silent --show-error --output compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
+curl --fail --location --silent --show-error --output pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
 
 # Run with Pipelock (no local LLM)
 docker compose -f compose.ai.yml up -d
 
 # Run with Pipelock + Ollama
-docker compose -f compose.ai.yml --profile ai up -d
+docker compose -f compose.ai.yml --profile local-ai up -d
 ```
 
 ### Setting up the external AI assistant
@@ -252,16 +258,22 @@ The external assistant delegates chat to a remote AI agent instead of calling LL
    - **Per-family (UI):** Go to Settings > Self-Hosting > AI Assistant, select "External"
    - **Global (env):** Set `ASSISTANT_TYPE=external` to force all families to use external
 
+To use the bundled OpenClaw service instead of a separately hosted agent, start the `external-assistant` profile. This profile starts OpenClaw without the local Ollama or Open WebUI services:
+
+```bash
+docker compose -f compose.ai.yml --profile external-assistant up -d
+```
+
 See [docs/hosting/ai.md](ai.md) for full configuration details including agent ID, session keys, and email allowlisting.
 
 ### Pipelock security proxy
 
-Pipelock sits between Sure and external services, scanning AI traffic for:
+Pipelock sits between Sure and external services. The default Compose file provides:
 
-- **Secret exfiltration** (DLP): catches API keys, tokens, or personal data leaking in prompts
-- **Prompt injection**: detects attempts to override system instructions
-- **Tool poisoning**: validates MCP tool calls against known-safe patterns
-- **Signed receipts**: optional hash-chained evidence of mediated decisions when `flight_recorder.dir` and `signing_key_path` are configured
+- MCP request and response scanning for DLP, prompt injection, and tool poisoning
+- HTTPS tunnel controls for destination, SSRF, rate, budget, CONNECT headers, and optional signed receipts
+
+The example doesn't enable TLS interception, so Pipelock can't read encrypted HTTPS request or response bodies. Docker Compose also doesn't prevent a client from bypassing the proxy.
 
 When using `compose.example.ai.yml`, Pipelock is always running. External AI agents should connect to port 8889 (MCP reverse proxy) instead of directly to Sure's `/mcp` on port 3000.
 

@@ -220,7 +220,7 @@ OPENAI_MODEL=llama3.1:13b
 # have enough prompt budget for categories + schemas before transaction rows are added.
 LLM_CONTEXT_WINDOW=8192
 
-# Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
+# Slow local models often need a longer per-request HTTP timeout once the prompt budget issue is fixed.
 OPENAI_REQUEST_TIMEOUT=180
 
 # Chained tool calls per turn. Each iteration is another call to the model, so
@@ -245,7 +245,7 @@ AI_DEBUG_MODE=true
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
-- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
+- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 
 ### Docker Compose Example
@@ -362,7 +362,7 @@ This is useful when:
 1. User sends a message in the Sure chat UI
 2. Sure sends the conversation to your agent's API endpoint (OpenAI chat completions format)
 3. Your agent processes it using whatever LLM, tools, or context it needs
-4. Your agent can call Sure's `/mcp` endpoint for financial data (accounts, transactions, balance sheet, holdings)
+4. Your agent can call Sure's `/mcp` endpoint for financial data and actions (accounts, transactions, balance sheet, budgets, file search, statement import, goals)
 5. Your agent streams the response back to Sure via Server-Sent Events (SSE)
 
 The agent's API must be **OpenAI chat completions compatible**: accept `POST` with a `messages` array, return SSE with `delta.content` chunks.
@@ -397,17 +397,24 @@ Sure exposes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) 
 
 **Authentication:** Bearer token via `Authorization` header
 
-**Environment variables:**
+Sure supports both:
+
+- OAuth bearer tokens issued through its discovery and registration endpoints (`/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `POST /register`)
+- Static bearer tokens configured with `MCP_API_TOKEN` and `MCP_USER_EMAIL`
+
+**Static-token environment variables:**
 ```bash
 MCP_API_TOKEN=your-secret-token    # Bearer token the agent sends to authenticate
 MCP_USER_EMAIL=user@example.com    # Email of the Sure user the agent acts as
 ```
 
 The agent must send requests to `https://your-sure-instance/mcp` with:
-```
-Authorization: Bearer <MCP_API_TOKEN>
+```http
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
+
+For OAuth clients, `<access-token>` is the issued Doorkeeper bearer token. For static-token clients, it is the configured `MCP_API_TOKEN`.
 
 **Supported methods:**
 
@@ -417,17 +424,9 @@ Content-Type: application/json
 | `tools/list` | Lists available tools with names, descriptions, and input schemas |
 | `tools/call` | Calls a specific tool by name with arguments |
 
-**Available tools** (exposed via `tools/list`):
-
-| Tool | Description |
-|------|-------------|
-| `get_accounts` | Retrieve account information |
-| `get_transactions` | Query transaction history |
-| `get_holdings` | Investment holdings data |
-| `get_balance_sheet` | Current financial position |
-| `get_income_statement` | Income and expenses |
-| `import_bank_statement` | Import bank statement data |
-| `search_family_files` | Search uploaded documents |
+**Available tools** (exposed via `tools/list`): the `/mcp` endpoint serves the
+same registry as the builtin assistant. See the canonical tool tables in
+[mcp.md](mcp.md#available-tools), which also cover the preview tools.
 
 **Example: list tools**
 ```bash
@@ -484,14 +483,14 @@ it implements.
 
 ### Security with Pipelock
 
-When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), all traffic between Sure and the external agent is scanned:
+When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), Sure configures two mediated routes:
 
 - **Outbound** (Sure -> agent): routed through Pipelock's forward proxy via `HTTPS_PROXY`
 - **Inbound** (agent -> Sure /mcp): routed through Pipelock's MCP reverse proxy (port 8889)
 
-Pipelock scans for prompt injection, DLP violations, and tool poisoning. The external agent does not need Pipelock installed. Sure's Pipelock handles both directions.
+The MCP reverse proxy scans readable MCP traffic for prompt injection, DLP violations, and tool poisoning. The forward proxy applies tunnel-level controls to HTTPS, but the default examples don't enable TLS interception and can't scan encrypted bodies. The external agent doesn't need Pipelock installed.
 
-If you need audit evidence, configure Pipelock's flight recorder as described in [Pipelock signed action receipts](pipelock.md#signed-action-receipts). `pipelock.enabled=true` gives scanning; receipts require mounted evidence storage plus a receipt-signing key.
+If you need audit evidence, configure Pipelock's flight recorder as described in [Pipelock signed action receipts](pipelock.md#signed-action-receipts). Enabling Pipelock adds the mediated routes, while receipts require mounted evidence storage plus a receipt-signing key.
 
 **`NO_PROXY` behavior (Helm/Kubernetes only):** The Helm chart's env template sets `NO_PROXY` to include `.svc.cluster.local` and other internal domains. This means in-cluster agent URLs (like `http://agent.namespace.svc.cluster.local:18789`) bypass the forward proxy and go directly. If your agent is in-cluster, its traffic won't be forward-proxy scanned (but MCP callbacks from the agent are still scanned by the reverse proxy). Docker Compose deployments use a different `NO_PROXY` set; check your compose file for the exact values.
 
@@ -689,26 +688,42 @@ Assistant.for_chat(chat) # => Assistant::Builtin instance
 
 ### Function Registry
 
-The `Assistant.function_classes` method centralizes all available financial tools:
-
-```ruby
-def self.function_classes
-  [
-    Function::GetTransactions,
-    Function::GetAccounts,
-    Function::GetHoldings,
-    Function::GetBalanceSheet,
-    Function::GetIncomeStatement,
-    Function::ImportBankStatement,
-    Function::SearchFamilyFiles
-  ]
-end
-```
+`Assistant.function_classes(user = nil)` centralizes all available financial
+tools. The full list lives in `app/models/assistant.rb` (not repeated here;
+it drifts). Passing a user matters: preview tools
+(`PREVIEW_FUNCTION_CLASSES`) are appended only when that user has preview
+features enabled.
 
 These functions are:
 - Used by builtin assistants for LLM function calling
 - Exposed via the MCP endpoint for external agents
 - Defined in `app/models/assistant/function/`
+
+### Responder loop
+
+`Assistant::Responder` drives the tool loop. Facts that matter when adding a
+function:
+
+- The iteration cap counts **rounds** (model round-trips), not individual
+  calls; parallel calls in one round count once. Default 8, override with
+  `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`.
+- On the final permitted round the follow-up request offers **no tools**, so
+  the model must answer in text with whatever it gathered (a grace turn
+  instead of a dead chat). `ToolCallLimitError` remains as a backstop.
+- Tool failures do not raise out of the loop. `FunctionToolCaller` returns
+  `{error:, hint:}` results, and the system prompt tells the model to follow
+  the hint and retry exactly once. Functions should return
+  `{ error: "...", message: "..." }`-shaped soft failures for expected
+  problems (unknown ids, invalid dates) rather than raising.
+
+### System prompt structure
+
+The prompt is `Assistant::Configurable::STATIC_INSTRUCTIONS` (a frozen,
+byte-stable constant, which providers can cache as a repeated prefix)
+followed by a volatile `## Session context` block: date, formats, currency,
+an account roster and category names. The roster collapses to counts beyond
+25 accounts, categories beyond 60 names, and both collapse whenever the
+configured context window is below 4096 tokens.
 
 ### Adding a New Assistant Type
 
@@ -1067,6 +1082,30 @@ ollama list  # See what's installed
 ollama pull model-name  # Install a model
 ```
 
+### Chat Fails With a Bare "404" (Model Without Function Calling)
+
+**Symptom:** The assistant answers every message with an unexplained `404` (or
+another opaque provider error), while the same endpoint and model work for
+auto-categorization.
+
+**Cause:** The assistant reads accounts, transactions, and holdings through
+function calls, so every chat request carries a `tools` payload. A model
+without function-calling support rejects it — OpenRouter answers `404` for
+models such as `tngtech/deepseek-r1t2-chimera:free`.
+
+**Confirm it:** Open **System health → AI status**
+(`/admin/system_health?tab=ai`). **Function calling (tools)** reports *Not
+supported by the effective provider/model* when the endpoint served the plain
+chat check but rejected the same request carrying tools, and *Tools accepted,
+but the model called none* when the model answered with text instead of
+calling the tool.
+
+**Fix:** Set `OPENAI_MODEL` to a model your provider documents as supporting
+tools/function calling — see [For Chat Assistant](#for-chat-assistant) above —
+then run the checks again. Free tiers are a poor place to look: providers
+commonly log their prompts and completions for training, and the assistant
+sends your accounts, transactions, and holdings in every tool call.
+
 ### "Fixed prompt tokens exceed context budget"
 
 **Symptom:** Auto-categorization or merchant detection fails immediately with an error like:
@@ -1118,10 +1157,10 @@ Then restart both `web` and `worker` so the new env var is loaded. If you are us
 **Cause:** Three settings interact here, measured over different spans:
 
 - `OPENAI_REQUEST_TIMEOUT` (default `60`) — applies to **each HTTP call** to the model, on its own.
-- `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `5`) — how many chained tool calls one turn may make. A turn costs up to `1 + this` model calls.
+- `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` (default `8`) — how many chained tool-call rounds one turn may make. A turn costs up to `1 + this` model calls. On the final permitted round the model is offered no tools, so it answers in text instead of erroring.
 - `AI_RESPONSE_TIMEOUT` (default `90`) — covers the **whole turn**, and its clock starts when the message is queued, so Sidekiq queue time counts against it.
 
-Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is six sequential model calls plus five tool executions.
+Responses from custom OpenAI-compatible providers are **not streamed**, so nothing appears in the chat until the entire reply is generated. Worse, the assistant only shows text once a response actually contains some — a tool-call-only response produces nothing to display — so a turn that chains several tool calls sits on "Thinking…" through all of them. At the defaults the worst case is nine sequential model calls plus eight tool-round executions.
 
 **Fix:** size `AI_RESPONSE_TIMEOUT` as a **sum**, not simply as a number larger than the per-call limit:
 
@@ -1130,7 +1169,7 @@ AI_RESPONSE_TIMEOUT ≥ (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUE
                       + tool execution + queue wait
 ```
 
-You have two levers, and the cheaper one is usually the tool-call cap, because it divides the first term. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of six, halving the timeout you need. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.
+You have two levers, and the cheaper one is usually the tool-call cap, because it divides the first term. With `ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2` a turn costs at most three model calls instead of nine, cutting the timeout you need by two-thirds. The trade-off is that genuinely long tool chains fail earlier, with a clear "exceeded the tool-call limit" error rather than a timeout.
 
 ```bash
 OPENAI_REQUEST_TIMEOUT=300
@@ -1138,11 +1177,11 @@ ASSISTANT_MAX_TOOL_CALL_ITERATIONS=2
 AI_RESPONSE_TIMEOUT=1200   # (1 + 2) × 300 = 900, plus 300 headroom
 ```
 
-Keeping the full five iterations at 300s per call would instead need `6 × 300 = 1800` plus headroom — which is why lowering the cap is usually the better trade.
+Keeping the full eight iterations at 300s per call would instead need `9 × 300 = 2700` plus headroom — which is why lowering the cap is usually the better trade.
 
 If `AI_RESPONSE_TIMEOUT` ends up below what the turn actually takes, you get a generic "no response" instead of the specific timeout error, and the job keeps running and burning tokens after the chat has given up.
 
-`AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Chat Response Timeout**, which takes effect without a restart. The environment variable wins if both are set. The minimum accepted value is `30`.
+`OPENAI_REQUEST_TIMEOUT` and `AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Timeouts**, which takes effect without a restart when the corresponding environment variable is not configured. Environment variables win over the settings fields. The minimum accepted chat response timeout is `30`.
 
 Restart `web` and `worker` after changing the environment variables, and make sure your Docker Compose file forwards them into the containers.
 
@@ -1213,9 +1252,16 @@ Restart `web` and `worker` after changing the environment variables, and make su
 
 The builtin AI assistant uses a system prompt that defines its behavior. The prompt is defined in `app/models/assistant/configurable.rb`. This does not apply to external assistants, which manage their own prompts.
 
+The prompt has two halves: `STATIC_INSTRUCTIONS`, a frozen constant that is
+byte-identical on every request (providers cache and discount an
+exactly-repeated prefix), and a trailing `## Session context` block holding
+everything volatile (date, currency, account roster, categories).
+
 To customize:
 1. Fork the repository
-2. Edit the `default_instructions` method
+2. Edit the `STATIC_INSTRUCTIONS` constant (keep customizations there so the
+   prompt stays cacheable; only put genuinely per-request data in the session
+   context builders)
 3. Rebuild and deploy
 
 **What you can customize:**
@@ -1229,15 +1275,29 @@ To customize:
 The assistant uses OpenAI's function calling (tool use) to access user data:
 
 **Available functions:**
-- `get_transactions` - Retrieve transaction history
-- `get_accounts` - Get account information
-- `get_holdings` - Investment holdings data
-- `get_balance_sheet` - Current financial position
-- `get_income_statement` - Income and expenses
-- `import_bank_statement` - Import bank statement data
-- `search_family_files` - Search uploaded documents
 
-These are defined in `app/models/assistant/function/`.
+Read and analysis:
+- `get_transactions` - Search transactions with filters, sorting and pagination
+- `get_recurring_transactions` - Detected and manual recurring transactions (subscriptions, bills) with totals
+- `get_accounts` - Accounts with ids and current balances; opt-in balance history series
+- `get_holdings` - Investment holdings
+- `get_balance_sheet` - Net worth, assets and liabilities with a configurable history period and interval
+- `get_income_statement` - Income and expenses for a period, with monthly series, prior-period comparison and account filtering
+- `get_budget` - Budget summary for a month
+- `get_merchants` - Merchants with the ids update_transaction accepts and the exact names get_transactions filters on
+- `get_tags` / `get_categories` - Tag and category listings with pagination
+
+Write:
+- `update_transaction`, `update_budget`, `create_goal`
+- `create_tag` / `update_tag`, `create_category` / `update_category`
+
+Documents:
+- `import_bank_statement` - Import bank statement data
+- `search_family_files` - Search uploaded documents (vector store)
+
+These are defined in `app/models/assistant/function/`. Preview tools
+(Statement Vault, `get_valuations`, `get_insights`) are listed in
+[mcp.md](mcp.md#preview-tools).
 
 ### Vector Store (Document Search)
 
@@ -1273,8 +1333,8 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 Use PostgreSQL's pgvector extension for fully local document search. All data stays on your infrastructure.
 
 **Requirements:**
-- Use the `pgvector/pgvector:pg16` Docker image instead of `postgres:16` (drop-in replacement)
-- An embedding model served via an OpenAI-compatible `/v1/embeddings` endpoint (e.g. Ollama with `nomic-embed-text`)
+- Use the `pgvector/pgvector:pg16-trixie` Docker image instead of `postgres:16` (drop-in replacement)
+- An embedding model served via an OpenAI-compatible `/v1/embeddings` endpoint (e.g. Ollama with `mxbai-embed-large`)
 - Run the migration with `VECTOR_STORE_PROVIDER=pgvector` to create the `vector_store_chunks` table
 
 ```bash
@@ -1282,22 +1342,55 @@ Use PostgreSQL's pgvector extension for fully local document search. All data st
 VECTOR_STORE_PROVIDER=pgvector
 
 # Embedding model configuration
-EMBEDDING_MODEL=nomic-embed-text          # Default: nomic-embed-text
+EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
 EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
 EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
 ```
 
+Sure enables the `vector` extension when it first provisions the chunks table,
+provided the database user has permission. If the AI status page reports that
+the extension is available but not enabled and automatic provisioning cannot
+enable it, connect as the PostgreSQL superuser and run:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+The LLM and embedding endpoints are independent. A common fully local setup is
+an OpenAI-compatible chat model through `OPENAI_URI_BASE`, pgvector for storage,
+and an embedding model through `EMBEDDING_URI_BASE`. Make sure
+`EMBEDDING_DIMENSIONS` matches the selected embedding model (for example,
+`mxbai-embed-large` uses 1024 dimensions).
+
 If you are using Ollama (as in `compose.example.ai.yml`), pull the embedding model:
 
 ```bash
-docker compose exec ollama ollama pull nomic-embed-text
+docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
+docker compose exec ollama ollama pull mxbai-embed-large
 ```
+
+> [!WARNING]
+> Do not change `EMBEDDING_MODEL` for an existing pgvector index without
+> rebuilding it. Vectors created by different models are not comparable, even
+> when they have the same dimensions. Back up the database and the source
+> documents, then remove the existing documents from Sure. If the new model has
+> different dimensions, drop the now-empty chunks table so Sure can recreate it
+> with the new vector size:
+>
+> ```bash
+> docker compose -f compose.example.ai.yml exec web bin/rails runner \
+>   'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+> ```
+>
+> Change the embedding settings and restart Sure. Confirm that **System health
+> → AI status** reports the new model and dimensions, then upload the source
+> documents again. This recreates every embedding with only the new model.
 
 ##### Qdrant (Self-Hosted)
 
 > [!CAUTION]
-> Only `OpenAI` has been implemented!
+> Qdrant is not implemented yet. Use OpenAI or pgvector for document search.
 
 Use a dedicated Qdrant vector database:
 
@@ -1333,7 +1426,36 @@ volumes:
 
 #### Verifying the Configuration
 
-You can check whether a vector store is properly configured from the Rails console:
+Super admins can open **System health → AI status** at
+`/admin/system_health?tab=ai`. Opening that URL runs bounded, non-destructive
+live checks against the effective configuration:
+
+- OpenAI-compatible and Anthropic providers must return the configured model
+  from their models API.
+- The configured model must complete one trivial function call, sent the way
+  the assistant sends its own tools. A model that serves plain chat but rejects
+  or ignores the `tools` parameter cannot answer questions about your data.
+- The hosted OpenAI vector-store adapter must answer a list request without
+  creating or changing a store.
+- The pgvector adapter must have its extension enabled, its chunks table
+  present, and successfully execute a query.
+- A pgvector embedding endpoint must create one short test embedding, and the
+  returned vector must match `EMBEDDING_DIMENSIONS`. The test vector is not
+  stored.
+
+When `OPENAI_URI_BASE` points outside OpenAI's hosted API, the page labels the
+selected provider **OpenAI-compatible** and identifies a known effective
+provider from the endpoint (for example Ollama, OpenRouter, Together, Kilo, or
+Cloudflare Workers AI/AI Gateway). Unrecognized services are shown as **Custom
+endpoint**.
+
+Results are cached for 60 seconds by default. **Run checks again** bypasses the
+cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
+timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
+checks are written as system-wide entries in **Settings → Debug logs** and to
+`Rails.logger`; endpoints are redacted and credentials are never included.
+
+You can also check the adapter from the Rails console:
 
 ```ruby
 VectorStore.configured?          # => true / false
@@ -1350,7 +1472,8 @@ The following file extensions are supported for document upload and search:
 #### Privacy Notes
 
 - **OpenAI backend:** Document content is sent to OpenAI's API for indexing and search. The same privacy considerations as the AI chat apply.
-- **Pgvector / Qdrant backends:** All data stays on your infrastructure. No external API calls are made for document search.
+- **Pgvector backend:** Stored chunks stay in PostgreSQL. Text is still sent to the configured embedding endpoint, which may be local or remote.
+- **Qdrant backend:** The adapter is currently scaffolded and cannot upload or search documents.
 
 ### Multi-Model Setup
 
@@ -1396,4 +1519,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** March 2026
+**Last Updated:** August 2026

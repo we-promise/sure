@@ -242,6 +242,7 @@ de:
       map: Zuordnen
       confirm: Bestätigen
       select: Auswählen
+      label: Schritt %{step}
       progress: Schritt %{step} von %{total}
     index:
       title: Importe

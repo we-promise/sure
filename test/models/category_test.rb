@@ -160,6 +160,17 @@ class CategoryTest < ActiveSupport::TestCase
     assert_not lookup.key?(0)
   end
 
+  test "alphabetically_by_hierarchy orders a category's subcategories immediately after it" do
+    ordered = @family.categories.alphabetically_by_hierarchy.to_a
+
+    parent_index = ordered.index(categories(:food_and_drink))
+    child_index = ordered.index(categories(:subcategory))
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
   test "recently_used_for orders by last_used_at, most recent first" do
     older = categories(:income)
     newer = categories(:food_and_drink)

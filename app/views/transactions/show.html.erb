@@ -83,13 +83,14 @@
                     disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
             <%= f.fields_for :entryable do |ef| %>
-              <%= ef.collection_select :category_id,
-                      Current.family.categories.alphabetically,
-                    :id, :name,
-                    { label: t(".category_label"),
-                      class: "text-subdued", include_blank: t(".uncategorized"),
-                      variant: :badge, searchable: true, disabled: @entry.split_child? || annotate_locked },
-                    "data-auto-submit-form-target": "auto" %>
+              <%= render DS::CategorySelect.new(
+                    form: ef,
+                    categories: Current.family.categories.alphabetically_by_hierarchy,
+                    selected_id: ef.object.category_id,
+                    disabled: @entry.split_child? || annotate_locked,
+                    auto_submit: true,
+                    blank_label: t(".uncategorized")
+                  ) %>
             <% end %>
           <% end %>
         <% end %>
@@ -111,13 +112,16 @@
                 { label: t(".account_label") },
                 { disabled: true } %>
             <%= f.fields_for :entryable do |ef| %>
-              <%= ef.collection_select :merchant_id,
-                    Current.family.available_merchants_for(Current.user).alphabetically,
-                    :id, :name,
-                    { include_blank: t(".none"),
-                      label: t(".merchant_label"),
-                      variant: :logo, searchable: true, menu_placement: :auto, disabled: @entry.split_child? || !can_annotate_entry? },
-                    "data-auto-submit-form-target": "auto" %>
+              <%= render DS::MerchantSelect.new(
+                    form: ef,
+                    method: :merchant_id,
+                    merchants: Current.family.available_merchants_for(Current.user).alphabetically,
+                    selected_id: ef.object.merchant_id,
+                    include_blank: t(".none"),
+                    label: t(".merchant_label"),
+                    disabled: @entry.split_child? || !can_annotate_entry?,
+                    auto_submit: true
+                  ) %>
               <%= render DS::TagSelect.new(
                     form: ef,
                     tags: Current.family.tags.alphabetically,
@@ -397,21 +401,37 @@
               ) %>
             </div>
           <% end %>
-          <!-- Mark as Recurring Form -->
-          <div class="flex items-center justify-between gap-2 p-3">
-            <div class="text-sm space-y-1">
-              <h4 class="text-primary"><%= t(".mark_recurring_title") %></h4>
-              <p class="text-secondary"><%= t(".mark_recurring_subtitle") %></p>
+          <%# Which bills this transaction paid. Bills has always linked out to
+              transactions; without this the trip back was a dead end. Loading
+              and preview-gating live with BillsHelper#entry_bill_allocations. %>
+          <% applied_to = entry_bill_allocations(@entry) %>
+          <% if applied_to.any? %>
+            <div class="p-3 space-y-2">
+              <h4 class="text-sm text-primary"><%= t(".applied_to_title") %></h4>
+              <% applied_to.each do |allocation| %>
+                <% occurrence = allocation.recurring_occurrence %>
+                <div class="flex items-center justify-between gap-2 text-sm">
+                  <div>
+                    <%= link_to occurrence.recurring_transaction.display_name,
+                                bill_path(occurrence.recurring_transaction),
+                                class: "text-primary font-medium hover:underline",
+                                data: { turbo_frame: "_top" } %>
+                    <p class="text-secondary text-xs privacy-sensitive">
+                      <%= t(".applied_to_detail",
+                            amount: format_money(allocation.allocated_amount_money),
+                            date: l(occurrence.due_on, format: :long)) %>
+                    </p>
+                  </div>
+                  <% if allocation.allocation_suggested? %>
+                    <span class="text-xs text-warning"><%= t(".applied_to_unreviewed") %></span>
+                  <% end %>
+                </div>
+              <% end %>
             </div>
-            <%= render DS::Button.new(
-              text: t(".mark_recurring"),
-              variant: "outline",
-              icon: "repeat",
-              href: mark_as_recurring_transaction_path(@entry.transaction),
-              method: :post,
-              frame: "_top"
-            ) %>
-          </div>
+          <% end %>
+
+          <!-- Mark as Recurring Form -->
+          <%= render "transactions/mark_recurring", entry: @entry %>
         <% end %>
         <%# Delete Transaction Form - hidden for split children %>
         <% unless @entry.split_child? %>

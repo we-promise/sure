@@ -96,9 +96,6 @@ class Demo::Generator
       puts "👥 Creating demo family..."
       family = create_family_and_users!("Demo Family", email, onboarded: true, subscribed: true)
 
-      puts "🔑 Creating monitoring API key..."
-      create_monitoring_api_key!(family)
-
       puts "📊 Creating realistic financial data..."
       create_realistic_categories!(family)
       create_realistic_accounts!(family)
@@ -108,6 +105,9 @@ class Demo::Generator
 
       puts "🎯 Seeding goals..."
       generate_goals!(family)
+
+      puts "🔑 Creating monitoring API key..."
+      create_monitoring_api_key!(family)
 
       puts "✅ Realistic demo data loaded successfully!"
     end
@@ -194,17 +194,24 @@ class Demo::Generator
       admin_user = family.users.find_by(role: "admin")
       return unless admin_user
 
-      # Find existing key scoped to this admin user by the deterministic display_key value
-      existing_key = admin_user.api_keys.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
-
-      if existing_key
-        puts "  → Use existing monitoring API key"
-        return existing_key
-      end
-
       # Revoke any existing user-created web API keys to keep demo access predictable.
       # (the monitoring key uses the dedicated "monitoring" source and cannot be revoked)
       admin_user.api_keys.active.visible.where(source: "web").find_each(&:revoke!)
+
+      existing_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+
+      if existing_key
+        existing_key.update!(
+          user: admin_user,
+          name: "monitoring",
+          scopes: [ "read" ],
+          source: "monitoring",
+          revoked_at: nil,
+          expires_at: nil
+        )
+        puts "  → Use existing monitoring API key"
+        return existing_key
+      end
 
       api_key = admin_user.api_keys.create!(
         name: "monitoring",
@@ -363,7 +370,7 @@ class Demo::Generator
       # Fetch expense transactions in the analysis period (positive amounts = expenses)
       txns = Entry.joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
                   .joins("INNER JOIN categories ON categories.id = transactions.category_id")
-                  .where(entries: { entryable_type: "Transaction", date: analysis_period })
+                  .where(entries: { entryable_type: "Transaction", date: analysis_period, account_id: family.accounts.select(:id) })
                   .where("entries.amount > 0")
 
       spend_per_cat = txns.group("categories.id").sum("entries.amount")
@@ -1322,23 +1329,26 @@ class Demo::Generator
           target: 20_000,
           target_date: 4.months.from_now.to_date,
           accounts: [ secondary ],
+          allocations: { secondary => 3_000 },
           pledges: [
             { account: secondary, amount: 250, kind: "transfer", status: "open", expires_at: 5.days.from_now }
           ]
         },
-        # active · reached — primary balance comfortably above target
+        # active · reached — earmark comfortably above target
         {
           name: "Wedding fund",
           target: 2_400,
           target_date: 12.months.from_now.to_date,
-          accounts: [ primary ]
+          accounts: [ primary ],
+          allocations: { primary => 2_500 }
         },
         # active · no_target_date — secondary so progress doesn't auto-cap at 100%
         {
           name: "Emergency fund",
           target: 30_000,
           target_date: nil,
-          accounts: [ secondary ]
+          accounts: [ secondary ],
+          allocations: { secondary => 3_000 }
         },
         # active · behind big — combined pools still well short of the target
         {
@@ -1346,12 +1356,14 @@ class Demo::Generator
           target: 500_000,
           target_date: 24.months.from_now.to_date,
           accounts: eligible.first(2),
+          allocations: { primary => 1_000, secondary => 2_000 },
           pledges: [
             { account: primary, amount: 2_000, kind: "transfer", status: "open", expires_at: 4.days.from_now }
           ]
         },
-        # active · on_track — primary balance close to target, long horizon makes
-        # the required monthly rate small enough for the demo's pace to cover
+        # active · on_track — the one goal left holding all of `primary`, so
+        # its balance stays close enough to the target for a 60-month pace to
+        # read as on track
         {
           name: "Long-term portfolio",
           target: 200_000,
@@ -1364,7 +1376,8 @@ class Demo::Generator
           name: "Tax prep buffer",
           target: 1_200,
           target_date: 2.months.ago.to_date,
-          accounts: [ secondary ]
+          accounts: [ secondary ],
+          allocations: { secondary => 1_000 }
         },
         # AASM paused
         {
@@ -1372,7 +1385,8 @@ class Demo::Generator
           target: 15_000,
           target_date: 18.months.from_now.to_date,
           state: "paused",
-          accounts: [ primary ]
+          accounts: [ primary ],
+          allocations: { primary => 1_000 }
         },
         # AASM archived
         {
@@ -1380,7 +1394,8 @@ class Demo::Generator
           target: 1_500,
           target_date: 12.months.ago.to_date,
           state: "archived",
-          accounts: [ primary ]
+          accounts: [ primary ],
+          allocations: { primary => 500 }
         },
         # AASM completed
         {
@@ -1388,7 +1403,8 @@ class Demo::Generator
           target: 8_000,
           target_date: 6.months.ago.to_date,
           state: "completed",
-          accounts: [ primary ]
+          accounts: [ primary ],
+          allocations: { primary => 8_000 }
         }
       ]
 
@@ -1402,7 +1418,9 @@ class Demo::Generator
           color: Goal::COLORS.sample,
           state: goal_spec[:state] || "active"
         )
-        goal_spec[:accounts].uniq.each { |a| goal.goal_accounts.build(account: a) }
+        goal_spec[:accounts].uniq.each do |a|
+          goal.goal_accounts.build(account: a, allocated_amount: goal_spec.dig(:allocations, a))
+        end
         goal.save!
         wedding_goal = goal if goal_spec[:name] == "Wedding fund"
 

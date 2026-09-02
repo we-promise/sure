@@ -7,7 +7,10 @@ de:
       account_prompt: Konto auswählen
       amount: Betrag
       category: Kategorie
+      category_search_placeholder: Kategorien suchen
       category_prompt: Kategorie auswählen
+      create_category: '„%{name}“ erstellen'
+      create_category_error: Kategorie konnte nicht erstellt werden
       date: Datum
       description: Beschreibung
       description_placeholder: Transaktion beschreiben
@@ -17,6 +20,9 @@ de:
       note_label: Notizen
       note_placeholder: Notiz eingeben
       create_tag: Erstellen
+      create_merchant: Erstellen
+      create_merchant_error: Händler konnte nicht erstellt werden
+      merchant_search_placeholder: Händler suchen oder erstellen
       submit: Transaktion hinzufügen
       tag_search_placeholder: Tag suchen oder erstellen
       tags_label: Tags
@@ -97,7 +103,6 @@ de:
     mark_recurring_title: Wiederkehrende Transaktion
     potential_duplicate_title: Mögliches Duplikat erkannt
     potential_duplicate_description: Diese ausstehende Transaktion könnte mit der unten stehenden gebuchten Transaktion übereinstimmen. Wenn ja, führe sie zusammen, um Doppelzählung zu vermeiden.
-    merge_duplicate: Ja, zusammenführen
     keep_both: Nein, beide behalten
     transaction:
       pending: Ausstehend

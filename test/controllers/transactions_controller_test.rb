@@ -8,6 +8,69 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  # Bills has always linked out to transactions. Until now nothing linked back,
+  # so a transaction that settled a bill was a dead end. The link-back is part
+  # of the preview-gated bills surface, so the viewer needs the flag.
+  test "a transaction shows the bill it paid, and links to it" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Watson Property", response.body
+    assert_match bill_path(series), response.body, "the bill must be reachable from the transaction"
+  end
+
+  test "the bill link-back stays hidden without preview access" do
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match bill_path(series), response.body,
+      "the preview-gated bill link must not render for a user without the flag"
+  end
+
+  test "index groups subcategories immediately after their parent in the category filter" do
+    get transactions_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
+
+    parent_index = checkbox_values.index(categories(:food_and_drink).name)
+    child_index = checkbox_values.index(categories(:subcategory).name)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
   test "creates with transaction details" do
     assert_difference [ "Entry.count", "Transaction.count" ], 1 do
       post transactions_url, params: {
@@ -33,6 +96,27 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(created_entry.account)
     assert_equal "Transaction created", flash[:notice]
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "create without an account re-renders the form instead of raising" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: "",
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          entryable_attributes: {
+            category_id: Category.first.id
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
   end
 
   test "updates with transaction details" do
@@ -72,6 +156,78 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Transaction updated", flash[:notice]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "re-renders show with mark-recurring state when update fails validation" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        name: "",
+        date: entry.date,
+        currency: entry.currency,
+        amount: entry.amount.abs,
+        nature: "outflow",
+        entryable_type: entry.entryable_type,
+        entryable_attributes: { id: entry.entryable_id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+    assert_select "button[disabled]", text: /Mark as Recurring/
+  end
+
+  test "turbo_stream update refreshes mark-recurring state when it newly matches" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Test Merchant"
+    entry = create_transaction(account: account, amount: 100, name: "Other Name")
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: entry.amount,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: true,
+      occurrence_count: 1
+    )
+
+    patch transaction_url(entry), params: {
+      entry: {
+        date: entry.date,
+        currency: entry.currency,
+        amount: entry.amount.abs,
+        nature: "outflow",
+        entryable_type: entry.entryable_type,
+        entryable_attributes: { id: entry.entryable_id, merchant_id: merchant.id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
   test "transaction count represents filtered total" do
@@ -238,6 +394,35 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   overflow_count = css_select("turbo-frame[id^='entry_']").count
   assert_operator overflow_count, :>, 0, "Overflow should show some transactions"
 end
+
+  test "filtered requests without per_page keep the stored page size" do
+    family = families(:empty)
+    sign_in users(:empty)
+
+    family.accounts.each { |account| account.entries.delete_all }
+
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    25.times do |i|
+      create_transaction(
+        account: account,
+        name: "Transaction #{i + 1}",
+        amount: 100 + i,
+        date: Date.current - i.days
+      )
+    end
+
+    get transactions_url(per_page: 20)
+    assert_response :success
+
+    # A filtered request that omits per_page has query params present, so it
+    # is not eligible for the "restore stored params" redirect - it must fall
+    # back to the previously stored per_page instead of the hardcoded default.
+    get transactions_url(q: { search: "Transaction" })
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='20'][selected]"
+    assert_equal 20, css_select("turbo-frame[id^='entry_']").count
+  end
 
   test "pagination does not duplicate or skip transactions with same date and timestamp" do
     family = families(:empty)
@@ -576,6 +761,60 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "new renders category and merchant selectors in German" do
+    get new_transaction_url(locale: "de")
+
+    assert_response :success
+
+    assert_select "[data-controller='category-select']" do
+      assert_select "input[type='search'][placeholder=?]", "Kategorien suchen"
+      assert_select "[data-category-select-create-label-value=?]", "„__CATEGORY_NAME__“ erstellen"
+      assert_select "[data-category-select-create-error-message-value=?]", "Kategorie konnte nicht erstellt werden"
+    end
+
+    assert_select "[data-controller='merchant-select']" do
+      assert_select "input[type='search'][placeholder=?]", "Händler suchen oder erstellen"
+      assert_select "[data-merchant-select-error-message-value=?]", "Händler konnte nicht erstellt werden"
+      assert_select "[data-merchant-select-target='createForm']", text: /Erstellen/
+    end
+  end
+
+  test "new groups subcategories immediately after their parent in the category select" do
+    get new_transaction_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    trigger = doc.at_css("#category_id_trigger")
+    assert_not_nil trigger, "expected the category select trigger button to render"
+
+    wrapper = trigger.ancestors(".relative").first
+    category_values = wrapper.css("[data-value]").map { |node| node["data-value"] }
+
+    parent_index = category_values.index(categories(:food_and_drink).id)
+    child_index = category_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+
+    child_option = wrapper.at_css("[data-category-id='#{categories(:subcategory).id}']")
+    assert_not_nil child_option, "expected the subcategory option to render"
+    assert child_option.at_css("[data-testid='category-select-subcategory-indicator']"),
+           "expected the subcategory option to show the hierarchy indicator used in Settings"
+  end
+
+  test "new renders a search box for account selection" do
+    get new_transaction_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    trigger = doc.at_css("#account_id_trigger")
+    assert_not_nil trigger, "expected the account select trigger button to render"
+
+    wrapper = trigger.ancestors(".relative").first
+    assert_not_nil wrapper.at_css("input[type='search']"), "expected a search input inside the account select"
+  end
+
   test "new with duplicate_entry_id pre-fills form from source transaction" do
     @entry.reload
 
@@ -878,6 +1117,266 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  test "index caches uncategorized_count and projected_recurring across requests" do
+    # Test environment uses null_store; swap in a memory store so the cache
+    # actually persists between the two requests below.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    assert_response :success
+
+    queries = capture_sql_queries { get transactions_url }
+    assert_response :success
+
+    # uncategorized_transactions is a scope (joins/wheres), so its name never
+    # appears in the generated SQL -- match the COUNT query it produces instead.
+    assert_empty queries.select { |q| q =~ /SELECT COUNT/i && q =~ /category_id.*IS NULL/i },
+      "second request with unchanged data should reuse the cached uncategorized count"
+    # Building the cache key itself still runs small COUNT/MAX queries against
+    # recurring_transactions (Family#recurring_transactions_version and
+    # #recurring_transaction_merchants_version), so match the projection query
+    # the cached block itself would run instead of the whole table name.
+    assert_empty queries.grep(/next_expected_date/i),
+      "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects new transactions immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "New uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count + 1, updated_count,
+      "a new uncategorized transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects categorizing a transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Needs a category",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.entryable.update!(category: categories(:food_and_drink))
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "categorizing a transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    share.account.entries.create!(
+      name: "Uncategorized on shared account",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    sign_in member
+    get transactions_url
+    count_with_access = rendered_uncategorized_count
+    assert_operator count_with_access, :>, 0,
+      "the member should see the shared account's uncategorized transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    count_after_revocation = rendered_uncategorized_count
+
+    assert_operator count_after_revocation, :<, count_with_access,
+      "revoking account-share access must not leave a stale cached count that still includes the now-inaccessible account"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    recurring = recurring_transactions(:netflix_subscription)
+    assert_equal share.account_id, recurring.account_id,
+      "fixture assumption: the shared depository account has the netflix recurring charge"
+
+    merchant_name_pattern = /#{Regexp.escape(recurring.merchant.name)}/
+
+    sign_in member
+    get transactions_url
+    assert_match merchant_name_pattern, response.body,
+      "the member should see the shared account's recurring transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    assert_no_match merchant_name_pattern, response.body,
+      "revoking account-share access must not leave a stale cached projected-recurring list"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a merchant rename immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+    merchant = recurring.merchant
+
+    get transactions_url
+    assert_match(/#{Regexp.escape(merchant.name)}/, response.body,
+      "the recurring transaction should render with the merchant's original name")
+
+    merchant.update!(name: "Netflix Renamed")
+
+    get transactions_url
+    assert_match(/Netflix Renamed/, response.body,
+      "renaming the merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a provider merchant update immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # Recurring detection copies transaction.merchant_id, which can point at a
+    # shared ProviderMerchant (not just a family-owned FamilyMerchant) -- e.g.
+    # ProviderMerchant::Enhancer updates these after the recurring row exists.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Merchant Original", source: "enable_banking")
+    recurring = recurring_transactions(:netflix_subscription)
+    recurring.update!(merchant: provider_merchant, name: nil)
+
+    get transactions_url
+    assert_match(/Provider Merchant Original/, response.body,
+      "the recurring transaction should render with the provider merchant's original name")
+
+    provider_merchant.update!(name: "Provider Merchant Renamed")
+
+    get transactions_url
+    assert_match(/Provider Merchant Renamed/, response.body,
+      "updating the provider merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects deleting an uncategorized transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Deleted while uncategorized",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.destroy!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "deleting an uncategorized transaction must not leave a stale cached count"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects disabling an account immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "Uncategorized on account about to be disabled",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+    assert_operator initial_count, :>, 0
+
+    account.disable!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_operator updated_count, :<, initial_count,
+      "disabling an account must not leave a stale cached count that still includes its transactions"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is scoped per user, not just per family" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # family_member has no share on this account (see test/fixtures/account_shares.yml),
+    # so only the admin can see its uncategorized transaction.
+    accounts(:other_asset).entries.create!(
+      name: "Admin-only uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    admin_count = rendered_uncategorized_count
+    assert_operator admin_count, :>, 0
+
+    sign_in users(:family_member)
+    get transactions_url
+    member_count = rendered_uncategorized_count
+
+    assert_not_equal admin_count, member_count,
+      "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
+  ensure
+    Rails.cache = original_cache
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
@@ -885,6 +1384,13 @@ end
 
     def normalize_sql_query(sql)
       sql.to_s.squish.gsub(/[`"]/, "").downcase
+    end
+
+    # The "Categorize (N)" menu item only renders when @uncategorized_count
+    # is positive, so an absent match means the count is 0.
+    def rendered_uncategorized_count
+      match = response.body.match(/Categorize \((\d+)\)/)
+      match ? match[1].to_i : 0
     end
 
     # Per-row lazy loads use `column = ?`. Do not treat `IN (...)` as lazy

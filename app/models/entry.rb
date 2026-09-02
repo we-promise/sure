@@ -12,8 +12,16 @@ class Entry < ApplicationRecord
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
   belongs_to :parent_entry, class_name: "Entry", optional: true
+  belongs_to :reconciled_by_statement, class_name: "AccountStatement", optional: true
+
+  # Mirrors chk_entries_reconciled_at_present_when_statement_set so a direct
+  # assignment surfaces a validation error rather than a StatementInvalid.
+  validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
+  # Read side only, so a transaction can say which bills it paid. The foreign key
+  # already nullifies on delete, so this adds no lifecycle behaviour.
+  has_many :recurring_allocations, dependent: nil, inverse_of: :entry
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -49,6 +57,11 @@ class Entry < ApplicationRecord
       id: :desc
     )
   }
+
+  # Reconciliation scopes - see AddReconciliationToEntries
+  scope :reconciled, -> { where.not(reconciled_at: nil) }
+  scope :unreconciled, -> { where(reconciled_at: nil) }
+  scope :reconciled_by, ->(statement) { where(reconciled_by_statement_id: statement) }
 
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
@@ -293,6 +306,42 @@ class Entry < ApplicationRecord
 
   def linked?
     external_id.present?
+  end
+
+  # Reconciliation state, following the Quicken uncleared / cleared / reconciled
+  # model. Only the last state is stored -- see AddReconciliationToEntries.
+  #
+  # @return [Symbol] :uncleared, :cleared or :reconciled
+  def reconciliation_state
+    return :reconciled if reconciled?
+    return :cleared if cleared?
+
+    :uncleared
+  end
+
+  # The institution has acknowledged this transaction: it either arrived from a
+  # provider, or was entered by hand and later claimed by one (which stamps
+  # external_id and source -- see Account::ProviderImportAdapter). Derived rather
+  # than stored so it cannot drift, and deliberately not user-settable: this is a
+  # fact about where the entry came from, not an opinion about it.
+  def cleared?
+    external_id.present? || source.present?
+  end
+
+  # A statement has been matched against this transaction. Unlike cleared?, this
+  # is a judgement -- made by a statement import, or by the user directly -- so
+  # it is stored and can be undone.
+  def reconciled?
+    reconciled_at.present?
+  end
+
+  # @param statement [AccountStatement, nil] the statement providing the evidence
+  def mark_reconciled!(statement: nil, at: Time.current)
+    update!(reconciled_at: at, reconciled_by_statement: statement)
+  end
+
+  def unmark_reconciled!
+    update!(reconciled_at: nil, reconciled_by_statement: nil)
   end
 
   # Checks if entry should be protected from provider sync overwrites.

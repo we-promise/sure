@@ -8,6 +8,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       tags 'Auth'
       consumes 'application/json'
       produces 'application/json'
+      description 'Creates a new user and family. The first user on a fresh instance is assigned ' \
+                  'the super_admin role; later family creators are assigned an admin role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -267,6 +269,42 @@ RSpec.describe 'API V1 Auth', type: :request do
         ]
         run_test!
       end
+
+      response '403', 'SSO identity removed by an administrator' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:linking_code) { 'rswag-removed-identity' }
+        let(:removed_uid) { 'rswag-removed-subject' }
+        let(:body) do
+          {
+            linking_code: linking_code,
+            email: 'removed@example.com',
+            password: 'unused-password'
+          }
+        end
+
+        around do |example|
+          original_cache = Rails.cache
+          Rails.cache = ActiveSupport::Cache::MemoryStore.new
+          example.run
+        ensure
+          Rails.cache = original_cache
+        end
+
+        before do
+          Rails.cache.write("mobile_sso_link:#{linking_code}", {
+            provider: 'openid_connect',
+            uid: removed_uid
+          })
+          SsoIdentityBlock.create!(
+            provider: 'openid_connect',
+            uid_digest: SsoIdentityBlock.digest(removed_uid),
+            identity_label: 'removed@example.com'
+          )
+        end
+
+        run_test!
+      end
     end
   end
 
@@ -275,7 +313,10 @@ RSpec.describe 'API V1 Auth', type: :request do
       tags 'Auth'
       consumes 'application/json'
       produces 'application/json'
-      description 'Creates a new user and family from a previously issued linking code. Links the SSO identity via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have allow_account_creation enabled.'
+      description 'Creates a new user and family from a previously issued linking code. Links the SSO identity ' \
+                  'via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. ' \
+                  'The linking code must have allow_account_creation enabled. The first user on a fresh instance is ' \
+                  'assigned the super_admin role; later family creators are assigned an admin-capable role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -319,7 +360,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'account creation disabled' do
+      response '403', 'SSO identity removed or account creation disabled' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

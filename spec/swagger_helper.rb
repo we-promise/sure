@@ -225,6 +225,36 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Insight: {
+            type: :object,
+            required: %w[id type title body priority status],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string },
+              title: { type: :string },
+              body: { type: :string },
+              priority: { type: :string, enum: %w[high medium low] },
+              status: { type: :string, enum: %w[active read] },
+              generated_at: { type: :string, format: :'date-time', nullable: true }
+            }
+          },
+          InsightCollection: {
+            type: :object,
+            required: %w[insights],
+            properties: {
+              insights: { type: :array, items: { '$ref' => '#/components/schemas/Insight' } }
+            }
+          },
+          PushSubscription: {
+            type: :object,
+            required: %w[id environment platform last_registered_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              last_registered_at: { type: :string, format: :'date-time' }
+            }
+          },
           RetryResponse: {
             type: :object,
             required: %w[message message_id],
@@ -361,13 +391,14 @@ RSpec.configure do |config|
           },
           BudgetCategorySummary: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
               currency: { type: :string },
               subcategory: { type: :boolean },
               inherits_parent_budget: { type: :boolean },
+              rollover_enabled: { type: :boolean },
               budgeted_spending: { type: :string },
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
@@ -389,19 +420,22 @@ RSpec.configure do |config|
           },
           BudgetCategory: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
               currency: { type: :string },
               subcategory: { type: :boolean },
               inherits_parent_budget: { type: :boolean },
+              rollover_enabled: { type: :boolean },
               budgeted_spending: { type: :string },
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
               display_budgeted_spending_cents: { type: :integer },
               actual_spending: { type: :string },
               actual_spending_cents: { type: :integer },
+              rolled_over_amount: { type: :string },
+              rolled_over_amount_cents: { type: :integer },
               available_to_spend: { type: :string },
               available_to_spend_cents: { type: :integer },
               category: {
@@ -761,10 +795,38 @@ RSpec.configure do |config|
               expected_day_of_month: { type: :integer, minimum: 1, maximum: 31 },
               last_occurrence_date: { type: :string, format: :date },
               next_expected_date: { type: :string, format: :date },
-              status: { type: :string, enum: %w[active inactive] },
+              status: { type: :string, enum: %w[suggested active paused inactive ended] },
               occurrence_count: { type: :integer, minimum: 0 },
               name: { type: :string, nullable: true },
               manual: { type: :boolean },
+              payment_url: { type: :string, nullable: true, description: 'Link to the biller portal where this bill is paid. Only http and https are accepted; a bare host is stored as https.' },
+              autopay: { type: :boolean, description: 'Whether this bill pays itself automatically.' },
+              notes: { type: :string, nullable: true, description: 'Free-text notes shown alongside the bill.' },
+              bill_type: { type: :string, enum: %w[bill subscription installment income transfer other], description: 'What kind of obligation this is.' },
+              category_id: { type: :string, format: :uuid, nullable: true },
+              anchor_date: { type: :string, format: :date, nullable: true, description: 'Reference occurrence that phases every-N cadences.' },
+              weekend_adjust: { type: :string, enum: %w[none skip before after] },
+              end_mode: { type: :string, enum: %w[never on_date after_count] },
+              end_on: { type: :string, format: :date, nullable: true },
+              end_after_count: { type: :integer, nullable: true },
+              renews_on: { type: :string, format: :date, nullable: true },
+              trial_ends_on: { type: :string, format: :date, nullable: true },
+              cancelled_on: { type: :string, format: :date, nullable: true },
+              recurrence_rules: {
+                type: :array,
+                description: 'Repetition patterns; multiple rows express semimonthly and similar multi-pattern cadences. Empty means legacy monthly on expected_day_of_month.',
+                items: {
+                  type: :object,
+                  properties: {
+                    frequency: { type: :string, enum: %w[weekly monthly yearly] },
+                    interval: { type: :integer },
+                    day_of_month: { type: :integer, nullable: true, description: '-1 means the last day of the month.' },
+                    weekday: { type: :integer, nullable: true },
+                    weekday_ordinal: { type: :integer, nullable: true, description: '-1 means the last such weekday.' },
+                    month_of_year: { type: :integer, nullable: true }
+                  }
+                }
+              },
               expected_amount_min: { type: :string, nullable: true },
               expected_amount_min_cents: { type: :integer, nullable: true, description: 'Minimum expected amount in currency minor units' },
               expected_amount_max: { type: :string, nullable: true },
@@ -800,6 +862,7 @@ RSpec.configure do |config|
               notes: { type: :string, nullable: true },
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },
+              user_modified: { type: :boolean },
               classification: { type: :string },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
