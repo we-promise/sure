@@ -627,6 +627,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "table tbody tr", count: loan_account.loan.term_months
   end
 
+  # UI::AccountPage renders every tab's content on each page load (only
+  # Statements lazy-loads via its own turbo-frame request), so a Loan
+  # account's schedule renders -- and must be synced -- regardless of which
+  # tab is active. Regression for the schedule sync moving out of the view
+  # partial and into the controller.
+  test "schedule is synced even when a different tab is active" do
+    loan_account = accounts(:loan)
+    assert_equal 0, loan_account.loan.amortizations.count
+
+    get account_url(loan_account) # no tab param -- defaults to activity
+
+    assert_response :success
+    assert_equal loan_account.loan.term_months, loan_account.loan.amortizations.count
+  end
+
   test "schedule tab is absent for a loan without an interest rate" do
     loan_account = Account.create! \
       family: @user.family,

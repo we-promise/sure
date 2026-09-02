@@ -1,7 +1,10 @@
 <%# locals: (account:) %>
 
 <% loan = account.loan %>
-<% loan.ensure_amortization_schedule_current! %>
+<%# Schedule sync (a write -- persists the amortization rows if missing) has
+    already happened in AccountsController#build_schedule_tab_data before
+    this partial renders; not repeated here so a GET can't trigger a write
+    as a side effect of template evaluation. %>
 <% schedule = loan.amortization_schedule %>
 <% payments = loan.amortizations.ordered %>
 <% today = Date.current %>

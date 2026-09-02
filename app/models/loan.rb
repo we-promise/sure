@@ -90,8 +90,18 @@ class Loan < ApplicationRecord
   # Lazily (re)build the persisted schedule if it doesn't exist yet -- a
   # safety net for loans that predate the after_save callback, or whose
   # amortizations were cleared out from under them.
+  #
+  # Uses a row lock so two concurrent first-reads of the same loan (e.g. two
+  # API requests) can't both pass the emptiness check and both rebuild --
+  # the second caller re-checks after acquiring the lock and finds the rows
+  # the first caller already inserted, so it's a no-op instead of a
+  # duplicate/conflicting write.
   def ensure_amortization_schedule_current!
-    rebuild_amortization_schedule if amortizable? && amortizations.empty?
+    return unless amortizable?
+
+    with_lock do
+      rebuild_amortization_schedule if amortizations.empty?
+    end
   end
 
   private

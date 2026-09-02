@@ -112,6 +112,45 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 360, loan.amortizations.count
   end
 
+  test "ensure_amortization_schedule_current! does not duplicate rows when called repeatedly" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    assert_equal 0, loan.amortizations.count
+
+    3.times { loan.ensure_amortization_schedule_current! }
+
+    assert_equal 360, loan.amortizations.count
+  end
+
+  test "ensure_amortization_schedule_current! serializes the check-then-rebuild through a row lock" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    loan.expects(:with_lock).once.yields
+    loan.ensure_amortization_schedule_current!
+  end
+
   test "adds variable rate changes" do
     loan_account = Account.create! \
       family: families(:dylan_family),
