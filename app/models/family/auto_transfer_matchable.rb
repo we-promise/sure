@@ -20,7 +20,8 @@ module Family::AutoTransferMatchable
         account_id:,
         include_rejected:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
-        upper_exchange_rate_bound: 1 + exchange_rate_tolerance
+        upper_exchange_rate_bound: 1 + exchange_rate_tolerance,
+        rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
       }
     ])
   end
@@ -193,11 +194,16 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency <> inflow_candidates.currency
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
-          JOIN exchange_rates ON (
-            exchange_rates.date = outflow_candidates.date AND
-            exchange_rates.from_currency = outflow_candidates.currency AND
-            exchange_rates.to_currency = inflow_candidates.currency
-          )
+          LEFT JOIN LATERAL (
+            SELECT er.rate
+            FROM exchange_rates er
+            WHERE
+              er.from_currency = outflow_candidates.currency AND
+              er.to_currency = inflow_candidates.currency AND
+              er.date BETWEEN outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookback_days
+            ORDER BY ABS(er.date - outflow_candidates.date) ASC, er.date DESC
+            LIMIT 1
+          ) exchange_rates ON TRUE
           LEFT JOIN transfers existing_transfers ON (
             existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
             existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
@@ -216,6 +222,7 @@ module Family::AutoTransferMatchable
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
+            exchange_rates.rate IS NOT NULL AND
             ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND

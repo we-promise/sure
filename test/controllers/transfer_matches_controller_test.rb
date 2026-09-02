@@ -56,6 +56,18 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     assert new_entry.user_modified?, "New transfer entry should be marked as user_modified to protect from provider sync"
   end
 
+  test "new lists cross-currency candidate even when exact-date exchange rate is missing" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.ago.to_date, rate: 1.4)
+
+    outflow_entry = create_transaction(date: Date.current, amount: 500, account: accounts(:depository))
+    inflow_entry = create_transaction(date: Date.current, amount: -700, currency: "CAD", account: accounts(:credit_card))
+
+    get new_transaction_transfer_match_path(inflow_entry)
+
+    assert_response :success
+    assert_select "option[value='#{outflow_entry.id}']"
+  end
+
   test "assigns investment_contribution kind and category for investment destination" do
     # Outflow from depository (positive amount), target is investment
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))

@@ -283,6 +283,53 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "matches multi-currency transfer when exact-date rate is missing but an earlier in-window rate exists" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.ago.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "matches multi-currency transfer when exact-date rate is missing but a later in-window rate exists (timezone offset case)" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.from_now.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not match multi-currency transfer when the only cached rate is outside the lookback window" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 10.days.ago.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "picks the nearest in-window rate by date distance, not the first one that happens to match" do
+    # Farther rate (distance 4) would satisfy the tolerance if chosen; nearer rate
+    # (distance 1) would not. Asserting no match proves the nearer rate wins.
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 4.days.ago.to_date, rate: 1.4)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.ago.to_date, rate: 2.0)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "same-currency matching ignores amount-mismatched busy-window entries" do
     noise_transaction_ids = []
 
@@ -329,7 +376,11 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "outflow_candidates.excluded = FALSE"
     assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
-    assert_includes sql, "JOIN exchange_rates"
+    assert_includes sql, "LEFT JOIN LATERAL"
+    assert_includes sql, "exchange_rates ON TRUE"
+    assert_includes sql, "exchange_rates.rate IS NOT NULL"
+    assert_includes sql, "outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookback_days"
+    assert_includes sql, "ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))"
   end
 
   # Regression tests for loan transfer kind assignment bug
