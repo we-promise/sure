@@ -72,23 +72,20 @@ class Account::LogoFetcher
       return false unless resolved_addresses
 
       # Pin the connection to a validated address to prevent DNS rebinding.
-      # For HTTPS: we need the original hostname for SNI and certificate verification,
-      # but we must connect to the validated IP. Unfortunately, Net::HTTP doesn't
-      # support connecting to one address while using another for SNI.
-      # 
-      # The safest approach: keep using the original hostname for the connection
-      # but verify that ALL resolved IPs are public (which public_http_url? does).
-      # This prevents the initial DNS rebinding attack vector while allowing
-      # proper TLS verification. The connection will use the system's DNS resolution
-      # which should return the same public IPs we already validated.
-      http = Net::HTTP.new(uri.host, uri.port)
+      # We use the first validated address for the connection while keeping the
+      # original host for HTTP Host header and TLS SNI verification.
+      http = Net::HTTP.new(resolved_addresses.first, uri.port)
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = HTTP_TIMEOUT
       http.read_timeout = HTTP_TIMEOUT
 
       tempfile = nil
 
-      http.request(Net::HTTP::Get.new(uri)) do |res|
+      request = Net::HTTP::Get.new(uri)
+      # Explicitly set Host header to the original hostname for SNI and HTTP Host
+      request["Host"] = uri.host
+
+      http.request(request) do |res|
         return false unless res.is_a?(Net::HTTPSuccess)
 
         content_type = res.content_type
