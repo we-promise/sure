@@ -489,6 +489,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
           effective_provider: :openai,
           llm_model: "gpt-4.1",
           llm_endpoint: "https://api.openai.com/v1",
+          llm_request_timeout: 60,
           function_calling_status: :supported,
           vector_store_adapter: nil,
           embedding_model: nil,

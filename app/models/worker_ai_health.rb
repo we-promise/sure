@@ -43,7 +43,7 @@ class WorkerAiHealth
   # model/adapter names, and probe statuses -- never a raw credential.
   Snapshot = Data.define(
     :process_identity, :hostname, :pid, :checked_at,
-    :effective_provider, :llm_model, :llm_endpoint,
+    :effective_provider, :llm_model, :llm_endpoint, :llm_request_timeout,
     :function_calling_status,
     :vector_store_adapter, :embedding_model, :embedding_endpoint, :embedding_dimensions,
     :llm_status, :vector_store_status,
@@ -79,6 +79,7 @@ class WorkerAiHealth
       effective_provider == ai_health.effective_llm_provider &&
         llm_model == ai_health.llm_model &&
         llm_endpoint == ai_health.llm_endpoint &&
+        llm_request_timeout == ai_health.llm_request_timeout &&
         vector_store_adapter == ai_health.vector_store_adapter &&
         embedding_model == ai_health.embedding_model &&
         embedding_endpoint == ai_health.embedding_endpoint &&

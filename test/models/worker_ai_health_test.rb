@@ -125,6 +125,13 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
     assert_not mismatched.matches_web?(ai_health)
   end
 
+  test "matches_web? catches a request-timeout mismatch even when every other field matches" do
+    ai_health = fake_ai_health
+
+    assert passing_snapshot(llm_request_timeout: 30).matches_web?(ai_health)
+    assert_not passing_snapshot(llm_request_timeout: 90).matches_web?(ai_health)
+  end
+
   test "current_process_identity combines hostname and pid" do
     identity = WorkerAiHealth.current_process_identity
 
@@ -159,6 +166,7 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
           effective_provider: :openai,
           llm_model: "gpt-4.1",
           llm_endpoint: "https://api.openai.com/v1",
+          llm_request_timeout: 30,
           function_calling_status: :supported,
           vector_store_adapter: :pgvector,
           embedding_model: "mxbai-embed-large",
@@ -176,6 +184,7 @@ class WorkerAiHealthTest < ActiveSupport::TestCase
         effective_llm_provider: :openai,
         llm_model: "gpt-4.1",
         llm_endpoint: "https://api.openai.com/v1",
+        llm_request_timeout: 30,
         vector_store_adapter: :pgvector,
         embedding_model: "mxbai-embed-large",
         embedding_endpoint: "http://ollama:11434/v1",

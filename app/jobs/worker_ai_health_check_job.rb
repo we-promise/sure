@@ -32,6 +32,7 @@ class WorkerAiHealthCheckJob < ApplicationJob
       effective_provider: ai_health.effective_llm_provider,
       llm_model: ai_health.llm_model,
       llm_endpoint: ai_health.llm_endpoint,
+      llm_request_timeout: ai_health.llm_request_timeout,
       function_calling_status: ai_health.function_calling_status,
       vector_store_adapter: ai_health.vector_store_adapter,
       embedding_model: ai_health.embedding_model,

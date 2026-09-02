@@ -1476,15 +1476,24 @@ A few things this does and doesn't prove:
 - **One check verifies one worker.** Sidekiq doesn't broadcast a job to every
   process, so a passing result confirms the process named on it is healthy —
   not your whole fleet. With multiple worker replicas, queue the check again
-  to sample another; each distinct process's most recent result is kept for a
-  few minutes (`WorkerAiHealth::RETENTION`), and a result older than
-  `WorkerAiHealth::STALE_AFTER` displays as **Stale** rather than pass/fail.
+  to sample another; only the 5 most recently checked-in distinct processes
+  are kept (`WorkerAiHealth::MAX_RESULTS`) — a 6th eviction can push out an
+  older entry before its own `WorkerAiHealth::RETENTION` (15 minutes) is up —
+  and a result older than `WorkerAiHealth::STALE_AFTER` displays as **Stale**
+  rather than pass/fail.
 - **Worker checks never reuse a web-cached result, or vice versa.** The web
   page's probes are cached briefly (see above) so repeat page loads don't
   re-hit providers; the worker job deliberately bypasses that shared cache so
   its result always reflects a live call from its own network context, and
   never leaves an entry a web request could read back as if it had checked
   itself.
+- **In local development, the web and worker results won't show up together.**
+  `bin/dev` runs `web` and `worker` as separate OS processes, and
+  `config/environments/development.rb` uses a process-local `:memory_store` /
+  `:null_store` cache there (production uses a shared Redis store). A worker
+  check queued locally writes to the worker process's own in-memory cache, so
+  the web page's "Verify worker configuration" button can appear to do
+  nothing — it isn't a bug, there's just no result for it to read back.
 - **Which settings need a restart depends on how they're set.** Provider,
   model, and API-key settings changed in **Settings → Self-Hosting** are
   stored in the database and take effect automatically for the next request

@@ -337,7 +337,7 @@
           <% status_tone = { passing: :success, failing: :error, stale: :neutral }.fetch(result.status) %>
           <% status_icon = { passing: "circle-check", failing: "circle-x", stale: "circle-help" }.fetch(result.status) %>
           <% matches_web = result.matches_web?(ai_health) %>
-          <div class="rounded-lg border border-alpha-black-25 p-3" data-testid="worker-ai-health-result">
+          <div class="rounded-lg border border-primary p-3" data-testid="worker-ai-health-result">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p class="font-mono text-sm text-primary" data-testid="worker-process-identity"><%= result.process_identity %></p>
