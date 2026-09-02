@@ -106,11 +106,16 @@ class LunchflowItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t(
+        "lunchflow_items.lunchflow_item.sync_status.partial_setup",
+        count: unlinked_count,
+        linked: linked_count,
+        unlinked: unlinked_count
+      )
     end
   end
 
