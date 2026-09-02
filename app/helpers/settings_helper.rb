@@ -102,7 +102,6 @@ module SettingsHelper
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item
-
       sync_based_summary(key)
     when "ibkr"
       return { status: :off } unless @ibkr_items&.any?
