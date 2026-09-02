@@ -46,16 +46,24 @@ class Account::LogoFetcher
     def fetch_from_url(url, expected_domain)
       uri = URI.parse(url)
 
-      return false unless public_http_url?(uri)
+      resolved_addresses = public_http_url?(uri)
+      return false unless resolved_addresses
 
-      http = Net::HTTP.new(uri.host, uri.port)
+      # Pin the connection to a validated address to prevent DNS rebinding.
+      # We use the first validated address for the connection, but keep the
+      # original host for HTTP Host header and TLS SNI verification.
+      http = Net::HTTP.new(resolved_addresses.first, uri.port)
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = HTTP_TIMEOUT
       http.read_timeout = HTTP_TIMEOUT
 
       tempfile = nil
 
-      http.request(Net::HTTP::Get.new(uri)) do |res|
+      request = Net::HTTP::Get.new(uri)
+      # Explicitly set Host header to the original hostname for SNI and HTTP Host
+      request["Host"] = uri.host
+
+      http.request(request) do |res|
         return false unless res.is_a?(Net::HTTPSuccess)
 
         content_type = res.content_type
@@ -131,7 +139,12 @@ class Account::LogoFetcher
       addresses = Resolv.getaddresses(uri.host)
       return false if addresses.empty?
 
-      addresses.all? { |address| public_ip_address?(address) }
+      # Validate all resolved addresses are public
+      unless addresses.all? { |address| public_ip_address?(address) }
+        return false
+      end
+
+      addresses
     end
 
     def public_ip_address?(address)
