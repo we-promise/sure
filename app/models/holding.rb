@@ -24,6 +24,7 @@ class Holding < ApplicationRecord
   validates :cost_basis_source, inclusion: { in: COST_BASIS_SOURCES }, allow_nil: true
 
   before_validation :derive_manual_amount_from_price, if: :should_derive_manual_amount_from_price?
+  after_save :clear_amount_assignment_flag
 
   scope :chronological, -> { order(:date) }
   scope :for, ->(security) { where(security_id: security).order(:date) }
@@ -31,6 +32,11 @@ class Holding < ApplicationRecord
   scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
 
   delegate :ticker, to: :security
+
+  def amount=(value)
+    @amount_assigned = true
+    super
+  end
 
   def name
     security.name || ticker
@@ -267,11 +273,19 @@ class Holding < ApplicationRecord
     end
 
     def should_derive_manual_amount_from_price?
-      account_provider_id.nil? && external_id.blank? && !will_save_change_to_amount? && (will_save_change_to_qty? || will_save_change_to_price?)
+      account_provider_id.nil? && external_id.blank? && !amount_assigned? && (will_save_change_to_qty? || will_save_change_to_price?)
     end
 
     def derive_manual_amount_from_price
       self.amount = qty * price if qty.present? && price.present?
+    end
+
+    def amount_assigned?
+      @amount_assigned == true
+    end
+
+    def clear_amount_assignment_flag
+      @amount_assigned = false
     end
 
     def calculate_trend
