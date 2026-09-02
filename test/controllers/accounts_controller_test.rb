@@ -107,6 +107,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(trading212_item)}"
   end
 
+  test "index renders only accessible accounts for a visible trading212 item" do
+    accessible_account = accounts(:depository)
+    inaccessible_account = accounts(:investment)
+    trading212_item = trading212_items(:configured_item)
+    trading212_accounts(:main_account).ensure_account_provider!(accessible_account)
+    trading212_item.trading212_accounts.create!(
+      name: "Private Trading 212 Account",
+      trading212_account_id: "t212_private_123",
+      currency: "USD",
+      current_balance: 1000,
+      cash_balance: 100,
+      raw_positions_payload: [],
+      raw_orders_payload: [],
+      raw_dividends_payload: [],
+      raw_transactions_payload: []
+    ).ensure_account_provider!(inaccessible_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+    assert_select "turbo-frame##{dom_id(accessible_account)}", count: 1
+    assert_select "turbo-frame##{dom_id(inaccessible_account)}", count: 0
+  end
+
   test "index renders only trading212 items with accessible accounts for members" do
     shared_account = accounts(:credit_card)
     trading212_accounts(:main_account).ensure_account_provider!(shared_account)
