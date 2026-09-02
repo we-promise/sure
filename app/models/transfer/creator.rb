@@ -82,18 +82,21 @@ class Transfer::Creator
       source_account.entries.find_by(idempotency_key: idempotency_key)&.entryable&.transfer
     end
 
-    # Only the outflow and inflow legs carry the bare idempotency key - a fee
-    # leg lands on the *same* account as its corresponding primary leg
-    # (source_account for the source fee, destination_account for the
-    # destination fee), so it needs a distinct key to avoid colliding with
-    # that leg under the same account-scoped unique index. Deliberately its
-    # own column, not external_id/source - see
+    # Every leg gets a role-specific suffix except the outflow (find_existing_transfer
+    # looks it up by the bare key). This matters because the unique index is
+    # scoped per account_id, and the form doesn't prevent selecting the same
+    # account as both source and destination - without distinct suffixes,
+    # the inflow (and a fee leg sharing its primary leg's account) would
+    # collide with another leg under that same account instead of with a
+    # genuine duplicate submission. Deliberately its own column, not
+    # external_id/source - see
     # db/migrate/20260902180400_add_idempotency_key_to_entries.rb for why
     # reusing those provider-linkage fields here would be wrong.
-    def entry_idempotency_attrs(fee: false)
+    def entry_idempotency_attrs(leg: :outflow)
       return {} unless idempotency_key
 
-      { idempotency_key: fee ? "#{idempotency_key}-fee" : idempotency_key }
+      key = leg == :outflow ? idempotency_key : "#{idempotency_key}-#{leg}"
+      { idempotency_key: key }
     end
 
     def apply_tags!(transfer)
@@ -118,7 +121,7 @@ class Transfer::Creator
           date: date,
           name: name,
           user_modified: true,
-          **entry_idempotency_attrs
+          **entry_idempotency_attrs(leg: :outflow)
         )
       )
     end
@@ -140,7 +143,7 @@ class Transfer::Creator
           date: date,
           name: name,
           user_modified: true,
-          **entry_idempotency_attrs
+          **entry_idempotency_attrs(leg: :inflow)
         )
       )
     end
@@ -155,7 +158,7 @@ class Transfer::Creator
           currency: source_account.currency,
           date: date,
           name: "Transfer fee — #{name_prefix} to #{destination_account.name}",
-          **entry_idempotency_attrs(fee: true)
+          **entry_idempotency_attrs(leg: :source_fee)
         )
       )
     end
@@ -170,7 +173,7 @@ class Transfer::Creator
           currency: destination_account.currency,
           date: date,
           name: "Transfer fee — #{name_prefix} from #{source_account.name}",
-          **entry_idempotency_attrs(fee: true)
+          **entry_idempotency_attrs(leg: :destination_fee)
         )
       )
     end
