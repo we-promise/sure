@@ -1,5 +1,11 @@
 class Transfer::Creator
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil)
+  # Same source tag used by TransactionsController#create's idempotency key
+  # (see MANUAL_FORM_SOURCE there) - this reuses the same
+  # entries(account_id, source, external_id) partial unique index for
+  # de-duplicating web-form-submitted transfers.
+  MANUAL_FORM_SOURCE = "web_form"
+
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
@@ -8,6 +14,7 @@ class Transfer::Creator
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
     @tag_ids = Array(tag_ids).reject(&:blank?)
+    @idempotency_key = idempotency_key
 
     if exchange_rate.present?
       rate_value = exchange_rate.to_d
@@ -21,6 +28,15 @@ class Transfer::Creator
   def create
     raise ArgumentError, "source_fee_amount must be non-negative" if source_fee_amount.negative?
     raise ArgumentError, "destination_fee_amount must be non-negative" if destination_fee_amount.negative?
+
+    # Sequential double-submit guard: the form was already submitted
+    # successfully once (double-click, browser retry, user reopening the
+    # dialog after a slow response) and the first request already committed
+    # by the time this one runs. Return the existing transfer instead of
+    # creating a second, identical one.
+    if idempotency_key && (existing_transfer = find_existing_transfer)
+      return existing_transfer
+    end
 
     transfer = Transfer.new(
       inflow_transaction: inflow_transaction,
@@ -44,10 +60,37 @@ class Transfer::Creator
     destination_account.sync_later
 
     transfer
+  rescue ActiveRecord::RecordNotUnique
+    # Concurrent-request backstop: two near-simultaneous submissions both
+    # passed the pre-check above (neither saw the other's row yet) and both
+    # reached #create. The partial unique index on entries(account_id,
+    # source, external_id) lets exactly one leg's INSERT win, which rolls
+    # back this entire Transfer.transaction block (no half-created transfer
+    # left behind). Return the winning transfer instead of creating a
+    # duplicate or raising a raw DB error to the user.
+    existing_transfer = idempotency_key && find_existing_transfer
+    raise unless existing_transfer
+
+    existing_transfer
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids
+    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
+
+    def find_existing_transfer
+      source_account.entries.find_by(source: MANUAL_FORM_SOURCE, external_id: idempotency_key)&.entryable&.transfer
+    end
+
+    # Only the outflow and inflow legs carry the bare idempotency key - a fee
+    # leg lands on the *same* account as its corresponding primary leg
+    # (source_account for the source fee, destination_account for the
+    # destination fee), so it needs a distinct external_id to avoid
+    # colliding with that leg under the same account-scoped unique index.
+    def entry_idempotency_attrs(fee: false)
+      return {} unless idempotency_key
+
+      { source: MANUAL_FORM_SOURCE, external_id: fee ? "#{idempotency_key}-fee" : idempotency_key }
+    end
 
     def apply_tags!(transfer)
       resolved_ids = family.tags.where(id: tag_ids).pluck(:id)
@@ -71,6 +114,7 @@ class Transfer::Creator
           date: date,
           name: name,
           user_modified: true,
+          **entry_idempotency_attrs
         )
       )
     end
@@ -92,6 +136,7 @@ class Transfer::Creator
           date: date,
           name: name,
           user_modified: true,
+          **entry_idempotency_attrs
         )
       )
     end
@@ -106,6 +151,7 @@ class Transfer::Creator
           currency: source_account.currency,
           date: date,
           name: "Transfer fee — #{name_prefix} to #{destination_account.name}",
+          **entry_idempotency_attrs(fee: true)
         )
       )
     end
@@ -120,6 +166,7 @@ class Transfer::Creator
           currency: destination_account.currency,
           date: date,
           name: "Transfer fee — #{name_prefix} from #{source_account.name}",
+          **entry_idempotency_attrs(fee: true)
         )
       )
     end

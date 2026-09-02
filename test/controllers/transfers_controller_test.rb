@@ -25,6 +25,97 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "resubmitting the same idempotency key does not create a duplicate transfer" do
+    idempotency_key = SecureRandom.uuid
+    params = {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "Test Transfer",
+        idempotency_key: idempotency_key
+      }
+    }
+
+    assert_difference "Transfer.count", 1 do
+      assert_difference "Entry.count", 2 do
+        post transfers_url, params: params
+      end
+    end
+    first_transfer = Transfer.order(:created_at).last
+
+    # Simulates a double-click or a browser retry: same form, same
+    # idempotency key, submitted again after the first request already
+    # completed and committed.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: params
+    end
+    assert_redirected_to transactions_path
+  end
+
+  test "handles a genuine concurrent double-submit without raising or duplicating" do
+    idempotency_key = SecureRandom.uuid
+    from_account = accounts(:depository)
+    to_account = accounts(:credit_card)
+
+    # Simulates the race: another request with the same idempotency key wins
+    # and commits its transfer in the window between our pre-check (which
+    # therefore still sees nothing, hence the first `nil`) and our own
+    # Transfer#save! (which then hits the real partial unique index on
+    # entries(account_id, source, external_id) and raises RecordNotUnique,
+    # exactly like the DB would under real concurrent requests). The rescue
+    # then re-runs the same lookup, this time finding the winner.
+    winning_transfer = Transfer::Creator.new(
+      family: users(:family_admin).family,
+      source_account_id: from_account.id,
+      destination_account_id: to_account.id,
+      date: Date.current,
+      amount: 100,
+      idempotency_key: idempotency_key
+    ).create
+    Transfer::Creator.any_instance.stubs(:find_existing_transfer).returns(nil, winning_transfer)
+    Transfer.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+  end
+
+  test "a RecordNotUnique with no matching transfer is not silently swallowed" do
+    idempotency_key = SecureRandom.uuid
+
+    # Defensive-branch coverage: if the unique index ever rejects an insert
+    # for a reason other than "another request with this exact idempotency
+    # key already won," we must not pretend it succeeded.
+    Transfer::Creator.any_instance.stubs(:find_existing_transfer).returns(nil)
+    Transfer.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+  end
+
   test "can create transfer with custom exchange rate" do
     usd_account = accounts(:depository)
     eur_account = users(:family_admin).family.accounts.create!(
