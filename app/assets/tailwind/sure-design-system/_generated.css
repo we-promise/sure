@@ -7,6 +7,8 @@
 @theme {
   --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --color-white: #ffffff;
   --color-black: #0B0B0B;
   --color-success: var(--color-green-700);
@@ -256,6 +258,14 @@
   }
 }
 
+@utility bg-subdued {
+  @apply bg-gray-400;
+
+  @variant theme-dark {
+    @apply bg-gray-400;
+  }
+}
+
 @utility bg-overlay {
   background-color: --alpha(var(--color-gray-100) / 50%);
 
@@ -392,6 +402,14 @@
   }
 }
 
+@utility divide-subdued {
+  @apply divide-alpha-black-50;
+
+  @variant theme-dark {
+    @apply divide-alpha-white-200;
+  }
+}
+
 @utility button-bg-primary {
   @apply bg-gray-900;
 
@@ -477,6 +495,22 @@
 
   @variant theme-dark {
     @apply bg-gray-700;
+  }
+}
+
+@utility button-bg-accent {
+  @apply bg-blue-tint-5;
+
+  @variant theme-dark {
+    @apply bg-blue-tint-5;
+  }
+}
+
+@utility button-bg-accent-hover {
+  @apply bg-blue-tint-10;
+
+  @variant theme-dark {
+    @apply bg-blue-tint-10;
   }
 }
 

@@ -1,0 +1,72 @@
+<%= content_for :page_title, t(".title") %>
+<% unless @api_keys.empty? %>
+  <%= content_for :page_actions do %>
+    <%= render DS::Link.new(
+      text: t(".new_key"),
+      href: new_settings_api_key_path,
+      variant: "primary",
+      icon: "plus"
+    ) %>
+  <% end %>
+<% end %>
+
+<% if @api_keys.empty? %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <div class="bg-surface-inset rounded-xl p-8 text-center">
+      <div class="flex justify-center mb-4">
+        <%= render DS::FilledIcon.new(
+          icon: "key",
+          rounded: true,
+          size: "lg"
+        ) %>
+      </div>
+      <h3 class="font-medium text-primary"><%= t(".empty_heading") %></h3>
+      <p class="text-secondary text-sm mt-1 mb-4"><%= t(".empty_description") %></p>
+      <div class="flex justify-center">
+        <%= render DS::Link.new(
+          text: t(".new_key"),
+          href: new_settings_api_key_path,
+          variant: "primary",
+          icon: "plus"
+        ) %>
+      </div>
+    </div>
+  </div>
+<% else %>
+  <div class="space-y-3">
+    <% @api_keys.each do |api_key| %>
+      <div class="bg-container rounded-xl shadow-border-xs p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3 min-w-0">
+            <%= render DS::FilledIcon.new(
+              icon: "key",
+              rounded: true,
+              size: "lg"
+            ) %>
+            <div class="text-sm space-y-1 min-w-0">
+              <%= link_to api_key.name, settings_api_key_path(api_key), class: "text-primary font-medium hover:underline break-all" %>
+              <%= render "settings/api_keys/key_meta", api_key: api_key %>
+              <div class="pt-1">
+                <%= render "settings/api_keys/scope_badges", scopes: api_key.scopes %>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 shrink-0">
+            <%= render "settings/api_keys/status_indicator" %>
+            <%= render DS::Button.new(
+              text: t(".revoke_key"),
+              href: settings_api_key_path(api_key),
+              method: :delete,
+              variant: "destructive",
+              size: "sm",
+              data: {
+                turbo_confirm: t(".revoke_confirmation", name: api_key.name)
+              }
+            ) %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

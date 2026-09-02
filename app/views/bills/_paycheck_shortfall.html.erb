@@ -1,0 +1,37 @@
+<%# The gap between today and the next payday, when what is owed in it exceeds
+    what is on hand.
+
+    This used to say "no income arriving before then", which was true of every
+    bridge window ever built and therefore explained nothing. The window earns
+    nothing by definition; the fact worth reporting is that the cash does not
+    reach, so the banner now shows both numbers it compared. %>
+
+<% largest = period.largest_obligation %>
+
+<div class="rounded-lg bg-destructive/5 px-4 py-3 space-y-1" role="status">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <p class="text-sm text-primary tabular-nums privacy-sensitive">
+      <span class="font-medium text-destructive"><%= t("bills.paycheck.shortfall_label") %></span>
+      <%= t("bills.paycheck.shortfall_amount", amount: format_money(Money.new(period.shortfall, currency))) %>
+    </p>
+    <%= link_to t("bills.paycheck.review_plan"), bills_path,
+          class: "text-xs text-secondary hover:text-primary shrink-0" %>
+  </div>
+
+  <p class="text-xs text-secondary">
+    <%= t("bills.paycheck.shortfall_split",
+          obligations: format_money(Money.new(period.obligation_total, currency)),
+          date: l(period.ends_on + 1, format: :short),
+          cash: format_money(Money.new(period.cash_on_hand, currency))) %>
+  </p>
+
+  <% if largest.present? %>
+    <p class="text-xs text-secondary">
+      <%= t("bills.paycheck.shortfall_largest") %>
+      <%= link_to bill_path(largest.occurrence.recurring_transaction), class: "text-primary hover:underline" do %>
+        <%= largest.occurrence.recurring_transaction.display_name %>
+        &middot; <span class="tabular-nums privacy-sensitive"><%= format_money(Money.new(largest.remaining_total, currency)) %></span>
+      <% end %>
+    </p>
+  <% end %>
+</div>

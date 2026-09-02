@@ -12,6 +12,7 @@ class Settings::AppearancesController < ApplicationController
       updated_prefs = (@user.preferences || {}).deep_dup
       updated_prefs["show_split_grouped"] = params.dig(:user, :show_split_grouped) == "1" if params.dig(:user, :show_split_grouped)
       updated_prefs["dashboard_two_column"] = params.dig(:user, :dashboard_two_column) == "1" if params.dig(:user, :dashboard_two_column)
+      updated_prefs["disable_modal_click_outside"] = params.dig(:user, :disable_modal_click_outside) == "1" if params.dig(:user, :disable_modal_click_outside)
       @user.update!(preferences: updated_prefs)
     end
     redirect_to settings_appearance_path

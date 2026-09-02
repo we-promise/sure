@@ -20,6 +20,13 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     assert_equal I18n.t("webauthn_credentials.mfa_required"), JSON.parse(response.body).fetch("error")
   end
 
+  test "asks for a discoverable credential so it can be used for passwordless sign-in" do
+    options = registration_options
+
+    assert_equal "preferred", options.dig("authenticatorSelection", "residentKey")
+    assert_equal "preferred", options.dig("authenticatorSelection", "userVerification")
+  end
+
   test "creates a credential from a verified registration challenge" do
     options = registration_options
     credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")

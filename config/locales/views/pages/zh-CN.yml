@@ -90,3 +90,6 @@ zh-CN:
         trades: 交易
         no_investments: 暂无投资账户
         add_investment: 添加投资账户以跟踪您的投资组合
+    release_notes_unavailable:
+      name: 发布说明暂不可用
+      body_html: "<p>暂时无法获取最新发布说明。请稍后再试，或直接访问 <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases 页面</a>。</p>"

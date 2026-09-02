@@ -32,6 +32,9 @@ en:
       category: Category
       category_label: Category
       category_prompt: Select a Category
+      category_search_placeholder: Search categories
+      create_category: 'Create "%{name}"'
+      create_category_error: Could not create category
       date: Date
       description: Description
       description_placeholder: Describe transaction
@@ -42,6 +45,9 @@ en:
       note_label: Notes
       note_placeholder: Enter a note
       create_tag: Create
+      create_merchant: Create
+      create_merchant_error: Could not create merchant
+      merchant_search_placeholder: Search or create merchant
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
@@ -56,8 +62,12 @@ en:
       keep_both: No, keep both
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring
+      create_bill: Create a bill
       mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
       mark_recurring_title: Recurring Transaction
+      applied_to_title: Bills this paid
+      applied_to_detail: "%{amount} toward the bill due %{date}"
+      applied_to_unreviewed: Needs review
       merge_duplicate: Yes, merge them
       potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
       potential_duplicate_title: Possible duplicate detected
@@ -124,7 +134,6 @@ en:
     mark_recurring_title: Recurring Transaction
     potential_duplicate_title: Possible duplicate detected
     potential_duplicate_description: This pending transaction may be the same as the posted transaction below. If so, merge them to avoid double-counting.
-    merge_duplicate: Yes, merge them
     keep_both: No, keep both
     split_parent_row:
       split_label: "Split"

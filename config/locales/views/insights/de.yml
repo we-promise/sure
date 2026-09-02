@@ -1,0 +1,99 @@
+---
+de:
+  insights:
+    notification:
+      title: Neue Finanzanalyse
+      body: Öffne Sure, um deine neueste KI-Analyse anzusehen.
+    actions:
+      budget: Budget ansehen
+      cash_flow_warning: Wiederkehrende Buchungen prüfen
+      idle_cash: Zum Konto
+      net_worth_milestone: Bericht zum Nettovermögen ansehen
+      savings_rate_change: Transaktionen dieses Monats ansehen
+      spending_anomaly: Transaktionen zu %{category} ansehen
+      subscription_audit: Wiederkehrende Buchungen prüfen
+    card:
+      acknowledge: Verstanden
+      acknowledge_title: Ausblenden, bis sich die Zahlen ändern
+      acknowledged: Verstanden – ausgeblendet, bis sich das ändert
+      new: Neu
+      undo: Rückgängig
+    feed:
+      acknowledge_aria: "Verstanden: %{title}"
+      header: Neueste
+      header_new: Neu
+      view_all: Alle Insights ansehen
+    figures:
+      days_overdue:
+        one: "%{count} Tag überfällig"
+        other: "%{count} Tage überfällig"
+      idle_days:
+        one: "%{count} Tag ungenutzt"
+        other: "%{count} Tage ungenutzt"
+      need_attention: zu prüfen
+      of_budget: vom Budget
+      on_pace: hochgerechnet
+      today: heute
+      vs_previous: vs. Vormonat
+    index:
+      empty:
+        description: Insights erscheinen hier, sobald in deinen Konten genug passiert ist. Sie werden jede Nacht aktualisiert.
+        title: Noch keine Insights
+      refresh: Nach neuen Insights suchen
+      subtitle: Was sich in deinen Finanzen tut, jede Nacht neu ausgewertet.
+      title: Insights
+    meta:
+      date_range: "%{from} bis %{to}"
+      last_n_days:
+        one: Letzter Tag
+        other: Letzte %{count} Tage
+      next_n_days:
+        one: Nächster Tag
+        other: Nächste %{count} Tage
+    refresh:
+      checking: Wird geprüft …
+      queued: Wir erzeugen gerade neue Insights. Schau in einer Minute noch einmal vorbei.
+    templates:
+      budget_at_risk:
+        near: "%{categories} nähern sich diesen Monat ihrer Grenze. Bisher hast du %{budget_spent_pct} % deines Gesamtbudgets genutzt."
+        over: "%{categories} liegen diesen Monat über dem Budget. Bisher hast du %{budget_spent_pct} % deines Gesamtbudgets genutzt."
+      budget_on_track: Du hast %{spent} von %{budgeted} ausgegeben (%{budget_spent_pct} %), alles liegt im Rahmen.
+      cash_flow_warning:
+        low: Nach deinen anstehenden wiederkehrenden Buchungen und deinen üblichen Ausgaben könnte dein Guthaben um den %{projected_low_date} auf %{projected_low} sinken.
+        negative: Nach deinen anstehenden wiederkehrenden Buchungen und deinen üblichen Ausgaben könnte dein Guthaben um den %{projected_low_date} auf %{projected_low} fallen.
+      idle_cash: Auf %{account} liegen %{balance}, ohne Bewegung in den letzten %{idle_days} Tagen.
+      net_worth_milestone: Dein Nettovermögen hat %{milestone} überschritten und liegt jetzt bei %{net_worth}.
+      savings_rate_change:
+        down: Du hast im %{month} %{current_rate} % deiner Einnahmen gespart, %{change_pp} Prozentpunkte weniger als die %{previous_rate} % im Monat davor.
+        down_negative: 'Du hast im %{month} mehr ausgegeben als eingenommen: Deine Sparquote fiel auf %{current_rate} %, nach %{previous_rate} % im Monat davor.'
+        up: Du hast im %{month} %{current_rate} % deiner Einnahmen gespart, %{change_pp} Prozentpunkte mehr als die %{previous_rate} % im Monat davor.
+      spending_anomaly:
+        above: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % mehr als dein jüngster Monatsschnitt von %{baseline_spend}.
+        below: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % weniger als dein jüngster Monatsschnitt von %{baseline_spend}.
+      subscription_audit: "%{name} (%{amount}) ist seit dem erwarteten Termin am %{expected_on} nicht mehr aufgetaucht. Vielleicht ist das Abo gekündigt oder die Abbuchung hat sich verschoben."
+    titles:
+      budget_at_risk:
+        one: Eine Kategorie in deinem Budget braucht Aufmerksamkeit
+        other: "%{count} Kategorien in deinem Budget brauchen Aufmerksamkeit"
+      budget_on_track: Dein Budget liegt im Plan
+      cash_flow_warning:
+        low: Dein Guthaben könnte knapp werden
+        negative: Dein Guthaben könnte ins Minus rutschen
+      idle_cash: Ungenutztes Guthaben in %{account}
+      net_worth_milestone: 'Meilenstein beim Nettovermögen: %{milestone}'
+      savings_rate_change:
+        down: Deine Sparquote ist im %{month} gesunken
+        up: Deine Sparquote ist im %{month} gestiegen
+      spending_anomaly:
+        above: Deine Ausgaben für %{category} steigen
+        below: Deine Ausgaben für %{category} sinken
+      subscription_audit: Läuft %{name} noch?
+    types:
+      budget_at_risk: Budget
+      budget_on_track: Budget
+      cash_flow_warning: Liquidität
+      idle_cash: Ungenutztes Guthaben
+      net_worth_milestone: Nettovermögen
+      savings_rate_change: Sparquote
+      spending_anomaly: Ausgaben
+      subscription_audit: Abos

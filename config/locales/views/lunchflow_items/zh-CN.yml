@@ -48,6 +48,7 @@ zh-CN:
       success:
         one: 成功连接 %{count} 个账户
         other: 成功连接 %{count} 个账户
+      no_api_key: 缺少 Lunch Flow API 密钥。
     lunchflow_item:
       accounts_need_setup: 账户需要设置
       delete: 删除连接
@@ -75,6 +76,7 @@ zh-CN:
       no_api_key: 未配置 Lunch Flow API 密钥。请在设置中配置。
       no_name_placeholder: （无名称）
       title: 选择 Lunch Flow 账户
+      no_credentials_configured: 请先配置 Lunch Flow 凭据。
     select_existing_account:
       account_already_linked: 此账户已连接到某个提供商
       all_accounts_already_linked: 所有 Lunch Flow 账户都已连接
@@ -88,6 +90,7 @@ zh-CN:
       no_api_key: 未配置 Lunch Flow API 密钥。请在设置中配置。
       no_name_placeholder: （无名称）
       title: 将 %{account_name} 与 Lunch Flow 关联
+      no_credentials_configured: 请先配置 Lunch Flow 凭据。
     link_existing_account:
       account_already_linked: 此账户已连接到某个提供商
       api_error: API 错误：%{message}
@@ -96,6 +99,7 @@ zh-CN:
       lunchflow_account_not_found: 未找到 Lunch Flow 账户
       missing_parameters: 缺少必需参数
       success: 已成功将 %{account_name} 与 Lunch Flow 关联
+      no_api_key: 缺少 Lunch Flow API 密钥。
     setup_accounts:
       account_type_label: 账户类型：
       all_accounts_linked: 您的所有 Lunch Flow 账户都已设置完成。

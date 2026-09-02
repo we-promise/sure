@@ -46,6 +46,9 @@ class Account < ApplicationRecord
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
+  # Accounts whose data should be included in financial reports, dashboards,
+  # and exports. Excludes accounts where the user has opted to suppress them.
+  scope :included_in_reports, -> { where(exclude_from_reports: false) }
   scope :assets, -> { where(classification: "asset") }
   scope :liabilities, -> { where(classification: "liability") }
   scope :alphabetically, -> { order(:name) }
@@ -95,10 +98,43 @@ class Account < ApplicationRecord
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
 
-  # Writer for subtype that delegates to the accountable
-  # This allows forms to set subtype directly on the account
+  # Writer for subtype that delegates to the accountable, allowing forms to set
+  # subtype directly on the account.
+  #
+  # On create the accountable is not built yet, and the chosen subtype is easy to
+  # drop because of mass-assignment ordering. Two cases:
+  #
+  #   1. `subtype` is applied while `accountable_type` is already known — build
+  #      the accountable from the delegated type so the value lands on it. The
+  #      later `accountable_attributes` assignment (update_only) then updates that
+  #      same record instead of building a new one.
+  #   2. `subtype` is applied *before* `accountable_type` — this is the real
+  #      controller path: strong-params `permit` preserves filter order, and
+  #      `account_params` lists `:subtype` before `:accountable_type`, so the
+  #      writer runs while the type (and thus `accountable_class`) is still
+  #      unknown. We can't build the accountable yet, so stash the value and
+  #      apply it from `accountable_type=` once the type is set.
   def subtype=(value)
-    accountable&.subtype = value
+    self.accountable = accountable_class.new if accountable.nil? && accountable_type.present?
+
+    if accountable
+      accountable.subtype = value
+    else
+      @deferred_subtype = value
+    end
+  end
+
+  # Applies a subtype that arrived before the type was known (see `subtype=`
+  # case 2). `super` resolves `accountable_type`/`accountable_class` first, then
+  # the re-entrant `subtype=` builds the accountable and assigns the value.
+  def accountable_type=(value)
+    super
+
+    if defined?(@deferred_subtype)
+      pending = @deferred_subtype
+      remove_instance_variable(:@deferred_subtype)
+      self.subtype = pending
+    end
   end
 
   accepts_nested_attributes_for :accountable, update_only: true
@@ -139,7 +175,10 @@ class Account < ApplicationRecord
       attrs = attributes.dup
       attrs[:cash_balance] = attrs[:balance] unless attrs.key?(:cash_balance)
       account = new(attrs)
-      initial_balance = attributes.dig(:accountable_attributes, :initial_balance)&.to_d
+      # Presence is read from the raw value: a blank form field arrives as ""
+      # and would convert to a very present-looking 0.
+      raw_initial_balance = attributes.dig(:accountable_attributes, :initial_balance)
+      initial_balance = raw_initial_balance.to_d if raw_initial_balance.present?
 
       transaction do
         account.save!
@@ -150,6 +189,29 @@ class Account < ApplicationRecord
           date: opening_balance_date
         )
         raise result.error if result.error
+
+        # When the opening balance differs from the entered current balance
+        # (a loan created with its original principal), the opening anchor is
+        # the account's only entry — the initial sync would recalculate
+        # today's balance back to it, silently discarding what the user just
+        # typed. Anchor today's balance too so both survive.
+        #
+        # Only when the opening anchor is on an earlier day: the opening date
+        # is user-supplied and may be today, and a same-day reconciliation
+        # would be matched to the opening anchor by date and overwrite it.
+        # On its own date the opening balance wins.
+        if initial_balance && initial_balance != account.balance && manager.opening_date < Date.current
+          # An explicit reconciliation, not CurrentBalanceManager: for cash
+          # accounts its transaction-adjustment strategy computes a zero delta
+          # here (account.balance already holds the entered value) and would
+          # only rewrite the opening anchor, leaving today's balance unanchored
+          # for the first sync.
+          reconciliation = Account::ReconciliationManager.new(account).reconcile_balance(
+            balance: account.balance,
+            date: Date.current
+          )
+          raise reconciliation.error_message unless reconciliation.success?
+        end
 
         account.auto_share_with_family! if account.family.share_all_by_default?
       end
@@ -244,6 +306,23 @@ class Account < ApplicationRecord
       )
     end
 
+    def create_from_wise_account(wise_account)
+      family = wise_account.wise_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: wise_account.name || "Wise #{wise_account.currency}",
+          balance: wise_account.current_balance || 0,
+          cash_balance: wise_account.current_balance || 0,
+          currency: wise_account.currency,
+          accountable_type: "Depository",
+          accountable_attributes: { subtype: wise_account.account_subtype }
+        },
+        skip_initial_sync: true
+      )
+    end
+
     def create_from_coinbase_account(coinbase_account)
       # All Coinbase accounts are crypto exchange accounts
       family = coinbase_account.coinbase_item.family
@@ -299,8 +378,49 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_trading212_account(trading212_account)
+      family = trading212_account.trading212_item.family
+
+      attributes = {
+        family: family,
+        name: trading212_account.name.presence || "Trading 212",
+        balance: 0,
+        cash_balance: 0,
+        currency: trading212_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     def create_from_kraken_account(kraken_account)
       create_from_crypto_exchange_account(kraken_account, family: kraken_account.kraken_item.family)
+    end
+
+    # Self-custody assets are wallets, not exchanges: no trade entry by hand,
+    # and no cash side. The balance is written by the provider sync, which is
+    # the only thing that knows what the chain says.
+    def create_from_onchain_wallet_account(onchain_wallet_account)
+      family = onchain_wallet_account.onchain_wallet_item.family
+
+      create_and_sync(
+        {
+          family: family,
+          name: onchain_wallet_account.display_name,
+          balance: 0,
+          cash_balance: 0,
+          currency: onchain_wallet_account.currency.presence || family.currency,
+          accountable_type: "Crypto",
+          accountable_attributes: {
+            subtype: "wallet",
+            tax_treatment: "taxable"
+          }
+        },
+        skip_initial_sync: true
+      )
     end
 
     private
@@ -371,7 +491,32 @@ class Account < ApplicationRecord
   # decision in one place so the new-pledge controller / preview helper
   # can't disagree on what they're going to save.
   def default_pledge_kind
-    manual? ? "manual_save" : "transfer"
+    # Investment accounts never use manual_save: a positive valuation delta on a
+    # brokerage is usually a market move, not a deposit, and would false-match a
+    # pledge. They resolve on transfer (cash-inflow) entries only.
+    manual? && !investment? ? "manual_save" : "transfer"
+  end
+
+  # Total fixed earmark this account currently has reserved across every goal
+  # still holding its money (unallocated/whole-balance links reserve no fixed
+  # slice). Mirrors Budget#allocated_spending. Scoped to Goal::RELEASED_STATES
+  # so this and Goal.pooled_allocations_for never disagree — if they did,
+  # free_to_earmark would contradict the figures the goals themselves show.
+  def goal_earmarked_total
+    GoalAccount.joins(:goal)
+               .where(account_id: id)
+               .where.not(allocated_amount: nil)
+               .where.not(goals: { state: Goal::RELEASED_STATES })
+               .sum(:allocated_amount)
+               .to_d
+  end
+
+  # Headroom left to earmark toward goals before fixed allocations exceed the
+  # balance. Negative means the account is over-earmarked. Intended to back a
+  # non-blocking over-allocation warning (UI is a follow-up). Mirrors
+  # Budget#available_to_allocate.
+  def free_to_earmark
+    balance.to_d - goal_earmarked_total
   end
 
   def logo_url
@@ -530,8 +675,12 @@ class Account < ApplicationRecord
   end
 
   def auto_share_with_family!
-    records = family.users.where.not(id: owner_id).pluck(:id).map do |user_id|
-      { account_id: id, user_id: user_id, permission: "read_write",
+    # Guests get read_only, everyone else read_write. This mirrors
+    # Family#auto_share_existing_accounts_with so a guest's permission on an
+    # account is the same whether they joined before or after it was created.
+    records = family.users.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
+      { account_id: id, user_id: user_id,
+        permission: role == "guest" ? "read_only" : "read_write",
         include_in_finances: true, created_at: Time.current, updated_at: Time.current }
     end
 
@@ -546,12 +695,17 @@ class Account < ApplicationRecord
       if Current.user.present? && Current.user.family_id == family_id
         self.owner = Current.user
       else
-        self.owner = family&.users&.find_by(role: %w[admin super_admin]) || family&.users&.order(:created_at)&.first
+        self.owner =
+          family&.users&.where(role: "admin")&.order(:created_at)&.first ||
+          family&.users&.where(role: "super_admin")&.order(:created_at)&.first ||
+          family&.users&.order(:created_at)&.first
       end
     end
 
     def owner_belongs_to_family
-      return if User.where(id: owner_id, family_id: family_id).exists?
+      owner_user = User.lock.find_by(id: owner_id)
+      return if owner_user&.family_id == family_id
+
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
     end
 
@@ -576,6 +730,7 @@ class Account < ApplicationRecord
       transaction_ids = entries.where(entryable_type: "Transaction").pluck(:entryable_id)
 
       transfers = Transfer.where(inflow_transaction_id: transaction_ids).or(Transfer.where(outflow_transaction_id: transaction_ids))
+                         .includes(inflow_transaction: { entry: { account: :family } }, outflow_transaction: { entry: { account: :family } })
 
       transfers.find_each(&:destroy!)
     end

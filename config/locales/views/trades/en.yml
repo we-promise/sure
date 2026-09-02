@@ -20,11 +20,21 @@ en:
       type_dividend: Dividend
       type_interest: Interest
       dividend_requires_security: Security is required for dividends
+      trade_requires_security: A security (ticker) is required for buy and sell trades
     header:
       buy: Buy
       sell: Sell
       dividend: Dividend
       interest: Interest
+      contribution: Contribution
+      exchange: Exchange
+      fee: Fee
+      other: Other
+      reinvestment: Reinvestment
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Transfer
+      withdrawal: Withdrawal
       current_market_price_label: Current Market Price
       overview: Overview
       purchase_price_label: Purchase Price

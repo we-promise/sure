@@ -6,12 +6,16 @@ class FamilyMerchant < Merchant
   before_validation :set_default_color
   before_save :generate_logo_url_from_website, if: :should_generate_logo?
 
-  validates :color, presence: true
+  validates :color, presence: true, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family }
 
   private
     def set_default_color
-      self.color = COLORS.sample
+      self.color = COLORS.sample unless valid_hex_color?
+    end
+
+    def valid_hex_color?
+      color.present? && color.match?(/\A#[0-9A-Fa-f]{6}\z/)
     end
 
     def should_generate_logo?

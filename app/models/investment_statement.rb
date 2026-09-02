@@ -14,11 +14,9 @@ class InvestmentStatement
 
   # Get totals for a specific period
   def totals(period: Period.current_month)
-    trades_in_period = family.trades
-      .joins(:entry)
-      .where(entries: { date: period.date_range, account_id: investment_account_ids })
+    account_ids = investment_account_ids
 
-    result = totals_query(trades_scope: trades_in_period)
+    result = totals_query(account_ids: account_ids, date_range: period.date_range)
 
     PeriodTotals.new(
       contributions: Money.new(result[:contributions], family.currency),
@@ -66,20 +64,30 @@ class InvestmentStatement
   # All current holdings across investment accounts. Holdings are returned in
   # their native currency; callers that aggregate across accounts must convert
   # to family currency via convert_to_family_currency.
+  #
+  # Memoized: top_holdings, allocation, unrealized_gains, unrealized_gains_trend,
+  # and day_change each call this, so an unmemoized version ran the same
+  # DISTINCT ON query up to 5x per dashboard/report request.
   def current_holdings
-    return Holding.none unless investment_accounts.any?
+    @current_holdings ||= begin
+      account_ids = investment_account_ids
 
-    # Get the latest holding for each security per account
-    Holding
-      .where(account_id: investment_account_ids)
-      .where.not(qty: 0)
-      .where(
-        id: Holding
-          .where(account_id: investment_account_ids)
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-      )
-      .includes(:security, :account)
+      if account_ids.any?
+        # Get the latest holding for each security per account
+        Holding
+          .where(account_id: account_ids)
+          .where.not(qty: 0)
+          .where(
+            id: Holding
+              .where(account_id: account_ids)
+              .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
+              .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
+          )
+          .includes(:security, :account)
+      else
+        Holding.none
+      end
+    end
   end
 
   # Top holdings by family-currency value
@@ -251,7 +259,7 @@ class InvestmentStatement
   # Investment accounts
   def investment_accounts
     @investment_accounts ||= begin
-      scope = family.accounts.visible.where(accountable_type: %w[Investment Crypto])
+      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
       scope = scope.included_in_finances_for(user) if user
       scope
     end
@@ -305,12 +313,17 @@ class InvestmentStatement
       @investment_account_ids ||= investment_accounts.pluck(:id)
     end
 
-    def totals_query(trades_scope:)
-      sql_hash = Digest::MD5.hexdigest(trades_scope.to_sql)
+    def totals_query(account_ids:, date_range:)
+      if account_ids.empty?
+        return Totals.new(family, account_ids: account_ids, date_range: date_range).call
+      end
+
+      account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query", family.id, user&.id, sql_hash, family.entries_cache_version
-      ]) { Totals.new(family, trades_scope: trades_scope).call }
+        "investment_statement", "totals_query", family.id, user&.id,
+        account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version
+      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
     end
 
     def monetizable_currency

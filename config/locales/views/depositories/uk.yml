@@ -1,0 +1,26 @@
+---
+uk:
+  depositories:
+    edit:
+      edit: "Редагувати %{account}"
+    form:
+      none: "Немає"
+      subtype_prompt: "Вибрати тип рахунку"
+    new:
+      title: "Введіть баланс рахунку"
+    subtypes:
+      cd:
+        long: "Депозитний сертифікат"
+        short: "ДС"
+      checking:
+        long: "Розрахунковий"
+        short: "Розрахунковий"
+      hsa:
+        long: "Рахунок для заощаджень на здоров'я"
+        short: "РЗЗ"
+      money_market:
+        long: "Грошовий ринок"
+        short: "ГР"
+      savings:
+        long: "Ощадний"
+        short: "Ощадний"

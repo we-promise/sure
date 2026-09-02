@@ -7,7 +7,7 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
 
   def create
     @import_session = ImportSession.create_or_find_for!(
-      family: Current.family,
+      family: current_resource_owner.family,
       import_type: params[:type].to_s,
       client_session_id: params[:client_session_id].presence,
       expected_chunks: expected_chunks_param
@@ -68,7 +68,7 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
 
   private
     def set_import_session
-      @import_session = Current.family.import_sessions.find(params[:id])
+      @import_session = current_resource_owner.family.import_sessions.find(params[:id])
     end
 
     def ensure_read_scope

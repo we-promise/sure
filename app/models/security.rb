@@ -20,8 +20,17 @@ class Security < ApplicationRecord
 
   # Builds the Brandfetch crypto URL for a base asset (e.g. "BTC"). Returns
   # nil when Brandfetch isn't configured.
+  # The symbol goes into a URL path segment, and it comes from provider data —
+  # an on-chain token can be called anything its deployer chose. A slash, a
+  # question mark or a hash would not merely break the link: they would point
+  # the path elsewhere on the CDN, or push the client id into a fragment where
+  # Brandfetch never sees it. Guarded here rather than at each call site, since
+  # six of them reach this method from four different providers.
+  SAFE_CRYPTO_SYMBOL = /\A[A-Za-z0-9][A-Za-z0-9.\-]{0,31}\z/
+
   def self.brandfetch_crypto_url(base_asset)
     return nil if base_asset.blank?
+    return nil unless base_asset.to_s.match?(SAFE_CRYPTO_SYMBOL)
     return nil unless Setting.brand_fetch_client_id.present?
     size = Setting.brand_fetch_logo_size
     "https://cdn.brandfetch.io/crypto/#{base_asset}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
@@ -79,23 +88,28 @@ class Security < ApplicationRecord
   # doesn't end in a supported quote.
   def crypto_base_asset
     return nil unless crypto?
-    Provider::BinancePublic::QUOTE_TO_CURRENCY.each_value do |suffix|
-      next unless ticker.end_with?(suffix)
-      base = ticker.delete_suffix(suffix)
-      return base unless base.empty?
-    end
-    nil
+
+    # Delegated rather than parsed here: this stripped a fiat suffix only, so it
+    # answered nil for the "CRYPTO:BTC" form the holdings processors store — the
+    # form every crypto integration writes — and those securities carried no
+    # logo at all. The provider already parses every shape it accepts.
+    Provider::BinancePublic.parse_ticker(ticker)&.dig(:base)
   end
 
-  # Single source of truth for which logo URL the UI should render. Crypto
-  # and stocks share the same shape: prefer a freshly computed Brandfetch
-  # URL (honors current client_id + size) and fall back to any stored
-  # logo_url for the provider-returns-its-own-URL case (e.g. Tiingo S3).
+  # Single source of truth for which logo URL the UI should render.
+  # - Crypto keeps its dedicated Brandfetch-crypto shape.
+  # - When a website domain is known, Brandfetch (consistent client_id + size)
+  #   wins, falling back to any stored logo_url.
+  # - With no domain, a stored provider logo (e.g. T-Invest's CDN for MOEX
+  #   instruments) is authoritative and beats the ticker-only Brandfetch
+  #   lettermark placeholder.
   def display_logo_url
     if crypto?
       self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
-    else
+    elsif website_url.present?
       brandfetch_icon_url.presence || logo_url.presence
+    else
+      logo_url.presence || brandfetch_icon_url.presence
     end
   end
 

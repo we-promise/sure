@@ -66,7 +66,7 @@ class Holding::ReverseCalculator
           next
         end
 
-        Holding.new(
+        Holding::HoldingData.new(
           account_id: account.id,
           security_id: security_id,
           date: date,
@@ -74,13 +74,18 @@ class Holding::ReverseCalculator
           price: price.price,
           currency: price.currency,
           amount: qty * price.price,
-          cost_basis: cost_basis_for(security_id, date)
+          cost_basis: cost_basis_for(security_id, date),
+          cost_basis_unknown: transferred_by?(security_id, date)
         )
       end.compact
     end
 
     def precompute_cost_basis
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
+      # First date a transfer landed on each security. From that day on the
+      # position contains units acquired at a price nothing here knows, so it
+      # has no cost basis — before it, the purchases still stand on their own.
+      @first_transfer_dates = {}
       tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
 
       portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
@@ -88,6 +93,12 @@ class Holding::ReverseCalculator
         next unless trade.qty > 0
 
         security_id = trade.security_id
+
+        if trade.investment_activity_label == Trade::TRANSFER_LABEL
+          @first_transfer_dates[security_id] ||= trade_entry.date
+          next
+        end
+
         trade_price = Money.new(trade.price, trade.currency)
         begin
           converted_price = trade_price.exchange_to(account.currency).amount
@@ -105,7 +116,14 @@ class Holding::ReverseCalculator
       end
     end
 
+    def transferred_by?(security_id, date)
+      first = @first_transfer_dates[security_id]
+      first.present? && first <= date
+    end
+
     def cost_basis_for(security_id, date)
+      return nil if transferred_by?(security_id, date)
+
       snapshots = @cost_basis_snapshots[security_id]
       return nil if snapshots.empty?
 

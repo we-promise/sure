@@ -1,0 +1,17 @@
+<%# locals: (avm_providers:) %>
+
+<%= render layout: "accounts/new/container", locals: { title: t("accounts.new.method_selector.title"), back_path: new_account_path } do %>
+  <div class="text-sm">
+    <%= render "properties/avm_method_option",
+               path: new_property_path(return_to: params[:return_to]),
+               icon_name: "keyboard",
+               label: t("accounts.new.method_selector.manual_entry") %>
+
+    <% avm_providers.each do |provider_key| %>
+      <%= render "properties/avm_method_option",
+                 path: new_property_path(method: provider_key, return_to: params[:return_to]),
+                 icon_name: "map-pin",
+                 label: t("properties.new.avm_option", provider: t("properties.avm_providers.#{provider_key}")) %>
+    <% end %>
+  </div>
+<% end %>

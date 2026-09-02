@@ -68,10 +68,8 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
     # Wait for exchange rate container to become visible
     assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
 
-    # Exchange rate field should be populated
-    exchange_rate_field = find("[data-transaction-form-target='exchangeRateField']")
-    assert_not_empty exchange_rate_field.value
-    assert_equal "1.27", exchange_rate_field.value
+    # Exchange rate is fetched asynchronously — wait for the field value.
+    assert_equal "1.27", wait_for_exchange_rate_value("1.27")
   end
 
   test "exchange rate field is empty when rate not found" do
@@ -100,18 +98,17 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
     # Change to EUR
     find("select[data-money-field-target='currency']").find("option[value='EUR']").select_option
 
-    # Wait for EUR rate to load
+    # Wait for EUR rate to load (async fetch)
     assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
-    first_rate = find("[data-transaction-form-target='exchangeRateField']").value
-    assert_equal "1.10", first_rate
+    first_rate = wait_for_exchange_rate_value("1.10")
 
     # Change to GBP
     find("select[data-money-field-target='currency']").find("option[value='GBP']").select_option
 
-    # Wait for GBP rate to be updated
+    # Wait for the field to flip from EUR→GBP; reading immediately is flaky
+    # because the previous value stays until the fetch completes.
     assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
-    second_rate = find("[data-transaction-form-target='exchangeRateField']").value
-    assert_equal "1.27", second_rate
+    second_rate = wait_for_exchange_rate_value("1.27")
 
     # Rates should be different
     assert_not_equal first_rate, second_rate
@@ -135,6 +132,7 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
 
     # Exchange rate shown (both USD and EUR exist, they differ)
     assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: true
+    wait_for_exchange_rate_value("1.10")
 
     # Switch to EUR account
     select_ds("Account", eur_account)
@@ -143,4 +141,11 @@ class TransactionsFormExchangeRateTest < ApplicationSystemTestCase
     # Exchange rate UI should hide
     assert_selector "[data-transaction-form-target='exchangeRateContainer']", visible: false
   end
+
+  private
+    # JS sets the input's value property after an async fetch. Waiting on the
+    # HTML value= attribute is unreliable, so filter the node by .value.
+    def wait_for_exchange_rate_value(expected)
+      find("[data-transaction-form-target='exchangeRateField']") { |node| node.value == expected }.value
+    end
 end

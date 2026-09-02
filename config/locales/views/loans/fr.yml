@@ -76,4 +76,3 @@ fr:
           one: "%{count} mois"
           other: "%{count} mois"
         edit_loan_details: "Modifier les détails du prêt"
-

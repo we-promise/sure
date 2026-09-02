@@ -1,0 +1,6 @@
+---
+en:
+  syncs:
+    cancel:
+      cancelled: Sync cancelled. Anything already synced is kept; queued work was stopped.
+      not_cancellable: This sync has already finished.

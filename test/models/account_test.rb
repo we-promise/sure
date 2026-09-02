@@ -16,6 +16,24 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "default owner prefers a family admin before a super admin" do
+    family = families(:empty)
+    admin = users(:empty)
+    super_admin = users(:sure_support_staff)
+
+    Current.reset
+
+    account = family.accounts.create!(
+      name: "Unowned test account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    assert_equal admin, account.owner
+    assert_not_equal super_admin, account.owner
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 
@@ -77,6 +95,95 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 1000, opening_anchor.entry.amount
   end
 
+  test "create_and_sync keeps the entered current balance when it differs from the opening balance" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 20_000, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 20_000, account.valuations.opening_anchor.first.entry.amount
+    # Without a today anchor, the initial sync would walk forward from the
+    # opening valuation and overwrite the entered 8,000 with 20,000.
+    today_valuation = account.entries.valuations.find_by(date: Date.current)
+    assert_not_nil today_valuation
+    assert_equal 8_000, today_valuation.amount
+  end
+
+  test "create_and_sync leaves the opening anchor alone when the opening balance date is today" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 20_000, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true,
+      opening_balance_date: Date.current
+    )
+
+    # Both balances land on the same day, so today's balance cannot be
+    # anchored without reusing (and overwriting) the opening anchor.
+    valuations = account.entries.valuations.where(date: Date.current)
+    assert_equal 1, valuations.count
+    assert_equal 20_000, valuations.first.amount
+    assert_equal "opening_anchor", valuations.first.entryable.kind
+  end
+
+  test "create_and_sync treats a blank initial balance as absent" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: "", rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 8_000, account.valuations.opening_anchor.first.entry.amount
+    assert_nil account.entries.valuations.find_by(date: Date.current)
+  end
+
+  test "create_and_sync treats a zero initial balance as a real opening balance" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 0, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 0, account.valuations.opening_anchor.first.entry.amount
+    assert_equal 8_000, account.entries.valuations.find_by(date: Date.current)&.amount
+  end
+
   test "create_and_sync uses provided opening balance date" do
     Account.any_instance.stubs(:sync_later)
     opening_date = Time.zone.today
@@ -97,6 +204,70 @@ class AccountTest < ActiveSupport::TestCase
 
     opening_anchor = account.valuations.opening_anchor.first
     assert_equal opening_date, opening_anchor.entry.date
+  end
+
+  test "subtype set as a top-level account attribute persists on create" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors the create flow: the form submits `account[subtype]` as a
+    # top-level attribute (not nested under accountable_attributes). The
+    # accountable does not exist yet, so the delegating writer must build it.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      subtype: "savings"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype assigned before accountable is built is not dropped" do
+    account = Account.new
+    account.accountable_type = "Depository"
+    account.subtype = "checking"
+
+    assert_not_nil account.accountable
+    assert_equal "checking", account.subtype
+  end
+
+  test "subtype assigned before accountable_type is not dropped" do
+    # The real controller path: strong-params `permit` preserves filter order,
+    # and `account_params` lists `:subtype` before `:accountable_type`, so the
+    # subtype writer runs while the type is still unknown.
+    account = Account.new
+    account.subtype = "savings"
+    account.accountable_type = "Depository"
+
+    assert_not_nil account.accountable
+    assert_equal "savings", account.subtype
+    assert_equal "savings", account.accountable.subtype
+  end
+
+  test "subtype persists on create when attributes arrive in permit order" do
+    Account.any_instance.stubs(:sync_later)
+
+    # Mirrors `account_params`: `permit` yields keys in filter order, so the
+    # create hash carries `subtype` before `accountable_type` — the ordering
+    # that previously dropped the subtype on create.
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Savings Account",
+      balance: 100,
+      subtype: "savings",
+      currency: "USD",
+      accountable_type: "Depository"
+    })
+
+    assert account.persisted?
+    assert_equal "savings", account.reload.subtype
+    assert_equal "savings", account.accountable.subtype
   end
 
   test "accountable display names expose singular and group contexts" do
@@ -346,6 +517,15 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_includes @family.accounts.included_in_finances_for(@member), @account
   end
 
+  test "included_in_reports scope excludes accounts marked as exclude_from_reports" do
+    included = @family.accounts.create! name: "Included", balance: 100, currency: "USD", accountable: Depository.new
+    excluded = @family.accounts.create! name: "Excluded", balance: 200, currency: "USD", accountable: Depository.new, exclude_from_reports: true
+
+    results = @family.accounts.included_in_reports
+    assert_includes results, included
+    assert_not_includes results, excluded
+  end
+
   test "auto_share_with_family creates shares for all non-owner members" do
     @family.update!(default_account_sharing: "private")
 
@@ -367,6 +547,27 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_nil share
     assert_equal "read_write", share.permission
     assert share.include_in_finances?
+  end
+
+  test "auto_share_with_family grants guests read_only and other members read_write" do
+    @family.update!(default_account_sharing: "private")
+    guest = users(:empty)
+    guest.update_columns(family_id: @family.id, role: "guest")
+
+    account = Account.create_and_sync({
+      family: @family,
+      owner: @admin,
+      name: "Guest Permission Account",
+      balance: 100,
+      currency: "USD",
+      accountable_type: "Depository",
+      accountable_attributes: {}
+    })
+
+    account.auto_share_with_family!
+
+    assert_equal "read_only", account.account_shares.find_by(user: guest).permission
+    assert_equal "read_write", account.account_shares.find_by(user: @member).permission
   end
 
   test "current_holdings prefers latest provider snapshot holdings across currencies" do
@@ -455,5 +656,27 @@ class AccountTest < ActiveSupport::TestCase
 
     outflow_transaction.reload
     assert_equal "standard", outflow_transaction.kind
+  end
+
+  test "cleanup transfers preloads transaction associations" do
+    counterparty = @family.accounts.create!(
+      owner: @admin,
+      name: "Transfer counterparty",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    transfers = 3.times.map do |index|
+      create_transfer(
+        from_account: @account,
+        to_account: counterparty,
+        amount: 10 + index
+      )
+    end
+
+    queries = capture_sql_queries { @account.send(:cleanup_transfers) }
+
+    assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
+    assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
 end

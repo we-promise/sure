@@ -56,6 +56,27 @@ class ImportEncodingTest < ActiveSupport::TestCase
     assert import.rows.any? { |row| row.name&.include?("Café") }, "Extended Latin characters should be preserved"
   end
 
+  test "normalizes encoding on save even when validations are skipped" do
+    file_path = Rails.root.join("test/fixtures/files/imports/windows1250.csv")
+    csv_content = File.binread(file_path)
+    assert_equal Encoding::ASCII_8BIT, csv_content.encoding
+
+    import = @family.imports.create!(
+      type: "TransactionImport",
+      account: @account,
+      date_format: "%Y-%m-%d"
+    )
+
+    import.assign_attributes(raw_file_str: csv_content)
+
+    assert_nothing_raised do
+      import.save!(validate: false)
+    end
+
+    assert_equal Encoding::UTF_8, import.reload.raw_file_str.encoding
+    assert import.raw_file_str.valid_encoding?, "Converted string should be valid UTF-8"
+  end
+
   test "handles UTF-8 files without modification" do
     # Test that valid UTF-8 files are not modified
     file_path = Rails.root.join("test/fixtures/files/imports/transactions.csv")
