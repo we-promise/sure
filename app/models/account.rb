@@ -615,6 +615,8 @@ class Account < ApplicationRecord
       old_blob.purge_later
     end
 
+    # Pass the current institution_domain for domain-based fetches.
+    # For provider-only logo fetches, this will be nil but the fetcher handles that.
     FetchLogoJob.perform_later(id, institution_domain)
   end
 

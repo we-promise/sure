@@ -128,7 +128,9 @@ class Account::LogoFetcher
           account.reload
 
           return false unless account.logo_source_auto?
-          return false if account.institution_domain != expected_domain
+          # Only check domain stale if we had an expected domain (domain-based fetch)
+          return false if expected_domain.present? &&
+            account.institution_domain != expected_domain
 
           account.attach_fetched_logo(
             io: tempfile,
