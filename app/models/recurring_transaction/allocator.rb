@@ -46,9 +46,9 @@ class RecurringTransaction
           # occurrence lock, because its own pre-lock check is advisory only:
           # two concurrent payments can both read the same stale remainder.
           if cap_at_remaining && allocated > occurrence.remaining_amount
-            raise OverAllocationError,
-                  "#{Money.new(allocated, occurrence.currency).format} exceeds the " \
-                  "#{Money.new(occurrence.remaining_amount, occurrence.currency).format} remaining on this cycle"
+            raise OverAllocationError, I18n.t("recurring_transactions.allocator.exceeds_remaining",
+              amount: Money.new(allocated, occurrence.currency).format,
+              remaining: Money.new(occurrence.remaining_amount, occurrence.currency).format)
           end
 
           allocation = occurrence.allocations.create!(

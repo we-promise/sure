@@ -5,6 +5,7 @@ en:
       missing_rate: "no exchange rate from %{from} to %{to}; enter an amount explicitly"
       unmeasurable: "this transaction carries an allocation that cannot be converted to %{currency}, so what is left of it cannot be measured. Add an exchange rate for %{date} or remove the existing payment first"
       over_allocated: "allocating %{amount} exceeds the transaction's remaining %{capacity} %{currency}"
+      exceeds_remaining: "%{amount} exceeds the %{remaining} remaining on this cycle"
   activerecord:
     attributes:
       recurring_transaction:
