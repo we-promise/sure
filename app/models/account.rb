@@ -607,8 +607,15 @@ class Account < ApplicationRecord
     # indefinitely. Only runs while logo_source is auto, so manual uploads
     # are never touched here.
     #
-    # Only purge if the domain actually changed (not on create, where the
-    # domain goes from nil to the initial value).
+    # Also purge manual logo when switching from manual to auto source
+    if saved_change_to_logo_source? && logo_source_auto? && logo.attached?
+      old_blob = logo.blob
+      logo.detach
+      old_blob.purge_later
+    end
+
+    # Purge on every persisted effective domain change, including transitions
+    # from provider-derived domains when stored account domain changes from blank
     if saved_change_to_institution_domain? && logo.attached? && institution_domain_before_last_save.present?
       old_blob = logo.blob
       logo.detach
