@@ -14,11 +14,14 @@ module Transaction::Transferable
     transfer_as_inflow || transfer_as_outflow
   end
 
-  def transfer_match_candidates(date_window: 30)
+  def transfer_match_candidates(
+    date_window: 30,
+    exchange_rate_tolerance: Family::AutoTransferMatchable::MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE
+  )
     candidates_scope = if self.entry.amount.negative?
-      family_matches_scope(date_window: date_window, inflow_transaction_id: self.id)
+      family_matches_scope(date_window: date_window, exchange_rate_tolerance: exchange_rate_tolerance, inflow_transaction_id: self.id)
     else
-      family_matches_scope(date_window: date_window, outflow_transaction_id: self.id)
+      family_matches_scope(date_window: date_window, exchange_rate_tolerance: exchange_rate_tolerance, outflow_transaction_id: self.id)
     end
 
     candidates_scope.map do |match|
