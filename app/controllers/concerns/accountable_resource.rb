@@ -79,6 +79,8 @@ module AccountableResource
         @account.save!
 
         # Then update the balance
+        # Capture attributes saved before set_current_balance performs another save
+        @account.lock_saved_attributes!
         result = @account.set_current_balance(account_params[:balance].to_d)
         unless result.success?
           @error_message = result.error_message
