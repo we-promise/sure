@@ -27,24 +27,21 @@ class Settings::HostingsController < ApplicationController
     exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
     enabled_securities = Setting.enabled_securities_providers
 
-    # Show provider settings if used for FX or enabled for securities. The
-    # securities checkbox is the master on/off switch for the securities use;
-    # the FX dropdown above is a separate, independent setting, so a provider
-    # can still be shown (fx_only) purely to let the FX-side API key be
-    # configured/monitored even after its securities checkbox is unchecked.
-    twelve_data_securities_enabled = enabled_securities.include?("twelve_data")
-    yahoo_finance_securities_enabled = enabled_securities.include?("yahoo_finance")
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || twelve_data_securities_enabled
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || yahoo_finance_securities_enabled
-    @twelve_data_fx_only = @show_twelve_data_settings && !twelve_data_securities_enabled
-    @yahoo_finance_fx_only = @show_yahoo_finance_settings && !yahoo_finance_securities_enabled
+    # Show provider settings if used for FX or enabled for securities
+    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
+    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
     @show_tiingo_settings = enabled_securities.include?("tiingo")
     @show_eodhd_settings = enabled_securities.include?("eodhd")
     @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
-    # T-Invest also doubles as a brand-logo fallback for MOEX-priced securities
-    # (see Security::Provided#brand_logo_provider), so surface it for either.
+    # T-Invest also doubles as a brand-logo source for every non-crypto
+    # security regardless of price provider (Security::Provided#import_brand_logo
+    # calls brand_logo_provider unconditionally whenever a token is configured),
+    # so surface it whenever a token already exists — otherwise a self-hoster
+    # with an active, in-use token would have no way to see/rotate/clear it
+    # once tinkoff_invest and moex_public are both unchecked.
     tinkoff_invest_checked = enabled_securities.include?("tinkoff_invest")
-    @show_tinkoff_invest_settings = tinkoff_invest_checked || enabled_securities.include?("moex_public")
+    tinkoff_invest_configured = ENV["TINKOFF_INVEST_API_KEY"].present? || Setting.tinkoff_invest_api_key.present?
+    @show_tinkoff_invest_settings = tinkoff_invest_checked || enabled_securities.include?("moex_public") || tinkoff_invest_configured
     @tinkoff_invest_moex_only = @show_tinkoff_invest_settings && !tinkoff_invest_checked
 
     # Only fetch provider data if we're showing the section

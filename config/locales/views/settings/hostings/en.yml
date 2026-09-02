@@ -153,7 +153,6 @@ en:
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance provides free access to stock prices, exchange rates, and financial data without requiring an API key.
-        fx_only_notice: Not enabled for securities pricing above — shown because Yahoo Finance is currently your selected exchange rate provider.
         status_healthy: Yahoo Finance is active and working.
         status_rate_limited: Yahoo Finance is temporarily rate limiting requests.
         rate_limited_title: Yahoo Finance rate limit reached.
@@ -189,7 +188,7 @@ en:
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
         description: Enter a read-only T-Invest API token. Used to fetch brand logos for securities (incl. funds and bonds, even when MOEX prices them) and, when enabled above, prices for Russian instruments.
-        moex_only_notice: Not enabled for prices above — shown because MOEX Public is enabled, and T-Invest is used as a brand logo fallback for MOEX-priced securities.
+        moex_only_notice: Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.
         env_configured_message: Successfully configured through the TINKOFF_INVEST_API_KEY environment variable.
         label: API Token
         placeholder: Enter your T-Invest API token here
@@ -222,7 +221,6 @@ en:
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API daily calls used (%{percentage})"
         description: Enter the API key provided by Twelve Data
-        fx_only_notice: Not enabled for securities pricing above — shown because Twelve Data is currently your selected exchange rate provider.
         env_configured_message: Successfully configured through the TWELVE_DATA_API_KEY environment variable.
         label: API Key
         placeholder: Enter your API key here

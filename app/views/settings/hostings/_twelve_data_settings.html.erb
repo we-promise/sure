@@ -1,7 +1,4 @@
 <div class="space-y-4">
-  <% if @twelve_data_fx_only %>
-    <%= render DS::Alert.new(message: t(".fx_only_notice"), variant: :info) %>
-  <% end %>
   <div>
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
     <% if ENV["TWELVE_DATA_API_KEY"].present? %>
