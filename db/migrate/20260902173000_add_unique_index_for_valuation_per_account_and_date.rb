@@ -1,13 +1,19 @@
 class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[7.2]
   disable_ddl_transaction!
 
-  def up
-    return if index_exists?(:entries, [ :account_id, :date ], unique: true, name: "index_entries_on_account_and_date_for_valuations")
+  INDEX_NAME = "index_entries_on_account_and_date_for_valuations"
 
-    # CREATE INDEX CONCURRENTLY can leave an INVALID index behind if it's
-    # interrupted (e.g. a deploy killed mid-build) - clean that up first so a
-    # retry of this migration doesn't fail with "relation already exists".
-    execute "DROP INDEX CONCURRENTLY IF EXISTS index_entries_on_account_and_date_for_valuations"
+  def up
+    # index_exists? alone isn't enough: CREATE INDEX CONCURRENTLY leaves an
+    # INVALID index behind if it's interrupted (e.g. a deploy killed
+    # mid-build), and index_exists? still reports that catalog entry as
+    # present - short-circuiting here would record this migration as
+    # applied while the constraint is actually missing/broken.
+    return if valid_index_exists?
+
+    # Clean up any leftover invalid index from a previous failed attempt so
+    # the rebuild below doesn't fail with "relation already exists".
+    execute "DROP INDEX CONCURRENTLY IF EXISTS #{INDEX_NAME}"
 
     # Business rule already enforced in application code
     # (Account::ReconciliationManager#prepare_reconciliation reuses the
@@ -34,11 +40,20 @@ class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[7.2]
     add_index :entries, [ :account_id, :date ],
               unique: true,
               where: "(entryable_type = 'Valuation')",
-              name: "index_entries_on_account_and_date_for_valuations",
+              name: INDEX_NAME,
               algorithm: :concurrently
   end
 
   def down
-    remove_index :entries, name: "index_entries_on_account_and_date_for_valuations", if_exists: true
+    remove_index :entries, name: INDEX_NAME, if_exists: true
   end
+
+  private
+    def valid_index_exists?
+      select_value(<<~SQL.squish) == true
+        SELECT indisvalid FROM pg_index
+        JOIN pg_class ON pg_class.oid = pg_index.indexrelid
+        WHERE pg_class.relname = '#{INDEX_NAME}'
+      SQL
+    end
 end
