@@ -197,6 +197,24 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes candidates.map(&:outflow_transaction_id), outflow.entryable_id
   end
 
+  test "the manual match dialog surfaces cross-currency matches beyond the tight automatic tolerance" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    # 5% FX slippage off the cached 1.40 rate: outside the tight 3% automatic
+    # tolerance, but within the wider 10% tolerance the manual dialog uses.
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1470, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    candidates = inflow.transaction.transfer_match_candidates
+    assert_includes candidates.map(&:outflow_transaction_id), outflow.entryable_id
+  end
+
   test "only matches inflow with correct currency when duplicate amounts exist" do
     load_exchange_prices
     link_account!(@depository)

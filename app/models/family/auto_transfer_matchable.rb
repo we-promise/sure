@@ -1,8 +1,15 @@
 module Family::AutoTransferMatchable
   # Real-world FX slippage between a transaction's timestamp and the cached daily
   # rate is typically 1-3%. A wider band (the previous default was 10%) turns the
-  # cross-currency branch into a coincidence match on round-number amounts.
+  # cross-currency branch into a coincidence match on round-number amounts. This
+  # tight default is for the automatic path, where no human reviews the match.
   DEFAULT_EXCHANGE_RATE_TOLERANCE = 0.03
+
+  # The manual "match as transfer" dialog (Transaction#transfer_match_candidates)
+  # needs a wider band: a user is confirming the match themselves, and real-world
+  # FX slippage/card-network markup on a manual-account leg can exceed 3%. Mirrors
+  # the same date_window: 30 vs. 4 widening that dialog already applies.
+  MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE = 0.1
 
   def transfer_match_candidates(
     date_window: 4,
@@ -260,21 +267,24 @@ module Family::AutoTransferMatchable
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
-              (
-                (
-                  inflow_accounts.plaid_account_id IS NOT NULL OR
-                  inflow_accounts.simplefin_account_id IS NOT NULL OR
-                  EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)
-                ) AND
-                (
-                  outflow_accounts.plaid_account_id IS NOT NULL OR
-                  outflow_accounts.simplefin_account_id IS NOT NULL OR
-                  EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)
-                )
-              )
+              (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
             )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
+      SQL
+    end
+
+    # The inverse of Account#manual? / the Account.manual scope, inlined as SQL so
+    # it can run against the inflow/outflow account aliases in the same query
+    # rather than round-tripping through AR. Keep in sync with Account#manual? if
+    # what counts as "linked" ever changes (e.g. a new provider type).
+    def linked_account_sql(accounts_alias)
+      <<~SQL.squish
+        (
+          #{accounts_alias}.plaid_account_id IS NOT NULL OR
+          #{accounts_alias}.simplefin_account_id IS NOT NULL OR
+          EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = #{accounts_alias}.id)
+        )
       SQL
     end
 end
