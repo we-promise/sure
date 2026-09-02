@@ -341,6 +341,26 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1", Provider::Openai::DEFAULT_MODEL
   end
 
+  test "effective_model treats blank env value as absent and falls back to setting" do
+    with_env_overrides("OPENAI_MODEL" => "") do
+      Setting.openai_model = "stored-model"
+
+      assert_equal "stored-model", Provider::Openai.effective_model
+    end
+  ensure
+    Setting.openai_model = nil
+  end
+
+  test "effective_json_mode ignores invalid env values and falls back to setting" do
+    with_env_overrides("LLM_JSON_MODE" => "bogus") do
+      Setting.openai_json_mode = "none"
+
+      assert_equal "none", Provider::Openai.effective_json_mode
+    end
+  ensure
+    Setting.openai_json_mode = nil
+  end
+
   test "budget readers default to conservative values" do
     with_env_overrides(
       "LLM_CONTEXT_WINDOW" => nil,
@@ -461,6 +481,26 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   ensure
     Setting.llm_context_window = nil
+  end
+
+  test "effective budget readers ignore invalid env values and fall back to setting" do
+    with_env_overrides(
+      "LLM_CONTEXT_WINDOW" => "0",
+      "LLM_MAX_RESPONSE_TOKENS" => "-5",
+      "LLM_MAX_ITEMS_PER_CALL" => "not-a-number"
+    ) do
+      Setting.llm_context_window = 4096
+      Setting.llm_max_response_tokens = 512
+      Setting.llm_max_items_per_call = 12
+
+      assert_equal 4096, Provider::Openai.effective_context_window
+      assert_equal 512, Provider::Openai.effective_max_response_tokens
+      assert_equal 12, Provider::Openai.effective_max_items_per_call
+    end
+  ensure
+    Setting.llm_context_window = nil
+    Setting.llm_max_response_tokens = nil
+    Setting.llm_max_items_per_call = nil
   end
 
   test "auto_categorize fans out oversized batches into sequential sub-calls" do

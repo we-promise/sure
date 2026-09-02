@@ -27,7 +27,13 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key].each do |key|
+    %i[
+      anthropic_access_token anthropic_base_url anthropic_model
+      external_assistant_agent_id external_assistant_token external_assistant_url
+      llm_context_window llm_max_items_per_call llm_max_response_tokens llm_provider
+      openai_access_token openai_json_mode openai_model openai_uri_base
+      rentcast_api_key realie_api_key twelve_data_api_key
+    ].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -193,6 +199,63 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "shows effective openai env values in locked self hosting fields" do
+    Setting.openai_access_token = nil
+    Setting.openai_uri_base = "https://stored.example.com/v1"
+    Setting.openai_model = "stored-model"
+    Setting.openai_json_mode = "none"
+    Setting.llm_context_window = 4096
+    Setting.llm_max_response_tokens = 512
+    Setting.llm_max_items_per_call = 12
+
+    with_env_overrides(
+      "OPENAI_ACCESS_TOKEN" => "env-token",
+      "OPENAI_URI_BASE" => "https://env.example.com/v1",
+      "OPENAI_MODEL" => "env-model",
+      "LLM_JSON_MODE" => "strict",
+      "LLM_CONTEXT_WINDOW" => "16384",
+      "LLM_MAX_RESPONSE_TOKENS" => "2048",
+      "LLM_MAX_ITEMS_PER_CALL" => "30"
+    ) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name=?][disabled][value=?]", "setting[openai_access_token]", "********"
+        assert_select "input[name=?][disabled][value=?]", "setting[openai_uri_base]", "https://env.example.com/v1"
+        assert_select "input[name=?][disabled][value=?]", "setting[openai_model]", "env-model"
+        assert_select "select[name=?][disabled] option[selected][value=?]", "setting[openai_json_mode]", "strict"
+        assert_select "input[name=?][disabled][value=?]", "setting[llm_context_window]", "16384"
+        assert_select "input[name=?][disabled][value=?]", "setting[llm_max_response_tokens]", "2048"
+        assert_select "input[name=?][disabled][value=?]", "setting[llm_max_items_per_call]", "30"
+      end
+    end
+  end
+
+  test "shows normalized openai values when locked env values are invalid" do
+    Setting.openai_json_mode = "none"
+    Setting.llm_context_window = 4096
+    Setting.llm_max_response_tokens = 512
+    Setting.llm_max_items_per_call = 12
+
+    with_env_overrides(
+      "LLM_JSON_MODE" => "bogus",
+      "LLM_CONTEXT_WINDOW" => "0",
+      "LLM_MAX_RESPONSE_TOKENS" => "-5",
+      "LLM_MAX_ITEMS_PER_CALL" => "not-a-number"
+    ) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name=?][disabled] option[selected][value=?]", "setting[openai_json_mode]", "none"
+        assert_select "input[name=?][disabled][value=?]", "setting[llm_context_window]", "4096"
+        assert_select "input[name=?][disabled][value=?]", "setting[llm_max_response_tokens]", "512"
+        assert_select "input[name=?][disabled][value=?]", "setting[llm_max_items_per_call]", "12"
+      end
+    end
+  end
+
   # Regression: issue #2465 symptom for the OpenAI token. Blanking the field
   # (the form auto-submits on blur) must clear the stored value, not silently
   # keep the old one.
@@ -221,6 +284,28 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { anthropic_access_token: "fake-anthropic-key-for-tests" } }
 
       assert_equal "fake-anthropic-key-for-tests", Setting.anthropic_access_token
+    end
+  end
+
+  test "shows effective anthropic env values in locked self hosting fields" do
+    Setting.llm_provider = "anthropic"
+    Setting.anthropic_access_token = nil
+    Setting.anthropic_base_url = "https://stored-anthropic.example.com"
+    Setting.anthropic_model = "stored-claude"
+
+    with_env_overrides(
+      "ANTHROPIC_API_KEY" => "env-anthropic-token",
+      "ANTHROPIC_BASE_URL" => "https://env-anthropic.example.com",
+      "ANTHROPIC_MODEL" => "env-claude"
+    ) do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name=?][disabled][value=?]", "setting[anthropic_access_token]", "********"
+        assert_select "input[name=?][disabled][value=?]", "setting[anthropic_base_url]", "https://env-anthropic.example.com"
+        assert_select "input[name=?][disabled][value=?]", "setting[anthropic_model]", "env-claude"
+      end
     end
   end
 
@@ -624,6 +709,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   ensure
     Setting.securities_providers = ""
+  end
+
+  test "empty exchange rate provider env falls back to setting in provider selector" do
+    Setting.exchange_rate_provider = "yahoo_finance"
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "select[name=?] option[selected][value=?]", "setting[exchange_rate_provider]", "yahoo_finance"
+      end
+    end
+  ensure
+    Setting.exchange_rate_provider = nil
   end
 
   test "filters out invalid provider names" do

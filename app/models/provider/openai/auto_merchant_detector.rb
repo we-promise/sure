@@ -40,16 +40,7 @@ class Provider::Openai::AutoMerchantDetector
   # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
   # - "json_object": Middle ground, broader compatibility than strict
   def default_json_mode
-    # 1. Check environment variable first (allows runtime override for testing)
-    env_mode = ENV["LLM_JSON_MODE"]
-    return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
-
-    # 2. Check app settings (user-configured)
-    setting_mode = Setting.openai_json_mode
-    return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
-
-    # 3. Default: auto mode for all providers (tries strict first, falls back to none if needed)
-    JSON_MODE_AUTO
+    Provider::Openai.effective_json_mode
   end
 
   def auto_detect_merchants

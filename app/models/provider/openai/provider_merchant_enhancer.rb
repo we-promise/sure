@@ -16,13 +16,7 @@ class Provider::Openai::ProviderMerchantEnhancer
   VALID_JSON_MODES = Provider::Openai::AutoMerchantDetector::VALID_JSON_MODES
 
   def default_json_mode
-    env_mode = ENV["LLM_JSON_MODE"]
-    return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
-
-    setting_mode = Setting.openai_json_mode
-    return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
-
-    Provider::Openai::AutoMerchantDetector::JSON_MODE_AUTO
+    Provider::Openai.effective_json_mode
   end
 
   def enhance_merchants
