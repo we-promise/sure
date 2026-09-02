@@ -177,6 +177,10 @@ class Family < ApplicationRecord
     nil
   end
 
+  # Callers should still enqueue the normal family sync immediately. Plaid's
+  # refresh is asynchronous, and its polling chain schedules a distinct item
+  # sync after the cursor advances (or after the bounded polling fallback), so
+  # fresh transactions are imported even if the baseline family sync runs first.
   def request_plaid_transactions_refreshes_later(source:)
     plaid_items.syncable.find_each do |plaid_item|
       plaid_item.request_transactions_refresh_later
