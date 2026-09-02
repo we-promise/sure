@@ -13,8 +13,13 @@
     <%# Anti-double-submit token: a fresh UUID per page load, echoed back on
         submit. TransactionsController#create uses it to recognize a repeat
         submission (double-click, retry, or a genuine concurrent race) and
-        avoid creating a duplicate transaction. See MANUAL_FORM_SOURCE. %>
-    <%= hidden_field_tag "entry[idempotency_key]", new_transaction_idempotency_key %>
+        avoid creating a duplicate transaction. See MANUAL_FORM_SOURCE.
+        transaction_form_controller#refreshIdempotencyKey replaces this value
+        on turbo:before-cache so a page restored from the bfcache/Turbo
+        snapshot cache (browser back, duplicated tab) can't replay a token
+        that already committed an entry and silently redirect a distinct
+        submission onto that old one. %>
+    <%= hidden_field_tag "entry[idempotency_key]", new_transaction_idempotency_key, data: { "transaction-form-target": "idempotencyKey" } %>
   </section>
 
   <section class="space-y-2">
