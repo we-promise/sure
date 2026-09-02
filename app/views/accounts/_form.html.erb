@@ -53,12 +53,18 @@
              data-controller="logo-source"
              data-logo-source-max-size-value="<%= Account::MAX_LOGO_BYTES %>">
           <p class="text-sm text-primary"><%= t(".logo_label") %></p>
-          <% if account.logo_url.present? %>
+          <% if account.logo.attached? && account.logo.blob.present? && account.logo.blob.service.exist?(account.logo.blob.key) %>
             <div class="flex items-center gap-2 p-2 bg-surface-inset rounded-lg">
               <%= image_tag account.logo_url, class: "w-8 h-8 rounded-full", loading: "lazy" %>
               <span class="text-sm text-secondary"><%= t(".logo_attached") %></span>
             </div>
+          <% elsif account.logo_url.present? %>
+            <div class="flex items-center gap-2 p-2 bg-surface-inset rounded-lg">
+              <%= image_tag account.logo_url, class: "w-8 h-8 rounded-full", loading: "lazy" %>
+              <span class="text-sm text-secondary"><%= t(".logo_status") %></span>
+            </div>
           <% end %>
+
           <div class="flex items-center gap-2">
             <%# opacity-0 (not display:none) so the file is always submitted with the form across all browsers %>
             <%= form.file_field :logo,
