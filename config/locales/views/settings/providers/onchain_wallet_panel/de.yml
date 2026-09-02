@@ -1,0 +1,10 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Verfolgt selbstverwahrte Bitcoin-, EVM- und Solana-Wallets über ihre öffentlichen Adressen.
+      onchain_wallet_panel:
+        add_wallet: Wallet hinzufügen
+        keyless_title: Nur Lesezugriff, keine Schlüssel erforderlich
+        keyless_body: Sure liest ausschließlich öffentliche Blockchain-Daten. Dabei werden weder Schlüssel, Seed-Phrases noch Signaturen verwendet. Mit diesen Daten lassen sich keine Vermögenswerte übertragen.
