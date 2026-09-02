@@ -13,6 +13,9 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
 
+    # Mock DNS resolution to return a known IP
+    Resolv.stubs(:getaddresses).with("cdn.brandfetch.io").returns([ "18.160.41.3" ])
+
     fake_response = Net::HTTPSuccess.new("1.1", "200", "OK")
     fake_response.stubs(:content_type).returns("image/png")
     fake_response.stubs(:content_length).returns(nil)
@@ -24,7 +27,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     http_mock.expects(:read_timeout=).with(5)
     http_mock.expects(:request).yields(fake_response)
 
-    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(http_mock)
+    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(http_mock)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
@@ -36,6 +39,10 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
   test "falls back to DuckDuckGo when Brandfetch returns non-200" do
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    # Mock DNS resolution
+    Resolv.stubs(:getaddresses).with("cdn.brandfetch.io").returns([ "18.160.41.3" ])
+    Resolv.stubs(:getaddresses).with("icons.duckduckgo.com").returns([ "18.160.41.80" ])
 
     brandfetch_fail = Net::HTTPNotFound.new("1.1", "404", "Not Found")
 
@@ -56,8 +63,8 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
 
-    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
-    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("18.160.41.80", 443).returns(ddg_http)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
@@ -86,7 +93,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     provider_http.stubs(:read_timeout=)
     provider_http.expects(:request).yields(provider_response)
 
-    Net::HTTP.stubs(:new).with("provider.example.com", 443).returns(provider_http)
+    Net::HTTP.stubs(:new).with("8.8.8.8", 443).returns(provider_http)
     Net::HTTP.expects(:new).with("icons.duckduckgo.com", 443).never
 
     Account::LogoFetcher.new(@account).fetch_and_attach
@@ -98,6 +105,10 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
   test "rejects a non-image response and falls back to DuckDuckGo" do
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    # Mock DNS resolution
+    Resolv.stubs(:getaddresses).with("cdn.brandfetch.io").returns([ "18.160.41.3" ])
+    Resolv.stubs(:getaddresses).with("icons.duckduckgo.com").returns([ "18.160.41.80" ])
 
     html_response = Net::HTTPSuccess.new("1.1", "200", "OK")
     html_response.stubs(:content_type).returns("text/html")
@@ -121,8 +132,8 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
 
-    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
-    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("18.160.41.80", 443).returns(ddg_http)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
@@ -151,6 +162,10 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)
 
+    # Mock DNS resolution
+    Resolv.stubs(:getaddresses).with("cdn.brandfetch.io").returns([ "18.160.41.3" ])
+    Resolv.stubs(:getaddresses).with("icons.duckduckgo.com").returns([ "18.160.41.80" ])
+
     odd_image = Net::HTTPSuccess.new("1.1", "200", "OK")
     odd_image.stubs(:content_type).returns("image/heif-sequence")
     odd_image.stubs(:content_length).returns(nil)
@@ -173,8 +188,8 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
 
-    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
-    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("18.160.41.80", 443).returns(ddg_http)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
