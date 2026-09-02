@@ -316,6 +316,7 @@ zh-CN:
       sync_provider_in_progress: 同步已开始。
       recently_synced: 刚刚已同步，请稍后再试。
       taglines:
+        open_banking_io: "通过 open-banking.io 同步欧洲银行账户。"
         simplefin: 通过开放的 SimpleFIN 协议连接美国银行账户。
         lunchflow: 连接来自 40 多个国家/地区的 2 万多家银行（英国、欧盟、美国等）！
         enable_banking: 通过 PSD2 开放银行连接欧洲银行账户。
@@ -444,6 +445,10 @@ zh-CN:
         base_url_placeholder: https://lunchflow.app/api/v1（默认）
         save_and_connect: 保存并连接
         update_connection: 更新连接
+      open_banking_io_panel:
+        step_1_html: "前往 %{link}，连接您的银行并导出凭据。"
+        step_2: "打开下载的 credentials.json 文件。"
+        step_3: "将其全部内容粘贴到下方，保存后再关联已同步的账户。"
       simplefin_panel:
         step_1_html: 前往 %{link} 获取一次性设置令牌。
         step_2: 将令牌粘贴到下方并连接。

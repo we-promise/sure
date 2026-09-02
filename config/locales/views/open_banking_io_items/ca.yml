@@ -1,0 +1,155 @@
+---
+ca:
+  providers:
+    open_banking_io:
+      name: open-banking.io
+      description: Connecta comptes bancaris europeus a través d'open-banking.io
+  open_banking_io_account:
+    fallback: Compte d'open-banking.io
+  open_banking_io_entry:
+    notes:
+      reference: Referència
+  open_banking_io_item:
+    errors:
+      stages:
+        import: "importació d'open-banking.io"
+        account_processing: "processament de comptes d'open-banking.io"
+        sync_scheduling: "planificació de la sincronització de comptes d'open-banking.io"
+      accounts_failed:
+        one: "1 compte amb errors"
+        other: "%{count} comptes amb errors"
+      transactions_failed_count:
+        one: "1 transacció amb errors"
+        other: "%{count} transaccions amb errors"
+      stage_failed: "%{stage} ha fallat"
+      accounts_fetch_failed: "No s'han pogut obtenir els comptes d'open-banking.io"
+      account_processing_failed: No s'ha pogut sincronitzar el compte d'open-banking.io
+      account_sync_schedule_failed: No s'ha pogut programar la sincronització del compte d'open-banking.io
+      transactions_failed: No s'han pogut obtenir les transaccions d'open-banking.io
+      sync_failed: No s'ha pogut sincronitzar la connexió d'open-banking.io
+    syncer:
+      importing_accounts: "S'estan important comptes des d'open-banking.io..."
+      checking_configuration: "S'està comprovant la configuració dels comptes..."
+      accounts_need_setup:
+        one: "1 compte necessita configuració..."
+        other: "%{count} comptes necessiten configuració..."
+      processing_transactions: "S'estan processant les transaccions..."
+      calculating_balances: "S'estan calculant els saldos..."
+    sync_status:
+      no_accounts: No s'ha trobat cap compte
+      all_synced:
+        one: 1 compte sincronitzat
+        other: "%{count} comptes sincronitzats"
+      partial: "%{linked} sincronitzats, %{unlinked} necessiten configuració"
+    institution_summary:
+      none: Cap institució connectada
+      one: 1 institució
+      count:
+        one: 1 institució
+        other: "%{count} institucions"
+  open_banking_io_items:
+    provider_panel:
+      default_connection_name: Connexió d'open-banking.io
+      add_connection: Afegeix una connexió d'open-banking.io
+      update_connection: Actualitza la connexió
+      connection_name_label: Nom de la connexió
+      connection_name_placeholder: open-banking.io principal
+      credentials_label: Credencials JSON
+      credentials_placeholder: Enganxa el contingut del teu credentials.json exportat
+      keep_credentials_placeholder: Deixa-ho en blanc per mantenir les credencials existents
+      credentials_required: Enganxa el teu credentials.json d'open-banking.io per connectar.
+      credentials_invalid: No s'ha pogut llegir el credentials.json. Enganxa el fitxer exportat complet.
+      credentials_invalid_url: El credentials.json ha d'utilitzar una URL de l'API d'open-banking.io amb https.
+      setup_accounts: Configura els comptes
+      syncing: S'està sincronitzant...
+      sync: Sincronitza
+      disconnect: Desconnecta
+      disconnect_confirm: "Segur que vols desconnectar %{name}?"
+    create:
+      success: S'ha desat la connexió d'open-banking.io.
+    update:
+      success: S'ha actualitzat la connexió d'open-banking.io.
+    destroy:
+      success: S'ha programat l'eliminació de la connexió d'open-banking.io.
+      unlink_failed: No s'ha pogut desconnectar la connexió d'open-banking.io
+    select_accounts:
+      title: Vincula comptes d'open-banking.io
+      description: Tria els comptes d'open-banking.io que vols afegir.
+      no_accounts_found: No s'ha trobat cap compte d'open-banking.io sense vincular.
+      no_credentials_configured: Configura primer open-banking.io a la configuració del proveïdor.
+      cancel: Cancel·la
+      link_accounts: Vincula els comptes
+    link_accounts:
+      success:
+        one: S'ha vinculat 1 compte d'open-banking.io.
+        other: "S'han vinculat %{count} comptes d'open-banking.io."
+      no_accounts_selected: Selecciona almenys un compte.
+      no_credentials_configured: Configura primer open-banking.io a la configuració del proveïdor.
+      unsupported_account_type: open-banking.io no admet aquest tipus de compte.
+      link_failed: No s'ha vinculat cap compte.
+    select_existing_account:
+      title: "Vincula un compte d'open-banking.io a %{account_name}"
+      description: Tria un compte d'open-banking.io sense vincular per connectar-lo a aquest compte.
+      no_accounts_found: No s'ha trobat cap compte d'open-banking.io sense vincular.
+      no_credentials_configured: Configura primer open-banking.io a la configuració del proveïdor.
+      account_already_linked: Aquest compte ja està vinculat a un proveïdor.
+      cancel: Cancel·la
+      link_account: Vincula el compte
+    link_existing_account:
+      no_credentials_configured: Configura primer open-banking.io a la configuració del proveïdor.
+      open_banking_io_account_not_found: "Aquest compte d'open-banking.io ja no està disponible."
+      link_failed: No s'ha vinculat cap compte.
+      success: "S'ha vinculat el compte d'open-banking.io a %{account_name}."
+      account_already_linked: Aquest compte ja està vinculat a un proveïdor.
+      open_banking_io_account_already_linked: Aquest compte d'open-banking.io ja està vinculat.
+    sync:
+      already_syncing: "Aquesta connexió ja s'està sincronitzant."
+      started: "Sincronitzant la connexió d'open-banking.io."
+    setup_required:
+      title: "Cal configurar open-banking.io"
+      credentials_not_configured: "Credencials no configurades"
+      credentials_description: "Abans de vincular comptes d'open-banking.io, has d'enganxar el teu credentials.json exportat."
+      setup_steps_title: "Passos de configuració:"
+      setup_step_1_html: "Ves a <strong>Configuració → Proveïdors</strong>"
+      setup_step_2_html: "Cerca la secció <strong>open-banking.io</strong>"
+      setup_step_3: "Enganxa el contingut del fitxer credentials.json"
+      setup_step_4: "Torna aquí per vincular els teus comptes"
+      go_to_provider_settings: "Ves a la configuració de proveïdors"
+    setup_accounts:
+      title: Configura els comptes d'open-banking.io
+      subtitle: Tria com ha d'aparèixer cada compte d'open-banking.io a Sure.
+      no_credentials: Configura primer les credencials d'open-banking.io.
+      api_error: No s'han pogut obtenir els comptes d'open-banking.io.
+      fetch_failed: No s'han pogut obtenir els comptes
+      no_accounts_to_setup: No hi ha comptes per configurar
+      all_accounts_linked: Tots els comptes d'open-banking.io ja estan vinculats.
+      choose_account_type: Tria un tipus de compte
+      choose_account_type_description: Omet els comptes que no vulguis fer un seguiment.
+      account_type_label: Tipus de compte
+      account_types:
+        skip: Omet
+        depository: Efectiu
+        credit_card: Targeta de crèdit
+        investment: Inversió
+        loan: Préstec
+      create_accounts: Crea els comptes
+      cancel: Cancel·la
+    complete_account_setup:
+      success:
+        one: S'ha creat 1 compte d'open-banking.io.
+        other: "S'han creat %{count} comptes d'open-banking.io."
+      all_skipped: No s'ha creat cap compte d'open-banking.io.
+      no_accounts: No s'ha seleccionat cap compte d'open-banking.io.
+      creation_failed: No s'han pogut crear els comptes d'open-banking.io.
+    open_banking_io_item:
+      deletion_in_progress: Eliminació en curs
+      syncing: S'està sincronitzant
+      error: Error
+      status_with_summary: "Sincronitzat fa %{timestamp} · %{summary}"
+      status_never: Mai sincronitzat
+      delete: Elimina
+      setup_needed: Cal configurar el compte
+      setup_description: "%{linked} de %{total} comptes vinculats."
+      setup_action: Configura els comptes
+      no_accounts_title: Encara no s'ha importat cap compte
+      no_accounts_description: Obtén els comptes d'open-banking.io i tria quins vols vincular.

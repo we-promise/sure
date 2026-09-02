@@ -420,6 +420,10 @@ de:
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
+      open_banking_io_panel:
+        step_1_html: "Gehen Sie zu %{link}, verbinden Sie Ihre Bank und exportieren Sie Ihre Zugangsdaten."
+        step_2: "Öffnen Sie die heruntergeladene Datei credentials.json."
+        step_3: "Fügen Sie den gesamten Inhalt unten ein, speichern Sie und verknüpfen Sie dann Ihre synchronisierten Konten."
       plaid_eu_panel:
         step_1_html: Öffne %{link} und kopier deine EU-Client-ID und deinen Secret Key.
       plaid_panel:
@@ -459,6 +463,7 @@ de:
       sync_provider_in_progress: Sync gestartet.
       sync_provider_no_items: Keine Verbindungen zum Synchronisieren vorhanden.
       taglines:
+        open_banking_io: "Europäische Bankkonten über open-banking.io synchronisieren."
         akahu: Synchronisiert neuseeländische Banken über Akahu.
         binance: Synchronisiert deine Spot-Guthaben bei Binance über einen API-Key mit Lesezugriff.
         brex: Synchronisiert Guthaben und Firmenkartenumsätze bei Brex mit reinem Lesezugriff.
