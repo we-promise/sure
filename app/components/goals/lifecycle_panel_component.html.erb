@@ -1,0 +1,173 @@
+<%# Keys are absolute: a relative `t(".x")` here would resolve against this
+    component's own path, not the goal page these strings belong to. %>
+<% case panel %>
+<% when :inactive %>
+  <%= render DS::Card.new(class: "items-center justify-center text-center") do %>
+    <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
+      <%= helpers.icon(inactive_icon, size: "2xl") %>
+    </div>
+    <h2 class="text-lg font-semibold text-primary">
+      <%= t("goals.show.#{inactive_heading_key}") %>
+    </h2>
+    <p class="text-sm text-secondary mt-1 max-w-md tabular-nums privacy-sensitive">
+      <%= t("goals.show.inactive.body", saved: goal.current_balance_money.format(precision: 0), target: goal.target_amount_money.format(precision: 0)) %>
+    </p>
+  <% end %>
+
+<% when :celebration %>
+  <%= render DS::Card.new(class: "items-center justify-center text-center") do %>
+    <div class="w-16 h-16 rounded-full bg-success/10 inline-flex items-center justify-center text-success mb-3">
+      <%= helpers.icon(celebration_icon, size: "2xl", color: "success") %>
+    </div>
+    <h2 class="text-lg font-semibold text-primary">
+      <%= t("goals.show.#{celebration_heading_key}") %>
+    </h2>
+    <p class="text-sm text-secondary mt-1 max-w-md privacy-sensitive">
+      <%= t("goals.show.#{celebration_body_key}",
+            saved: goal.current_balance_money.format(precision: 0),
+            target: goal.target_amount_money.format(precision: 0)) %>
+    </p>
+    <% if show_frozen_note? %>
+      <p class="text-xs text-secondary mt-2 tabular-nums privacy-sensitive">
+        <%= t("goals.show.celebration.frozen",
+              date: l(goal.completed_at.to_date, format: :long),
+              amount: goal.current_balance_money.format(precision: 0)) %>
+      </p>
+    <% end %>
+    <%# The spend action sits before closing because that is the order the two
+        happen in, and because closing is the one that cannot be undone by
+        another click. %>
+    <% if offer_recording_a_spend? || celebration_action != :none %>
+    <div id="goal-celebration-actions" class="mt-4 flex flex-wrap items-center justify-center gap-2">
+      <% if offer_recording_a_spend? %>
+        <%= render DS::Link.new(
+          text: t("goals.show.consume"),
+          href: helpers.consume_goal_path(goal),
+          variant: "secondary",
+          size: "sm",
+          icon: "hand-coins",
+          frame: :modal
+        ) %>
+      <% end %>
+
+      <% case celebration_action %>
+      <% when :close %>
+        <%# Same confirmation as the menu action: closing releases the goal's
+            earmarked money, and a one-click release is not a gesture to make
+            reversible-by-apology. %>
+        <%= render DS::Button.new(
+          text: t("goals.show.celebration.close_cta"),
+          href: helpers.complete_goal_path(goal),
+          variant: "primary",
+          size: "sm",
+          method: :patch,
+          confirm: helpers.goal_complete_confirm(goal)
+        ) %>
+      <% when :archive %>
+        <%= render DS::Button.new(
+          text: t("goals.show.celebration.archive_cta"),
+          href: helpers.archive_goal_path(goal),
+          variant: "outline",
+          size: "sm",
+          method: :patch
+        ) %>
+      <% end %>
+    </div>
+    <% end %>
+    <% if celebration_action == :close %>
+      <p class="text-xs text-secondary mt-2 max-w-md"><%= t("goals.show.celebration.close_hint") %></p>
+    <% end %>
+  <% end %>
+
+<% when :reserve_shortfall %>
+  <%= render DS::Card.new(class: "items-center justify-center text-center") do %>
+    <div class="w-16 h-16 rounded-full bg-warning/10 inline-flex items-center justify-center text-warning mb-3">
+      <%= helpers.icon("shield-alert", size: "2xl", color: "warning") %>
+    </div>
+    <h2 class="text-lg font-semibold text-primary"><%= t("goals.show.reserve_shortfall.heading") %></h2>
+    <p class="text-sm text-secondary mt-1 max-w-md tabular-nums privacy-sensitive">
+      <%= t("goals.show.reserve_shortfall.body",
+            saved: goal.current_balance_money.format(precision: 0),
+            target: goal.target_amount_money.format(precision: 0),
+            missing: goal.remaining_amount_money.format(precision: 0)) %>
+    </p>
+  <% end %>
+
+<% when :empty %>
+  <%# No movement yet on the linked account: an inline "make your first
+      transfer" card instead of a flat-at-zero chart that looks broken. %>
+  <%= render DS::Card.new(class: "items-center justify-center text-center") do %>
+    <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
+      <%= helpers.icon("piggy-bank", size: "2xl") %>
+    </div>
+    <h2 class="text-lg font-semibold text-primary"><%= t("goals.show.empty.heading") %></h2>
+    <p class="text-sm text-secondary mt-1 max-w-md"><%= t("goals.show.empty.body") %></p>
+    <div class="mt-4">
+      <%= render DS::Link.new(
+        text: t("goals.show.record_pledge_cta"),
+        variant: "primary",
+        size: "sm",
+        href: helpers.new_goal_pledge_path(goal),
+        icon: "plus",
+        frame: :modal
+      ) %>
+    </div>
+  <% end %>
+
+<% else %>
+  <%= render DS::Card.new do %>
+    <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+      <div class="min-w-0">
+        <h2 class="text-sm font-medium text-primary"><%= t("goals.show.projection.heading") %></h2>
+        <p class="text-xs text-secondary mt-0.5"><%= helpers.sanitize goal.projection_summary %></p>
+        <% if show_catch_up? %>
+          <p class="text-xs text-secondary mt-0.5 tabular-nums privacy-sensitive">
+            <%= t("goals.show.catch_up.body", avg: goal.pace_money.format(precision: 0), required: Money.new(goal.monthly_target_amount, goal.currency).format(precision: 0)) %>
+          </p>
+        <% end %>
+      </div>
+      <%# Swatches are bordered spans rather than inline SVG. The projection one
+          keeps the chart's own colour variables in an inline style rather than
+          taking `border-success` / `border-warning`: a legend that does not
+          match the line it describes is worse than the markup it saves, and
+          the chart hard-codes green-600 / yellow-600. %>
+      <div class="flex items-center flex-wrap gap-x-5 gap-y-1 text-xs text-secondary sm:gap-x-3 sm:shrink-0">
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block w-5 border-t-2 border-current text-primary" aria-hidden="true"></span>
+          <%= t("goals.show.projection.legend_saved") %>
+        </span>
+        <% if show_projection_legend? %>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="inline-block w-5 border-t-2 border-dashed" style="border-color: <%= projection_color %>" aria-hidden="true"></span>
+            <%= t("goals.show.projection.legend_projection") %>
+          </span>
+          <% if show_required_legend? %>
+            <span class="inline-flex items-center gap-1.5">
+              <span class="inline-block w-5 border-t-2 border-dotted border-current text-secondary opacity-50" aria-hidden="true"></span>
+              <%= t("goals.show.projection.legend_required") %>
+            </span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+    <div class="flex-1 min-h-[200px] privacy-sensitive"
+         data-controller="goal-projection-chart"
+         data-goal-projection-chart-data-value="<%= goal.projection_payload.to_json %>"
+         data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: goal.name) %>"
+         data-goal-projection-chart-aria-description-value="<%= helpers.strip_tags(goal.projection_summary) %>"
+         data-goal-projection-chart-today-label-value="<%= t("goals.show.projection.today_marker") %>"
+         data-goal-projection-chart-projected-template-value="<%= t("goals.show.projection.tooltip_projected", amount: "{amount}") %>"
+         data-goal-projection-chart-saved-template-value="<%= t("goals.show.projection.tooltip_saved", amount: "{amount}") %>"
+         data-goal-projection-chart-target-relation-template-value="<%= t("goals.show.projection.tooltip_target_relation", percent: "{percent}", target: "{target}") %>"></div>
+    <% if goal.target_date.nil? %>
+      <div class="mt-3 flex items-center gap-2 text-xs text-secondary">
+        <span class="text-subdued"><%= helpers.icon("calendar-plus", size: "sm") %></span>
+        <span class="flex-1"><%= t("goals.show.no_target_date.body") %></span>
+        <%= helpers.link_to t("goals.show.no_target_date.cta"),
+                   helpers.edit_goal_path(goal),
+                   data: { turbo_frame: :modal },
+                   class: "font-medium text-primary underline-offset-2 hover:underline" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

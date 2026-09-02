@@ -3,6 +3,7 @@ de:
   properties:
     edit:
       edit: "%{account} bearbeiten"
+      title: Immobilie manuell erfassen
     form:
       address_line1: Straßenadresse
       address_line1_placeholder: Musterstraße 123
@@ -23,6 +24,17 @@ de:
       year_built_placeholder: '2000'
     new:
       title: Immobiliendetails eingeben
+      avm_description: Gib der Immobilie einen Namen und trag ihre Adresse ein. %{provider} sucht die Objektdaten und den geschätzten Marktwert für dich heraus.
+      avm_option: Über %{provider} hinzufügen
+      avm_preview_back: Zurück
+      avm_preview_confirm: Immobilie anlegen
+      avm_preview_description: Das hat %{provider} gefunden. Prüf die Angaben, bevor du die Immobilie anlegst – bisher wurde nichts gespeichert.
+      avm_preview_no_record: "%{provider} hat unter dieser Adresse keinen Eintrag gefunden. Der gezeigte Wert ist deshalb eine Schätzung anhand der Umgebung. Prüf die Adresse, bevor du fortfährst."
+      avm_preview_title: Objektdaten bestätigen
+      avm_submit: Immobilie suchen
+      avm_title: Immobilie über %{provider} hinzufügen
+      avm_us_only: "%{provider} unterstützt nur Immobilien in den USA."
+      next: Weiter
     overview:
       living_area: Wohnfläche
       market_value: Marktwert
@@ -30,3 +42,66 @@ de:
       trend: Entwicklung
       unknown: Unbekannt
       year_built: Baujahr
+    form_tabs:
+      address: Adresse
+      overview: Übersicht
+      value: Wert
+    address:
+      address_line1_label: Adresszeile 1
+      address_line1_placeholder: Hauptstraße 123
+      city_label: Stadt
+      city_placeholder: Berlin
+      country_label: Land
+      country_placeholder: Deutschland
+      postal_code_label: Postleitzahl
+      postal_code_placeholder: '12345'
+      save: Speichern
+      state_region_label: Bundesland/Region
+      state_region_placeholder: BE
+      title: Immobilie manuell erfassen
+    avm_providers:
+      realie: Realie
+      rentcast: RentCast
+    balances:
+      market_value_label: Geschätzter Marktwert
+      market_value_tooltip: Der geschätzte Marktwert deiner Immobilie. Anhaltspunkte liefern Portale wie ImmoScout24 oder Immowelt; ein exakter Wert ist das nie.
+      next: Weiter
+      save: Speichern
+      title: Immobilie manuell erfassen
+    overview_fields:
+      area_label: Fläche (optional)
+      area_placeholder: '120'
+      area_unit_label: Flächeneinheit
+      name_label: Name
+      name_placeholder: Ferienhaus
+      property_type_label: Objektart
+      square_feet: Quadratfuß
+      square_meters: Quadratmeter
+      subtype_prompt: Typ wählen
+      year_built_label: Baujahr (optional)
+      year_built_placeholder: '1990'
+    subtypes:
+      agri_land:
+        long: Landwirtschaftliche Fläche
+        short: Agrarfläche
+      apartment:
+        long: Wohnung
+        short: Wohnung
+      commercial:
+        long: Gewerbeimmobilie
+        short: Gewerbe
+      plot:
+        long: Grundstück / Land
+        short: Grundstück
+      rented:
+        long: Vermietete Immobilie
+        short: Vermietet
+    tabs:
+      overview:
+        edit_account_details: Kontodaten bearbeiten
+        living_area: Wohnfläche
+        market_value: Marktwert
+        purchase_price: Kaufpreis
+        trend: Entwicklung
+        unknown: Unbekannt
+        year_built: Baujahr

@@ -66,6 +66,44 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "pending transactions do not affect materialized balances" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -500 }
+      ]
+    )
+    account.entries.find_by!(date: 1.day.ago.to_date).entryable.update!(
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_equal 1200, calculated.last.balance
+    assert_equal 200, calculated.sum(&:cash_inflows)
+    assert_not_includes calculated.map(&:date), 1.day.ago.to_date
+  end
+
+  test "calculation start date ignores a pending entry before the opening anchor" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "transaction", date: 5.days.ago.to_date, amount: -100 },
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 }
+      ]
+    )
+    account.entries.find_by!(date: 5.days.ago.to_date).entryable.update!(
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    calculator = Balance::ForwardCalculator.new(account)
+
+    assert_equal 3.days.ago.to_date, calculator.calculation_start_date
+  end
+
   test "reconciliation valuation sets absolute balance before applying subsequent transactions" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
@@ -534,6 +572,57 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "investment account interest trade is classified as cash-only, not non-cash outflow" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 5000 },
+        { type: "trade", date: 1.day.ago.to_date, ticker: "AAPL", qty: 10, price: 100 },
+        { type: "income_trade", date: Date.current, ticker: "AAPL", amount: 5, label: "Interest" }
+      ],
+      holdings: [
+        { date: 1.day.ago.to_date, ticker: "AAPL", qty: 10, price: 100, amount: 1000 },
+        { date: Date.current, ticker: "AAPL", qty: 10, price: 110, amount: 1100 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 5000, cash_balance: 5000 },
+          balances: { start: 5000, start_cash: 5000, start_non_cash: 0, end_cash: 5000, end_non_cash: 0, end: 5000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago.to_date,
+          legacy_balances: { balance: 5000, cash_balance: 5000 },
+          balances: { start: 5000, start_cash: 5000, start_non_cash: 0, end_cash: 5000, end_non_cash: 0, end: 5000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago.to_date,
+          legacy_balances: { balance: 5000, cash_balance: 4000 },
+          balances: { start: 5000, start_cash: 5000, start_non_cash: 0, end_cash: 4000, end_non_cash: 1000, end: 5000 },
+          flows: { cash_inflows: 0, cash_outflows: 1000, non_cash_inflows: 1000, non_cash_outflows: 0, net_market_flows: 0 },
+          adjustments: 0
+        },
+        {
+          date: Date.current,
+          legacy_balances: { balance: 5105, cash_balance: 4005 },
+          balances: { start: 5000, start_cash: 4000, start_non_cash: 1000, end_cash: 4005, end_non_cash: 1100, end: 5105 },
+          flows: { cash_inflows: 5, cash_outflows: 0, non_cash_inflows: 0, non_cash_outflows: 0, net_market_flows: 100 },
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
   test "investment account can have valuations that override balance" do
     account = create_account_with_ledger(
       account: { type: Investment, currency: "USD" },
@@ -755,6 +844,27 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     # Full range returned.
     assert_includes result.map(&:date), 3.days.ago.to_date
     assert_not calculator.incremental?, "Should not be incremental for foreign currency accounts"
+  end
+
+  test "pending foreign-currency entries do not force a full recalculation" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -100 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -500, currency: "EUR" }
+      ]
+    )
+    account.entries.find_by!(date: 1.day.ago.to_date).entryable.update!(
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    result = calculator.calculate
+
+    assert calculator.incremental?, "Pending foreign-currency entries should be ignored by the guard"
+    assert_equal [ 2.days.ago.to_date ], result.map(&:date)
   end
 
   # Regression: a reconciliation (or any entry) backfilled with a date EARLIER

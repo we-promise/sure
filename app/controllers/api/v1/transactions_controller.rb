@@ -99,9 +99,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
-      @entry.sync_account_later
       @entry.lock_saved_attributes!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      @entry.mark_user_modified! if user_modified_requested?
+      @entry.sync_account_later
 
       @transaction = @entry.transaction
       render :show, status: :created
@@ -127,7 +128,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       error: "internal_server_error",
       message: "An unexpected error occurred"
     }, status: :internal_server_error
-end
+  end
 
   def update
     if @entry.split_child?
@@ -227,12 +228,12 @@ end
     def apply_filters(query)
       # Account filtering
       if params[:account_id].present?
-        query = query.joins(:entry).where(entries: { account_id: params[:account_id] })
+        query = query.where(entries: { account_id: params[:account_id] })
       end
 
       if params[:account_ids].present?
         account_ids = Array(params[:account_ids])
-        query = query.joins(:entry).where(entries: { account_id: account_ids })
+        query = query.where(entries: { account_id: account_ids })
       end
 
       # Category filtering
@@ -257,37 +258,39 @@ end
 
       # Date range filtering
       if params[:start_date].present?
-        query = query.joins(:entry).where("entries.date >= ?", Date.parse(params[:start_date]))
+        query = query.where("entries.date >= ?", Date.parse(params[:start_date]))
       end
 
       if params[:end_date].present?
-        query = query.joins(:entry).where("entries.date <= ?", Date.parse(params[:end_date]))
+        query = query.where("entries.date <= ?", Date.parse(params[:end_date]))
       end
 
       # Amount filtering
       if params[:min_amount].present?
         min_amount = params[:min_amount].to_f
-        query = query.joins(:entry).where("entries.amount >= ?", min_amount)
+        query = query.where("entries.amount >= ?", min_amount)
       end
 
       if params[:max_amount].present?
         max_amount = params[:max_amount].to_f
-        query = query.joins(:entry).where("entries.amount <= ?", max_amount)
+        query = query.where("entries.amount <= ?", max_amount)
       end
 
       # Tag filtering
       if params[:tag_ids].present?
         tag_ids = Array(params[:tag_ids])
-        query = query.joins(:tags).where(tags: { id: tag_ids })
+        query = query.where(
+          id: query.joins(:tags).where(tags: { id: tag_ids }).distinct.select(:id)
+        )
       end
 
       # Transaction type filtering (income/expense)
       if params[:type].present?
         case params[:type].downcase
         when "income"
-          query = query.joins(:entry).where("entries.amount < 0")
+          query = query.where("entries.amount < 0")
         when "expense"
-          query = query.joins(:entry).where("entries.amount > 0")
+          query = query.where("entries.amount > 0")
         end
       end
 
@@ -297,19 +300,29 @@ end
     def apply_search(query)
       search_term = "%#{params[:search]}%"
 
-      query.joins(:entry)
-           .left_joins(:merchant)
-           .where(
-             "entries.name ILIKE ? OR entries.notes ILIKE ? OR merchants.name ILIKE ?",
-             search_term, search_term, search_term
-           )
-end
+      query
+        .left_joins(:merchant)
+        .where(
+          "entries.name ILIKE ? OR entries.notes ILIKE ? OR merchants.name ILIKE ?",
+          search_term, search_term, search_term
+        )
+    end
 
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, tag_ids: []
+        :category_id, :merchant_id, :nature, :user_modified, tag_ids: []
       )
+    end
+
+    # An API client can opt a transaction it creates into the same
+    # sync-protection a manual edit gets (Entry#protected_from_sync?) -
+    # useful for a client that owns its own writes into an account also
+    # linked to a bank-sync provider (Plaid/SimpleFin/etc.), so the next
+    # sync only links its external_id to the entry instead of overwriting
+    # the category/name the client already set.
+    def user_modified_requested?
+      ActiveModel::Type::Boolean.new.cast(transaction_params[:user_modified])
     end
 
     def account_id_param

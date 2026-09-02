@@ -19,6 +19,80 @@ de:
         all: Alle
         on_track: Im Plan
         over_budget: Uber Budget
+        aria_label: Budgetkategorien filtern
       tabs:
         actual: Ist
         budgeted: Budgetiert
+    actuals_summary:
+      expenses: Ausgaben
+      income: Einnahmen
+    budget_donut:
+      new_budget: Neues Budget
+      of_budget: von %{amount}
+      spent: Ausgegeben
+      unused: Ungenutzt
+    budget_header:
+      today: Heute
+    budget_nav:
+      categories: Kategorien
+      setup: Setup
+    budgeted_summary:
+      budgeted: Budgetiert
+      earned: "%{amount} eingenommen"
+      expected_income: Erwartete Einnahmen
+      left: "%{amount} übrig"
+      over: "%{amount} drüber"
+      spent: "%{amount} ausgegeben"
+    copy_previous:
+      already_initialized: Dieses Budget ist bereits eingerichtet
+      no_source: Kein früheres Budget zum Übernehmen gefunden
+      success: Budget aus %{source_name} übernommen
+    copy_previous_prompt:
+      copy_button: Aus %{source_name} übernehmen
+      description: Du kannst dein Budget aus %{source_name} übernehmen oder neu anfangen.
+      fresh_button: Neu anfangen
+      title: Budget einrichten
+    edit:
+      autosuggest_description: Grundlage ist dein bisheriger Transaktionsverlauf. KI kann sich irren, prüf die Werte vor dem Fortfahren.
+      autosuggest_title: Einnahmen & Ausgaben automatisch vorschlagen
+      budgeted_spending: Geplante Ausgaben
+      continue: Weiter
+      expected_income: Erwartete Einnahmen
+      setup_description: Trag unten deine monatlichen Einnahmen und geplanten Ausgaben ein, um dein Budget einzurichten.
+      setup_title: Budget einrichten
+    over_allocation_warning:
+      fix_allocations: Zuweisungen korrigieren
+      over_allocated_message: Du hast mehr verplant, als dein Budget hergibt. Bitte korrigiere die Zuweisungen.
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: Budget überschritten um <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: noch zu verteilen
+      over_set: "> 100 % verplant"
+      percent_set: "%{percent} verplant"
+    budget_category_form:
+      monthly_average: "%{amount}/M Ø"
+      shared_placeholder: Geteilt
+      shared_title: Leer lassen, um das Budget der Oberkategorie zu teilen
+    confirm_button:
+      confirm: Bestätigen
+    index:
+      description: Passe die Kategoriebudgets an, um Ausgabengrenzen zu setzen. Nicht verteilte Mittel gelten automatisch als nicht kategorisiert.
+      title: Kategoriebudgets bearbeiten
+    no_categories:
+      new_category: Neue Kategorie
+      no_categories_message: Du hast deinen Transaktionen noch keine Ausgabenkategorien zugewiesen.
+      oops: Hoppla!
+      use_defaults: Vorgaben nutzen (empfohlen)
+    show:
+      budgeted: Budgetiert
+      category: Kategorie
+      left: übrig
+      monthly_average_spending: Ausgaben im Monatsschnitt
+      monthly_median_spending: Ausgaben im Monatsmedian
+      no_transactions: Keine Transaktionen in diesem Budgetzeitraum.
+      overspent: überzogen
+      overview: Übersicht
+      recent_transactions: Letzte Transaktionen
+      spending: Ausgaben %{date}
+      status: Status
+      view_all_transactions: Alle Transaktionen der Kategorie

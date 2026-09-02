@@ -1,0 +1,63 @@
+<%# locals: (occurrence:, entry:, reasons: [], promoted: false) %>
+
+<%# One transaction offered as the payment for this bill.
+
+    The list used to put an identical bordered "Use this" button on all fifteen
+    rows, which made a reconciliation screen read as a database dump. Now the
+    strongest candidate gets a card with the single real button on it, and
+    every other row IS the button -- the whole row posts, so there is one tap
+    target per transaction instead of a small one sitting beside the text.
+
+    DS::Button cannot be used for the row form: its template renders its own
+    icon-and-text body and never renders a caller's block, so the row markup
+    would silently vanish. Hence a raw button_to, with form_class -- button_to
+    puts `class` on the <button>, and without a width on the <form> every row
+    would shrink-wrap inside the divider stack. %>
+
+<% amount = format_money(entry.amount_money.abs) %>
+
+<% if promoted %>
+  <div class="bg-container-inset rounded-lg p-3 space-y-3">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0 space-y-0.5">
+        <p class="text-sm font-medium text-primary truncate"><%= entry.name %></p>
+        <p class="text-xs text-secondary">
+          <%= l(entry.date, format: :short) %>
+          <% if entry.account %>
+            &middot; <%= entry.account.name %>
+          <% end %>
+        </p>
+      </div>
+      <p class="text-sm font-medium text-primary privacy-sensitive shrink-0"><%= amount %></p>
+    </div>
+
+    <% if reasons.any? %>
+      <div class="flex flex-wrap gap-1.5">
+        <% reasons.each do |reason| %>
+          <%= render DS::Pill.new(label: reason, tone: :neutral, marker: false) %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= render DS::Button.new(
+          text: t("recurring_occurrences.show.link_payment"),
+          variant: "primary",
+          full_width: true,
+          href: recurring_occurrence_allocations_path(occurrence, entry_id: entry.id),
+          method: :post
+        ) %>
+  </div>
+<% else %>
+  <%# py-3 rather than py-2 so the row clears 44px on a phone. %>
+  <%= button_to recurring_occurrence_allocations_path(occurrence, entry_id: entry.id),
+        form_class: "w-full",
+        class: "w-full text-left flex items-center justify-between gap-3 px-3 py-3 rounded-lg hover:bg-container-inset" do %>
+    <span class="min-w-0">
+      <span class="block text-sm text-primary truncate"><%= entry.name %></span>
+      <span class="block text-xs text-secondary truncate">
+        <%= l(entry.date, format: :short) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
+      </span>
+    </span>
+    <span class="text-sm text-primary privacy-sensitive shrink-0"><%= amount %></span>
+  <% end %>
+<% end %>

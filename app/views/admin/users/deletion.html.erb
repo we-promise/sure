@@ -1,0 +1,30 @@
+<%= render DS::Dialog.new(width: "sm") do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".warning")) %>
+
+  <% dialog.with_body do %>
+    <p class="mb-4 text-sm text-secondary"><%= t(".instruction", email: @user.email) %></p>
+
+    <%= styled_form_with url: admin_user_path(@user), method: :delete, data: { turbo_frame: "_top" } do |form| %>
+      <%= form.text_field :confirmation_email,
+            label: t(".email_label"),
+            autocomplete: "off",
+            spellcheck: false,
+            required: true,
+            container_class: "mb-4" %>
+
+      <div class="flex justify-end gap-2">
+        <%= render DS::Button.new(
+              text: t(".cancel"),
+              type: "button",
+              variant: :secondary,
+              data: { action: "DS--dialog#close" }
+            ) %>
+        <%= render DS::Button.new(
+              text: t(".submit"),
+              type: "submit",
+              variant: :destructive
+            ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

@@ -225,5 +225,3 @@ zh-CN:
       long: "%Y年%m月%d日 %H:%M"
       short: "%m月%d日 %H:%M"
     pm: 下午
-  common:
-    close: 关闭

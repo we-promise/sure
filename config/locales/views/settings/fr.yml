@@ -36,7 +36,6 @@ fr:
         disable_modal_click_outside_description: Empêche les fenêtres modales de se fermer en cliquant à l'extérieur. Utile pour éviter de perdre accidentellement des modifications non sauvegardées.
         transactions_title: Transactions
         transactions_subtitle: Personnalisez l'affichage des transactions
-        transactions_title: Transactions
     debugs:
       show:
         context:
@@ -85,7 +84,7 @@ fr:
         completion: achèvement
         cost_by_model: Coût par modèle
         cost_by_operation: Coût par opération
-        cost_estimates_description: Les coûts sont estimés sur la base des tarifs d'OpenAI à partir de 2025. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total.
+        cost_estimates_description: "Les coûts sont estimés d'après les tarifs publiés par les fournisseurs, y compris les tarifs OpenAI en vigueur en juillet 2026. Les coûts réels peuvent varier. Le prix est par million de jetons et varie selon le modèle. Les modèles personnalisés ou auto-hébergés afficheront « N/A » et ne seront pas inclus dans le coût total."
         cost_estimates_title: À propos des estimations de coûts
         end_date: Date de fin
         failed: Échec
@@ -114,8 +113,8 @@ fr:
         page_title: Serveur MCP
         revoke: Révoquer
         revoke_confirm: Révoquer l'accès pour ce client ?
-        step_1: Ouvrez Claude.ai et allez dans Paramètres → Intégrations.
-        step_2: Cliquez sur "Ajouter l'intégration" et collez l'URL du serveur MCP ci-dessus.
+        step_1: Ouvrez Claude.ai et allez dans Paramètres → Personnaliser → Connecteurs.
+        step_2: Cliquez sur "Ajouter un connecteur" et collez l'URL du serveur MCP ci-dessus.
         step_3: Cliquez sur Connecter — vous serez redirigé vers Sure pour vous connecter et autoriser l'accès.
         step_4: Une fois autorisé, Claude peut lire vos comptes, transactions et données de solde.
         unknown_client: Client inconnu
@@ -140,6 +139,16 @@ fr:
         additional_currencies_label: Devises supplémentaires
         base_currency_badge: Devise de base
         base_currency_label: Devise de base
+        budget_sharing_title: Partage de budget
+        budget_sharing_subtitle: Autorisez d'autres membres à consulter ou modifier votre budget personnel
+        budget_sharing_no_members: Aucun autre membre de votre %{moniker} avec qui partager
+        budget_sharing_permission_label: "Accès de %{name}"
+        budget_sharing_permissions:
+          none: Aucun accès
+          read_only: Lecture seule
+          read_write: Peut modifier
+        budget_subtitle: Configurez le fonctionnement de vos budgets
+        budget_title: Budget
         country: Pays
         currencies_more: "+%{count} de plus"
         currencies_subtitle: Choisissez les devises qui apparaissent dans les champs monétaires de votre %{moniker}
@@ -161,6 +170,10 @@ fr:
         no_additional_currencies: Aucune sélectionnée
         no_matching_currencies: Aucune devise trouvée
         page_title: Préférences
+        personal_budgets: Budgets personnels
+        personal_budgets_hint: Activer les budgets individuels pour chaque membre de la famille.
+        household_budget_enabled: Budget commun
+        household_budget_enabled_hint: Garder un budget commun au foyer en plus des budgets personnels. Désactivez pour n'utiliser que les budgets personnels.
         preview:
           description: Activez les fonctionnalités en cours étiquetées Aperçu ou Canary.
           title: Activer les fonctionnalités d'aperçu
@@ -177,6 +190,9 @@ fr:
         sharing_title: Partage de %{moniker}
         timezone: Fuseau horaire
         translations_notice: Veuillez noter que nous travaillons toujours sur des traductions dans différentes langues.
+    budget_shares:
+      update:
+        success: Paramètres de partage de budget mis à jour
     profiles:
       destroy:
         cannot_remove_self: Vous ne pouvez pas vous enlever de votre compte.
@@ -187,16 +203,16 @@ fr:
       show:
         confirm_delete:
           body: Êtes-vous sûr(e) de vouloir supprimer définitivement votre compte ? Cette action est irréversible.
-          title: Supprimer le compte?
+          title: Supprimer le compte ?
         confirm_remove_invitation:
-          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email}?
+          body: Êtes-vous sûr(e) de vouloir supprimer l'invitation pour %{email} ?
           title: Supprimer l'invitation
         confirm_remove_member:
-          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte?
+          body: Êtes-vous sûr(e) de vouloir supprimer %{name} de votre compte ?
           title: Supprimer le membre
         confirm_reset:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte ? Cela supprimera tous vos comptes, catégories, marchands, étiquettes et autres données. Cette action ne peut pas être annulée.
-          title: Réinitialiser le compte?
+          title: Réinitialiser le compte ?
         confirm_reset_with_sample_data:
           body: Êtes-vous sûr(e) de vouloir réinitialiser votre compte et charger des données d'exemple ? Cela supprimera vos données existantes et les remplacera par des données de démonstration afin que vous puissiez explorer Sure en toute sécurité.
           title: Réinitialiser le compte et charger des données d'exemple ?
@@ -231,7 +247,7 @@ fr:
     providers:
       akahu_panel:
         step_1_html: Allez sur %{link} et créez une application personnelle.
-        step_2: Copiez votre jeton d'application (App Token) et votre jeton d'utilisateur (User Token).
+        step_2: Copiez votre jeton d'application et votre jeton d'utilisateur.
         step_3: Collez les jetons ci-dessous, enregistrez, puis liez vos comptes synchronisés.
       bank_sync:
         lede: Connectez des comptes externes pour que les transactions, les soldes et les holdings soient automatiquement transférés vers Sure.
@@ -415,7 +431,6 @@ fr:
           one: Consentement requis dans 1 jour
           other: Consentement requis dans %{count} jours
         reconsent_required: Consentement requis
-        registration_needed: Enregistrement requis
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.
@@ -473,9 +488,11 @@ fr:
         mercury: Synchronisez automatiquement vos comptes professionnels Mercury.
         plaid: Connectez des milliers d'institutions financières américaines via Plaid.
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
+        questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.
         simplefin: Connectez des comptes bancaires américains via le protocole ouvert SimpleFIN.
         snaptrade: Connectez vos comptes de courtage via le réseau d'agrégation SnapTrade.
         sophtron: Connectez vos banques et services publics américains et canadiens.
+        wise: Synchronisez automatiquement vos soldes multi-devises Wise et vos transferts internationaux.
       up_panel:
         step_1_html: Allez sur %{link} et générez un jeton d'accès personnel.
         step_2: Copiez votre jeton d'accès personnel.

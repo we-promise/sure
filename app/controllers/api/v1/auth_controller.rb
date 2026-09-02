@@ -10,6 +10,7 @@ module Api
       before_action :ensure_write_scope, only: :enable_ai
       before_action :check_api_key_rate_limit, only: :enable_ai
       before_action :log_api_access, only: :enable_ai
+      rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
 
       def signup
         # Check if invite code is required
@@ -43,7 +44,6 @@ module Api
         # First user of an instance becomes super_admin
         family = Family.new
         user.family = family
-        user.role = User.role_for_new_family_creator
 
         # Atomic: user creation, invite-code claim, and device/token issuance
         # either all commit or none do. Without this, a post-commit device
@@ -52,6 +52,9 @@ module Api
         token_response = nil
         begin
           ActiveRecord::Base.transaction do
+            User.lock_first_user_role!
+            user.role = User.role_for_new_family_creator
+
             unless user.save
               render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
               raise ActiveRecord::Rollback
@@ -153,7 +156,7 @@ module Api
 
         user = User.authenticate_by(email: params[:email], password: params[:password])
 
-        unless user
+        unless user&.active?
           render json: { error: "Invalid email or password" }, status: :unauthorized
           return
         end
@@ -209,22 +212,53 @@ module Api
         else
           user.family = Family.new
 
+          # New family creators must be able to administer their own family.
+          # Lower provider defaults are promoted to admin by role_for_new_family_creator,
+          # while intentional super_admin defaults remain supported.
           provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
           provider_default_role = provider_config&.dig(:settings, :default_role)
-          user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
         end
 
-        if user.save
-          # Mark invitation as accepted if one was used
-          invitation&.update!(accepted_at: Time.current)
+        identity = nil
+        account_created = false
 
-          OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+        begin
+          account_created = ActiveRecord::Base.transaction do
+            unless invitation.present?
+              User.lock_first_user_role!
+              user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+            end
 
-          SsoAuditLog.log_jit_account_created!(
-            user: user,
-            provider: cached[:provider],
-            request: request
-          )
+            unless user.save
+              raise ActiveRecord::Rollback
+            end
+
+            # Mark invitation as accepted if one was used
+            invitation&.update!(accepted_at: Time.current)
+
+            # Joining an existing family via invitation must honor the family's
+            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # SSO invitee sees the accounts the family shares by default.
+            user.family.auto_share_existing_accounts_with(user) if invitation.present?
+
+            identity = OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
+            true
+          end
+        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+          # Expected persistence failures (e.g. a duplicate identity) roll the
+          # whole onboarding back and return the error response. Unexpected
+          # errors propagate so they surface instead of being hidden.
+          user.errors.add(:base, e.message)
+        end
+
+        if account_created
+          if identity&.persisted?
+            SsoAuditLog.log_jit_account_created!(
+              user: user,
+              provider: cached[:provider],
+              request: request
+            )
+          end
 
           issue_mobile_tokens(user, cached[:device_info])
         else
@@ -264,23 +298,37 @@ module Api
           return
         end
 
-        # Create new access token
-        new_token = Doorkeeper::AccessToken.create!(
-          application: access_token.application,
-          resource_owner_id: access_token.resource_owner_id,
-          mobile_device_id: access_token.mobile_device_id,
-          expires_in: 30.days.to_i,
-          scopes: access_token.scopes,
-          use_refresh_token: true
-        )
+        user = User.find_by(id: access_token.resource_owner_id)
+        new_token = begin
+          user&.with_lock do
+            next false unless user.active?
 
-        # Revoke old access token
-        access_token.revoke
+            access_token.with_lock do
+              next false if access_token.revoked?
 
-        # Update device last seen
-        user = User.find(access_token.resource_owner_id)
-        device = user.mobile_devices.find_by(device_id: params[:device][:device_id])
-        device&.update_last_seen!
+              token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
+                application: access_token.application,
+                resource_owner_id: access_token.resource_owner_id,
+                mobile_device_id: access_token.mobile_device_id,
+                expires_in: 30.days.to_i,
+                scopes: access_token.scopes,
+                use_refresh_token: true
+              )
+
+              access_token.revoke
+              device = user.mobile_devices.find_by(device_id: params.dig(:device, :device_id))
+              device&.update_last_seen!
+              token
+            end
+          end
+        rescue ActiveRecord::RecordNotFound
+          false
+        end
+
+        unless new_token
+          render json: { error: "Invalid refresh token" }, status: :unauthorized
+          return
+        end
 
         render json: {
           access_token: new_token.plaintext_token,
@@ -376,7 +424,17 @@ module Api
             return nil
           end
 
+          if SsoIdentityBlock.blocked?(provider: cached[:provider], uid: cached[:uid])
+            Rails.cache.delete(cache_key)
+            render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
+            return nil
+          end
+
           cached
+        end
+
+        def render_removed_identity
+          render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
         end
 
         # Atomically deletes the linking code from cache.

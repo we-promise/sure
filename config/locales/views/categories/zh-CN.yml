@@ -17,6 +17,7 @@ zh-CN:
       name_label: 名称
       unassigned: （未分配）
       parent_category_label: 父分类（可选）
+      trigger_label: 选择颜色和图标
       color: 颜色
       icon: 图标
       auto_adjust: 自动调整。

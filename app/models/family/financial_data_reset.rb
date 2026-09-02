@@ -48,8 +48,11 @@ class Family::FinancialDataReset
     ibkr_items
     indexa_capital_items
     kraken_items
+    questrade_items
     lunchflow_items
+    redbark_items
     mercury_items
+    onchain_wallet_items
     plaid_items
     simplefin_items
     snaptrade_items

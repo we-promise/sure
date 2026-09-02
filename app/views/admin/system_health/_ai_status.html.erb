@@ -1,0 +1,323 @@
+<% function_calling_status = ai_health.function_calling_status %>
+<% function_calling_class = case function_calling_status
+   when :supported then "text-success"
+   when :unsupported, :failing then "text-destructive"
+   else "text-warning"
+   end %>
+
+<% pdf_checks = [
+  {
+    key: :pdf_text_extraction,
+    status: ai_health.pdf_text_extraction_status,
+    supported: ai_health.pdf_text_extraction_supported?,
+    probe: ai_health.pdf_text_extraction_probe
+  },
+  {
+    key: :pdf_vision_processing,
+    status: ai_health.pdf_vision_processing_status,
+    supported: ai_health.pdf_vision_processing_supported?,
+    probe: ai_health.pdf_vision_processing_probe
+  }
+] %>
+
+<div class="space-y-4" data-testid="ai-status">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-secondary">
+      <% if ai_health.last_checked_at %>
+        <%= t("admin.system_health.show.ai.last_checked", time_ago: time_ago_in_words(ai_health.last_checked_at)) %>
+      <% else %>
+        <%= t("admin.system_health.show.ai.not_checked_help") %>
+      <% end %>
+    </p>
+    <%= render DS::Button.new(
+      href: admin_system_health_path(tab: "ai", refresh_ai_health: "1"),
+      method: :get,
+      variant: :outline,
+      size: :sm,
+      icon: "refresh-cw",
+      text: t("admin.system_health.show.ai.run_checks")
+    ) %>
+  </div>
+
+  <% if ai_health.llm_status == :failing %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.llm_probe_failed.title"),
+      message: t("admin.system_health.show.ai.alerts.llm_probe_failed.message"),
+      variant: :error
+    ) %>
+  <% end %>
+
+  <% if function_calling_status.in?([ :unsupported, :not_used ]) %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.function_calling_#{function_calling_status}.title"),
+      message: t("admin.system_health.show.ai.alerts.function_calling_#{function_calling_status}.message"),
+      variant: function_calling_status == :unsupported ? :error : :warning
+    ) %>
+  <% end %>
+
+  <% pdf_checks.select { |check| check[:status] == :failing }.each do |check| %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.#{check[:key]}_failed.title"),
+      message: t("admin.system_health.show.ai.alerts.#{check[:key]}_failed.message"),
+      variant: :error
+    ) %>
+  <% end %>
+
+  <% case ai_health.vector_store_status %>
+  <% when :failing %>
+    <% if ai_health.openai_vector_store_uses_custom_endpoint? %>
+      <%= render DS::Alert.new(title: t("admin.system_health.show.ai.alerts.custom_openai.title"), variant: :error) do %>
+        <p><%= t("admin.system_health.show.ai.alerts.custom_openai.message") %></p>
+      <% end %>
+    <% else %>
+      <%= render DS::Alert.new(
+        title: t("admin.system_health.show.ai.alerts.vector_probe_failed.title"),
+        message: t("admin.system_health.show.ai.alerts.vector_probe_failed.message"),
+        variant: :error
+      ) %>
+    <% end %>
+  <% when :scaffolded %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.qdrant.title"),
+      message: t("admin.system_health.show.ai.alerts.qdrant.message"),
+      variant: :warning
+    ) %>
+  <% when :missing %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.missing_vector_store.title"),
+      message: t("admin.system_health.show.ai.alerts.missing_vector_store.message"),
+      variant: :warning
+    ) %>
+  <% when :not_configured %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.unavailable_vector_store.title"),
+      message: t("admin.system_health.show.ai.alerts.unavailable_vector_store.message"),
+      variant: :warning
+    ) %>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <% llm_tone = { passing: :success, failing: :error, not_checked: :neutral, not_configured: :warning }.fetch(ai_health.llm_status) %>
+    <% llm_icon = { passing: "circle-check", failing: "circle-x", not_checked: "circle-help", not_configured: "triangle-alert" }.fetch(ai_health.llm_status) %>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.llm.title") %></h2>
+        <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.llm.description") %></p>
+      </div>
+      <%= render DS::Pill.new(
+        label: t("admin.system_health.show.ai.probe_statuses.#{ai_health.llm_status}"),
+        tone: llm_tone,
+        marker: false,
+        icon: llm_icon
+      ) %>
+    </div>
+
+    <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.selected_provider") %></dt>
+        <dd class="mt-1 font-medium text-primary" data-testid="selected-llm-provider"><%= t("admin.system_health.show.ai.providers.#{ai_health.selected_llm_provider}") %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.effective_provider") %></dt>
+        <dd class="mt-1 font-medium text-primary" data-testid="effective-llm-provider">
+          <% if ai_health.effective_llm_provider %>
+            <%= t("admin.system_health.show.ai.providers.#{ai_health.effective_llm_provider}") %>
+            <% if ai_health.llm_fallback? %>
+              <span class="text-warning"><%= t("admin.system_health.show.ai.values.fallback") %></span>
+            <% end %>
+          <% else %>
+            <span class="text-warning"><%= t("admin.system_health.show.ai.values.not_configured") %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.model") %></dt>
+        <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.llm_model.presence || t("admin.system_health.show.ai.values.not_set") %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.endpoint") %></dt>
+        <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.llm_endpoint %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.function_calling") %></dt>
+        <dd class="mt-1 font-medium <%= function_calling_class %>" data-testid="function-calling-status">
+          <%= t("admin.system_health.show.ai.function_calling_statuses.#{function_calling_status}") %>
+        </dd>
+      </div>
+      <% pdf_checks.each do |check| %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}") %></dt>
+          <dd class="mt-1 font-medium <%= check[:supported] ? "text-success" : (check[:status] == :failing ? "text-destructive" : "text-warning") %>">
+            <%= t("admin.system_health.show.ai.pdf_statuses.#{check[:status]}") %>
+          </dd>
+        </div>
+      <% end %>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.llm_request_timeout") %></dt>
+        <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.llm_request_timeout) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.probe_request_timeout") %></dt>
+        <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.probe_request_timeout) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary">
+          <%= t("admin.system_health.show.ai.labels.#{ai_health.openai_compatible_endpoint? ? :openai_compatible_credentials : :openai_credentials}") %>
+        </dt>
+        <dd class="mt-1 font-medium text-primary">
+          <%= t("admin.system_health.show.ai.values.#{ai_health.openai_credentials_configured? ? :configured : :not_configured}") %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.anthropic_credentials") %></dt>
+        <dd class="mt-1 font-medium text-primary">
+          <%= t("admin.system_health.show.ai.values.#{ai_health.anthropic_credentials_configured? ? :configured : :not_configured}") %>
+        </dd>
+      </div>
+      <% if ai_health.llm_probe.failure_code %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.failure_reason") %></dt>
+          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.llm_probe.failure_code}") %></dd>
+        </div>
+      <% end %>
+      <% if ai_health.function_calling_probe.failure_code %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.function_calling_failure_reason") %></dt>
+          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.function_calling_probe.failure_code}") %></dd>
+        </div>
+      <% end %>
+      <% pdf_checks.select { |check| check[:probe].failure_code }.each do |check| %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}_failure_reason") %></dt>
+          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{check[:probe].failure_code}") %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <% vector_status = ai_health.vector_store_status %>
+    <% vector_tone = { passing: :success, failing: :error, not_checked: :neutral, not_configured: :warning, scaffolded: :warning, missing: :warning }.fetch(vector_status) %>
+    <% vector_icon = vector_status == :passing ? "circle-check" : (vector_status == :failing ? "circle-x" : "triangle-alert") %>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.vector_store.title") %></h2>
+        <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.vector_store.description") %></p>
+      </div>
+      <%= render DS::Pill.new(
+        label: t("admin.system_health.show.ai.vector_statuses.#{vector_status}"),
+        tone: vector_tone,
+        marker: false,
+        icon: vector_icon
+      ) %>
+    </div>
+
+    <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.adapter") %></dt>
+        <dd class="mt-1 font-medium text-primary">
+          <% if ai_health.vector_store_adapter %>
+            <%= t("admin.system_health.show.ai.adapters.#{ai_health.vector_store_adapter}") %>
+          <% else %>
+            <span class="text-warning"><%= t("admin.system_health.show.ai.values.not_configured") %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.adapter_available") %></dt>
+        <dd class="mt-1 font-medium <%= ai_health.vector_store_configured? ? "text-success" : "text-warning" %>">
+          <%= t("admin.system_health.show.ai.values.#{ai_health.vector_store_configured? ? :yes : :no}") %>
+        </dd>
+      </div>
+
+      <% case ai_health.vector_store_adapter %>
+      <% when :openai %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.endpoint") %></dt>
+          <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.openai_endpoint %></dd>
+        </div>
+        <% if ai_health.vector_store_probe.failure_code %>
+          <div>
+            <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.failure_reason") %></dt>
+            <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.vector_store_probe.failure_code}") %></dd>
+          </div>
+        <% end %>
+      <% when :pgvector %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.storage_probe") %></dt>
+          <dd class="mt-1">
+            <%= render DS::Pill.new(
+              label: t("admin.system_health.show.ai.probe_statuses.#{ai_health.vector_store_probe.status}"),
+              tone: ai_health.vector_store_probe.passing? ? :success : (ai_health.vector_store_probe.failing? ? :error : :neutral),
+              marker: false
+            ) %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.embedding_probe") %></dt>
+          <dd class="mt-1">
+            <%= render DS::Pill.new(
+              label: t("admin.system_health.show.ai.probe_statuses.#{ai_health.embedding_probe.status}"),
+              tone: ai_health.embedding_probe.passing? ? :success : (ai_health.embedding_probe.failing? ? :error : :neutral),
+              marker: false
+            ) %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.pgvector_extension") %></dt>
+          <dd class="mt-1 font-medium text-primary">
+            <% if ai_health.pgvector_extension_enabled %>
+              <span class="text-success"><%= t("admin.system_health.show.ai.values.enabled") %></span>
+            <% elsif ai_health.pgvector_extension_available %>
+              <span class="text-warning"><%= t("admin.system_health.show.ai.values.available_not_enabled") %></span>
+            <% else %>
+              <span class="text-warning"><%= t("admin.system_health.show.ai.values.not_available") %></span>
+            <% end %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.pgvector_table") %></dt>
+          <dd class="mt-1 font-medium <%= ai_health.pgvector_table_available ? "text-success" : "text-warning" %>">
+            <%= t("admin.system_health.show.ai.values.#{ai_health.pgvector_table_available ? :available : :not_found}") %>
+          </dd>
+        </div>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.embedding_model") %></dt>
+          <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.embedding_model.presence || t("admin.system_health.show.ai.values.not_set") %></dd>
+        </div>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.embedding_endpoint") %></dt>
+          <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.embedding_endpoint %></dd>
+        </div>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.embedding_dimensions") %></dt>
+          <dd class="mt-1 font-mono text-primary"><%= ai_health.embedding_dimensions %></dd>
+        </div>
+        <% [ ai_health.vector_store_probe, ai_health.embedding_probe ].filter_map(&:failure_code).uniq.each do |failure_code| %>
+          <div>
+            <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.failure_reason") %></dt>
+            <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{failure_code}") %></dd>
+          </div>
+        <% end %>
+      <% when :qdrant %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.endpoint") %></dt>
+          <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.qdrant_endpoint %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <%= render DS::Alert.new(title: t("admin.system_health.show.ai.local_setup.title"), variant: :info) do %>
+    <p><%= t("admin.system_health.show.ai.local_setup.description") %></p>
+    <p>
+      <code class="rounded bg-container-inset px-1.5 py-0.5">VECTOR_STORE_PROVIDER=pgvector</code>
+      <span aria-hidden="true">·</span>
+      <code class="rounded bg-container-inset px-1.5 py-0.5">EMBEDDING_URI_BASE</code>
+      <span aria-hidden="true">·</span>
+      <code class="rounded bg-container-inset px-1.5 py-0.5">EMBEDDING_MODEL</code>
+      <span aria-hidden="true">·</span>
+      <code class="rounded bg-container-inset px-1.5 py-0.5">EMBEDDING_DIMENSIONS</code>
+    </p>
+  <% end %>
+</div>

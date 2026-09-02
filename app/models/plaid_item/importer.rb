@@ -7,6 +7,7 @@ class PlaidItem::Importer
   def import
     fetch_and_import_item_data
     fetch_and_import_accounts_data
+    plaid_item.good! if plaid_item.requires_update?
   rescue Plaid::ApiError => e
     handle_plaid_error(e)
   end

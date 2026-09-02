@@ -14,12 +14,12 @@ fr:
     reject:
       success: Demande rejetée
     super_admin_bar:
-      impersonating: Usurpation d'identité
+      impersonating: Emprunt d'identité
       jobs: Emplois
       join: Rejoindre
       join_a_session: Rejoindre une session
-      leave: Partir
-      request_impersonation: Demander une usurpation d'identité
+      leave: Quitter
+      request_impersonation: Demander un emprunt d'identité
       super_admin: Super administrateur
       terminate: Terminer
       uuid_placeholder: UUID

@@ -1,0 +1,6 @@
+uk:
+  other_liabilities:
+    edit:
+      edit: Редагувати %{account}
+    new:
+      title: Введіть деталі зобов'язання

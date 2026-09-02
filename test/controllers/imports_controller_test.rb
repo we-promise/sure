@@ -26,6 +26,39 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#modal"
   end
 
+  test "cancel marks a lost import as failed" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    post cancel_import_path(import)
+
+    assert_redirected_to imports_path
+    assert_equal "failed", import.reload.status
+    assert_equal Import.lost_error_message, import.error
+  end
+
+  test "cancel refuses an import that is not presumed lost" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 5.minutes.ago)
+
+    post cancel_import_path(import)
+
+    assert_equal I18n.t("imports.cancel.not_cancellable"), flash[:alert]
+    assert_equal "importing", import.reload.status
+  end
+
+  test "cannot cancel another family's import" do
+    import = imports(:transaction)
+    import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    sign_in users(:empty)
+
+    post cancel_import_path(import)
+
+    assert_response :not_found
+    assert_equal "importing", import.reload.status
+  end
+
   test "shows disabled account-dependent imports when family has no accounts" do
     sign_in users(:empty)
 
@@ -78,6 +111,19 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_import_url
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
+  end
+
+  test "summary renders the import outcome for a pdf import" do
+    get summary_import_url(imports(:pdf_with_rows))
+
+    assert_response :success
+    assert_select "dialog"
+  end
+
+  test "summary is not available for non-pdf imports" do
+    get summary_import_url(imports(:transaction))
+
+    assert_response :not_found
   end
 
   test "uploads pdf document as PdfImport when using DocumentImport option" do
@@ -363,6 +409,29 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
+  end
+
+  test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when creating Sure import (#3010)" do
+    configured_limit = 2.megabytes
+    SureImport.stubs(:max_ndjson_size).returns(configured_limit)
+
+    oversized_file = Rack::Test::UploadedFile.new(
+      StringIO.new("x" * (configured_limit + 1)),
+      "application/x-ndjson",
+      original_filename: "all.ndjson"
+    )
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: {
+        import: {
+          type: "SureImport",
+          import_file: oversized_file
+        }
+      }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
   end
 
   test "PDF import account select does not leak unshared family accounts (#1803)" do

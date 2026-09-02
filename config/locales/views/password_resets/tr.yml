@@ -1,13 +1,17 @@
 ---
 tr:
   password_resets:
+    disabled: Sure üzerinden şifre sıfırlama devre dışı bırakılmıştır. Lütfen şifrenizi
+      kimlik sağlayıcınız üzerinden sıfırlayın.
     edit:
       title: Şifreyi sıfırla
     new:
+      back: Geri
       requested: Lütfen şifrenizi sıfırlamak için e-postanızı kontrol edin.
       submit: Şifreyi sıfırla
       title: Şifreyi sıfırla
-      back: Geri
+    sso_only_user: Hesabınız kimlik doğrulama için SSO kullanıyor. Kimlik bilgilerinizi
+      yönetmek için lütfen yöneticinizle iletişime geçin.
     update:
       invalid_token: Geçersiz token.
       success: Şifreniz başarıyla sıfırlandı.

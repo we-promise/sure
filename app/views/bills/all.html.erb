@@ -1,0 +1,233 @@
+<%= content_for :page_title, t("bills.index.title") %>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <%= render "bills/view_switcher", active: "all" %>
+
+  <%= form_with url: bills_path, method: :get, scope: :q,
+        data: { controller: "auto-submit-form" },
+        class: "flex flex-wrap items-center gap-2" do |form| %>
+    <%= hidden_field_tag :view, "all" %>
+    <%= render DS::SearchInput.new(
+          name: "q[search]",
+          value: params.dig(:q, :search),
+          placeholder: t(".search_placeholder"),
+          class: "grow max-w-xs",
+          data: { "auto-submit-form-target": "auto" }) %>
+    <%= form.select :status,
+          options_for_select(
+            [ [ t(".any_status"), "" ] ] + BillsController::STATUS_FILTERS.map { |status| [ t(".status_filters.#{status}"), status ] },
+            params.dig(:q, :status)
+          ),
+          {},
+          { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
+    <%= form.select :bill_type,
+          options_for_select(
+            [ [ t(".any_type"), "" ] ] + RecurringTransaction.bill_types.keys.map { |type| [ t(".types.#{type}"), type ] },
+            params.dig(:q, :bill_type)
+          ),
+          {},
+          { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
+    <%= form.select :sort,
+          options_for_select(
+            [ [ t(".sort_due"), "" ], [ t(".sort_name"), "name" ], [ t(".sort_amount"), "amount" ] ],
+            params.dig(:q, :sort)
+          ),
+          {},
+          { class: "form-field__input w-auto", "data-auto-submit-form-target": "auto" } %>
+  <% end %>
+
+  <%# What the Subscriptions tab existed to answer. It was a whole destination
+      for a filter All bills already had, so the rollup now appears when that
+      filter is on rather than living behind its own tab. %>
+  <% if @subscription_rollup %>
+    <%# A text-xl currency figure does not fit an 85px cell, which is what three
+        columns leaves at 375px. %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 bg-container rounded-xl shadow-border-xs divide-y sm:divide-y-0 sm:divide-x divide-alpha-black-100 theme-dark:divide-alpha-white-200">
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".subscription_monthly") %></p>
+        <p class="text-primary font-medium text-xl privacy-sensitive">
+          <%= @subscription_rollup[:monthly] ? format_money(@subscription_rollup[:monthly]) : "–" %>
+        </p>
+        <% if @subscription_rollup[:unconvertible].positive? %>
+          <p class="text-xs text-warning"><%= t("bills.index.unconvertible", count: @subscription_rollup[:unconvertible]) %></p>
+        <% end %>
+      </div>
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".subscription_annual") %></p>
+        <p class="text-primary font-medium text-xl privacy-sensitive">
+          <%= @subscription_rollup[:annual] ? format_money(@subscription_rollup[:annual]) : "–" %>
+        </p>
+      </div>
+      <div class="p-4 space-y-1">
+        <p class="text-sm text-secondary"><%= t(".subscription_active") %></p>
+        <p class="text-primary font-medium text-xl"><%= @subscription_rollup[:active_count] %></p>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @all_series.empty? %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4">
+      <%= render DS::EmptyState.new(
+            icon: "receipt",
+            title: t(".no_matches_title"),
+            description: t(".no_matches_description")
+          ) %>
+    </div>
+  <% else %>
+    <%# A seven-column table on a phone is a table you scroll sideways to read.
+        The same rows, the same filters, laid out the way the Calendar already
+        does it: a purpose-built small-screen list rather than a squeezed
+        desktop one. Switched on the container, not the viewport: the app
+        shell's sidebars can squeeze a desktop window to phone-list widths,
+        and a viewport breakpoint cannot see that. %>
+    <div class="@container">
+    <div class="@3xl:hidden bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+      <% @all_series.each do |series| %>
+        <div class="flex items-center gap-3 p-3">
+          <%= link_to bill_path(series), class: "flex items-center gap-3 min-w-0 flex-1 group" do %>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-primary truncate group-hover:underline"><%= series.display_name %></p>
+              <p class="text-xs text-secondary truncate">
+                <%= frequency_label(series) %>
+                <% if series.next_expected_date %>
+                  &middot; <%= t(".next_short", date: l(series.next_expected_date, format: :short)) %>
+                <% end %>
+              </p>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="text-sm font-medium text-primary privacy-sensitive">
+                <%= format_money(Money.new(series.amount.abs, series.currency)) %>
+              </p>
+              <p class="text-xs">
+                <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
+              </p>
+            </div>
+          <% end %>
+
+          <div class="shrink-0">
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                  variant: "link",
+                  text: t("recurring_transactions.edit.trigger_label"),
+                  icon: "pencil",
+                  href: edit_recurring_transaction_path(series),
+                  data: { turbo_frame: :modal }) %>
+              <% menu.with_item(
+                  variant: "button",
+                  text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+                  icon: series.active? ? "pause" : "play",
+                  href: toggle_status_recurring_transaction_path(series),
+                  method: :post) %>
+              <% menu.with_item(
+                  variant: "button",
+                  text: t("recurring_transactions.actions.delete"),
+                  icon: "trash-2",
+                  href: recurring_transaction_path(series),
+                  method: :delete,
+                  destructive: true,
+                  confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="hidden @3xl:block bg-container rounded-lg shadow-border-xs overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <%# The one rule on these pages that stays at full weight. Row
+              dividers dropped to `subdued` so the content carries the
+              structure, which leaves the header rule free to do the one job a
+              line is actually good at: separating the labels from the data. %>
+          <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+            <th class="text-left py-3 px-3"><%= t(".col_name") %></th>
+            <th class="text-left py-3 px-2"><%= t(".col_type") %></th>
+            <th class="text-left py-3 px-2"><%= t(".col_frequency") %></th>
+            <th class="text-right py-3 px-2"><%= t(".col_amount") %></th>
+            <th class="text-left py-3 px-2"><%= t(".col_next") %></th>
+            <th class="text-left py-3 px-2"><%= t(".col_status") %></th>
+            <th class="text-right py-3 px-3"><%= t(".col_actions") %></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-subdued">
+          <% @all_series.each do |series| %>
+            <tr>
+              <td class="py-3 px-3">
+                <%= link_to series.display_name, bill_path(series),
+                      class: "text-sm font-medium text-primary hover:underline" %>
+              </td>
+              <td class="py-3 px-2 text-sm text-secondary"><%= t(".types.#{series.bill_type}") %></td>
+              <td class="py-3 px-2 text-sm text-secondary"><%= frequency_label(series) %></td>
+              <td class="py-3 px-2 text-sm text-primary text-right privacy-sensitive">
+                <% amount = Money.new(series.amount.abs, series.currency) %>
+                <% monthly = series.monthly_equivalent_amount.abs %>
+                <%= format_money(amount) %>
+                <%# A monthly bill's monthly equivalent is its own amount, so the
+                    second line said "$5.99" under "$5.99". It only carries
+                    information for the other cadences. %>
+                <% if monthly != amount %>
+                  <p class="text-xs text-secondary"><%= t(".monthly_equivalent", amount: format_money(monthly)) %></p>
+                <% end %>
+              </td>
+              <td class="py-3 px-2 text-sm text-secondary"><%= series.next_expected_date ? l(series.next_expected_date, format: :short) : "–" %></td>
+              <td class="py-3 px-2 text-sm">
+                <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
+              </td>
+              <td class="py-3 px-3 text-right">
+                <%= render DS::Menu.new do |menu| %>
+                  <% menu.with_item(
+                      variant: "link",
+                      text: t("recurring_transactions.edit.trigger_label"),
+                      icon: "pencil",
+                      href: edit_recurring_transaction_path(series),
+                      data: { turbo_frame: :modal }) %>
+                  <% menu.with_item(
+                      variant: "button",
+                      text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+                      icon: series.active? ? "pause" : "play",
+                      href: toggle_status_recurring_transaction_path(series),
+                      method: :post) %>
+                  <% menu.with_item(
+                      variant: "button",
+                      text: t("recurring_transactions.actions.delete"),
+                      icon: "trash-2",
+                      href: recurring_transaction_path(series),
+                      method: :delete,
+                      destructive: true,
+                      confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    </div>
+  <% end %>
+
+  <%# Across every bill, not just the one you have open. Per-bill history lives
+      in the bill's own detail. %>
+  <% if @recent_price_changes&.any? %>
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".subscription_price_changes") %></p>
+      </div>
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+        <% @recent_price_changes.each do |change| %>
+          <div class="flex items-center justify-between gap-3 px-4 py-2">
+            <div>
+              <p class="text-sm text-primary"><%= change.recurring_transaction.display_name %></p>
+              <p class="text-xs text-secondary"><%= l(change.effective_on, format: :long) %></p>
+            </div>
+            <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+              <%= t(".subscription_price_change_line",
+                    from: format_money(change.previous_amount_money),
+                    to: format_money(change.new_amount_money),
+                    percent: change.previous_amount.positive? ? ((change.new_amount - change.previous_amount) / change.previous_amount * 100).round(1) : 0) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

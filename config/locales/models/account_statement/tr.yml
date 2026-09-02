@@ -1,0 +1,30 @@
+---
+tr:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Hesap
+        account_last4_hint: Hesabın son dört hanesi
+        account_name_hint: Hesap adı ipucu
+        closing_balance: Kapanış bakiyesi
+        content_sha256: İçerik özeti
+        currency: Para Birimi
+        filename: Dosya adı
+        institution_name_hint: Kurum ipucu
+        opening_balance: Açılış bakiyesi
+        original_file: Ekstre dosyası
+        period_end_on: Dönem bitişi
+        period_start_on: Dönem başlangıcı
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: bu aile için zaten yüklenmiş
+            content_sha256:
+              duplicate_statement_file: bu aile için zaten yüklenmiş
+            original_file:
+              invalid_format: PDF, CSV veya XLSX dosyası olmalıdır
+              too_large: çok büyük. Maksimum boyut %{max_mb}MB
+            period_end_on:
+              on_or_after_start: dönem başlangıcıyla aynı veya sonraki bir tarih olmalıdır

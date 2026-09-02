@@ -1,0 +1,63 @@
+<div id="redbark-providers-panel" class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("redbark_items.panel.setup_instructions") %></p>
+    <ol>
+      <li><%= t("redbark_items.panel.step_1") %></li>
+      <li><%= t("redbark_items.panel.step_2") %></li>
+      <li><%= t("redbark_items.panel.step_3") %></li>
+    </ol>
+
+    <p class="text-primary font-medium"><%= t("redbark_items.panel.field_descriptions") %></p>
+    <ul>
+      <li><strong><%= t("redbark_items.panel.fields.api_key.label") %>:</strong> <%= t("redbark_items.panel.fields.api_key.description") %> <%= t("redbark_items.panel.required") %></li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a redbark_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    redbark_item = Current.family.redbark_items.first_or_initialize(name: t("redbark_items.default_name"))
+    is_new_record = redbark_item.new_record?
+  %>
+
+  <%= styled_form_with model: redbark_item,
+                       url: is_new_record ? redbark_items_path : redbark_item_path(redbark_item),
+                       scope: :redbark_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :api_key,
+                        label: t("redbark_items.panel.fields.api_key.label"),
+                        placeholder: is_new_record ? t("redbark_items.panel.fields.api_key.placeholder_new") : t("redbark_items.panel.fields.api_key.placeholder_update"),
+                        type: :password,
+                        value: nil %>
+
+    <div class="flex justify-end">
+      <%= render DS::Button.new(
+        text: is_new_record ? t("redbark_items.panel.save_button") : t("redbark_items.panel.update_button"),
+        variant: "primary",
+        type: "submit"
+      ) %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:redbark_items] || @redbark_items || Current.family.redbark_items.where.not(api_key: [nil, ""]) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("redbark_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("redbark_items.panel.status_not_configured") %></p>
+    <% end %>
+  </div>
+</div>

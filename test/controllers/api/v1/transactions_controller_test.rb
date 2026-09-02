@@ -3,6 +3,8 @@
 require "test_helper"
 
 class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @family = @user.family
@@ -49,6 +51,30 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert response_data["pagination"].key?("per_page")
     assert response_data["pagination"].key?("total_count")
     assert response_data["pagination"].key?("total_pages")
+  end
+
+  test "index avoids per-transaction transfer queries" do
+    from_account = @family.accounts.first
+    to_account = @family.accounts.second || @family.accounts.create!(
+      name: "Second Account",
+      balance: 0,
+      currency: @family.currency,
+      accountable: Depository.new
+    )
+
+    create_transfer(from_account: from_account, to_account: to_account, amount: 10)
+    baseline_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    5.times { create_transfer(from_account: from_account, to_account: to_account, amount: 10) }
+    expanded_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    assert_equal baseline_queries, expanded_queries
   end
 
   test "should get index with read-only API key" do
@@ -119,6 +145,37 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert transaction_date >= start_date
       assert transaction_date <= end_date
     end
+  end
+
+  test "should filter transactions by tag_ids without error" do
+    tag_one = tags(:one)
+    tag_two = tags(:two)
+    tagged_entry = @account.entries.create!(
+      name: "Tagged Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new(tags: [ tag_one, tag_two ])
+    )
+
+    untagged_entry = @account.entries.create!(
+      name: "Untagged Transaction",
+      amount: 12.34,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get api_v1_transactions_url,
+        params: { tag_ids: [ tag_one.id, tag_two.id ], per_page: 200 },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    transaction_ids = response_data["transactions"].map { |t| t["id"] }
+    assert_equal 1, transaction_ids.count(tagged_entry.transaction.id)
+    assert_includes transaction_ids, tagged_entry.transaction.id
+    assert_not_includes transaction_ids, untagged_entry.transaction.id
   end
 
   test "should filter disabled account transactions by date range" do
@@ -297,6 +354,53 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     entry = @account.entries.find_by!(external_id: "import-txn-1", source: "external_import")
     assert_equal response_data["id"], entry.transaction.id
+  end
+
+  test "should create transaction protected from provider sync when user_modified is true" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense",
+        user_modified: true
+      }
+    }
+
+    assert_difference("@account.entries.count", 1) do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal true, response_data["user_modified"]
+
+    entry = Transaction.find(response_data["id"]).entry
+    assert entry.user_modified?
+    assert entry.protected_from_sync?
+  end
+
+  test "should not mark transaction user_modified by default" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    post api_v1_transactions_url, params: transaction_params, headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal false, response_data["user_modified"]
   end
 
   test "should use default source when external_id provided without source" do
@@ -762,6 +866,19 @@ end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
+    end
+
+    def count_db_queries(&block)
+      queries = 0
+      callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        return if payload[:cached]
+        return if payload[:name].in?(%w[SCHEMA TRANSACTION])
+
+        queries += 1
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+      queries
     end
 
     def create_transfer_between_accounts

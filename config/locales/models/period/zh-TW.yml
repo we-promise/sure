@@ -1,0 +1,54 @@
+---
+zh-TW:
+  period:
+    last_day:
+      label_short: 1天
+      label: 最近 1 天
+      comparison_label: （對比昨天）
+    current_week:
+      label_short: 本週
+      label: 本週
+      comparison_label: （對比本週初）
+    last_7_days:
+      label_short: 7天
+      label: 最近 7 天
+      comparison_label: （對比上週）
+    current_month:
+      label_short: 本月
+      label: 本月
+      comparison_label: （對比月初）
+    last_month:
+      label_short: 上月
+      label: 上個月
+      comparison_label: （對比上個月）
+    last_30_days:
+      label_short: 30天
+      label: 最近 30 天
+      comparison_label: （對比前 30 天）
+    last_90_days:
+      label_short: 90天
+      label: 最近 90 天
+      comparison_label: （對比上一季）
+    current_year:
+      label_short: 今年
+      label: 今年
+      comparison_label: （對比年初）
+    last_365_days:
+      label_short: 365天
+      label: 最近 365 天
+      comparison_label: （對比一年前）
+    last_5_years:
+      label_short: 5年
+      label: 最近 5 年
+      comparison_label: （對比五年前）
+    last_10_years:
+      label_short: 10年
+      label: 最近 10 年
+      comparison_label: （對比十年前）
+    all_time:
+      label_short: 全部
+      label: 全部期間
+      comparison_label: （對比最初）
+    custom:
+      label_short: 自訂
+      label: 自訂期間

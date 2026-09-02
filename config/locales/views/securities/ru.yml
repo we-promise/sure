@@ -1,0 +1,15 @@
+---
+ru:
+  securities:
+    combobox:
+      display: "%{symbol} - %{name} (%{exchange})"
+      exchange_label: "%{symbol} (%{exchange})"
+    providers:
+      alpha_vantage: Alpha Vantage
+      binance_public: Binance
+      eodhd: EODHD
+      mfapi: MFAPI.in
+      moex_public: MOEX
+      tiingo: Tiingo
+      twelve_data: Twelve Data
+      yahoo_finance: Yahoo Finance
