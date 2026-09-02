@@ -50,7 +50,7 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
   end
 
   def api_headers(api_key = @api_key)
-    { "X-Api-Key" => api_key.plain_key }
+    { "X-Api-Key" => api_key.display_key }
   end
 
   test "returns amortization schedule for fixed rate loan" do
@@ -66,6 +66,9 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     assert json["schedule"]["monthly_payment"].present?
     assert json["schedule"]["total_interest"].present?
     assert json["schedule"]["payoff_date"].present?
+    assert_kind_of String, json["payments"].first["payment_amount"]
+    assert_kind_of String, json["payments"].first["principal_payment"]
+    assert_kind_of String, json["payments"].first["interest_payment"]
   end
 
   test "returns paginated payments" do
@@ -128,6 +131,17 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, json["pagination"]["offset"]
   end
 
+  test "bounds an excessively large page number" do
+    loan = @loan_account.accountable
+    get api_v1_loan_amortization_schedule_path(loan),
+        params: { page: 2_000_000 },
+        headers: api_headers
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_equal (Api::V1::LoansController::MAX_PAGE - 1) * 25, json["pagination"]["offset"]
+  end
+
   test "returns 404 for a malformed loan id instead of erroring" do
     get api_v1_loan_amortization_schedule_path("not-a-valid-uuid"),
         headers: api_headers
@@ -188,6 +202,7 @@ class Api::V1::LoansControllerTest < ActionDispatch::IntegrationTest
     get api_v1_loan_amortization_schedule_path(loan),
         headers: api_headers(other_api_key)
     assert_response :forbidden
+    assert_equal "unauthorized", JSON.parse(response.body)["error"]
   end
 
   test "returns 404 for non-existent loan" do

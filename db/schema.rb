@@ -1314,9 +1314,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160656) do
     t.date "payment_date", null: false
     t.integer "payment_number", null: false
     t.decimal "principal_payment", precision: 19, scale: 4, null: false
+    t.string "schedule_signature", null: false
     t.datetime "updated_at", null: false
     t.index ["loan_id", "payment_date"], name: "index_loan_amortizations_on_loan_id_and_payment_date"
     t.index ["loan_id", "payment_number"], name: "index_loan_amortizations_on_loan_id_and_payment_number", unique: true
+    t.index ["loan_id", "schedule_signature"], name: "index_loan_amortizations_on_loan_id_and_schedule_signature"
     t.index ["loan_id"], name: "index_loan_amortizations_on_loan_id"
   end
 
@@ -1325,7 +1327,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160656) do
     t.decimal "initial_balance", precision: 19, scale: 4
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
-    t.date "next_rate_change_date"
     t.string "rate_type"
     t.date "start_date"
     t.string "subtype"

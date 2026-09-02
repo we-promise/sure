@@ -78,9 +78,11 @@ class UI::AccountPage < ApplicationComponent
     case tab
     when :activity
       activity_feed
-    when :holdings, :overview, :schedule
+    when :holdings, :overview
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+    when :schedule
+      render_schedule_tab
     when :statements
       render_statement_tab
     end
@@ -108,6 +110,18 @@ class UI::AccountPage < ApplicationComponent
       reconciliation_statuses: reconciliation_statuses,
       can_manage_statements: can_manage_statements
     }
+  end
+
+  def render_schedule_tab
+    return render "loans/tabs/schedule", account: account if active_tab == :schedule
+
+    turbo_frame_tag schedule_tab_frame_id,
+                    src: helpers.account_path(account, tab: "schedule"),
+                    loading: :lazy
+  end
+
+  def schedule_tab_frame_id
+    dom_id(account, :schedule_tab)
   end
 
   private

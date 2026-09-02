@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Api::V1::LoansController < Api::V1::BaseController
+  MAX_PAGE = 10_000
+
   before_action :ensure_read_scope
   before_action :set_loan, only: [ :amortization_schedule ]
 
@@ -10,11 +12,11 @@ class Api::V1::LoansController < Api::V1::BaseController
   # recomputing (and slicing) the full in-memory schedule on every request,
   # so cost scales with the requested page rather than the loan's term.
   def amortization_schedule
+    @loan.ensure_amortization_schedule_current!
+
     unless @loan.amortizable?
       return render json: { error: "not_amortizable", message: "Loan is not amortizable" }, status: :unprocessable_entity
     end
-
-    @loan.ensure_amortization_schedule_current!
 
     limit = safe_per_page_param
     offset = (safe_page_param - 1) * limit
@@ -42,7 +44,9 @@ class Api::V1::LoansController < Api::V1::BaseController
       end
 
       @loan = Loan.find(params[:id])
-      unless authorize_account!(@loan.account)
+      if authorize_account!(@loan.account)
+        @loan
+      else
         render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
       end
     rescue ActiveRecord::RecordNotFound
@@ -51,7 +55,10 @@ class Api::V1::LoansController < Api::V1::BaseController
 
     # Check if current user can access the given account. Returns boolean instead of rendering.
     def authorize_account!(account)
-      current_resource_owner.family.accounts.accessible_by(current_resource_owner).include?(account)
+      current_resource_owner.family.accounts
+        .accessible_by(current_resource_owner)
+        .where(id: account&.id)
+        .exists?
     end
 
     # Ensure the API key has read scope
@@ -62,8 +69,10 @@ class Api::V1::LoansController < Api::V1::BaseController
     # Extract and validate page number from params. Coerces via to_s first so
     # an array/hash param (e.g. ?page[]=1) can't raise NoMethodError on #to_i.
     def safe_page_param
-      page = params[:page].to_s.to_i
-      page > 0 ? page : 1
+      page = Integer(params[:page].to_s, 10)
+      page.clamp(1, MAX_PAGE)
+    rescue ArgumentError, TypeError
+      1
     end
 
     # Extract and validate per_page from params, clamping to a safe range.

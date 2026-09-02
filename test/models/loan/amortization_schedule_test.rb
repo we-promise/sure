@@ -81,6 +81,67 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal 4.5, after_change[:interest_rate].to_f
   end
 
+  test "variable rate changes between payments use the latest rate on the next payment" do
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan Multiple Changes",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: 3.5,
+        term_months: 6,
+        start_date: Date.new(2023, 1, 1)
+      )
+    loan = variable_loan.loan
+    loan.add_variable_rate_change(Date.new(2023, 2, 15), 4.5)
+    loan.add_variable_rate_change(Date.new(2023, 2, 20), 5.5)
+
+    payments = loan.amortization_schedule.payments
+
+    assert_equal 6, payments.length
+    assert_equal Date.new(2023, 2, 1), payments[0][:payment_date]
+    assert_equal 3.5, payments[0][:interest_rate].to_f
+    assert_equal Date.new(2023, 3, 1), payments[1][:payment_date]
+    assert_equal 5.5, payments[1][:interest_rate].to_f
+  end
+
+  test "variable rate changes after maturity do not create extra segments" do
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan After Maturity",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: 3.5,
+        term_months: 6,
+        start_date: Date.new(2023, 1, 1)
+      )
+    loan = variable_loan.loan
+    loan.add_variable_rate_change(Date.new(2025, 1, 1), 5.5)
+
+    assert_equal 6, loan.amortization_schedule.payment_count
+  end
+
+  test "monthly payment uses the rate effective on the first payment date" do
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan First Payment Rate",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: 3.5,
+        term_months: 360,
+        start_date: Date.new(2023, 1, 1)
+      )
+    loan = variable_loan.loan
+    loan.add_variable_rate_change(Date.new(2023, 1, 15), 5.5)
+
+    assert_equal loan.amortization_schedule.payments.first[:payment_amount], loan.monthly_payment.amount
+  end
+
   test "schedule is not amortizable for zero principal" do
     zero_loan = Account.create! \
       family: @family,
@@ -222,6 +283,12 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
   test "final payment clears balance" do
     last_payment = @schedule.payments.last
     assert_equal 0, last_payment[:ending_balance]
+  end
+
+  test "each payment amount equals principal plus interest" do
+    @schedule.payments.each do |payment|
+      assert_equal payment[:principal_payment] + payment[:interest_payment], payment[:payment_amount]
+    end
   end
 
   test "principal portions sum to original principal" do

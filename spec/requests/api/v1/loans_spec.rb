@@ -40,7 +40,7 @@ RSpec.describe 'API V1 Loans', type: :request do
     )
   end
 
-  let(:'X-Api-Key') { api_key.plain_key }
+  let(:'X-Api-Key') { api_key.display_key }
 
   let!(:mortgage_account) do
     Account.create!(
@@ -105,8 +105,9 @@ RSpec.describe 'API V1 Loans', type: :request do
   path '/api/v1/loans/{id}/amortization_schedule' do
     parameter name: :id, in: :path, required: true, description: 'Loan ID',
               schema: { type: :string, format: :uuid }
-    parameter name: :page, in: :query, type: :integer, required: false,
-              description: 'Page number (default: 1)'
+    parameter name: :page, in: :query, required: false,
+              description: 'Page number (default: 1, max: 10000)',
+              schema: { type: :integer, minimum: 1, maximum: 10000 }
     parameter name: :per_page, in: :query, type: :integer, required: false,
               description: 'Items per page (default: 25, max: 100)'
 

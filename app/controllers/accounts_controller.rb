@@ -79,12 +79,12 @@ class AccountsController < ApplicationController
       return render_statement_tab_frame if statement_tab_frame_request?
     end
 
-    # Unlike the Statements tab, the Schedule tab isn't lazily loaded behind
-    # its own turbo-frame request -- UI::AccountPage renders every tab's
-    # content on each page load (toggled client-side), so this must run
-    # unconditionally whenever the account has a loan, not just when
-    # @tab == "schedule".
-    build_schedule_tab_data
+    if schedule_tab_frame_request?
+      build_schedule_tab_data
+      return render_schedule_tab_frame
+    end
+
+    build_schedule_tab_data if schedule_tab_active?
 
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?
@@ -396,6 +396,14 @@ class AccountsController < ApplicationController
       render partial: "accounts/show/statements_frame", locals: statement_tab_locals, layout: false
     end
 
+    def schedule_tab_frame_request?
+      turbo_frame_request? && request.headers["Turbo-Frame"] == helpers.dom_id(@account, :schedule_tab)
+    end
+
+    def render_schedule_tab_frame
+      render partial: "accounts/show/schedule_frame", locals: { account: @account }, layout: false
+    end
+
     def statement_tab_locals
       {
         account: @account,
@@ -410,10 +418,10 @@ class AccountsController < ApplicationController
       @tab == "statements"
     end
 
-    # Rebuilding the persisted amortization schedule is a write (bulk insert)
-    # -- do it here, once, before the view renders, rather than in the
-    # _schedule.html.erb partial itself, so a GET request doesn't trigger a
-    # DB write as a side effect of template evaluation.
+    def schedule_tab_active?
+      @tab == "schedule"
+    end
+
     def build_schedule_tab_data
       return unless @account.loan
 

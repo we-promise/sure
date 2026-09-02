@@ -8,6 +8,14 @@ class LoanTest < ActiveSupport::TestCase
     assert_includes loan.errors[:subtype], "is not included in the list"
   end
 
+  test "rejects malformed variable rate schedule entries" do
+    loan = Loan.new(variable_rate_schedule: { "not-a-date" => "not-a-rate" })
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:variable_rate_schedule], "contains an invalid effective date"
+    assert_includes loan.errors[:variable_rate_schedule], "contains a non-numeric rate"
+  end
+
   test "calculates correct monthly payment for fixed rate loan" do
     loan_account = Account.create! \
       family: families(:dylan_family),
@@ -112,6 +120,53 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 360, loan.amortizations.count
   end
 
+  test "clears the persisted schedule when a loan becomes non-amortizable" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    loan.rebuild_amortization_schedule
+    assert_equal 360, loan.amortizations.count
+
+    loan.update!(interest_rate: nil)
+
+    assert_equal 0, loan.amortizations.count
+  end
+
+  test "rebuilds the persisted schedule when Account-derived inputs change" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    loan.ensure_amortization_schedule_current!
+    assert_equal 360, loan.amortizations.count
+    original_signature = loan.amortizations.ordered.first.schedule_signature
+
+    loan_account.update!(balance: 450000)
+    loan.ensure_amortization_schedule_current!
+
+    assert_not_equal original_signature, loan.amortizations.ordered.first.schedule_signature
+    assert_equal BigDecimal("450000"), loan.amortizations.ordered.first.beginning_balance
+  end
+
   test "ensure_amortization_schedule_current! does not duplicate rows when called repeatedly" do
     loan_account = Account.create! \
       family: families(:dylan_family),
@@ -171,6 +226,15 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 2, loan.variable_rates.length
     assert_equal 4.0, loan.variable_rates[0][1]
     assert_equal 4.5, loan.variable_rates[1][1]
+    assert_equal Date.new(2027, 1, 1), loan.next_rate_change_date
+
+    travel_to Date.new(2027, 1, 2) do
+      assert_equal Date.new(2028, 1, 1), loan.next_rate_change_date
+    end
+
+    travel_to Date.new(2028, 1, 2) do
+      assert_nil loan.next_rate_change_date
+    end
   end
 
   test "gets current variable rate based on date" do

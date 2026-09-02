@@ -627,19 +627,29 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "table tbody tr", count: loan_account.loan.term_months
   end
 
-  # UI::AccountPage renders every tab's content on each page load (only
-  # Statements lazy-loads via its own turbo-frame request), so a Loan
-  # account's schedule renders -- and must be synced -- regardless of which
-  # tab is active. Regression for the schedule sync moving out of the view
-  # partial and into the controller.
-  test "schedule is synced even when a different tab is active" do
+  # The schedule should remain unloaded until its tab is selected. Regression
+  # for moving schedule synchronization out of the view partial and behind a
+  # dedicated turbo-frame request.
+  test "schedule is lazy-loaded when a different tab is active" do
     loan_account = accounts(:loan)
     assert_equal 0, loan_account.loan.amortizations.count
 
     get account_url(loan_account) # no tab param -- defaults to activity
 
     assert_response :success
+    assert_equal 0, loan_account.loan.amortizations.count
+    assert_select "turbo-frame[src='#{account_path(loan_account, tab: 'schedule')}']"
+  end
+
+  test "schedule frame builds the schedule when requested" do
+    loan_account = accounts(:loan)
+
+    get account_url(loan_account, tab: "schedule"),
+        headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(loan_account, :schedule_tab) }
+
+    assert_response :success
     assert_equal loan_account.loan.term_months, loan_account.loan.amortizations.count
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(loan_account, :schedule_tab)}"
   end
 
   test "schedule tab is absent for a loan without an interest rate" do
