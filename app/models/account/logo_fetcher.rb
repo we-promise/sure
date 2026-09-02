@@ -44,12 +44,12 @@ class Account::LogoFetcher
       return false unless response.is_a?(Net::HTTPSuccess) && response.body.present?
 
       content_type = response.content_type
-      # A 200 with a non-image body (rate-limit page, interstitial) is not a
-      # logo; reject it so the next candidate still gets a chance.
-      return false if content_type.present? && !content_type.start_with?("image/")
+      # Reject anything outside the shared upload allowlist — non-images as
+      # well as image types Account's validation refuses — so the next
+      # candidate still gets a chance.
+      return false if content_type.blank? || Account::ACCEPTED_LOGO_CONTENT_TYPES.exclude?(content_type)
       return false if response.body.bytesize > Account::MAX_LOGO_BYTES
 
-      content_type ||= "image/png"
       extension = File.extname(uri.path).presence || (content_type.include?("icon") ? ".ico" : ".png")
 
       tempfile = Tempfile.new([ "logo", extension ])
@@ -72,7 +72,9 @@ class Account::LogoFetcher
         )
       end
 
-      true
+      # Verify the attach actually landed; a silent failure must not stop the
+      # fallback chain.
+      account.logo.attached?
     rescue StandardError => e
       Rails.logger.warn("Failed to fetch logo from #{url} for account #{account.id}: #{e.message}")
       false

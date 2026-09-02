@@ -145,6 +145,39 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     assert_not @account.logo.attached?
   end
 
+  test "rejects image types outside the allowlist and falls back" do
+    Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    odd_image = Net::HTTPSuccess.new("1.1", "200", "OK")
+    odd_image.stubs(:body).returns("odd-image-data")
+    odd_image.stubs(:content_type).returns("image/heif-sequence")
+
+    ddg_success = Net::HTTPSuccess.new("1.1", "200", "OK")
+    ddg_success.stubs(:body).returns("fake-favicon-data")
+    ddg_success.stubs(:content_type).returns("image/x-icon")
+
+    bf_http = mock
+    bf_http.stubs(:use_ssl=)
+    bf_http.stubs(:open_timeout=)
+    bf_http.stubs(:read_timeout=)
+    bf_http.expects(:request).returns(odd_image)
+
+    ddg_http = mock
+    ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:open_timeout=)
+    ddg_http.stubs(:read_timeout=)
+    ddg_http.expects(:request).returns(ddg_success)
+
+    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+
+    Account::LogoFetcher.new(@account).fetch_and_attach
+
+    assert @account.logo.attached?
+    assert_equal "image/x-icon", @account.logo.blob.content_type
+  end
+
   test "does not overwrite manual logo when logo_source is manual" do
     @account.update!(logo_source: "manual")
     @account.logo.attach(
