@@ -287,7 +287,12 @@ class Loan < ApplicationRecord
         base = insurance_base || balance
         insurance_amount = (base * insurance_rate_m).round(0)
 
-        principal = [ payment - interest, 0 ].max
+        principal =
+          if i == months - 1
+            balance
+          else
+            [ payment - interest, 0 ].max
+          end
         principal = [ principal, balance ].min
         row_payment = principal + interest
         balance   = [ balance - principal, 0 ].max

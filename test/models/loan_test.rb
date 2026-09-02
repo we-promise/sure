@@ -309,21 +309,22 @@ class LoanTest < ActiveSupport::TestCase
 
   test "generate_amortization_schedule caps final payment at remaining principal" do
     loan = Loan.new(
-      interest_rate: 12.0,
-      term_months: 2,
+      interest_rate: 0.0,
+      term_months: 3,
       rate_type: "fixed",
       start_date: Date.new(2024, 1, 1)
     )
 
     loan.stub :original_balance, OpenStruct.new(amount: 100) do
-      loan.stub :monthly_payment, OpenStruct.new(amount: 60) do
+      loan.stub :monthly_payment, OpenStruct.new(amount: 33) do
         schedule = loan.send(:generate_amortization_schedule)
 
-        assert_equal 2, schedule.length
-        assert_equal 60, schedule.first[:payment]
-        assert_equal 41, schedule.second[:payment]
-        assert_equal 41, schedule.second[:principal]
-        assert_equal 0, schedule.second[:remaining_balance]
+        assert_equal 3, schedule.length
+        assert_equal 33, schedule.first[:payment]
+        assert_equal 33, schedule.second[:payment]
+        assert_equal 34, schedule.third[:payment]
+        assert_equal 34, schedule.third[:principal]
+        assert_equal 0, schedule.third[:remaining_balance]
       end
     end
   end
