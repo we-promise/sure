@@ -15,6 +15,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index localizes the Plaid add accounts action" do
+    ensure_tailwind_build
+    @user.update!(locale: "de")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]",
+                  edit_plaid_item_path(plaid_items(:one), add_accounts: true),
+                  text: "Konten hinzufügen",
+                  count: 1
+  end
+
   test "index renders kraken items" do
     kraken_item = kraken_items(:one)
     get accounts_url
