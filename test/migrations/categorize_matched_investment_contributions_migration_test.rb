@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require Rails.root.join("db/migrate/20260729000000_categorize_matched_investment_contributions")
+require Rails.root.join("db/migrate/20260731000000_add_investment_contribution_reporting_support")
 
 class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::TestCase
   include EntriesTestHelper
@@ -21,7 +21,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     updated_at = confirmed_outflow.reload.updated_at
 
     travel 1.second do
-      CategorizeMatchedInvestmentContributions.new.up
+      AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
     end
 
     assert_equal category.id, confirmed_outflow.reload.entryable.category_id
@@ -39,7 +39,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
     assert_no_difference -> { family.categories.count } do
-      CategorizeMatchedInvestmentContributions.new.up
+      AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
     end
 
     assert_nil outflow.reload.entryable.category_id
@@ -54,7 +54,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
-    CategorizeMatchedInvestmentContributions.new.up
+    AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
 
     assert_equal category.id, outflow.reload.entryable.category_id
   end
@@ -68,7 +68,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
-    CategorizeMatchedInvestmentContributions.new.up
+    AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
 
     assert_nil outflow.reload.entryable.category_id
   end
@@ -87,7 +87,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     confirmed_inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
     Transfer.create!(outflow_transaction: confirmed_outflow.entryable, inflow_transaction: confirmed_inflow.entryable, status: "confirmed")
 
-    CategorizeMatchedInvestmentContributions.new.up
+    AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
 
     assert_equal category.id, pending_outflow.reload.entryable.category_id
     assert_nil confirmed_outflow.reload.entryable.category_id
@@ -105,7 +105,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
     Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
-    CategorizeMatchedInvestmentContributions.new.up
+    AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
 
     assert_equal category.id, outflow.reload.entryable.category_id
   end
@@ -127,7 +127,7 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     Transfer.create!(outflow_transaction: backfill_outflow.entryable, inflow_transaction: backfill_inflow.entryable, status: "confirmed")
 
     assert_no_difference -> { family.categories.count } do
-      CategorizeMatchedInvestmentContributions.new.up
+      AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
     end
 
     assert Category.exists?(duplicate_category.id)
