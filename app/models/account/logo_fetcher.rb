@@ -20,7 +20,6 @@ class Account::LogoFetcher
     return unless account.logo_source_auto?
 
     domain = (@expected_domain || account.institution_domain).presence
-    return unless domain
 
     # Do not make any network request if the domain changed while the job
     # was waiting in the queue.
@@ -29,11 +28,14 @@ class Account::LogoFetcher
 
     # Same priority as Account#logo_url: Brandfetch when configured, then the
     # linked provider's own logo, then a favicon.
-    [
-      account.brandfetch_logo_url(domain),
-      account.provider&.logo_url,
-      account.favicon_url(domain)
-    ].each do |url|
+    # If we have a domain, use it for Brandfetch and favicon fallbacks.
+    # Provider logo URLs are independent of domain.
+    urls = []
+    urls << account.brandfetch_logo_url(domain) if domain.present?
+    urls << account.provider&.logo_url
+    urls << account.favicon_url(domain) if domain.present?
+
+    urls.each do |url|
       next if url.blank?
       return if fetch_from_url(url, domain)
     end
