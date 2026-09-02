@@ -80,6 +80,51 @@ class Account::ReconciliationManagerTest < ActiveSupport::TestCase
     end
   end
 
+  test "handles a genuine concurrent double-submit without raising or duplicating" do
+    create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
+
+    # Simulates the race: another request reconciling the same account+date
+    # wins and commits its INSERT in the window between our own
+    # find_existing_valuation_for_date lookup (which therefore still sees
+    # nothing, hence the first `nil`) and our #save! (which then hits the
+    # real partial unique index on entries(account_id, date) for valuations
+    # and raises RecordNotUnique, exactly like the DB would under real
+    # concurrent requests). The rescue then re-runs the same lookup, this
+    # time finding the winner, and retries against it.
+    winning_entry = @account.entries.create!(
+      name: "Test", amount: 1000, date: Date.current,
+      entryable: Valuation.new(kind: "reconciliation"), currency: @account.currency
+    )
+    @manager.stubs(:find_existing_valuation_for_date).returns(nil, winning_entry)
+    Entry.any_instance.stubs(:save!)
+      .raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+      .then.returns(true)
+
+    assert_no_difference "Valuation.count" do
+      result = @manager.reconcile_balance(balance: 1200, date: Date.current)
+
+      assert result.success?
+      assert_equal 1200, result.new_balance
+    end
+  end
+
+  test "a RecordNotUnique with no matching valuation is reported, not silently swallowed" do
+    create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
+
+    # Defensive-branch coverage: if the unique index ever rejects an insert
+    # for a reason other than "another request reconciling this exact
+    # account+date already won," we must not pretend it succeeded.
+    @manager.stubs(:find_existing_valuation_for_date).returns(nil)
+    Entry.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference "Valuation.count" do
+      result = @manager.reconcile_balance(balance: 1200, date: Date.current)
+
+      assert_not result.success?
+      assert_match "duplicate key value violates unique constraint", result.error_message
+    end
+  end
+
   test "dry run does not persist account" do
     create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
 

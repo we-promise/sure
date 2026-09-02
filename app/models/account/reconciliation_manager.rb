@@ -27,6 +27,28 @@ class Account::ReconciliationManager
       new_balance: prepared_valuation.amount,
       error_message: nil
     )
+  rescue ActiveRecord::RecordNotUnique => e
+    # Concurrent-request backstop: another request reconciling the same
+    # account+date won the race and committed its valuation in the window
+    # between our `find_by(date:)` lookup above (in #prepare_reconciliation)
+    # and our own #save!. The partial unique index on entries(account_id,
+    # date) scoped to valuations lets exactly one INSERT win. Retry once
+    # against the now-existing row so the request that lost the race still
+    # applies its balance, instead of surfacing a raw DB error to the user.
+    # Only retry when we weren't already targeting a specific row (a caller
+    # that passed existing_valuation_entry explicitly hit this for some
+    # other reason, e.g. a changed date colliding with a different
+    # valuation - not the race this rescue is meant to handle).
+    winning_valuation = existing_valuation_entry.nil? && find_existing_valuation_for_date(date)
+
+    if winning_valuation
+      reconcile_balance(balance: balance, date: date, dry_run: dry_run, existing_valuation_entry: winning_valuation)
+    else
+      ReconciliationResult.new(
+        success?: false,
+        error_message: e.message
+      )
+    end
   rescue => e
     ReconciliationResult.new(
       success?: false,
@@ -82,7 +104,7 @@ class Account::ReconciliationManager
 
     def prepare_reconciliation(balance, date, existing_valuation)
       valuation_record = existing_valuation ||
-                         account.entries.valuations.find_by(date: date) || # In case of conflict, where existing valuation is not passed as arg, but one exists
+                         find_existing_valuation_for_date(date) || # In case of conflict, where existing valuation is not passed as arg, but one exists
                          account.entries.build(
                                   name: Valuation.build_reconciliation_name(account.accountable_type),
                                   entryable: Valuation.new(kind: "reconciliation")
@@ -95,6 +117,10 @@ class Account::ReconciliationManager
       )
 
       valuation_record
+    end
+
+    def find_existing_valuation_for_date(date)
+      account.entries.valuations.find_by(date: date)
     end
 
     def derived_cash_balance(date:, total_balance:)
