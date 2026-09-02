@@ -29,6 +29,7 @@ class CreateTradeRepublicItemsAndAccounts < ActiveRecord::Migration[7.2]
       t.jsonb :raw_timeline_payload, default: [], null: false
       t.datetime :last_positions_sync
       t.boolean :holdings_snapshot_complete, default: false, null: false
+      t.string :kind, default: "portfolio", null: false
 
       t.timestamps
     end
@@ -37,5 +38,7 @@ class CreateTradeRepublicItemsAndAccounts < ActiveRecord::Migration[7.2]
       unique: true,
       where: "(trade_republic_account_id IS NOT NULL)",
       name: "index_trade_republic_accounts_on_item_and_account_id"
+
+    add_index :trade_republic_accounts, [ :trade_republic_item_id, :kind ], unique: true
   end
 end
