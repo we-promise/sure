@@ -632,13 +632,19 @@ class Account < ApplicationRecord
   private
 
     def should_queue_logo_fetch?
-      logo_source_auto? && (
-        saved_change_to_institution_domain? ||
+      return false unless logo_source_auto?
+
+      # Only queue if there's actually a source to fetch from
+      has_domain = institution_domain.present?
+      has_provider_logo = provider&.logo_url.present?
+      return false unless has_domain || has_provider_logo
+
+      # Queue on relevant changes or if no logo attached yet
+      saved_change_to_institution_domain? ||
         saved_change_to_logo_source? ||
         !logo.attached? ||
         # Allow fetching from providers that expose logo_url but have no institution domain
-        (institution_domain.blank? && provider&.logo_url.present?)
-      )
+        (institution_domain.blank? && has_provider_logo)
     end
 
     def mark_manual_if_logo_uploaded

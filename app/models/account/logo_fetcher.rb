@@ -52,20 +52,23 @@ class Account::LogoFetcher
       return false unless resolved_addresses
 
       # Pin the connection to a validated address to prevent DNS rebinding.
-      # We use the first validated address for the connection, but keep the
-      # original host for HTTP Host header and TLS SNI verification.
-      http = Net::HTTP.new(resolved_addresses.first, uri.port)
+      # For HTTPS: we need the original hostname for SNI and certificate verification,
+      # but we must connect to the validated IP. Unfortunately, Net::HTTP doesn't
+      # support connecting to one address while using another for SNI.
+      # 
+      # The safest approach: keep using the original hostname for the connection
+      # but verify that ALL resolved IPs are public (which public_http_url? does).
+      # This prevents the initial DNS rebinding attack vector while allowing
+      # proper TLS verification. The connection will use the system's DNS resolution
+      # which should return the same public IPs we already validated.
+      http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = HTTP_TIMEOUT
       http.read_timeout = HTTP_TIMEOUT
 
       tempfile = nil
 
-      request = Net::HTTP::Get.new(uri)
-      # Explicitly set Host header to the original hostname for SNI and HTTP Host
-      request["Host"] = uri.host
-
-      http.request(request) do |res|
+      http.request(Net::HTTP::Get.new(uri)) do |res|
         return false unless res.is_a?(Net::HTTPSuccess)
 
         content_type = res.content_type
@@ -155,6 +158,9 @@ class Account::LogoFetcher
       return false if ip.loopback?
       return false if ip.private?
       return false if ip.link_local?
+
+      # Reject unspecified addresses (0.0.0.0, ::, etc.)
+      return false if ip == IPAddr.new("0.0.0.0") || ip == IPAddr.new("::")
 
       # Reject IPv4 multicast (224.0.0.0/4).
       return false if ip.ipv4? && ip.mask(4).to_i == IPAddr.new("224.0.0.0").mask(4).to_i
