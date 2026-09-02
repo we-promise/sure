@@ -78,6 +78,35 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "each leg gets a distinct idempotency key so fee legs don't collide with their primary leg" do
+    # Regression test: the outflow/source-fee share source_account, and the
+    # inflow/destination-fee share destination_account. The unique index is
+    # scoped per account_id, so without role-specific suffixes a fee leg
+    # would collide with its primary leg under the same idempotency key.
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "Test Transfer",
+        source_fee_amount: 2,
+        destination_fee_amount: 3,
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    transfer = Transfer.order(:created_at).last
+    keys = [
+      transfer.outflow_transaction.entry.idempotency_key,
+      transfer.inflow_transaction.entry.idempotency_key,
+      transfer.fee_transactions.map { |t| t.entry.idempotency_key }
+    ].flatten
+
+    assert_equal keys.uniq.length, keys.length
+    assert keys.all?(&:present?)
+  end
+
   test "handles a genuine concurrent double-submit without raising or duplicating" do
     idempotency_key = SecureRandom.uuid
     from_account = accounts(:depository)
