@@ -8,12 +8,11 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
-  # Track logo source: a logo uploaded through logo= (form/params) is treated
-  # as a manual upload unless the save explicitly assigns a logo_source. The
-  # background fetcher attaches through attach_fetched_logo, which opts out of
-  # that (see set_logo_source and logo_upload_in_this_save?).
-  before_save :set_logo_source,
-              if: -> { logo.attached? && !@attaching_fetched_logo && logo_upload_in_this_save? }
+
+  # Mark logo_source as "manual" when a logo is uploaded without an
+  # explicit source selection. This ensures uploads are prioritized
+  # over auto-fetched logos.
+  before_save :mark_manual_if_logo_uploaded, if: -> { logo.attached? && !@attaching_fetched_logo && logo_upload_in_this_save? && !@logo_source_explicitly_set }
 
   # Queue logo fetch after save to avoid blocking the save operation
   after_save_commit :queue_logo_fetch, if: :should_queue_logo_fetch?
@@ -121,6 +120,14 @@ class Account < ApplicationRecord
 
   # Track whether logo is manually uploaded or auto-fetched
   enum :logo_source, { auto: "auto", manual: "manual" }, default: "auto", prefix: :logo_source
+
+  # Track whether logo_source was explicitly set by the user.
+  # This allows the before_save callback to distinguish between
+  # "user chose auto" and "user didn't specify".
+  def logo_source=(value)
+    @logo_source_explicitly_set = true
+    super
+  end
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -547,25 +554,23 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    # A blob can be orphaned — the DB row exists but the file was never
-    # written (or was deleted). When that happens, treat the logo as
-    # absent so the auto-fetch fallback chain kicks in instead of
-    # rendering a broken image tag.
-    if logo.attached? && logo_blob_accessible?
+    # Manual source: prioritize the user-uploaded logo, then fall back to
+    # the auto-fetch chain if the upload is missing or inaccessible.
+    if logo_source_manual? && logo.attached? && logo_blob_accessible?
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
-    # No usable attached logo (not attached, or the file is missing on
-    # disk). Fall back to the auto-fetch chain so the user always sees
-    # SOME icon — for a manual account whose upload was lost, this surfaces
-    # the institution logo instead of a broken <img> tag.
+    # Auto source (or manual with no usable upload): use the auto-fetch
+    # chain. When logo_source is "auto", the uploaded logo is intentionally
+    # ignored - "Auto" should not take the upload into account.
     # Account::LogoFetcher mirrors this priority.
     brandfetch = brandfetch_logo_url
     return brandfetch if brandfetch.present?
     return provider.logo_url if provider&.logo_url.present?
 
     favicon_url
-end
+  end
+
 
   def favicon_url(domain = institution_domain)
     return nil unless domain.present?
@@ -590,7 +595,10 @@ end
     # or favicon URL instead of serving the old institution's logo
     # indefinitely. Only runs while logo_source is auto, so manual uploads
     # are never touched here.
-    if saved_change_to_institution_domain? && logo.attached?
+    #
+    # Only purge if the domain actually changed (not on create, where the
+    # domain goes from nil to the initial value).
+    if saved_change_to_institution_domain? && logo.attached? && institution_domain_before_last_save.present?
       logo.purge
     end
 
@@ -618,7 +626,13 @@ end
     return false if blob.nil?
 
     blob.service.exist?(blob.key)
+  rescue Aws::S3::Errors::ServiceError, Google::Cloud::Error => e
+    Rails.logger.warn(
+      "Account logo accessibility check failed for account #{id}: #{e.class} - #{e.message}"
+    )
+    false
   end
+
 
   private
 
@@ -630,16 +644,11 @@ end
       )
     end
 
-    def set_logo_source
-      # An explicitly assigned logo_source always wins (form submissions send
-      # one). Otherwise a logo uploaded through logo= is a human upload: mark
-      # it "manual" so FetchLogoJob can never replace it with an institution
-      # logo later. The enum's "auto" default never registers as a change,
-      # which would otherwise let a default swallow an upload here.
-      return if logo_source_changed?
-
+    def mark_manual_if_logo_uploaded
       self.logo_source = "manual"
     end
+
+
 
     # True when this save carries an attachment that is not yet persisted for
     # the account. A params upload defers its blob to the save (pending blob
