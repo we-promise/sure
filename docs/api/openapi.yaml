@@ -7350,6 +7350,9 @@ paths:
                       type: number
                       description: Amount (required for dividend, deposit, withdrawal,
                         interest, fee)
+                    fee:
+                      type: number
+                      description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
                       enum:

@@ -166,6 +166,10 @@ RSpec.describe 'API V1 Trades', type: :request do
                 type: :number,
                 description: 'Amount (required for dividend, deposit, withdrawal, interest, fee)'
               },
+              fee: {
+                type: :number,
+                description: 'Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)'
+              },
               type: {
                 type: :string,
                 enum: %w[buy sell sweep_in sweep_out dividend reinvestment interest fee deposit withdrawal],

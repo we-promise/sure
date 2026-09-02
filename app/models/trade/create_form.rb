@@ -114,14 +114,14 @@ class Trade::CreateForm
     # Interest in an investment account is always a Trade.
     # Falls back to a synthetic cash security when none is selected.
     def create_interest_income
-      sec = ticker_present? ? security : Security.cash_for(account)
+      sec = ticker_present? ? security : Security.cash_for(account, currency: currency)
       label = CASH_TRADE_LABELS.fetch("interest")
       name = sec.cash? ? label : "#{label}: #{sec.ticker}"
       create_income_trade(sec: sec, label: label, name: name)
     end
 
     def create_fee
-      sec = ticker_present? ? security : Security.cash_for(account)
+      sec = ticker_present? ? security : Security.cash_for(account, currency: currency)
       label = CASH_TRADE_LABELS.fetch("fee")
       name = sec.cash? ? label : "#{label}: #{sec.ticker}"
       create_income_trade(sec: sec, label: label, name: name, amount_sign: 1)
