@@ -7,7 +7,6 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   def initialize(trade_republic_account)
     @trade_republic_account = trade_republic_account
-    @category_matcher = TradeRepublicAccount::CategoryMatcher.new(trade_republic_account.trade_republic_item.family)
   end
 
   def process
@@ -184,9 +183,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def category_for(event, label)
-      return if label.in?([ t("contribution"), t("withdrawal"), t("interest"), t("dividend") ])
-
-      @category_matcher.category_for([ event[:title], event[:subtitle] ].compact.join(" "))
+      nil
     end
 
     def transfer_event?(event)
