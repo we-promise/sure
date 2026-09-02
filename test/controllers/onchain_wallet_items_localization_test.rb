@@ -101,7 +101,7 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Vermögenswerte zum Verfolgen auswählen", response.body
     assert_match "Wallets erhalten Spam-Airdrops", response.body
-    assert_match "Kein Preis verfügbar; wird nur nach Menge verfolgt", response.body
+    assert_match "Kein Preis verfügbar; wird nur anhand der Menge verfolgt", response.body
     assert_match "USDC", response.body
   end
 

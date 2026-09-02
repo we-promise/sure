@@ -55,5 +55,5 @@ de:
       cancel: Abbrechen
       explanation: Vermögenswerte mit bekanntem Preis sind vorausgewählt. Alle anderen bleiben abgewählt – Wallets erhalten Spam-Airdrops, und bei deren Verfolgung wird kein Wert angezeigt.
       native: Nativ
-      no_price: Kein Preis verfügbar; wird nur nach Menge verfolgt
+      no_price: Kein Preis verfügbar; wird nur anhand der Menge verfolgt
       nothing_found: Diese Adresse enthält in diesem Netzwerk nichts, was wir erkennen können.
