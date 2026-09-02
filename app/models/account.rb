@@ -120,7 +120,7 @@ class Account < ApplicationRecord
   has_many :account_statements
 
   # Track whether logo is manually uploaded or auto-fetched
-  enum :logo_source, { auto: "auto", manual: "manual" }, default: "auto", prefix: :logo_source
+  enum :logo_source, { auto: "auto", manual: "manual" }, default: "auto", prefix: :logo_source, validate: true
 
   # Track whether logo_source was explicitly set by the user.
   # This allows the before_save callback to distinguish between
