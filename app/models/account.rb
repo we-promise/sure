@@ -654,7 +654,7 @@ class Account < ApplicationRecord
     end
 
     def mark_manual_if_logo_uploaded
-      self.logo_source = "manual"
+      write_attribute(:logo_source, "manual")
     end
 
 
