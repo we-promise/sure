@@ -462,21 +462,24 @@ class Account < ApplicationRecord
   
   def purge_manual_logo_on_auto_switch
     # Always purge manual logo when switching from manual to auto source
-    # This happens independently of fetch-source availability
-    if saved_change_to_logo_source? && logo_source_auto? && logo.attached?
+    # This happens independently of fetch-source availability.
+    # Check if logo_source changed from manual to auto by comparing with previous value
+    if logo_source_auto? && logo.attached? && logo_source_before_last_save == "manual"
       old_blob = logo.blob
       logo.detach
       old_blob.purge_later
     end
   end
 
+  # Callback condition: should we purge manual logo on auto switch?
+  # Must be public because it's used in after_save_commit callback
   def should_purge_manual_logo?
-    saved_change_to_logo_source? && logo_source_auto? && logo.attached?
+    logo_source_auto? && logo.attached?
   end
 
   private
 
-      def create_from_crypto_exchange_account(provider_account, family:)
+  def create_from_crypto_exchange_account(provider_account, family:)
         attributes = {
           family: family,
           name: provider_account.name,
@@ -647,21 +650,22 @@ class Account < ApplicationRecord
     @attaching_fetched_logo = false
   end
 
+  # Callback condition: should we queue logo fetch?
+  # Must be public because it's used in after_save_commit callback
+  def should_queue_logo_fetch?
+    return false unless logo_source_auto?
+
+    # Only queue if there's actually a source to fetch from
+    has_domain = institution_domain.present?
+    has_provider_logo = provider&.logo_url.present?
+    return false unless has_domain || has_provider_logo
+    # Queue on relevant changes or if no logo attached yet
+    saved_change_to_institution_domain? ||
+      saved_change_to_logo_source? ||
+      !logo.attached?
+  end
+
   private
-
-    def should_queue_logo_fetch?
-      return false unless logo_source_auto?
-
-      # Only queue if there's actually a source to fetch from
-      has_domain = institution_domain.present?
-      has_provider_logo = provider&.logo_url.present?
-      return false unless has_domain || has_provider_logo
-      # Queue on relevant changes or if no logo attached yet
-      saved_change_to_institution_domain? ||
-        saved_change_to_logo_source? ||
-        !logo.attached?
-
-    end
 
     def mark_manual_if_logo_uploaded
       write_attribute(:logo_source, "manual")
@@ -696,6 +700,7 @@ class Account < ApplicationRecord
       end
     end
 
+    def clean_institution_domain
       return unless read_attribute(:institution_domain).present?
 
       value = read_attribute(:institution_domain).strip
