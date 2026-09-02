@@ -678,7 +678,8 @@ class Account < ApplicationRecord
       return unless institution_domain.present?
 
       value = institution_domain.strip
-      value = "//#{value}" unless value.match?(%r{\A[a-z][a-z0-9+\-.]*://}i)
+      # Case-insensitive scheme check: handle HTTP://, https://, HTTP://, HTTPS://, etc.
+      value = "//#{value}" unless value.match?(/\Ahttps?:\/\//i)
 
       domain = URI.parse(value).host&.downcase&.sub(/\Awww\./, "")
 
