@@ -8,6 +8,54 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  # Bills has always linked out to transactions. Until now nothing linked back,
+  # so a transaction that settled a bill was a dead end. The link-back is part
+  # of the preview-gated bills surface, so the viewer needs the flag.
+  test "a transaction shows the bill it paid, and links to it" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Watson Property", response.body
+    assert_match bill_path(series), response.body, "the bill must be reachable from the transaction"
+  end
+
+  test "the bill link-back stays hidden without preview access" do
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match bill_path(series), response.body,
+      "the preview-gated bill link must not render for a user without the flag"
+  end
+
   test "index groups subcategories immediately after their parent in the category filter" do
     get transactions_url
     assert_response :success
