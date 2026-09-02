@@ -118,6 +118,78 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2245.22"), payment.amount
   end
 
+  test "monthly payment is nil, not zero, when the loan is not amortizable" do
+    no_rate_loan = Account.create! \
+      family: @family,
+      name: "No Rate Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "fixed",
+        interest_rate: nil,
+        term_months: 360
+      )
+
+    schedule = no_rate_loan.loan.amortization_schedule
+    assert_nil schedule.monthly_payment
+  end
+
+  test "a rate segment does not amortize as if the loan ended when the rate changes again" do
+    # Same rate re-registered partway through the term, purely to force a
+    # segment split with no change in rate value -- isolates the "amortize
+    # over this segment's own length" bug from any rate-driven difference.
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan Long Segment",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: 3.5,
+        term_months: 360,
+        start_date: Date.new(2020, 1, 1)
+      )
+    loan = variable_loan.loan
+    loan.add_variable_rate_change(loan.start_date + 300.months, 3.5)
+
+    schedule = loan.amortization_schedule
+    first_payment = schedule.payments.first
+
+    # Segment 1 covers only 300 of the 360 payments, but the level payment
+    # must still amortize the full 360-payment term (matching the fixed-rate
+    # loan's payment at the same rate/principal/term), not a 300-payment
+    # payoff -- which would be a substantially larger payment.
+    assert_equal BigDecimal("2245.22"), first_payment[:payment_amount]
+  end
+
+  test "a rate-change segment landing in a short calendar month is not skipped" do
+    # Feb 1 -> Mar 1 is 28-29 days, under the ~30.44-day average a single
+    # 1.month duration division would round down to 0 payments and silently
+    # drop this segment's payment from the schedule.
+    variable_loan = Account.create! \
+      family: @family,
+      name: "Variable Loan Short Month",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        rate_type: "variable",
+        interest_rate: 3.5,
+        term_months: 360,
+        start_date: Date.new(2023, 1, 1)
+      )
+    loan = variable_loan.loan
+    loan.add_variable_rate_change(Date.new(2023, 3, 1), 4.5)
+
+    schedule = loan.amortization_schedule
+    payments = schedule.payments
+
+    assert_equal 360, payments.length
+    assert_equal Date.new(2023, 2, 1), payments[0][:payment_date]
+    assert_equal 3.5, payments[0][:interest_rate].to_f
+    assert_equal Date.new(2023, 3, 1), payments[1][:payment_date]
+    assert_equal 4.5, payments[1][:interest_rate].to_f
+  end
+
   test "zero interest rate calculates straight line principal" do
     zero_interest_loan = Account.create! \
       family: @family,

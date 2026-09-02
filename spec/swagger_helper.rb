@@ -1744,6 +1744,71 @@ RSpec.configure do |config|
                 properties: reset_count_keys.index_with { { type: :integer, minimum: 0 } }
               }
             }
+          },
+          AmortizationSchedulePayment: {
+            type: :object,
+            required: %w[payment_number payment_date payment_amount principal_payment interest_payment beginning_balance ending_balance interest_rate],
+            properties: {
+              payment_number: { type: :integer, minimum: 1 },
+              payment_date: { type: :string, format: :date },
+              payment_amount: { type: :string },
+              principal_payment: { type: :string },
+              interest_payment: { type: :string },
+              beginning_balance: { type: :string },
+              ending_balance: { type: :string },
+              interest_rate: { type: :number, description: 'Rate effective for this payment, as a percentage (e.g. 3.5 for 3.5%)' }
+            }
+          },
+          AmortizationScheduleResponse: {
+            type: :object,
+            required: %w[loan schedule pagination payments],
+            properties: {
+              loan: {
+                type: :object,
+                required: %w[id account_id name rate_type interest_rate term_months original_balance currency],
+                properties: {
+                  id: { type: :string, format: :uuid },
+                  account_id: { type: :string, format: :uuid },
+                  name: { type: :string },
+                  rate_type: { type: :string, enum: %w[fixed variable] },
+                  interest_rate: { type: :number },
+                  term_months: { type: :integer, minimum: 1 },
+                  original_balance: { type: :string },
+                  currency: { type: :string },
+                  next_rate_change_date: {
+                    type: :string,
+                    format: :date,
+                    nullable: true,
+                    description: 'Next future date a variable-rate change takes effect, or null for fixed-rate loans and variable-rate loans with no upcoming change.'
+                  }
+                }
+              },
+              schedule: {
+                type: :object,
+                required: %w[monthly_payment total_interest total_cost payoff_date payment_count has_rate_changes],
+                properties: {
+                  monthly_payment: { type: :string },
+                  total_interest: { type: :string },
+                  total_cost: { type: :string },
+                  payoff_date: { type: :string, format: :date, nullable: true },
+                  payment_count: { type: :integer, minimum: 0 },
+                  has_rate_changes: { type: :boolean, description: 'True for variable-rate loans with at least one recorded rate change.' }
+                }
+              },
+              pagination: {
+                type: :object,
+                required: %w[limit offset total_count],
+                properties: {
+                  limit: { type: :integer, minimum: 1 },
+                  offset: { type: :integer, minimum: 0 },
+                  total_count: { type: :integer, minimum: 0 }
+                }
+              },
+              payments: {
+                type: :array,
+                items: { '$ref' => '#/components/schemas/AmortizationSchedulePayment' }
+              }
+            }
           }
         }
       }

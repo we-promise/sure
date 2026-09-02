@@ -137,7 +137,12 @@ class Loan
 
         payment_num = 1
         segments.each do |segment|
-          segment_payment = calculate_segment_payment(segment, balance)
+          # Amortize over the payments remaining through loan maturity, not just
+          # this segment's own length -- otherwise a segment before the last one
+          # gets treated as if the loan ended when the rate changes again, which
+          # produces a payment far larger than the correct level payment.
+          remaining_payments = loan.term_months - payment_num + 1
+          segment_payment = calculate_segment_payment(segment, balance, remaining_payments)
 
           segment[:payment_count].times do
             break if balance <= 0
@@ -235,12 +240,12 @@ class Loan
         segments
       end
 
-      # Calculate the payment amount for a segment with a specific rate
-      def calculate_segment_payment(segment, balance)
-        # For simplicity, use the rate from the segment
+      # Calculate the payment amount for a segment with a specific rate,
+      # amortized over remaining_payments -- the payments left through loan
+      # maturity, not just this segment's own length.
+      def calculate_segment_payment(segment, balance, remaining_payments)
         annual_rate = segment[:rate] / 100.0
         monthly_rate = annual_rate / 12.0
-        remaining_payments = segment[:payment_count]
 
         if monthly_rate.zero?
           (balance / remaining_payments).round(currency_precision)

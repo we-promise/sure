@@ -7,6 +7,7 @@ json.loan do
   json.term_months loan.term_months
   json.original_balance loan.original_balance.to_s
   json.currency loan.account.currency
+  json.next_rate_change_date loan.next_rate_change_date
 end
 
 json.schedule do
@@ -15,6 +16,7 @@ json.schedule do
   json.total_cost schedule.total_cost.to_s
   json.payoff_date schedule.payoff_date
   json.payment_count schedule.payment_count
+  json.has_rate_changes schedule.has_rate_changes?
 end
 
 json.pagination do
