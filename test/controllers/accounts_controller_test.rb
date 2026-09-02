@@ -80,7 +80,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do
-    PlaidItem.any_instance.expects(:request_transactions_refresh_later).once
+    sequence = sequence("manual sync all")
+    Family.any_instance
+      .expects(:request_plaid_transactions_refreshes_later)
+      .with(source: "AccountsController#sync_all")
+      .in_sequence(sequence)
+    Family.any_instance.expects(:sync_later).once.in_sequence(sequence)
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
+  end
+
+  test "sync all continues when Plaid refresh orchestration cannot be enqueued" do
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
     Family.any_instance.expects(:sync_later).once
 
     post sync_all_accounts_url

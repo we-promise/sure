@@ -182,19 +182,14 @@ class Family < ApplicationRecord
   # sync after the cursor advances (or after the bounded polling fallback), so
   # fresh transactions are imported even if the baseline family sync runs first.
   def request_plaid_transactions_refreshes_later(source:)
-    plaid_items.syncable.find_each do |plaid_item|
-      plaid_item.request_transactions_refresh_later
-    rescue => error
-      DebugLogEntry.capture(
-        category: "provider_sync",
-        level: "warn",
-        message: "Plaid transaction refresh could not be enqueued; continuing with normal sync",
-        source: source,
-        provider_key: "plaid",
-        family: self,
-        metadata: { error_class: error.class.name }
-      )
-    end
+    enqueued_job = PlaidTransactionsRefreshAllJob.perform_later(self, source: source)
+    return enqueued_job if enqueued_job
+
+    capture_plaid_refresh_enqueue_failure(source:, error_class: "ActiveJob::EnqueueError")
+    nil
+  rescue => error
+    capture_plaid_refresh_enqueue_failure(source:, error_class: error.class.name)
+    nil
   end
 
   def custom_enabled_currencies?
@@ -218,6 +213,23 @@ class Family < ApplicationRecord
   def secondary_enabled_currency_objects(extra: [])
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
   end
+
+  def capture_plaid_refresh_enqueue_failure(source:, error_class:)
+    DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "warn",
+      message: "Plaid transaction refresh could not be enqueued; continuing with normal sync",
+      source: source,
+      provider_key: "plaid",
+      family: self,
+      metadata: { error_class: error_class }
+    )
+  rescue => logging_error
+    Rails.logger.warn(
+      "Plaid refresh enqueue diagnostic failed: #{logging_error.class.name}"
+    )
+  end
+  private :capture_plaid_refresh_enqueue_failure
 
 
   def moniker_label

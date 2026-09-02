@@ -16,7 +16,7 @@ class SyncAllProvidersJobTest < ActiveJob::TestCase
     family = families(:dylan_family)
 
     Family.stubs(:find_by).with(id: family.id).returns(family)
-    family.stubs(:request_plaid_transactions_refreshes_later)
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
     family.expects(:sync_later)
 
     SyncAllProvidersJob.perform_now(family.id)
