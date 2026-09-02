@@ -59,24 +59,32 @@ module AccountableResource
   end
 
   def update
-    # Validate non-balance attributes first, before making any balance changes.
-    # This ensures we roll back ledger changes if logo validation fails.
+    # Assign update_params without persisting first, then wrap the account save
+    # and balance update in a single transaction to ensure atomicity.
     update_params = account_params.except(:return_to, :balance, :opening_balance_date)
-    
+
     # Handle balance update if the value actually changed
     if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
-      # Validate remaining attributes first
-      unless @account.update(update_params)
-        @error_message = @account.errors.full_messages.join(", ")
-        render :edit, status: :unprocessable_entity
-        return
-      end
+      # Wrap both operations in a transaction
+      Account.transaction do
+        # First assign and validate all attributes
+        @account.assign_attributes(update_params)
+        unless @account.valid?
+          @error_message = @account.errors.full_messages.join(", ")
+          render :edit, status: :unprocessable_entity
+          return
+        end
 
-      result = @account.set_current_balance(account_params[:balance].to_d)
-      unless result.success?
-        @error_message = result.error_message
-        render :edit, status: :unprocessable_entity
-        return
+        # Save the account first
+        @account.save!
+
+        # Then update the balance
+        result = @account.set_current_balance(account_params[:balance].to_d)
+        unless result.success?
+          @error_message = result.error_message
+          render :edit, status: :unprocessable_entity
+          raise ActiveRecord::Rollback
+        end
       end
     else
       unless @account.update(update_params)
