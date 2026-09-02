@@ -23,6 +23,8 @@ class Holding < ApplicationRecord
   validates :external_id, uniqueness: { scope: :account_id }, allow_blank: true
   validates :cost_basis_source, inclusion: { in: COST_BASIS_SOURCES }, allow_nil: true
 
+  before_validation :derive_manual_amount_from_price, if: :should_derive_manual_amount_from_price?
+
   scope :chronological, -> { order(:date) }
   scope :for, ->(security) { where(security_id: security).order(:date) }
   scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
@@ -262,6 +264,14 @@ class Holding < ApplicationRecord
       Money.new(amount, currency).exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
       amount
+    end
+
+    def should_derive_manual_amount_from_price?
+      account_provider_id.nil? && external_id.blank? && !will_save_change_to_amount? && (will_save_change_to_qty? || will_save_change_to_price?)
+    end
+
+    def derive_manual_amount_from_price
+      self.amount = qty * price if qty.present? && price.present?
     end
 
     def calculate_trend

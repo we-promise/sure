@@ -36,6 +36,19 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta 0.75, foreign_holding.weight, 0.001
   end
 
+  test "recalculates manual market value when price changes" do
+    @amzn.update!(price: 250)
+
+    assert_equal BigDecimal("3750.0"), @amzn.amount
+    assert_equal Money.new(3750, "USD"), @amzn.amount_money
+  end
+
+  test "keeps explicit market value when price changes" do
+    @amzn.update!(price: 250, amount: 4000)
+
+    assert_equal BigDecimal("4000.0"), @amzn.amount
+  end
+
   test "calculates average cost basis" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
