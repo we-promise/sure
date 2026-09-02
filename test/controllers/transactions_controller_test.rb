@@ -131,6 +131,31 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(first_entry.account)
   end
 
+  test "the idempotency key does not mark the created transaction as provider-linked" do
+    # Regression test: the idempotency key must not be stored in
+    # external_id/source (Entry#linked? = external_id.present?), or a plain
+    # manual entry would incorrectly look provider-synced - disabling its
+    # editable fields in the UI and hiding it from future provider dedup.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_not created_entry.linked?
+    assert_nil created_entry.external_id
+    assert_nil created_entry.source
+  end
+
   test "handles a genuine concurrent double-submit without raising or duplicating" do
     idempotency_key = SecureRandom.uuid
 
@@ -138,12 +163,12 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # and commits its INSERT in the window between our pre-check (which
     # therefore still sees nothing, hence the first `nil`) and our own
     # #save (which then hits the real partial unique index on
-    # entries(account_id, source, external_id) and raises RecordNotUnique,
+    # entries(account_id, idempotency_key) and raises RecordNotUnique,
     # exactly like the DB would under real concurrent requests). The rescue
     # then re-runs the same lookup, this time finding the winner.
     winning_entry = @entry.account.entries.create!(
       name: "New transaction", date: Date.current, currency: "USD", amount: 100,
-      source: "web_form", external_id: idempotency_key,
+      idempotency_key: idempotency_key,
       entryable: Transaction.new
     )
     TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil, winning_entry)

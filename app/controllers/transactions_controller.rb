@@ -1,12 +1,6 @@
 class TransactionsController < ApplicationController
   include EntryableResource
 
-  # Distinguishes manually-created web form entries in the shared
-  # entries(account_id, source, external_id) uniqueness index from entries
-  # tagged by provider importers (e.g. "simplefin", "wise") or the public API
-  # (source "api"), which each use the same columns for their own idempotency.
-  MANUAL_FORM_SOURCE = "web_form"
-
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
@@ -594,11 +588,16 @@ class TransactionsController < ApplicationController
     def entry_params_with_idempotency_key(idempotency_key)
       return entry_params unless idempotency_key
 
-      entry_params.merge(source: MANUAL_FORM_SOURCE, external_id: idempotency_key)
+      # A dedicated column, deliberately not external_id/source: those are
+      # provider-linkage fields (Entry#linked? = external_id.present?), and
+      # reusing them here would make a manual entry look provider-synced -
+      # disabling its date/nature/amount/currency fields in the editor, and
+      # hiding it from future provider dedup matching.
+      entry_params.merge(idempotency_key: idempotency_key)
     end
 
     def find_duplicate_manual_entry(account, idempotency_key)
-      account.entries.find_by(source: MANUAL_FORM_SOURCE, external_id: idempotency_key)
+      account.entries.find_by(idempotency_key: idempotency_key)
     end
 
     # The hidden "entry[idempotency_key]" field is rendered fresh (a random
