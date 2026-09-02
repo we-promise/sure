@@ -202,6 +202,17 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
     assert_match(/suggested/, result[:hint])
   end
 
+  # A filter that silently answers a different question than it was asked is
+  # worse than an error: due_within_days: 0 used to clamp to 1.
+  test "an out-of-range due_within_days is rejected, not silently adjusted" do
+    create_series(name: "Rent", amount: 2150)
+
+    assert_match(/between 1 and 365/, call_tool("due_within_days" => 0)[:error])
+    assert_match(/between 1 and 365/, call_tool("due_within_days" => "soon")[:error])
+    assert_match(/between 1 and 365/, call_tool("due_within_days" => 400)[:error])
+    assert_nil call_tool("due_within_days" => 30)[:error]
+  end
+
   private
 
     def call_tool(params = {})

@@ -66,7 +66,7 @@ class Assistant::Function::UpdateBill < Assistant::Function
   def call(params = {})
     return recurring_disabled_result if recurring_disabled?
 
-    series, error = find_series(params["bill_id"])
+    series, error = find_writable_series(params["bill_id"])
     return error if error
 
     changed = []
@@ -125,10 +125,15 @@ class Assistant::Function::UpdateBill < Assistant::Function
         }
       end
 
-      if params["bill_type"].presence_in(EDITABLE_BILL_TYPES)
-        series.bill_type = params["bill_type"]
-        changed << "bill_type"
+      unless params["bill_type"].presence_in(EDITABLE_BILL_TYPES)
+        return {
+          error: "#{params["bill_type"].inspect} is not a kind this tool can set",
+          hint: "Use one of: #{EDITABLE_BILL_TYPES.join(', ')}."
+        }
       end
+
+      series.bill_type = params["bill_type"]
+      changed << "bill_type"
       nil
     end
 
@@ -158,18 +163,27 @@ class Assistant::Function::UpdateBill < Assistant::Function
       nil
     end
 
+    # Writable, not merely visible: attaching a series to an account changes
+    # what that account's owners see, so a read-only share is not a
+    # destination (same contract as the edit dialog's account resolution).
     def apply_account(series, params, changed)
       return nil unless params.key?("account_name")
 
-      account = user.accessible_accounts.find_by(name: params["account_name"])
-      if account.nil?
+      matches = Account.writable_by(user).where(name: params["account_name"]).limit(2).to_a
+      if matches.empty?
         return {
-          error: "No account named #{params["account_name"].inspect}",
-          hint: "Call get_accounts and retry once with the exact account name."
+          error: "No account named #{params["account_name"].inspect} that you can add bills to",
+          hint: "Call get_accounts and retry once with the exact name of a writable account."
+        }
+      end
+      if matches.size > 1
+        return {
+          error: "More than one account is named #{params["account_name"].inspect}",
+          hint: "Ask the user which one they mean; this tool cannot pick between namesakes."
         }
       end
 
-      series.account = account
+      series.account = matches.first
       changed << "account"
       nil
     end
@@ -184,6 +198,8 @@ class Assistant::Function::UpdateBill < Assistant::Function
         return nil
       end
 
+      # Category namesakes cannot exist: names are unique per family
+      # (index_categories_on_family_id_and_name), so find_by is unambiguous.
       category = family.categories.find_by(name: name)
       if category.nil?
         return {
@@ -205,7 +221,11 @@ class Assistant::Function::UpdateBill < Assistant::Function
       case params["status"]
       when "active" then series.status = "active"
       when "paused" then series.status = "inactive"
-      else return nil
+      else
+        return {
+          error: "#{params["status"].inspect} is not a status this tool can set",
+          hint: "Use active or paused."
+        }
       end
       changed << "status"
       nil
@@ -214,7 +234,28 @@ class Assistant::Function::UpdateBill < Assistant::Function
     # An AI-applied cadence is user intent by proxy: pin it so detection
     # cannot quietly move it back, exactly as the edit dialog does.
     def apply_schedule(series, params, changed)
-      return nil unless params.key?("frequency")
+      companions = %w[due_day_of_month weekday month_of_year].select { |key| params.key?(key) }
+
+      unless params.key?("frequency")
+        # Day details without a cadence would be silently dropped; a financial
+        # write is the wrong place to guess which cadence they belong to.
+        if companions.any?
+          return {
+            error: "#{companions.to_sentence} need frequency alongside them",
+            hint: "Pass frequency too (get_bill_details shows the current one)."
+          }
+        end
+        return nil
+      end
+
+      # Same contract as create_bill: an unrecognized cadence is rejected, not
+      # guessed around, and the other edits in this call are not saved with it.
+      unless params["frequency"].to_s.presence_in(RecurringTransaction::FrequencyPreset::PRESETS)
+        return {
+          error: "#{params["frequency"]} is not a frequency this app recognizes",
+          hint: "Use one of: #{RecurringTransaction::FrequencyPreset::PRESETS.join(', ')}."
+        }
+      end
 
       applied = RecurringTransaction::FrequencyPreset.apply(
         series,

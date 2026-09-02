@@ -98,8 +98,10 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
     # already in the bank, and it read as a deficit next to short: false.
     #
     # For a bridge, headroom is cash minus what is due out of it. When the
-    # balance cannot be read there is no honest number, so the key is null and
-    # cash_on_hand says why rather than leaving a figure to be guessed at.
+    # balance cannot be read there is no honest number, so the key is OMITTED
+    # from the payload (serialize_period compacts nils away), which the
+    # unreadable-balance test pins on purpose: an absent key cannot be read
+    # aloud as a figure.
     def safe_after_bills(period)
       return period.cash_after_obligations.nil? ? nil : fmt(period.cash_after_obligations) if period.bridge?
 

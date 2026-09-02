@@ -46,6 +46,25 @@ module Assistant::Function::BillsSupport
       [ accessible_series.find(id), nil ]
     end
 
+    # The write tools' lookup. Reading a shared bill is fine; changing it is
+    # not: sharing is per account, so a read-only share must not mutate the
+    # series, exactly as RecurringTransactionsController#ensure_series_writable
+    # enforces for the pages. Accountless series carry no account gate. The
+    # bill is already visible to this user, so naming the reason leaks nothing.
+    def find_writable_series(id)
+      series, error = find_series(id)
+      return [ nil, error ] if error
+
+      if series.account_id.present? && !Account.writable_by(user).where(id: series.account_id).exists?
+        return [ nil, {
+          error: "#{series.display_name} is on an account shared with you read-only",
+          hint: "You can read this bill but not change it. Do not retry."
+        } ]
+      end
+
+      [ series, nil ]
+    end
+
     def display_status(series)
       case series.status
       when "inactive", "paused" then "paused"

@@ -133,6 +133,35 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert_equal "annual", RecurringTransaction::FrequencyPreset.detect(series).key
   end
 
+  # The tool caller does not enforce params_schema: a loose MCP client can
+  # send booleans as strings, and "true" == true is false in Ruby, which used
+  # to silently declare a paycheck as a bill.
+  test "boolean-ish strings cast and garbage booleans are refused" do
+    result = call_tool("name" => "Paycheck", "amount" => 1200,
+                       "first_due_on" => (Date.current + 3).iso8601, "is_income" => "true")
+
+    assert result[:created]
+    assert @family.recurring_transactions.find_by(name: "Paycheck").amount.negative?,
+      "a string true must still declare income, stored negative"
+
+    garbage = call_tool("name" => "Maybe", "amount" => 10,
+                        "first_due_on" => (Date.current + 3).iso8601, "is_income" => "yeah")
+    assert_match(/must be true or false/, garbage[:error])
+    assert_nil @family.recurring_transactions.find_by(name: "Maybe")
+  end
+
+  test "a read-only shared account is not a creation destination" do
+    member = users(:family_member)
+
+    result = Assistant::Function::CreateBill.new(member).call(
+      "name" => "Sneaky", "amount" => 10, "first_due_on" => (Date.current + 3).iso8601,
+      "account_name" => accounts(:credit_card).name
+    )
+
+    assert_match(/add bills to/, result[:error])
+    assert_nil @family.recurring_transactions.find_by(name: "Sneaky")
+  end
+
   private
 
     def call_tool(params)

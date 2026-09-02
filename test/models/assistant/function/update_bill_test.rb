@@ -118,6 +118,66 @@ class Assistant::Function::UpdateBillTest < ActiveSupport::TestCase
     assert_match(/No recognized fields/, result[:error])
   end
 
+  # Sharing is per account: a read-only share reads a bill everywhere the app
+  # shows it and must not change it, mirroring the pages' write guard.
+  test "a read-only account share cannot update the series" do
+    series = create_series(name: "Shared Sub", amount: 12, account: accounts(:credit_card))
+    member = users(:family_member)
+
+    result = Assistant::Function::UpdateBill.new(member).call("bill_id" => series.id.to_s, "name" => "Hijacked")
+
+    assert_match(/read-only/, result[:error])
+    assert_equal "Shared Sub", series.reload.name
+  end
+
+  test "the reassignment target must be writable" do
+    series = create_series(name: "Wandering", amount: 9, account: nil)
+    member = users(:family_member)
+
+    result = Assistant::Function::UpdateBill.new(member).call(
+      "bill_id" => series.id.to_s, "account_name" => accounts(:credit_card).name
+    )
+
+    assert_match(/add bills to/, result[:error])
+    assert_nil series.reload.account_id
+  end
+
+  test "namesake accounts are refused rather than picked between" do
+    series = create_series(name: "Gym", amount: 40)
+    @family.accounts.create!(
+      name: accounts(:depository).name, balance: 0, currency: "USD",
+      accountable: Depository.new, owner: @user
+    )
+
+    result = call_tool(series.id, "account_name" => accounts(:depository).name)
+
+    assert_match(/More than one account/, result[:error])
+  end
+
+  test "an unrecognized frequency is rejected before anything saves" do
+    series = create_series(name: "Insurance", amount: 60)
+
+    result = call_tool(series.id, "frequency" => "yearly", "name" => "Renamed")
+
+    assert_match(/not a frequency/, result[:error])
+    assert_equal "Insurance", series.reload.name, "companion edits must not save with a rejected cadence"
+  end
+
+  test "day details without a frequency are refused, not silently dropped" do
+    series = create_series(name: "Rent", amount: 2150)
+
+    result = call_tool(series.id, "due_day_of_month" => 5)
+
+    assert_match(/need frequency/, result[:error])
+  end
+
+  test "unrecognized status and kind values error instead of no-opping" do
+    series = create_series(name: "Gym", amount: 40)
+
+    assert_match(/not a status/, call_tool(series.id, "status" => "cancelled")[:error])
+    assert_match(/not a kind/, call_tool(series.id, "bill_type" => "loan")[:error])
+  end
+
   private
 
     def call_tool(bill_id, params)

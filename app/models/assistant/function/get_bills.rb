@@ -87,9 +87,19 @@ class Assistant::Function::GetBills < Assistant::Function
     currents = rows.index_with { |series| current_occurrence_from_loaded(series) }
     preload_allocation_sums(currents.values)
 
-    # Integer(..., exception: false): MCP clients send whatever they like.
-    if (days = Integer(params["due_within_days"].to_s, exception: false))
-      horizon = Date.current + days.clamp(1, 365)
+    # Integer(..., exception: false): MCP clients send whatever they like. A
+    # filter that silently answers a different question than it was asked is
+    # worse than an error, so out-of-range values are rejected, not adjusted.
+    if params["due_within_days"].present?
+      days = Integer(params["due_within_days"].to_s, exception: false)
+      unless days&.between?(1, 365)
+        return {
+          error: "due_within_days must be a whole number between 1 and 365",
+          hint: "Retry once with a value in that range, or omit it."
+        }
+      end
+
+      horizon = Date.current + days
       rows = rows.select { |series| series.next_due_date.present? && series.next_due_date <= horizon }
     end
 

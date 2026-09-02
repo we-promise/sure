@@ -46,11 +46,16 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
   def call(params = {})
     return recurring_disabled_result if recurring_disabled?
 
-    series, error = find_series(params["bill_id"])
+    series, error = find_writable_series(params["bill_id"])
     return error if error
 
+    # Settling means the amount was not provided at all. A present-but-blank
+    # amount is malformed input, not a request to settle: it falls through to
+    # parse_amount and is rejected there.
+    settling = params["amount"].nil?
+
     occurrence, occurrence_error = resolve_occurrence(
-      series, params["occurrence_due_on"], settling: params["amount"].blank?
+      series, params["occurrence_due_on"], settling: settling
     )
     return occurrence_error if occurrence_error
 
@@ -59,16 +64,19 @@ class Assistant::Function::RecordBillPayment < Assistant::Function
 
     allocator = RecurringTransaction::Allocator.new(occurrence)
 
-    if params["amount"].present?
+    if settling
+      allocator.mark_paid!(paid_on: paid_on)
+    else
       amount = parse_amount(params["amount"])
       return amount if amount.is_a?(Hash)
 
+      # Friendly pre-check only: the authoritative remainder guard runs inside
+      # Allocator#allocate! under the occurrence lock, where two concurrent
+      # calls cannot both read the same stale capacity.
       capacity = check_capacity(occurrence, amount)
       return capacity if capacity
 
-      allocator.allocate!(amount: amount, paid_on: paid_on, source: "user_created")
-    else
-      allocator.mark_paid!(paid_on: paid_on)
+      allocator.allocate!(amount: amount, paid_on: paid_on, source: "user_created", cap_at_remaining: true)
     end
 
     { recorded: true, bill: series.display_name, occurrence: serialize_occurrence(occurrence.reload).merge(status: occurrence.status) }

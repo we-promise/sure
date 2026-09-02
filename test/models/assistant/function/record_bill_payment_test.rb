@@ -144,6 +144,28 @@ class Assistant::Function::RecordBillPaymentTest < ActiveSupport::TestCase
     assert_equal 0, series.recurring_occurrences.order(:due_on).first.allocations.count
   end
 
+  # "" is not "no amount": a present-but-blank value used to skip the amount
+  # branch entirely and settle the whole occurrence.
+  test "a blank amount is malformed input, not a settlement" do
+    series = declare_capped_bill(amount: 100)
+
+    result = Assistant::Function::RecordBillPayment.new(@user).call("bill_id" => series.id, "amount" => "")
+
+    assert_match(/not a number/, result[:error])
+    assert_equal 0, series.recurring_occurrences.order(:due_on).first.allocations.count
+  end
+
+  test "a read-only account share cannot record payments" do
+    series = declare_capped_bill(amount: 100)
+    series.update!(account: accounts(:credit_card))
+    member = users(:family_member)
+
+    result = Assistant::Function::RecordBillPayment.new(member).call("bill_id" => series.id)
+
+    assert_match(/read-only/, result[:error])
+    assert_equal 0, series.recurring_occurrences.order(:due_on).first.allocations.count
+  end
+
   private
 
     def declare_capped_bill(amount:)
