@@ -990,4 +990,10 @@ class AccountTest < ActiveSupport::TestCase
     logo_url = account.logo_url
     assert logo_url.present?, "logo_url should be present even without attached logo"
   end
+
+  test "clean_institution_domain removes uppercase https scheme" do
+    @account.institution_domain = "HTTPS://WWW.EXAMPLE.COM/path"
+    @account.valid?
+    assert_equal "example.com", @account.institution_domain
+  end
 end

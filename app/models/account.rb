@@ -1,3 +1,5 @@
+require "uri"
+
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
@@ -554,20 +556,24 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    # Manual source: prioritize the user-uploaded logo, then fall back to
-    # the auto-fetch chain if the upload is missing or inaccessible.
-    if logo_source_manual? && logo.attached? && logo_blob_accessible?
+    # Manual source: prioritize the user-uploaded logo.
+    #
+    # We intentionally do not check whether the blob exists on the backing
+    # storage service here. Calling blob.service.exist? would make every
+    # logo_url evaluation perform a synchronous remote storage request
+    # (S3/R2/GCS), which can significantly slow down account lists and can
+    # cause storage outages to break page rendering.
+    if logo_source_manual? && logo.attached?
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
-    # Auto source (or manual with no usable upload): use the auto-fetch
+    # Auto source (or manual with no attached upload): use the auto-fetch
     # chain. When logo_source is "auto", the uploaded logo is intentionally
     # ignored - "Auto" should not take the upload into account.
     # Account::LogoFetcher mirrors this priority.
     brandfetch = brandfetch_logo_url
     return brandfetch if brandfetch.present?
     return provider.logo_url if provider&.logo_url.present?
-
     favicon_url
   end
 
@@ -618,24 +624,6 @@ class Account < ApplicationRecord
     @attaching_fetched_logo = false
   end
 
-  # True when the attached logo's blob actually has its file on the backing
-  # service. ActiveStorage stores the blob row even if the disk write failed
-  # (or the file was later deleted), leaving an orphaned blob that would
-  # render a broken <img>. This guard lets logo_url fall through to the auto
-  # source chain instead.
-  def logo_blob_accessible?
-    blob = logo.blob
-    return false if blob.nil?
-
-    blob.service.exist?(blob.key)
-  rescue Aws::S3::Errors::ServiceError, Google::Cloud::Error => e
-    Rails.logger.warn(
-      "Account logo accessibility check failed for account #{id}: #{e.class} - #{e.message}"
-    )
-    false
-  end
-
-
   private
 
     def should_queue_logo_fetch?
@@ -682,12 +670,14 @@ class Account < ApplicationRecord
     def clean_institution_domain
       return unless institution_domain.present?
 
-      # Remove protocol and path, keep only domain
-      domain = institution_domain.gsub(/^https?:\/\//, "").gsub(/^www\./, "").split("/").first
-      # Remove port numbers
-      domain = domain.split(":").first
-      # Only update if it changed
-      self.institution_domain = domain if domain != institution_domain
+      value = institution_domain.strip
+      value = "//#{value}" unless value.match?(%r{\A[a-z][a-z0-9+\-.]*://}i)
+
+      domain = URI.parse(value).host&.downcase&.sub(/\Awww\./, "")
+
+      self.institution_domain = domain if domain.present?
+    rescue URI::InvalidURIError
+      # Preserve the original value when it cannot be parsed as a URI.
     end
 
   public
@@ -697,7 +687,7 @@ class Account < ApplicationRecord
       mark_for_deletion!
       DestroyJob.perform_later(self)
     end
-    end
+  end
 
   # Override destroy to handle error recovery for accounts
   def destroy
