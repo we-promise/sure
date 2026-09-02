@@ -555,14 +555,11 @@ class Account < ApplicationRecord
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
-    # Only auto-fetch when the user hasn't pinned a manual logo. A manual
-    # logo that is missing on disk is left to the fallback icon in the view;
-    # we don't silently overwrite a user's manual choice with an auto fetch.
-    return nil unless logo_source_auto?
-
-    # Auto mode: Brandfetch first when configured, then the linked provider's
-    # own logo — account-specific, so it must outrank the generic favicon —
-    # then a favicon fallback. Account::LogoFetcher mirrors this priority.
+    # No usable attached logo (not attached, or the file is missing on
+    # disk). Fall back to the auto-fetch chain so the user always sees
+    # SOME icon — for a manual account whose upload was lost, this surfaces
+    # the institution logo instead of a broken <img> tag.
+    # Account::LogoFetcher mirrors this priority.
     brandfetch = brandfetch_logo_url
     return brandfetch if brandfetch.present?
     return provider.logo_url if provider&.logo_url.present?

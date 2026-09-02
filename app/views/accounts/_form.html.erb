@@ -53,7 +53,7 @@
              data-controller="logo-source"
              data-logo-source-max-size-value="<%= Account::MAX_LOGO_BYTES %>">
           <p class="text-sm text-primary"><%= t(".logo_label") %></p>
-          <% if account.logo.attached? %>
+          <% if account.logo_url.present? %>
             <div class="flex items-center gap-2 p-2 bg-surface-inset rounded-lg">
               <%= image_tag account.logo_url, class: "w-8 h-8 rounded-full", loading: "lazy" %>
               <span class="text-sm text-secondary"><%= t(".logo_attached") %></span>
@@ -84,9 +84,10 @@
             <% end %>
           </div>
 
-          <div data-logo-source-target="fileInfo" class="hidden text-xs text-secondary">
-            <span data-logo-source-target="fileName"></span>
-            <span data-logo-source-target="fileSize"></span>
+          <div data-logo-source-target="fileInfo" class="hidden text-xs text-success flex items-center gap-1">
+            <%= icon "check", size: "xs" %>
+            <span data-logo-source-target="fileName" class="font-medium"></span>
+            <span data-logo-source-target="fileSize" class="text-secondary"></span>
           </div>
         </div>
 

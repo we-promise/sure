@@ -74,8 +74,17 @@ export default class extends Controller {
       return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
     };
 
-    this.fileNameTarget.textContent = file.name;
-    this.fileSizeTarget.textContent = ` — ${humanReadable(file.size)} of ${maxHuman(this.maxSizeValue)}`;
+    // Browsers expose only the filename (never the full path) for security;
+    // abbreviate long names so the info line stays on one row.
+    const MAX_NAME_LEN = 24;
+    const displayName =
+      file.name.length > MAX_NAME_LEN
+        ? `${file.name.slice(0, MAX_NAME_LEN - 3)}…${file.name.slice(-3)}`
+        : file.name;
+
+    this.fileNameTarget.textContent = displayName;
+    this.fileNameTarget.title = file.name;
+    this.fileSizeTarget.textContent = ` · ${humanReadable(file.size)} / ${maxHuman(this.maxSizeValue)}`;
     this.#setFileInfoVisible(true);
   }
 
