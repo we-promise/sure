@@ -1,0 +1,92 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".link_ibkr_title")) %>
+    <% dialog.with_body do %>
+      <% if @ibkr_items&.any? %>
+        <div class="border-t border-primary pt-4 space-y-3">
+          <% @ibkr_items.each do |ibkr_item| %>
+            <div class="flex items-center justify-between p-3 rounded-lg bg-container border border-primary">
+              <div class="flex items-center gap-3">
+                <% if ibkr_item.syncing? %>
+                  <div class="w-2 h-2 bg-inverse rounded-full animate-pulse"></div>
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= ibkr_item.name %></p>
+                    <p class="text-xs text-secondary"><%= t(".syncing") %></p>
+                  </div>
+                <% elsif ibkr_item.sync_error.present? %>
+                  <div class="w-2 h-2 bg-destructive rounded-full"></div>
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= ibkr_item.name %></p>
+                    <p class="text-xs text-destructive"><%= t(".sync_error") %></p>
+                  </div>
+                <% elsif ibkr_item.credentials_configured? %>
+                  <div class="w-2 h-2 bg-success rounded-full"></div>
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= ibkr_item.name %></p>
+                    <p class="text-xs text-secondary"><%= ibkr_item.sync_status_summary %></p>
+                  </div>
+                <% else %>
+                  <div class="w-2 h-2 bg-secondary rounded-full"></div>
+                  <div>
+                    <p class="text-sm font-medium text-primary"><%= ibkr_item.name %></p>
+                    <p class="text-xs text-secondary"><%= t(".not_configured_status") %></p>
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <% if ibkr_item.credentials_configured? %>
+                  <%= render DS::Link.new(
+                    text: t(".setup_accounts"),
+                    href: setup_accounts_ibkr_item_path(ibkr_item),
+                    variant: :primary,
+                    size: :sm,
+                    data: { turbo_frame: "modal" }
+                  ) %>
+                <% else %>
+                  <%= render DS::Link.new(
+                    text: t(".go_to_provider_settings"),
+                    href: settings_providers_path,
+                    variant: :primary,
+                    size: :sm,
+                    data: { turbo: false }
+                  ) %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <%= icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+            <div class="text-sm text-secondary">
+              <p class="font-medium text-primary mb-2"><%= t(".not_configured") %></p>
+              <p><%= t(".not_configured_description") %></p>
+            </div>
+          </div>
+
+          <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+            <p class="font-medium text-primary"><%= t(".setup_steps_title") %></p>
+            <ol class="list-decimal list-inside space-y-1 text-secondary">
+              <li><%= t(".setup_step_1_html") %></li>
+              <li><%= t(".setup_step_2_html") %></li>
+              <li><%= t(".setup_step_3") %></li>
+              <li><%= t(".setup_step_4") %></li>
+            </ol>
+          </div>
+
+          <div class="mt-4">
+            <%= render DS::Link.new(
+              text: t(".go_to_provider_settings"),
+              href: settings_providers_path,
+              variant: :primary,
+              full_width: true,
+              data: { turbo: false }
+            ) %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

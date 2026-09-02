@@ -500,6 +500,13 @@ vi:
           all_other_options: 'Tất cả tùy chọn cấu hình khác: "Không"'
         report_window_note: "Báo cáo IBKR Flex bị giới hạn trong cửa sổ truy vấn bạn cấu hình trong IBKR. Sure sẽ nhập toàn bộ danh mục nắm giữ hiện tại cộng với tối đa 365 ngày hoạt động gần nhất từ báo cáo này."
         sync: Đồng bộ
+        syncing: Đang đồng bộ
+        remove: Xóa
+        setup_accounts: Thiết lập tài khoản
+        add_connection: Thêm kết nối
+        new_connection_title: Kết nối mới
+        connection_name_label: Tên kết nối
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: Ngắt kết nối Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Nhập Query ID IBKR Flex của bạn
@@ -509,7 +516,4 @@ vi:
         token_placeholder_existing: Để trống để giữ Token hiện tại
         save_configuration: Lưu cấu hình
         update_configuration: Cập nhật cấu hình
-        status_configured_prefix: "%{summary}. Vào tab"
-        accounts_tab: Tài khoản
-        status_configured_suffix: để quản lý các tài khoản đã phát hiện.
         not_configured: Chưa cấu hình.

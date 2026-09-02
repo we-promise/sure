@@ -26,6 +26,91 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "create with custom name uses provided name" do
+    post ibkr_items_url, params: {
+      ibkr_item: {
+        name: "My Trading Account",
+        query_id: "QUERYNEW",
+        token: "TOKENNEW"
+      }
+    }
+
+    created_item = IbkrItem.order(created_at: :desc).first
+    assert_equal "My Trading Account", created_item.name
+  end
+
+  test "create multiple connections for same family" do
+    assert_difference "IbkrItem.count", 1 do
+      post ibkr_items_url, params: {
+        ibkr_item: {
+          name: "Second IBKR Connection",
+          query_id: "QUERYSECOND",
+          token: "TOKENSECOND"
+        }
+      }
+    end
+
+    family_items = @ibkr_item.family.ibkr_items
+    assert_equal 2, family_items.count
+    assert_includes family_items.pluck(:name), "Second IBKR Connection"
+  end
+
+  test "sync specific item" do
+    second_item = @ibkr_item.family.ibkr_items.create!(
+      name: "Second Connection",
+      query_id: "QUERY2",
+      token: "TOKEN2"
+    )
+
+    post sync_ibkr_item_url(second_item)
+
+    assert_redirected_to accounts_path
+    assert second_item.reload.syncing? || second_item.last_synced_at.present?
+  end
+
+  test "destroy specific item only" do
+    second_item = @ibkr_item.family.ibkr_items.create!(
+      name: "Second Connection",
+      query_id: "QUERY2",
+      token: "TOKEN2"
+    )
+
+    assert_difference "IbkrItem.count", -1 do
+      delete ibkr_item_url(second_item)
+    end
+
+    assert_redirected_to settings_providers_path
+    assert IbkrItem.exists?(@ibkr_item.id)
+  end
+
+  test "select_accounts with specific item id" do
+    second_item = @ibkr_item.family.ibkr_items.create!(
+      name: "Second Connection",
+      query_id: "QUERY2",
+      token: "TOKEN2"
+    )
+
+    get select_accounts_ibkr_items_url, params: { ibkr_item_id: second_item.id }
+
+    assert_redirected_to setup_accounts_ibkr_item_path(second_item)
+  end
+
+  test "select_accounts without item id redirects to settings" do
+    get select_accounts_ibkr_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal "Interactive Brokers is not configured.", flash[:alert]
+  end
+
+  test "select_accounts with deletion-pending item redirects to settings" do
+    @ibkr_item.update!(scheduled_for_deletion: true)
+
+    get select_accounts_ibkr_items_url, params: { ibkr_item_id: @ibkr_item.id }
+
+    assert_redirected_to settings_providers_path
+    assert_equal "Interactive Brokers is not configured.", flash[:alert]
+  end
+
   test "update redirects to accounts on success" do
     patch ibkr_item_url(@ibkr_item), params: {
       ibkr_item: {

@@ -320,7 +320,6 @@ de:
         last_synced: Sync vor %{time}
         needs_attention: mit Problemen
       ibkr_panel:
-        accounts_tab: Konten
         configuration:
           all_other_options: 'Alle übrigen Optionen: „No“'
           date_format: 'Date Format: yyyy-MM-dd'
@@ -361,8 +360,6 @@ de:
           trades: 'Trades:'
           trades_fields: 'Felder: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Optionen: Execution'
-        status_configured_prefix: "%{summary}. Im Reiter"
-        status_configured_suffix: verwaltest du die gefundenen Konten.
         steps:
           step_1: Öffne im IBKR Client Portal „Performance & Reports“ > „Flex Queries“.
           step_2: Klick im Bereich „Activity Flex Query“ auf das Plus-Symbol, um eine neue Abfrage anzulegen.
@@ -370,6 +367,13 @@ de:
           step_4: Speichere die Abfrage, notier dir die „Query ID“ und erzeug über das Zahnrad im Bereich „Flex Web Service Configuration“ einen Zugriffstoken.
           step_5: Füg Query ID und Token unten ein, speichere die Konfiguration und geh dann zu den Konten, um die gefundenen IBKR-Konten zu verknüpfen.
         sync: Sync
+        syncing: Sync läuft
+        remove: Entfernen
+        setup_accounts: Konten einrichten
+        add_connection: Verbindung hinzufügen
+        new_connection_title: Neue Verbindung
+        connection_name_label: Name der Verbindung
+        connection_name_placeholder: Interactive Brokers
         token_label: Token
         token_placeholder_existing: Leer lassen, um den bisherigen Token zu behalten
         token_placeholder_new: IBKR-Flex-Web-Service-Token eintragen

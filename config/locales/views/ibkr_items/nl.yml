@@ -90,3 +90,17 @@ nl:
         other: "%{count} Interactive Brokers-accounts succesvol aangemaakt."
       none_selected: Er zijn geen accounts geselecteerd.
       none_created: Er zijn geen accounts aangemaakt.
+    new:
+      link_ibkr_title: Interactive Brokers koppelen
+      syncing: Synchroniseren...
+      sync_error: Synchronisatiefout
+      not_configured_status: Niet geconfigureerd
+      setup_accounts: Accounts instellen
+      not_configured: Interactive Brokers is niet geconfigureerd
+      not_configured_description: Voordat u Interactive Brokers-accounts kunt koppelen, moet u uw IBKR-verbinding configureren.
+      setup_steps_title: "Instellingsstappen:"
+      setup_step_1_html: "Ga naar <strong>Instellingen → Providers</strong>"
+      setup_step_2_html: "Zoek het gedeelte <strong>Interactive Brokers</strong>"
+      setup_step_3: Voer uw Flex Query-inloggegevens in (Query ID en Token)
+      setup_step_4: Kom hier terug om uw accounts te koppelen
+      go_to_provider_settings: Ga naar provider-instellingen

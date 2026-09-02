@@ -334,7 +334,6 @@ fr:
         last_synced: Dernière synchronisation il y a %{time}
         needs_attention: requiert de l'attention
       ibkr_panel:
-        accounts_tab: Comptes
         configuration:
           all_other_options: 'All other configuration options : "No"'
           date_format: 'Date Format : yyyy-MM-dd'
@@ -375,8 +374,6 @@ fr:
           trades: 'Trades :'
           trades_fields: 'Fields : Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Options : Execution'
-        status_configured_prefix: "%{summary}. Visitez l'onglet"
-        status_configured_suffix: pour gérer les comptes découverts.
         steps:
           step_1: Dans votre portail client IBKR, accédez à "Performance & Rapports" > "Requêtes Flex".
           step_2: Cliquez sur l'icône "+" dans la section "Activity Flex Query" pour créer une nouvelle requête.
@@ -384,6 +381,13 @@ fr:
           step_4: Enregistrez la requête, notez votre "Query ID", puis utilisez l'icône d'engrenage dans la section "Flex Web Service Configuration" pour générer un jeton d'accès (Token).
           step_5: Collez votre Query ID et votre Token ci-dessous, enregistrez la configuration, puis allez dans Comptes pour lier les comptes IBKR découverts.
         sync: Synchroniser
+        syncing: Synchronisation
+        remove: Supprimer
+        setup_accounts: Configurer les comptes
+        add_connection: Ajouter une connexion
+        new_connection_title: Nouvelle connexion
+        connection_name_label: Nom de la connexion
+        connection_name_placeholder: Interactive Brokers
         token_label: Jeton (Token)
         token_placeholder_existing: Laissez vide pour conserver le jeton actuel
         token_placeholder_new: Saisissez votre jeton de service web IBKR Flex

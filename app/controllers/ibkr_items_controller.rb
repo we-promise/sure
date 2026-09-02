@@ -1,6 +1,10 @@
 class IbkrItemsController < ApplicationController
   before_action :set_ibkr_item, only: [ :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
-  before_action :require_admin!, only: [ :create, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :require_admin!, only: [ :new, :create, :select_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+
+  def new
+    @ibkr_items = Current.family.ibkr_items.ordered
+  end
 
   def create
     @ibkr_item = Current.family.ibkr_items.build(ibkr_item_params)
@@ -92,7 +96,8 @@ class IbkrItemsController < ApplicationController
   end
 
   def select_accounts
-    ibkr_item = current_ibkr_item
+    ibkr_item = Current.family.ibkr_items.active.find_by(id: params[:ibkr_item_id])
+
     unless ibkr_item
       redirect_to settings_providers_path, alert: t(".not_configured")
       return
@@ -222,12 +227,6 @@ class IbkrItemsController < ApplicationController
 
     def set_ibkr_item
       @ibkr_item = Current.family.ibkr_items.find(params[:id])
-    end
-
-    def current_ibkr_item
-      active_items = Current.family.ibkr_items.active
-
-      active_items.syncable.ordered.first || active_items.ordered.first
     end
 
     def ibkr_item_params

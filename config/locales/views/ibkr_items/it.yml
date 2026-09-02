@@ -90,3 +90,17 @@ it:
         other: Creati con successo %{count} conti Interactive Brokers.
       none_selected: Nessun conto è stato selezionato.
       none_created: Nessun conto è stato creato.
+    new:
+      link_ibkr_title: Collega Interactive Brokers
+      syncing: Sincronizzazione...
+      sync_error: Errore di sincronizzazione
+      not_configured_status: Non configurato
+      setup_accounts: Configura conti
+      not_configured: Interactive Brokers non è configurato
+      not_configured_description: Prima di poter collegare i conti Interactive Brokers, devi configurare la tua connessione IBKR.
+      setup_steps_title: "Passaggi di configurazione:"
+      setup_step_1_html: "Vai su <strong>Impostazioni → Provider</strong>"
+      setup_step_2_html: "Trova la sezione <strong>Interactive Brokers</strong>"
+      setup_step_3: Inserisci le tue credenziali Flex Query (Query ID e Token)
+      setup_step_4: Torna qui per collegare i tuoi conti
+      go_to_provider_settings: Vai alle impostazioni del provider

@@ -17,7 +17,7 @@ class Provider::IbkrAdapter < Provider::Base
       description: I18n.t("providers.ibkr.connection_description"),
       can_connect: true,
       new_account_path: ->(_accountable_type, _return_to) {
-        Rails.application.routes.url_helpers.select_accounts_ibkr_items_path
+        Rails.application.routes.url_helpers.new_ibkr_item_path
       },
       existing_account_path: ->(account_id) {
         Rails.application.routes.url_helpers.select_existing_account_ibkr_items_path(account_id: account_id)

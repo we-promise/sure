@@ -372,7 +372,6 @@ ru:
         last_synced: Последняя синхронизация %{time} назад
         needs_attention: требует внимания
       ibkr_panel:
-        accounts_tab: Счета
         configuration:
           all_other_options: 'Все остальные параметры конфигурации: "Нет"'
           date_format: 'Формат даты: yyyy-MM-dd'
@@ -423,8 +422,6 @@ ru:
             к базовой валюте, Комиссия IB, Валюта комиссии IB, Количество, Символ,
             Дата сделки, ID сделки, Цена сделки, ID операции'
           trades_options: 'Опции: Исполнение'
-        status_configured_prefix: "%{summary}. Перейдите на"
-        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
         steps:
           step_1: В вашем клиентском портале IBKR перейдите в "Performance & Reports"
             > "Flex Queries".
@@ -438,6 +435,13 @@ ru:
           step_5: Вставьте ваш Query ID и токен ниже, сохраните конфигурацию, затем
             перейдите в Счета, чтобы связать обнаруженные счета IBKR.
         sync: Синхронизировать
+        syncing: Синхронизация
+        remove: Удалить
+        setup_accounts: Настроить счета
+        add_connection: Добавить подключение
+        new_connection_title: Новое подключение
+        connection_name_label: Название подключения
+        connection_name_placeholder: Interactive Brokers
         token_label: Токен
         token_placeholder_existing: Оставьте пустым, чтобы сохранить текущий токен
         token_placeholder_new: Введите ваш токен веб-сервиса IBKR Flex

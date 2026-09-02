@@ -91,6 +91,20 @@ tr:
       partial: "%{linked} bağlandı, %{unlinked} kurulum gerektiriyor"
     update:
       success: Interactive Brokers yapılandırması başarıyla güncellendi.
+    new:
+      link_ibkr_title: Interactive Brokers'ı Bağla
+      syncing: Senkronize ediliyor...
+      sync_error: Senkronizasyon hatası
+      not_configured_status: Yapılandırılmamış
+      setup_accounts: Hesapları Yapılandır
+      not_configured: Interactive Brokers yapılandırılmamış
+      not_configured_description: Interactive Brokers hesaplarını bağlamadan önce IBKR bağlantınızı yapılandırmanız gerekir.
+      setup_steps_title: "Yapılandırma Adımları:"
+      setup_step_1_html: "<strong>Ayarlar → Sağlayıcılar</strong>'a gidin"
+      setup_step_2_html: "<strong>Interactive Brokers</strong> bölümünü bulun"
+      setup_step_3: Flex Query kimlik bilgilerinizi girin (Query ID ve Token)
+      setup_step_4: Hesaplarınızı bağlamak için buraya dönün
+      go_to_provider_settings: Sağlayıcı Ayarlarına Git
   providers:
     ibkr:
       connection_description: Bir Interactive Brokers Flex Web Service raporu bağlayın

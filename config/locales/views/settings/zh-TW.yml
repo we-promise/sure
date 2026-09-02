@@ -593,6 +593,13 @@ zh-TW:
           all_other_options: 其他所有設定選項：「No」
         report_window_note: IBKR Flex 報表的範圍受限於您在 IBKR 設定的查詢區間。Sure 會從這份報表匯入完整的目前持股，以及最多近 365 天的活動。
         sync: 同步
+        syncing: 同步中
+        remove: 移除
+        setup_accounts: 設定帳戶
+        add_connection: 新增連線
+        new_connection_title: 新連線
+        connection_name_label: 連線名稱
+        connection_name_placeholder: Interactive Brokers
         disconnect_confirm: 要中斷 Interactive Brokers 連線嗎？
         query_id_label: Query ID
         query_id_placeholder_new: 輸入您的 IBKR Flex Query ID
@@ -602,9 +609,6 @@ zh-TW:
         token_placeholder_existing: 留白即維持目前的 Token
         save_configuration: 儲存設定
         update_configuration: 更新設定
-        status_configured_prefix: '%{summary}。請前往'
-        accounts_tab: 帳戶管理
-        status_configured_suffix: 分頁管理已偵測到的帳戶。
         not_configured: 尚未設定。
       trading212_panel:
         steps:

@@ -325,7 +325,6 @@ ca:
         last_synced: Última sincronització fa %{time}
         needs_attention: necessita atenció
       ibkr_panel:
-        accounts_tab: Comptes
         configuration:
           all_other_options: 'Tota la resta d''opcions de configuració: "No"'
           date_format: 'Format de data: yyyy-MM-dd'
@@ -376,8 +375,6 @@ ca:
             To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
             Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Options: Execution'
-        status_configured_prefix: "%{summary}. Visita la"
-        status_configured_suffix: pestanya per gestionar els comptes descoberts.
         steps:
           step_1: Al teu IBKR Client Portal, navega a "Performance & Reports" > "Flex
             Queries".
@@ -392,6 +389,13 @@ ca:
           step_5: Enganxa el teu Query ID i Token a sota, desa la configuració, i
             ves a Comptes per enllaçar els comptes d'IBKR descoberts.
         sync: Sincronitza
+        syncing: Sincronitzant
+        remove: Elimina
+        setup_accounts: Configura comptes
+        add_connection: Afegeix connexió
+        new_connection_title: Nova connexió
+        connection_name_label: Nom de la connexió
+        connection_name_placeholder: Interactive Brokers
         token_label: Token
         token_placeholder_existing: Deixa en blanc per mantenir el Token actual
         token_placeholder_new: Introdueix el teu Token d'IBKR Flex Web Service

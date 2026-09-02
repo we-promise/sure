@@ -94,6 +94,20 @@ fr:
       partial: "%{linked} lié, %{unlinked} doit être configuré"
     update:
       success: La configuration d'Interactive Brokers a été mise à jour avec succès.
+    new:
+      link_ibkr_title: Lier Interactive Brokers
+      syncing: Synchronisation...
+      sync_error: Erreur de synchronisation
+      not_configured_status: Non configuré
+      setup_accounts: Configurer les comptes
+      not_configured: Interactive Brokers n'est pas configuré
+      not_configured_description: Avant de pouvoir lier des comptes Interactive Brokers, vous devez configurer votre connexion IBKR.
+      setup_steps_title: "Étapes de configuration :"
+      setup_step_1_html: "Allez dans <strong>Paramètres → Fournisseurs</strong>"
+      setup_step_2_html: "Trouvez la section <strong>Interactive Brokers</strong>"
+      setup_step_3: Entrez vos identifiants Flex Query (Query ID et Token)
+      setup_step_4: Revenez ici pour lier vos comptes
+      go_to_provider_settings: Aller aux paramètres du fournisseur
   providers:
     ibkr:
       connection_description: Connecter un rapport de service Web Flex d'Interactive
