@@ -632,10 +632,12 @@ class Account < ApplicationRecord
   private
 
     def should_queue_logo_fetch?
-      logo_source_auto? && institution_domain.present? && (
+      logo_source_auto? && (
         saved_change_to_institution_domain? ||
         saved_change_to_logo_source? ||
-        !logo.attached?
+        !logo.attached? ||
+        # Allow fetching from providers that expose logo_url but have no institution domain
+        (institution_domain.blank? && provider&.logo_url.present?)
       )
     end
 
