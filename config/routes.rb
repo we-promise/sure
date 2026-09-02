@@ -127,6 +127,25 @@ Rails.application.routes.draw do
     end
   end
 
+  # Self-custody / on-chain wallets
+  resources :onchain_wallet_items, only: [ :update, :destroy ] do
+    collection do
+      get :new_wallet
+      post :preview_wallet
+      post :link_wallet
+      post :enable_crypto_prices
+    end
+
+    member do
+      post :sync
+      get :manage
+      get :review_tokens
+      post :update_tokens
+      delete :disconnect_wallet
+      delete :disconnect_asset
+    end
+  end
+
   resources :snaptrade_items, only: [ :index, :show, :destroy ] do
     collection do
       get :preload_accounts
@@ -136,6 +155,8 @@ Rails.application.routes.draw do
       get :callback
       get :oauth_authorize
       get :oauth_callback
+      get :oauth_device_authorize
+      post :start_oauth_device_flow
     end
 
     member do
@@ -144,6 +165,7 @@ Rails.application.routes.draw do
       get :setup_accounts
       post :complete_account_setup
       get :connections
+      post :complete_oauth_device_flow
       delete :delete_connection
     end
   end
@@ -207,7 +229,9 @@ Rails.application.routes.draw do
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
-  use_doorkeeper
+  use_doorkeeper do |mapping|
+    mapping.controllers authorizations: "oauth/authorizations"
+  end
   # MFA routes
   resource :mfa, controller: "mfa", only: [ :new, :create ] do
     get :verify
@@ -275,6 +299,10 @@ Rails.application.routes.draw do
 
   resource :registration, only: %i[new create]
   resources :sessions, only: %i[index new create destroy]
+  # Passwordless sign-in with a discoverable passkey. Unauthenticated by design;
+  # rate limited alongside the MFA WebAuthn endpoints in Rack::Attack.
+  post "/sessions/passkey_options", to: "passkey_sessions#options", as: :passkey_session_options
+  post "/sessions/passkey", to: "passkey_sessions#create", as: :passkey_session
   # Desktop app SSO: opens the flow in the system browser (so passkeys/WebAuthn
   # work), then hands a single-use, PKCE-bound code back via the sure:// scheme
   # which the desktop webview exchanges for a normal web session.
@@ -312,6 +340,7 @@ Rails.application.routes.draw do
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
     resource :preferences, only: %i[show update]
+    resource :budget_shares, only: :update
     resource :appearance, only: %i[show update]
     resource :debug, only: :show
     resource :background_jobs, controller: "background_jobs", only: :show do
@@ -377,11 +406,16 @@ Rails.application.routes.draw do
     get :picker, on: :collection
   end
 
+  # Hub page fronting budgets + goals under a single "Plan" nav entry.
+  resource :plan, only: :show
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
 
-    resources :budget_categories, only: %i[index show update]
+    resources :budget_categories, only: %i[index show update] do
+      post :move, on: :collection
+    end
   end
 
   resources :goals do
@@ -392,6 +426,12 @@ Rails.application.routes.draw do
       patch :archive
       patch :unarchive
       patch :reopen
+      # Two actions on one path rather than one action branching on the verb:
+      # HEAD routes like GET but `request.get?` is false for it, so a branch
+      # would send a HEAD request down the write path. A goal can be partly
+      # spent more than once, so the write is a POST, not a PATCH on the goal.
+      get :consume
+      post :consume, action: :record_consumption, as: nil
     end
 
     resources :pledges, only: %i[new create destroy], controller: "goal_pledges" do
@@ -414,6 +454,7 @@ Rails.application.routes.draw do
   resources :transfers, only: %i[new create destroy show update] do
     member do
       post :mark_as_recurring
+      patch :tags, action: :update_tags
     end
   end
 
@@ -423,6 +464,7 @@ Rails.application.routes.draw do
       put :revert
       put :apply_template
       post :cancel
+      get :summary
     end
 
     resource :upload, only: %i[show update], module: :import
@@ -471,7 +513,6 @@ Rails.application.routes.draw do
 
     collection do
       delete :clear_filter
-      patch :update_preferences
     end
 
     member do
@@ -485,15 +526,55 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :recurring_transactions, only: %i[index destroy] do
+  resources :bills, only: %i[index show] do
+    # POST for the same reason recurring_transactions#identify is: detection
+    # mutates (creates suggested series and occurrences), so it stays behind
+    # CSRF protection rather than a plain URL.
     collection do
-      match :identify, via: [ :get, :post ]
-      match :cleanup, via: [ :get, :post ]
+      post :detect
+      post :ai_review, to: "bills/ai_reviews#create"
+      post :reset_feed_token
+    end
+    member do
+      get :smart_configuration, to: "bills/smart_configurations#show"
+    end
+  end
+  get "bills_feed/:token", to: "bills_feeds#show", as: :bills_feed, defaults: { format: :ics }
+
+  resources :recurring_occurrences, only: %i[show] do
+    member do
+      post :mark_paid
+      post :skip
+      post :reopen
+      patch :snooze
+      patch :override_amount
+    end
+
+    resources :allocations, controller: :recurring_allocations, only: %i[create]
+  end
+
+  resources :recurring_allocations, only: %i[destroy] do
+    member do
+      post :confirm
+      post :reject
+    end
+  end
+
+  resources :recurring_transactions, only: %i[index new create edit update destroy] do
+    collection do
+      # POST only: all three mutate. They accepted GET while DS::Link's method
+      # option was inert, which left destructive work sitting behind a plain
+      # URL and outside CSRF protection. Every call site passes method: :post.
+      post :identify
+      post :cleanup
+      post :smart_fill, to: "recurring_transactions/smart_fills#create"
       patch :update_settings
     end
 
     member do
-      match :toggle_status, via: [ :get, :post ]
+      post :toggle_status
+      post :confirm
+      post :dismiss
     end
   end
 
@@ -503,8 +584,8 @@ Rails.application.routes.draw do
     end
 
     member do
-      patch :dismiss
-      patch :undismiss
+      patch :acknowledge
+      patch :unacknowledge
     end
   end
 
@@ -637,6 +718,8 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
+      resources :insights, only: [ :index ]
+      resources :push_subscriptions, only: [ :create, :destroy ]
       resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create", as: :sync_job
       resources :syncs, only: [ :index, :show ] do
@@ -824,13 +907,22 @@ Rails.application.routes.draw do
         post :test_connection
       end
     end
-    resources :users, only: [ :index, :update ]
+    resources :users, only: [ :index, :update, :destroy ] do
+      get :deletion, on: :member
+    end
+    resources :sso_identity_blocks, only: [ :destroy ]
     resources :invitations, only: [ :destroy ]
-    resources :families, only: [] do
+    resources :families, only: [ :destroy ] do
       member do
         delete :invitations, to: "invitations#destroy_all"
       end
     end
+    # Singular `resource :system_health` would otherwise route to
+    # `Admin::SystemHealthsController` (Rails pluralizes the controller
+    # name even for singular resources, unlike its plural siblings above
+    # that happen to round-trip cleanly). The controller file is singular,
+    # so name it explicitly.
+    resource :system_health, only: :show, controller: "system_health"
   end
 
   # Defines the root path route ("/")

@@ -5,7 +5,18 @@
     </div>
     <div class="min-w-0 flex-1">
       <h1 class="text-2xl font-semibold text-primary break-words"><%= @goal.name %></h1>
-      <p class="text-sm text-secondary mt-1 privacy-sensitive"><%= @goal.header_summary %></p>
+      <%# Each segment is its own nowrap span so a short trailing one — "184 days
+          left" — moves to the next line whole instead of breaking after "days".
+          The first segment carries the target and a long-format date, so it is
+          left free to wrap; pinning it would overflow a narrow screen. %>
+      <p class="text-sm text-secondary mt-1 privacy-sensitive">
+        <%= safe_join(
+              @goal.header_summary_parts.map.with_index { |part, i|
+                tag.span(part, class: ("whitespace-nowrap" unless i.zero?))
+              },
+              " · "
+            ) %>
+      </p>
       <% last_days = @goal.last_matched_pledge_days_ago %>
       <% unless last_days.nil? %>
         <p class="text-xs text-subdued mt-0.5">
@@ -26,26 +37,23 @@
         <% if @goal.may_resume? %>
           <% menu.with_item(variant: "button", text: t(".resume"), icon: "play", href: resume_goal_path(@goal), method: :patch) %>
         <% end %>
+        <%# Partial spend: only offered on a one-off goal that is still running
+            and has something THIS READER can spend. A reserve is drawn down and
+            refilled, not consumed — the model refuses it outright. Same
+            question the lifecycle panel asks, off the same scoped list, so the
+            two doors to this dialog cannot disagree. %>
+        <% if @goal.spendable_within?(eligible_consumption_accounts.map(&:id)) %>
+          <% menu.with_item(variant: "link", text: t(".consume"), icon: "hand-coins",
+                            href: consume_goal_path(@goal), data: { turbo_frame: :modal }) %>
+        <% end %>
         <% if @goal.may_complete? %>
-          <% complete_body = if @goal.progress_percent < 100
-                              t(".confirm_complete_body_short",
-                                progress: @goal.progress_percent,
-                                saved: @goal.current_balance_money.format(precision: 0),
-                                target: @goal.target_amount_money.format(precision: 0))
-                            else
-                              t(".confirm_complete_body")
-                            end %>
           <% menu.with_item(
                variant: "button",
                text: t(".complete"),
                icon: "circle-check-big",
                href: complete_goal_path(@goal),
                method: :patch,
-               confirm: CustomConfirm.new(
-                 title: t(".confirm_complete_title"),
-                 body: complete_body,
-                 btn_text: t(".confirm_complete_cta")
-               )
+               confirm: goal_complete_confirm(@goal)
              ) %>
         <% end %>
         <% if @goal.may_archive? %>
@@ -68,17 +76,17 @@
         <% if @goal.may_reopen? %>
           <% menu.with_item(variant: "button", text: t(".reopen"), icon: "rotate-ccw", href: reopen_goal_path(@goal), method: :patch) %>
         <% end %>
-        <% if @goal.archived? %>
-          <% menu.with_item(
-               variant: "button",
-               text: t(".delete"),
-               icon: "trash-2",
-               href: goal_path(@goal),
-               method: :delete,
-               destructive: true,
-               confirm: CustomConfirm.for_resource_deletion(@goal.name, high_severity: true)
-             ) %>
-        <% end %>
+        <%# Available in any state — see GoalsController#destroy for why there's
+            no archive-first gate. %>
+        <% menu.with_item(
+             variant: "button",
+             text: t(".delete"),
+             icon: "trash-2",
+             href: goal_path(@goal),
+             method: :delete,
+             destructive: true,
+             confirm: @goal.deletion_confirm
+           ) %>
       <% end %>
     </div>
   </header>
@@ -87,6 +95,10 @@
 
   <% @open_pledges.each do |pledge| %>
     <%= render "pending_pledge_banner", pledge: pledge %>
+  <% end %>
+
+  <% if @unattributed_outflows.any? %>
+    <%= render "unattributed_outflows", goal: @goal, outflows: @unattributed_outflows %>
   <% end %>
 
   <% if @goal.paused? %>
@@ -123,14 +135,22 @@
   <section class="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-3">
     <div class="rounded-xl p-5 flex flex-col items-center justify-center text-center">
       <%= render Goals::ProgressRingComponent.new(goal: @goal, size: 180) %>
-      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.current_balance_money.format(precision: 0) %></p>
+      <%# The figure the ring is drawn from — held plus already spent on the
+          goal — so the two agree. What is still sitting in each account is in
+          the funding breakdown below, which is where that question belongs. %>
+      <p class="text-xl font-medium text-primary tabular-nums privacy-sensitive mt-4"><%= @goal.progress_amount_money.format(precision: 0) %></p>
+      <% if @goal.any_consumption? %>
+        <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive">
+          <%= t(".ring.including_used", amount: @goal.consumed_amount_money.format(precision: 0)) %>
+        </p>
+      <% end %>
       <% if @goal.contributions_basis? %>
         <p class="text-xs text-secondary tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.market_value", amount: @goal.market_value_money.format(precision: 0)) %></p>
       <% end %>
       <% unless @goal.completed? %>
         <p class="text-xs text-subdued tabular-nums mt-0.5 privacy-sensitive"><%= t(".ring.to_go", amount: @goal.remaining_amount_money.format(precision: 0)) %></p>
       <% end %>
-      <% unless @goal.completed? || @goal.status == :reached || @goal.paused? || @goal.archived? %>
+      <% unless @goal.completed? || @goal.status == :reached || @goal.status == :funded || @goal.paused? || @goal.archived? %>
         <%# Single Record pledge entry point on the page. Pre-filled with the
             catch-up delta when behind so accepting once funds the gap. %>
         <% prefill_amount = @goal.status == :behind && @goal.catch_up_delta_money.amount.positive? ? @goal.catch_up_delta_money.amount.to_f : nil %>
@@ -147,122 +167,21 @@
       <% end %>
     </div>
 
-    <% if @goal.archived? || @goal.paused? %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
-        <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
-          <%= icon(@goal.archived? ? "archive" : "pause", size: "2xl") %>
-        </div>
-        <h2 class="text-lg font-semibold text-primary">
-          <%= t(@goal.archived? ? ".inactive.heading_archived" : ".inactive.heading_paused") %>
-        </h2>
-        <p class="text-sm text-secondary mt-1 max-w-md tabular-nums privacy-sensitive">
-          <%= t(".inactive.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %>
-        </p>
-      </div>
-    <% elsif @goal.completed? || @goal.status == :reached %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
-        <div class="w-16 h-16 rounded-full bg-success/10 inline-flex items-center justify-center text-success mb-3">
-          <%= icon("party-popper", size: "2xl", color: "success") %>
-        </div>
-        <h2 class="text-lg font-semibold text-primary"><%= t(".celebration.heading") %></h2>
-        <p class="text-sm text-secondary mt-1 max-w-md privacy-sensitive"><%= t(".celebration.body", saved: @goal.current_balance_money.format(precision: 0), target: @goal.target_amount_money.format(precision: 0)) %></p>
-        <% if @goal.may_archive? %>
-          <div class="mt-4">
-            <%= render DS::Button.new(
-              text: t(".celebration.archive_cta"),
-              href: archive_goal_path(@goal),
-              variant: "outline",
-              size: "sm",
-              method: :patch
-            ) %>
-          </div>
-        <% end %>
-      </div>
-    <% elsif @goal.current_balance.to_d.zero? && @goal.pace.to_d.zero? %>
-      <%# No movement yet on the linked account: render an inline "make your first transfer"
-          CTA card instead of a flat-at-$0 chart that looks broken. %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col items-center justify-center text-center">
-        <div class="w-16 h-16 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary mb-3">
-          <%= icon("piggy-bank", size: "2xl") %>
-        </div>
-        <h2 class="text-lg font-semibold text-primary"><%= t(".empty.heading") %></h2>
-        <p class="text-sm text-secondary mt-1 max-w-md"><%= t(".empty.body") %></p>
-        <div class="mt-4">
-          <%= render DS::Link.new(
-            text: t(".record_pledge_cta"),
-            variant: "primary",
-            size: "sm",
-            href: new_goal_pledge_path(@goal),
-            icon: "plus",
-            frame: :modal
-          ) %>
-        </div>
-      </div>
-    <% else %>
-      <div class="bg-container rounded-xl shadow-border-xs p-5 flex flex-col">
-        <div class="flex flex-col gap-2 mb-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-          <div class="min-w-0">
-            <h2 class="text-sm font-medium text-primary"><%= t(".projection.heading") %></h2>
-            <p class="text-xs text-secondary mt-0.5"><%= sanitize @goal.projection_summary %></p>
-            <% if @goal.status == :behind && @goal.monthly_target_amount %>
-              <p class="text-xs text-secondary mt-0.5 tabular-nums privacy-sensitive">
-                <%= t("goals.show.catch_up.body", avg: @goal.pace_money.format(precision: 0), required: Money.new(@goal.monthly_target_amount, @goal.currency).format(precision: 0)) %>
-              </p>
-            <% end %>
-          </div>
-          <% projection_color = @goal.status == :on_track ? "var(--color-green-600)" : "var(--color-yellow-600)" %>
-          <div class="flex items-center flex-wrap gap-x-5 gap-y-1 text-[11px] text-secondary sm:gap-x-3 sm:shrink-0">
-            <span class="inline-flex items-center gap-1.5">
-              <svg width="18" height="6" class="text-primary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" /></svg>
-              <%= t(".projection.legend_saved") %>
-            </span>
-            <% unless @goal.target_date.nil? %>
-              <span class="inline-flex items-center gap-1.5">
-                <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="<%= projection_color %>" stroke-width="2" stroke-dasharray="3 3" /></svg>
-                <%= t(".projection.legend_projection") %>
-              </span>
-              <% if @goal.monthly_target_amount.to_d.positive? && @goal.remaining_amount.to_d.positive? %>
-                <span class="inline-flex items-center gap-1.5">
-                  <svg width="18" height="6" class="text-secondary"><line x1="0" y1="3" x2="18" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="2 4" opacity="0.5" /></svg>
-                  <%= t(".projection.legend_required") %>
-                </span>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-        <div class="flex-1 min-h-[200px] privacy-sensitive"
-             data-controller="goal-projection-chart"
-             data-goal-projection-chart-data-value="<%= @goal.projection_payload.to_json %>"
-             data-goal-projection-chart-aria-label-value="<%= t("goals.show.projection.aria_label", name: @goal.name) %>"
-             data-goal-projection-chart-aria-description-value="<%= strip_tags(@goal.projection_summary) %>"
-             data-goal-projection-chart-today-label-value="<%= t("goals.show.projection.today_marker") %>"
-             data-goal-projection-chart-projected-template-value="<%= t("goals.show.projection.tooltip_projected", amount: "{amount}") %>"
-             data-goal-projection-chart-saved-template-value="<%= t("goals.show.projection.tooltip_saved", amount: "{amount}") %>"
-             data-goal-projection-chart-target-relation-template-value="<%= t("goals.show.projection.tooltip_target_relation", percent: "{percent}", target: "{target}") %>"></div>
-        <% if @goal.target_date.nil? %>
-          <div class="mt-3 flex items-center gap-2 text-xs text-secondary">
-            <span class="text-subdued"><%= icon("calendar-plus", size: "sm") %></span>
-            <span class="flex-1"><%= t(".no_target_date.body") %></span>
-            <%= link_to t(".no_target_date.cta"),
-                       edit_goal_path(@goal),
-                       data: { turbo_frame: :modal },
-                       class: "font-medium text-primary underline-offset-2 hover:underline" %>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
+    <%= render Goals::LifecyclePanelComponent.new(
+          goal: @goal, viewer_account_ids: eligible_consumption_accounts.map(&:id)
+        ) %>
   </section>
 
   <% if @goal.linked_accounts.any? %>
-    <section class="bg-container rounded-xl shadow-border-xs p-5">
+    <%= render DS::Card.new do %>
       <%= render Goals::FundingAccountsBreakdownComponent.new(goal: @goal) %>
-    </section>
+    <% end %>
   <% end %>
 
   <% if @goal.notes.present? %>
-    <section class="bg-container rounded-xl shadow-border-xs p-5">
+    <%= render DS::Card.new do %>
       <h2 class="text-sm font-medium text-primary mb-2"><%= t(".notes") %></h2>
       <p class="text-sm text-secondary whitespace-pre-line"><%= @goal.notes %></p>
-    </section>
+    <% end %>
   <% end %>
 </div>

@@ -1,19 +1,23 @@
 ---
 fr:
   insights:
+    notification:
+      title: Nouvelle analyse financière
+      body: Ouvrez Sure pour consulter votre dernière analyse par IA.
     actions:
       budget: Voir le budget
       cash_flow_warning: Vérifier les transactions récurrentes
       idle_cash: Aller au compte
+      maintained_goal_depleted: Voir la réserve
       net_worth_milestone: Voir le rapport de patrimoine net
       savings_rate_change: Voir les transactions de ce mois
       spending_anomaly: Voir les transactions de %{category}
       subscription_audit: Vérifier les transactions récurrentes
     card:
+      acknowledged: "Analyse ignorée"
       dismiss: Ignorer
       dismissed: Analyse ignorée
       new: Nouveau
-      undo: Annuler
     feed:
       header: Dernières
       header_new: Nouveau
@@ -56,6 +60,7 @@ fr:
           %{budget_spent_pct}% de votre budget total jusqu'à présent."
       budget_on_track: Vous avez dépensé %{spent} sur votre budget de %{budgeted}
         (%{budget_spent_pct}%) et tout reste dans les limites.
+      maintained_goal_depleted: "%{goal} détient %{saved} sur les %{target} qu'elle doit conserver. Il manque %{missing}."
       cash_flow_warning:
         low: D'après vos prochaines transactions récurrentes et vos dépenses habituelles,
           votre solde de trésorerie pourrait descendre à %{projected_low} vers le
@@ -94,6 +99,7 @@ fr:
       cash_flow_warning:
         low: Votre solde de trésorerie pourrait devenir faible
         negative: Votre solde de trésorerie pourrait devenir négatif
+      maintained_goal_depleted: "%{goal} est passée sous son niveau"
       idle_cash: Liquidités inactives sur %{account}
       net_worth_milestone: "Étape de patrimoine net : %{milestone}"
       savings_rate_change:
@@ -108,6 +114,7 @@ fr:
       budget_on_track: Budget
       cash_flow_warning: Trésorerie
       idle_cash: Liquidités inactives
+      maintained_goal_depleted: Réserve
       net_worth_milestone: Patrimoine net
       savings_rate_change: Taux d'épargne
       spending_anomaly: Dépenses

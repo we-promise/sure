@@ -49,4 +49,28 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
 
     @importer.import
   end
+
+  test "clears requires update status after a successful import" do
+    @plaid_item.update!(status: :requires_update)
+    @importer.stubs(:fetch_and_import_item_data)
+    @importer.stubs(:fetch_and_import_accounts_data)
+
+    @importer.import
+
+    assert_predicate @plaid_item.reload, :good?
+  end
+
+  test "keeps requires update status when login is still required" do
+    @plaid_item.update!(status: :requires_update)
+    error = Plaid::ApiError.new(
+      code: 400,
+      response_body: { "error_code" => "ITEM_LOGIN_REQUIRED" }.to_json
+    )
+    @importer.stubs(:fetch_and_import_item_data).raises(error)
+    @importer.expects(:fetch_and_import_accounts_data).never
+
+    @importer.import
+
+    assert_predicate @plaid_item.reload, :requires_update?
+  end
 end

@@ -37,9 +37,11 @@ en:
       new:
         title: "Add SSO Provider"
         description: "Configure a new single sign-on authentication provider"
+        provider_configuration: Provider Configuration
       edit:
         title: "Edit SSO Provider"
         description: "Update configuration for %{label}"
+        provider_configuration: Provider Configuration
       create:
         success: "SSO provider was successfully created."
       update:

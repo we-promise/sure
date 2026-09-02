@@ -7,7 +7,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
     @llm_provider = mock
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
+    Provider::Registry.stubs(:preferred_llm_provider).returns(@llm_provider)
   end
 
   test "auto-categorizes transactions" do
@@ -36,6 +36,20 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     # After auto-categorization, only successfully categorized transactions are locked
     # txn3 remains enrichable since it didn't get a category (allows retry)
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
+  end
+
+  test "raises when provider returns an unsuccessful response" do
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    @family.categories.create!(name: "Coffee")
+
+    @llm_provider.expects(:auto_categorize)
+                 .returns(provider_error_response(Provider::Error.new("Fixed prompt tokens exceed context budget")))
+
+    error = assert_raises(Family::AutoCategorizer::Error) do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+
+    assert_equal "Failed to auto-categorize transactions: Fixed prompt tokens exceed context budget", error.message
   end
 
   private

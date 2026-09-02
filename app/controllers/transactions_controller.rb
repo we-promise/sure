@@ -5,6 +5,11 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
+  def show
+    super
+    assign_mark_recurring_state
+  end
+
   def new
     prefill_params_from_duplicate!
     super
@@ -20,13 +25,28 @@ class TransactionsController < ApplicationController
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
-                          { entry: :account },
-                          :category, :merchant, :tags,
-                          transfer_as_outflow: { inflow_transaction: { entry: :account } },
-                          transfer_as_inflow: { outflow_transaction: { entry: :account } }
-                        )
+                         { entry: :account },
+                         :category, :merchant, :tags,
+                         # Union of #2643 counterpart UI + Skylight category-menu N+1:
+                         # - outflow rows need inflow_transaction (to_account) for both
+                         #   counterpart display and Transfer#categorizable?/#payment?
+                         # - inflow rows need outflow_transaction (from_account) for
+                         #   counterpart display, and inflow_transaction (to_account)
+                         #   for the category menu on the same row
+                         {
+                           transfer_as_outflow: {
+                             inflow_transaction: { entry: :account }
+                           }
+                         },
+                         {
+                           transfer_as_inflow: {
+                             inflow_transaction: { entry: :account },
+                             outflow_transaction: { entry: :account }
+                           }
+                         }
+                       )
 
-    @pagy, @transactions = pagy(base_scope, limit: safe_per_page)
+    @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
     # Preload split parent data
@@ -53,16 +73,21 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
-    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
+    @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
+      Current.accessible_entries.uncategorized_transactions.count
+    end
 
     # Load projected recurring transactions for next 10 days
-    @projected_recurring = Current.family.recurring_transactions
-                                  .accessible_by(Current.user)
-                                  .active
-                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
-                                         10.days.from_now.to_date,
-                                         Date.current)
-                                  .includes(:merchant)
+    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+      Current.family.recurring_transactions
+                    .accessible_by(Current.user)
+                    .active
+                    .where("next_expected_date <= ? AND next_expected_date >= ?",
+                           10.days.from_now.to_date,
+                           Date.current)
+                    .includes(:merchant)
+                    .to_a
+    end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
@@ -97,7 +122,15 @@ class TransactionsController < ApplicationController
   end
 
   def create
-    account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
+    account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
+
+    if account.nil?
+      @entry = Current.family.entries.new(entry_params)
+      @entry.valid?
+      set_new_transaction_form_options
+      render :new, status: :unprocessable_entity
+      return
+    end
 
     return unless require_account_permission!(account)
 
@@ -124,6 +157,7 @@ class TransactionsController < ApplicationController
   def update
     if @entry.update(permitted_entry_params)
       transaction = @entry.transaction
+      transaction.record_category_usage!
 
       if needs_rule_notification?(transaction)
         flash[:cta] = {
@@ -142,6 +176,8 @@ class TransactionsController < ApplicationController
 
       # Reload to ensure fresh state for turbo stream rendering
       @entry.reload
+
+      assign_mark_recurring_state
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
@@ -163,6 +199,11 @@ class TransactionsController < ApplicationController
               partial: "transactions/notes",
               locals: { entry: @entry, can_annotate: can_annotate_entry? }
             ) if params[:entry]&.key?(:notes) && notes_changed),
+            (turbo_stream.replace(
+              dom_id(@entry, :mark_recurring),
+              partial: "transactions/mark_recurring",
+              locals: { entry: @entry }
+            ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -173,6 +214,7 @@ class TransactionsController < ApplicationController
         end
       end
     else
+      assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
   end
@@ -337,14 +379,10 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern
-    existing = Current.family.recurring_transactions.find_by(
-      account_id: transaction.entry.account_id,
-      merchant_id: transaction.merchant_id,
-      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
-      currency: transaction.entry.currency,
-      manual: true
-    )
+    # Check if a recurring transaction already exists for this pattern.
+    # The UI disables the button ahead of time using the same lookup, but this
+    # guard remains as the authoritative check (e.g. stale page, direct POST).
+    existing = transaction.existing_manual_recurring_transaction
 
     if existing
       flash[:alert] = t("recurring_transactions.already_exists")
@@ -368,6 +406,16 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
         end
       end
+    rescue ActiveRecord::RecordNotUnique
+      # Another request created the same (account, name/merchant, amount,
+      # currency) pattern between the check above and this create — the DB
+      # unique index is the authoritative backstop for that race.
+      respond_to do |format|
+        format.html do
+          flash[:alert] = t("recurring_transactions.already_exists")
+          redirect_back_or_to transactions_path
+        end
+      end
     rescue StandardError => e
       respond_to do |format|
         format.html do
@@ -376,13 +424,6 @@ class TransactionsController < ApplicationController
         end
       end
     end
-  end
-
-  def update_preferences
-    Current.user.update_transactions_preferences(preferences_params)
-    head :ok
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
-    head :unprocessable_entity
   end
 
   def exchange_rate
@@ -410,6 +451,49 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # Scoped by user (not just family) because Current.accessible_entries is
+    # user-scoped for family sharing (see Current#accessible_entries).
+    #
+    # Includes Family#accounts_status_version because `uncategorized_transactions`
+    # filters on account status (draft/active), and toggling an account's
+    # active status (AccountsController#toggle_active) doesn't touch `entries`
+    # or `AccountShare`, so it wouldn't otherwise bust this cache.
+    def uncategorized_count_cache_key
+      "transactions_uncategorized_count/v3/#{Current.family.id}/#{Current.user.id}/" \
+        "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
+    end
+
+    # Scoped additionally by Date.current since the "next 10 days" window is
+    # date-dependent and would otherwise return a stale window on a cache hit
+    # from an earlier day.
+    #
+    # Includes Family#recurring_transaction_merchants_version because the
+    # cached records are preloaded with :merchant and rendered with its
+    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
+    # doesn't touch `recurring_transactions`.
+    def projected_recurring_cache_key
+      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
+        "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
+    end
+
+    # The "Mark as Recurring" block is only ever rendered under these same
+    # conditions (see transactions/show.html.erb), so skip the extra query
+    # entirely when it won't be used — this runs on every show/failed-update
+    # render, including read-only viewers and split-child transactions.
+    def assign_mark_recurring_state
+      return unless can_edit_entry? && !@entry.split_child?
+
+      existing = @entry.transaction.existing_manual_recurring_transaction
+
+      @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
+      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = existing.present?
+      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
+      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+    end
+
     def accessible_transactions
       Current.family.transactions
         .joins(entry: :account)
@@ -499,7 +583,7 @@ class TransactionsController < ApplicationController
         .alphabetically
         .includes(:account_providers, logo_attachment: :blob)
         .to_a
-      @categories = Current.family.categories.alphabetically.to_a
+      @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
       @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
     end
@@ -554,7 +638,7 @@ class TransactionsController < ApplicationController
           prev_transaction_page_params: {
             q: search_params,
             page: params[:page],
-            per_page: params[:per_page]
+            per_page: params[:per_page].presence || stored_params["per_page"]
           }
         )
       end
@@ -566,10 +650,6 @@ class TransactionsController < ApplicationController
 
     def stored_params
       Current.session.prev_transaction_page_params
-    end
-
-    def preferences_params
-      params.require(:preferences).permit(collapsed_sections: {})
     end
 
     # Helper methods for convert_to_trade

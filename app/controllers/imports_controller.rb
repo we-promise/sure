@@ -1,7 +1,7 @@
 class ImportsController < ApplicationController
   include SettingsHelper
 
-  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
 
   def update
@@ -16,7 +16,17 @@ class ImportsController < ApplicationController
       end
       return if @import.account_statement.present? && !require_account_permission!(account)
 
-      @import.is_a?(PdfImport) ? @import.assign_account!(account) : @import.update!(account: account)
+      if @import.is_a?(PdfImport)
+        # Refused for an import whose data already landed -- see
+        # PdfImport#reassignable?. A replayed or back-button PATCH gets the
+        # explanation rather than a silent unwind.
+        unless @import.assign_account!(account)
+          redirect_back_or_to import_path(@import), alert: t("imports.update.account_locked")
+          return
+        end
+      else
+        @import.update!(account: account)
+      end
     end
 
     redirect_to import_path(@import), notice: t("imports.update.account_saved", default: "Account saved.")
@@ -28,6 +38,14 @@ class ImportsController < ApplicationController
     redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  end
+
+  # Statement imports only: what became of each extracted transaction. Without it
+  # a statement whose lines all matched finishes on the generic complete screen,
+  # which cannot distinguish "everything was already recorded" from "nothing was
+  # found".
+  def summary
+    raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport)
   end
 
   def cancel
@@ -233,8 +251,8 @@ class ImportsController < ApplicationController
     end
 
     def create_sure_import(file)
-      if file.size > SureImport::MAX_NDJSON_SIZE
-        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport::MAX_NDJSON_SIZE / 1.megabyte)
+      if file.size > SureImport.max_ndjson_size
+        redirect_to new_import_path, alert: t("imports.create.file_too_large", max_size: SureImport.max_ndjson_size / 1.megabyte)
         return
       end
 

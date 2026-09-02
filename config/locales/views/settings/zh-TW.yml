@@ -3,8 +3,114 @@ zh-TW:
   views:
     settings:
       payments:
-        renewal: "您的貢獻將於 %{date} 繼續。"
+        renewal: 您的貢獻將於 %{date}繼續。
+        cancellation: 您的貢獻將於 %{date}結束。
   settings:
+    background_jobs:
+      show:
+        page_title: 背景工作
+        title: Worker 狀態
+        subtitle: Sidekiq 即時執行狀態：worker 處理程序、佇列深度，以及重試與失效佇列。
+        redis_unreachable: 無法取得 Sidekiq 狀態（Redis 無法連線）。存活狀態未知，因此已停用相關操作。
+        operations_title: 進行中的作業
+        operations_subtitle: 所有家庭中尚未進入終結狀態的同步、匯入與匯出作業。作業若閒置超過 30 分鐘又查不到對應的背景工作，即推定為已遺失，可標記為遺失。
+        empty: 沒有進行中的作業。
+        missing_value: '-'
+        stats:
+          workers: Worker 數
+          busy: 忙碌中
+          enqueued: 佇列中
+          retries: 重試
+          scheduled: 已排程
+          dead: 失效
+          queue_label: "%{name}: %{size} · 延遲 %{latency} 秒"
+        table:
+          type: 作業
+          family: 家庭
+          status: 狀態
+          last_activity: 最後活動
+          liveness: 存活狀態
+          action: 操作
+      operation:
+        ago: '%{time}前'
+        sync_label: 同步 · %{type}
+        running: 執行中
+        queued: 佇列中
+        recent: 最近
+        unknown: 未知
+        stuck: 卡住 — 推定已遺失
+        confirm: 要將此作業標記為已遺失嗎？紀錄會移至終結狀態以便重試，底層資料不會受到影響。
+        missing_value: '-'
+        actions:
+          mark_stale: 標記為過期
+          mark_failed: 標記為失敗
+          release_claim: 釋放佔用
+      cancel:
+        cancelled: '%{type} 已標記為遺失。'
+        not_cancellable: 目前無法修改此作業 — 背景工作可能仍在佇列中或執行中。請等背景工作閒置滿 30 分鐘後再試。
+        cancelled_error: 由管理員標記為失敗 — 背景工作推定已遺失。
+    debugs:
+      show:
+        page_title: 偵錯
+        title: 偵錯事件紀錄
+        subtitle: 提供給超級管理員的重要運作事件，最新的在最前面。
+        empty: 找不到偵錯事件。
+        missing_value: '-'
+        filters:
+          all: 全部
+          category: 分類
+          level: 層級
+          source: 來源
+          provider: 供應商
+          start_date: 開始
+          end_date: 結束
+          family_id: 家庭 ID
+          account_id: 帳戶 ID
+          user_id: 使用者 ID
+          account_provider_id: 帳戶供應商 ID
+          submit: 篩選
+          reset: 重設
+        table:
+          time: 時間
+          level: 層級
+          category: 分類
+          source: 來源
+          message: 訊息
+          context: 情境
+          metadata: 中繼資料
+          view_metadata: 查看
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}
+    llm_usages:
+      show:
+        page_title: LLM 使用量與費用
+        subtitle: 追蹤您的 AI 使用量與預估費用
+        start_date: 開始日期
+        end_date: 結束日期
+        filter: 篩選
+        total_requests: 總請求數
+        total_tokens: Token 總數
+        prompt: 提示 Token
+        completion: 輸出 Token
+        total_cost: 總費用
+        avg_cost_per_request: 平均每次請求費用
+        based_on_requests: 根據 %{total} 次請求中有費用資料的 %{with_cost} 次計算
+        cost_by_operation: 各作業費用
+        cost_by_model: 各模型費用
+        recent_usage: 近期使用量
+        col_date: 日期
+        col_operation: 作業
+        col_model: 模型
+        col_tokens: Token 數
+        col_cost: 費用
+        failed: 已失敗
+        no_usage_data: 所選期間內查無使用資料
+        cost_estimates_title: 關於費用預估
+        cost_estimates_description: 費用是依各供應商公布的價格預估，其中 OpenAI 的價格以 2026 年 7 月為準。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
     ai_prompts:
       show:
         page_title: AI 提示詞
@@ -13,45 +119,100 @@ zh-TW:
         prompt_instructions: 提示詞指令
         main_system_prompt:
           title: 主系統提示詞 (System Prompt)
-          subtitle: 定義 AI 助手在所有對話中行為模式的核心指令
+          subtitle: 核心指令，決定 AI 助手在每一段對話中的行為
         transaction_categorizer:
           title: 交易分類器
-          subtitle: AI 會根據您定義的類別自動為交易進行分類
+          subtitle: AI 會根據您定義的分類自動為交易分類
         merchant_detector:
           title: 商家偵測器
           subtitle: AI 會辨識交易資料並自動補全商家資訊
     payments:
       show:
         page_title: 付款
-        subscription_subtitle: 更新您的訂閱方案與付款詳情
-        subscription_title: 管理訂閱
+        subscription_subtitle: 更新您的信用卡資訊
+        subscription_title: 管理貢獻
+        currently_on_plan: 目前使用的方案為
+        trialing: 目前使用的是 %{product_name} 的公開試用版
+        trial_days_left:
+          one: 資料將在 %{count} 天後刪除
+          other: 資料將在 %{count} 天後刪除
+        not_contributing_prefix: 您目前
+        not_contributing_emphasis: 尚未貢獻
+        contributions_note: 對 %{product_name} 的貢獻會顯示在這裡。
+        manage: 管理
+        choose_level: 選擇級距
+        payment_via_stripe: 透過 Stripe 付款
+    appearances:
+      show:
+        page_title: 外觀
+        theme_title: 主題
+        theme_subtitle: 選擇您偏好的應用程式主題
+        theme_dark: 深色
+        theme_light: 淺色
+        theme_system: 跟隨系統
+        modals_title: 模態視窗
+        modals_subtitle: 自訂模態視窗行為
+        disable_modal_click_outside_title: 點擊外部時保持模態視窗開啟
+        disable_modal_click_outside_description: 防止點擊外部時關閉模態視窗。有助於避免意外遺失未儲存的變更。
+        transactions_title: 交易紀錄
+        transactions_subtitle: 自訂交易紀錄的顯示方式
+        dashboard_title: 儀表板
+        dashboard_subtitle: 自訂儀表板的顯示方式
+        dashboard_two_column_title: 雙欄版面
+        dashboard_two_column_description: 在大螢幕上以兩欄顯示儀表板小工具，每個小工具的標題列都有各自的寬度與高度控制項。關閉時，小工具會排成單欄。
+        split_grouped_title: 將拆分交易分組
+        split_grouped_description: 在交易清單中，將拆分交易歸在其母交易之下顯示。關閉時，拆分出來的子項會各自成為一列。
     preferences:
       show:
         country: 國家
         currency: 幣別
         date_format: 日期格式
-        general_subtitle: 配置您的偏好設定
+        general_subtitle: 設定您的偏好
         general_title: 一般
         default_period: 預設時段
         default_account_order: 預設帳戶排序
         language: 語言
         language_auto: 瀏覽器語言
         page_title: 偏好設定
+        timezone: 時區
+        month_start_day: 預算月份起始日
+        month_start_day_hint: 設定您的預算月份從哪一天開始（例如發薪日）
+        month_start_day_warning: 您的預算與月初至今計算將採用這個自訂的起始日，而不是每個月的 1 號。
+        translations_notice: 請注意，我們仍在進行各語言的翻譯工作。
+        currencies_title: '%{moniker}貨幣'
+        currencies_subtitle: 選擇哪些貨幣要出現在您%{moniker}的金額欄位中
+        base_currency_label: 基準貨幣
+        base_currency_badge: 基準貨幣
+        additional_currencies_label: 其他貨幣
+        no_additional_currencies: 未選擇任何項目
+        currencies_more: 另有 %{count} 種
+        manage_currencies: 管理貨幣
+        manage_currencies_subtitle: 取消勾選您從不使用的貨幣，或把清單縮減到只剩幾種。
+        select_all_currencies: 全選
+        select_base_only: 僅基準貨幣
+        currency_search_placeholder: 搜尋貨幣
+        no_matching_currencies: 找不到貨幣
+        selected_currencies_count:
+          one: 已選擇 %{count} 種
+          other: 已選擇 %{count} 種
+        save_currencies: 儲存貨幣
+        sharing_title: '%{moniker}共享'
+        sharing_subtitle: 控制帳戶在您%{moniker}中的共享方式
+        sharing_default_label: 新帳戶的預設共享方式
+        sharing_shared: 與所有成員共享
+        sharing_private: 預設保持私人
+        preview:
+          title: 啟用預覽功能
+          description: 加入標示為 preview 或 canary 的開發中功能。
         theme_dark: 深色
         theme_light: 淺色
         theme_subtitle: 選擇您偏好的應用程式主題
         theme_system: 系統設定
         theme_title: 主題
-        timezone: 時區
-    appearances:
-      show:
-        modals_title: 模態視窗
-        modals_subtitle: 自訂模態視窗行為
-        disable_modal_click_outside_title: 點擊外部時保持模態視窗開啟
-        disable_modal_click_outside_description: 防止點擊外部時關閉模態視窗。有助於避免意外遺失未儲存的變更。
     profiles:
       destroy:
         cannot_remove_self: 您無法將自己從帳號中移除。
+        member_owns_other_family_data: 這位成員在另一個家庭中仍擁有帳戶，因此無法移除。請先轉移或移除那些帳戶。
         member_removal_failed: 移除成員時發生問題。
         member_removed: 已成功移除成員。
         not_authorized: 您沒有移除成員的權限。
@@ -60,7 +221,7 @@ zh-TW:
           body: 您確定要永久刪除您的帳號嗎？此操作無法復原。
           title: 刪除帳號？
         confirm_reset:
-          body: 您確定要重設帳號嗎？這將刪除您所有的帳戶、類別、商家、標籤及其他資料。此操作無法復原。
+          body: 您確定要重設帳號嗎？這將刪除您所有的帳戶、分類、商家、標籤及其他資料。此操作無法復原。
           title: 重設帳號？
         confirm_reset_with_sample_data:
           body: 您確定要重設帳號並載入範例資料嗎？這將刪除您現有的資料，並替換為示範資料，讓您可以安全地探索 Sure 的功能。
@@ -75,15 +236,18 @@ zh-TW:
         delete_account: 刪除帳號
         delete_account_warning: 刪除帳號將永久移除您所有的資料，且無法復原。
         reset_account: 重設帳號
-        reset_account_warning: 重設帳號將刪除您所有的帳戶、類別、商家、標籤及其他資料，但會保留您的使用者帳號。
+        reset_account_warning: 重設帳號將刪除您所有的帳戶、分類、商家、標籤及其他資料，但會保留您的使用者帳號。
         reset_account_with_sample_data: 重設並預載資料
         reset_account_with_sample_data_warning: 刪除所有現有資料，並載入全新的範例資料，讓您在預填好的環境中進行探索。
         email: 電子郵件
         first_name: 名字
-        household_form_input_placeholder: 輸入家戶名稱
-        household_form_label: 家戶名稱
-        household_subtitle: 邀請家庭成員、伴侶或其他成員加入。受邀者可以登入您的家戶並存取共享帳戶。
-        household_title: 家戶
+        group_form_input_placeholder: 輸入群組名稱
+        group_form_label: 群組名稱
+        group_title: 群組成員
+        household_form_input_placeholder: 輸入家庭名稱
+        household_form_label: 家庭名稱
+        household_subtitle: 受邀者可以登入您的%{moniker}帳號並存取共享資源。
+        household_title: 家庭
         invitation_link: 邀請連結
         invite_member: 新增成員
         last_name: 姓氏
@@ -93,35 +257,92 @@ zh-TW:
         profile_title: 個人資訊
         remove_invitation: 移除邀請
         remove_member: 移除成員
+        resend_confirmation_link: 重新寄送確認信
         save: 儲存
+        unconfirmed_email_notice_html: 您已要求將電子郵件變更為 %{email}。請至信箱確認以完成變更。若未收到信件，請檢查垃圾郵件匣，或%{resend_link}。
     securities:
       show:
         page_title: 安全性
+        encryption_warning:
+          title: 缺少加密金鑰
+          intro: 敏感資料（API 金鑰、供應商 Token、MFA 密鑰與個人資料）目前以未加密的狀態儲存。要啟用加密，請在環境變數或 Rails credentials 中設定下列金鑰：
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 用這個指令產生一組：bin/rails db:encryption:init
+        mfa_title: 雙重驗證
+        mfa_description: 登入時除了密碼，還會要求輸入驗證應用程式產生的驗證碼，為您的帳號多一層保護。
+        enable_mfa: 啟用雙重驗證 (2FA)
+        disable_mfa: 停用雙重驗證 (2FA)
+        disable_mfa_confirm: 您確定要停用雙重驗證嗎？這將會降低您帳號的安全性。
+        sso_title: 已連結的帳號
+        sso_subtitle: 管理您的單一登入帳號連結
+        sso_disconnect: 中斷連線
+        sso_last_used: 上次使用
+        sso_never: 從未使用
+        sso_no_email: 沒有電子郵件
+        sso_no_identities: 尚未連結任何 SSO 帳號
+        sso_connect_hint: 登出後改用 SSO 供應商登入，即可連結帳號。
+        sso_confirm_title: 要中斷帳號連結嗎？
+        sso_confirm_body: 確定要中斷您的 %{provider} 帳號連結嗎？之後再用該供應商登入就能重新連結。
+        sso_confirm_button: 中斷連線
+        sso_warning_message: 這是您唯一的登入方式。中斷連結前，建議先在安全性設定中設定密碼，否則您可能會無法登入自己的帳號。
+    mcp:
+      show:
+        page_title: MCP Server
+        connect_title: 連接 AI 助手
+        connect_subtitle: 將這個網址貼到 Claude.ai（或任何支援 MCP 的用戶端），即可連接到您的 Sure 帳號。
+        copy_url: 複製
+        copied: 已複製！
+        how_to_connect_title: 如何連接 Claude
+        step_1: 開啟 Claude.ai，前往 Settings → Customize → Connectors。
+        step_2: 點選「Add connector」，貼上上方的 MCP 伺服器網址。
+        step_3: 點選 Connect — 您會被導向 Sure 登入並授權存取。
+        step_4: 授權完成後，Claude 就能讀取您的帳戶、交易與餘額資料。
+        connected_title: 已連接的用戶端
+        connected_subtitle: 這些應用程式目前可以存取您的 Sure 資料。不再使用的請撤銷。
+        unknown_client: 未知用戶端
+        connected_ago: 於 %{time}前連接
+        revoke: 撤銷
+        revoke_confirm: 要撤銷此用戶端的存取權嗎？
+      revoke:
+        revoked: 連線已撤銷。
     settings_nav:
       accounts_label: 帳戶管理
       advanced_section_title: 進階設定
       ai_prompts_label: AI 提示詞
+      background_jobs_label: 背景工作
       api_key_label: API 金鑰
       payment_label: 付款
-      categories_label: 類別
+      categories_label: 分類管理
       feedback_label: 意見回饋
       general_section_title: 一般
-      imports_label: 匯入/匯出
+      imports_label: 匯入紀錄
+      exports_label: 匯出
+      llm_usage_label: LLM 使用量
       logout: 登出
-      merchants_label: 商家
+      merchants_label: 商家管理
+      providers_label: 供應商
       guides_label: 使用指南
       other_section_title: 更多
       preferences_label: 偏好設定
       profile_label: 個人資料
       recurring_transactions_label: 定期交易
       rules_label: 自動化規則
+      mcp_label: MCP
       security_label: 安全性
       self_hosting_label: 自行代管
+      sso_providers_label: SSO 供應商
+      statement_vault_label: 對帳單管理
       tags_label: 標籤
       transactions_section_title: 交易
-      whats_new_label: 最新動態
+      users_label: 使用者
+      whats_new_label: 更新日誌
       api_keys_label: API 金鑰
+      appearance_label: 外觀
       bank_sync_label: 銀行同步
+      debug_label: 偵錯
     settings_nav_link_large:
       next: 下一步
       previous: 返回
@@ -130,3 +351,281 @@ zh-TW:
       choose: 上傳相片
       choose_label: （選填）
       change: 變更相片
+    providers:
+      update:
+        updated_successfully: 供應商設定更新成功
+        no_changes: 沒有任何變更
+      not_authorized: 沒有權限
+      bank_sync:
+        page_title: 銀行同步
+        lede: 連結外部帳戶，讓交易、餘額與持股自動流入 Sure。
+      status:
+        ok: 已連線
+        warn: 需要處理
+        err: 錯誤
+        false: 未設定
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: 唯讀存取。Sure 永遠無法動用您的資金，您的憑證也是加密儲存的。
+      setup_steps:
+        eyebrow: 設定
+        need_help: 需要協助嗎？
+      connect: 連結
+      groups:
+        your_connections: 您的連線
+        available: 可用
+        empty_available: 所有可用的供應商都已連線。
+      health_strip:
+        connected: 個已連線
+        needs_attention: 個需要處理
+        accounts_syncing: 個帳戶同步中
+        last_synced: 上次同步於 %{time}前
+      meta:
+        sync_error: 同步錯誤
+        no_recent_sync: 同步逾期
+        reconsent_required: 需要重新授權
+        reconsent_needed:
+          one: 1 天後需要重新授權
+          other: '%{count} 天後需要重新授權'
+        last_synced: '%{time}前同步'
+      sync_all: 全部同步
+      sync_all_in_progress: 正在同步所有已連線的供應商...
+      sync_all_recently: 已有同步進行中，請稍候再試。
+      sync_provider: 立即同步
+      sync_provider_in_progress: 同步已開始。
+      recently_synced: 剛剛才同步過，請稍候再試。
+      taglines:
+        akahu: 透過 Akahu 同步紐西蘭的金融機構。
+        simplefin: 透過開放的 SimpleFIN 協定連結美國銀行帳戶。
+        lunchflow: 連結來自 40 多個國家（英國、歐盟、美國等）的 2 萬多家銀行！
+        redbark: 透過 Redbark 開放銀行同步澳洲銀行帳戶。
+        enable_banking: 透過 PSD2 開放銀行同步歐洲的銀行帳戶。
+        coinstats: 追蹤您散布在各錢包與交易所的全部加密貨幣投資組合。
+        wise: 自動同步您的 Wise 多幣別餘額與國際轉帳。
+        mercury: 自動同步您的 Mercury 商業銀行帳戶。
+        brex: 以唯讀存取同步 Brex 的現金與公司卡活動。
+        coinbase: 匯入您的 Coinbase 加密貨幣持倉並追蹤績效。
+        binance: 使用唯讀 API 金鑰同步您的 Binance 現貨餘額。
+        kraken: 使用唯讀 API 金鑰同步 Kraken 的餘額與現貨成交紀錄。
+        snaptrade: 透過 SnapTrade 整合網路連結券商帳戶。
+        trading212: 使用唯讀 API 金鑰同步您的 Trading 212 投資組合。
+        ibkr: 透過 Flex Query 匯入同步 Interactive Brokers 的投資帳戶。
+        questrade: 透過 Questrade API 直接同步您的 Questrade 投資帳戶。
+        indexa_capital: 追蹤您的 Indexa Capital 自動化投資組合。
+        sophtron: 連結美國與加拿大的銀行及公用事業帳戶。
+        plaid: 透過 Plaid 連結數千家美國金融機構。
+        plaid_eu: 透過 Plaid 連結歐洲金融機構（PSD2／開放銀行）。
+      search_filters:
+        aria_label: 搜尋供應商
+        placeholder: 搜尋供應商
+        chips:
+          all: 全部
+          bank: 銀行
+          crypto: 加密貨幣
+          investment: 投資
+      empty_filter: 沒有符合篩選條件的供應商。
+      clear_filter: 清除篩選
+      encryption_error:
+        title: 缺少加密金鑰
+        message: 銀行同步需要先設定 Active Record 加密。請在您的 Rails credentials 或環境變數中設定 primary_key、deterministic_key 與 key_derivation_salt。
+      provider_form:
+        save_and_connect: 儲存並連線
+      coinbase_panel:
+        setup_instructions: 要連結 Coinbase：
+        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API 設定</a>
+        step2: 建立一組只有唯讀權限的新 API 金鑰（檢視帳戶、檢視交易）
+        step3: 複製您的 API 金鑰與 API Secret，貼到下方
+        api_key_label: API 金鑰
+        api_key_placeholder: 輸入您的 Coinbase API 金鑰
+        api_secret_label: API 密鑰 (API Secret)
+        api_secret_placeholder: 輸入您的 Coinbase API Secret
+        connect_button: 連結 Coinbase
+        syncing: 同步中...
+        sync: 同步
+        disconnect_confirm: 確定要中斷這個 Coinbase 連線嗎？已同步的帳戶會變成手動帳戶。
+      binance_panel:
+        setup_instructions: 要連結 Binance，請建立一組唯讀 API 金鑰：
+        step1_html: 前往 <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>
+        step2: 建立一組新的 API 金鑰，只勾選 Enable Reading 權限
+        step3: 將您的 API Key 與 Secret 貼到下方
+        no_withdraw_title: 只用唯讀金鑰
+        no_withdraw_body: 建立 Binance API 金鑰時，請不要啟用提領權限。Sure 只需要讀取權限。
+        ip_hint_title: 需要設定 IP 白名單
+        ip_hint_body: 請將這台應用程式伺服器的對外 IP 加入 Binance API 金鑰的白名單：
+        ip_hint_contact_admin: 請聯絡您的管理員取得應用程式伺服器的對外 IP 位址。
+        api_key_label: API 金鑰
+        api_key_placeholder: 貼上您的 Binance API Key
+        api_secret_label: API 密鑰 (API Secret)
+        api_secret_placeholder: 貼上您的 Binance API Secret
+        connect_button: 連結 Binance
+        syncing: 同步中...
+        sync: 同步
+        historical_import: 歷史資料匯入設定
+        sync_start_date_label: 匯入資料起始日
+        sync_start_date_help: 選擇要往回抓多久的歷史交易。
+        disconnect_confirm: 確定要中斷 Binance 連線嗎？
+      kraken_panel:
+        step1_html: 前往 <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>
+        step2: 建立一組 API 金鑰，只勾選 Query Funds 與 Query Closed Orders & Trades。
+        step3: 將 API 金鑰與私密金鑰貼到下方。
+        read_only_title: 只做唯讀的交易所同步
+        read_only_body: 請不要授予交易、取消、提領、匯出、帳本、Earn、質押或轉帳權限。Sure 只會匯入餘額、持倉與現貨成交紀錄。
+        default_connection_name: Kraken
+        add_connection: 新增 Kraken 連線
+        update_connection: 更新連線
+        connection_name_label: 連線名稱
+        connection_name_placeholder: 主要 Kraken
+        api_key_label: API 金鑰
+        api_key_placeholder: 貼上您的 Kraken API 金鑰
+        keep_api_key_placeholder: 留白即維持現有的 API 金鑰
+        api_secret_label: 私密金鑰
+        api_secret_placeholder: 貼上您的 Kraken 私密金鑰
+        keep_api_secret_placeholder: 留白即維持現有的私密金鑰
+        setup_accounts: 設定帳戶
+        syncing: 同步中...
+        sync: 同步
+        disconnect: 中斷連線
+        disconnect_confirm: 確定要中斷 %{name} 嗎？
+      enable_banking_panel:
+        callback_url_instruction: 回呼網址請使用 %{callback_url}。
+        connection_error: 連線錯誤
+        step_1_html: 前往 %{link} 取得您的開發者憑證。
+        step_2: 選擇您的國家，並將 Application ID 與 Client Certificate 貼到下方。
+        step_3: 儲存後，用「新增連線」連結您的銀行。
+        config_locked_title: 設定已鎖定
+        config_locked_message: 變更這些憑證前，請先中斷所有已連結的銀行。
+        application_id_label: Application ID
+        application_id_placeholder_new: 輸入 Application ID
+        application_id_placeholder_update: 輸入新的 ID 以更新
+        client_certificate_label: Client Certificate（含私密金鑰）
+        save_and_connect: 儲存並連線
+        update_connection: 更新連線
+        connected_bank: 已連結的銀行
+        session_expires: 工作階段到期時間：%{date}
+        unknown: 未知
+        connection: 連線
+        session_expired_reconnect: 工作階段已過期 - 請重新連線
+        configured: 已設定
+        ready_to_link: 可以開始連結帳戶了
+        sync: 同步
+        reconnect: 重新連線
+        connect_bank: 連結銀行
+        remove: 移除
+        remove_confirm: 確定要移除這個連線嗎？
+        add_connection: 新增連線
+        syncing: 正在同步
+        select_country: 選擇國家...
+        country_label: 國家/地區
+      lunchflow_panel:
+        step_1_html: 前往 %{link} 並建立一組 API 金鑰。
+        step_2: 將您的金鑰貼到下方並連線。
+        step_3: 接著前往「帳戶」連結您已同步的帳戶。
+        api_key_label: API 金鑰
+        api_key_placeholder_new: 在此貼上 API 金鑰
+        api_key_placeholder_update: 輸入新的 API 金鑰以更新
+        base_url_label: Base URL（選填）
+        base_url_placeholder: https://lunchflow.app/api/v1（預設）
+        save_and_connect: 儲存並連線
+        update_connection: 更新連線
+      akahu_panel:
+        step_1_html: 前往 %{link} 並建立一個個人應用程式。
+        step_2: 複製您的 app token 與 user token。
+        step_3: 將 Token 貼到下方並儲存，然後連結您已同步的帳戶。
+      up_panel:
+        step_1_html: 前往 %{link} 並產生 Personal Access Token。
+        step_2: 複製您的 Personal Access Token。
+        step_3: 將 Token 貼到下方並儲存，然後連結您已同步的帳戶。
+      simplefin_panel:
+        step_1_html: 前往 %{link} 取得一次性的 Setup Token。
+        step_2: 將 Token 貼到下方並連線。
+        step_3: 接著前往「帳戶」連結您已同步的帳戶。
+        setup_token_label: 設定權杖 (Setup Token)
+        setup_token_placeholder: 貼上 SimpleFIN Setup Token
+        save_and_connect: 儲存並連線
+      plaid_panel:
+        step_1_html: 開啟 %{link} 並複製您的 Client ID 與 Secret Key。
+        step_2: 挑選一個環境。測試用 sandbox，正式帳戶用 production。
+        step_3: 將您的憑證貼到下方並連線。
+      plaid_eu_panel:
+        step_1_html: 開啟 %{link} 並複製您的 EU Client ID 與 Secret Key。
+      not_found: 找不到供應商。
+      sync_provider_no_items: 沒有可同步的連線。
+      ibkr_panel:
+        steps:
+          step_1: 在您的 IBKR Client Portal 中，前往「Performance & Reports」>「Flex Queries」。
+          step_2: 點選「Activity Flex Query」區塊中的「+」圖示，建立一個新查詢。
+          step_3: 為查詢命名（例如「Sure Sync」），然後對照下方的 Flex Query 明細，啟用列出的區塊、欄位與設定選項。
+          step_4: 儲存查詢並記下您的「Query ID」，再用「Flex Web Service Configuration」區塊中的齒輪圖示產生 Access Token。
+          step_5: 將您的 Query ID 與 Token 貼到下方，儲存設定後前往「帳戶」連結已偵測到的 IBKR 帳戶。
+        flex_query_details:
+          eyebrow: Flex Query
+          title: 區塊、欄位與設定
+          summary: 展開即可看到您的 IBKR Activity Flex Query 必須包含哪些區塊、欄位與設定。
+          sections_heading: 請啟用這些區塊與欄位
+          configuration_heading: 請設定這些查詢選項
+        sections:
+          account_information: Account Information：Account ID, Currency
+          cash_report: Cash Report：
+          cash_report_options: 選項：None
+          cash_report_fields: 欄位：Currency, Ending Cash
+          cash_transactions: Cash Transactions：
+          cash_transactions_options: 選項：Dividends, Deposits & Withdrawals, Detail
+          cash_transactions_fields: 欄位：Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type
+          change_in_position_value_summary: Change In Position Value Summary：Currency, End Of Period Value
+          net_asset_value: Net Asset Value (NAV) in Base：
+          net_asset_value_options: 選項：None
+          net_asset_value_fields: 欄位：Currency, Report Date, Total
+          open_positions: Open Positions：
+          open_positions_options: 選項：Summary
+          open_positions_fields: 欄位：Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol
+          trades: Trades：
+          trades_options: 選項：Execution
+          trades_fields: 欄位：Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID
+        configuration:
+          models: Models：Optional
+          format: Format：XML
+          period: Period：Last 365 Calendar Days
+          date_format: Date Format：yyyy-MM-dd
+          time_format: Time Format：HH:mm:ss
+          date_time_separator: Date/Time Separator：; (semi-colon)
+          profit_and_loss: Profit and Loss：Default
+          all_other_options: 其他所有設定選項：「No」
+        report_window_note: IBKR Flex 報表的範圍受限於您在 IBKR 設定的查詢區間。Sure 會從這份報表匯入完整的目前持股，以及最多近 365 天的活動。
+        sync: 同步
+        disconnect_confirm: 要中斷 Interactive Brokers 連線嗎？
+        query_id_label: Query ID
+        query_id_placeholder_new: 輸入您的 IBKR Flex Query ID
+        query_id_placeholder_existing: 留白即維持目前的 Query ID
+        token_label: 權杖 (Token)
+        token_placeholder_new: 輸入您的 IBKR Flex Web Service Token
+        token_placeholder_existing: 留白即維持目前的 Token
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        status_configured_prefix: '%{summary}。請前往'
+        accounts_tab: 帳戶管理
+        status_configured_suffix: 分頁管理已偵測到的帳戶。
+        not_configured: 尚未設定。
+      trading212_panel:
+        steps:
+          step_1: 前往 Trading 212 → Settings → API（網頁版或行動應用程式）。
+          step_2: 產生新的 API 金鑰 — Trading 212 會顯示 API ID 與 Secret Key。
+          step_3: 將兩者貼到下方，選擇環境與帳戶幣別，然後儲存。
+        api_key_label: API ID
+        api_key_placeholder_new: 貼上您的 Trading 212 API ID
+        api_key_placeholder_existing: 留白則沿用目前的 API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: 貼上您的 Trading 212 Secret Key
+        api_secret_placeholder_existing: 留白則沿用目前的 Secret Key
+        environment_label: 環境
+        environment_live: 正式帳戶
+        environment_demo: 模擬帳戶
+        currency_label: 帳戶幣別
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        sync: 同步
+        disconnect_confirm: 要中斷 Trading 212 連線嗎？
+        status_configured_prefix: 已設定。請前往
+        accounts_tab: 帳戶管理
+        status_configured_suffix: 分頁管理已偵測到的帳戶。
+        not_configured: 尚未設定。

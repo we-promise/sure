@@ -5,11 +5,10 @@ es:
     upcoming: Próximas Transacciones Recurrentes
     projected: Proyectado
     recurring: Recurrente
-    expected_today: "Esperado hoy"
+    expected_today: Esperado hoy
     expected_in:
-      one: "Esperado en %{count} día"
-      other: "Esperado en %{count} días"
-    expected_on: Esperado el %{date}
+      one: Esperado en %{count} día
+      other: Esperado en %{count} días
     day_of_month: Día %{day} del mes
     identify_patterns: Identificar Patrones
     cleanup_stale: Limpiar Obsoletos
@@ -20,10 +19,10 @@ es:
     info:
       title: Detección Automática de Patrones
       manual_description: Puedes identificar patrones manualmente o limpiar transacciones recurrentes obsoletas usando los botones de arriba.
-      automatic_description: "La identificación automática también se ejecuta después de:"
+      automatic_description: 'La identificación automática también se ejecuta después de:'
       triggers:
-        - Finalización de importaciones CSV (transacciones, operaciones, cuentas, etc.)
-        - Finalización de cualquier sincronización de proveedor (Plaid, SimpleFIN, etc.)
+      - Finalización de importaciones CSV (transacciones, operaciones, cuentas, etc.)
+      - Finalización de cualquier sincronización de proveedor (Plaid, SimpleFIN, etc.)
     identified: Identificados %{count} patrones de transacciones recurrentes
     cleaned_up: Limpiadas %{count} transacciones recurrentes obsoletas
     marked_inactive: Transacción recurrente marcada como inactiva
@@ -34,7 +33,7 @@ es:
     already_exists: Ya existe una transacción recurrente manual para este patrón
     creation_failed: Error al crear la transacción recurrente. Por favor, comprueba los detalles e inténtalo de nuevo.
     unexpected_error: Ha ocurrido un error inesperado al crear la transacción recurrente
-    amount_range: "Rango: %{min} a %{max}"
+    amount_range: 'Rango: %{min} a %{max}'
     empty:
       title: No se encontraron transacciones recurrentes
       description: Haz clic en "Identificar Patrones" para detectar automáticamente transacciones recurrentes de tu historial de transacciones.
@@ -51,3 +50,8 @@ es:
       inactive: Inactiva
     badges:
       manual: Manual
+    transfer_marked_as_recurring: Transferencia marcada como recurrente
+    transfer_already_exists: Ya existe una transferencia recurrente para este par de cuentas
+    transfer_creation_failed: Error al crear la transferencia recurrente. Revisa los detalles de la transferencia e inténtalo de nuevo.
+    transfer_feature_disabled: Las transacciones recurrentes están desactivadas para esta familia
+    expected_on: Esperado el %{date}

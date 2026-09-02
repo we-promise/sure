@@ -14,6 +14,8 @@ de:
       valuations: Wert
       value: Wert
     new:
+      amount: Betrag
+      submit: Kontostand hinzufügen
       title: Neuer Kontostand
     show:
       amount: Betrag
@@ -29,3 +31,40 @@ de:
       overview: Übersicht
       settings: Einstellungen
       opening_balance: Eröffnungssaldo
+      amount_label: Kontowert am Stichtag
+      update_value: Wert aktualisieren
+    confirm_create:
+      confirm: Bestätigen
+      title: Neuen Saldo bestätigen
+    confirm_update:
+      title: Saldo aktualisieren
+      update: Aktualisieren
+    confirmation_contents:
+      action_set: gesetzt
+      action_update: aktualisiert
+      account_balance: Kontostand
+      asset_value: Vermögenswert
+      balance: Saldo
+      brokerage_cash: Barmittel im Depot
+      change: Änderung
+      credit_card_balance: Kreditkartensaldo
+      crypto_balance: Krypto-Bestand
+      holdings_value: Wert der Bestände
+      liability_balance: Verbindlichkeit
+      loan_balance: Kreditsaldo
+      "on": am
+      property_value: Immobilienwert
+      recalculate_notice: Alle späteren Transaktionen und Salden werden auf Basis dieser %{change_or_update} neu berechnet.
+      this_will: Damit wird der Kontowert %{action_verb} am
+      to: auf
+      to_colon: 'auf:'
+      total_account_value: Gesamtwert des Kontos
+      update: Aktualisierung
+      vehicle_value: Fahrzeugwert
+    create:
+      account_updated: Konto aktualisiert
+    errors:
+      amount_required: Betrag ist erforderlich
+    update:
+      account_updated: Konto aktualisiert
+      entry_updated: Eintrag aktualisiert

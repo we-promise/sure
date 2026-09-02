@@ -16,7 +16,6 @@ fr:
     create:
       success: Objectif créé.
     destroy:
-      archive_first: Archivez l'objectif avant de le supprimer.
       success: Objectif supprimé.
     edit:
       heading: Modifier l'objectif
@@ -31,12 +30,30 @@ fr:
     errors:
       not_found: Cet objectif n'a pas pu être trouvé. Il a peut-être été supprimé.
     form:
+      target_modes:
+        fixed: Un montant fixe
+        months_of_expenses: Un nombre de mois de dépenses
+      kinds:
+        maintained:
+          hint: Un solde à maintenir, comme une épargne de précaution. Jamais clôturée.
+          label: Réserve à maintenir
+        one_off:
+          hint: Épargner pour quelque chose, puis clôturer une fois la dépense faite.
+          label: Objectif ponctuel
       create: Créer l'objectif
       errors:
         accounts_required: Sélectionnez au moins un compte de financement.
         amount_required: Définissez une cible supérieure à zéro.
         name_required: Donnez un nom à votre objectif.
+      earmark:
+        headroom: "Il reste {left} affectables sur ce compte."
+        prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
+        whole_balance: Ce compte financera le solde restant après les autres affectations.
+        whole_balance_alone: "Cet objectif utilisera tout le solde de ce compte."
       fields:
+        target_mode: Comment le solde cible est fixé
+        target_months: Mois de dépenses
+        target_months_hint: Recalculé le 1er de chaque mois à partir de vos dépenses mensuelles médianes.
         color: Couleur
         earmark_for: Affecter un montant pour %{account}
         earmark_hint: Laissez le montant vide pour dédier la totalité du solde de ce compte.
@@ -47,6 +64,9 @@ fr:
         notes: Notes (facultatif)
         notes_placeholder: Un rappel pour plus tard…
         target_amount: Montant cible
+        target_balance: "Solde cible"
+        target_balance_pending: "Calculé à l'enregistrement"
+        target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
         target_date: Date cible
         whole_balance: Solde total
       save: Enregistrer les modifications
@@ -60,6 +80,7 @@ fr:
       suggested_no_date: Définissez une date cible pour projeter la fin.
       suggested_with_date: Épargnez {monthly}/mois sur {accounts} pour l'atteindre à temps.
     goal_card:
+      including_used: "Dont %{amount} déjà utilisés"
       accounts:
         one: 1 compte
         other: "%{count} comptes"
@@ -77,6 +98,8 @@ fr:
       footer_no_deadline: Ouvert
       footer_no_pledges: Aucune promesse rapprochée
       footer_paused: En pause
+      footer_reserve_intact: Réserve constituée
+      footer_reserve_short: "%{amount} à recompléter"
       footer_reached: Objectif atteint
       left: restant
       n_accounts: "%{first} +%{count}"
@@ -87,7 +110,7 @@ fr:
       past_due: Échu
       pending_count:
         one: 1 en attente
-        other: "%{count} en en attente"
+        other: "%{count} en attente"
       pending_pledge: Promesse en attente
     index:
       archived_section:
@@ -158,6 +181,31 @@ fr:
     resume:
       invalid_transition: L'objectif ne peut pas être repris dans son état actuel.
       success: Objectif repris.
+    consume:
+      title: Enregistrer une dépense
+      subtitle: "%{goal}"
+      amount_label: Combien avez-vous utilisé ?
+      amount_hint: "%{saved} soutiennent actuellement cet objectif."
+      account_label: Depuis quel compte ?
+      earmark_note: "Le montant enregistré cesse d'être réservé à cet objectif : vos autres objectifs sur ce compte récupèrent leur part."
+      cancel: Annuler
+      submit: Enregistrer
+      success: "%{amount} enregistrés comme utilisés."
+      errors:
+        non_positive: Indiquez un montant supérieur à zéro.
+        maintained: "Une réserve se ponctionne et se reconstitue, elle ne se dépense pas — ce qui lui manque apparaît déjà sur l'objectif."
+        exceeds_target: C'est plus que ce que cet objectif visait à épargner.
+        account_required: Cet objectif est financé par plusieurs comptes — indiquez celui d'où vient l'argent.
+        account_not_linked: Ce compte ne finance pas cet objectif.
+        not_active: "Cet objectif n'est plus actif : rien ne peut y être enregistré."
+        exceeds_earmark: "C'est plus que ce que l'objectif a affecté sur ce compte."
+        transaction_already_claimed: Cette sortie a déjà été attribuée.
+        transaction_not_found: Cette sortie n'est plus disponible.
+        no_linked_account: Cet objectif n'a plus de compte de financement.
+    unattributed_outflows:
+      heading: De l'argent est sorti de ces comptes
+      body: Si une partie a servi à %{goal}, dites-le et elle cessera de compter comme un retard.
+      attribute: C'était ça
     show:
       archive: Archiver
       archived_banner:
@@ -169,19 +217,29 @@ fr:
         body: Rythme actuel %{avg}/mois · requis %{required}/mois pour atteindre votre objectif.
         title: Épargnez %{amount}/mois de plus pour rattraper le retard
       celebration:
+        body_reserve: "Votre réserve est à son solde cible, %{saved} sur %{target}. Rien à faire — elle reste affectée."
+        heading_reserve: Réserve constituée
+        body_reached: "Vous avez atteint votre cible, à %{saved} sur %{target}. Il n'est pas encore clôturé — l'argent lui reste affecté."
+        close_cta: Clôturer cet objectif
+        close_hint: La clôture libère l'argent affecté au profit de vos autres objectifs sur le même compte. À faire une fois la dépense réellement effectuée.
+        frozen: "Atteint le %{date} · %{amount}"
         archive_cta: Archiver l'objectif
         body: Objectif clôturé à %{saved} sur %{target}. Conservez-le, ou archivez-le dès maintenant.
         heading: Objectif atteint. Bon travail !
       complete: Marquer comme terminé
-      confirm_archive_body: Les objectifs archivés disparaissent de la liste principale. Vous pourrez les restaurer plus tard.
+      confirm_archive_body: Les objectifs archivés disparaissent de la liste principale. Vous pourrez les restaurer plus tard. L'archivage n'enregistre pas le montant atteint — clôturez d'abord l'objectif si vous voulez le conserver.
       confirm_archive_cta: Archiver
       confirm_archive_title: Archiver cet objectif ?
-      confirm_complete_body: Il quittera la liste En cours. Vous pourrez toujours l'archiver ou le restaurer plus tard.
+      confirm_delete_title: "Supprimer cet objectif ?"
+      confirm_delete_body: "%{name} et son historique de versements sont supprimés définitivement. Vos comptes liés, soldes et transactions ne sont pas affectés. Pour en garder une trace, archivez-le plutôt."
+      confirm_delete_cta: "Supprimer l'objectif"
+      confirm_complete_body: L'argent qui lui était affecté sera libéré pour vos autres objectifs sur le même compte. Il quittera la liste En cours, et vous pourrez toujours l'archiver ou le restaurer plus tard.
       confirm_complete_body_short: Vous êtes à %{progress}%, %{saved} sur %{target}. Marquer comme terminé enregistrera cela comme votre réussite à la place de l'objectif initial. Continuer, ou fermer ceci et ajuster l'objectif à la place ?
       confirm_complete_cta: Marquer comme terminé
       confirm_complete_title: Marquer cet objectif comme terminé ?
-      delete: Supprimer définitivement
+      delete: Supprimer
       edit: Modifier
+      consume: J'ai utilisé une partie de cet argent
       empty:
         body: Effectuez un virement sur votre compte lié. Sure le détectera lors de la prochaine synchronisation. Ou mettez à jour manuellement le solde du compte.
         heading: Aucun dépôt pour l'instant
@@ -236,22 +294,29 @@ fr:
         no_pace: Aucun dépôt pour le moment. Ajoutez de l'argent sur un compte lié pour démarrer la projection.
         no_target_date: Aucune date cible définie. Définissez-en une pour projeter la fin.
         on_track_html: Au rythme actuel, vous atteindrez cet objectif vers le <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        reserve: "Une réserve maintient un solde cible : il n'y a pas d'échéance à projeter."
         reached: Vous avez atteint l'objectif. Aucune projection nécessaire.
         today_marker: Aujourd'hui
         tooltip_projected: 'Projeté : %{amount}'
         tooltip_saved: 'Épargné : %{amount}'
         tooltip_target_relation: "%{percent}% de la cible de %{target}"
+      reserve_shortfall:
+        heading: Réserve sous son solde cible
+        body: "Vous détenez %{saved} sur %{target}. Complétez de %{missing} pour la ramener à son solde cible."
       record_pledge_cta: Enregistrer une promesse
       reopen: Réouvrir l'objectif
       resume: Reprendre
       ring:
+        including_used: "Dont %{amount} déjà utilisés"
         aria_label: Objectif complété à %{percent}%. %{amount} sur %{target} épargnés.
+        aria_label_with_used: "Objectif à %{percent}%. %{amount} sur %{target}, dont %{used} déjà utilisés."
         market_value: Valeur de marché %{amount}
         of: sur %{target}
         of_target: de l'objectif
         saved: Épargné
         to_go: "%{amount} restant(s)"
       status_callout:
+        depleted: "il manque %{amount} — complétez pour ramener la réserve à son solde cible"
         behind: épargnez %{amount}/mois de plus pour rattraper le retard
         behind_covered: les promesses en attente comblent le retard
         no_target_date: définissez une date cible pour projeter une date de fin
@@ -263,6 +328,8 @@ fr:
       completed: Terminé
       paused: En pause
     status:
+      depleted: À recompléter
+      funded: Réserve constituée
       archived: Archivé
       behind: En retard
       completed: Terminé

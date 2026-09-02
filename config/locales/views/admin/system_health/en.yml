@@ -1,0 +1,169 @@
+---
+en:
+  admin:
+    system_health:
+      show:
+        title: System health
+        tabs:
+          background_jobs: Background jobs
+          ai: AI status
+        alert:
+          title: Background jobs aren't running
+        status_section_title: Sidekiq status
+        status_section_description: Current state of the background worker that powers syncs, balances, and net-worth calculations.
+        counters_section_title: Job counters
+        counters_section_description: Aggregate Sidekiq counters across all queues.
+        queues_section_title: Queues
+        queues_section_description: Per-queue depth and oldest-job age. Latency is the seconds the oldest job has been waiting.
+        labels:
+          status: Status
+          processes: Worker processes
+          last_heartbeat: Last heartbeat
+          max_queue_latency: Oldest job age
+          enqueued: Enqueued
+          retries: Retries
+          failed: Failed
+          processed_total: Processed total
+          queue: Queue
+          size: Size
+          latency: Latency
+        values:
+          healthy: Healthy
+          unhealthy: Degraded
+          time_ago: "%{time_ago} ago"
+          never: Never
+          seconds: "%{seconds}s"
+          no_queues: "No queues are registered. The worker may not be running."
+        ai:
+          run_checks: Run checks again
+          last_checked: "Live checks completed %{time_ago} ago. Results are cached briefly."
+          not_checked_help: Open the AI status URL directly or run the checks to verify service liveness.
+          alerts:
+            custom_openai:
+              title: The hosted vector-store check failed at this custom endpoint
+              message: The configured endpoint did not pass the /v1/vector_stores liveness check. Most local and OpenAI-compatible endpoints do not implement that API. Chat and PDF processing may still work; use pgvector with a separate embeddings endpoint for the usual local setup. The failure was recorded in Settings → Debug logs and Rails.logger.
+            function_calling_unsupported:
+              title: The model does not support function calling
+              message: The endpoint served a plain chat request but rejected the same request carrying the tools parameter. The AI assistant reads accounts, transactions, and holdings through function calls, so chat keeps failing — often with an unhelpful 404 — until the model is one that supports tools. Pick a model whose provider documents function-calling support. The failure was recorded in Settings → Debug logs and Rails.logger.
+            function_calling_not_used:
+              title: The model answered without calling the tool it was asked to call
+              message: The endpoint accepted the tools parameter, but the model replied with text instead of calling the health-check tool. The AI assistant cannot read financial data without tool calls, so chat may answer with nothing or with invented figures. Prefer a model whose provider documents function-calling support.
+            llm_probe_failed:
+              title: The LLM live check failed
+              message: Sure could not verify both the configured endpoint and model. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pdf_text_extraction_failed:
+              title: The synthetic PDF text-extraction check failed
+              message: Sure could not complete the text-first path that extracts embedded PDF text locally and sends it to the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pdf_vision_processing_failed:
+              title: The synthetic PDF vision/native check failed
+              message: Sure could not complete the image or native-document PDF path through the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
+            vector_probe_failed:
+              title: The document-search live check failed
+              message: Sure could not verify the selected vector store and every required embedding service. The failure was recorded in Settings → Debug logs and Rails.logger.
+            qdrant:
+              title: Qdrant support is not implemented yet
+              message: The Qdrant adapter is scaffolded, but document upload and search operations currently fail. Select OpenAI or pgvector for document search.
+            missing_vector_store:
+              title: No vector store is configured
+              message: Uploaded documents cannot be indexed or searched until a vector-store adapter and its requirements are configured.
+            unavailable_vector_store:
+              title: The selected vector store is unavailable
+              message: Check the adapter requirements below. For pgvector, the database must provide the vector extension or an existing vector_store_chunks table.
+          llm:
+            title: LLM and PDF processing
+            description: The live checks verify the configured model, ask it for one trivial function call the way the assistant does, then separately exercise text extraction and vision/native processing with a one-page synthetic PDF containing no customer data. Credential values are never displayed.
+          vector_store:
+            title: Vector store and document search
+            description: The live check queries the hosted vector-store API, or tests the pgvector table and creates one short embedding without storing it.
+          labels:
+            selected_provider: Selected provider
+            effective_provider: Effective provider
+            model: Model
+            endpoint: Endpoint
+            function_calling: Function calling (tools)
+            pdf_text_extraction: PDF text-extraction path
+            pdf_vision_processing: PDF vision/native path
+            llm_request_timeout: LLM request timeout
+            probe_request_timeout: Health-check probe timeout
+            openai_credentials: OpenAI credentials
+            openai_compatible_credentials: OpenAI-compatible API credentials
+            anthropic_credentials: Anthropic credentials
+            adapter: Adapter
+            adapter_available: Adapter available
+            pgvector_extension: PostgreSQL vector extension
+            pgvector_table: Vector chunks table
+            embedding_model: Embedding model
+            embedding_endpoint: Embedding endpoint
+            embedding_dimensions: Embedding dimensions
+            function_calling_failure_reason: Function-calling failure reason
+            pdf_text_extraction_failure_reason: Text-extraction failure reason
+            pdf_vision_processing_failure_reason: Vision/native failure reason
+            storage_probe: pgvector storage check
+            embedding_probe: Embedding endpoint check
+            failure_reason: Failure reason
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-compatible
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Custom endpoint
+          adapters:
+            openai: OpenAI hosted vector store
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configured
+            not_configured: Not configured
+            fallback: "(fallback)"
+            not_set: Not set
+            "yes": "Yes"
+            "no": "No"
+            enabled: Enabled
+            available_not_enabled: Available, not enabled
+            not_available: Not available
+            available: Available
+            not_found: Not found
+          function_calling_statuses:
+            supported: Live tool call succeeded
+            unsupported: Not supported by the effective provider/model
+            not_used: Tools accepted, but the model called none
+            failing: Live check failed
+            not_checked: Not checked
+            unavailable: Unavailable until an LLM provider is configured
+          pdf_statuses:
+            supported: Synthetic PDF check passed
+            failing: Synthetic PDF check failed
+            unsupported: Disabled or not supported by the effective provider/model
+            not_checked: Not checked
+            unavailable: Unavailable until an LLM provider is configured
+          probe_statuses:
+            passing: Live check passed
+            failing: Live check failed
+            not_checked: Not checked
+            not_configured: Not configured
+          vector_statuses:
+            passing: Live checks passed
+            failing: Live check failed
+            not_checked: Not checked
+            not_configured: Not configured
+            scaffolded: Scaffolded
+            missing: Not configured
+          failure_codes:
+            model_not_available: The configured model was not returned by the provider
+            no_tool_call: The model answered without calling the health-check tool
+            tools_refused: The service served the same request without tools and refused it with them
+            invalid_response: The service returned an unexpected response
+            dimensions_mismatch: The embedding vector dimensions do not match the configured dimensions
+            extension_not_enabled: The PostgreSQL vector extension is not enabled
+            table_not_found: The vector_store_chunks table was not found
+            render_missing_binary: The pdftoppm renderer (poppler-utils) is not available in this container
+            timeout: The service did not respond before the probe timeout
+            request_failed: The service request failed
+            unsupported_provider: The provider does not support this check
+          local_setup:
+            title: Recommended local setup
+            description: Run the LLM through your local OpenAI-compatible endpoint, store document vectors in pgvector, and point the embedding settings at an OpenAI-compatible embeddings endpoint. The PostgreSQL image must include the vector extension, and embedding dimensions must match the selected model.

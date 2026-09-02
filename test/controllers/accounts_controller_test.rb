@@ -2,6 +2,7 @@ require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include OnchainTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -12,6 +13,78 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "p.ml-auto.privacy-sensitive"
+  end
+
+  test "index localizes the Plaid add accounts action" do
+    ensure_tailwind_build
+    @user.update!(locale: "de")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]",
+                  edit_plaid_item_path(plaid_items(:one), add_accounts: true),
+                  text: "Konten hinzufügen",
+                  count: 1
+  end
+
+  test "index renders kraken items" do
+    kraken_item = kraken_items(:one)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(kraken_item)}"
+  end
+
+  test "index renders on-chain wallet items" do
+    register_fake_chain!
+    item = create_onchain_wallet_item(family: @user.family)
+    onchain_account = create_onchain_wallet_account(item: item)
+    onchain_account.ensure_account_provider!(accounts(:investment))
+
+    get accounts_url
+
+    assert_response :success
+    # Without this the wallet is invisible here: its accounts carry a provider
+    # link, so Account.manual excludes them, and no provider section claimed them.
+    assert_select "##{dom_id(item, :accounts_index)}"
+    # The card carries the same actions menu every other provider card does.
+    assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
+    assert_select "form[action=?]", onchain_wallet_item_path(item)
+  ensure
+    unregister_fake_chain!
+  end
+
+  test "index does not leak wallet accounts a member was never given" do
+    register_fake_chain!
+    admin = users(:family_admin)
+    member = users(:family_member)
+    item = create_onchain_wallet_item(family: admin.family)
+
+    shared = accounts(:investment)
+    unshared = accounts(:credit_card)
+    [ shared, unshared ].each_with_index do |account, index|
+      account.update!(owner: admin)
+      account.account_shares.destroy_all
+      row = create_onchain_wallet_account(
+        item: item,
+        address: "#{OnchainTestHelper::FAKE_ADDRESS}#{index}"
+      )
+      row.ensure_account_provider!(account)
+    end
+    shared.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item, :accounts_index)}"
+    # The item is surfaced as soon as ONE of its accounts is accessible, so
+    # rendering them all would hand a partially-authorised member the names and
+    # balances of accounts nobody shared with them.
+    assert_includes response.body, shared.name
+    assert_not_includes response.body, unshared.name
+  ensure
+    unregister_fake_chain!
   end
 
   test "should get show" do
@@ -37,6 +110,28 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # checked option instead of the custom row.
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
+  test "sync all requests fresh Plaid transactions before syncing the family" do
+    sequence = sequence("manual sync all")
+    Family.any_instance
+      .expects(:request_plaid_transactions_refreshes_later)
+      .with(source: "AccountsController#sync_all")
+      .in_sequence(sequence)
+    Family.any_instance.expects(:sync_later).once.in_sequence(sequence)
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
+  end
+
+  test "sync all continues when Plaid refresh orchestration cannot be enqueued" do
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    Family.any_instance.expects(:sync_later).once
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
   end
 
   test "show avoids N+1 transfer queries across paginated entries" do
@@ -184,12 +279,60 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "account activity keeps excluded entries visible so they can be restored" do
+    trade_entry = entries(:trade)
+    trade_entry.update!(excluded: true)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)}"
+  end
+
   test "renders investment account with gains chart view" do
     get account_url(accounts(:investment), chart_view: "gains")
 
     assert_response :success
     assert_select "option[value=gains][selected]"
     assert_select "p", text: I18n.t("UI.account.chart.title.total_gains")
+  end
+
+  test "remembers selected per_page across account navigation" do
+    other_account = accounts(:credit_card)
+
+    get account_url(@account, per_page: 50)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+
+    get account_url(other_account)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+  end
+
+  test "shares remembered per_page with the global transactions page" do
+    get transactions_url(per_page: 100)
+    assert_response :success
+
+    get account_url(@account)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='100'][selected]"
+  end
+
+  test "shares account per_page preference with the global transactions page" do
+    get account_url(@account, per_page: 50)
+    assert_response :success
+
+    get transactions_url
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+  end
+
+  test "falls back to default per_page when nothing was stored yet" do
+    get account_url(@account)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='10'][selected]"
   end
 
   test "activity pagination keeps activity tab when loaded from holdings tab" do
@@ -248,6 +391,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sparkline renders an empty series without a trend" do
+    empty_series = Series.new(
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: []
+    )
+    Account.any_instance.expects(:sparkline_series).returns(empty_series)
+
+    get sparkline_account_url(@account)
+
+    assert_response :success
+    assert_select "p.font-mono", count: 0
+  end
+
   test "destroys account" do
     delete account_url(@account)
     assert_redirected_to accounts_path
@@ -265,7 +423,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # Mock at the class level since controller loads account from DB
     Account.any_instance.expects(:syncing?).returns(false)
     PlaidItem.any_instance.expects(:syncing?).returns(false)
-    PlaidItem.any_instance.expects(:sync_later).once
+    PlaidItem.any_instance.expects(:sync_later_with_provider_refresh).once
 
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)
@@ -478,6 +636,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     holding.reload
 
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
+  end
+
+  # Regression for #2516: the account sidebar fragment cache renders DS::* view
+  # components, which Rails' ERB dependency tracker mis-parses as a bogus "Ds/D"
+  # template dependency. With automatic digesting enabled that logged
+  # "Couldn't find template for digesting: Ds/D" on every cache miss. The
+  # fragment is manually versioned and opts out of digesting via skip_digest.
+  test "sidebar fragment cache does not log a bogus template digest error" do
+    log = StringIO.new
+    logger = ActiveSupport::Logger.new(log)
+
+    original_perform_caching = ActionController::Base.perform_caching
+    original_view_logger = ActionView::Base.logger
+    original_rails_logger = Rails.logger
+
+    ActionController::Base.perform_caching = true
+    ActionView::Base.logger = logger
+    Rails.logger = logger
+
+    get accounts_path
+    assert_response :success
+    assert_no_match(/Couldn't find template for digesting/, log.string)
+  ensure
+    ActionController::Base.perform_caching = original_perform_caching
+    ActionView::Base.logger = original_view_logger
+    Rails.logger = original_rails_logger
   end
 end
 

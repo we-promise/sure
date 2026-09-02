@@ -398,12 +398,30 @@ class ReportsController < ApplicationController
 
       # Helper to initialize a category group hash
       init_category_group = ->(id, name, color, icon, type) do
-        { category_id: id, category_name: name, category_color: color, category_icon: icon, type: type, total: 0, count: 0, subcategories: {} }
+        {
+          category_id: id,
+          category_name: name,
+          category_color: color,
+          category_icon: icon,
+          type: type,
+          total: 0,
+          count: 0,
+          has_transactions: false,
+          subcategories: {}
+        }
       end
 
       # Helper to initialize a subcategory hash
       init_subcategory = ->(category) do
-        { category_id: category.id, category_name: category.name, category_color: category.color, category_icon: category.lucide_icon, total: 0, count: 0 }
+        {
+          category_id: category.id,
+          category_name: category.name,
+          category_color: category.color,
+          category_icon: category.lucide_icon,
+          total: 0,
+          count: 0,
+          has_transactions: false
+        }
       end
 
       # Helper to process an entry (transaction or trade)
@@ -434,6 +452,7 @@ class ReportsController < ApplicationController
           grouped_data[parent_key][:subcategories][category.id] ||= init_subcategory.call(category)
           grouped_data[parent_key][:subcategories][category.id][:count] += 1
           grouped_data[parent_key][:subcategories][category.id][:total] += converted_amount
+          grouped_data[parent_key][:subcategories][category.id][:has_transactions] = true unless is_trade
         else
           # This is a root category (no parent)
           parent_key = [ category.id, type ]
@@ -442,6 +461,7 @@ class ReportsController < ApplicationController
 
         grouped_data[parent_key][:count] += 1
         grouped_data[parent_key][:total] += converted_amount
+        grouped_data[parent_key][:has_transactions] = true unless is_trade
       end
 
       # Process transactions
@@ -501,6 +521,12 @@ class ReportsController < ApplicationController
         .where(entries: { date: @period.date_range })
         .merge(Account.included_in_reports)
         .where("trades.qty < 0")
+        # A transfer out has the same negative quantity as a sale and would be
+        # counted and listed as one. Nothing was sold, so it belongs in neither.
+        .where(
+          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
+          Trade::INTERNAL_MOVEMENT_LABELS
+        )
         .includes(:security, entry: { account: :accountable })
         .to_a
 

@@ -1,0 +1,114 @@
+<div class="relative"
+     data-controller="category-select"
+     data-category-select-create-url-value="<%= helpers.categories_path(format: :json) %>"
+     data-category-select-default-color-value="<%= Category::COLORS.first %>"
+     data-category-select-disabled-value="<%= disabled %>"
+     data-category-select-auto-submit-value="<%= auto_submit %>"
+     data-category-select-create-label-value="<%= helpers.t("transactions.form.create_category", name: "__CATEGORY_NAME__") %>"
+     data-category-select-create-error-message-value="<%= helpers.t("transactions.form.create_category_error") %>"
+     data-action="click@window->category-select#handleOutsideClick">
+
+  <div class="form-field">
+    <div class="form-field__body">
+      <%= form.label :category_id,
+                     helpers.t("transactions.form.category"),
+                     class: "form-field__label" %>
+
+      <button type="button"
+              id="<%= trigger_id %>"
+              class="form-field__input min-h-7 flex items-center gap-2 pr-8"
+              data-category-select-target="button"
+              data-action="click->category-select#toggle"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="<%= menu_id %>"
+              <%= "disabled" if disabled %>>
+
+        <span data-category-select-target="selectionContainer"
+              class="text-secondary">
+          <% selected = categories.find { |c| c.id.to_s == selected_id } %>
+
+          <% if selected %>
+            <%= render partial: "categories/badge",
+                       locals: { category: selected } %>
+          <% else %>
+            <%= helpers.t("transactions.form.category_prompt") %>
+          <% end %>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <input type="hidden"
+         name="<%= field_name %>"
+         value="<%= selected_id %>"
+         data-category-select-target="hiddenInput"
+         <%= "disabled" if disabled %>>
+
+  <% unless disabled %>
+    <div class="absolute z-50 p-1.5 w-full min-w-48 rounded-lg shadow-lg bg-container mt-1.5 hidden"
+         data-category-select-target="menu">
+
+      <%= render DS::SearchInput.new(
+        variant: :embedded,
+        placeholder: helpers.t("transactions.form.category_search_placeholder"),
+        data: {
+          category_select_target: "search",
+          action: "input->category-select#filter keydown->category-select#handleSearchKeydown"
+        }
+      ) %>
+
+      <div class="flex flex-col gap-1 max-h-64 overflow-auto mt-1"
+           id="<%= menu_id %>"
+           role="listbox">
+
+        <% if blank_label.present? %>
+          <button type="button"
+                  role="option"
+                  aria-selected="<%= selected_id.blank? %>"
+                  data-category-select-target="option"
+                  data-category-id=""
+                  data-category-name="<%= blank_label %>"
+                  data-category-display-label="<%= blank_label %>"
+                  data-action="click->category-select#selectCategory"
+                  class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected_id.blank? %>">
+            <span class="check-icon w-4 <%= "invisible" unless selected_id.blank? %>">
+              <%= helpers.icon("check") %>
+            </span>
+
+            <span><%= blank_label %></span>
+          </button>
+        <% end %>
+
+        <% Category::Group.for(categories).each do |group| %>
+          <%= render partial: "DS/category_select/option",
+                     locals: {
+                       category: group.category,
+                       selected: group.category.id.to_s == selected_id,
+                       view_helpers: helpers
+                     } %>
+
+          <% group.subcategories.each do |category| %>
+            <%= render partial: "DS/category_select/option",
+                       locals: {
+                         category: category,
+                         selected: category.id.to_s == selected_id,
+                         view_helpers: helpers
+                       } %>
+          <% end %>
+        <% end %>
+
+        <button type="button"
+                class="hidden text-primary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
+                data-category-select-target="createForm"
+                data-action="click->category-select#createCategory">
+          <%= helpers.icon("plus") %>
+          <span data-category-select-target="createLabel"></span>
+        </button>
+
+        <p class="hidden px-3 py-1 text-xs text-destructive"
+           data-category-select-target="createError"></p>
+      </div>
+    </div>
+  <% end %>
+</div>

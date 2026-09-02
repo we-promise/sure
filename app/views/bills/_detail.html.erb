@@ -1,0 +1,222 @@
+<%# locals: (series:, current_occurrence:, history:, upcoming:, analytics:,
+             payment_history:, yearly_metrics:, last_account:,
+             recent_allocations:, dense: false) %>
+
+<%# The single definition of what a bill's detail *is*.
+
+    The inline expansion and the drawer were two templates over one controller
+    action, so they drifted: open a bill from the Overview and you got the
+    matching rules, the twelve-month chart and its recent payments; open the
+    same bill from All bills and you got upcoming dates, notes and the
+    averages instead. Same bill, different facts, decided by which list you
+    happened to click from.
+
+    They stay two presentations, because an inline row and a drawer want
+    different widths, but only one of them decides what a bill consists of.
+    `dense` picks the layout; it never picks the content. %>
+
+<% columns = dense ? "" : "md:grid-cols-2 md:divide-x md:divide-y-0" %>
+
+<div class="space-y-4">
+  <%= render "bills/cancelled_notice", series: series %>
+
+  <%# What is owed right now leads the page above this partial. With no open
+      cycle there is nothing for that card to say, so the expectation is
+      stated here instead. %>
+  <% unless current_occurrence %>
+    <div class="bg-container-inset rounded-lg p-3">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.next_payment") %></p>
+      <p class="text-lg font-medium text-primary privacy-sensitive">
+        <%= "~" if series.has_amount_variance? %><%= format_money(Money.new(series.amount.abs, series.currency)) %>
+      </p>
+      <% if series.next_expected_date.present? %>
+        <p class="text-xs text-secondary"><%= t("bills.detail.around", date: l(series.next_expected_date, format: :short)) %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# Subscription state: a trial about to convert, a renewal date, a
+      cancellation already recorded. These lived only on the Subscriptions
+      tab, which meant they were invisible from every other route to the
+      same bill. %>
+  <%= render "bills/state_chips", series: series %>
+
+  <%# Why this bill matches what it matches, in words rather than engine terms. %>
+  <div class="space-y-1.5">
+    <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.rules") %></p>
+    <div class="flex flex-wrap gap-1.5">
+      <%= render DS::Pill.new(label: t("bills.detail.rule_named", name: series.merchant&.name.presence || series.name), tone: :neutral, marker: false) %>
+      <% amount_label = series.has_amount_variance? ?
+           t("bills.detail.rule_amount_range", min: format_money(series.expected_amount_min_money), max: format_money(series.expected_amount_max_money)) :
+           format_money(Money.new(series.amount.abs, series.currency)) %>
+      <span class="privacy-sensitive"><%= render DS::Pill.new(label: amount_label, tone: :neutral, marker: false) %></span>
+      <%= render DS::Pill.new(label: frequency_label(series), tone: :neutral, marker: false) %>
+      <% if series.account %>
+        <%= render DS::Pill.new(label: series.account.name, tone: :neutral, marker: false) %>
+      <% end %>
+    </div>
+
+    <%# What the app has learned from corrections, prepared by
+        BillsHelper#bills_matcher_hints. %>
+    <% hints = bills_matcher_hints(series) %>
+    <% if hints[:aliases].any? %>
+      <p class="text-xs text-secondary">
+        <%= t("bills.detail.rule_aliases", names: hints[:aliases].to_sentence) %>
+      </p>
+    <% end %>
+    <% if hints[:learned_pct].positive? %>
+      <p class="text-xs text-secondary">
+        <%= t("bills.detail.rule_learned_tolerance", percent: number_to_percentage(hints[:learned_pct], precision: 1, format: "%n%")) %>
+      </p>
+    <% end %>
+  </div>
+
+  <%# What it has actually cost: the shape over twelve months, then the figures. %>
+  <div class="border border-subdued rounded-lg grid <%= columns %> divide-y divide-subdued">
+    <div class="px-3 py-3 flex flex-col justify-center">
+      <p class="text-xs font-medium text-secondary uppercase pb-1"><%= t("bills.detail.history_title") %></p>
+      <%= render DS::Sparkline.new(series: payment_history, aria_label: t("bills.detail.history_aria")) %>
+    </div>
+
+    <div class="px-3 py-3 space-y-2">
+      <% if analytics %>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <p class="text-xs text-secondary"><%= t("bills.detail.average") %></p>
+            <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:average]) %></p>
+            <p class="text-xs text-subdued privacy-sensitive">
+              <%= t("bills.detail.range", min: format_money(analytics[:lowest]), max: format_money(analytics[:highest])) %>
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t("bills.detail.annualized") %></p>
+            <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:annualized]) %></p>
+          </div>
+          <div>
+            <p class="text-xs text-secondary"><%= t("bills.detail.ytd") %></p>
+            <p class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(analytics[:ytd]) %></p>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Per-year totals are reference material rather than something you read
+          every time, so they sit one click away instead of adding a table to
+          every bill you open. %>
+      <% if yearly_metrics.any? %>
+        <%= render DS::Disclosure.new(title: t("bills.detail.key_metrics"), align: "left") do %>
+          <div class="divide-y divide-subdued pt-1">
+            <div class="grid grid-cols-3 text-xs text-secondary pb-1">
+              <p><%= t("bills.detail.year") %></p>
+              <p class="text-right"><%= t("bills.detail.spent_per_year") %></p>
+              <p class="text-right"><%= t("bills.detail.avg_payment") %></p>
+            </div>
+            <% yearly_metrics.each do |row| %>
+              <div class="grid grid-cols-3 py-1.5 text-sm">
+                <p class="text-secondary"><%= row[:year] %></p>
+                <p class="text-right text-primary privacy-sensitive"><%= format_money(row[:total]) %></p>
+                <p class="text-right text-primary privacy-sensitive"><%= format_money(row[:average]) %></p>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% if last_account %>
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-xs text-secondary"><%= t("bills.detail.last_account") %></p>
+          <p class="text-sm text-primary truncate"><%= last_account.name %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# What it used to cost. The twelve-month chart above shows the shape; this
+      names the moment it changed and by how much. %>
+  <% changes = series.recent_price_changes %>
+  <% if changes.any? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.price_changes") %></p>
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
+        <% changes.each do |change| %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2">
+            <p class="text-sm text-primary"><%= l(change.effective_on, format: :long) %></p>
+            <p class="text-sm privacy-sensitive <%= change.new_amount > change.previous_amount ? "text-warning" : "text-success" %>">
+              <%= t("bills.detail.price_change_line",
+                    from: format_money(change.previous_amount_money),
+                    to: format_money(change.new_amount_money)) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if upcoming.any? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.upcoming") %></p>
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
+        <% upcoming.each do |date| %>
+          <div class="flex items-center justify-between px-3 py-2">
+            <p class="text-sm text-primary"><%= l(date, format: :long) %></p>
+            <p class="text-sm text-secondary privacy-sensitive">
+              ~<%= format_money(Money.new(series.amount.abs, series.currency)) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Individual payments, which is the answer to "what actually paid this". %>
+  <% if recent_allocations.any? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.recent_payments") %></p>
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
+        <% recent_allocations.each do |allocation| %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2">
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate"><%= allocation.entry&.name.presence || t("bills.detail.manual_payment") %></p>
+              <% if allocation.paid_on %>
+                <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+              <% end %>
+            </div>
+            <p class="text-sm text-primary privacy-sensitive shrink-0"><%= format_money(allocation.allocated_amount_money) %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Settled cycles, which answers "did I pay it that month" rather than
+      "which transaction paid it". %>
+  <% if history.any? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.history") %></p>
+      <div class="bg-container-inset rounded-lg divide-y divide-subdued">
+        <% history.each do |occurrence| %>
+          <div class="flex items-center justify-between px-3 py-2">
+            <div>
+              <p class="text-sm text-primary"><%= l(occurrence.due_on, format: :long) %></p>
+              <p class="text-xs text-secondary">
+                <%= t("recurring_occurrences.history_status.#{occurrence.status}") %>
+                <% if occurrence.allocations.size > 1 %>
+                  &middot; <%= t("bills.detail.payment_count", count: occurrence.allocations.size) %>
+                <% end %>
+              </p>
+            </div>
+            <p class="text-sm text-primary privacy-sensitive">
+              <%= format_money(occurrence.confirmed_allocated_money) %>
+            </p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if series.notes.present? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.notes") %></p>
+      <p class="text-sm text-primary"><%= series.notes %></p>
+    </div>
+  <% end %>
+</div>

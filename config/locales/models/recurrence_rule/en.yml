@@ -1,0 +1,27 @@
+---
+en:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: "Frequency"
+        interval: "Interval"
+        day_of_month: "Day of month"
+        weekday: "Weekday"
+        weekday_ordinal: "Week of month"
+        month_of_year: "Month"
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: "Choose exactly one of a day of the month or a weekday"
+          attributes:
+            weekday:
+              required_for_weekly: "is required for a weekly rule"
+            weekday_ordinal:
+              not_allowed_for_weekly: "does not apply to a weekly rule"
+              required_with_weekday: "is required when a weekday is set"
+              not_allowed_without_weekday: "only applies when a weekday is set"
+            day_of_month:
+              not_allowed_for_weekly: "does not apply to a weekly rule"
+            month_of_year:
+              required_for_yearly: "is required for a yearly rule"
+              not_allowed: "only applies to a yearly rule"

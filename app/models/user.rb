@@ -25,6 +25,7 @@ class User < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
+  has_many :push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -35,6 +36,8 @@ class User < ApplicationRecord
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
+  has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
+  has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
 
   MFA_BACKUP_CODE_COUNT = 8
@@ -74,9 +77,34 @@ class User < ApplicationRecord
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
-  # get the specified fallback role (typically :admin for family creators).
+  # get the specified admin-capable fallback role.
+  # Keep this one-key advisory lock stable across deploys so old and new app
+  # processes serialize first-user role selection on the same database lock.
+  FIRST_USER_ROLE_LOCK_KEY = 8_391_247
+
+  def self.lock_first_user_role!
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", FIRST_USER_ROLE_LOCK_KEY ]))
+  end
+
   def self.role_for_new_family_creator(fallback_role: :admin)
+    fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
+
     User.exists? ? fallback_role : :super_admin
+  end
+
+  class << self
+    def human_attribute_name(attribute, options = {})
+      locale = options[:locale] || I18n.locale
+      moniker = I18n.with_locale(locale) do
+        Current.family&.moniker_label || I18n.t("shared.family_moniker.singular", default: "Family")
+      end
+
+      options = {
+        moniker: moniker
+      }.merge(options)
+
+      super(attribute, options)
+    end
   end
 
   has_one_attached :profile_image, dependent: :purge_later do |attachable|
@@ -139,6 +167,12 @@ class User < ApplicationRecord
     family.accounts.included_in_finances_for(self)
   end
 
+  # Other family members who have granted this user access to their personal
+  # budget (see BudgetShare). Used to build the budget owner switcher.
+  def budget_owners_shared_with_me
+    User.where(id: budget_shares_received.select(:owner_id))
+  end
+
   def display_name
     [ first_name, last_name ].compact.join(" ").presence || email
   end
@@ -192,7 +226,7 @@ class User < ApplicationRecord
   # SSO-only users have OIDC identities but no local password.
   # They cannot use password reset or local login.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil? && oidc_identities.any?
   end
 
   # Check if user has a local password set (can authenticate locally)
@@ -205,10 +239,88 @@ class User < ApplicationRecord
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
+
+  # Super Admin Invariant
+  validate :ensure_not_last_super_admin, if: :losing_super_admin_privileges?
+  before_destroy :ensure_not_last_super_admin_on_destroy
+
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
-    update active: false, email: deactivated_email
+    return true unless active?
+
+    transaction do
+      update(active: false, email: deactivated_email)
+    end || false
+  end
+
+  private
+
+    def losing_super_admin_privileges?
+      (role_changed? && role_was == "super_admin" && role != "super_admin") ||
+        (active_changed? && active_was == true && !active && role == "super_admin")
+    end
+
+    def ensure_not_last_super_admin
+      return unless check_last_super_admin_invariant_failed?
+
+      attribute = role_changed? ? :role : :base
+      errors.add(attribute, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+    end
+
+    def ensure_not_last_super_admin_on_destroy
+      return unless role == "super_admin" && active?
+
+      if check_last_super_admin_invariant_failed?
+        errors.add(:base, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+        throw(:abort)
+      end
+    end
+
+    def check_last_super_admin_invariant_failed?
+      # Lock all active super admins in a consistent order to prevent deadlocks
+      locked_ids = User.where(role: :super_admin, active: true).order(:id).lock.pluck(:id)
+      locked_ids.size <= 1 && locked_ids.include?(id)
+    end
+
+  public
+
+  # Permanent removal of another user, initiated by a super admin from the
+  # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
+  # (which reassigns owned accounts, or destroys the family when this is its
+  # last member) for the heavy data cleanup, but additionally revokes every
+  # live authentication vector *synchronously* so there is no window in which
+  # the removed user can keep acting or re-authenticate before the async purge
+  # runs. Returns false (with errors populated) when the user cannot be
+  # deactivated, e.g. an admin who still has co-members in their family.
+  def permanently_remove!
+    was_active = active?
+    removed = transaction do
+      identity_label = email
+      raise ActiveRecord::Rollback unless deactivate
+
+      SsoIdentityBlock.block_all!(oidc_identities, identity_label: identity_label)
+      revoke_all_credentials!
+      true
+    end || false
+
+    purge_later if removed && !was_active
+    removed
+  end
+
+  # Destroys every credential/session that can authenticate as this user.
+  # Web sessions and the SSO identity re-auth path (OidcIdentity lookup by
+  # provider+uid) are not gated on #active?, so they must be torn down here for
+  # revocation to be immediate; the async purge would otherwise leave a window.
+  def revoke_all_credentials!
+    Doorkeeper::AccessToken
+      .where(resource_owner_id: id, revoked_at: nil)
+      .update_all(revoked_at: Time.current)
+    sessions.destroy_all
+    api_keys.destroy_all
+    mobile_devices.destroy_all
+    webauthn_credentials.destroy_all
+    oidc_identities.destroy_all
   end
 
   def can_deactivate
@@ -219,6 +331,59 @@ class User < ApplicationRecord
 
   def purge_later
     UserPurgeJob.perform_later(self)
+  end
+
+  def transfer_to_family!(new_family, role: self.role)
+    transaction do
+      lock!
+
+      accounts_to_move = owned_accounts.to_a
+      provider_items_to_move = provider_items_for_transfer(accounts_to_move)
+      moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      account_shares.delete_all
+
+      update!(family: new_family, role: role, default_account: moving_default_account ? default_account : nil)
+
+      accounts_to_move.each do |account|
+        account.update!(family: new_family)
+      end
+
+      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+
+      provider_items_to_move.each do |provider_item|
+        provider_item.update!(family: new_family)
+      end
+
+      new_family.auto_share_existing_accounts_with(self)
+    end
+  end
+
+  def provider_items_for_transfer(accounts_to_move)
+    account_ids_to_move = accounts_to_move.map(&:id)
+    provider_items = accounts_to_move.flat_map do |account|
+      account.account_providers.includes(:provider).filter_map do |account_provider|
+        provider_item_for(account_provider.provider)
+      end
+    end.uniq
+
+    provider_items.each do |provider_item|
+      linked_account_ids = provider_item.accounts.map(&:id)
+      next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    provider_items
+  end
+
+  def provider_item_for(provider)
+    item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
+      association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
+    end
+
+    provider.public_send(item_association.name) if item_association
   end
 
   def purge
@@ -385,10 +550,6 @@ class User < ApplicationRecord
   end
 
   # Transactions preferences management
-  def transactions_section_collapsed?(section_key)
-    preferences&.dig("transactions_collapsed_sections", section_key) == true
-  end
-
   def show_split_grouped?
     preferences&.dig("show_split_grouped") != false
   end
@@ -403,24 +564,6 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
-  end
-
-  def update_transactions_preferences(prefs)
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs["transactions_#{key}"] ||= {}
-          updated_prefs["transactions_#{key}"] = updated_prefs["transactions_#{key}"].merge(value)
-        else
-          updated_prefs["transactions_#{key}"] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
   end
 
   private

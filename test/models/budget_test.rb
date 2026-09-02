@@ -263,6 +263,7 @@ class BudgetTest < ActiveSupport::TestCase
     budget.stubs(:available_to_spend).returns(200)
     budget.stubs(:budget_category_actual_spending).with(parent_budget_category).returns(63.11)
     budget.stubs(:budget_category_actual_spending).with(standalone_budget_category).returns(25)
+    budget.stubs(:budget_category_actual_spending).with(budget.uncategorized_budget_category).returns(0)
 
     segments = budget.to_donut_segments_json
 
@@ -278,6 +279,59 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 63.11, segments_by_id[parent_budget_category.id][:amount]
     assert_equal 25, segments_by_id[standalone_budget_category.id][:amount]
     assert_equal 200, segments_by_id["unused"][:amount]
+  end
+
+  test "to_donut_segments_json includes uncategorized spending" do
+    family = @family
+    account = Account.create!(
+      family: family,
+      accountable: Depository.new,
+      name: "Checking",
+      status: "active",
+      currency: "USD",
+      balance: 0
+    )
+
+    category = Category.create!(
+      name: "Groceries #{Time.now.to_f}",
+      family: family,
+      color: "#407706",
+      lucide_icon: "shopping-bag"
+    )
+
+    budget = Budget.create!(
+      family: family,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month,
+      currency: "USD",
+      budgeted_spending: 100
+    )
+
+    BudgetCategory.create!(
+      budget: budget,
+      category: category,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Uncategorized donut spending",
+      amount: 125,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+    uncategorized = budget.uncategorized_budget_category
+    segments = budget.to_donut_segments_json
+    uncategorized_segment = segments.find { |segment| segment[:id] == uncategorized.id }
+
+    assert_equal 125, budget.actual_spending
+    assert_equal 125, uncategorized.actual_spending
+    assert_not_nil uncategorized_segment
+    assert_equal 125, uncategorized_segment[:amount]
   end
 
   test "actual_spending subtracts uncategorized refunds" do
@@ -382,6 +436,50 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 500, target_bc.budgeted_spending
   end
 
+  test "copy_from copies the rollover toggle but not the rolled over amount" do
+    family = families(:dylan_family)
+
+    source_budget = Budget.find_or_bootstrap(family, start_date: 2.months.ago)
+    source_budget.update!(budgeted_spending: 4000, expected_income: 6000)
+    source_bc = source_budget.budget_categories.find_by(category: categories(:food_and_drink))
+    source_bc.update!(budgeted_spending: 500, rollover_enabled: true)
+    source_bc.update_column(:rolled_over_amount, 250)
+
+    target_budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
+    target_budget.copy_from!(source_budget)
+
+    target_bc = target_budget.budget_categories.find_by(category: categories(:food_and_drink)).reload
+
+    assert target_bc.rollover_enabled?
+    assert_not_equal 250, target_bc[:rolled_over_amount],
+      "the carry is derived from the chain, never copied from the source"
+
+    # copy_from! changes what the chain should hold, so it must leave it
+    # recomputed: running the calculator again has nothing left to do.
+    derived = target_bc[:rolled_over_amount]
+    Budget::RolloverCalculator.new(family: family, user: nil).recompute!
+    assert_equal derived, target_bc.reload[:rolled_over_amount]
+  end
+
+  test "rollover leaves allocated_spending and available_to_allocate alone" do
+    family = families(:dylan_family)
+
+    budget = Budget.find_or_bootstrap(family, start_date: 1.month.ago)
+    budget.update!(budgeted_spending: 4000, expected_income: 6000)
+    budget_category = budget.budget_categories.find_by(category: categories(:food_and_drink))
+    budget_category.update!(budgeted_spending: 500, rollover_enabled: true)
+
+    allocated_before = budget.reload.allocated_spending
+    available_before = budget.available_to_allocate
+
+    budget_category.update_column(:rolled_over_amount, 120)
+    budget.reload
+
+    assert_equal allocated_before, budget.allocated_spending
+    assert_equal available_before, budget.available_to_allocate
+    assert_equal 120, budget.total_rolled_over
+  end
+
   test "copy_from skips categories that dont exist in target" do
     family = families(:dylan_family)
 
@@ -452,5 +550,21 @@ class BudgetTest < ActiveSupport::TestCase
     # Must be > 0 — the nil-key collision between Uncategorized and
     # Other Investments synthetic categories previously caused this to return 0
     assert spending >= 75, "Uncategorized actual spending should include the $75 transaction, got #{spending}"
+  end
+
+  test "days_remaining counts today through the end of the period" do
+    budget = budgets(:one)
+
+    travel_to budget.start_date do
+      assert_equal (budget.end_date - budget.start_date).to_i + 1, budget.days_remaining
+    end
+
+    travel_to budget.end_date do
+      assert_equal 1, budget.days_remaining
+    end
+
+    travel_to budget.end_date + 1.day do
+      assert_equal 0, budget.days_remaining
+    end
   end
 end

@@ -1,6 +1,9 @@
 ---
 pl:
   insights:
+    notification:
+      title: Nowa analiza finansowa
+      body: Otwórz Sure, aby przejrzeć najnowszą analizę AI.
     index:
       title: Analityka
       subtitle: Co dzieje się w twoich finansach, odświeżane codziennie.
@@ -12,10 +15,10 @@ pl:
       queued: Generujemy świeże analizy. Sprawdź za minutę.
       checking: Sprawdzanie...
     card:
+      acknowledged: "Analiza odrzucona"
       dismiss: Odrzuć
       new: Nowa
       dismissed: Analiza odrzucona
-      undo: Cofnij
     feed:
       view_all: Zobacz wszystkie analizy
       header: Najnowsze

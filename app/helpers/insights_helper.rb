@@ -7,11 +7,38 @@ module InsightsHelper
     "savings_rate_change" => "piggy-bank",
     "idle_cash" => "wallet",
     "budget_at_risk" => "alert-triangle",
-    "budget_on_track" => "circle-check"
+    "budget_on_track" => "circle-check",
+    # Same shield the reserve panel uses on the goal page, so the two read as
+    # the same object seen from two places.
+    "maintained_goal_depleted" => "shield-alert"
   }.freeze
 
   def insight_icon_key(insight)
     INSIGHT_ICONS.fetch(insight.insight_type, "lightbulb")
+  end
+
+  # Matches the numeric fragments inside insight prose: currency amounts
+  # ("€288.59", "1 234,56 €"), percentages ("142%"), and bare counts. Digit
+  # groups may be separated by ".", ",", or the (narrow) no-break spaces some
+  # locales format with, but must start and end on a digit so sentence
+  # punctuation stays outside the match.
+  INSIGHT_NUMERIC_FRAGMENT = /
+    (?:\p{Sc}[\s\u00A0\u202F]?)?          # currency symbol prefix
+    \d(?:[\d.,\s\u00A0\u202F]*\d)?        # digits with grouping separators
+    (?:[\s\u00A0\u202F]?(?:%|\p{Sc}))?    # percent or currency symbol suffix
+  /x
+
+  # Insight titles and bodies are stored as finished prose with the amounts
+  # already interpolated (by the i18n template or the LLM writer), so unlike
+  # the rest of the app the figures can't be tagged where they're formatted.
+  # This wraps each numeric fragment in a privacy-sensitive span at render
+  # time so privacy mode blurs the numbers but the sentence stays readable.
+  def insight_privacy_text(text)
+    safe_join(
+      text.to_s.split(/(#{INSIGHT_NUMERIC_FRAGMENT})/o).map.with_index do |part, index|
+        index.odd? ? tag.span(part, class: "privacy-sensitive") : part
+      end
+    )
   end
 
   # "Savings rate · June" / "Cash flow · Next 30 days" — the card's meta line.
@@ -45,7 +72,14 @@ module InsightsHelper
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
       facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
-    when "budget_at_risk", "budget_on_track"
+    when "budget_at_risk"
+      # Not budget_spent_pct: this card's headline is "N categories need
+      # attention", and total consumption ("14% of budget") reads as reassurance
+      # next to it — a focal figure arguing against its own card. The flagged
+      # count is what the card is actually about.
+      facts["count"] && [ facts["count"].to_s, t("insights.figures.need_attention") ]
+    when "budget_on_track"
+      # Still the right figure here, where overall usage *is* the subject.
       facts["budget_spent_pct"] && [ "#{facts["budget_spent_pct"]}%", t("insights.figures.of_budget") ]
     end
   end
@@ -80,6 +114,9 @@ module InsightsHelper
     when "budget_at_risk", "budget_on_track"
       return nil unless insight.period_start
       { text: t("insights.actions.budget"), href: budget_path(Budget.date_to_param(insight.period_start)) }
+    when "maintained_goal_depleted"
+      goal = insight.family.goals.find_by(id: metadata["goal_id"])
+      goal && { text: t("insights.actions.maintained_goal_depleted"), href: goal_path(goal) }
     end
   end
 
@@ -121,7 +158,9 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
-    when "budget_at_risk"
+    when "budget_at_risk", "maintained_goal_depleted"
+      # Warning, not negative: the reserve is short, not overdrawn, and red is
+      # reserved here for money actually going the wrong side of zero.
       :warning
     else
       :neutral
@@ -141,18 +180,24 @@ module InsightsHelper
         return facts["account"] || facts["name"]
       end
 
-      if start_date == start_date.beginning_of_month && end_date == start_date.end_of_month
-        format = start_date.year == Date.current.year ? "%B" : "%B %Y"
-        return I18n.l(start_date, format: format)
-      end
-
       days = (end_date - start_date).to_i
-      if start_date >= Date.current - 1
+      if rolling_period_insight?(insight) && start_date >= Date.current - 1
+        t("insights.meta.next_n_days", count: days)
+      elsif rolling_period_insight?(insight) && end_date >= Date.current - 1
+        t("insights.meta.last_n_days", count: days)
+      elsif start_date == start_date.beginning_of_month && end_date == start_date.end_of_month
+        format = start_date.year == Date.current.year ? "%B" : "%B %Y"
+        I18n.l(start_date, format: format)
+      elsif start_date >= Date.current - 1
         t("insights.meta.next_n_days", count: days)
       elsif end_date >= Date.current - 1
         t("insights.meta.last_n_days", count: days)
       else
         t("insights.meta.date_range", from: I18n.l(start_date, format: :short), to: I18n.l(end_date, format: :short))
       end
+    end
+
+    def rolling_period_insight?(insight)
+      insight.insight_type.in?(%w[cash_flow_warning net_worth_milestone])
     end
 end

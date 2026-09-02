@@ -159,4 +159,43 @@ class CategoryTest < ActiveSupport::TestCase
     assert lookup.key?(category.id)
     assert_not lookup.key?(0)
   end
+
+  test "alphabetically_by_hierarchy orders a category's subcategories immediately after it" do
+    ordered = @family.categories.alphabetically_by_hierarchy.to_a
+
+    parent_index = ordered.index(categories(:food_and_drink))
+    child_index = ordered.index(categories(:subcategory))
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
+  test "recently_used_for orders by last_used_at, most recent first" do
+    older = categories(:income)
+    newer = categories(:food_and_drink)
+    older.update!(last_used_at: 2.days.ago)
+    newer.update!(last_used_at: 1.day.ago)
+
+    assert_equal [ newer, older ], Category.recently_used_for(family: @family).to_a
+  end
+
+  test "recently_used_for excludes categories with no usage yet" do
+    categories(:food_and_drink).update!(last_used_at: 1.day.ago)
+
+    assert_not_includes Category.recently_used_for(family: @family).to_a, categories(:income)
+  end
+
+  test "recently_used_for excludes given categories and respects limit" do
+    a = categories(:income)
+    b = categories(:food_and_drink)
+    c = categories(:subcategory)
+    a.update!(last_used_at: 3.days.ago)
+    b.update!(last_used_at: 2.days.ago)
+    c.update!(last_used_at: 1.day.ago)
+
+    result = Category.recently_used_for(family: @family, excluding: b, limit: 1)
+
+    assert_equal [ c ], result.to_a
+  end
 end
