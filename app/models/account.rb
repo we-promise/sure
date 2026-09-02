@@ -640,13 +640,11 @@ class Account < ApplicationRecord
       has_domain = institution_domain.present?
       has_provider_logo = provider&.logo_url.present?
       return false unless has_domain || has_provider_logo
-
       # Queue on relevant changes or if no logo attached yet
       saved_change_to_institution_domain? ||
         saved_change_to_logo_source? ||
-        !logo.attached? ||
-        # Allow fetching from providers that expose logo_url but have no institution domain
-        (institution_domain.blank? && has_provider_logo)
+        !logo.attached?
+
     end
 
     def mark_manual_if_logo_uploaded
