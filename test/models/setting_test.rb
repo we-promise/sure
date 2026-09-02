@@ -131,4 +131,23 @@ class SettingTest < ActiveSupport::TestCase
     assert_nil result
     assert_equal "test-model", Setting.openai_model
   end
+
+  test "enabled_securities_providers falls back to twelve_data when nothing is configured" do
+    assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+  end
+
+  test "enabled_securities_providers returns an empty list when explicitly cleared, not the legacy default" do
+    Setting.securities_providers = ""
+    Setting.securities_provider = ""
+
+    assert_equal [], Setting.enabled_securities_providers
+  ensure
+    # Explicitly restore the real default value rather than assigning nil —
+    # rails-settings-cached's cache layer doesn't reliably invalidate on
+    # delete within a single test process, so a later test can still read
+    # back the just-deleted blank override instead of falling through to
+    # the field's default.
+    Setting.securities_providers = ""
+    Setting.securities_provider = "twelve_data"
+  end
 end

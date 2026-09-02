@@ -27,16 +27,25 @@ class Settings::HostingsController < ApplicationController
     exchange_rate_provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
     enabled_securities = Setting.enabled_securities_providers
 
-    # Show provider settings if used for FX or enabled for securities
-    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || enabled_securities.include?("twelve_data")
-    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || enabled_securities.include?("yahoo_finance")
+    # Show provider settings if used for FX or enabled for securities. The
+    # securities checkbox is the master on/off switch for the securities use;
+    # the FX dropdown above is a separate, independent setting, so a provider
+    # can still be shown (fx_only) purely to let the FX-side API key be
+    # configured/monitored even after its securities checkbox is unchecked.
+    twelve_data_securities_enabled = enabled_securities.include?("twelve_data")
+    yahoo_finance_securities_enabled = enabled_securities.include?("yahoo_finance")
+    @show_twelve_data_settings = exchange_rate_provider == "twelve_data" || twelve_data_securities_enabled
+    @show_yahoo_finance_settings = exchange_rate_provider == "yahoo_finance" || yahoo_finance_securities_enabled
+    @twelve_data_fx_only = @show_twelve_data_settings && !twelve_data_securities_enabled
+    @yahoo_finance_fx_only = @show_yahoo_finance_settings && !yahoo_finance_securities_enabled
     @show_tiingo_settings = enabled_securities.include?("tiingo")
     @show_eodhd_settings = enabled_securities.include?("eodhd")
     @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
-    # T-Invest doubles as a brand-logo source consulted regardless of the price
-    # provider, so its token is useful even when it's not enabled for prices.
-    # Always surface the token field, decoupled from the securities checklist.
-    @show_tinkoff_invest_settings = true
+    # T-Invest also doubles as a brand-logo fallback for MOEX-priced securities
+    # (see Security::Provided#brand_logo_provider), so surface it for either.
+    tinkoff_invest_checked = enabled_securities.include?("tinkoff_invest")
+    @show_tinkoff_invest_settings = tinkoff_invest_checked || enabled_securities.include?("moex_public")
+    @tinkoff_invest_moex_only = @show_tinkoff_invest_settings && !tinkoff_invest_checked
 
     # Only fetch provider data if we're showing the section
     if @show_twelve_data_settings
@@ -97,8 +106,10 @@ class Settings::HostingsController < ApplicationController
 
       # Clear the legacy singular setting so the fallback in
       # enabled_securities_providers doesn't re-enable a provider
-      # the user just unchecked.
-      Setting.securities_provider = nil if new_providers.empty?
+      # the user just unchecked. Assigning nil would delete the override and
+      # fall back to its own field default ("twelve_data"), silently
+      # re-enabling it — assign a blank string instead, which persists.
+      Setting.securities_provider = "" if new_providers.empty?
 
       # Mark securities linked to removed providers as offline so they aren't
       # silently queried against an incompatible fallback provider (e.g. MFAPI
