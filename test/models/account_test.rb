@@ -635,7 +635,7 @@ class AccountTest < ActiveSupport::TestCase
     ddg_http.stubs(:open_timeout=)
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).returns(ddg_failure)
-    Net::HTTP.stubs(:new).with("52.149.246.247", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
 
     @account.update!(institution_domain: "new.example.com")
     FetchLogoJob.perform_now(@account.id, "new.example.com")

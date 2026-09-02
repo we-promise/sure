@@ -27,7 +27,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     http_mock.expects(:read_timeout=).with(5)
     http_mock.expects(:request).yields(fake_response)
 
-    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(http_mock)
+    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(http_mock)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
@@ -63,8 +63,8 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
 
-    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(bf_http)
-    Net::HTTP.stubs(:new).with("18.160.41.80", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
@@ -93,7 +93,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     provider_http.stubs(:read_timeout=)
     provider_http.expects(:request).yields(provider_response)
 
-    Net::HTTP.stubs(:new).with("8.8.8.8", 443).returns(provider_http)
+    Net::HTTP.stubs(:new).with("provider.example.com", 443).returns(provider_http)
     Net::HTTP.expects(:new).with("icons.duckduckgo.com", 443).never
 
     Account::LogoFetcher.new(@account).fetch_and_attach
@@ -132,8 +132,8 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
 
-    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(bf_http)
-    Net::HTTP.stubs(:new).with("18.160.41.80", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
@@ -188,8 +188,8 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
 
-    Net::HTTP.stubs(:new).with("18.160.41.3", 443).returns(bf_http)
-    Net::HTTP.stubs(:new).with("18.160.41.80", 443).returns(ddg_http)
+    Net::HTTP.stubs(:new).with("cdn.brandfetch.io", 443).returns(bf_http)
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
 
     Account::LogoFetcher.new(@account).fetch_and_attach
 
