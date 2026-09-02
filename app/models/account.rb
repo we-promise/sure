@@ -613,9 +613,10 @@ class Account < ApplicationRecord
       old_blob.purge_later
     end
 
-    # Purge on every persisted effective domain change, including transitions
-    # from provider-derived domains when stored account domain changes from blank
-    if saved_change_to_institution_domain? && logo.attached? && institution_domain_before_last_save.present?
+    # Evaluate effective previous domain, including provider-derived values
+    # when persisted attribute was blank
+    previous_effective_domain = institution_domain_before_last_save || provider&.institution_domain
+    if saved_change_to_institution_domain? && logo.attached? && previous_effective_domain.present?
       old_blob = logo.blob
       logo.detach
       old_blob.purge_later
