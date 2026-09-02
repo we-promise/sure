@@ -18,6 +18,7 @@ class Account < ApplicationRecord
 
   # Queue logo fetch after save to avoid blocking the save operation
   after_save_commit :queue_logo_fetch, if: :should_queue_logo_fetch?
+  after_save_commit :purge_manual_logo_on_auto_switch, if: :should_purge_manual_logo?
   before_validation :clean_institution_domain, if: -> { read_attribute(:institution_domain).present? }
 
   validates :name, :balance, :currency, presence: true
@@ -458,7 +459,22 @@ class Account < ApplicationRecord
       )
     end
 
-    private
+  
+  def purge_manual_logo_on_auto_switch
+    # Always purge manual logo when switching from manual to auto source
+    # This happens independently of fetch-source availability
+    if saved_change_to_logo_source? && logo_source_auto? && logo.attached?
+      old_blob = logo.blob
+      logo.detach
+      old_blob.purge_later
+    end
+  end
+
+  def should_purge_manual_logo?
+    saved_change_to_logo_source? && logo_source_auto? && logo.attached?
+  end
+
+  private
 
       def create_from_crypto_exchange_account(provider_account, family:)
         attributes = {
@@ -606,13 +622,6 @@ class Account < ApplicationRecord
     # indefinitely. Only runs while logo_source is auto, so manual uploads
     # are never touched here.
     #
-    # Also purge manual logo when switching from manual to auto source
-    if saved_change_to_logo_source? && logo_source_auto? && logo.attached?
-      old_blob = logo.blob
-      logo.detach
-      old_blob.purge_later
-    end
-
     # Evaluate effective previous domain, including provider-derived values
     # when persisted attribute was blank
     previous_effective_domain = institution_domain_before_last_save || provider&.institution_domain
