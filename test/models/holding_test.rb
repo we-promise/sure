@@ -49,6 +49,12 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal BigDecimal("3240.0"), @amzn.amount
   end
 
+  test "keeps explicit market value when quantity and price change" do
+    @amzn.update!(qty: 20, price: 250, amount: @amzn.amount)
+
+    assert_equal BigDecimal("3240.0"), @amzn.amount
+  end
+
   test "calculates average cost basis" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
