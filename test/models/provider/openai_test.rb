@@ -8,6 +8,32 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "request_timeout uses ENV then Setting then default" do
+    Setting.stubs(:openai_request_timeout).returns(nil)
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do
+      assert_equal Provider::Openai::DEFAULT_REQUEST_TIMEOUT, Provider::Openai.request_timeout
+    end
+
+    Setting.stubs(:openai_request_timeout).returns(180)
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do
+      assert_equal 180, Provider::Openai.request_timeout
+    end
+
+    Setting.stubs(:openai_request_timeout).returns(180)
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => "300") do
+      assert_equal 300, Provider::Openai.request_timeout
+    end
+  end
+
+  test "request_timeout is passed to OpenAI client" do
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do
+      Setting.stubs(:openai_request_timeout).returns(180)
+      ::OpenAI::Client.expects(:new).with(access_token: "test-token", request_timeout: 180).returns(mock)
+
+      Provider::Openai.new("test-token")
+    end
+  end
+
   test "openai errors are automatically raised" do
     VCR.use_cassette("openai/chat/error") do
       response = @openai.chat_response("Test", model: "invalid-model-that-will-trigger-api-error")
