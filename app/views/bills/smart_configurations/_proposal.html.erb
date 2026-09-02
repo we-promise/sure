@@ -1,0 +1,12 @@
+<%# locals: (name:, value:, label:, current:, proposed:) %>
+<%# The checkbox IS the form field: its value is the proposed change, so an
+    unchecked row submits nothing at all. %>
+<label class="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-container-inset cursor-pointer">
+  <%= check_box_tag name, value, true, id: nil, class: "checkbox checkbox--light" %>
+  <span class="min-w-0 text-sm">
+    <span class="block text-primary"><%= label %></span>
+    <span class="block text-xs text-secondary">
+      <%= current %> <span aria-hidden="true">&rarr;</span> <span class="text-primary"><%= proposed %></span>
+    </span>
+  </span>
+</label>
