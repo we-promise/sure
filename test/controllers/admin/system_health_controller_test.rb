@@ -379,6 +379,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/The embedding dimensions do not match/, response.body)
     assert_match(/EMBEDDING_MODEL and EMBEDDING_DIMENSIONS/, response.body)
+    assert_match(/alter or recreate the pgvector embedding column\/table/, response.body)
     assert_match(/gemini-embedding-2-preview/, response.body)
     assert_no_match(/anthropic-secret/, response.body)
   end

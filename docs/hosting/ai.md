@@ -1486,6 +1486,18 @@ EMBEDDING_MODEL=gemini-embedding-2-preview
 EMBEDDING_DIMENSIONS=3072
 ```
 
+Changing only `EMBEDDING_DIMENSIONS` does not reshape an existing pgvector
+column. If `vector_store_chunks` was already created with a different size,
+back up the database and source documents, remove the indexed documents from
+Sure, then alter or recreate the `embedding` column/table before uploading the
+documents again. Dropping the empty chunks table lets Sure recreate it with the
+new vector size:
+
+```bash
+docker compose -f compose.example.ai.yml exec web bin/rails runner \
+  'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+```
+
 Restart Sure after changing environment values so the new settings are present
 in both web and worker processes. If the embedding live check times out, raise
 the health-check probe timeout in the service environment:

@@ -74,7 +74,7 @@ en:
               message: Sure could not query the pgvector chunks table. Check PostgreSQL permissions, the vector extension, and the vector_store_chunks migration. The failure was recorded in Settings → Debug logs and Rails.logger.
             embedding_dimensions_mismatch:
               title: The embedding dimensions do not match
-              message: The embedding endpoint returned a vector whose length does not match EMBEDDING_DIMENSIONS. Set EMBEDDING_MODEL and EMBEDDING_DIMENSIONS to the model's documented vector size, restart Sure so the environment persists, then rebuild the pgvector index if existing documents used a different size.
+              message: The embedding endpoint returned a vector whose length does not match EMBEDDING_DIMENSIONS. Set EMBEDDING_MODEL and EMBEDDING_DIMENSIONS to the model's documented vector size, restart Sure so the environment persists, then alter or recreate the pgvector embedding column/table and re-embed documents if existing data used a different size.
             embedding_probe_timeout:
               title: The embedding live check timed out
               message: The embedding endpoint did not answer before AI_HEALTH_PROBE_TIMEOUT. Increase that health-check timeout if the provider is slow, then restart Sure so the environment persists in every process. If normal AI chat calls also time out, raise OPENAI_REQUEST_TIMEOUT separately.
