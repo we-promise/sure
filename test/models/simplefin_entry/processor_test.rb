@@ -388,7 +388,39 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by!(external_id: "simplefin_tx_other_institution_direct_debit", source: "simplefin")
     assert_equal BigDecimal("-25.00"), entry.amount
-    assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_not sf.key?("amount_normalization"), "expected non-Fidelity transactions to carry no amount_normalization key"
+  end
+
+  test "does not raise or normalize when org_data is missing or malformed" do
+    cases = {
+      "nil" => nil,
+      "empty" => {},
+      "no_name" => { "domain" => "fidelity.com" },
+      "non_string_name" => { "name" => 123 },
+      "json_string" => "Fidelity Investments",
+      "json_array" => [ "Fidelity Investments" ]
+    }
+
+    cases.each do |label, org_data|
+      @simplefin_account.update!(org_data: org_data)
+      tx = {
+        id: "tx_org_data_#{label}",
+        amount: "25.00",
+        currency: "USD",
+        description: "DIRECT DEBIT",
+        posted: Date.current.to_s
+      }
+
+      assert_nothing_raised do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_org_data_#{label}", source: "simplefin")
+      assert_equal BigDecimal("-25.00"), entry.amount, "expected org_data #{label} to fall back to upstream sign behavior"
+      sf = entry.transaction.extra.fetch("simplefin")
+      assert_not sf.key?("amount_normalization"), "expected org_data #{label} to carry no amount_normalization key"
+    end
   end
 
   test "leaves ambiguous and unmapped descriptions on upstream sign behavior" do
@@ -437,5 +469,28 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     entry.reload
     assert_equal BigDecimal("-10.00"), entry.amount
     assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "clears stale normalization metadata when a resynced descriptor becomes unmapped" do
+    tx = {
+      id: "tx_normalization_resync_2",
+      amount: "-40.00",
+      currency: "USD",
+      description: "DIRECT DEPOSIT",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_normalization_resync_2", source: "simplefin")
+    assert_equal "direct_deposit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+
+    tx[:description] = "PURCHASE"
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry.reload
+    assert_equal BigDecimal("40.00"), entry.amount
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert sf.key?("amount_normalization"), "expected Fidelity transactions to keep the key so stale values are overwritten"
+    assert_nil sf["amount_normalization"]
   end
 end
