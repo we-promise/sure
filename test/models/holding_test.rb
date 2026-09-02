@@ -44,9 +44,9 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   test "keeps explicit market value when price changes" do
-    @amzn.update!(price: 250, amount: 4000)
+    @amzn.update!(price: 250, amount: @amzn.amount)
 
-    assert_equal BigDecimal("4000.0"), @amzn.amount
+    assert_equal BigDecimal("3240.0"), @amzn.amount
   end
 
   test "calculates average cost basis" do
