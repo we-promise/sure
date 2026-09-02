@@ -108,6 +108,29 @@ class Account::ReconciliationManagerTest < ActiveSupport::TestCase
     end
   end
 
+  test "recovers when the winner is caught by the model-level date-uniqueness validation instead of the DB index" do
+    create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
+
+    # A different timing than the DB-unique-index test above: here the
+    # winning valuation is already committed and visible by the time our
+    # own save runs its validations, so Entry's own date-uniqueness
+    # validation (validates :date, uniqueness: ..., if: -> { valuation? })
+    # catches it first and raises RecordInvalid - never reaching the
+    # database at all, so RecordNotUnique alone wouldn't have covered this.
+    winning_entry = @account.entries.create!(
+      name: "Test", amount: 1000, date: Date.current,
+      entryable: Valuation.new(kind: "reconciliation"), currency: @account.currency
+    )
+    @manager.stubs(:find_existing_valuation_for_date).returns(nil, winning_entry)
+
+    assert_no_difference "Valuation.count" do
+      result = @manager.reconcile_balance(balance: 1200, date: Date.current)
+
+      assert result.success?
+      assert_equal 1200, result.new_balance
+    end
+  end
+
   test "recovers from a genuine unique-index conflict even inside an outer transaction" do
     create_balance(account: @account, date: Date.current, balance: 1000, cash_balance: 500)
 

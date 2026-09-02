@@ -37,19 +37,27 @@ class Account::ReconciliationManager
       new_balance: prepared_valuation.amount,
       error_message: nil
     )
-  rescue ActiveRecord::RecordNotUnique => e
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
     # Concurrent-request backstop: another request reconciling the same
     # account+date won the race and committed its valuation in the window
     # between our `find_by(date:)` lookup above (in #prepare_reconciliation)
-    # and our own #save!. The partial unique index on entries(account_id,
-    # date) scoped to valuations lets exactly one INSERT win. Retry once
-    # against the now-existing row so the request that lost the race still
-    # applies its balance, instead of surfacing a raw DB error to the user.
-    # Only retry when we weren't already targeting a specific row (a caller
-    # that passed existing_valuation_entry explicitly hit this for some
-    # other reason, e.g. a changed date colliding with a different
-    # valuation - not the race this rescue is meant to handle).
-    winning_valuation = existing_valuation_entry.nil? && find_existing_valuation_for_date(date)
+    # and our own #save!. Depending on exactly when the winner commits
+    # relative to our own save, this shows up as either:
+    #   - ActiveRecord::RecordNotUnique - the winner's INSERT lands between
+    #     our lookup and our own INSERT, so the partial unique index on
+    #     entries(account_id, date) rejects us at the database level; or
+    #   - ActiveRecord::RecordInvalid on :date - the winner's row is already
+    #     visible by the time our own validations run (before we ever reach
+    #     the database), so Entry's model-level date-uniqueness validation
+    #     catches it first.
+    # Either way, retry once against the now-existing row so the request
+    # that lost the race still applies its balance, instead of surfacing a
+    # raw DB/validation error to the user. A RecordInvalid for any other
+    # reason isn't this race - fall through to the generic failure below.
+    is_date_uniqueness_race = e.is_a?(ActiveRecord::RecordNotUnique) ||
+      e.record.errors.of_kind?(:date, :taken)
+
+    winning_valuation = is_date_uniqueness_race && existing_valuation_entry.nil? && find_existing_valuation_for_date(date)
 
     if winning_valuation
       reconcile_balance(balance: balance, date: date, dry_run: dry_run, existing_valuation_entry: winning_valuation)
