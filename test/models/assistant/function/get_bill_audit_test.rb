@@ -101,6 +101,16 @@ class Assistant::Function::GetBillAuditTest < ActiveSupport::TestCase
     assert_operator row[:cycles_overdue], :>=, 1
   end
 
+  # Same contract as get_bills' due_within_days: out-of-range values are
+  # rejected, not silently clamped onto a different question.
+  test "an out-of-range lookback_months is rejected, not silently adjusted" do
+    assert_match(/between 1 and 24/, call_tool("lookback_months" => 0)[:error])
+    assert_match(/between 1 and 24/, call_tool("lookback_months" => "forever")[:error])
+    assert_match(/between 1 and 24/, call_tool("lookback_months" => 36)[:error])
+    assert_nil call_tool("lookback_months" => 6)[:error]
+    assert_nil call_tool({})[:error]
+  end
+
   private
 
     def call_tool(params = {})

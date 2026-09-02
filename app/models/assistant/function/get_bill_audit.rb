@@ -45,7 +45,19 @@ class Assistant::Function::GetBillAudit < Assistant::Function
   def call(params = {})
     return recurring_disabled_result if recurring_disabled?
 
-    lookback = (Integer(params["lookback_months"].to_s, exception: false) || 12).clamp(1, 24)
+    # Same contract as get_bills' due_within_days: a present value outside the
+    # range is rejected, not silently adjusted to answer a different question.
+    if params["lookback_months"].present?
+      lookback = Integer(params["lookback_months"].to_s, exception: false)
+      unless lookback&.between?(1, 24)
+        return {
+          error: "lookback_months must be a whole number between 1 and 24",
+          hint: "Retry once with a value in that range, or omit it for 12."
+        }
+      end
+    else
+      lookback = 12
+    end
     active = accessible_series.active
                               .includes(:merchant, :account, :recurrence_rules)
                               .to_a
