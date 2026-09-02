@@ -1,0 +1,181 @@
+<%= content_for :page_title, t(".title") %>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <%= render "bills/view_switcher", active: "overview" %>
+
+  <div class="space-y-4 min-w-0">
+  <%# Nothing here was confirmed by anyone: detection built it from bank data.
+      Says so once, and stops as soon as the user works with any of it. %>
+  <% if @detected_awaiting_review.positive? %>
+    <div class="bg-container rounded-xl shadow-border-xs px-4 py-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <p class="text-sm text-primary">
+        <%= t(".detected_review", count: @detected_awaiting_review) %>
+      </p>
+      <%= link_to t(".detected_review_action"), bills_path(view: "all"),
+            class: "text-xs text-secondary hover:text-primary shrink-0" %>
+    </div>
+  <% end %>
+
+  <%= render "bills/month_pulse" %>
+
+  <%= render "bills/ai_prompts", prompts: %w[due_before_paycheck subscriptions_up monthly_subscriptions] %>
+
+  <%# Changes worth knowing about, ranked by whether you can still do anything.
+      Everything stays on the page: the quieter half collapses rather than
+      being capped, so nothing becomes a dead end and nothing pushes the
+      worklist off screen. %>
+  <% if @notices.any? %>
+    <% urgent, routine = @notices.partition(&:urgent?) %>
+    <div class="bg-container rounded-xl shadow-border-xs divide-y divide-subdued">
+      <% urgent.each do |notice| %>
+        <%= render "bills/notice", notice: notice, urgent: true %>
+      <% end %>
+
+      <% if routine.any? %>
+        <div class="px-4 py-2">
+          <% if urgent.any? %>
+            <%= render DS::Disclosure.new(title: t(".notices_routine", count: routine.size), align: "left") do %>
+              <div class="divide-y divide-subdued">
+                <% routine.each do |notice| %>
+                  <%= render "bills/notice", notice: notice, urgent: false %>
+                <% end %>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="divide-y divide-subdued">
+              <% routine.each do |notice| %>
+                <%= render "bills/notice", notice: notice, urgent: false %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @suggested_allocations.any? %>
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t(".needs_review") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p><%= @suggested_allocations.size %></p>
+      </div>
+
+      <div class="bg-container rounded-lg shadow-border-xs divide-y divide-subdued">
+        <% @suggested_allocations.each do |suggestion| %>
+          <% series = suggestion.recurring_occurrence.recurring_transaction %>
+          <div class="flex items-center justify-between gap-4 px-4 py-3">
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate">
+                <%= t(".suggestion_line",
+                      entry: suggestion.entry&.name.presence || t(".suggestion_unknown_entry"),
+                      bill: series.display_name) %>
+              </p>
+              <%# The matcher stores WHY it proposed each of these. This line
+                  used to show a bare percentage of that reasoning instead of
+                  the reasoning, which told nobody anything they could judge. %>
+              <% reasons = bills_match_reasons(
+                   suggestion.match_signals,
+                   currency: suggestion.recurring_occurrence.currency,
+                   expected: suggestion.recurring_occurrence.resolved_expected_amount,
+                   actual: suggestion.entry&.amount&.abs,
+                   due_on: suggestion.recurring_occurrence.effective_due_on,
+                   paid_on: suggestion.paid_on
+                 ) %>
+              <p class="text-xs text-secondary privacy-sensitive">
+                <%= format_money(suggestion.allocated_amount_money) %>
+                &middot; <%= l(suggestion.paid_on, format: :short) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <%= render DS::Link.new(
+                    text: t("recurring_occurrences.show.link_payment"),
+                    variant: "primary",
+                    href: confirm_recurring_allocation_path(suggestion),
+                    method: :post
+                  ) %>
+              <%= render DS::Link.new(
+                    text: t("recurring_occurrences.show.not_this_one"),
+                    variant: "ghost",
+                    href: reject_recurring_allocation_path(suggestion),
+                    method: :post
+                  ) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Series-level review: detection found these, nobody confirmed them yet.
+      Distinct from the payment-match queue above. %>
+  <% if @suggested_series.any? %>
+    <%= render "recurring_transactions/suggested_series", suggested: @suggested_series %>
+  <% end %>
+
+  <% if [ @overdue, @month_rows, @later, @dormant ].all?(&:empty?) %>
+    <% if @suggested_series.none? %>
+      <div class="bg-container rounded-xl shadow-border-xs p-4">
+        <%= render DS::EmptyState.new(
+              icon: "receipt",
+              title: t(".empty.title"),
+              description: @has_transaction_history ? t(".empty.description") : t(".empty.no_history_description")
+            ) do |empty| %>
+          <% empty.with_action do %>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <% if @has_transaction_history %>
+                <%= render DS::Link.new(
+                      text: t(".empty.action"),
+                      icon: "search",
+                      variant: "primary",
+                      href: detect_bills_path,
+                      method: :post
+                    ) %>
+                <%= render DS::Link.new(
+                      text: t(".add_bill"),
+                      icon: "plus",
+                      variant: "outline",
+                      href: new_recurring_transaction_path,
+                      frame: :modal
+                    ) %>
+              <% else %>
+                <%# Detection over zero transactions finds nothing; offering it
+                    would be a button that silently does nothing. %>
+                <%= render DS::Link.new(
+                      text: t(".add_bill"),
+                      icon: "plus",
+                      variant: "primary",
+                      href: new_recurring_transaction_path,
+                      frame: :modal
+                    ) %>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <%# Anything late is pulled out of the chronological run. Inside it, an
+        overdue bill was distinguishable only by a word in the date column, so
+        the most urgent rows were the easiest ones to scroll past. %>
+    <% if @overdue.any? %>
+      <div class="rounded-xl bg-container-inset space-y-1 p-1">
+        <%# The section says how much is at stake, not just how many rows: a
+            count alone is alarming without being informative. %>
+        <%= render "bills/occurrence_section",
+                   title: t(".needs_attention"),
+                   occurrences: @overdue,
+                   date_labels: true,
+                   suggestions: @suggestions_by_occurrence,
+                   meta: (@past_due_total && @past_due_total.amount.positive? ? t(".attention_overdue_total", amount: format_money(@past_due_total)) : nil) %>
+      </div>
+    <% end %>
+
+    <div class="rounded-xl bg-container-inset space-y-1 p-1">
+      <%= render "bills/occurrence_section", title: t(".this_month"), occurrences: @month_rows, date_labels: true, suggestions: @suggestions_by_occurrence, pay_periods: @month_pay_periods %>
+      <%= render "bills/occurrence_section", title: t(".later"), occurrences: @later, suggestions: @suggestions_by_occurrence %>
+      <%= render "bills/occurrence_section", title: t(".dormant"), occurrences: @dormant, suggestions: @suggestions_by_occurrence %>
+    </div>
+  <% end %>
+  </div>
+</div>

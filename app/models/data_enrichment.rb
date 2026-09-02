@@ -19,6 +19,7 @@ class DataEnrichment < ApplicationRecord
     ibkr: "ibkr",
     questrade: "questrade",
     pluggy: "pluggy",
-    redbark: "redbark"
+    redbark: "redbark",
+    trade_republic: "trade_republic"
   }
 end

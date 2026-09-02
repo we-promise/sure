@@ -13,6 +13,18 @@
       <% end %>
     </div>
 
+    <% if @trade_republic_categories.present? %>
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <% @trade_republic_categories.each do |category, summary| %>
+          <div class="rounded-lg border border-secondary bg-container-inset px-3 py-2">
+            <p class="text-xs text-secondary"><%= t("trade_republic_items.portfolio_categories.#{category}") %></p>
+            <p class="text-sm font-medium text-primary"><%= t(".positions", count: summary[:count]) %></p>
+            <p class="text-xs text-secondary"><%= format_money Money.new(summary[:value].round(2), @account.currency) %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
     <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
       <div class="w-max lg:w-full">
         <div class="grid grid-cols-12 items-center uppercase text-xs font-medium text-secondary px-4 py-2">

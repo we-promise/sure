@@ -104,6 +104,9 @@ module SettingsHelper
     when "ibkr"
       return { status: :off } unless @ibkr_items&.any?
       sync_based_summary(key)
+    when "trade_republic"
+      return { status: :off } unless @trade_republic_items&.any?
+      sync_based_summary(key)
     when "indexa_capital"
       return { status: :off } unless @indexa_capital_items&.any?
       sync_based_summary(key)

@@ -36,6 +36,9 @@ class AccountsController < ApplicationController
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
     @pluggy_items = visible_provider_items(family.pluggy_items.ordered.with_attached_logo.includes(:syncs, :pluggy_accounts))
+    @trade_republic_items = visible_provider_items(
+      family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
+    )
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
@@ -64,7 +67,7 @@ class AccountsController < ApplicationController
   end
 
   def sync_all
-    family.plaid_items.syncable.each(&:request_transactions_refresh_later)
+    family.request_plaid_transactions_refreshes_later(source: "AccountsController#sync_all")
     family.sync_later
     redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
@@ -355,6 +358,7 @@ class AccountsController < ApplicationController
         @questrade_items,
         @wise_items,
         @pluggy_items,
+        @trade_republic_items,
         @onchain_wallet_items
       ].flatten.compact
 
