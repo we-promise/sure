@@ -599,7 +599,9 @@ class Account < ApplicationRecord
     # Only purge if the domain actually changed (not on create, where the
     # domain goes from nil to the initial value).
     if saved_change_to_institution_domain? && logo.attached? && institution_domain_before_last_save.present?
-      logo.purge
+      old_blob = logo.blob
+      logo.detach
+      old_blob.purge_later
     end
 
     FetchLogoJob.perform_later(id, institution_domain)
