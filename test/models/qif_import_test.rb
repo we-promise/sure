@@ -320,6 +320,19 @@ class QifImportTest < ActiveSupport::TestCase
     refute normal_txn.split, "Expected normal transaction not to be flagged"
   end
 
+  test "parse preserves ordered split line details" do
+    transactions = QifParser.parse(QIF_WITH_SPLITS)
+    split_txn = transactions.find { |t| t.payee == "Grocery & Hardware Store" }
+
+    assert_equal 2, split_txn.split_lines.length
+    assert_equal "Food & Dining", split_txn.split_lines.first.category
+    assert_equal "-100.00", split_txn.split_lines.first.amount
+    assert_equal "Groceries", split_txn.split_lines.first.memo
+    assert_equal "Household", split_txn.split_lines.second.category
+    assert_equal "-50.00", split_txn.split_lines.second.amount
+    assert_equal "Supplies", split_txn.split_lines.second.memo
+  end
+
   test "parse returns correct count including split transactions" do
     transactions = QifParser.parse(QIF_WITH_SPLITS)
     assert_equal 2, transactions.length
@@ -455,12 +468,50 @@ class QifImportTest < ActiveSupport::TestCase
     refute @import.has_split_transactions?
   end
 
-  test "split_categories is empty when splits use --Split-- placeholder" do
+  test "split_categories uses split line categories when splits use --Split-- placeholder" do
     @import.update!(raw_file_str: QIF_WITH_SPLIT_PLACEHOLDER)
     @import.generate_rows_from_csv
 
-    assert_empty @import.split_categories
+    assert_equal [ "Clothing", "Food", "Home Improvement" ], @import.split_categories
+    assert_includes @import.row_categories, "Clothing"
+    assert_includes @import.row_categories, "Food"
+    assert_includes @import.row_categories, "Home Improvement"
     refute_includes @import.row_categories, "--Split--"
+  end
+
+  test "import! creates split children from QIF split lines" do
+    @import.update!(raw_file_str: QIF_WITH_SPLITS)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Entry.count", 4 do
+      @import.import!
+    end
+
+    parent = @account.entries.find_by!(name: "Grocery & Hardware Store")
+    assert parent.excluded?
+    assert parent.split_parent?
+    assert_equal @import, parent.import
+
+    children = parent.child_entries.includes(:entryable).order(:amount)
+    assert_equal 2, children.count
+
+    supplies = children.find { |entry| entry.name == "Supplies" }
+    groceries = children.find { |entry| entry.name == "Groceries" }
+
+    assert_not_nil groceries
+    assert_not_nil supplies
+    assert_in_delta 100, groceries.amount, 0.01
+    assert_equal "Food & Dining", groceries.entryable.category.name
+    assert_equal "Groceries", groceries.notes
+    assert_equal @import, groceries.import
+    assert groceries.import_locked?
+
+    assert_in_delta 50, supplies.amount, 0.01
+    assert_equal "Household", supplies.entryable.category.name
+    assert_equal "Supplies", supplies.notes
+    assert_equal @import, supplies.import
+    assert supplies.import_locked?
   end
 
   test "categories_selected? is false before sync_mappings" do

@@ -105,7 +105,7 @@ class QifImport < Import
 
   # Unique categories used across all rows (blank entries excluded).
   def row_categories
-    rows.distinct.pluck(:category).reject(&:blank?).sort
+    (rows.distinct.pluck(:category) + parsed_split_categories).reject(&:blank?).uniq.sort
   end
 
   # Returns true if the QIF file contains any split transactions.
@@ -115,18 +115,15 @@ class QifImport < Import
   end
 
   # Categories that appear on split transactions in the QIF file.
-  # Split transactions use S/$ fields to break a total into sub-amounts;
-  # the app does not yet support splits, so these categories are flagged.
   def split_categories
     return @split_categories if defined?(@split_categories)
 
-    split_cats = parsed_transactions_with_splits.select(&:split).map(&:category).reject(&:blank?).uniq.sort
-    @split_categories = split_cats & row_categories
+    @split_categories = parsed_split_categories
   end
 
   # Unique tags used across all rows (blank entries excluded).
   def row_tags
-    rows.flat_map(&:tags_list).uniq.reject(&:blank?).sort
+    (rows.flat_map(&:tags_list) + parsed_split_tags).uniq.reject(&:blank?).sort
   end
 
   # True once the category/tag selection step has been completed
@@ -153,6 +150,18 @@ class QifImport < Import
 
     def parsed_transactions_with_splits
       @parsed_transactions_with_splits ||= QifParser.parse(raw_file_str)
+    end
+
+    def parsed_transaction_by_source_row_number
+      @parsed_transaction_by_source_row_number ||= parsed_transactions_with_splits.each.with_index(1).to_h { |trn, index| [ index, trn ] }
+    end
+
+    def parsed_split_categories
+      parsed_transactions_with_splits.flat_map { |trn| trn.split_lines.to_a.map(&:category) }.reject(&:blank?).uniq.sort
+    end
+
+    def parsed_split_tags
+      parsed_transactions_with_splits.flat_map { |trn| trn.split_lines.to_a.flat_map(&:tags) }
     end
 
     def investment_account?
@@ -245,27 +254,54 @@ class QifImport < Import
     # ------------------------------------------------------------------
 
     def import_transaction_rows!
-      transactions = rows.map do |row|
+      rows.ordered.each do |row|
+        parsed_transaction = parsed_transaction_by_source_row_number[row.source_row_number]
         category = mappings.categories.mappable_for(row.category)
         tags     = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
 
-        Transaction.new(
+        transaction = Transaction.create!(
           category: category,
-          tags:     tags,
-          entry:    Entry.new(
-            account:      account,
-            date:         row.date_iso,
-            amount:       row.signed_amount,
-            name:         row.name,
-            currency:     row.currency,
-            notes:        row.notes,
-            import:       self,
-            import_locked: true
-          )
+          tags:     tags
         )
+
+        entry = Entry.create!(
+          account:       account,
+          date:          row.date_iso,
+          amount:        row.signed_amount,
+          name:          row.name,
+          currency:      row.currency,
+          notes:         row.notes,
+          import:        self,
+          import_locked: true,
+          entryable:     transaction
+        )
+
+        import_split_lines!(entry, parsed_transaction, fallback_tags: tags) if parsed_transaction&.split_lines.present?
+      end
+    end
+
+    def import_split_lines!(entry, parsed_transaction, fallback_tags:)
+      split_rows = parsed_transaction.split_lines.map do |line|
+        {
+          name:        line.memo.presence || line.category.presence || entry.name,
+          amount:      signed_transaction_amount(line.amount),
+          category_id: mappings.categories.mappable_for(line.category)&.id,
+          notes:       line.memo,
+          tags:        line.tags.present? ? line.tags.map { |tag| mappings.tags.mappable_for(tag) }.compact : fallback_tags
+        }
       end
 
-      Transaction.import!(transactions, recursive: true)
+      return unless split_rows.sum { |row| row[:amount] } == entry.amount
+
+      children = entry.split!(split_rows)
+      children.zip(split_rows).each do |child, row|
+        child.update!(notes: row[:notes]) if row[:notes].present?
+        row[:tags].each { |tag| child.entryable.taggings.create!(tag: tag) }
+      end
+    end
+
+    def signed_transaction_amount(amount)
+      amount.to_d * (signage_convention == "inflows_positive" ? -1 : 1)
     end
 
     def import_investment_rows!

@@ -42,9 +42,11 @@ module QifParser
   OUTFLOW_TRANSACTION_ACTIONS = %w[XOut MiscExp].freeze
 
   ParsedTransaction = Struct.new(
-    :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared, :split,
+    :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared, :split, :split_lines,
     keyword_init: true
   )
+
+  ParsedSplitLine = Struct.new(:category, :tags, :amount, :memo, keyword_init: true)
 
   ParsedCategory = Struct.new(:name, :description, :income, keyword_init: true)
   ParsedTag      = Struct.new(:name, :description, keyword_init: true)
@@ -262,7 +264,8 @@ module QifParser
 
   # Splits a section into an array of field-code => value hashes.
   # Single-letter codes with no value (e.g. "I", "E", "T") are stored with nil.
-  # Split transactions (multiple S/$/E lines) are flagged with "_split" => true.
+  # Split transactions (multiple S/$/E lines) are flagged and retain ordered
+  # split line data so Quicken splits can be imported as Sure splits.
   def self.parse_records(section_content)
     records = []
     current = {}
@@ -279,8 +282,15 @@ module QifParser
         value = line[1..]&.strip
         next unless code
 
-        # Mark records that contain split fields (S = split category, $ = split amount)
-        current["_split"] = true if code == "S"
+        case code
+        when "S"
+          current["_split"] = true
+          (current["_split_lines"] ||= []) << { "category" => value.presence }
+        when "$"
+          current["_split_lines"]&.last&.[]=("amount", value.presence)
+        when "E"
+          current["_split_lines"]&.last&.[]=("memo", value.presence)
+        end
 
         # Flag fields like "I" (income) and "E" (expense) have no meaningful value
         current[code] = value.presence
@@ -308,6 +318,7 @@ module QifParser
     return nil unless date && amount
 
     category, tags = parse_category_and_tags(record["L"])
+    split_lines = build_split_lines(record["_split_lines"])
 
     ParsedTransaction.new(
       date:      date,
@@ -318,10 +329,28 @@ module QifParser
       tags:      tags,
       check_num: record["N"],
       cleared:   record["C"],
-      split:     record["_split"] == true
+      split:     record["_split"] == true,
+      split_lines: split_lines
     )
   end
   private_class_method :build_transaction
+
+  def self.build_split_lines(lines)
+    Array(lines).filter_map do |line|
+      amount = parse_qif_amount(line["amount"])
+      next unless amount
+
+      category, tags = parse_category_and_tags(line["category"])
+
+      ParsedSplitLine.new(
+        category: category,
+        tags:     tags,
+        amount:   amount,
+        memo:     line["memo"]
+      )
+    end
+  end
+  private_class_method :build_split_lines
 
   # Separates the category name from any tag(s) appended with a "/" delimiter.
   # Transfer accounts are wrapped in brackets – treated as no category.
