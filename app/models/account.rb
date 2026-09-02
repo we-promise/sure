@@ -18,8 +18,7 @@ class Account < ApplicationRecord
 
   # Queue logo fetch after save to avoid blocking the save operation
   after_save_commit :queue_logo_fetch, if: :should_queue_logo_fetch?
-
-  before_validation :clean_institution_domain, if: -> { institution_domain.present? }
+  before_validation :clean_institution_domain, if: -> { read_attribute(:institution_domain).present? }
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
