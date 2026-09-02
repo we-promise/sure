@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  staticTargets = [
+  static targets = [
     "input",
     "segment",
     "sizeError",
@@ -10,7 +10,7 @@ export default class extends Controller {
     "fileName",
     "fileSize",
   ];
-  staticValues = { maxSize: Number };
+  static values = { maxSize: Number };
 
   select(event) {
     this.#setSource(event.params.source);
