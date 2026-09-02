@@ -1,9 +1,17 @@
 class TransactionsController < ApplicationController
   include EntryableResource
 
+  # Distinguishes manually-created web form entries in the shared
+  # entries(account_id, source, external_id) uniqueness index from entries
+  # tagged by provider importers (e.g. "simplefin", "wise") or the public API
+  # (source "api"), which each use the same columns for their own idempotency.
+  MANUAL_FORM_SOURCE = "web_form"
+
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
+
+  helper_method :new_transaction_idempotency_key
 
   def show
     super
@@ -134,7 +142,19 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(account)
 
-    @entry = account.entries.new(entry_params)
+    idempotency_key = submitted_idempotency_key
+
+    # Sequential double-submit guard: the form was already submitted
+    # successfully once (double-click, browser retry, user reopening the
+    # dialog after a slow response) and the first request already committed
+    # by the time this one runs. Treat it as a success instead of creating a
+    # second, identical entry.
+    if idempotency_key && (existing_entry = find_duplicate_manual_entry(account, idempotency_key))
+      respond_with_created_entry(existing_entry)
+      return
+    end
+
+    @entry = account.entries.new(entry_params_with_idempotency_key(idempotency_key))
 
     if @entry.save
       @entry.sync_account_later
@@ -142,16 +162,22 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
-      flash[:notice] = t(".created")
-
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account) }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
-      end
+      respond_with_created_entry(@entry)
     else
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordNotUnique
+    # Concurrent-request backstop: two near-simultaneous submissions both
+    # passed the pre-check above (neither saw the other's row yet) and both
+    # reached #save. The partial unique index on
+    # entries(account_id, source, external_id) lets exactly one INSERT win;
+    # this rescues the loser and redirects it to the winning entry instead of
+    # creating a duplicate or surfacing a 500 to the user.
+    existing_entry = idempotency_key && find_duplicate_manual_entry(account, idempotency_key)
+    raise unless existing_entry
+
+    respond_with_created_entry(existing_entry)
   end
 
   def update
@@ -563,6 +589,45 @@ class TransactionsController < ApplicationController
       end
 
       entry_params
+    end
+
+    def entry_params_with_idempotency_key(idempotency_key)
+      return entry_params unless idempotency_key
+
+      entry_params.merge(source: MANUAL_FORM_SOURCE, external_id: idempotency_key)
+    end
+
+    def find_duplicate_manual_entry(account, idempotency_key)
+      account.entries.find_by(source: MANUAL_FORM_SOURCE, external_id: idempotency_key)
+    end
+
+    # The hidden "entry[idempotency_key]" field is rendered fresh (a random
+    # UUID) every time the new-transaction form loads, and echoed back
+    # unchanged by the browser on submit. It's never trusted for anything but
+    # de-duplication scoped to the current user's own account (see #create),
+    # so we only require that it looks like a UUID we could have generated -
+    # anything else (missing field, tampered value, non-string type from a
+    # malformed request) just disables the idempotency check for that
+    # request rather than being treated as an error.
+    UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+    private_constant :UUID_FORMAT
+
+    def submitted_idempotency_key
+      key = params.dig(:entry, :idempotency_key)
+      key if key.is_a?(String) && key.match?(UUID_FORMAT)
+    end
+
+    def new_transaction_idempotency_key
+      @new_transaction_idempotency_key ||= submitted_idempotency_key || SecureRandom.uuid
+    end
+
+    def respond_with_created_entry(entry)
+      flash[:notice] = t(".created")
+
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(entry.account) }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(entry.account)) }
+      end
     end
 
     def tag_ids_param
