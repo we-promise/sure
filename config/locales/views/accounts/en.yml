@@ -55,7 +55,7 @@ en:
       logo_too_large: That file is too large. Please choose an image under %{max_size}.
       logo_file_chosen: Chose %{filename} (%{size} of %{max_size})
       logo_attached: Current icon
-      logo_status: Using logo from institution or provider
+      logo_fallback: Using logo from institution or provider
       change_logo: Change icon
       auto_logo: Auto (from institution)
       manual_logo: Manual (custom upload)
