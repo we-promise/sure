@@ -54,6 +54,30 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to transactions_path
   end
 
+  test "the idempotency key does not mark either leg as provider-linked" do
+    # Regression test: the key must not be stored in external_id/source
+    # (Entry#linked? = external_id.present?), or an ordinary manual transfer
+    # would incorrectly look provider-synced.
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "Test Transfer",
+        source_fee_amount: 3,
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    transfer = Transfer.order(:created_at).last
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry, transfer.fee_transactions.first.entry ].each do |entry|
+      assert_not entry.linked?
+      assert_nil entry.external_id
+      assert_nil entry.source
+    end
+  end
+
   test "handles a genuine concurrent double-submit without raising or duplicating" do
     idempotency_key = SecureRandom.uuid
     from_account = accounts(:depository)
@@ -63,7 +87,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     # and commits its transfer in the window between our pre-check (which
     # therefore still sees nothing, hence the first `nil`) and our own
     # Transfer#save! (which then hits the real partial unique index on
-    # entries(account_id, source, external_id) and raises RecordNotUnique,
+    # entries(account_id, idempotency_key) and raises RecordNotUnique,
     # exactly like the DB would under real concurrent requests). The rescue
     # then re-runs the same lookup, this time finding the winner.
     winning_transfer = Transfer::Creator.new(

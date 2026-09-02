@@ -1,10 +1,4 @@
 class Transfer::Creator
-  # Same source tag used by TransactionsController#create's idempotency key
-  # (see MANUAL_FORM_SOURCE there) - this reuses the same
-  # entries(account_id, source, external_id) partial unique index for
-  # de-duplicating web-form-submitted transfers.
-  MANUAL_FORM_SOURCE = "web_form"
-
   def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
@@ -45,7 +39,14 @@ class Transfer::Creator
       amount: amount
     )
 
-    Transfer.transaction do
+    # requires_new: true opens a savepoint rather than joining whatever
+    # transaction the caller may already be in, so a RecordNotUnique below
+    # only rolls back this block, not any outer transaction - keeping the
+    # retry lookup in the rescue usable instead of hitting
+    # PG::InFailedSqlTransaction (see Account::ReconciliationManager for the
+    # same fix applied to valuations, and the CodeRabbit/Codex findings that
+    # prompted it).
+    Transfer.transaction(requires_new: true) do
       if source_fee_amount > 0
         transfer.fee_transactions << build_source_fee_transaction
       end
@@ -64,10 +65,10 @@ class Transfer::Creator
     # Concurrent-request backstop: two near-simultaneous submissions both
     # passed the pre-check above (neither saw the other's row yet) and both
     # reached #create. The partial unique index on entries(account_id,
-    # source, external_id) lets exactly one leg's INSERT win, which rolls
-    # back this entire Transfer.transaction block (no half-created transfer
-    # left behind). Return the winning transfer instead of creating a
-    # duplicate or raising a raw DB error to the user.
+    # idempotency_key) lets exactly one leg's INSERT win, which rolls back
+    # this entire Transfer.transaction block (no half-created transfer left
+    # behind). Return the winning transfer instead of creating a duplicate
+    # or raising a raw DB error to the user.
     existing_transfer = idempotency_key && find_existing_transfer
     raise unless existing_transfer
 
@@ -78,18 +79,21 @@ class Transfer::Creator
     attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
 
     def find_existing_transfer
-      source_account.entries.find_by(source: MANUAL_FORM_SOURCE, external_id: idempotency_key)&.entryable&.transfer
+      source_account.entries.find_by(idempotency_key: idempotency_key)&.entryable&.transfer
     end
 
     # Only the outflow and inflow legs carry the bare idempotency key - a fee
     # leg lands on the *same* account as its corresponding primary leg
     # (source_account for the source fee, destination_account for the
-    # destination fee), so it needs a distinct external_id to avoid
-    # colliding with that leg under the same account-scoped unique index.
+    # destination fee), so it needs a distinct key to avoid colliding with
+    # that leg under the same account-scoped unique index. Deliberately its
+    # own column, not external_id/source - see
+    # db/migrate/20260902180400_add_idempotency_key_to_entries.rb for why
+    # reusing those provider-linkage fields here would be wrong.
     def entry_idempotency_attrs(fee: false)
       return {} unless idempotency_key
 
-      { source: MANUAL_FORM_SOURCE, external_id: fee ? "#{idempotency_key}-fee" : idempotency_key }
+      { idempotency_key: fee ? "#{idempotency_key}-fee" : idempotency_key }
     end
 
     def apply_tags!(transfer)
