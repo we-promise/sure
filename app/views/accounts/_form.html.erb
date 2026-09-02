@@ -63,12 +63,14 @@
             <%= form.file_field :logo,
                 accept: "image/*",
                 class: "hidden",
-                id: "account_logo_file",
-                data: { action: "change->logo-source#fileSelected" } %>
-            <label for="account_logo_file" class="px-3 py-2 rounded-lg text-sm hover:bg-surface-hover border border-secondary inline-flex items-center gap-2 cursor-pointer">
-              <%= icon "image-plus", size: "sm" %>
-              <span><%= account.logo.attached? ? t(".change_logo") : t(".logo_label") %></span>
-            </label>
+                data: { logo_source_target: "fileInput", action: "change->logo-source#fileSelected" } %>
+            <%# DS::Button, not a hand-rolled label: opens the hidden file input through the controller %>
+            <%= render DS::Button.new(
+                  variant: :outline,
+                  text: account.logo.attached? ? t(".change_logo") : t(".logo_label"),
+                  icon: "image-plus",
+                  data: { action: "click->logo-source#pickFile" }
+                ) %>
           </div>
           <p class="text-xs text-secondary"><%= t(".logo_hint", max_size: number_to_human_size(Account::MAX_LOGO_BYTES)) %></p>
           <p class="hidden text-xs text-destructive" data-logo-source-target="sizeError"><%= t(".logo_too_large", max_size: number_to_human_size(Account::MAX_LOGO_BYTES)) %></p>

@@ -1,11 +1,17 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["input", "segment", "sizeError"];
+  static targets = ["input", "segment", "sizeError", "fileInput"];
   static values = { maxSize: Number };
 
   select(event) {
     this.#setSource(event.params.source);
+  }
+
+  // DS::Button cannot natively trigger a file input (it renders a real
+  // <button>), so the click is forwarded to the hidden input here.
+  pickFile() {
+    this.fileInputTarget.click();
   }
 
   fileSelected(event) {
