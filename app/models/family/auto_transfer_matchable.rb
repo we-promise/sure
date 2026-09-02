@@ -1,4 +1,10 @@
 module Family::AutoTransferMatchable
+  # A future-dated rate is only ever a legitimate match for a timezone skew between
+  # a data source and the server (at most a day), not for the provider catching up
+  # on missed days -- unlike the backward direction, it must stay tight so a stale
+  # transaction can't be matched against an unrelated, much-later rate.
+  RATE_LOOKAHEAD_DAYS = 1
+
   def transfer_match_candidates(
     date_window: 4,
     exchange_rate_tolerance: 0.1,
@@ -21,7 +27,8 @@ module Family::AutoTransferMatchable
         include_rejected:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance,
-        rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
+        rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS,
+        rate_lookahead_days: RATE_LOOKAHEAD_DAYS
       }
     ])
   end
@@ -200,7 +207,7 @@ module Family::AutoTransferMatchable
             WHERE
               er.from_currency = outflow_candidates.currency AND
               er.to_currency = inflow_candidates.currency AND
-              er.date BETWEEN outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookback_days
+              er.date BETWEEN outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookahead_days
             ORDER BY ABS(er.date - outflow_candidates.date) ASC, er.date DESC
             LIMIT 1
           ) exchange_rates ON TRUE

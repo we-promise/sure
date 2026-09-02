@@ -294,8 +294,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "matches multi-currency transfer when exact-date rate is missing but a later in-window rate exists (timezone offset case)" do
-    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.from_now.to_date, rate: 1.4)
+  test "matches multi-currency transfer when exact-date rate is missing but a next-day rate exists (timezone offset case)" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.from_now.to_date, rate: 1.4)
 
     create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
@@ -305,8 +305,23 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "does not match multi-currency transfer when the only cached rate is outside the lookback window" do
+  test "does not match multi-currency transfer when the only cached rate is outside the backward lookback window" do
     ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 10.days.ago.to_date, rate: 1.4)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not match multi-currency transfer when the only cached rate is more than one day in the future" do
+    # The forward window only exists to cover a timezone skew between a data source
+    # and the server (at most a day) -- unlike the 5-day backward lookback, it must
+    # not reach further, or a stale transaction could be matched against an
+    # unrelated, much-later rate.
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 2.days.from_now.to_date, rate: 1.4)
 
     create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
@@ -379,7 +394,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "LEFT JOIN LATERAL"
     assert_includes sql, "exchange_rates ON TRUE"
     assert_includes sql, "exchange_rates.rate IS NOT NULL"
-    assert_includes sql, "outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookback_days"
+    assert_includes sql, "outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookahead_days"
     assert_includes sql, "ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))"
   end
 
