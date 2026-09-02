@@ -11,11 +11,23 @@ class Account::LogoFetcher
 
   # The fetcher builds request URLs from the domain the job was enqueued for
   # and refuses to attach when the account's domain has since changed.
+  #
+  # It validates that all DNS-resolved addresses for a URL are public before
+  # making any connection, preventing DNS rebinding attacks where a second
+  # resolution could return a private/loopback address.
   def initialize(account, expected_domain: nil)
     @account = account
     @expected_domain = expected_domain
   end
 
+  # Fetches a logo from available sources and attaches it to the account.
+  #
+  # Tries sources in priority order:
+  # 1. Brandfetch (if configured and domain present)
+  # 2. Provider logo URL (if available)
+  # 3. Favicon from DuckDuckGo (if domain present)
+  #
+  # Returns early if any source succeeds. Only attaches when logo_source is "auto".
   def fetch_and_attach
     return unless account.logo_source_auto?
 
@@ -45,6 +57,14 @@ class Account::LogoFetcher
 
     attr_reader :account
 
+    # Fetches a logo from a single URL and attaches it to the account.
+    # Validates the URL's DNS resolution contains only public addresses before
+    # connecting. Downloads the image, validates content type and size, then
+    # attaches it via attach_fetched_logo (preserving auto source).
+    #
+    # @param url [String] The URL to fetch the logo from
+    # @param expected_domain [String] The domain we expect the account to have (for stale check)
+    # @return [Boolean] true if logo was successfully attached, false otherwise
     def fetch_from_url(url, expected_domain)
       uri = URI.parse(url)
 
@@ -137,6 +157,10 @@ class Account::LogoFetcher
       tempfile&.unlink
     end
 
+    # Validates that a URI uses a public HTTP/HTTPS scheme and resolves to public IPs.
+    #
+    # @param uri [URI] The URI to validate
+    # @return [Array<String>, false] Array of resolved public IP addresses, or false if invalid
     def public_http_url?(uri)
       return false unless %w[http https].include?(uri.scheme)
       return false if uri.host.blank?
@@ -152,6 +176,10 @@ class Account::LogoFetcher
       addresses
     end
 
+    # Checks if an IP address is public (not loopback, private, link-local, multicast, or unspecified).
+    #
+    # @param address [String] The IP address to check
+    # @return [Boolean] true if the address is a public, globally routable address
     def public_ip_address?(address)
       ip = IPAddr.new(address)
 
