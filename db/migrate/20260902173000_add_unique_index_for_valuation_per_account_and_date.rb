@@ -45,7 +45,7 @@ class AddUniqueIndexForValuationPerAccountAndDate < ActiveRecord::Migration[7.2]
   end
 
   def down
-    remove_index :entries, name: INDEX_NAME, if_exists: true
+    remove_index :entries, name: INDEX_NAME, if_exists: true, algorithm: :concurrently
   end
 
   private
