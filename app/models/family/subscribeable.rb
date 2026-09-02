@@ -7,6 +7,7 @@ module Family::Subscribeable
 
   included do
     has_one :subscription, dependent: :destroy
+    before_destroy :cancel_or_reject_active_subscription
 
     scope :inactive_trial_for_cleanup, -> {
       cutoff_with_sub = CLEANUP_GRACE_PERIOD.ago
@@ -113,4 +114,20 @@ module Family::Subscribeable
 
     entries.where(date: recent_window_start..trial_end).exists?
   end
+
+  private
+
+    def cancel_or_reject_active_subscription
+      return unless subscription&.stripe_id.present?
+      return if subscription.canceled? || subscription.incomplete_expired?
+
+      begin
+        Provider::Registry.get_provider(:stripe).cancel_subscription(subscription.stripe_id)
+      rescue => e
+        Sentry.capture_exception(e) if defined?(Sentry)
+        Rails.logger.error "Failed to cancel Stripe subscription before family deletion: #{e.message}"
+        errors.add(:base, :cannot_delete_with_active_subscription, message: "Could not cancel active Stripe subscription. Please cancel it manually before deleting the family.")
+        throw(:abort)
+      end
+    end
 end

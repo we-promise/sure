@@ -104,6 +104,18 @@ en:
         expense: Expense
         transfer: Transfer
         equal_to: Equal to
+      operators:
+        contains: Contains
+        does_not_contain: Does not contain
+        equal_to: Equal to
+        is_equal_to: Is equal to
+        not_equal_to: Not equal to
+        is_empty: Is empty
+        is_not_empty: Is not empty
+        greater_than: Greater than
+        greater_or_equal_to: Greater or equal to
+        less_than: Less than
+        less_than_or_equal_to: Less than or equal to
   rule:
     conditions:
       condition_group:

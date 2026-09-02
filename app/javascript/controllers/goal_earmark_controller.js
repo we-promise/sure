@@ -19,6 +19,7 @@ export default class extends Controller {
     wholeBalance: String,
     prorata: String,
     headroom: String,
+    wholeBalanceAlone: String,
   }
 
   // A complete number, optionally with one decimal separator and digits after
@@ -49,10 +50,19 @@ export default class extends Controller {
 
     const balance = Number.parseFloat(row.dataset.balance || "0")
     const others = Number.parseFloat(row.dataset.earmarkedByOthers || "0")
+    // A whole-account link elsewhere sums to zero above, so the amount alone
+    // cannot tell "nobody else claims this" from "somebody claims all of it".
+    const claimedWhole = row.dataset.wholeAccountClaimed === "true"
     const raw = input.value.trim()
 
+    // "whatever is left after the other earmarks" describes nothing when there
+    // are none — and this is where a first-time user meets the word, pointed
+    // at something absent. With the account to itself, say that instead.
     if (raw === "") {
-      return this.#show(warning, this.wholeBalanceValue)
+      return this.#show(
+        warning,
+        others > 0 || claimedWhole ? this.wholeBalanceValue : this.wholeBalanceAloneValue,
+      )
     }
 
     if (!this.constructor.ALLOCATION_PATTERN.test(raw)) return this.#hide(warning)

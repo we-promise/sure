@@ -34,9 +34,24 @@
               amount: goal.current_balance_money.format(precision: 0)) %>
       </p>
     <% end %>
-    <% case celebration_action %>
-    <% when :close %>
-      <div class="mt-4">
+    <%# The spend action sits before closing because that is the order the two
+        happen in, and because closing is the one that cannot be undone by
+        another click. %>
+    <% if offer_recording_a_spend? || celebration_action != :none %>
+    <div id="goal-celebration-actions" class="mt-4 flex flex-wrap items-center justify-center gap-2">
+      <% if offer_recording_a_spend? %>
+        <%= render DS::Link.new(
+          text: t("goals.show.consume"),
+          href: helpers.consume_goal_path(goal),
+          variant: "secondary",
+          size: "sm",
+          icon: "hand-coins",
+          frame: :modal
+        ) %>
+      <% end %>
+
+      <% case celebration_action %>
+      <% when :close %>
         <%# Same confirmation as the menu action: closing releases the goal's
             earmarked money, and a one-click release is not a gesture to make
             reversible-by-apology. %>
@@ -48,10 +63,7 @@
           method: :patch,
           confirm: helpers.goal_complete_confirm(goal)
         ) %>
-      </div>
-      <p class="text-xs text-secondary mt-2 max-w-md"><%= t("goals.show.celebration.close_hint") %></p>
-    <% when :archive %>
-      <div class="mt-4">
+      <% when :archive %>
         <%= render DS::Button.new(
           text: t("goals.show.celebration.archive_cta"),
           href: helpers.archive_goal_path(goal),
@@ -59,7 +71,11 @@
           size: "sm",
           method: :patch
         ) %>
-      </div>
+      <% end %>
+    </div>
+    <% end %>
+    <% if celebration_action == :close %>
+      <p class="text-xs text-secondary mt-2 max-w-md"><%= t("goals.show.celebration.close_hint") %></p>
     <% end %>
   <% end %>
 

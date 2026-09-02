@@ -5,6 +5,8 @@ class Provider::Openai < Provider
   Error = Class.new(Provider::Error)
 
   DEFAULT_MODEL = "gpt-4.1".freeze
+  DEFAULT_REQUEST_TIMEOUT = 60
+  MIN_REQUEST_TIMEOUT = 1
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
@@ -18,12 +20,23 @@ class Provider::Openai < Provider
     ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
+  # Effective per-request HTTP timeout for OpenAI-compatible calls.
+  # Precedence matches other self-hosting settings: ENV > Setting > default.
+  def self.request_timeout
+    configured = ENV["OPENAI_REQUEST_TIMEOUT"].to_s.strip.to_i
+    configured = Setting.openai_request_timeout.to_i unless configured.positive?
+    return DEFAULT_REQUEST_TIMEOUT unless configured.positive?
+
+    [ configured, MIN_REQUEST_TIMEOUT ].max
+  end
+
+  # Builds a client that uses the effective request timeout for every OpenAI call.
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
-    client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+    client_options[:request_timeout] = self.class.request_timeout
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
@@ -160,6 +173,31 @@ class Provider::Openai < Provider
       end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
+  end
+
+  def suggest_bill_setup(charges: [], categories: [], current_config: nil, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.suggest_bill_setup",
+        input: { charges: charges, configure_mode: current_config.present? }
+      )
+
+      result = BillSetupSuggester.new(
+        client,
+        model: effective_model,
+        charges: charges,
+        categories: categories,
+        current_config: current_config,
+        langfuse_trace: trace,
+        family: family
+      ).suggest
+
+      upsert_langfuse_trace(trace: trace, output: result.to_h)
 
       result
     end

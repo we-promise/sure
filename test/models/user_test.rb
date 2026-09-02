@@ -3,6 +3,8 @@ require "test_helper"
 class UserTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic
+
   def setup
     @user = users(:family_admin)
   end
@@ -681,6 +683,66 @@ class UserTest < ActiveSupport::TestCase
     assert_nil @user.default_account_for_transactions
   end
 
+  test "transfer_to_family! clears a shared default account" do
+    user = users(:family_member)
+    user.update!(role: "admin", default_account: accounts(:depository))
+
+    new_family = Family.create!(name: "Transferred Family")
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    user.reload
+
+    assert_equal new_family, user.family
+    assert_nil user.default_account_id
+    assert_nil user.default_account_for_transactions
+  end
+
+  test "transfer_to_family! moves owned account provider items and statements" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred Provider Family")
+    account = Account.create!(family: source_family, owner: user, name: "Synced Checking", balance: 100, currency: "USD", accountable: Depository.new)
+    plaid_item = PlaidItem.create!(family: source_family, plaid_id: "item_transfer_#{SecureRandom.hex(4)}", access_token: "token", name: "Transfer Bank")
+    plaid_account = PlaidAccount.create!(plaid_item: plaid_item, plaid_id: "acct_transfer_#{SecureRandom.hex(4)}", name: "Transfer Checking", plaid_type: "depository", currency: "USD", current_balance: 100)
+    AccountProvider.create!(account: account, provider: plaid_account)
+    statement = AccountStatement.create_from_upload!(
+      family: source_family,
+      account: account,
+      file: uploaded_file(filename: "transfer-statement.csv", content_type: "text/csv", content: "date,amount\n2026-01-01,10\n")
+    )
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_equal new_family, user.reload.family
+    assert_equal new_family, account.reload.family
+    assert_equal new_family, plaid_item.reload.family
+    assert_equal new_family, statement.reload.family
+  end
+
+  test "transfer_to_family! rejects provider items linked to accounts outside the transfer" do
+    user = users(:family_member)
+    other_user = users(:family_admin)
+    source_family = user.family
+    new_family = Family.create!(name: "Rejected Provider Family")
+    moved_account = Account.create!(family: source_family, owner: user, name: "Moved Synced", balance: 100, currency: "USD", accountable: Depository.new)
+    remaining_account = Account.create!(family: source_family, owner: other_user, name: "Remaining Synced", balance: 200, currency: "USD", accountable: Depository.new)
+    plaid_item = PlaidItem.create!(family: source_family, plaid_id: "item_reject_#{SecureRandom.hex(4)}", access_token: "token", name: "Shared Bank")
+    moved_plaid_account = PlaidAccount.create!(plaid_item: plaid_item, plaid_id: "acct_reject_moved_#{SecureRandom.hex(4)}", name: "Moved Checking", plaid_type: "depository", currency: "USD", current_balance: 100)
+    remaining_plaid_account = PlaidAccount.create!(plaid_item: plaid_item, plaid_id: "acct_reject_remaining_#{SecureRandom.hex(4)}", name: "Remaining Checking", plaid_type: "depository", currency: "USD", current_balance: 200)
+    AccountProvider.create!(account: moved_account, provider: moved_plaid_account)
+    AccountProvider.create!(account: remaining_account, provider: remaining_plaid_account)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      user.transfer_to_family!(new_family, role: "admin")
+    end
+
+    assert_includes error.record.errors[:base], I18n.t("activerecord.errors.models.user.attributes.base.provider_item_has_other_accounts")
+    assert_equal source_family, user.reload.family
+    assert_equal source_family, moved_account.reload.family
+    assert_equal source_family, plaid_item.reload.family
+  end
+
   # SSO-only user security tests
   test "sso_only? returns true for user with OIDC identity and no password" do
     sso_user = users(:sso_only)
@@ -739,7 +801,7 @@ class UserTest < ActiveSupport::TestCase
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
-    User.destroy_all
+    User.connection.disable_referential_integrity { User.delete_all }
 
     assert_equal :super_admin, User.role_for_new_family_creator
   end
@@ -753,6 +815,76 @@ class UserTest < ActiveSupport::TestCase
     assert_equal :admin, User.role_for_new_family_creator(fallback_role: :guest)
     assert_equal :admin, User.role_for_new_family_creator(fallback_role: "custom_role")
     assert_equal "super_admin", User.role_for_new_family_creator(fallback_role: "super_admin")
+  end
+
+  test "first user role lock makes concurrent family creators deterministic" do
+    created_family_ids = Queue.new
+
+    User.connection.disable_referential_integrity { User.delete_all }
+    first_user_saved = Queue.new
+    creator_errors = Queue.new
+
+    first_creator = Thread.new do
+      signaled = false
+
+      ActiveRecord::Base.connection_pool.with_connection do
+        ActiveRecord::Base.transaction do
+          family = Family.create!
+          created_family_ids << family.id
+
+          User.lock_first_user_role!
+          user = User.create!(
+            email: "concurrent-first@example.com",
+            password: user_password_test,
+            family: family,
+            role: User.role_for_new_family_creator
+          )
+          first_user_saved << user.id
+          signaled = true
+          sleep 0.1
+        end
+      end
+    rescue StandardError => e
+      creator_errors << e
+      first_user_saved << nil unless signaled
+    end
+
+    first_user_saved.pop
+    second_creator = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        ActiveRecord::Base.transaction do
+          family = Family.create!
+          created_family_ids << family.id
+
+          User.lock_first_user_role!
+          User.create!(
+            email: "concurrent-second@example.com",
+            password: user_password_test,
+            family: family,
+            role: User.role_for_new_family_creator
+          )
+        end
+      end
+    rescue StandardError => e
+      creator_errors << e
+    end
+
+    [ first_creator, second_creator ].each(&:join)
+    raise creator_errors.pop(true) unless creator_errors.empty?
+
+    assert_equal 1, User.where(role: :super_admin).count
+    assert User.find_by(email: "concurrent-first@example.com").super_admin?
+    assert User.find_by(email: "concurrent-second@example.com").admin?
+  ensure
+    [ first_creator, second_creator ].compact.each(&:join)
+
+    family_ids = []
+    family_ids << created_family_ids.pop(true) until created_family_ids.empty?
+
+    User.connection.disable_referential_integrity do
+      User.where(email: %w[concurrent-first@example.com concurrent-second@example.com]).delete_all
+      Family.where(id: family_ids).delete_all if family_ids.any?
+    end
   end
 
   # Preview features preference tests
@@ -864,5 +996,25 @@ class UserTest < ActiveSupport::TestCase
 
     assert_not Family.exists?(family.id)
     assert_not ActiveStorage::Attachment.exists?(export_attachment_id)
+  end
+
+  test "cannot demote the last super admin in the system" do
+    User.where(role: :super_admin).update_all(role: :member)
+    solo_super_admin = users(:sure_support_staff)
+    solo_super_admin.update!(role: :super_admin)
+
+    solo_super_admin.role = :member
+    assert_not solo_super_admin.valid?
+    assert_includes solo_super_admin.errors[:role], "Cannot demote the last super admin in the system."
+  end
+
+  test "can demote super admin if another super admin exists" do
+    admin1 = users(:family_admin)
+    admin1.update!(role: :super_admin)
+
+    admin2 = users(:sure_support_staff)
+    admin2.update!(role: :super_admin)
+
+    assert admin1.update(role: :member)
   end
 end

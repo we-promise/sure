@@ -3,7 +3,8 @@ require "test_helper"
 class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   AI_ENVIRONMENT = %w[
     OPENAI_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_MODEL OPENAI_REQUEST_TIMEOUT
-    OPENAI_SUPPORTS_PDF_PROCESSING ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY
+    OPENAI_SUPPORTS_PDF_PROCESSING OPENAI_SUPPORTS_RESPONSES_ENDPOINT
+    ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY
     ANTHROPIC_BASE_URL ANTHROPIC_MODEL ANTHROPIC_REQUEST_TIMEOUT
     VECTOR_STORE_PROVIDER EMBEDDING_URI_BASE EMBEDDING_MODEL
     EMBEDDING_DIMENSIONS EMBEDDING_ACCESS_TOKEN QDRANT_URL QDRANT_API_KEY
@@ -19,6 +20,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     Setting.stubs(:anthropic_base_url).returns(nil)
     Setting.stubs(:anthropic_model).returns(nil)
     AiHealth::Probe.any_instance.stubs(:llm).returns(probe_result(:passing))
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(probe_result(:passing))
@@ -109,6 +111,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
     AiHealth::Probe.any_instance.expects(:llm).never
+    AiHealth::Probe.any_instance.expects(:function_calling).never
     AiHealth::Probe.any_instance.expects(:pdf_text_extraction).never
     AiHealth::Probe.any_instance.expects(:pdf_vision_processing).never
     AiHealth::Probe.any_instance.expects(:openai_vector_store).never
@@ -156,6 +159,45 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/local-token|uri-secret|query-secret/, response.body)
   end
 
+  test "AI status names the missing function-calling support behind an unhelpful chat error" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(
+      probe_result(:failing, failure_code: :tools_refused, http_status: 404)
+    )
+
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "router-secret",
+      "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1",
+      "OPENAI_MODEL" => "tngtech/deepseek-r1t2-chimera:free"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_select "[data-testid='function-calling-status']", text: /Not supported by the effective provider/
+    assert_match(/The model does not support function calling/, response.body)
+    assert_match(/Function-calling failure reason/, response.body)
+    assert_no_match(/router-secret/, response.body)
+  end
+
+  test "AI status separates a model that ignores tools from one that cannot use them" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:function_calling).returns(
+      probe_result(:failing, failure_code: :no_tool_call)
+    )
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_select "[data-testid='function-calling-status']", text: /Tools accepted, but the model called none/
+    assert_match(/answered without calling the tool it was asked to call/, response.body)
+    assert_no_match(/The model does not support function calling/, response.body)
+  end
+
   test "AI status reports text and vision PDF probes separately" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
@@ -176,6 +218,31 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Vision\/native failure reason/, response.body)
     assert_match(/unexpected response/, response.body)
     assert_no_match(/sk-secret-openai/, response.body)
+  end
+
+  test "AI status surfaces LLM and probe request timeouts as distinct values" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    # OPENAI_REQUEST_TIMEOUT bounds real LLM calls the app makes (chat, PDF
+    # import). AI_HEALTH_PROBE_TIMEOUT only bounds the admin "live checks".
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "local-token",
+      "OPENAI_REQUEST_TIMEOUT" => "300",
+      "AI_HEALTH_PROBE_TIMEOUT" => "5"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    llm_label = response.body.index("LLM request timeout")
+    probe_label = response.body.index("Health-check probe timeout")
+    assert llm_label, "expected an 'LLM request timeout' label on the AI status page"
+    assert probe_label, "expected a 'Health-check probe timeout' label on the AI status page"
+    assert_operator llm_label, :<, probe_label, "LLM timeout row should appear before the probe timeout row"
+    assert response.body[llm_label, 400].include?("300s"), "LLM timeout value (300s) missing near its label"
+    assert response.body[probe_label, 400].include?("5s"), "probe timeout value (5s) missing near its label"
+    assert_no_match(/local-token/, response.body)
   end
 
   test "AI status does not probe PDF processing when it is explicitly disabled" do

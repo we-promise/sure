@@ -127,6 +127,8 @@ en:
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
+        model_function_calling_help: "The AI assistant reads your data through function calls, so pick a model your provider documents as supporting tools/function calling. Models without it fail chat with an opaque provider error."
+        model_function_calling_link: Check the configured model
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
@@ -141,10 +143,12 @@ en:
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
         max_items_per_call_label: Max Items Per Batch (Optional)
         max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
-        ai_response_timeout_heading: Chat Response Timeout
-        ai_response_timeout_description: How long the chat waits for the assistant before showing a "no response" error. Raise this if you run a local model on slow hardware — responses from OpenAI-compatible providers are not streamed, and tool-call rounds display nothing, so the chat can sit on "Thinking…" for the whole turn.
+        timeout_heading: Timeouts
+        timeout_description: Controls how long OpenAI-compatible model calls may run before Sure gives up. Raise these if you run a local model on slow hardware.
+        openai_request_timeout_label: Request Timeout in Seconds (Optional)
+        openai_request_timeout_help: "Default: 60. Applies to each OpenAI-compatible HTTP request, including auto-categorization, merchant detection, chat, PDF processing, and vector-store calls. OPENAI_REQUEST_TIMEOUT overrides this field."
         ai_response_timeout_label: Response Timeout in Seconds (Optional)
-        ai_response_timeout_help: "Default: 90. This covers the whole turn, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, plus tool execution and queue time. Lowering ASSISTANT_MAX_TOOL_CALL_ITERATIONS reduces how large this needs to be, and is often the better lever on slow hardware."
+        ai_response_timeout_help: "Default: 90. Applies only to chat's whole-turn watchdog, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × request timeout, plus tool execution and queue time. AI_RESPONSE_TIMEOUT overrides this field."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

@@ -6,11 +6,14 @@ module Assistant
     "external" => Assistant::External
   }.freeze
 
-  # Statement Vault + provenance tools, for users who opted into preview features
-  # in Settings -> Preferences. They back the wealth agent-harness workflow
+  # Tools for users who opted into preview features in Settings -> Preferences.
+  #
+  # Statement Vault + provenance tools back the wealth agent-harness workflow
   # documented in docs/llm-guides/wealth-agent-harness.md. GetValuations is the
   # read pair for RecordValuation; GetInsights reads the Insights feed, which is
   # itself preview-gated app-wide.
+  #
+  # The bills tools back the preview-gated Bills subsystem.
   PREVIEW_FUNCTION_CLASSES = [
     Function::UploadAccountStatement,
     Function::ListAccountStatements,
@@ -18,7 +21,18 @@ module Assistant
     Function::GetStatementCoverage,
     Function::RecordValuation,
     Function::GetValuations,
-    Function::GetInsights
+    Function::GetInsights,
+    # Bills: the whole subsystem is preview-gated, so its tools ride the same
+    # per-user flag as the surfaces they operate on. Each tool additionally
+    # re-checks the family's recurring feature gate and the user's
+    # account-access scope itself.
+    Function::GetBills,
+    Function::GetBillDetails,
+    Function::GetPaycheckPlan,
+    Function::GetBillAudit,
+    Function::CreateBill,
+    Function::UpdateBill,
+    Function::RecordBillPayment
   ].freeze
 
   class << self
