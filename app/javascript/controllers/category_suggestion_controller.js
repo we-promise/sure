@@ -15,8 +15,13 @@ export default class extends Controller {
     this.applyingSuggestion = false
   }
 
-  onCategorySelected() {
+  onCategorySelected(event) {
     if (this.applyingSuggestion) return
+    // The category select has no selection event of its own, so we watch clicks on the
+    // whole field and keep only the ones that landed on an option — opening the menu or
+    // typing in its search box is not a pick.
+    if (!event.target.closest('[data-category-select-target="option"]')) return
+
     this.userPickedCategory = true
   }
 
@@ -39,7 +44,7 @@ export default class extends Controller {
 
   #categoryHiddenInput() {
     return this.hasCategoryFieldTarget
-      ? this.categoryFieldTarget.querySelector('[data-form-dropdown-target="input"]')
+      ? this.categoryFieldTarget.querySelector('[data-category-select-target="hiddenInput"]')
       : null
   }
 
@@ -47,7 +52,7 @@ export default class extends Controller {
     if (this.userPickedCategory || !this.hasCategoryFieldTarget) return
 
     const option = this.categoryFieldTarget.querySelector(
-      `[data-select-target="option"][data-value="${CSS.escape(String(categoryId))}"]`
+      `[data-category-select-target="option"][data-category-id="${CSS.escape(String(categoryId))}"]`
     )
     if (!option) return
 
