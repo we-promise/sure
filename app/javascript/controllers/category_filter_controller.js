@@ -14,9 +14,23 @@ export default class extends Controller {
   static targets = ["checkbox"];
 
   connect() {
+    // Server-rendered `checked` state is derived independently per checkbox
+    // from the submitted query params, so a parent-only filter (e.g. an
+    // incoming link that only names the parent category) renders the parent
+    // checked with its children unchecked. Cascade checked parents down to
+    // their children first so the pass below doesn't read that as "some
+    // children unchecked" and clear the parent.
+    this.checkboxTargets.forEach((checkbox) => {
+      if (checkbox.checked) {
+        this.#childCheckboxesFor(checkbox.dataset.categoryId).forEach((child) => {
+          child.checked = true;
+        });
+      }
+    });
+
     this.checkboxTargets.forEach((checkbox) => {
       if (checkbox.dataset.parentId) {
-        this.syncParentState(checkbox.dataset.parentId);
+        this.#syncParentState(checkbox.dataset.parentId);
       }
     });
   }
@@ -25,7 +39,7 @@ export default class extends Controller {
     const checkbox = event.target;
     const categoryId = checkbox.dataset.categoryId;
 
-    const children = this.childCheckboxesFor(categoryId);
+    const children = this.#childCheckboxesFor(categoryId);
     children.forEach((child) => {
       child.checked = checkbox.checked;
       child.indeterminate = false;
@@ -33,22 +47,22 @@ export default class extends Controller {
 
     const parentId = checkbox.dataset.parentId;
     if (parentId) {
-      this.syncParentState(parentId);
+      this.#syncParentState(parentId);
     }
   }
 
-  childCheckboxesFor(parentId) {
+  #childCheckboxesFor(parentId) {
     if (!parentId) return [];
     return this.checkboxTargets.filter((cb) => cb.dataset.parentId === parentId);
   }
 
-  syncParentState(parentId) {
+  #syncParentState(parentId) {
     const parentCheckbox = this.checkboxTargets.find(
       (cb) => cb.dataset.categoryId === parentId,
     );
     if (!parentCheckbox) return;
 
-    const children = this.childCheckboxesFor(parentId);
+    const children = this.#childCheckboxesFor(parentId);
     if (children.length === 0) return;
 
     const checkedCount = children.filter((cb) => cb.checked).length;

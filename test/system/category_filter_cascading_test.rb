@@ -66,6 +66,28 @@ class CategoryFilterCascadingTest < ApplicationSystemTestCase
     assert_selector "#" + dom_id(@child_two_transaction)
   end
 
+  test "reopening a parent-only filter from the URL keeps it checked and active on Apply" do
+    visit transactions_url(q: { categories: [ @parent.name ] })
+
+    assert_selector "#" + dom_id(@child_one_transaction)
+    assert_selector "#" + dom_id(@child_two_transaction)
+
+    find("#transaction-filters-button").click
+
+    within "#transaction-filters-menu" do
+      click_button "Category"
+
+      assert find_field(@parent.name).checked?
+      assert find_field(@child_one.name).checked?
+      assert find_field(@child_two.name).checked?
+
+      click_button "Apply"
+    end
+
+    assert_selector "#" + dom_id(@child_one_transaction)
+    assert_selector "#" + dom_id(@child_two_transaction)
+  end
+
   private
 
     def create_transaction(name, date, amount, category:)
