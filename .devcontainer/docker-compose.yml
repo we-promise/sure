@@ -68,7 +68,7 @@ services:
       db-version-check:
         condition: service_completed_successfully
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     ports:
       - "5432:5432"
     restart: unless-stopped
