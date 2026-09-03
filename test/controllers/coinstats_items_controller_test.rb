@@ -2,7 +2,7 @@ require "test_helper"
 
 class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in users(:family_admin)
+    sign_in @user = users(:family_admin)
     @family = families(:dylan_family)
     @coinstats_item = CoinstatsItem.create!(
       family: @family,
@@ -160,7 +160,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "link_wallet handles no tokens found" do
+  test "link_wallet preserves no tokens found error in English" do
     Provider::Coinstats.any_instance.expects(:get_wallet_balances)
       .returns(success_response([]))
 
@@ -174,7 +174,28 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/No tokens found/, response.body)
+    assert_includes response.body, "No tokens found for wallet"
+  end
+
+  test "link_wallet localizes no tokens found error in German" do
+    @user.update!(locale: "de")
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .returns(success_response([]))
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .returns([])
+
+    post link_wallet_coinstats_items_url, params: {
+      coinstats_item_id: @coinstats_item.id,
+      address: "0x123abc",
+      blockchain: "ethereum"
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Für dieses Krypto-Wallet wurden keine Token gefunden."
+    refute_includes response.body, "No tokens found for wallet"
+    assert_equal "Für dieses Krypto-Wallet wurden keine Token gefunden.",
+                 I18n.t("models.coinstats_item.wallet_linker.no_tokens_found", locale: :de, fallback: false)
   end
 
   test "link_exchange filters unexpected connection fields" do
