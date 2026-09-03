@@ -107,14 +107,16 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "session headers substitute the chat id and merge onto the client" do
+  test "session headers substitute the chat id onto a request-scoped client copy" do
     with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}","X-Static":"1"}') do
       subject = Provider::Openai.new("test-token")
       fake_client = mock
-      fake_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      scoped_client = mock
+      fake_client.expects(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
       subject.stubs(:client).returns(fake_client)
 
-      subject.send(:apply_session_headers, session_id: "chat-42")
+      assert_same scoped_client, subject.send(:with_session_headers, session_id: "chat-42")
     end
   end
 
@@ -122,20 +124,40 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
       subject = Provider::Openai.new("test-token")
       fake_client = mock
+      fake_client.expects(:dup).never
       fake_client.expects(:add_headers).never
       subject.stubs(:client).returns(fake_client)
 
-      subject.send(:apply_session_headers, session_id: nil)
+      assert_same subject.send(:client), subject.send(:with_session_headers, session_id: nil)
     end
   end
 
-  test "native chat path resolves session headers onto the client" do
+  test "session headers never persist onto the shared client after a chat request" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
+      subject = Provider::Openai.new("test-token")
+      scoped_client = mock
+      fake_client = mock
+      fake_client.expects(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      fake_client.expects(:responses).never
+      subject.stubs(:client).returns(fake_client)
+
+      scoped = subject.send(:with_session_headers, session_id: "chat-42")
+
+      assert_same scoped_client, scoped
+      assert_same fake_client, subject.send(:client)
+    end
+  end
+
+  test "native chat path resolves session headers onto a request-scoped client" do
     with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
       subject = Provider::Openai.new("test-token")
       fake_responses = mock
+      scoped_client = mock
+      scoped_client.stubs(:responses).returns(fake_responses)
       fake_client = mock
-      fake_client.stubs(:responses).returns(fake_responses)
-      fake_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      fake_client.stubs(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
       fake_responses.stubs(:create).returns(
         { "id" => "resp_1", "model" => "gpt-4.1", "output" => [], "usage" => { "total_tokens" => 1 } }
       )
@@ -147,15 +169,17 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "generic chat path resolves session headers onto the client" do
+  test "generic chat path resolves session headers onto a request-scoped client" do
     with_env_overrides(
       "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "false",
       "OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}'
     ) do
       subject = Provider::Openai.new("test-token")
+      scoped_client = mock
       fake_client = mock
-      fake_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
-      fake_client.stubs(:chat).returns(
+      fake_client.stubs(:dup).returns(scoped_client)
+      scoped_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      scoped_client.stubs(:chat).returns(
         { "id" => "resp_1", "model" => "gpt-4.1", "choices" => [ { "message" => { "content" => "Yes" } } ],
           "usage" => { "total_tokens" => 1 } }
       )

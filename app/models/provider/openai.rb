@@ -398,16 +398,20 @@ class Provider::Openai < Provider
   private
     attr_reader :client
 
-    # Substitutes {session_id} into session-valued extra headers and merges
-    # them onto the client for this chat request. Static headers were already
-    # set at construction; a session header without a session_id is simply
-    # never merged (a merge can only add/overwrite, never delete).
-    def apply_session_headers(session_id:)
-      return if @session_extra_headers.blank? || session_id.blank?
+    # Substitutes {session_id} into session-valued extra headers for this chat
+    # request. Static headers were already set at construction; a session
+    # header without a session_id is simply never applied. Returns a
+    # request-scoped client copy carrying the resolved headers — session
+    # headers must not persist on the shared client, so later batch requests
+    # (which reuse this provider instance's client) never see them.
+    def with_session_headers(session_id:)
+      return client if @session_extra_headers.blank? || session_id.blank?
 
-      client.add_headers(
+      session_client = client.dup
+      session_client.add_headers(
         @session_extra_headers.transform_values { |value| value.gsub("{session_id}") { session_id } }
       )
+      session_client
     end
 
     # Returns the first positive integer among env, setting, default. Treats
@@ -447,7 +451,7 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
-        apply_session_headers(session_id: session_id)
+        session_client = with_session_headers(session_id: session_id)
 
         chat_config = ChatConfig.new(
           functions: functions,
@@ -484,7 +488,7 @@ class Provider::Openai < Provider
           request_params[:tool_choice] = "none" if tool_choice == :none && chat_config.tools.present?
           request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
-          raw_response = client.responses.create(parameters: request_params)
+          raw_response = session_client.responses.create(parameters: request_params)
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
@@ -557,7 +561,7 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
-        apply_session_headers(session_id: session_id)
+        session_client = with_session_headers(session_id: session_id)
 
         messages = build_generic_messages(
           prompt: prompt,
@@ -578,7 +582,7 @@ class Provider::Openai < Provider
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
         begin
-          raw_response = client.chat(parameters: params)
+          raw_response = session_client.chat(parameters: params)
 
           parsed = GenericChatParser.new(raw_response).parsed
 
