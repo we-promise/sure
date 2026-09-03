@@ -1,4 +1,7 @@
 <div class="space-y-4">
+  <% if @tinkoff_invest_moex_only %>
+    <%= render DS::Alert.new(message: t(".moex_only_notice"), variant: :info) %>
+  <% end %>
   <div>
     <h2 class="font-medium mb-1"><%= t(".title") %></h2>
     <% if ENV["TINKOFF_INVEST_API_KEY"].present? %>

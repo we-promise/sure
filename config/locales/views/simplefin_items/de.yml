@@ -92,6 +92,24 @@ de:
       stale_accounts_errors:
         one: "%{count} Aktion für veraltetes Konto fehlgeschlagen. Details in den Logs prüfen."
         other: "%{count} Aktionen für veraltete Konten fehlgeschlagen. Details in den Logs prüfen."
+    sync_status:
+      no_accounts: Keine Konten gefunden
+      synced:
+        one: "%{count} Konto synchronisiert"
+        other: "%{count} Konten synchronisiert"
+      partial_setup:
+        one: "%{linked} synchronisiert, %{unlinked} muss eingerichtet werden"
+        other: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+    institution_summary:
+      none: Keine Institute verbunden
+      count:
+        one: "%{count} Institut"
+        other: "%{count} Institute"
+    rate_limited:
+      daily_refresh: "Du hast das tägliche Aktualisierungslimit von SimpleFIN erreicht. Versuch es erneut, sobald die SimpleFIN Bridge die Daten aktualisiert hat (das kann bis zu 24 Stunden dauern)."
+    stale_sync:
+      last_successful: "Die letzte erfolgreiche Synchronisierung war vor %{count} Tagen. Deine SimpleFIN-Verbindung braucht möglicherweise Aufmerksamkeit."
+      no_transactions: "Seit %{count} Tagen gibt es keine neuen Transaktionen. Prüfe in deinem SimpleFIN-Dashboard, ob deine Bankverbindungen aktiv sind."
     simplefin_item:
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Verbindung löschen
