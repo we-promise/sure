@@ -1,0 +1,10 @@
+---
+pt-PT:
+  passwords:
+    edit:
+      password: Nova Palavra-passe
+      password_challenge: Palavra-passe Atual
+      submit: Repor Palavra-passe
+      title: Atualizar Palavra-passe
+    update:
+      success: A sua palavra-passe foi reposta.
