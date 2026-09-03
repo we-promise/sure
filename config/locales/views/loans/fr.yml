@@ -5,19 +5,6 @@ fr:
       edit: Modifier %{account}
     
     form:
-      subtypes:
-        mortgage:
-          short: Immobilier
-          long: Prêt Immobilier
-        student:
-          short: Étudiant
-          long: Prêt Étudiant
-        auto:
-          short: Auto
-          long: Prêt Automobile
-        other:
-          short: Autre
-          long: Autre Prêt
       down_payment: Apport
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5,25'

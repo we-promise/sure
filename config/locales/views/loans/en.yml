@@ -5,19 +5,6 @@ en:
       edit: Edit %{account}
     
     form:
-      subtypes:
-        mortgage:
-          short: Mortgage
-          long: Mortgage
-        student:
-          short: Student Loan
-          long: Student Loan
-        auto:
-          short: Auto Loan
-          long: Auto Loan
-        other:
-          short: Other Loan
-          long: Other Loan
       down_payment: Down payment
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'

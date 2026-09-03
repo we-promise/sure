@@ -1,6 +1,8 @@
 require "test_helper"
 
 class LoanTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   test "rejects invalid subtype" do
     loan = Loan.new(subtype: "invalid")
 
@@ -170,6 +172,49 @@ class LoanTest < ActiveSupport::TestCase
       end
     end
   end
+  test "amortization_schedule memoizes on the instance instead of re-hitting the cache" do
+    loan = Loan.new(
+      interest_rate: 3.5,
+      term_months: 12,
+      rate_type: "fixed",
+      start_date: Date.today
+    )
+
+    call_count = 0
+    generator = -> { call_count += 1; [ { month: 1 } ] }
+
+    loan.stub :cache_key_with_version, "loan/1" do
+      loan.stub :generate_amortization_schedule, generator do
+        Rails.cache.clear
+
+        3.times { loan.amortization_schedule }
+
+        assert_equal 1, call_count, "generate_amortization_schedule should run once, not once per call"
+      end
+    end
+  end
+
+  test "original_balance_cache_key tracks the date-ordered first valuation, not creation order" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Reconciled Mortgage",
+      balance: 500000,
+      currency: "USD",
+      accountable: create_loan
+
+    # Account.create!(balance:) above seeds an opening valuation dated today.
+    # This second valuation is dated *earlier* but created *after* --
+    # unordered access (account.valuations.first) still returns the opening
+    # one, while Account#first_valuation (date-ordered) returns this one.
+    create_valuation(account: loan_account, date: 10.days.ago.to_date, amount: 480_000)
+
+    loan = loan_account.loan
+
+    assert_not_equal loan_account.valuations.first, loan_account.first_valuation,
+      "test setup must produce differing creation-order vs date-order results"
+    assert_equal loan_account.first_valuation.updated_at.to_i, loan.send(:original_balance_cache_key)
+  end
+
   test "amortization_schedule returns empty array when loan is not eligible" do
     loan = Loan.new(
       interest_rate: nil,

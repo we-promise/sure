@@ -17,6 +17,8 @@ class Loan < ApplicationRecord
     high: 8..
   }.freeze
 
+  RATE_TYPES = %w[fixed variable adjustable].freeze
+
   before_validation :set_default_start_date, on: :create
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
@@ -38,7 +40,7 @@ class Loan < ApplicationRecord
             allow_nil: true
 
   validates :rate_type,
-            inclusion: { in: %w[fixed variable adjustable] },
+            inclusion: { in: RATE_TYPES },
             allow_nil: true
 
   validates :down_payment,
@@ -109,7 +111,7 @@ class Loan < ApplicationRecord
 
   def amortization_schedule
     return [] unless term_months && interest_rate && start_date && rate_type == "fixed"
-    Rails.cache.fetch([ "loan_amortization", cache_key_with_version, original_balance_cache_key ]) do
+    @amortization_schedule ||= Rails.cache.fetch([ "loan_amortization", cache_key_with_version, original_balance_cache_key ]) do
       generate_amortization_schedule
     end
   end
@@ -248,8 +250,13 @@ class Loan < ApplicationRecord
 
   private
 
+    # Must track the exact record #original_balance reads (Account#first_valuation,
+    # date-ordered) rather than an unordered association -- otherwise editing
+    # a loan account's date-earliest valuation while a later (e.g.
+    # reconciliation) valuation also exists wouldn't necessarily change this
+    # key, leaving a stale amortization_schedule cached.
     def original_balance_cache_key
-      account&.valuations&.first&.updated_at&.to_i
+      account&.first_valuation&.updated_at&.to_i
     end
 
     def set_default_start_date
@@ -277,7 +284,6 @@ class Loan < ApplicationRecord
 
       schedule = []
       months   = term_months
-      date     = start_date
 
       months.times do |i|
         interest = (balance * rate).round(0)
