@@ -356,8 +356,21 @@ services:
     networks:
       - sure_net
 
+  db-version-check:
+    image: alpine:3.23
+    restart: "no"
+    volumes:
+      - postgres-data:/pgdata:ro
+      - ./bin/db-version-check.sh:/db-version-check.sh:ro
+    command: sh /db-version-check.sh /pgdata 18
+    networks:
+      - sure_net
+
   db:
     image: pgvector/pgvector:pg18-trixie
+    depends_on:
+      db-version-check:
+        condition: service_completed_successfully
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
