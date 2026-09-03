@@ -35,7 +35,7 @@
       amount_data: { transaction_form_target: "amount", action: "input->transaction-form#onAmountChange" },
       currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
 
-    <div data-category-suggestion-target="categoryField" data-action="dropdown:select->category-suggestion#onCategorySelected">
+    <div data-category-suggestion-target="categoryField" data-action="click->category-suggestion#onCategorySelected">
       <%= f.fields_for :entryable do |ef| %>
         <%= render DS::CategorySelect.new(
         form: ef,
