@@ -35,6 +35,8 @@
 
     <%= f.number_field :amount, label: t(".source_amount"), required: true, min: 0, placeholder: "100", step: 0.00000001, data: { transfer_form_target: "amount", action: "input->transfer-form#onSourceAmountChange" } %>
 
+    <%= f.collection_select :category_id, @categories, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @selected_category_id, variant: :badge, searchable: true } %>
+
     <%= render DS::TagSelect.new(
           form: f,
           tags: @tags,

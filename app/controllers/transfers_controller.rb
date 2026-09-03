@@ -3,17 +3,15 @@ class TransfersController < ApplicationController
 
   before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
+  before_action :set_categories, only: %i[new show create]
+  before_action :set_tags, only: %i[new show create]
 
   def new
     @transfer = Transfer.new
     @from_account_id = params[:from_account_id]
-    @tags = Current.family.tags.alphabetically
   end
 
   def show
-    @categories = Current.family.categories.alphabetically_by_hierarchy
-    @tags = Current.family.tags.alphabetically
-
     # Whether the current user can hit `mark_as_recurring`: feature flag on,
     # AND they have write access to BOTH transfer endpoints. Gating the
     # view button on this avoids showing a CTA that the controller would
@@ -34,7 +32,7 @@ class TransfersController < ApplicationController
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
-    @transfer = Transfer::Creator.new(
+    creator_params = {
       family: Current.family,
       source_account_id: source_account.id,
       destination_account_id: destination_account.id,
@@ -44,7 +42,10 @@ class TransfersController < ApplicationController
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
       tag_ids: transfer_params[:tag_ids]
-    ).create
+    }
+    creator_params[:category_id] = transfer_params[:category_id] if transfer_params.key?(:category_id)
+
+    @transfer = Transfer::Creator.new(**creator_params).create
 
     if @transfer.persisted?
       success_message = "Transfer created"
@@ -54,7 +55,7 @@ class TransfersController < ApplicationController
       end
     else
       @from_account_id = transfer_params[:from_account_id]
-      @tags = Current.family.tags.alphabetically
+      @selected_category_id = transfer_params[:category_id]
       render :new, status: :unprocessable_entity
     end
   rescue Money::ConversionError
@@ -62,14 +63,14 @@ class TransfersController < ApplicationController
     @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:base, t(".exchange_rate_unavailable"))
     set_accounts
-    @tags = Current.family.tags.alphabetically
+    @selected_category_id = transfer_params[:category_id]
     render :new, status: :unprocessable_entity
   rescue ArgumentError
     @transfer ||= Transfer.new
     @transfer.tag_ids = transfer_params[:tag_ids]
     @transfer.errors.add(:date, t(".date_invalid"))
     set_accounts
-    @tags = Current.family.tags.alphabetically
+    @selected_category_id = transfer_params[:category_id]
     render :new, status: :unprocessable_entity
   end
 
@@ -190,7 +191,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_params
-      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, tag_ids: [])
+      params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, :category_id, tag_ids: [])
     end
 
     def set_accounts
@@ -200,6 +201,14 @@ class TransfersController < ApplicationController
           :account_providers,
           logo_attachment: :blob
         )
+    end
+
+    def set_categories
+      @categories = Current.family.categories.alphabetically_by_hierarchy
+    end
+
+    def set_tags
+      @tags = Current.family.tags.alphabetically
     end
 
     def transfer_update_params
@@ -215,8 +224,11 @@ class TransfersController < ApplicationController
     end
 
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
-      @transfer.update!(notes: transfer_update_params[:notes])
+      if transfer_update_params.key?(:category_id)
+        category_id = Current.family.categories.find_by(id: transfer_update_params[:category_id].presence)&.id
+        @transfer.outflow_transaction.update!(category_id: category_id)
+      end
+      @transfer.update!(notes: transfer_update_params[:notes]) if transfer_update_params.key?(:notes)
     end
 
     def update_transfer_fees_and_amount

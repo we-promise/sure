@@ -25,6 +25,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create defaults to investment contributions category when category_id is omitted" do
+    investment_category = ensure_investment_contributions_category(users(:family_admin).family)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:investment).id,
+          date: Date.current,
+          amount: 100
+        }
+      }
+    end
+
+    transfer = Transfer.order(:created_at).last
+    assert_equal investment_category, transfer.outflow_transaction.category
+  end
+
   test "can create transfer with custom exchange rate" do
     usd_account = accounts(:depository)
     eur_account = users(:family_admin).family.accounts.create!(
@@ -359,6 +377,51 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
     assert_equal original_outflow_tags, transfer.outflow_transaction.reload.tag_ids
     assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
+  end
+
+  test "update transfer category ignores category from other family" do
+    transfer = transfers(:one)
+    other_family = Family.create!(name: "Other Family", currency: "USD")
+    other_category = other_family.categories.create!(name: "Foreign")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: other_category.id } }
+
+    assert_redirected_to transactions_url
+    assert_nil transfer.outflow_transaction.reload.category_id, "Should not assign a category belonging to another family"
+  end
+
+  test "omitted category_id on update leaves existing category unchanged" do
+    transfer = transfers(:one)
+    category = users(:family_admin).family.categories.create!(name: "Existing")
+    transfer.outflow_transaction.update!(category_id: category.id)
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Test notes" } }
+
+    assert_redirected_to transactions_url
+    assert_equal category.id, transfer.outflow_transaction.reload.category_id
+  end
+
+  test "explicit blank category_id on update clears the category" do
+    transfer = transfers(:one)
+    category = users(:family_admin).family.categories.create!(name: "Existing")
+    transfer.outflow_transaction.update!(category_id: category.id)
+
+    patch transfer_url(transfer), params: { transfer: { category_id: "" } }
+
+    assert_redirected_to transactions_url
+    assert_nil transfer.outflow_transaction.reload.category_id
+  end
+
+  test "category-only update leaves existing notes unchanged" do
+    transfer = transfers(:one)
+    transfer.update!(notes: "Existing note")
+    category = users(:family_admin).family.categories.create!(name: "Existing")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert_redirected_to transactions_url
+    assert_equal "Existing note", transfer.reload.notes
+    assert_equal category.id, transfer.outflow_transaction.reload.category_id
   end
 
   test "can add notes to transfer" do

@@ -43,6 +43,22 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "Transfer from #{@source_account.name}", inflow.entry.name
   end
 
+  test "preserves explicit blank category_id as uncategorized for investment contribution" do
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: @destination_account.id,
+      date: @date,
+      amount: @amount,
+      category_id: ""
+    )
+
+    transfer = creator.create
+
+    assert transfer.persisted?
+    assert_nil transfer.outflow_transaction.category, "Explicit Uncategorized selection should not fall back to Investment Contributions"
+  end
+
   test "creates basic transfer between depository accounts" do
     other_depository = @family.accounts.create!(name: "Savings", balance: 1000, currency: "USD", accountable: Depository.new)
 
@@ -69,6 +85,24 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     # Verify inflow transaction
     inflow = transfer.inflow_transaction
     assert_equal "funds_movement", inflow.kind
+  end
+
+  test "ignores category_id belonging to another family" do
+    other_family_category = families(:empty).categories.create!(name: "Other family category")
+
+    creator = Transfer::Creator.new(
+      family: @family,
+      source_account_id: @source_account.id,
+      destination_account_id: accounts(:credit_card).id,
+      date: @date,
+      amount: @amount,
+      category_id: other_family_category.id
+    )
+
+    transfer = creator.create
+
+    assert transfer.persisted?
+    assert_nil transfer.outflow_transaction.category, "Should not assign a category belonging to another family"
   end
 
   test "creates investment contribution when transferring from depository to crypto" do

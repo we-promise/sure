@@ -22,4 +22,15 @@ module CategoriesHelper
   def family_categories
     [ Category.uncategorized ].concat(Current.family.categories.alphabetically_by_hierarchy)
   end
+
+  # Transactions keep a real, editable category (nil when none is chosen).
+  # For transfers with no category picked, show the Transfer/Payment badge
+  # instead of the generic Uncategorized one, so the row still visually
+  # reads as a transfer rather than "needs categorizing."
+  def display_category_for(transaction)
+    return transaction.category if transaction.category
+    return transaction.transfer.payment? ? payment_category : transfer_category if transaction.transfer
+
+    Category.uncategorized
+  end
 end
