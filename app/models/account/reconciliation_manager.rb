@@ -62,9 +62,13 @@ class Account::ReconciliationManager
     if winning_valuation
       reconcile_balance(balance: balance, date: date, dry_run: dry_run, existing_valuation_entry: winning_valuation)
     else
+      # RecordNotUnique carries the raw Postgres exception text (including
+      # the internal index name), which must never reach end users. Swap in
+      # the same friendly message Entry's own uniqueness validation already
+      # produces for the sibling RecordInvalid case.
       ReconciliationResult.new(
         success?: false,
-        error_message: e.message
+        error_message: e.is_a?(ActiveRecord::RecordNotUnique) ? I18n.t("valuations.errors.duplicate_date") : e.message
       )
     end
   rescue => e

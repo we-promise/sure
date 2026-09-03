@@ -178,7 +178,10 @@ class Account::ReconciliationManagerTest < ActiveSupport::TestCase
       result = @manager.reconcile_balance(balance: 1200, date: Date.current)
 
       assert_not result.success?
-      assert_match "duplicate key value violates unique constraint", result.error_message
+      # The raw Postgres exception text (which includes the internal index
+      # name) must never reach the user - a friendly message is substituted.
+      assert_equal I18n.t("valuations.errors.duplicate_date"), result.error_message
+      assert_no_match "duplicate key value violates unique constraint", result.error_message
     end
   end
 
