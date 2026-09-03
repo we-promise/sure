@@ -585,7 +585,14 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
       assert result["isError"], "Expected isError to be true"
       inner = JSON.parse(result["content"][0]["text"])
-      assert_equal "test error", inner["error"]
+
+      # The raised text is written for a log, not for an external client: a
+      # RecordNotFound carries the access-control SQL and a range error carries
+      # the column definition. The client learns which tool failed; the detail
+      # stays server-side.
+      assert_equal "The tool failed to run", inner["error"]
+      assert_equal "get_balance_sheet", inner["tool"]
+      assert_no_match(/test error/, response.body)
     end
   end
 

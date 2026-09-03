@@ -1,0 +1,42 @@
+---
+pt-PT:
+  plaid_items:
+    create:
+      success: Conta ligada com sucesso.  Por favor, aguarde a sincronização das contas.
+    destroy:
+      success: Contas agendadas para eliminação.
+    errors:
+      link_token_generic: Não conseguimos abrir o Plaid neste momento. Tente novamente,
+        e se o problema persistir verifique os registos do servidor para obter detalhes.
+      link_token_with_message: "O Plaid não conseguiu abrir a ligação: %{message}"
+    plaid_item:
+      add_accounts: Adicionar contas
+      add_new: Adicionar nova ligação
+      confirm_accept: Eliminar instituição
+      confirm_body: Isto eliminará permanentemente todas as contas deste grupo e
+        todos os dados associados.
+      confirm_title: Eliminar instituição?
+      connection_lost: Ligação perdida
+      connection_lost_description: Esta ligação já não é válida. Terá de eliminar
+        esta ligação e adicioná-la novamente para continuar a sincronizar dados.
+      delete: Eliminar
+      deletion_in_progress: (a eliminar...)
+      error: Ocorreu um erro durante a sincronização de dados
+      no_accounts_description: Não conseguimos carregar nenhuma conta desta instituição
+        financeira.
+      no_accounts_title: Nenhuma conta encontrada
+      requires_update: Ligar novamente
+      status: Última sincronização há %{timestamp}
+      status_never: Requer sincronização de dados
+      syncing: A sincronizar...
+      update: Atualizar
+    select_existing_account:
+      no_available_accounts: Não existem contas do Plaid por ligar disponíveis. Ligue primeiro uma nova conta do Plaid.
+      title: "Ligar %{account_name} ao Plaid"
+      description: Selecione uma conta do Plaid para ligar à sua conta existente
+      cancel: Cancelar
+      link_account: Ligar conta
+    link_existing_account:
+      invalid_account: Conta do Plaid inválida selecionada
+      already_linked: Esta conta do Plaid já está ligada
+      success: Conta ligada com sucesso ao Plaid
