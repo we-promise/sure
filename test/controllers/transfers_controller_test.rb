@@ -151,11 +151,12 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
 
     # Defensive-branch coverage: if the unique index ever rejects an insert
     # for a reason other than "another request with this exact idempotency
-    # key already won," we must not pretend it succeeded.
+    # key already won," we must not pretend it succeeded - it should
+    # surface as a stale-form error instead of a raw DB exception.
     Transfer::Creator.any_instance.stubs(:find_existing_transfer).returns(nil)
     Transfer.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
 
-    assert_raises(ActiveRecord::RecordNotUnique) do
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
       post transfers_url, params: {
         transfer: {
           from_account_id: accounts(:depository).id,
@@ -167,6 +168,46 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reusing a key for a genuinely different request does not silently return the old transfer" do
+    idempotency_key = SecureRandom.uuid
+    from_account = accounts(:depository)
+    to_account = accounts(:credit_card)
+    other_destination = accounts(:other_liability)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    # Simulates a stale hidden field (cached page / reopened dialog) still
+    # carrying the first request's key while the user changed the
+    # destination account before resubmitting.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: other_destination.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
   end
 
   test "can create transfer with custom exchange rate" do

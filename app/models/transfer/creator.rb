@@ -1,4 +1,10 @@
 class Transfer::Creator
+  # Raised when the submitted idempotency key already belongs to an entry,
+  # but that entry's transfer doesn't match the current request (different
+  # destination/amount/date) — i.e. a stale key from a cached form rather
+  # than a genuine double-submit. See #find_existing_transfer.
+  StaleIdempotencyKeyError = Class.new(StandardError)
+
   def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
@@ -69,8 +75,15 @@ class Transfer::Creator
     # this entire Transfer.transaction block (no half-created transfer left
     # behind). Return the winning transfer instead of creating a duplicate
     # or raising a raw DB error to the user.
+    #
+    # The INSERT hitting the unique index proves an entry with this key
+    # already exists on source_account, but find_existing_transfer only
+    # returns it when it matches the current request - so a nil here means
+    # the key belongs to a *different*, stale request (e.g. a cached form
+    # resubmitted with a new destination/amount/date), not a genuine retry.
+    # Surface that distinctly instead of re-raising the raw DB error.
     existing_transfer = idempotency_key && find_existing_transfer
-    raise unless existing_transfer
+    raise StaleIdempotencyKeyError unless existing_transfer
 
     existing_transfer
   end
@@ -78,8 +91,29 @@ class Transfer::Creator
   private
     attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
 
+    # Scoped to source_account + idempotency_key so it only ever finds a
+    # transfer this same key could plausibly refer to, but the key alone
+    # isn't enough: a stale hidden field (Turbo Drive cache, reopened
+    # dialog) can resubmit an old key for a request that's since changed
+    # destination/amount/date. Verifying those fields against the request
+    # keeps a genuinely different transfer from being silently discarded
+    # in favor of returning the old one.
     def find_existing_transfer
-      source_account.entries.find_by(idempotency_key: idempotency_key)&.entryable&.transfer
+      transfer = source_account.entries.find_by(idempotency_key: idempotency_key)&.entryable&.transfer
+      return nil unless transfer
+      return nil unless matches_request?(transfer)
+
+      transfer
+    end
+
+    def matches_request?(transfer)
+      outflow_entry = transfer.outflow_transaction.entry
+      inflow_entry = transfer.inflow_transaction.entry
+
+      outflow_entry.account_id == source_account.id &&
+        inflow_entry.account_id == destination_account.id &&
+        outflow_entry.date == date &&
+        outflow_entry.amount == amount
     end
 
     # Every leg gets a role-specific suffix except the outflow (find_existing_transfer

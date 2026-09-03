@@ -74,6 +74,13 @@ class TransfersController < ApplicationController
     set_accounts
     @tags = Current.family.tags.alphabetically
     render :new, status: :unprocessable_entity
+  rescue Transfer::Creator::StaleIdempotencyKeyError
+    @transfer ||= Transfer.new
+    @transfer.tag_ids = transfer_params[:tag_ids]
+    @transfer.errors.add(:base, t(".stale_form"))
+    set_accounts
+    @tags = Current.family.tags.alphabetically
+    render :new, status: :unprocessable_entity
   end
 
   def update
@@ -196,12 +203,11 @@ class TransfersController < ApplicationController
       params.require(:transfer).permit(:from_account_id, :to_account_id, :amount, :date, :name, :excluded, :exchange_rate, :source_fee_amount, :destination_fee_amount, tag_ids: [])
     end
 
-    # Same anti-double-submit token approach as
-    # TransactionsController#new_transaction_idempotency_key: a random UUID
-    # rendered fresh on every "new transfer" form load, echoed back on
-    # submit, only ever trusted to look like something we could have
-    # generated (see Transfer::Creator#find_existing_transfer for how it's
-    # used to de-duplicate).
+    # Anti-double-submit token: a random UUID rendered fresh on every "new
+    # transfer" form load, echoed back on submit, only ever trusted to look
+    # like something we could have generated (see
+    # Transfer::Creator#find_existing_transfer for how it's used to
+    # de-duplicate).
     UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
     private_constant :UUID_FORMAT
 
