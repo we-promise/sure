@@ -8,6 +8,7 @@ class TransactionsController < ApplicationController
   def show
     super
     assign_mark_recurring_state
+    assign_create_rule_state
   end
 
   def new
@@ -492,6 +493,13 @@ class TransactionsController < ApplicationController
       @mark_recurring_disabled = existing.present?
       @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
       @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+    end
+
+    def assign_create_rule_state
+      return unless can_edit_entry? && !@entry.split_child?
+
+      rule_name = @entry.transaction.merchant&.name || @entry.name
+      @create_rule_href = new_rule_path(resource_type: "transaction", name: rule_name)
     end
 
     def accessible_transactions

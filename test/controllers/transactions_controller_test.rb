@@ -56,6 +56,46 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "create rule link is prefilled with the merchant name when a merchant is set" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
+
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name)
+  end
+
+  test "create rule link falls back to the transaction name without a merchant" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String")
+
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: "Payee String")
+  end
+
+  test "create rule link is hidden for split child transactions" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    get transaction_url(child), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href^='#{rules_path}']", false
+  end
+
+  test "create rule link is hidden without edit permission" do
+    # credit_card is shared read-only with family_member, see fixtures/account_shares.yml
+    entry = create_transaction(account: accounts(:credit_card), name: "Payee String", merchant: merchants(:netflix))
+
+    sign_in users(:family_member)
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href^='#{rules_path}']", false
+  end
+
   test "index groups subcategories immediately after their parent in the category filter" do
     get transactions_url
     assert_response :success
