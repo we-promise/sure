@@ -336,6 +336,39 @@ docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
 
+### PostgreSQL major version mismatch (`db-version-check`)
+
+The compose files run a one-shot `db-version-check` service before Postgres starts. If your `postgres-data` volume was created by a different PostgreSQL major version than the pinned image (for example, a PostgreSQL 16 volume under the PostgreSQL 18 image), startup stops with an actionable error instead of crash-looping.
+
+Note that PostgreSQL 18's official image changed the on-disk layout: the volume now mounts at `/var/lib/postgresql` and the cluster lives in a versioned subdirectory (`18/docker`). A pre-18 volume still holds its cluster at `data/` inside that volume. Either way, your existing data is NOT gone - pick one of the migration paths below.
+
+#### Option A: dump and restore (simplest, works between any versions)
+
+Run the dump **before** switching to the new image, while the old PostgreSQL is still running:
+
+```bash
+# Still on the OLD image (e.g. Postgres 16):
+docker compose exec db pg_dumpall -U sure_user -f /tmp/sure-backup.sql
+docker compose cp db:/tmp/sure-backup.sql ./sure-backup.sql
+
+docker compose down
+docker volume rm sure_postgres-data # destroys the old cluster - the dump is now your only copy
+
+# Switch the db image to the new major version (compose.yml), then:
+docker compose up -d db
+docker compose cp ./sure-backup.sql db:/tmp/sure-backup.sql
+docker compose exec db psql -U sure_user -f /tmp/sure-backup.sql
+docker compose up
+```
+
+#### Option B: `pg_upgrade` (fast, in-place)
+
+Because both the old (`data/`) and new (`18/docker/`) clusters can live side by side in the same volume, an in-place upgrade is possible with a dual-version helper image such as [`tianon/postgres-upgrade`](https://github.com/tianon/docker-postgres-upgrade). Follow that image's instructions; the key step is moving the legacy cluster into the `16/` subdirectory it expects before running the upgrade.
+
+#### Starting over instead
+
+If you do not need the existing data, the error message spells it out: `docker compose down`, `docker volume rm sure_postgres-data`, `docker compose up`.
+
 ### Slow `.csv` import (processing rows taking longer than expected)
 
 Importing comma-separated-value file(s) requires the `sure-worker` container to communicate with Redis. Check your worker logs for any unexpected errors, such as connection timeouts or Redis communication failures.

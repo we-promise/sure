@@ -140,7 +140,7 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     environment:
       <<: *db_env
     healthcheck:
@@ -177,7 +177,7 @@ services:
       - RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
       - RCLONE_CONFIG_S3_ENDPOINT
     command: >
-      sh -c "apk add --no-cache postgresql18-client~=18 rclone~=1.66 gzip~=1 &&
+      sh -c "apk add --no-cache postgresql18-client~=18 rclone~=1.72 gzip~=1 &&
              echo \"$${BACKUP_SCHEDULE:-0 2 * * *} /usr/local/bin/db-backup.sh\" > /etc/crontabs/root &&
              crond -f -d 8"
     depends_on:
