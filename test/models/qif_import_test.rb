@@ -514,6 +514,36 @@ class QifImportTest < ActiveSupport::TestCase
     assert supplies.import_locked?
   end
 
+  test "import! creates split children from QIF split lines with detected non-default date format" do
+    qif = <<~QIF
+      !Type:Bank
+      D31/ 1'24
+      U-30.00
+      T-30.00
+      PMarket and tram
+      L--Split--
+      SFood
+      $-10.00
+      STransport
+      $-20.00
+      ^
+    QIF
+
+    @import.update!(raw_file_str: qif)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_equal "%d/%m/%Y", @import.reload.qif_date_format
+
+    @import.import!
+
+    parent = @account.entries.find_by!(name: "Market and tram")
+    assert_equal Date.new(2024, 1, 31), parent.date
+    assert parent.split_parent?
+    assert_equal [ 10, 20 ], parent.child_entries.order(:amount).pluck(:amount).map(&:to_i)
+    assert_equal [ "Food", "Transport" ], parent.child_entries.includes(entryable: :category).map { |entry| entry.entryable.category.name }.sort
+  end
+
   test "categories_selected? is false before sync_mappings" do
     @import.update!(raw_file_str: SAMPLE_QIF)
     @import.generate_rows_from_csv

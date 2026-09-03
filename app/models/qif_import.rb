@@ -149,7 +149,7 @@ class QifImport < Import
   private
 
     def parsed_transactions_with_splits
-      @parsed_transactions_with_splits ||= QifParser.parse(raw_file_str)
+      @parsed_transactions_with_splits ||= QifParser.parse(raw_file_str, date_format: qif_date_format)
     end
 
     def parsed_transaction_by_source_row_number
@@ -290,8 +290,6 @@ class QifImport < Import
           tags:        line.tags.present? ? line.tags.map { |tag| mappings.tags.mappable_for(tag) }.compact : fallback_tags
         }
       end
-
-      return unless split_rows.sum { |row| row[:amount] } == entry.amount
 
       children = entry.split!(split_rows)
       children.zip(split_rows).each do |child, row|
