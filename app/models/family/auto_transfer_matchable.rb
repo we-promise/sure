@@ -142,6 +142,9 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
+    # On a tie in date-distance between a cached rate before and after the outflow date,
+    # the query below prefers the past-dated rate: the forward window exists only to
+    # cover timezone skew, so it must never outrank real historical data.
     def transfer_match_candidates_sql
       <<~SQL.squish
         SELECT transfer_match_candidates.*
@@ -208,7 +211,7 @@ module Family::AutoTransferMatchable
               er.from_currency = outflow_candidates.currency AND
               er.to_currency = inflow_candidates.currency AND
               er.date BETWEEN outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookahead_days
-            ORDER BY ABS(er.date - outflow_candidates.date) ASC, er.date DESC
+            ORDER BY ABS(er.date - outflow_candidates.date) ASC, er.date ASC
             LIMIT 1
           ) exchange_rates ON TRUE
           LEFT JOIN transfers existing_transfers ON (

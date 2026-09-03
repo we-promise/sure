@@ -345,6 +345,21 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "on an equal-distance tie between a past and future rate, prefers the past rate" do
+    # Both rates are exactly 1 day from the outflow date, so date-distance alone
+    # can't break the tie. The forward window exists only to cover timezone skew,
+    # so on a tie the past (historical) rate must win over the future one.
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.ago.to_date, rate: 1.4)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: 1.day.from_now.to_date, rate: 5.0)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "same-currency matching ignores amount-mismatched busy-window entries" do
     noise_transaction_ids = []
 
