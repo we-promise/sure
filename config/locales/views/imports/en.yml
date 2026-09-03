@@ -368,6 +368,7 @@ en:
       map: Map
       confirm: Confirm
       select: Select
+      label: "Step %{step}"
       progress: "Step %{step} of %{total}"
     empty:
       message: No imports found.

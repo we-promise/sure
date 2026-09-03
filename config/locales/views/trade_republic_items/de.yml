@@ -1,0 +1,120 @@
+---
+de:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Verbinde ein Trade-Republic-Investmentkonto über eine sichere Web-Anmeldung"
+      institution_name: Trade Republic
+  trade_republic_items:
+    defaults:
+      name: Trade Republic
+    portfolio_categories:
+      brokerage: "Brokerage"
+      private_markets: "Private Märkte"
+      interest_products: "Zinsprodukte"
+      crypto_wallet: "Krypto-Wallet"
+    trade_republic_item:
+      syncing: "Wird synchronisiert"
+      requires_update: "Erneute Authentifizierung erforderlich"
+      error: "Fehler"
+      synced: "Vor %{time} synchronisiert. %{summary}."
+      setup_accounts: "Konten einrichten"
+      delete: "Löschen"
+      accounts_need_setup: "Konto muss eingerichtet werden"
+      accounts_need_setup_description: "Dein Trade-Republic-Konto muss mit einem Sure-Konto verknüpft werden."
+      no_accounts_discovered: "Noch kein Trade-Republic-Konto entdeckt."
+      no_accounts_discovered_description: "Schließe die Anmeldung ab und starte einen Sync, um dein Konto zu entdecken."
+      data_quality:
+        title: "Datenqualität und Sync-Details"
+        repair: "Importdaten reparieren"
+        positions:
+          one: "%{count} Position"
+          other: "%{count} Positionen"
+        unpriced:
+          one: "%{count} ohne aktuellen Kurs"
+          other: "%{count} ohne aktuellen Kurs"
+        events:
+          one: "%{count} Aktivität"
+          other: "%{count} Aktivitäten"
+        unknown:
+          one: "%{count} unbekannte Aktivität"
+          other: "%{count} unbekannte Aktivitäten"
+        expenses:
+          one: "%{count} Ausgabe in den letzten 30 Tagen (%{amount})"
+          other: "%{count} Ausgaben in den letzten 30 Tagen (%{amount})"
+        reconciliation: "%{matched}/%{total} Kontostände abgeglichen"
+        sync_history: "Letzte Syncs"
+        sync_status:
+          completed: Abgeschlossen
+          failed: Fehlgeschlagen
+          pending: Ausstehend
+          syncing: Wird synchronisiert
+          stale: Veraltet
+    setup_accounts:
+      page_title: "Trade-Republic-Konto einrichten"
+      subtitle: "Verknüpfe dein Trade-Republic-Investmentkonto."
+      available_accounts:
+        account_type_investment: "Investment-Portfolio"
+        account_type_cash: "Cash-Konto"
+      buttons:
+        refresh: "Aktualisieren"
+        cancel: "Abbrechen"
+        link: "Verknüpfen"
+        done: "Fertig"
+    sync:
+      errors:
+        phone_number_missing: "Die Telefonnummer für Trade Republic fehlt."
+        reauthentication_required: "Die Trade-Republic-Sitzung fehlt oder ist abgelaufen. Verbinde den Account unter Einstellungen > Anbieter erneut."
+      status:
+        checking_credentials: "Trade-Republic-Zugangsdaten werden geprüft..."
+        importing_account: "Trade-Republic-Konto wird importiert..."
+        processing_activity: "Positionen und Aktivitäten werden verarbeitet..."
+        calculating_balances: "Kontostände werden berechnet..."
+    repair:
+      scheduled: "Die Reparatur der Trade-Republic-Daten wurde eingeplant."
+    select_existing_account:
+      title: "Trade-Republic-Konto verknüpfen"
+      link: "Verknüpfen"
+      cancel: "Abbrechen"
+    initiate_login:
+      pin_required: "Gib deine Trade-Republic-PIN ein, um eine neue Anmeldung zu starten."
+      verification_required: "Anmeldung gestartet. Bestätige sie über %{method} und klicke anschließend auf Anmeldung bestätigen."
+    initiate_qr_login:
+      not_configured: "Trade Republic ist nicht konfiguriert."
+    poll_login:
+      no_pending_login: "Es ist keine Anmeldung ausstehend. Starte zuerst eine neue Anmeldung."
+      login_expired: "Die Anmeldeanfrage ist abgelaufen. Bitte starte sie erneut."
+    poll_qr_login:
+      no_pending_login: "Es ist keine QR-Anmeldung ausstehend."
+      success: "Trade Republic wurde erfolgreich verbunden."
+    complete_login:
+      approval_pending: "Noch nicht bestätigt. Bestätige die Anmeldung in der Trade-Republic-App und versuche es danach erneut."
+      still_pending: "Noch nicht bestätigt. Bestätige die Anmeldung in der Trade-Republic-App und versuche es danach erneut."
+      success: "Trade Republic wurde erfolgreich verbunden."
+      login_expired: "Die Anmeldeanfrage ist abgelaufen. Bitte starte sie erneut."
+    link_existing_account:
+      not_found: "Konto oder Trade-Republic-Konfiguration nicht gefunden."
+      success: "Erfolgreich mit dem Trade-Republic-Konto verknüpft."
+      processing_failed: "Das Konto wurde verknüpft, aber die erste Datenverarbeitung ist fehlgeschlagen. Ein Sync wurde geplant; prüfe das Debug-Log, falls die Daten unvollständig bleiben."
+    complete_account_setup:
+      none_selected: "Es wurden keine Konten ausgewählt."
+      partial_failure:
+        one: "Ein ausgewähltes Trade-Republic-Konto konnte nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
+        other: "%{count} ausgewählte Trade-Republic-Konten konnten nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
+    update:
+      pin_required: "Gib deine Trade-Republic-PIN ein, um die Verbindung erneut zu authentifizieren."
+    destroy:
+      unlink_failed: "Trade Republic konnte nicht vollständig getrennt werden. Die Verbindung bleibt für einen sicheren erneuten Versuch erhalten."
+    activities:
+      labels:
+        contribution: Einzahlung
+        withdrawal: Auszahlung
+        interest: Zinsen
+        dividend: Dividende
+        card_payment: Kartenzahlung
+        cash_withdrawal: Bargeldabhebung
+        card_fee: Kartengebühr
+        card_refund: Kartenrückerstattung
+        tax_refund: Steuerrückerstattung
+        buy: Kauf
+        sell: Verkauf

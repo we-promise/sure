@@ -39,15 +39,21 @@ Make sure you are in the directory you just created and run the following comman
 
 ```bash
 # Download the sample compose.yml file from the GitHub repository
-curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+
+# (Optional) If you plan to use the automated database backups feature:
+mkdir -p bin
+curl --fail --location --silent --show-error --output bin/db-backup.sh https://raw.githubusercontent.com/we-promise/sure/main/bin/db-backup.sh
+chmod +x bin/db-backup.sh
 ```
 
 This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
+3. (Optionally) Fetches the backup script to `bin/db-backup.sh` and makes it executable.
 
-At this point, the only file in your current working directory should be `compose.yml`.
+At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
 ### Step 3 (optional): Configure your environment
 
@@ -63,7 +69,7 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
 #### Generate the app secret key
@@ -221,9 +227,9 @@ Sure ships with a separate compose file for AI-related features: `compose.exampl
 
 ```bash
 # Download both compose files
-curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
-curl -o compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
-curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
+curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl --fail --location --silent --show-error --output compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
+curl --fail --location --silent --show-error --output pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
 
 # Run with Pipelock (no local LLM)
 docker compose -f compose.ai.yml up -d
