@@ -91,9 +91,10 @@
 
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <% if transaction.one_time? %>
-                      <span class="text-orange-500" title="One-time <%= entry.amount.negative? ? "income" : "expense" %> (excluded from averages)">
-                        <%= icon "asterisk", size: "sm", color: "current" %>
-                      </span>
+                      <%= render DS::Tooltip.new(text: t(".one_time_tooltip", type: entry.amount.negative? ? t(".income") : t(".expense")), icon: "asterisk", size: "sm", as: :span) %>
+                    <% end %>
+                    <% if transaction.refund? %>
+                      <%= render DS::Tooltip.new(text: t(".refund_tooltip"), icon: "corner-down-left", size: "sm", color: "info", as: :span) %>
                     <% end %>
 
                     <%# Pending indicator %>
@@ -139,9 +140,7 @@
                       ) %>
                     <% end %>
                     <% if entry.split_child? && !in_split_group %>
-                      <span class="text-secondary" title="<%= t("transactions.transaction.split_child_tooltip") %>">
-                        <%= icon "corner-down-right", size: "sm", color: "current" %>
-                      </span>
+                      <%= render DS::Tooltip.new(text: t("transactions.transaction.split_child_tooltip"), icon: "corner-down-right", size: "sm", as: :span) %>
                     <% end %>
 
                     <% if transaction.transfer.present? %>

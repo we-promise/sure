@@ -1616,6 +1616,10 @@ components:
           format: date
         amount:
           type: string
+        amount_cents:
+          type: integer
+        signed_amount_cents:
+          type: integer
         currency:
           type: string
         name:
@@ -1629,6 +1633,10 @@ components:
         source:
           type: string
           nullable: true
+        kind:
+          type: string
+        refund:
+          type: boolean
         user_modified:
           type: boolean
         classification:
@@ -7724,6 +7732,10 @@ paths:
                       - inflow
                       - outflow
                       description: Transaction nature (determines sign)
+                    refund:
+                      type: boolean
+                      nullable: true
+                      description: Mark as refund to offset original expense
                     external_id:
                       type: string
                       description: Optional external idempotency key scoped to account
@@ -7835,6 +7847,9 @@ paths:
                       - expense
                       - inflow
                       - outflow
+                    refund:
+                      type: boolean
+                      nullable: true
                     tag_ids:
                       type: array
                       items:

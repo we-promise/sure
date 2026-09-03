@@ -13,6 +13,10 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     scope = transaction_scope.with_entry
 
     count_modified_resources(scope) do |txn|
+      # A refund is an expense-side adjustment, never a movement between
+      # accounts. Do not let a rule promote it into an invalid transfer.
+      next false if txn.refund?
+
       entry = txn.entry
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)

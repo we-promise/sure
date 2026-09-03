@@ -19,6 +19,15 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "refunds are not offered as transfer candidates" do
+    outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    refund_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500, refund: true)
+
+    candidates = @family.transfer_match_candidates
+
+    assert_not candidates.any? { |candidate| candidate.inflow_transaction_id == refund_entry.entryable_id && candidate.outflow_transaction_id == outflow_entry.entryable_id }
+  end
+
   test "concurrent unique-index race does not abort the surrounding transaction" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: @credit_card, amount: -500)

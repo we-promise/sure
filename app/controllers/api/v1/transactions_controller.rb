@@ -120,6 +120,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     else
       raise
     end
+  rescue ActiveRecord::RecordInvalid => e
+    render json: {
+      error: "validation_failed",
+      message: "Transaction could not be created",
+      errors: e.record.errors.full_messages
+    }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "TransactionsController#create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -151,6 +157,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
           @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
         end
 
+        if refund_provided?
+          @entry.transaction.update!(refund: transaction_params[:refund])
+        end
+
         @entry.sync_account_later
         @entry.lock_saved_attributes!
 
@@ -166,6 +176,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
     end
 
+  rescue ActiveRecord::RecordInvalid => e
+    render json: {
+      error: "validation_failed",
+      message: "Transaction could not be updated",
+      errors: e.record.errors.full_messages
+    }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -311,7 +327,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, :user_modified, tag_ids: []
+        :category_id, :merchant_id, :nature, :refund, :user_modified, tag_ids: []
       )
     end
 
@@ -340,8 +356,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         entryable_attributes: {
           category_id: transaction_params[:category_id],
           merchant_id: transaction_params[:merchant_id],
+          refund: transaction_params[:refund],
           tag_ids: transaction_params[:tag_ids] || []
-        }
+        }.compact
       }
       if idempotency_key_requested?
         entry_params[:external_id] = idempotency_external_id
@@ -360,8 +377,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
           id: @entry.entryable_id,
           category_id: transaction_params[:category_id],
           merchant_id: transaction_params[:merchant_id]
-          # Note: tag_ids handled separately in update action to distinguish
-          # "not provided" from "explicitly set to empty"
+          # Note: tag_ids and refund handled separately in update action to distinguish
+          # "not provided" from "explicitly set to empty/false"
         }.compact_blank
       }
 
@@ -377,6 +394,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
     def tags_provided?
       params[:transaction].key?(:tag_ids)
+    end
+
+    def refund_provided?
+      params[:transaction].key?(:refund)
     end
 
     def split_financial_fields_changed?

@@ -875,7 +875,8 @@ class Family::DataImporter
         transaction.assign_attributes(
           category_id: new_category_id,
           merchant_id: new_merchant_id,
-          kind: data["kind"] || "standard"
+          kind: data["kind"] || "standard",
+          refund: boolean_import_value(data, "refund", default: false)
         )
 
         entry ||= Entry.new(entryable: transaction)
@@ -942,7 +943,8 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          refund: boolean_import_value(row, "refund", default: false)
         }
       end
     end
@@ -963,7 +965,8 @@ class Family::DataImporter
         transaction = child_entry.entryable
         transaction.update!(
           merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
-          kind: row[:kind].presence || transaction.kind
+          kind: row[:kind].presence || transaction.kind,
+          refund: row[:refund]
         )
         child_entry.update!(notes: row[:notes]) if row[:notes].present?
 
@@ -999,13 +1002,16 @@ class Family::DataImporter
     def apply_transfer_transaction_kinds!(transfer)
       destination_account = transfer.inflow_transaction.entry.account
       outflow_kind = imported_transfer_outflow_kind(transfer)
-      outflow_attrs = { kind: outflow_kind }
+      # A transfer record is authoritative: legacy exports may contain a
+      # refund flag on either endpoint, but the endpoint is no longer a refund
+      # once it is restored as a transfer.
+      outflow_attrs = { kind: outflow_kind, refund: false }
       if outflow_kind == "investment_contribution" && transfer.outflow_transaction.category_id.blank?
         outflow_attrs[:category] = destination_account.family.investment_contributions_category
       end
 
       transfer.outflow_transaction.update!(outflow_attrs)
-      transfer.inflow_transaction.update!(kind: "funds_movement")
+      transfer.inflow_transaction.update!(kind: "funds_movement", refund: false)
     end
 
     def imported_transfer_outflow_kind(transfer)

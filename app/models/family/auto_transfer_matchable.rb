@@ -38,10 +38,17 @@ module Family::AutoTransferMatchable
     investment_category = nil
     investment_category_loaded = false
 
+    # Preload refund flags from in-memory transactions to skip refunds without N+1
+    refund_ids = transactions_by_id.values.select { |t| t.refund? }.map(&:id).to_set
+
     Transfer.transaction do
       candidates_scope.each do |match|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
+
+        # Refunds are not transfers — skip them
+        next if refund_ids.include?(match.inflow_transaction_id) ||
+                refund_ids.include?(match.outflow_transaction_id)
 
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
@@ -144,6 +151,7 @@ module Family::AutoTransferMatchable
             ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
+          JOIN transactions inflow_transactions ON inflow_transactions.id = inflow_candidates.entryable_id
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
@@ -154,6 +162,7 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency = inflow_candidates.currency AND
             outflow_candidates.amount = -inflow_candidates.amount
           )
+          JOIN transactions outflow_transactions ON outflow_transactions.id = outflow_candidates.entryable_id
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
           LEFT JOIN transfers existing_transfers ON (
             existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
@@ -167,6 +176,8 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_type = 'Transaction' AND
             inflow_candidates.excluded = FALSE AND
             inflow_candidates.amount < 0 AND
+            inflow_transactions.refund = FALSE AND
+            outflow_transactions.refund = FALSE AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
             inflow_accounts.status IN ('draft', 'active') AND
@@ -183,6 +194,7 @@ module Family::AutoTransferMatchable
             ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
+          JOIN transactions inflow_transactions ON inflow_transactions.id = inflow_candidates.entryable_id
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
@@ -192,6 +204,7 @@ module Family::AutoTransferMatchable
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
             outflow_candidates.currency <> inflow_candidates.currency
           )
+          JOIN transactions outflow_transactions ON outflow_transactions.id = outflow_candidates.entryable_id
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
           JOIN exchange_rates ON (
             exchange_rates.date = outflow_candidates.date AND
@@ -210,6 +223,8 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_type = 'Transaction' AND
             inflow_candidates.excluded = FALSE AND
             inflow_candidates.amount < 0 AND
+            inflow_transactions.refund = FALSE AND
+            outflow_transactions.refund = FALSE AND
             inflow_accounts.family_id = :family_id AND
             outflow_accounts.family_id = :family_id AND
             inflow_accounts.status IN ('draft', 'active') AND

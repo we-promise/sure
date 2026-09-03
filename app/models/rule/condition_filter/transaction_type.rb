@@ -24,9 +24,10 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
     case value
     when "income"
       scope.where("entries.amount < 0")
+           .where(refund: false)
            .where.not(kind: Transaction::TRANSFER_KINDS)
     when "expense"
-      scope.where("entries.amount >= 0")
+      scope.where("entries.amount >= 0 OR transactions.refund = true")
            .where.not(kind: Transaction::TRANSFER_KINDS)
     when "transfer"
       scope.where(kind: Transaction::TRANSFER_KINDS)

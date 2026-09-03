@@ -117,7 +117,6 @@ josh:
   ai_enabled: true
   show_sidebar: true
   show_ai_sidebar: true
-
 ann:
   family: empty
   first_name: Ann
@@ -129,4 +128,3 @@ ann:
   ai_enabled: true
   show_sidebar: true
   show_ai_sidebar: true
-

@@ -496,8 +496,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
   test "retries fetch when refetchable provisional prices exist" do
     Security::Price.delete_all
 
-    # Skip if today is a weekend
-    return if Date.current.saturday? || Date.current.sunday?
+    skip "refetchable provisional prices are resolved on trading days" if Date.current.saturday? || Date.current.sunday?
 
     # Pre-populate with provisional price for today
     Security::Price.create!(
@@ -526,6 +525,7 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     ).import_provider_prices
 
     db_price = Security::Price.find_by(security: @security, date: Date.current)
+    assert_not_nil db_price, "Provider price should replace the provisional price"
     assert_equal 165, db_price.price, "Price should be updated from provider"
     assert_not db_price.provisional, "Price should no longer be provisional after provider returns real price"
   end
