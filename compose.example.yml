@@ -141,7 +141,7 @@ services:
   backup:
     profiles:
       - backup
-    image: alpine:3.20
+    image: alpine:3.23
     restart: unless-stopped
     volumes:
       - ./bin/db-backup.sh:/usr/local/bin/db-backup.sh:ro
@@ -164,7 +164,7 @@ services:
       - RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
       - RCLONE_CONFIG_S3_ENDPOINT
     command: >
-      sh -c "apk add --no-cache postgresql16-client~=16 rclone~=1.66 gzip~=1 &&
+      sh -c "apk add --no-cache postgresql18-client~=18 rclone~=1.66 gzip~=1 &&
              echo \"$${BACKUP_SCHEDULE:-0 2 * * *} /usr/local/bin/db-backup.sh\" > /etc/crontabs/root &&
              crond -f -d 8"
     depends_on:
