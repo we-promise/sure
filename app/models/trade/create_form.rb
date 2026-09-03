@@ -7,6 +7,12 @@ class Trade::CreateForm
   # Either creates a trade, transaction, or transfer based on type
   # Returns the model, regardless of success or failure
   def create
+    unless account&.supports_trades?
+      entry = account.entries.build(entryable: Trade.new)
+      entry.errors.add(:base, I18n.t("trades.form.account_does_not_support_trades"))
+      return entry
+    end
+
     case type
     when "buy", "sell"
       create_trade

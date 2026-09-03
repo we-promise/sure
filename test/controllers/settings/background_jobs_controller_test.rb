@@ -11,6 +11,8 @@ class Settings::BackgroundJobsControllerTest < ActionDispatch::IntegrationTest
     get settings_background_jobs_path
 
     assert_response :success
+    assert_select "turbo-frame#background_jobs_console"
+    assert_select "h2", I18n.t("settings.background_jobs.show.title")
   end
 
   test "console renders in-flight operations with actions" do
@@ -24,9 +26,9 @@ class Settings::BackgroundJobsControllerTest < ActionDispatch::IntegrationTest
     get settings_background_jobs_path
 
     assert_response :success
-    assert_match stuck.id, response.body
-    assert_match fresh_sync.id, response.body
-    assert_match I18n.t("settings.background_jobs.operation.actions.mark_failed"), response.body
+    assert_includes response.body, stuck.id.to_s
+    assert_includes response.body, fresh_sync.id.to_s
+    assert_includes response.body, I18n.t("settings.background_jobs.operation.actions.mark_failed")
   end
 
   test "family admin is redirected away" do
@@ -177,10 +179,13 @@ class Settings::BackgroundJobsControllerTest < ActionDispatch::IntegrationTest
       process_set = mock("ProcessSet")
       process_set.stubs(:size).returns(1)
       process_set.stubs(:sum).returns(worker_payloads.size)
+      process_set.stubs(:map).returns([])
       Sidekiq::ProcessSet.stubs(:new).returns(process_set)
 
       stats = mock("Stats")
       stats.stubs(:enqueued).returns(0)
+      stats.stubs(:failed).returns(0)
+      stats.stubs(:processed).returns(0)
       stats.stubs(:retry_size).returns(0)
       stats.stubs(:dead_size).returns(0)
       stats.stubs(:scheduled_size).returns(0)

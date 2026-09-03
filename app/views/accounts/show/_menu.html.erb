@@ -11,6 +11,17 @@
   <% if permission.in?([ :owner, :full_control ]) %>
     <% menu.with_item(variant: "divider") %>
 
+    <% if account.investment? && account.investment.physical_gold? %>
+      <% menu.with_item(
+        variant: "button",
+        text: t("investments.refresh_gold_valuation.button"),
+        href: refresh_gold_valuation_investment_path(account),
+        method: :post,
+        icon: "refresh-cw",
+        data: { turbo_frame: :_top }
+      ) %>
+    <% end %>
+
     <% if account.exclude_from_reports? %>
       <% menu.with_item(variant: "button", text: t(".include_in_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye", data: { turbo_frame: :_top }) %>
     <% else %>

@@ -6,10 +6,65 @@ en:
     form:
       none: None
       subtype_prompt: Select investment type
+      gold_form: Gold form
+      physical_gold: Physical gold
+      digital_gold: Digital gold
+    refresh_gold_valuation:
+      button: Refresh gold valuation
+      success: Gold valuation refreshed
+      failure: Gold valuation could not be refreshed. Check the gold purchases and provider settings.
+    errors:
+      gold_details_only_for_gold: Physical gold details require the Physical gold form.
+      gold_form_only_for_gold: can only be selected for a Gold investment.
+      gold_cannot_have_holdings: Gold accounts cannot contain securities holdings. Remove or move the holdings before changing this account to Gold.
     new:
       title: Enter account balance
     show:
       chart_title: Total value
+    tabs:
+      overview:
+        market_value: Market value
+        purchases: Purchases
+        gross_weight: Gross weight
+        fine_gold_content: 24k gold equivalent
+        valuation: Valuation
+        valuation_description: The account value is the sum of each purchase's purity-adjusted spot estimate or individual manual value.
+        refresh_valuation: Refresh valuation
+        valuation_method: Valuation method
+        manual_override: Manual override
+        goldapi_spot: GoldAPI spot price
+        goldapi_spot_with_overrides: GoldAPI spot price with purchase overrides
+        spot_price: 24k spot price
+        spot_price_hint: Fine (24k) gold per gram. Each purchase is valued using its own karat purity.
+        last_price_date: Price date
+        lots: Gold purchases
+        lots_description: Record each physical-gold purchase separately.
+        add_lot: Add gold purchase
+        no_lots: No individual purchases recorded yet.
+        gold_purchase: Physical gold purchase
+        purchase_count:
+          one: 1 purchase
+          other: "%{count} purchases"
+        gross_weight_value: "%{amount} g gross"
+        fine_weight_value: "%{amount} g of 24k gold"
+        individual_manual_value: Manual valuation
+        spot_price_basis: "GoldAPI estimate (%{karat}k)"
+        total_paid: "Total paid: %{value}"
+        delete_lot: Delete gold purchase
+        edit_lot: Edit gold purchase
+        delete_lot_confirm: Delete this gold purchase? This cannot be undone.
+        unknown: Not set
+        not_available: Not available
+        not_applicable: Not applicable
+        not_set: Not set
+        gram: gram
+        grams_value: "%{amount} g"
+        karat_value: "%{karat}k"
+        weight_value: "%{amount} %{unit}"
+        units:
+          gram: g
+          troy_ounce: troy oz
+          kilogram: kg
     subtypes:
       # United States
       brokerage:

@@ -44,7 +44,9 @@ class UI::AccountPage < ApplicationComponent
 
   def tabs
     base_tabs = case account.accountable_type
-    when "Investment", "Crypto"
+    when "Investment"
+      account.investment.physical_gold? ? [ :activity, :overview ] : [ :activity, :holdings ]
+    when "Crypto"
       [ :activity, :holdings ]
     when "Property", "Vehicle", "Loan"
       [ :activity, :overview ]

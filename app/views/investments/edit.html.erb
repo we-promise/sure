@@ -1,4 +1,4 @@
-<%= render DS::Dialog.new do |dialog| %>
+<%= render DS::Dialog.new(disable_click_outside: @account.investment.physical_gold?) do |dialog| %>
   <% dialog.with_header(title: t(".edit", account: @account.name)) %>
   <% dialog.with_body do %>
     <%= render "investments/form", account: @account, url: investment_path(@account) %>

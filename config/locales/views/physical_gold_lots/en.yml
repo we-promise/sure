@@ -1,0 +1,49 @@
+---
+en:
+  physical_gold_lots:
+    form:
+      description: Description
+      acquired_on: Purchase date
+      weight: Weight
+      weight_unit: Weight unit
+      karat: Purity (karat)
+      merchant: Merchant
+      no_merchant: No merchant selected
+      cost_amount: Purchase price
+      making_charge: Making charges (optional)
+      manual_value: Manual current value (optional)
+      manual_value_hint: Overrides the spot-price estimate for this purchase only.
+      notes: Notes (optional)
+      grams: Grams
+      troy_ounces: Troy ounces
+      kilograms: Kilograms
+    new:
+      title: Add physical gold purchase
+      acquired_on: Purchase date
+      weight: Weight
+      weight_unit: Weight unit
+      karat: Purity (karat)
+      cost_amount: Purchase cost (optional)
+      notes: Notes (optional)
+      grams: Grams
+      troy_ounces: Troy ounces
+      kilograms: Kilograms
+      submit: Add purchase
+    edit:
+      title: Edit physical gold purchase
+      acquired_on: Purchase date
+      weight: Weight
+      weight_unit: Weight unit
+      karat: Purity (karat)
+      cost_amount: Purchase cost (optional)
+      notes: Notes (optional)
+      grams: Grams
+      troy_ounces: Troy ounces
+      kilograms: Kilograms
+      submit: Save purchase
+    create:
+      success: Gold purchase added
+    update:
+      success: Gold purchase updated
+    destroy:
+      deleted: Gold purchase deleted

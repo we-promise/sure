@@ -2,8 +2,21 @@
 
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= form.fields_for :accountable do |investment_form| %>
-    <%= investment_form.select :subtype,
+    <div data-controller="gold-investment-form">
+      <%= investment_form.select :subtype,
                        grouped_options_for_select(Investment.subtypes_grouped_for_select(currency: Current.family.currency), account.accountable.subtype),
-                       { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") } %>
+                       { label: true, prompt: t("investments.form.subtype_prompt"), include_blank: t("investments.form.none") },
+                       data: { gold_investment_form_target: "subtype", action: "change->gold-investment-form#toggle" } %>
+
+      <fieldset class="space-y-2 <%= "hidden" unless account.accountable.gold? %>"
+                data-gold-investment-form-target="form">
+        <legend class="text-sm font-medium"><%= t("investments.form.gold_form") %></legend>
+        <%= investment_form.select :gold_form,
+                                   [[t("investments.form.physical_gold"), "physical"], [t("investments.form.digital_gold"), "digital"]],
+                                   { label: t("investments.form.gold_form"), include_blank: false },
+                                   data: { action: "change->gold-investment-form#toggle" } %>
+      </fieldset>
+
+    </div>
   <% end %>
 <% end %>

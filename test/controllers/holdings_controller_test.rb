@@ -12,6 +12,23 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "redirects physical gold accounts to their overview" do
+    @account.holdings.destroy_all
+    @account.investment.update!(subtype: "gold")
+
+    get holdings_url(account_id: @account.id)
+
+    assert_redirected_to account_path(@account, tab: "overview")
+  end
+
+  test "shows holdings for digital gold accounts" do
+    @account.investment.update!(subtype: "gold", gold_form: "digital")
+
+    get holdings_url(account_id: @account.id)
+
+    assert_response :success
+  end
+
   test "gets holding" do
     get holding_path(@holding)
 

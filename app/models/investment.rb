@@ -1,6 +1,10 @@
 class Investment < ApplicationRecord
   include Accountable
 
+  GOLD_WEIGHT_UNITS = %w[gram troy_ounce kilogram].freeze
+  GOLD_FORMS = %w[physical digital].freeze
+  MAX_GOLD_KARAT = BigDecimal("24")
+
   # Tax treatment categories:
   # - taxable: Gains taxed when realized
   # - tax_deferred: Taxes deferred until withdrawal
@@ -97,6 +101,117 @@ class Investment < ApplicationRecord
   def tax_treatment
     SUBTYPES.dig(subtype, :tax_treatment) || :taxable
   end
+
+  validates :gold_weight, numericality: { greater_than: 0 }, allow_nil: true
+  validates :gold_weight_unit, inclusion: { in: GOLD_WEIGHT_UNITS }, allow_nil: true
+  validates :gold_karat, numericality: { greater_than: 0, less_than_or_equal_to: MAX_GOLD_KARAT }, allow_nil: true
+  validates :gold_manual_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :gold_form, inclusion: { in: GOLD_FORMS }, allow_nil: true
+  before_validation :default_gold_form
+  before_validation :clear_physical_gold_details_for_digital_form
+  validate :gold_form_only_for_gold_investments
+  validate :physical_gold_details_only_for_physical_gold_investments
+  validate :physical_gold_cannot_have_securities
+
+  def gold?
+    subtype == "gold"
+  end
+
+  def physical_gold?
+    gold? && gold_form == "physical"
+  end
+
+  def digital_gold?
+    gold? && gold_form == "digital"
+  end
+
+  def gold_details_complete?
+    physical_gold_lots.any? || (gold_weight.present? && gold_weight_unit.present? && gold_karat.present?)
+  end
+
+  def physical_gold_lots
+    account ? account.physical_gold_lots : PhysicalGoldLot.none
+  end
+
+  def gold_weight_in_grams
+    return BigDecimal(0) unless gold_weight.present?
+
+    case gold_weight_unit
+    when "gram" then gold_weight.to_d
+    when "kilogram" then gold_weight.to_d * 1_000
+    when "troy_ounce" then gold_weight.to_d * GoldValuation::TROY_OUNCE_GRAMS
+    else BigDecimal(0)
+    end
+  end
+
+  # `price_per_troy_ounce` is the XAU quote; karat adjusts it to the item's
+  # fine-gold content (for example, 18k is 75% of 24k spot value).
+  def gold_value_for(price_per_troy_ounce)
+    return physical_gold_lots.sum { |lot| lot.value_for(price_per_troy_ounce) } if physical_gold_lots.any?
+    return gold_manual_value.to_d if gold_manual_value.present?
+
+    gold_weight_in_grams * gold_karat.to_d / MAX_GOLD_KARAT * price_per_troy_ounce.to_d / GoldValuation::TROY_OUNCE_GRAMS
+  end
+
+  def gold_fine_weight_in_grams
+    return physical_gold_lots.sum(&:fine_weight_in_grams) if physical_gold_lots.any?
+
+    gold_weight_in_grams * gold_karat.to_d / MAX_GOLD_KARAT
+  end
+
+  def gold_total_weight_in_grams
+    return physical_gold_lots.sum(&:weight_in_grams) if physical_gold_lots.any?
+
+    gold_weight_in_grams
+  end
+
+  def latest_gold_rate
+    return unless account
+
+    ExchangeRate.where(from_currency: "XAU", to_currency: account.currency).order(date: :desc).first
+  end
+
+  def gold_spot_price_per_gram(rate: latest_gold_rate)
+    rate&.rate&.to_d&./(GoldValuation::TROY_OUNCE_GRAMS)
+  end
+
+  def gold_spot_price_required?
+    return physical_gold_lots.any? { |lot| !lot.manual_value? } if physical_gold_lots.any?
+
+    gold_manual_value.blank?
+  end
+
+  private
+    def default_gold_form
+      self.gold_form = "physical" if gold? && gold_form.blank?
+    end
+
+    def clear_physical_gold_details_for_digital_form
+      return unless digital_gold?
+
+      self.gold_weight = nil
+      self.gold_weight_unit = nil
+      self.gold_karat = nil
+      self.gold_manual_value = nil
+    end
+
+    def gold_form_only_for_gold_investments
+      return if gold? || gold_form.blank?
+
+      errors.add(:gold_form, I18n.t("investments.errors.gold_form_only_for_gold"))
+    end
+
+    def physical_gold_details_only_for_physical_gold_investments
+      return if physical_gold? || [ gold_weight, gold_weight_unit, gold_karat, gold_manual_value ].all?(&:blank?)
+
+      errors.add(:base, I18n.t("investments.errors.gold_details_only_for_gold"))
+    end
+
+    def physical_gold_cannot_have_securities
+      return unless physical_gold? && account&.persisted? && account.holdings.exists?
+
+      errors.add(:subtype, I18n.t("investments.errors.gold_cannot_have_holdings"))
+    end
 
   class << self
     def color

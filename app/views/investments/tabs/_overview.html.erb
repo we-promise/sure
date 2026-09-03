@@ -1,0 +1,143 @@
+<%# locals: (account:) %>
+
+<% gold = account.investment %>
+<% rate = gold.latest_gold_rate %>
+<% lots = account.physical_gold_lots.includes(:merchant).order(acquired_on: :desc) %>
+<% editable = account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+<% has_manual_values = lots.any?(&:manual_value?) %>
+
+<div class="space-y-6">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <%= summary_card title: t(".market_value") do %>
+      <%= format_money(account.balance_money) %>
+    <% end %>
+
+    <%= summary_card title: t(".purchases") do %>
+      <% if lots.any? %>
+        <%= t(".purchase_count", count: lots.size) %>
+      <% else %>
+        <%= t(".unknown") %>
+      <% end %>
+    <% end %>
+
+    <%= summary_card title: t(".gross_weight") do %>
+      <% if lots.any? %>
+        <%= t(".weight_value", amount: number_with_precision(gold.gold_total_weight_in_grams, precision: 3, strip_insignificant_zeros: true), unit: t(".units.gram")) %>
+      <% else %>
+        <%= t(".unknown") %>
+      <% end %>
+    <% end %>
+
+    <%= summary_card title: t(".fine_gold_content") do %>
+      <%= lots.any? ? t(".grams_value", amount: number_with_precision(gold.gold_fine_weight_in_grams, precision: 3, strip_insignificant_zeros: true)) : t(".unknown") %>
+    <% end %>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h2 class="font-medium text-lg"><%= t(".lots") %></h2>
+        <p class="text-sm text-secondary"><%= t(".lots_description") %></p>
+      </div>
+      <% if editable %>
+        <%= render DS::Link.new(text: t(".add_lot"), href: new_physical_gold_lot_path(account_id: account.id), icon: "plus", variant: :outline, size: :sm, frame: :modal) %>
+      <% end %>
+    </div>
+
+    <% if lots.any? %>
+      <div class="divide-y divide-alpha-black-200 rounded-lg bg-container-inset">
+        <% lots.each do |lot| %>
+          <% estimated_value = lot.manual_value? || rate.present? ? Money.new(lot.value_for(rate&.rate), account.currency) : nil %>
+          <% purchase_name = lot.description.presence || lot.merchant&.name || t(".gold_purchase") %>
+          <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4">
+            <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-7 min-w-0">
+              <% if lot.merchant&.logo_url.present? %>
+                <%= image_tag Setting.transform_brand_fetch_url(lot.merchant.logo_url), class: "w-9 h-9 rounded-full border border-secondary", loading: "lazy" %>
+              <% else %>
+                <%= render DS::FilledIcon.new(variant: :text, text: purchase_name, size: "lg", rounded: true) %>
+              <% end %>
+
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="truncate"><%= purchase_name %></div>
+                  <%= render DS::Pill.new(label: t(".karat_value", karat: number_with_precision(lot.karat, strip_insignificant_zeros: true)), tone: :neutral, marker: false) %>
+                </div>
+                <div class="text-secondary text-xs font-normal truncate">
+                  <%= l(lot.acquired_on, format: :long) %><%= " · #{lot.merchant.name}" if lot.merchant.present? && lot.description.present? %> · <%= t(".gross_weight_value", amount: number_with_precision(lot.weight_in_grams, precision: 3, strip_insignificant_zeros: true)) %> · <%= t(".fine_weight_value", amount: number_with_precision(lot.fine_weight_in_grams, precision: 3, strip_insignificant_zeros: true)) %>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden md:flex min-w-0 items-center gap-1 col-span-3">
+              <%= render DS::Pill.new(
+                label: lot.manual_value? ? t(".individual_manual_value") : t(".spot_price_basis", karat: number_with_precision(lot.karat, strip_insignificant_zeros: true)),
+                tone: :neutral,
+                marker: false,
+                truncate: true
+              ) %>
+            </div>
+
+            <div class="shrink-0 col-span-4 lg:col-span-2 ml-auto flex items-center justify-end gap-2">
+              <div class="text-right">
+                <p class="font-medium privacy-sensitive"><%= estimated_value ? format_money(estimated_value) : t(".not_available") %></p>
+                <p class="text-xs text-secondary font-normal privacy-sensitive"><%= t(".total_paid", value: format_money(Money.new(lot.total_cost_amount, account.currency))) %></p>
+              </div>
+              <% if editable %>
+                <div class="flex items-center gap-1">
+                  <%= render DS::Link.new(variant: :icon, icon: "pencil-line", aria_label: t(".edit_lot"), title: t(".edit_lot"), href: edit_physical_gold_lot_path(lot), frame: :modal) %>
+                  <%= render DS::Button.new(variant: :icon, icon: "trash-2", aria_label: t(".delete_lot"), title: t(".delete_lot"), href: physical_gold_lot_path(lot), method: :delete, data: { turbo_confirm: t(".delete_lot_confirm"), turbo_frame: :_top }) %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t(".no_lots") %></p>
+    <% end %>
+  </div>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="font-medium text-lg"><%= t(".valuation") %></h2>
+        <p class="text-sm text-secondary"><%= t(".valuation_description") %></p>
+      </div>
+
+      <% if editable %>
+        <%= render DS::Button.new(
+          text: t(".refresh_valuation"),
+          href: refresh_gold_valuation_investment_path(account),
+          method: :post,
+          icon: "refresh-cw",
+          variant: :outline,
+          size: :sm,
+          data: { turbo_frame: :_top }
+        ) %>
+      <% end %>
+    </div>
+
+    <dl class="grid gap-3 sm:grid-cols-2 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t(".valuation_method") %></dt>
+        <dd class="text-primary font-medium"><%= has_manual_values ? t(".goldapi_spot_with_overrides") : t(".goldapi_spot") %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".spot_price") %></dt>
+        <dd class="text-primary font-medium">
+          <% if gold.gold_spot_price_per_gram(rate:).present? %>
+            <%= format_money(Money.new(gold.gold_spot_price_per_gram(rate:), account.currency)) %> / <%= t(".gram") %>
+          <% else %>
+            <%= t(".not_available") %>
+          <% end %>
+        </dd>
+        <p class="text-xs text-secondary"><%= t(".spot_price_hint") %></p>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t(".last_price_date") %></dt>
+        <dd class="text-primary font-medium"><%= rate ? l(rate.date, format: :long) : t(".not_available") %></dd>
+      </div>
+    </dl>
+  </div>
+
+</div>

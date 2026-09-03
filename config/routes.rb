@@ -517,6 +517,7 @@ Rails.application.routes.draw do
     post :confirm_create, on: :collection
     post :confirm_update, on: :member
   end
+  resources :physical_gold_lots, only: %i[new create edit update destroy]
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
@@ -671,7 +672,11 @@ Rails.application.routes.draw do
   end
 
   resources :depositories, only: %i[new create edit update]
-  resources :investments, only: %i[new create edit update]
+  resources :investments, only: %i[new create edit update] do
+    member do
+      post :refresh_gold_valuation
+    end
+  end
   resources :properties, only: %i[new create edit update] do
     member do
       get :balances

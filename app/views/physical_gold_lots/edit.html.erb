@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+  <% dialog.with_body do %>
+    <%= render "physical_gold_lots/form", lot: @lot, account: @account, submit_label: t(".submit") %>
+  <% end %>
+<% end %>

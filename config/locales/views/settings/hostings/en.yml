@@ -37,12 +37,15 @@ en:
         exchange_rate_provider_label: Exchange Rate Provider
         securities_title: Securities Providers
         securities_description: Enable one or more providers for fetching stock, ETF, and mutual fund prices. When searching, all enabled providers are queried and results are merged.
+        physical_gold_title: Physical Gold Provider
+        physical_gold_description: Enable a provider to refresh the valuation of physical-gold accounts from the current spot price.
         env_configured_message: Provider selection is disabled because environment variables are set. To enable selection here, remove these environment variables from your configuration.
         twelve_data_hint: requires API key, 800 credits/day
         yahoo_finance_hint: free, no API key needed
         requires_api_key: requires API key
         requires_api_key_eodhd: requires API key, 20 calls/day limit
         requires_api_key_alpha_vantage: requires API key, 25 calls/day limit
+        gold_api_hint: requires API key, 100 requests/month
         mfapi_hint: free, no API key -- Indian mutual funds only
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
@@ -58,6 +61,12 @@ en:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          gold_api: GoldAPI
+      gold_api_settings:
+        title: Physical Gold Pricing
+        description: Optional GoldAPI key for calculating physical-gold account valuations. The free plan is limited to 100 requests per month; Sure caches one XAU quote per currency per day.
+        label: GoldAPI key
+        placeholder: Enter your GoldAPI key
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.

@@ -93,6 +93,7 @@ en:
         filter: Filter
         new: New
         new_activity: New activity
+        new_gold_lot: Add gold purchase
         new_balance: New balance
         new_trade: New trade
         new_transaction: New transaction

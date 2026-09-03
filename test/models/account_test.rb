@@ -10,6 +10,34 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "physical gold investments do not support securities trades" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.investment.update!(subtype: "gold")
+
+    assert_not account.supports_trades?
+  end
+
+  test "other investment accounts continue to support securities trades" do
+    assert accounts(:investment).supports_trades?
+  end
+
+  test "digital gold investments support securities trades" do
+    account = accounts(:investment)
+    account.investment.update!(subtype: "gold", gold_form: "digital")
+
+    assert account.supports_trades?
+  end
+
+  test "does not allow a brokerage with holdings to become a physical gold account" do
+    investment = accounts(:investment).investment
+
+    investment.subtype = "gold"
+
+    assert_not investment.valid?
+    assert_includes investment.errors[:subtype], I18n.t("investments.errors.gold_cannot_have_holdings")
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy

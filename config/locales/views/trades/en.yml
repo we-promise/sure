@@ -21,6 +21,7 @@ en:
       type_interest: Interest
       dividend_requires_security: Security is required for dividends
       trade_requires_security: A security (ticker) is required for buy and sell trades
+      account_does_not_support_trades: This account does not support securities trades.
     header:
       buy: Buy
       sell: Sell

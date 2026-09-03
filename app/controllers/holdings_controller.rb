@@ -6,6 +6,11 @@ class HoldingsController < ApplicationController
 
   def index
     @account = accessible_accounts.find(params[:account_id])
+    if @account.investment? && @account.investment.physical_gold?
+      redirect_to account_path(@account, tab: "overview")
+      return
+    end
+
     @trade_republic_categories = trade_republic_categories_for(@account)
   end
 

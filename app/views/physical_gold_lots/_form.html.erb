@@ -1,0 +1,18 @@
+<%# locals: (lot:, account:, submit_label:) %>
+<% form_url = lot.persisted? ? physical_gold_lot_path(lot) : physical_gold_lots_path %>
+<% form_method = lot.persisted? ? :patch : :post %>
+<%= styled_form_with model: lot, url: form_url, method: form_method, class: "space-y-4", data: { turbo_frame: :_top } do |form| %>
+  <%= hidden_field_tag :account_id, account.id if lot.new_record? %>
+  <%= form.text_field :description, label: t("physical_gold_lots.form.description"), required: true %>
+  <%= form.date_field :acquired_on, label: t("physical_gold_lots.form.acquired_on"), required: true, max: Date.current %>
+  <%= form.number_field :weight, label: t("physical_gold_lots.form.weight"), min: 0, step: 0.001, required: true %>
+  <%= form.select :weight_unit, [[t("physical_gold_lots.form.grams"), "gram"], [t("physical_gold_lots.form.troy_ounces"), "troy_ounce"], [t("physical_gold_lots.form.kilograms"), "kilogram"]], { label: t("physical_gold_lots.form.weight_unit"), include_blank: true }, required: true %>
+  <%= form.number_field :karat, label: t("physical_gold_lots.form.karat"), min: 0, max: 24, step: 0.1, required: true %>
+  <%= render DS::MerchantSelect.new(form: form, method: :merchant_id, merchants: account.family.merchants.alphabetically.to_a, selected_id: lot.merchant_id, include_blank: t("physical_gold_lots.form.no_merchant"), label: t("physical_gold_lots.form.merchant")) %>
+  <%= form.money_field :cost_amount, label: t("physical_gold_lots.form.cost_amount"), default_currency: account.currency, required: true %>
+  <%= form.money_field :making_charge, label: t("physical_gold_lots.form.making_charge"), default_currency: account.currency %>
+  <%= form.money_field :manual_value, label: t("physical_gold_lots.form.manual_value"), default_currency: account.currency %>
+  <p class="text-xs text-secondary"><%= t("physical_gold_lots.form.manual_value_hint") %></p>
+  <%= form.text_area :notes, label: t("physical_gold_lots.form.notes") %>
+  <%= form.submit submit_label %>
+<% end %>

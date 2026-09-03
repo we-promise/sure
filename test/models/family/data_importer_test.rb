@@ -637,6 +637,38 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal false, restored_named.manual
   end
 
+  test "round trips physical gold investment details, including a zero override" do
+    source_family = Family.create!(name: "Gold Source", currency: "USD")
+    source_family.accounts.create!(
+      name: "Physical Gold",
+      accountable: Investment.new(
+        subtype: "gold",
+        gold_form: "physical",
+        gold_weight: 100.25,
+        gold_weight_unit: "gram",
+        gold_karat: 22,
+        gold_manual_value: 0
+      ),
+      balance: 12_000,
+      currency: "USD"
+    )
+
+    ndjson = nil
+    Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    gold = @family.accounts.find_by!(name: "Physical Gold").investment
+    assert_equal "gold", gold.subtype
+    assert_equal "physical", gold.gold_form
+    assert_equal 100.25, gold.gold_weight.to_f
+    assert_equal "gram", gold.gold_weight_unit
+    assert_equal 22.0, gold.gold_karat.to_f
+    assert_equal 0.0, gold.gold_manual_value.to_f
+  end
+
   test "imports recurring transactions with unknown status fallback" do
     ndjson = build_ndjson([
       {

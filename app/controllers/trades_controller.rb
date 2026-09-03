@@ -6,6 +6,11 @@ class TradesController < ApplicationController
   # Defaults to a buy trade
   def new
     @account = accessible_accounts.find_by(id: params[:account_id])
+    if @account.present? && !@account.supports_trades?
+      redirect_to account_path(@account, tab: "overview"), alert: t("trades.form.account_does_not_support_trades")
+      return
+    end
+
     @model = Current.family.entries.new(
       account: @account,
       currency: @account ? @account.currency : Current.family.currency,
@@ -18,6 +23,11 @@ class TradesController < ApplicationController
     @account = accessible_accounts.find(params[:account_id])
 
     return unless require_account_permission!(@account)
+
+    unless @account.supports_trades?
+      redirect_to account_path(@account, tab: "overview"), alert: t("trades.form.account_does_not_support_trades")
+      return
+    end
 
     @model = Trade::CreateForm.new(create_params.merge(account: @account)).create
 

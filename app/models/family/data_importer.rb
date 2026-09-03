@@ -306,15 +306,19 @@ class Family::DataImporter
           accountable = accountable_class.new
           accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
 
-          # Copy any other accountable attributes
-          safe_accountable_attrs = %w[subtype locked_attributes]
-          safe_accountable_attrs.each do |attr|
-            if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
-              accountable.send("#{attr}=", accountable_data[attr])
-            end
-          end
-
           account = @family.accounts.build(accountable: accountable)
+        end
+
+        # Preserve accountable data that is safe to restore from a family
+        # export. Use key? rather than present? so a zero manual valuation
+        # round-trips instead of being silently dropped.
+        safe_accountable_attrs = %w[
+          subtype locked_attributes gold_form gold_weight gold_weight_unit gold_karat gold_manual_value
+        ]
+        safe_accountable_attrs.each do |attr|
+          if accountable.respond_to?("#{attr}=") && accountable_data.key?(attr)
+            accountable.public_send("#{attr}=", accountable_data[attr])
+          end
         end
 
         account.assign_attributes(

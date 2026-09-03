@@ -1,6 +1,34 @@
 require "test_helper"
 
 class InvestmentTest < ActiveSupport::TestCase
+  test "calculates physical gold value from weight, purity, and a troy-ounce quote" do
+    investment = Investment.new(subtype: "gold", gold_weight: 100, gold_weight_unit: "gram", gold_karat: 18)
+
+    assert_in_delta 7_500, investment.gold_value_for(3_110.34768), 0.01
+  end
+
+  test "rejects physical gold details on a non-gold investment" do
+    investment = Investment.new(subtype: "brokerage", gold_weight: 10, gold_weight_unit: "gram", gold_karat: 24, gold_manual_value: 500)
+
+    assert_not investment.valid?
+    assert_includes investment.errors.full_messages, "Physical gold details require the Physical gold form."
+  end
+
+  test "uses a manual gold valuation override when present" do
+    investment = Investment.new(subtype: "gold", gold_manual_value: 12_345)
+
+    assert_equal 12_345, investment.gold_value_for(3_000)
+  end
+
+  test "treats Gold as digital when selected and clears physical details" do
+    investment = Investment.new(subtype: "gold", gold_form: "digital", gold_weight: 1, gold_weight_unit: "gram", gold_karat: 24)
+
+    assert investment.digital_gold?
+    assert investment.valid?
+    assert_nil investment.gold_weight
+    assert_nil investment.gold_karat
+  end
+
   # Tax treatment derivation tests
 
   test "tax_treatment returns tax_deferred for US retirement accounts" do

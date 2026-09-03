@@ -80,7 +80,10 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
     other = PG.connect({
       dbname: config[:database], host: config[:host], port: config[:port],
-      user: config[:username], password: config[:password]
+      # database.yml uses `user`; some adapter configurations also expose the
+      # normalized `username` key. Prefer the explicit application setting so
+      # this separate PG session does not fall back to the container OS user.
+      user: config[:user] || config[:username], password: config[:password]
     }.compact)
     other.exec("SELECT pg_advisory_lock(#{key})")
 
