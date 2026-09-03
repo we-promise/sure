@@ -9,24 +9,32 @@
 # PostgreSQL 18+ official images keep the cluster in a version-specific
 # subdirectory of the volume (/var/lib/postgresql/<major>/docker), while
 # PostgreSQL 16 and earlier wrote directly into the mounted directory
-# (/var/lib/postgresql/data). We mount the volume root, so probe every
-# layout - versioned dirs first, then the legacy data/ subdir.
+# (/var/lib/postgresql/data). A volume can hold several clusters after a
+# pg_upgrade (e.g. 16/docker AND 18/docker), so the expected major's
+# cluster wins when present - that is the one the server will use.
 set -u
 
 DATA_DIR="${1:?usage: db-version-check.sh <data-dir> <expected-major>}"
 EXPECTED_MAJOR="${2:?usage: db-version-check.sh <data-dir> <expected-major>}"
 
 VERSION_FILE=""
-for candidate in \
-  "${DATA_DIR}"/*/docker/PG_VERSION \
-  "${DATA_DIR}/data/PG_VERSION" \
-  "${DATA_DIR}/PG_VERSION"
-do
-  if [ -f "${candidate}" ]; then
-    VERSION_FILE="${candidate}"
-    break
-  fi
-done
+
+# 1. The cluster the server will actually use: <expected-major>/docker.
+if [ -f "${DATA_DIR}/${EXPECTED_MAJOR}/docker/PG_VERSION" ]; then
+  VERSION_FILE="${DATA_DIR}/${EXPECTED_MAJOR}/docker/PG_VERSION"
+else
+  # 2. Any other layout: other versioned dirs, legacy data/, direct mount.
+  for candidate in \
+    "${DATA_DIR}"/*/docker/PG_VERSION \
+    "${DATA_DIR}/data/PG_VERSION" \
+    "${DATA_DIR}/PG_VERSION"
+  do
+    if [ -f "${candidate}" ]; then
+      VERSION_FILE="${candidate}"
+      break
+    fi
+  done
+fi
 
 if [ -z "${VERSION_FILE}" ]; then
   echo "db-version-check: no PG_VERSION under ${DATA_DIR} (fresh install) - OK"
