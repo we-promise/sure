@@ -56,13 +56,34 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
-  test "create rule link is prefilled with the merchant name when a merchant is set" do
+  test "create rule link is prefilled with the merchant name and merchant id when a merchant is set" do
     entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
 
     get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
 
     assert_response :success
-    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name)
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id)
+  end
+
+  test "create rule link is refreshed after an update that changes the merchant" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
+
+    patch transaction_url(entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: entry.entryable_id, merchant_id: merchants(:amazon).id } }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_match new_rule_path(resource_type: "transaction", name: merchants(:amazon).name, merchant_id: merchants(:amazon).id), response.body
+    assert_no_match new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id), response.body
+  end
+
+  test "create rule link is repopulated when an update fails validation" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
+
+    patch transaction_url(entry), params: { entry: { date: nil } }, as: :turbo_stream
+
+    assert_response :unprocessable_entity
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id)
   end
 
   test "create rule link falls back to the transaction name without a merchant" do
