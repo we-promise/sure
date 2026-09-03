@@ -1333,7 +1333,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 Use PostgreSQL's pgvector extension for fully local document search. All data stays on your infrastructure.
 
 **Requirements:**
-- Use the `pgvector/pgvector:pg16-trixie` Docker image instead of `postgres:16` (drop-in replacement)
+- Use the `pgvector/pgvector:pg18-trixie` Docker image instead of `postgres:18` (drop-in replacement)
 - An embedding model served via an OpenAI-compatible `/v1/embeddings` endpoint (e.g. Ollama with `mxbai-embed-large`)
 - Run the migration with `VECTOR_STORE_PROVIDER=pgvector` to create the `vector_store_chunks` table
 

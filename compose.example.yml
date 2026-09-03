@@ -124,7 +124,7 @@ services:
       - sure_net
 
   db:
-    image: postgres:16
+    image: postgres:18
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
