@@ -165,7 +165,7 @@ class TransactionsController < ApplicationController
     # Concurrent-request backstop: two near-simultaneous submissions both
     # passed the pre-check above (neither saw the other's row yet) and both
     # reached #save. The partial unique index on
-    # entries(account_id, source, external_id) lets exactly one INSERT win;
+    # entries(account_id, idempotency_key) lets exactly one INSERT win;
     # this rescues the loser and redirects it to the winning entry instead of
     # creating a duplicate or surfacing a 500 to the user.
     existing_entry = idempotency_key && find_duplicate_manual_entry(account, idempotency_key)

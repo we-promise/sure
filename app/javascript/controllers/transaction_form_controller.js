@@ -22,7 +22,7 @@ export default class extends ExchangeRateFormController {
   // unconsumed token regardless of which cache served the page.
   refreshIdempotencyKey() {
     if (this.hasIdempotencyKeyTarget) {
-      this.idempotencyKeyTarget.value = crypto.randomUUID();
+      this.idempotencyKeyTarget.value = this.#generateUUID();
     }
   }
 
@@ -30,6 +30,32 @@ export default class extends ExchangeRateFormController {
     if (event.persisted) {
       this.refreshIdempotencyKey();
     }
+  }
+
+  // crypto.randomUUID() only exists in secure contexts (HTTPS/localhost),
+  // but self-hosted deployments of this app are commonly reverse-proxied or
+  // reached over plain HTTP on a LAN, where it's undefined and would throw
+  // from inside the cache-restore handlers above - leaving the stale,
+  // already-consumed token in place. crypto.getRandomValues has no such
+  // restriction, so build a v4 UUID manually when randomUUID is missing;
+  // the server's UUID_FORMAT check requires this exact shape.
+  #generateUUID() {
+    if (crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [ ...bytes ].map((byte) => byte.toString(16).padStart(2, "0"));
+
+    return [
+      hex.slice(0, 4).join(""),
+      hex.slice(4, 6).join(""),
+      hex.slice(6, 8).join(""),
+      hex.slice(8, 10).join(""),
+      hex.slice(10, 16).join("")
+    ].join("-");
   }
 
   hasRequiredExchangeRateTargets() {
