@@ -29,7 +29,7 @@ class Provider::CoinspotTest < ActiveSupport::TestCase
     assert_equal({ "status" => "ok", "balances" => [] }, @provider.get_balances)
   end
 
-  test "history requests include date params in signed body" do
+  test "history requests include date params and the max record limit in signed body" do
     response = mock_httparty_response(200, { "status" => "ok", "buyorders" => [] })
 
     Provider::Coinspot.expects(:post)
@@ -38,12 +38,14 @@ class Provider::CoinspotTest < ActiveSupport::TestCase
         has_entries(body: JSON.generate({
           "nonce" => 1616492376594,
           "startdate" => "2026-01-01",
-          "enddate" => "2026-01-31"
+          "enddate" => "2026-01-31",
+          "limit" => "500"
         }))
       )
       .returns(response)
 
-    @provider.get_order_history(startdate: Date.new(2026, 1, 1), enddate: Date.new(2026, 1, 31))
+    result = @provider.get_order_history(startdate: Date.new(2026, 1, 1), enddate: Date.new(2026, 1, 31))
+    assert_equal({ "status" => "ok", "buyorders" => [] }, result)
   end
 
   test "handle response raises api error for non 2xx" do
