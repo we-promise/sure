@@ -75,7 +75,7 @@ class Import::UploadsController < ApplicationController
       normalized_qif = QifParser.normalize_encoding(csv_str)
 
       unless import_account_id.present? || QifParser.parse_accounts(normalized_qif).any?
-        flash.now[:alert] = "Please select an account for the QIF import"
+        flash.now[:alert] = t(".qif_account_required")
         render :show, status: :unprocessable_entity and return
       end
 

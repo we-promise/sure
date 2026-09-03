@@ -22,11 +22,8 @@ class QifImport < Import
 
     rows.destroy_all
 
-    if investment_account?
-      generate_investment_rows
-    else
-      generate_transaction_rows
-    end
+    generate_transaction_rows
+    generate_investment_rows
 
     update_column(:rows_count, rows.count)
   end
@@ -35,11 +32,8 @@ class QifImport < Import
     transaction do
       mappings.each(&:create_mappable!)
 
-      if investment_account?
-        import_investment_rows!
-      else
-        import_transaction_rows!
-      end
+      import_transaction_rows!
+      import_investment_rows!
 
       apply_opening_balances_or_adjust_anchors!
     end
@@ -110,7 +104,7 @@ class QifImport < Import
 
   # Unique categories used across all rows (blank entries excluded).
   def row_categories
-    (rows.distinct.pluck(:category) + parsed_split_categories).reject(&:blank?).uniq.sort
+    (rows.distinct.pluck(:category) + selected_split_categories).reject(&:blank?).uniq.sort
   end
 
   # Returns true if the QIF file contains any split transactions.
@@ -128,7 +122,7 @@ class QifImport < Import
 
   # Unique tags used across all rows (blank entries excluded).
   def row_tags
-    (rows.flat_map(&:tags_list) + parsed_split_tags).uniq.reject(&:blank?).sort
+    (rows.flat_map(&:tags_list) + selected_split_tags).uniq.reject(&:blank?).sort
   end
 
   # True once the category/tag selection step has been completed
@@ -167,6 +161,20 @@ class QifImport < Import
 
     def parsed_split_tags
       parsed_transactions_with_splits.flat_map { |trn| trn.split_lines.to_a.flat_map(&:tags) }
+    end
+
+    def selected_split_categories
+      selected = column_mappings&.dig("qif_selected_categories")
+      return parsed_split_categories unless selected
+
+      parsed_split_categories & selected
+    end
+
+    def selected_split_tags
+      selected = column_mappings&.dig("qif_selected_tags")
+      return parsed_split_tags unless selected
+
+      parsed_split_tags & selected
     end
 
     def investment_account?
@@ -208,13 +216,16 @@ class QifImport < Import
 
     def generate_investment_rows
       inv_transactions = QifParser.parse_investment_transactions(raw_file_str, date_format: qif_date_format)
+      source_row_offset = rows.maximum(:source_row_number).to_i
 
       mapped_rows = inv_transactions.map.with_index(1) do |trn, index|
+        source_row_number = source_row_offset + index
+
         if QifParser::TRADE_ACTIONS.include?(trn.action)
           qty = trade_qty_for(trn.action, trn.qty)
 
           {
-            source_row_number:       index,
+            source_row_number:       source_row_number,
             date:                   trn.date.to_s,
             ticker:                 trn.security_ticker.to_s,
             qty:                    qty.to_s,
@@ -232,7 +243,7 @@ class QifImport < Import
           }
         else
           {
-            source_row_number:       index,
+            source_row_number:       source_row_number,
             date:                   trn.date.to_s,
             amount:                 trn.amount.to_s,
             currency:               default_currency.to_s,
@@ -262,7 +273,45 @@ class QifImport < Import
     # ------------------------------------------------------------------
 
     def import_transaction_rows!
-      rows.ordered.each do |row|
+      split_rows, regular_rows = rows.ordered
+                                    .reject { |row| row.resource_type == "Invst" }
+                                    .partition do |row|
+                                      parsed_transaction_by_source_row_number[row.source_row_number]&.split_lines.present?
+                                    end
+
+      import_regular_transaction_rows!(regular_rows)
+      import_split_transaction_rows!(split_rows)
+    end
+
+    def import_regular_transaction_rows!(regular_rows)
+      return if regular_rows.empty?
+
+      transactions = regular_rows.map do |row|
+        row_account = account_for_row(row)
+        category = mappings.categories.mappable_for(row.category)
+        tags     = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
+
+        Transaction.new(
+          category: category,
+          tags:     tags,
+          entry:    Entry.new(
+            account:       row_account,
+            date:          row.date_iso,
+            amount:        row.signed_amount,
+            name:          row.name,
+            currency:      row.currency,
+            notes:         row.notes,
+            import:        self,
+            import_locked: true
+          )
+        )
+      end
+
+      Transaction.import!(transactions, recursive: true)
+    end
+
+    def import_split_transaction_rows!(split_rows)
+      split_rows.each do |row|
         row_account = account_for_row(row)
         parsed_transaction = parsed_transaction_by_source_row_number[row.source_row_number]
         category = mappings.categories.mappable_for(row.category)
@@ -300,6 +349,8 @@ class QifImport < Import
         }
       end
 
+      return unless split_rows.sum { |row| row[:amount].to_d } == entry.amount
+
       children = entry.split!(split_rows)
       children.zip(split_rows).each do |child, row|
         child.update!(notes: row[:notes]) if row[:notes].present?
@@ -312,8 +363,9 @@ class QifImport < Import
     end
 
     def import_investment_rows!
-      trade_rows       = rows.select { |r| QifParser::TRADE_ACTIONS.include?(r.entity_type) }
-      transaction_rows = rows.reject { |r| QifParser::TRADE_ACTIONS.include?(r.entity_type) }
+      investment_rows  = rows.select { |r| r.resource_type == "Invst" }
+      trade_rows       = investment_rows.select { |r| QifParser::TRADE_ACTIONS.include?(r.entity_type) }
+      transaction_rows = investment_rows.reject { |r| QifParser::TRADE_ACTIONS.include?(r.entity_type) }
 
       if trade_rows.any?
         trades = trade_rows.map do |row|
@@ -383,7 +435,7 @@ class QifImport < Import
       opening_balances = QifParser.parse_opening_balances(raw_file_str, date_format: qif_date_format)
 
       if has_qif_accounts?
-        accounts_by_name = qif_account_cache.values.index_by(&:name)
+        accounts_by_name = qif_accounts.to_h { |qif_account| [ qif_account.name, find_or_create_qif_account(qif_account.name, qif_account.account_type) ] }
         opening_balances.each do |opening_balance|
           target_account = accounts_by_name[opening_balance[:account_name]]
           next unless target_account

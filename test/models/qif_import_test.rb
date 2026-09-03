@@ -206,6 +206,95 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  QIF_WITH_MIXED_ACCOUNT_TYPES = <<~QIF
+    !Account
+    NQIF Checking
+    TBank
+    ^
+    !Type:Bank
+    D1/ 1'24
+    U-25.00
+    T-25.00
+    PCoffee Shop
+    ^
+    !Type:Security
+    NACME
+    SACME
+    TStock
+    ^
+    !Account
+    NQIF Brokerage
+    TInvst
+    ^
+    !Type:Invst
+    D1/ 2'24
+    NBuy
+    YACME
+    I66.10
+    Q2
+    U132.20
+    T132.20
+    ^
+  QIF
+
+  QIF_WITH_BALANCE_ONLY_ACCOUNT = <<~QIF
+    !Account
+    NBalance Only
+    TBank
+    ^
+    !Type:Bank
+    D1/ 1'24
+    U500.00
+    T500.00
+    POpening Balance
+    ^
+    !Account
+    NQIF Checking
+    TBank
+    ^
+    !Type:Bank
+    D1/ 2'24
+    U-25.00
+    T-25.00
+    PCoffee Shop
+    ^
+  QIF
+
+  QIF_WITH_SPLIT_TAGS = <<~QIF
+    !Type:Bank
+    D1/ 1'24
+    U-100.00
+    T-100.00
+    PTagged Split Store
+    L--Split--
+    SFood/TRIP2025
+    $-60.00
+    EGroceries
+    STravel/KEEP
+    $-40.00
+    ETrain
+    ^
+  QIF
+
+  QIF_WITH_ROUNDING_SPLIT_MISMATCH = <<~QIF
+    !Type:Bank
+    D1/ 1'24
+    U-100.00
+    T-100.00
+    PRounded Split Store
+    L--Split--
+    SFood
+    $-60.00
+    SHousehold
+    $-39.99
+    ^
+    D1/ 2'24
+    U-20.00
+    T-20.00
+    PCoffee Shop
+    ^
+  QIF
+
   # ── QifParser: valid? ───────────────────────────────────────────────────────
 
   test "valid? returns true for QIF content" do
@@ -459,6 +548,22 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal "CCard", grocery.resource_type
   end
 
+  test "generates rows for mixed transaction and investment QIF sections" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_MIXED_ACCOUNT_TYPES)
+    @import.generate_rows_from_csv
+
+    assert_equal 2, @import.rows.count
+
+    coffee = @import.rows.find_by!(name: "Coffee Shop")
+    buy = @import.rows.find_by!(entity_type: "Buy")
+
+    assert_equal "QIF Checking", coffee.account
+    assert_equal "Bank", coffee.resource_type
+    assert_equal "QIF Brokerage", buy.account
+    assert_equal "Invst", buy.resource_type
+    assert_equal "ACME", buy.ticker
+  end
+
   test "requires_csv_workflow? is false" do
     refute @import.requires_csv_workflow?
   end
@@ -594,6 +699,46 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal [ "Food", "Transport" ], parent.child_entries.includes(entryable: :category).map { |entry| entry.entryable.category.name }.sort
   end
 
+  test "import! preserves deselected split categories and tags" do
+    @import.update!(
+      raw_file_str: QIF_WITH_SPLIT_TAGS,
+      column_mappings: (@import.column_mappings || {}).merge(
+        "qif_selected_categories" => [ "Travel" ],
+        "qif_selected_tags" => [ "KEEP" ]
+      )
+    )
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    @import.import!
+
+    parent = @account.entries.find_by!(name: "Tagged Split Store")
+    groceries = parent.child_entries.includes(entryable: :tags).find_by!(name: "Groceries")
+    train = parent.child_entries.includes(entryable: :tags).find_by!(name: "Train")
+
+    assert_nil groceries.entryable.category
+    assert_empty groceries.entryable.tags
+    assert_equal "Travel", train.entryable.category.name
+    assert_equal [ "KEEP" ], train.entryable.tags.map(&:name)
+  end
+
+  test "import! skips split creation when split line totals do not match parent" do
+    @import.update!(raw_file_str: QIF_WITH_ROUNDING_SPLIT_MISMATCH)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Transaction.count", 2 do
+      @import.import!
+    end
+
+    rounded_parent = @account.entries.find_by!(name: "Rounded Split Store")
+    coffee = @account.entries.find_by!(name: "Coffee Shop")
+
+    refute rounded_parent.split_parent?
+    refute rounded_parent.excluded?
+    assert_not_nil coffee
+  end
+
   test "categories_selected? is false before sync_mappings" do
     @import.update!(raw_file_str: SAMPLE_QIF)
     @import.generate_rows_from_csv
@@ -648,6 +793,24 @@ class QifImportTest < ActiveSupport::TestCase
     assert_in_delta 50, grocery.amount, 0.01
   end
 
+  test "import! routes mixed transaction and investment sections independently" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_MIXED_ACCOUNT_TYPES)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Transaction.count", 1 do
+      assert_difference "Trade.count", 1 do
+        @import.import!
+      end
+    end
+
+    checking = @family.accounts.find_by!(name: "QIF Checking")
+    brokerage = @family.accounts.find_by!(name: "QIF Brokerage")
+
+    assert checking.entries.exists?(name: "Coffee Shop", entryable_type: "Transaction")
+    assert brokerage.entries.exists?(entryable_type: "Trade")
+  end
+
   # ── Opening balance handling ─────────────────────────────────────────────────
 
   test "Opening Balance row is not generated as a transaction row" do
@@ -668,6 +831,23 @@ class QifImportTest < ActiveSupport::TestCase
     assert manager.has_opening_anchor?
     assert_equal Date.new(2020, 1, 1), manager.opening_date
     assert_equal BigDecimal("500"),    manager.opening_balance
+  end
+
+  test "import! creates declared account that only has an opening balance" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_BALANCE_ONLY_ACCOUNT)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Account.count", 2 do
+      @import.import!
+    end
+
+    balance_only = @family.accounts.find_by!(name: "Balance Only")
+    manager = Account::OpeningBalanceManager.new(balance_only)
+
+    assert manager.has_opening_anchor?
+    assert_equal Date.new(2024, 1, 1), manager.opening_date
+    assert_equal BigDecimal("500"), manager.opening_balance
   end
 
   test "import! moves opening anchor back when transactions predate it" do

@@ -200,6 +200,7 @@ en:
     uploads:
       handle_qif_upload:
         qif_uploaded: "QIF file uploaded successfully."
+        qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:

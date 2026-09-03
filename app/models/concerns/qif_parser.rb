@@ -31,6 +31,7 @@
 #   T  total       total cash amount of transaction
 module QifParser
   TRANSACTION_TYPES = %w[CCard Bank Cash Invst Oth\ L Oth\ A].freeze
+  GENERIC_TRANSACTION_TYPES = TRANSACTION_TYPES - [ "Invst" ]
 
   # Investment action types that create Trade records (buy or sell shares).
   BUY_LIKE_ACTIONS  = %w[Buy ReinvDiv Cover].freeze
@@ -123,7 +124,7 @@ module QifParser
     content = normalize_encoding(content)
     content = normalize_line_endings(content)
 
-    transaction_sections(content).flat_map do |section|
+    transaction_sections(content).select { |section| GENERIC_TRANSACTION_TYPES.include?(section[:type]) }.flat_map do |section|
       parse_records(section[:content]).filter_map do |record|
         build_transaction(
           record,
