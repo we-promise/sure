@@ -30,6 +30,27 @@ class Provider::Openai < Provider
     [ configured, MIN_REQUEST_TIMEOUT ].max
   end
 
+  # Extra HTTP headers for OpenAI-compatible requests, parsed from the
+  # OPENAI_EXTRA_HEADERS env var (a JSON object). ENV-only: no Setting
+  # fallback. Keys and values are stringified for Faraday; blank values are
+  # dropped. Nested JSON values are Ruby-inspect-stringified, not
+  # JSON-serialized. Fail-closed: any parse problem yields {} plus an error
+  # log (raw value never logged) so chat never breaks from bad config.
+  def self.extra_headers
+    raw = ENV["OPENAI_EXTRA_HEADERS"].presence
+    return {} unless raw
+
+    parsed = JSON.parse(raw)
+    unless parsed.is_a?(Hash)
+      Rails.logger.error("OPENAI_EXTRA_HEADERS must be a JSON object; ignoring")
+      return {}
+    end
+    parsed.transform_keys(&:to_s).transform_values(&:to_s).compact_blank
+  rescue JSON::ParserError, TypeError
+    Rails.logger.error("OPENAI_EXTRA_HEADERS is not valid JSON; ignoring")
+    {}
+  end
+
   # Builds a client that uses the effective request timeout for every OpenAI call.
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
@@ -37,6 +58,8 @@ class Provider::Openai < Provider
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = self.class.request_timeout
+    parsed_headers = self.class.extra_headers
+    client_options[:extra_headers] = parsed_headers if parsed_headers.present?
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base

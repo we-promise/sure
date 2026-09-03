@@ -118,6 +118,9 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 
 # Optional: Request timeout in seconds (default: 60)
 # OPENAI_REQUEST_TIMEOUT=60
+
+# Optional: extra HTTP headers as a JSON object (see "Extra HTTP Headers" below)
+# OPENAI_EXTRA_HEADERS='{"x-session":"<value>"}'
 ```
 
 **Recommended models:**
@@ -166,6 +169,26 @@ Any service offering an OpenAI-compatible API should work:
 - [Together AI](https://together.ai/) - Various open models
 - [Anyscale](https://www.anyscale.com/) - Llama models
 - [Replicate](https://replicate.com/) - Various models
+
+### Extra HTTP Headers
+
+Some gateways require custom headers on requests to OpenAI-compatible
+endpoints (e.g. OpenRouter's `HTTP-Referer`). Set `OPENAI_EXTRA_HEADERS`
+to a JSON object mapping header names to values:
+
+```bash
+# Single-quoted so the shell does not interpret braces or quotes.
+OPENAI_EXTRA_HEADERS='{"x-session":"b3f1c2d4-0000-0000-0000-000000000000"}'
+```
+
+Behavior:
+
+- Extra headers are attached to **all requests** made by the OpenAI-compatible provider's client — chat and batch flows (auto-categorize, merchant detection, PDF processing) alike.
+- Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
+- User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
+- Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.
+- These headers are NOT sent to embedding, vector-store, or AI-health-probe calls — those build separate clients. A gateway requiring the header on those endpoints is not supported.
+- ENV-only: there is no settings-page equivalent. The value is re-read every time a provider client is built (nothing is cached), but updating the environment requires restarting the app.
 
 ## Local LLM Setup (Ollama)
 

@@ -26,12 +26,68 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   end
 
   test "request_timeout is passed to OpenAI client" do
-    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do
+    with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil, "OPENAI_EXTRA_HEADERS" => nil) do
       Setting.stubs(:openai_request_timeout).returns(180)
       ::OpenAI::Client.expects(:new).with(access_token: "test-token", request_timeout: 180).returns(mock)
 
       Provider::Openai.new("test-token")
     end
+  end
+
+  test "extra_headers parses valid JSON, stringifies keys and values, drops blanks" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-session": "abc", "Retry": 3, "empty": "", "drop": null}') do
+      assert_equal({ "x-session" => "abc", "Retry" => "3" }, Provider::Openai.extra_headers)
+    end
+  end
+
+  test "extra_headers stringifies nested values Ruby-style" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-meta":{"a":1}}') do
+      assert_equal({ "x-meta" => '{"a" => 1}' }, Provider::Openai.extra_headers)
+    end
+  end
+
+  test "extra_headers returns empty hash for unset, blank, malformed, and non-object JSON" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => nil) do
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => "  ") do
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => "{not json") do
+      Rails.logger.expects(:error).with(regexp_matches(/OPENAI_EXTRA_HEADERS is not valid JSON/))
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => "[1,2]") do
+      Rails.logger.expects(:error).with(regexp_matches(/must be a JSON object/))
+      assert_equal({}, Provider::Openai.extra_headers)
+    end
+  end
+
+  test "client construction receives parsed extra_headers" do
+    with_env_overrides(
+      "OPENAI_REQUEST_TIMEOUT" => nil,
+      "OPENAI_EXTRA_HEADERS" => '{"X-Static":"1"}'
+    ) do
+      Setting.stubs(:openai_request_timeout).returns(nil)
+      ::OpenAI::Client.expects(:new).with(
+        access_token: "test-token",
+        request_timeout: 60,
+        extra_headers: { "X-Static" => "1" }
+      ).returns(mock)
+
+      Provider::Openai.new("test-token")
+    end
+  end
+
+  test "extra headers knob is documented in hosting docs and env examples" do
+    doc = Rails.root.join("docs/hosting/ai.md").read
+    assert_includes doc, "OPENAI_EXTRA_HEADERS"
+
+    assert_includes Rails.root.join(".env.example").read, "OPENAI_EXTRA_HEADERS"
+    assert_includes Rails.root.join(".env.local.example").read, "OPENAI_EXTRA_HEADERS"
   end
 
   test "openai errors are automatically raised" do
