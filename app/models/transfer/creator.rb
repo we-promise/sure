@@ -106,6 +106,19 @@ class Transfer::Creator
       transfer
     end
 
+    # Compares against every persisted effect of #create, not just accounts
+    # and date/amount - a retry with the same key but a different
+    # exchange_rate or fee would otherwise be reported as "success" while
+    # silently keeping the old inflow amount and fee entries.
+    #
+    # inflow_converted_amount re-applies the current request's exchange_rate
+    # (or re-fetches the rate for the same date, which is cached/stable) to
+    # compare against what's actually persisted, rather than trying to
+    # recover the original request's exchange_rate from stored state (it
+    # isn't persisted anywhere - only its effect on the inflow amount is).
+    # A rate that's no longer available on retry means this isn't a
+    # same-request retry either, so treat that as a mismatch too and let the
+    # normal create path surface the real Money::ConversionError.
     def matches_request?(transfer)
       outflow_entry = transfer.outflow_transaction.entry
       inflow_entry = transfer.inflow_transaction.entry
@@ -113,7 +126,12 @@ class Transfer::Creator
       outflow_entry.account_id == source_account.id &&
         inflow_entry.account_id == destination_account.id &&
         outflow_entry.date == date &&
-        outflow_entry.amount == amount
+        outflow_entry.amount == amount &&
+        inflow_entry.amount == inflow_converted_amount * -1 &&
+        transfer.derived_source_fee_amount == source_fee_amount &&
+        transfer.derived_destination_fee_amount == destination_fee_amount
+    rescue Money::ConversionError
+      false
     end
 
     # Every leg gets a role-specific suffix except the outflow (find_existing_transfer

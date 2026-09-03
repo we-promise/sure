@@ -210,6 +210,86 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "reusing a key with a different fee does not silently return the old transfer" do
+    idempotency_key = SecureRandom.uuid
+    from_account = accounts(:depository)
+    to_account = accounts(:credit_card)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    # Same accounts/date/amount/key as the first request, but a fee was
+    # added before resubmitting - the persisted effect differs, so this
+    # must not be reported as a successful retry of the fee-less transfer.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          source_fee_amount: 5,
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reusing a key with a different exchange rate does not silently return the old transfer" do
+    idempotency_key = SecureRandom.uuid
+    usd_account = accounts(:depository)
+    eur_account = users(:family_admin).family.accounts.create!(
+      name: "EUR Account",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: usd_account.id,
+          to_account_id: eur_account.id,
+          date: Date.current,
+          amount: 100,
+          exchange_rate: 0.9,
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    # Same accounts/date/amount/key, but a different exchange rate - the
+    # persisted inflow amount would differ, so this must not be reported as
+    # a successful retry of the first, differently-converted transfer.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: usd_account.id,
+          to_account_id: eur_account.id,
+          date: Date.current,
+          amount: 100,
+          exchange_rate: 0.5,
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "can create transfer with custom exchange rate" do
     usd_account = accounts(:depository)
     eur_account = users(:family_admin).family.accounts.create!(
