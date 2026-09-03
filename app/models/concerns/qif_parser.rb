@@ -42,11 +42,13 @@ module QifParser
   OUTFLOW_TRANSACTION_ACTIONS = %w[XOut MiscExp].freeze
 
   ParsedTransaction = Struct.new(
-    :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared, :split, :split_lines,
+    :date, :amount, :payee, :memo, :category, :tags, :check_num, :cleared,
+    :split, :split_lines, :account_name, :account_type,
     keyword_init: true
   )
 
   ParsedSplitLine = Struct.new(:category, :tags, :amount, :memo, keyword_init: true)
+  ParsedAccount = Struct.new(:name, :account_type, :description, keyword_init: true)
 
   ParsedCategory = Struct.new(:name, :description, :income, keyword_init: true)
   ParsedTag      = Struct.new(:name, :description, keyword_init: true)
@@ -55,7 +57,7 @@ module QifParser
 
   ParsedInvestmentTransaction = Struct.new(
     :date, :action, :security_name, :security_ticker,
-    :price, :qty, :amount, :memo, :payee, :category, :tags,
+    :price, :qty, :amount, :memo, :payee, :category, :tags, :account_name, :account_type,
     keyword_init: true
   )
 
@@ -121,13 +123,16 @@ module QifParser
     content = normalize_encoding(content)
     content = normalize_line_endings(content)
 
-    type = account_type(content)
-    return [] unless type
-
-    section = extract_section(content, type)
-    return [] unless section
-
-    parse_records(section).filter_map { |record| build_transaction(record, date_format: date_format) }
+    transaction_sections(content).flat_map do |section|
+      parse_records(section[:content]).filter_map do |record|
+        build_transaction(
+          record,
+          date_format: date_format,
+          account: section[:account],
+          account_type: section[:type]
+        )
+      end
+    end
   end
 
   # Returns the opening balance entry from the QIF file, if present.
@@ -137,25 +142,32 @@ module QifParser
   #
   # Returns a hash { date: Date, amount: BigDecimal } or nil.
   def self.parse_opening_balance(content, date_format: "%m/%d/%Y")
-    return nil unless valid?(content)
+    parse_opening_balances(content, date_format: date_format).first&.slice(:date, :amount)
+  end
+
+  # Returns opening balance entries keyed by the QIF account metadata for
+  # multi-account QIF exports, or a single metadata-less result for legacy files.
+  def self.parse_opening_balances(content, date_format: "%m/%d/%Y")
+    return [] unless valid?(content)
 
     content = normalize_encoding(content)
     content = normalize_line_endings(content)
 
-    type = account_type(content)
-    return nil unless type
+    transaction_sections(content).filter_map do |section|
+      record = parse_records(section[:content]).find { |r| r["P"]&.strip == "Opening Balance" }
+      next unless record
 
-    section = extract_section(content, type)
-    return nil unless section
+      date   = parse_qif_date(record["D"], date_format: date_format)
+      amount = parse_qif_amount(record["T"] || record["U"])
+      next unless date && amount
 
-    record = parse_records(section).find { |r| r["P"]&.strip == "Opening Balance" }
-    return nil unless record
-
-    date   = parse_qif_date(record["D"], date_format: date_format)
-    amount = parse_qif_amount(record["T"] || record["U"])
-    return nil unless date && amount
-
-    { date: Date.parse(date), amount: amount.to_d }
+      {
+        account_name: section[:account]&.name,
+        account_type: section[:type],
+        date: Date.parse(date),
+        amount: amount.to_d
+      }
+    end
   end
 
   # Parses categories from the !Type:Cat section.
@@ -201,6 +213,17 @@ module QifParser
     end
   end
 
+  def self.parse_accounts(content)
+    return [] if content.blank?
+
+    content = normalize_encoding(content)
+    content = normalize_line_endings(content)
+
+    content.scan(/^!Account[^\n]*\n(.*?)(?=^!Account|^!Type:|\z)/mi).flat_map do |captures|
+      parse_records(captures[0]).filter_map { |record| build_account(record) }
+    end
+  end
+
   # Parses all !Type:Security sections and returns an array of ParsedSecurity structs.
   # Each security in a QIF file gets its own !Type:Security header, so we scan
   # for all occurrences rather than just the first.
@@ -238,10 +261,17 @@ module QifParser
 
     ticker_by_name = parse_securities(content).each_with_object({}) { |s, h| h[s.name] = s.ticker }
 
-    section = extract_section(content, "Invst")
-    return [] unless section
-
-    parse_records(section).filter_map { |record| build_investment_transaction(record, ticker_by_name, date_format: date_format) }
+    transaction_sections(content).select { |section| section[:type] == "Invst" }.flat_map do |section|
+      parse_records(section[:content]).filter_map do |record|
+        build_investment_transaction(
+          record,
+          ticker_by_name,
+          date_format: date_format,
+          account: section[:account],
+          account_type: section[:type]
+        )
+      end
+    end
   end
 
   # ------------------------------------------------------------------
@@ -261,6 +291,66 @@ module QifParser
     content.match(pattern)&.captures&.first
   end
   private_class_method :extract_section
+
+  def self.transaction_sections(content)
+    sections = []
+    current_account = nil
+    lines = content.lines
+    index = 0
+
+    while index < lines.length
+      line = lines[index]
+
+      if line.match?(/^!Account/i)
+        section_content, index = collect_section_lines(lines, index + 1)
+        current_account = parse_records(section_content).filter_map { |record| build_account(record) }.first
+        next
+      end
+
+      if (match = line.match(/^!Type:(.+)/i))
+        type = match[1].strip
+        section_content, index = collect_section_lines(lines, index + 1)
+
+        if TRANSACTION_TYPES.include?(type)
+          sections << {
+            type: type,
+            account: current_account,
+            content: section_content
+          }
+        end
+
+        next
+      end
+
+      index += 1
+    end
+
+    sections
+  end
+  private_class_method :transaction_sections
+
+  def self.collect_section_lines(lines, index)
+    section_lines = []
+
+    while index < lines.length && !lines[index].match?(/^!(?:Account|Type:)/i)
+      section_lines << lines[index]
+      index += 1
+    end
+
+    [ section_lines.join, index ]
+  end
+  private_class_method :collect_section_lines
+
+  def self.build_account(record)
+    return nil if record["N"].blank?
+
+    ParsedAccount.new(
+      name: record["N"].strip,
+      account_type: record["T"]&.strip,
+      description: record["D"]&.strip
+    )
+  end
+  private_class_method :build_account
 
   # Splits a section into an array of field-code => value hashes.
   # Single-letter codes with no value (e.g. "I", "E", "T") are stored with nil.
@@ -302,7 +392,7 @@ module QifParser
   end
   private_class_method :parse_records
 
-  def self.build_transaction(record, date_format: "%m/%d/%Y")
+  def self.build_transaction(record, date_format: "%m/%d/%Y", account: nil, account_type: nil)
     # "Opening Balance" is a Quicken convention for the account's starting balance –
     # it is not a real transaction and must not be imported as one.
     return nil if record["P"]&.strip == "Opening Balance"
@@ -330,7 +420,9 @@ module QifParser
       check_num: record["N"],
       cleared:   record["C"],
       split:     record["_split"] == true,
-      split_lines: split_lines
+      split_lines: split_lines,
+      account_name: account&.name,
+      account_type: account&.account_type.presence || account_type
     )
   end
   private_class_method :build_transaction
@@ -475,7 +567,7 @@ module QifParser
 
   # Builds a ParsedInvestmentTransaction from a raw record hash.
   # ticker_by_name maps security names (N field in !Type:Security) to tickers (S field).
-  def self.build_investment_transaction(record, ticker_by_name, date_format: "%m/%d/%Y")
+  def self.build_investment_transaction(record, ticker_by_name, date_format: "%m/%d/%Y", account: nil, account_type: nil)
     action = record["N"]&.strip
     return nil unless action.present?
 
@@ -505,7 +597,9 @@ module QifParser
       memo:            record["M"]&.strip,
       payee:           record["P"]&.strip,
       category:        category,
-      tags:            tags
+      tags:            tags,
+      account_name:    account&.name,
+      account_type:    account&.account_type.presence || account_type
     )
   end
   private_class_method :build_investment_transaction

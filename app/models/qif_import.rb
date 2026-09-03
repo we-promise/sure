@@ -39,16 +39,9 @@ class QifImport < Import
         import_investment_rows!
       else
         import_transaction_rows!
-
-        if (ob = QifParser.parse_opening_balance(raw_file_str, date_format: qif_date_format))
-          Account::OpeningBalanceManager.new(account).set_opening_balance(
-            balance: ob[:amount],
-            date:    ob[:date]
-          )
-        else
-          adjust_opening_anchor_if_needed!
-        end
       end
+
+      apply_opening_balances_or_adjust_anchors!
     end
   end
 
@@ -62,19 +55,23 @@ class QifImport < Import
   end
 
   def column_keys
-    if qif_account_type == "Invst"
+    if qif_account_type == "Invst" && has_qif_accounts?
+      %i[date account ticker qty price amount currency name]
+    elsif qif_account_type == "Invst"
       %i[date ticker qty price amount currency name]
+    elsif has_qif_accounts?
+      %i[date account amount name currency category tags notes]
     else
       %i[date amount name currency category tags notes]
     end
   end
 
   def publishable?
-    account.present? && super
+    (account.present? || has_qif_accounts?) && super
   end
 
   def publishable_from_validation_stats?(invalid_rows_count:)
-    account.present? && super
+    (account.present? || has_qif_accounts?) && super
   end
 
   # Returns true if import! will move the opening anchor back to cover transactions
@@ -101,6 +98,14 @@ class QifImport < Import
   def qif_account_type
     return @qif_account_type if instance_variable_defined?(:@qif_account_type)
     @qif_account_type = raw_file_str.present? ? QifParser.account_type(raw_file_str) : nil
+  end
+
+  def qif_accounts
+    @qif_accounts ||= raw_file_str.present? ? QifParser.parse_accounts(raw_file_str) : []
+  end
+
+  def has_qif_accounts?
+    qif_accounts.any?
   end
 
   # Unique categories used across all rows (blank entries excluded).
@@ -185,12 +190,13 @@ class QifImport < Import
           notes:                  trn.memo.to_s,
           category:               trn.category.to_s,
           tags:                   trn.tags.join("|"),
-          account:                "",
+          account:                trn.account_name.to_s,
           qty:                    "",
           ticker:                 "",
           price:                  "",
           exchange_operating_mic: "",
-          entity_type:            ""
+          entity_type:            "",
+          resource_type:          trn.account_type.to_s
         }
       end
 
@@ -219,9 +225,10 @@ class QifImport < Import
             notes:                  trn.memo.to_s,
             category:               "",
             tags:                   "",
-            account:                "",
+            account:                trn.account_name.to_s,
             exchange_operating_mic: "",
-            entity_type:            trn.action
+            entity_type:            trn.action,
+            resource_type:          trn.account_type.to_s
           }
         else
           {
@@ -233,12 +240,13 @@ class QifImport < Import
             notes:                  trn.memo.to_s,
             category:               trn.category.to_s,
             tags:                   trn.tags.join("|"),
-            account:                "",
+            account:                trn.account_name.to_s,
             qty:                    "",
             ticker:                 "",
             price:                  "",
             exchange_operating_mic: "",
-            entity_type:            trn.action
+            entity_type:            trn.action,
+            resource_type:          trn.account_type.to_s
           }
         end
       end
@@ -255,6 +263,7 @@ class QifImport < Import
 
     def import_transaction_rows!
       rows.ordered.each do |row|
+        row_account = account_for_row(row)
         parsed_transaction = parsed_transaction_by_source_row_number[row.source_row_number]
         category = mappings.categories.mappable_for(row.category)
         tags     = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
@@ -265,7 +274,7 @@ class QifImport < Import
         )
 
         entry = Entry.create!(
-          account:       account,
+          account:       row_account,
           date:          row.date_iso,
           amount:        row.signed_amount,
           name:          row.name,
@@ -308,6 +317,7 @@ class QifImport < Import
 
       if trade_rows.any?
         trades = trade_rows.map do |row|
+          row_account = account_for_row(row)
           security = find_or_create_security(ticker: row.ticker)
 
           # Use the stored T-field amount for accuracy (includes any fees/commissions).
@@ -321,7 +331,7 @@ class QifImport < Import
             currency:                  row.currency,
             investment_activity_label: investment_activity_label_for(row.entity_type),
             entry:                     Entry.new(
-              account:      account,
+              account:      row_account,
               date:         row.date_iso,
               amount:       entry_amount,
               name:         row.name,
@@ -337,6 +347,7 @@ class QifImport < Import
 
       if transaction_rows.any?
         transactions = transaction_rows.map do |row|
+          row_account = account_for_row(row)
           # Inflow actions: money entering account → negative Entry.amount
           # Outflow actions: money leaving account → positive Entry.amount
           entry_amount = QifParser::INFLOW_TRANSACTION_ACTIONS.include?(row.entity_type) ? -row.amount.to_d : row.amount.to_d
@@ -348,7 +359,7 @@ class QifImport < Import
             category: category,
             tags:     tags,
             entry:    Entry.new(
-              account:      account,
+              account:      row_account,
               date:         row.date_iso,
               amount:       entry_amount,
               name:         row.name,
@@ -368,22 +379,91 @@ class QifImport < Import
     # Helpers
     # ------------------------------------------------------------------
 
-    def adjust_opening_anchor_if_needed!
-      manager = Account::OpeningBalanceManager.new(account)
+    def apply_opening_balances_or_adjust_anchors!
+      opening_balances = QifParser.parse_opening_balances(raw_file_str, date_format: qif_date_format)
+
+      if has_qif_accounts?
+        accounts_by_name = qif_account_cache.values.index_by(&:name)
+        opening_balances.each do |opening_balance|
+          target_account = accounts_by_name[opening_balance[:account_name]]
+          next unless target_account
+
+          Account::OpeningBalanceManager.new(target_account).set_opening_balance(
+            balance: opening_balance[:amount],
+            date:    opening_balance[:date]
+          )
+        end
+
+        accounts_by_name.each_value do |target_account|
+          next if opening_balances.any? { |opening_balance| opening_balance[:account_name] == target_account.name }
+
+          adjust_opening_anchor_if_needed!(target_account, earliest_row_date(target_account.name))
+        end
+      elsif (opening_balance = opening_balances.first)
+        Account::OpeningBalanceManager.new(account).set_opening_balance(
+          balance: opening_balance[:amount],
+          date:    opening_balance[:date]
+        )
+      else
+        adjust_opening_anchor_if_needed!(account, earliest_row_date)
+      end
+    end
+
+    def adjust_opening_anchor_if_needed!(target_account, earliest)
+      manager = Account::OpeningBalanceManager.new(target_account)
       return unless manager.has_opening_anchor?
 
-      earliest = earliest_row_date
       return unless earliest.present? && earliest < manager.opening_date
 
-      Account::OpeningBalanceManager.new(account).set_opening_balance(
+      Account::OpeningBalanceManager.new(target_account).set_opening_balance(
         balance: manager.opening_balance,
         date:    earliest - 1.day
       )
     end
 
-    def earliest_row_date
-      str = rows.minimum(:date)
+    def earliest_row_date(account_name = nil)
+      scope = account_name.present? ? rows.where(account: account_name) : rows
+      str = scope.minimum(:date)
       Date.parse(str) if str.present?
+    end
+
+    def account_for_row(row)
+      return account if row.account.blank?
+
+      qif_account_cache[row.account] ||= find_or_create_qif_account(row.account, row.resource_type)
+    end
+
+    def qif_account_cache
+      @qif_account_cache ||= {}
+    end
+
+    def find_or_create_qif_account(name, qif_type)
+      family.accounts.find_by(name: name) || Account.create_and_sync(
+        {
+          family: family,
+          name: name,
+          balance: 0,
+          currency: default_currency,
+          accountable_type: accountable_type_for_qif_type(qif_type),
+          import: self
+        },
+        skip_initial_sync: true
+      )
+    end
+
+    def accountable_type_for_qif_type(qif_type)
+      case qif_type
+      when "CCard"
+        "CreditCard"
+      when "Invst"
+        "Investment"
+      when "Oth A"
+        "OtherAsset"
+      when "Oth L"
+        "OtherLiability"
+      else
+        "Depository"
+      end
     end
 
     def set_default_config

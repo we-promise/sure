@@ -183,6 +183,29 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  QIF_WITH_ACCOUNTS = <<~QIF
+    !Account
+    NQIF Checking
+    TBank
+    ^
+    !Type:Bank
+    D1/ 1'24
+    U-25.00
+    T-25.00
+    PCoffee Shop
+    ^
+    !Account
+    NQIF Visa
+    TCCard
+    ^
+    !Type:CCard
+    D1/ 2'24
+    U-50.00
+    T-50.00
+    PGrocery Store
+    ^
+  QIF
+
   # ── QifParser: valid? ───────────────────────────────────────────────────────
 
   test "valid? returns true for QIF content" do
@@ -205,6 +228,13 @@ class QifImportTest < ActiveSupport::TestCase
   test "account_type ignores Tag and Cat sections" do
     qif = "!Type:Tag\nNMyTag\n^\n!Type:Cat\nNMyCat\n^\n!Type:Bank\nD1/1'24\nT100.00\nPTest\n^\n"
     assert_equal "Bank", QifParser.account_type(qif)
+  end
+
+  test "parse_accounts extracts QIF account metadata" do
+    accounts = QifParser.parse_accounts(QIF_WITH_ACCOUNTS)
+
+    assert_equal [ "QIF Checking", "QIF Visa" ], accounts.map(&:name)
+    assert_equal [ "Bank", "CCard" ], accounts.map(&:account_type)
   end
 
   # ── QifParser: parse (transactions) ─────────────────────────────────────────
@@ -246,6 +276,13 @@ class QifImportTest < ActiveSupport::TestCase
     assert_equal [],             transactions[0].tags
     assert_equal [],             transactions[1].tags
     assert_equal [ "TRIP2025" ], transactions[2].tags
+  end
+
+  test "parse associates transactions with QIF account metadata" do
+    transactions = QifParser.parse(QIF_WITH_ACCOUNTS)
+
+    assert_equal [ "QIF Checking", "QIF Visa" ], transactions.map(&:account_name)
+    assert_equal [ "Bank", "CCard" ], transactions.map(&:account_type)
   end
 
   # ── QifParser: parse_categories ─────────────────────────────────────────────
@@ -409,6 +446,19 @@ class QifImportTest < ActiveSupport::TestCase
     assert row.category.blank?
   end
 
+  test "generates rows with QIF account metadata" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_ACCOUNTS)
+    @import.generate_rows_from_csv
+
+    coffee = @import.rows.find_by!(name: "Coffee Shop")
+    grocery = @import.rows.find_by!(name: "Grocery Store")
+
+    assert_equal "QIF Checking", coffee.account
+    assert_equal "Bank", coffee.resource_type
+    assert_equal "QIF Visa", grocery.account
+    assert_equal "CCard", grocery.resource_type
+  end
+
   test "requires_csv_workflow? is false" do
     refute @import.requires_csv_workflow?
   end
@@ -564,6 +614,38 @@ class QifImportTest < ActiveSupport::TestCase
     import_without_account.update_columns(raw_file_str: SAMPLE_QIF, rows_count: 1)
 
     refute import_without_account.publishable?
+  end
+
+  test "publishable? allows QIF account metadata without selected account" do
+    import_without_account = QifImport.create!(family: @family)
+    import_without_account.update!(raw_file_str: QIF_WITH_ACCOUNTS)
+    import_without_account.generate_rows_from_csv
+
+    assert import_without_account.publishable?
+  end
+
+  test "import! creates accounts from QIF metadata and routes transactions" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_ACCOUNTS)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Account.count", 2 do
+      @import.import!
+    end
+
+    checking = @family.accounts.find_by!(name: "QIF Checking")
+    visa = @family.accounts.find_by!(name: "QIF Visa")
+
+    assert_equal @import, checking.import
+    assert_equal "Depository", checking.accountable_type
+    assert_equal @import, visa.import
+    assert_equal "CreditCard", visa.accountable_type
+
+    coffee = checking.entries.find_by!(name: "Coffee Shop", entryable_type: "Transaction")
+    grocery = visa.entries.find_by!(name: "Grocery Store", entryable_type: "Transaction")
+
+    assert_in_delta 25, coffee.amount, 0.01
+    assert_in_delta 50, grocery.amount, 0.01
   end
 
   # ── Opening balance handling ─────────────────────────────────────────────────
