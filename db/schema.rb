@@ -2298,6 +2298,43 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_173204) do
     t.index ["message_id"], name: "index_tool_calls_on_message_id"
   end
 
+  create_table "trade_republic_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_type"
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.boolean "holdings_snapshot_complete", default: false, null: false
+    t.string "kind", default: "portfolio", null: false
+    t.datetime "last_positions_sync"
+    t.string "name"
+    t.jsonb "raw_positions_payload", default: [], null: false
+    t.jsonb "raw_timeline_payload", default: [], null: false
+    t.string "trade_republic_account_id"
+    t.uuid "trade_republic_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["trade_republic_item_id", "kind"], name: "idx_on_trade_republic_item_id_kind_3b60cc72fb", unique: true
+    t.index ["trade_republic_item_id", "trade_republic_account_id"], name: "index_trade_republic_accounts_on_item_and_account_id", unique: true, where: "(trade_republic_account_id IS NOT NULL)"
+    t.index ["trade_republic_item_id"], name: "index_trade_republic_accounts_on_trade_republic_item_id"
+  end
+
+  create_table "trade_republic_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "newest_event_id"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.text "pending_login_state"
+    t.string "phone_number"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.text "session_blob"
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_trade_republic_items_on_family_id"
+    t.index ["status"], name: "index_trade_republic_items_on_status"
+  end
+
   create_table "trades", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency"
@@ -2682,6 +2719,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_01_173204) do
   add_foreign_key "taggings", "tags"
   add_foreign_key "tags", "families"
   add_foreign_key "tool_calls", "messages"
+  add_foreign_key "trade_republic_accounts", "trade_republic_items"
+  add_foreign_key "trade_republic_items", "families"
   add_foreign_key "trades", "securities"
   add_foreign_key "trading212_accounts", "trading212_items"
   add_foreign_key "trading212_items", "families"

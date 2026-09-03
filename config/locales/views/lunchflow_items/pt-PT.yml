@@ -1,0 +1,166 @@
+---
+pt-PT:
+  lunchflow_items:
+    api_error:
+      title: Erro de ligação Lunch Flow
+      unable_to_connect: Não foi possível ligar ao Lunch Flow
+      common_issues: "Problemas comuns:"
+      invalid_api_key_label: Chave de API inválida
+      invalid_api_key_desc: Verifique a sua chave de API nas Definições do serviço
+      expired_credentials_label: Credenciais expiradas
+      expired_credentials_desc: Gere uma nova chave de API a partir do Lunch Flow
+      network_issue_label: Problema de rede
+      network_issue_desc: Verifique a sua ligação à internet
+      service_down_label: Serviço indisponível
+      service_down_desc: A API do Lunch Flow pode estar temporariamente indisponível
+      check_provider_settings: Verificar definições do serviço
+    setup_required:
+      title: Configuração do Lunch Flow necessária
+      api_key_not_configured: Chave de API não configurada
+      api_key_description: Antes de poder associar contas Lunch Flow, precisa de configurar a sua chave de API Lunch Flow.
+      setup_steps_title: "Passos de configuração:"
+      setup_step_1_html: "Aceda a <strong>Definições → Serviços</strong>"
+      setup_step_2_html: "Encontre a secção <strong>Lunch Flow</strong>"
+      setup_step_3: Introduza a sua chave de API Lunch Flow
+      setup_step_4: Volte aqui para associar as suas contas
+      go_to_provider_settings: Aceder às definições do serviço
+    create:
+      success: Ligação Lunch Flow criada com sucesso
+    destroy:
+      success: Ligação Lunch Flow removida
+    index:
+      title: Ligações Lunch Flow
+    loading:
+      loading_message: A carregar contas Lunch Flow...
+      loading_title: A carregar
+    link_accounts:
+      all_already_linked:
+        one: "A conta selecionada (%{names}) já está associada"
+        other: "Todas as %{count} contas selecionadas já estão associadas: %{names}"
+      api_error: "Erro de API: %{message}"
+      invalid_account_names:
+        one: "Não é possível associar uma conta com nome em branco"
+        other: "Não é possível associar %{count} contas com nomes em branco"
+      link_failed: Falha ao associar contas
+      no_accounts_selected: Selecione pelo menos uma conta
+      partial_invalid: "Associadas com sucesso %{created_count} conta(s), %{already_linked_count} já estavam associadas, %{invalid_count} conta(s) tinham nomes inválidos"
+      partial_success: "Associadas com sucesso %{created_count} conta(s). %{already_linked_count} conta(s) já estavam associadas: %{already_linked_names}"
+      success:
+        one: "%{count} conta associada com sucesso"
+        other: "%{count} contas associadas com sucesso"
+    lunchflow_item:
+      accounts_need_setup: As contas precisam de configuração
+      delete: Eliminar ligação
+      deletion_in_progress: eliminação em curso...
+      error: Erro
+      no_accounts_description: Esta ligação ainda não tem contas associadas.
+      no_accounts_title: Sem contas
+      setup_action: Configurar novas contas
+      setup_description: "%{linked} de %{total} contas associadas. Escolha os tipos de conta para as suas contas Lunch Flow recém-importadas."
+      setup_needed: Novas contas prontas a configurar
+      status: "Sincronizada há %{timestamp}"
+      status_never: Nunca sincronizada
+      status_with_summary: "Última sincronização há %{timestamp} • %{summary}"
+      syncing: A sincronizar...
+      total: Total
+      unlinked: Por associar
+    select_accounts:
+      accounts_selected: contas selecionadas
+      api_error: "Erro de API: %{message}"
+      cancel: Cancelar
+      configure_name_in_lunchflow: Não é possível importar - configure o nome da conta no Lunchflow
+      description: Selecione as contas que pretende associar à sua conta %{product_name}.
+      link_accounts: Associar contas selecionadas
+      no_accounts_found: Não foram encontradas contas. Verifique a configuração da sua chave de API.
+      no_api_key: A chave de API do Lunch Flow não está configurada. Configure-a nas Definições.
+      no_name_placeholder: "(Sem nome)"
+      title: Selecionar contas Lunch Flow
+    select_existing_account:
+      account_already_linked: Esta conta já está associada a um serviço
+      all_accounts_already_linked: Todas as contas Lunch Flow já estão associadas
+      api_error: "Erro de API: %{message}"
+      cancel: Cancelar
+      configure_name_in_lunchflow: Não é possível importar - configure o nome da conta no Lunchflow
+      description: Selecione uma conta Lunch Flow para associar a esta conta. As transações serão sincronizadas e desduplicadas automaticamente.
+      link_account: Associar conta
+      no_account_specified: Nenhuma conta especificada
+      no_accounts_found: Não foram encontradas contas Lunch Flow. Verifique a configuração da sua chave de API.
+      no_api_key: A chave de API do Lunch Flow não está configurada. Configure-a nas Definições.
+      no_name_placeholder: "(Sem nome)"
+      title: "Associar %{account_name} com Lunch Flow"
+    link_existing_account:
+      account_already_linked: Esta conta já está associada a um serviço
+      api_error: "Erro de API: %{message}"
+      invalid_account_name: Não é possível associar uma conta com nome em branco
+      lunchflow_account_already_linked: Esta conta Lunch Flow já está associada a outra conta
+      lunchflow_account_not_found: Conta Lunch Flow não encontrada
+      missing_parameters: Parâmetros obrigatórios em falta
+      success: "%{account_name} associada com sucesso ao Lunch Flow"
+    setup_accounts:
+      account_type_label: "Tipo de conta:"
+      all_accounts_linked: "Todas as suas contas Lunch Flow já foram configuradas."
+      api_error: "Erro de API: %{message}"
+      fetch_failed: "Falha ao obter contas"
+      no_accounts_to_setup: "Não existem contas para configurar"
+      no_api_key: "A chave de API do Lunch Flow não está configurada. Verifique as definições da sua ligação."
+      account_types:
+        skip: Ignorar esta conta
+        depository: Conta à ordem ou poupança
+        credit_card: Cartão de crédito
+        investment: Conta de investimento
+        loan: Empréstimo ou hipoteca
+        other_asset: Outro ativo
+      subtype_labels:
+        depository: "Subtipo da conta:"
+        credit_card: ""
+        investment: "Tipo de investimento:"
+        loan: "Tipo de empréstimo:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Os cartões de crédito serão configurados automaticamente como contas de cartão de crédito."
+        other_asset: "Não são necessárias opções adicionais para Outros Ativos."
+      subtypes:
+        depository:
+          checking: Conta à ordem
+          savings: Poupança
+          hsa: Conta Poupança Saúde
+          cd: Certificado de Depósito
+          money_market: Mercado monetário
+        investment:
+          brokerage: Corretora
+          pension: Pensão
+          retirement: Reforma
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Plano de Poupança Federal
+          "529_plan": "Plano 529"
+          hsa: Conta Poupança Saúde
+          mutual_fund: Fundo de Investimento
+          ira: IRA Tradicional
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Hipoteca
+          student: Empréstimo de estudos
+          auto: Crédito automóvel
+          other: Outro empréstimo
+      balance: Saldo
+      cancel: Cancelar
+      choose_account_type: "Escolha o tipo de conta correto para cada conta Lunch Flow:"
+      create_accounts: Criar contas
+      creating_accounts: A criar contas...
+      historical_data_range: "Intervalo de dados históricos:"
+      subtitle: Escolha os tipos de conta corretos para as suas contas importadas
+      sync_start_date_help: Selecione até onde quer recuar no histórico de transações. Estão disponíveis no máximo 3 anos de histórico.
+      sync_start_date_label: "Iniciar a sincronização de transações a partir de:"
+      title: Configurar as suas contas Lunch Flow
+    complete_account_setup:
+      all_skipped: "Todas as contas foram ignoradas. Não foi criada nenhuma conta."
+      creation_failed: "Falha ao criar contas: %{error}"
+      no_accounts: "Não existem contas para configurar."
+      success: "%{count} conta(s) criada(s) com sucesso."
+    sync:
+      success: Sincronização iniciada
+    update:
+      success: Ligação Lunch Flow atualizada
