@@ -55,10 +55,61 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
 
     assert_equal 1, result[:orders_imported]
-    assert_equal(
-      [ { "id" => "m1", "coin" => "BTC" } ],
-      @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "buyorders")
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal [ { "id" => "m1", "coin" => "BTC" } ], payload.dig("orders", "orders")
+    assert_equal [], payload.dig("orders", "buyorders")
+  end
+
+  test "does not raise when both order history endpoints fail for the same window" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
+    @provider.stubs(:get_market_order_history).raises(Provider::Coinspot::ApiError, "also unavailable")
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    assert_equal 0, result[:orders_imported]
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal [], payload.dig("orders", "buyorders")
+    assert_equal [], payload.dig("orders", "sellorders")
+    assert_equal [], payload.dig("orders", "orders")
+  end
+
+  test "preserves sell orders alongside buy orders from the primary endpoint" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).returns(
+      "buyorders" => [ { "id" => "b1", "coin" => "BTC" } ],
+      "sellorders" => [ { "id" => "s1", "coin" => "BTC" } ]
     )
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    assert_equal 2, result[:orders_imported]
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal [ { "id" => "b1", "coin" => "BTC" } ], payload.dig("orders", "buyorders")
+    assert_equal [ { "id" => "s1", "coin" => "BTC" } ], payload.dig("orders", "sellorders")
+  end
+
+  test "bisects a window that comes back saturated at the record limit" do
+    travel_to Date.new(2026, 1, 20) do
+      @provider.stubs(:get_balances).returns("balances" => [])
+      @item.update!(sync_start_date: Date.new(2026, 1, 1))
+
+      full_window_orders = Array.new(CoinspotItem::Importer::ORDER_HISTORY_LIMIT) { |i| { "id" => "sat-#{i}", "coin" => "BTC" } }
+      first_half_orders = [ { "id" => "half-1", "coin" => "BTC" } ]
+      second_half_orders = [ { "id" => "half-2", "coin" => "BTC" } ]
+
+      @provider.stubs(:get_order_history).with(startdate: Date.new(2026, 1, 1), enddate: Date.new(2026, 1, 20))
+        .returns("buyorders" => full_window_orders, "sellorders" => [])
+      @provider.stubs(:get_order_history).with(startdate: Date.new(2026, 1, 1), enddate: Date.new(2026, 1, 10))
+        .returns("buyorders" => first_half_orders, "sellorders" => [])
+      @provider.stubs(:get_order_history).with(startdate: Date.new(2026, 1, 11), enddate: Date.new(2026, 1, 20))
+        .returns("buyorders" => second_half_orders, "sellorders" => [])
+
+      CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+      buyorders = @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "buyorders")
+      assert_equal %w[half-1 half-2], buyorders.map { |order| order["id"] }.sort
+    end
   end
 
   test "marks item requires update when permissions are invalid" do

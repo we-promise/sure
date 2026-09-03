@@ -73,36 +73,79 @@ class CoinspotItem::Importer
       }
     end
 
+    # The three shapes CoinSpot's order-history endpoints return records in:
+    # "buyorders"/"sellorders" from the primary endpoint (always that type),
+    # and "orders" from the market-order fallback (mixed type, inferred per
+    # order by CoinspotAccount::Processor#infer_order_type).
+    ORDER_BUCKETS = %w[buyorders sellorders orders].freeze
+    ORDER_HISTORY_LIMIT = Provider::Coinspot::MAX_ORDER_HISTORY_LIMIT
+
     # Fetches order history via the primary endpoint, falling back to the
-    # market-order endpoint (a different shape CoinSpot uses for market-type
-    # orders) if the primary one errors. Partitions the date range into
-    # 30-day windows to ensure all records are fetched (API returns max 500).
+    # market-order endpoint if the primary one errors. Partitions the date
+    # range into 30-day windows, further bisecting any window whose response
+    # comes back saturated (== ORDER_HISTORY_LIMIT), since that means more
+    # records exist in that window than a single response can return.
     def fetch_order_history
-      orders_by_id = {}
+      orders_by_id = ORDER_BUCKETS.index_with { {} }
       window_start = history_window[:startdate]
       window_end = history_window[:enddate]
 
       while window_start <= window_end
         current_window_end = [ window_start + 29.days, window_end ].min
-        window_orders = fetch_orders_for_window(
-          startdate: window_start,
-          enddate: current_window_end
-        )
-
-        Array(window_orders).each do |order|
-          order_id = order["id"] || order[:id]
-          orders_by_id[order_id] = order if order_id
-        end
-
+        merge_window!(orders_by_id, startdate: window_start, enddate: current_window_end)
         window_start = current_window_end + 1.day
       end
 
-      { "buyorders" => orders_by_id.values }
+      orders_by_id.transform_values(&:values)
     end
 
+    # Fetches one date window and merges its records into `orders_by_id`
+    # (deduped per bucket by order id). Bisects and retries when the
+    # response is saturated, bottoming out at a single day -- CoinSpot
+    # offers no finer-grained paging, so a still-saturated single day is
+    # logged and accepted as an incomplete import rather than looped on.
+    def merge_window!(orders_by_id, startdate:, enddate:)
+      buckets = fetch_orders_for_window(startdate: startdate, enddate: enddate)
+
+      if saturated?(buckets)
+        if startdate < enddate
+          midpoint = startdate + ((enddate - startdate) / 2).to_i.days
+          merge_window!(orders_by_id, startdate: startdate, enddate: midpoint)
+          merge_window!(orders_by_id, startdate: midpoint + 1.day, enddate: enddate)
+          return
+        end
+
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "CoinSpot order history for #{startdate} may be incomplete: a single day hit the #{ORDER_HISTORY_LIMIT}-record response limit",
+          source: self.class.name,
+          provider_key: "coinspot",
+          family: coinspot_item.family,
+          metadata: { coinspot_item_id: coinspot_item.id, date: startdate.to_s }
+        )
+      end
+
+      buckets.each do |kind, orders|
+        orders.each do |order|
+          order_id = order["id"] || order[:id]
+          orders_by_id[kind][order_id] = order if order_id
+        end
+      end
+    end
+
+    def saturated?(buckets)
+      buckets.values.any? { |orders| orders.size >= ORDER_HISTORY_LIMIT }
+    end
+
+    # Returns the primary endpoint's buy/sell orders for the window, or the
+    # market-order fallback's mixed-type orders if the primary endpoint
+    # errors. Both the primary and fallback failing for the same window
+    # degrades to an empty result (logged) rather than aborting the sync,
+    # so one bad window doesn't lose every other window's history.
     def fetch_orders_for_window(startdate:, enddate:)
       response = coinspot_provider.get_order_history(startdate: startdate, enddate: enddate)
-      Array(response["buyorders"])
+      { "buyorders" => Array(response["buyorders"]), "sellorders" => Array(response["sellorders"]) }
     rescue Provider::Coinspot::ApiError => e
       DebugLogEntry.capture(
         category: "provider_sync_error",
@@ -114,19 +157,21 @@ class CoinspotItem::Importer
         metadata: { coinspot_item_id: coinspot_item.id, error_class: e.class.name }
       )
 
-      response = coinspot_provider.get_market_order_history(startdate: startdate, enddate: enddate)
-      Array(response["orders"])
-    rescue Provider::Coinspot::ApiError => e
-      DebugLogEntry.capture(
-        category: "provider_sync_error",
-        level: "error",
-        message: "CoinSpot order history failed for window #{startdate}-#{enddate}: #{e.message}",
-        source: self.class.name,
-        provider_key: "coinspot",
-        family: coinspot_item.family,
-        metadata: { coinspot_item_id: coinspot_item.id, error_class: e.class.name }
-      )
-      []
+      begin
+        response = coinspot_provider.get_market_order_history(startdate: startdate, enddate: enddate)
+        { "orders" => Array(response["orders"]) }
+      rescue Provider::Coinspot::ApiError => e
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "CoinSpot order history failed for window #{startdate}-#{enddate}: #{e.message}",
+          source: self.class.name,
+          provider_key: "coinspot",
+          family: coinspot_item.family,
+          metadata: { coinspot_item_id: coinspot_item.id, error_class: e.class.name }
+        )
+        {}
+      end
     end
 
     # Converts CoinSpot's balances response into the flat asset-list shape

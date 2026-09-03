@@ -14,6 +14,11 @@ class Provider::Coinspot
   BASE_URL = "https://www.coinspot.com.au"
   READ_ONLY_PREFIX = "/api/v2/ro"
 
+  # CoinSpot's order-history endpoints default to 200 records per response
+  # when no `limit` is given, and cap at 500 -- always request the max so a
+  # single response is less likely to silently truncate an active window.
+  MAX_ORDER_HISTORY_LIMIT = 500
+
   base_uri BASE_URL
   default_options.merge!({ timeout: 30 }.merge(httparty_ssl_options))
 
@@ -41,14 +46,14 @@ class Provider::Coinspot
   end
 
   # Completed buy/sell order history, optionally scoped to a date range.
-  def get_order_history(startdate: nil, enddate: nil)
-    read_only_post("/my/orders/completed", date_params(startdate: startdate, enddate: enddate))
-end
+  def get_order_history(startdate: nil, enddate: nil, limit: MAX_ORDER_HISTORY_LIMIT)
+    read_only_post("/my/orders/completed", date_params(startdate: startdate, enddate: enddate).merge("limit" => limit))
+  end
 
   # Completed market-order history -- a fallback CoinSpot exposes separately
   # from the primary order-history endpoint for market-type orders.
-  def get_market_order_history(startdate: nil, enddate: nil)
-    read_only_post("/my/orders/market/completed", date_params(startdate: startdate, enddate: enddate))
+  def get_market_order_history(startdate: nil, enddate: nil, limit: MAX_ORDER_HISTORY_LIMIT)
+    read_only_post("/my/orders/market/completed", date_params(startdate: startdate, enddate: enddate).merge("limit" => limit))
   end
 
   # On-chain send/receive transaction history.
