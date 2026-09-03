@@ -432,6 +432,9 @@
 
           <!-- Mark as Recurring Form -->
           <%= render "transactions/mark_recurring", entry: @entry %>
+
+          <!-- Create Rule -->
+          <%= render "transactions/create_rule", entry: @entry %>
         <% end %>
         <%# Delete Transaction Form - hidden for split children %>
         <% unless @entry.split_child? %>
