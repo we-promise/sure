@@ -22,6 +22,8 @@ class Provider::Openai < Provider
 
   # Effective per-request HTTP timeout for OpenAI-compatible calls.
   # Precedence matches other self-hosting settings: ENV > Setting > default.
+  #
+  # @return [Integer] timeout in seconds, at least MIN_REQUEST_TIMEOUT
   def self.request_timeout
     configured = ENV["OPENAI_REQUEST_TIMEOUT"].to_s.strip.to_i
     configured = Setting.openai_request_timeout.to_i unless configured.positive?
@@ -36,6 +38,8 @@ class Provider::Openai < Provider
   # dropped. Nested JSON values are Ruby-inspect-stringified, not
   # JSON-serialized. Fail-closed: any parse problem yields {} plus an error
   # log (raw value never logged) so chat never breaks from bad config.
+  #
+  # @return [Hash<String, String>] parsed headers, {} when unset or invalid
   def self.extra_headers
     raw = ENV["OPENAI_EXTRA_HEADERS"].presence
     return {} unless raw
@@ -52,6 +56,13 @@ class Provider::Openai < Provider
   end
 
   # Builds a client that uses the effective request timeout for every OpenAI call.
+  # Static extra headers from OPENAI_EXTRA_HEADERS are attached at construction;
+  # session-valued headers are withheld for per-request resolution.
+  #
+  # @param access_token [String] API token for the OpenAI-compatible endpoint
+  # @param uri_base [String, nil] custom endpoint base URL (OpenAI when nil)
+  # @param model [String, nil] default model; required when uri_base is set
+  # @return [void]
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
@@ -404,6 +415,10 @@ class Provider::Openai < Provider
     # request-scoped client copy carrying the resolved headers — session
     # headers must not persist on the shared client, so later batch requests
     # (which reuse this provider instance's client) never see them.
+    #
+    # @param session_id [String, nil] chat session UUID to substitute
+    # @return [OpenAI::Client] scoped copy when session headers apply, otherwise
+    #   the shared client
     def with_session_headers(session_id:)
       return client if @session_extra_headers.blank? || session_id.blank?
 
