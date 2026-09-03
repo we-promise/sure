@@ -13,19 +13,39 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+  # Loans up to 100 years cover any real mortgage, business, or personal loan
+  # term while keeping a rebuild's array allocation, exponentiation, and bulk
+  # insert bounded. Matches the DB check constraint in
+  # db/migrate/20260903150000_add_amortization_bounds_to_loans.rb.
+  MAX_TERM_MONTHS = 1200
+
   has_many :amortizations, class_name: "LoanAmortization", dependent: :destroy
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
+  validates :term_months, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_TERM_MONTHS }, allow_nil: true
+  validates :interest_rate, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }, allow_nil: true
   validate :variable_rate_schedule_entries_are_valid
 
-  after_save :rebuild_amortization_schedule, if: :amortization_inputs_changed?
+  before_validation :quantize_variable_rate_schedule
+
+  after_save :enqueue_amortization_rebuild, if: :amortization_inputs_changed?
 
   def monthly_payment
     amortization_schedule.monthly_payment
   end
 
+  # Memoized per instance (and cleared alongside the calculator cache) so a
+  # single check-then-rebuild cycle reads Account's mutable, unlocked
+  # valuation/currency once and reuses that exact reading everywhere --
+  # otherwise the signature persisted with a schedule could describe a
+  # different balance than the one actually used to calculate it if a
+  # concurrent Account update lands between the two reads.
   def original_balance
-    Money.new(account.first_valuation_amount, account.currency)
+    @original_balance ||= Money.new(account.first_valuation_amount, account.currency)
+  end
+
+  def account_opening_anchor_date
+    @account_opening_anchor_date ||= account.opening_anchor_date
   end
 
   # Recreate the calculator when any Loan or Account input changes. Account
@@ -84,9 +104,9 @@ class Loan < ApplicationRecord
     Digest::SHA256.hexdigest([
       AmortizationSchedule::ALGORITHM_VERSION,
       account.id,
-      account.first_valuation_amount.amount.to_s,
+      original_balance.amount.to_s,
       account.currency,
-      account.opening_anchor_date.to_s,
+      account_opening_anchor_date.to_s,
       interest_rate.to_s,
       term_months.to_s,
       rate_type.to_s,
@@ -102,7 +122,10 @@ class Loan < ApplicationRecord
   end
 
   # Lazily build or replace the persisted schedule when it is missing or stale.
-  # This also removes rows when a loan is no longer amortizable.
+  # This also removes rows when a loan is no longer amortizable. Mutates, so
+  # callers that must not write on a read (e.g. a read-scoped API request)
+  # should use #schedule_current? instead and let the background job handle
+  # regeneration.
   def ensure_amortization_schedule_current!
     with_lock do
       clear_amortization_schedule_cache!
@@ -113,12 +136,18 @@ class Loan < ApplicationRecord
         next
       end
 
-      schedule = amortization_schedule
-      signature = amortization_schedule_signature
-      matching_rows = amortizations.where(schedule_signature: signature).count
-      current = matching_rows == schedule.payment_count && amortizations.count == schedule.payment_count
-      rebuild_amortization_schedule_locked! unless current
+      rebuild_amortization_schedule_locked! unless schedule_current?
     end
+  end
+
+  # Read-only freshness check. `rebuild_amortization_schedule_locked!` always
+  # replaces every row for a loan in one transaction under the same
+  # signature, so the persisted set is current if and only if a row exists
+  # with today's signature -- no need to regenerate the schedule just to
+  # count it. Backed by the existing loan_id+schedule_signature index.
+  def schedule_current?
+    return false unless amortizable?
+    amortizations.exists?(schedule_signature: amortization_schedule_signature)
   end
 
   private
@@ -167,15 +196,37 @@ class Loan < ApplicationRecord
         saved_change_to_variable_rate_schedule?
     end
 
+    # Enqueues instead of rebuilding inline: a rebuild allocates and inserts
+    # up to MAX_TERM_MONTHS rows under a row lock, which shouldn't happen
+    # synchronously inside an ordinary save. Deduped per loan via
+    # sidekiq-unique-jobs, so a burst of saves collapses to one rebuild.
+    def enqueue_amortization_rebuild
+      LoanAmortizationRebuildJob.perform_later(id)
+    end
+
     def normalized_rate(rate)
       BigDecimal(rate.to_s)
     rescue ArgumentError, TypeError
       raise ArgumentError, "variable interest rates must be numeric"
     end
 
+    def quantize_variable_rate_schedule
+      return unless variable_rate_schedule.is_a?(Hash)
+
+      self.variable_rate_schedule = variable_rate_schedule.transform_values do |rate|
+        begin
+          BigDecimal(rate.to_s).round(3).to_f
+        rescue ArgumentError, TypeError
+          rate
+        end
+      end
+    end
+
     def clear_amortization_schedule_cache!
       @amortization_schedule = nil
       @amortization_schedule_signature = nil
+      @original_balance = nil
+      @account_opening_anchor_date = nil
     end
 
     def reset_amortizations_association!
@@ -199,7 +250,11 @@ class Loan < ApplicationRecord
 
         begin
           parsed_rate = BigDecimal(rate.to_s)
-          errors.add(:variable_rate_schedule, "contains a non-numeric rate") unless parsed_rate.finite?
+          if !parsed_rate.finite?
+            errors.add(:variable_rate_schedule, "contains a non-numeric rate")
+          elsif parsed_rate.negative? || parsed_rate > 100
+            errors.add(:variable_rate_schedule, "contains a rate outside the supported 0-100 range")
+          end
         rescue ArgumentError, TypeError
           errors.add(:variable_rate_schedule, "contains a non-numeric rate")
         end

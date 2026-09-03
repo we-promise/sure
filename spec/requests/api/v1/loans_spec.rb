@@ -107,9 +107,10 @@ RSpec.describe 'API V1 Loans', type: :request do
               schema: { type: :string, format: :uuid }
     parameter name: :page, in: :query, required: false,
               description: 'Page number (default: 1, max: 10000)',
-              schema: { type: :integer, minimum: 1, maximum: 10000 }
-    parameter name: :per_page, in: :query, type: :integer, required: false,
-              description: 'Items per page (default: 25, max: 100)'
+              schema: { type: :integer, minimum: 1, maximum: 10000, default: 1 }
+    parameter name: :per_page, in: :query, required: false,
+              description: 'Items per page (default: 25, max: 100). Malformed values (non-numeric, negative, or missing) fall back to the default rather than erroring.',
+              schema: { type: :integer, minimum: 1, maximum: 100, default: 25 }
 
     get 'Get amortization schedule' do
       tags 'Loans'
@@ -141,18 +142,19 @@ RSpec.describe 'API V1 Loans', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient permissions' do
-        schema '$ref' => '#/components/schemas/ErrorResponse'
-
-        let(:id) { inaccessible_loan_account.accountable.id }
-
-        run_test!
-      end
-
       response '404', 'loan not found' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '404', 'loan belongs to another family' do
+        description 'A loan outside the caller\'s family renders the same 404 as a nonexistent id, so a caller cannot enumerate valid ids they do not have access to.'
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { inaccessible_loan_account.accountable.id }
 
         run_test!
       end

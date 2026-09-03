@@ -222,7 +222,7 @@ class Loan
 
       def scheduled_payment_dates
         @scheduled_payment_dates ||= begin
-          date = loan.start_date || loan.account.opening_anchor_date
+          date = loan.start_date || loan.account_opening_anchor_date
           Array.new(loan.term_months) do
             date = date.next_month
           end

@@ -158,13 +158,25 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_not schedule.amortizable?
   end
 
+  test "rejects zero or negative term at the validation layer" do
+    loan = Loan.new(rate_type: "fixed", interest_rate: 3.5, term_months: 0)
+    assert_not loan.valid?
+    assert_includes loan.errors[:term_months], "must be greater than 0"
+  end
+
+  test "rejects a term months beyond the supported maximum" do
+    loan = Loan.new(rate_type: "fixed", interest_rate: 3.5, term_months: Loan::MAX_TERM_MONTHS + 1)
+    assert_not loan.valid?
+    assert_includes loan.errors[:term_months], "must be less than or equal to #{Loan::MAX_TERM_MONTHS}"
+  end
+
   test "schedule is not amortizable for zero term" do
-    zero_term_loan = Account.create! \
+    zero_term_loan = Account.new \
       family: @family,
       name: "Zero Term Loan",
       balance: 500000,
       currency: "USD",
-      accountable: Loan.create!(
+      accountable: Loan.new(
         rate_type: "fixed",
         interest_rate: 3.5,
         term_months: 0

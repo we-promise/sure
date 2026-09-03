@@ -8,22 +8,26 @@ class Api::V1::LoansController < Api::V1::BaseController
 
   # GET /api/v1/loans/:id/amortization_schedule
   # Returns the amortization schedule for a loan with pagination support.
-  # Reads from the persisted, indexed amortizations table rather than
-  # recomputing (and slicing) the full in-memory schedule on every request,
-  # so cost scales with the requested page rather than the loan's term.
+  # Strictly read-only: a read-scoped credential must never trigger a write,
+  # so this never calls Loan#ensure_amortization_schedule_current! (which can
+  # delete/insert rows). It reads whatever is persisted, reports whether that
+  # matches the loan's current inputs via `status`, and enqueues a background
+  # rebuild when it doesn't -- the next request (from anyone) picks up the
+  # fresh schedule once the job has run.
   def amortization_schedule
-    @loan.ensure_amortization_schedule_current!
-
     unless @loan.amortizable?
       return render json: { error: "not_amortizable", message: "Loan is not amortizable" }, status: :unprocessable_entity
     end
+
+    status = amortization_schedule_status
+    LoanAmortizationRebuildJob.perform_later(@loan.id) unless status == "current"
 
     limit = safe_per_page_param
     offset = (safe_page_param - 1) * limit
 
     render :amortization_schedule, locals: {
       loan: @loan,
-      schedule: @loan.amortization_schedule,
+      status: status,
       payments: @loan.amortizations.ordered.offset(offset).limit(limit),
       total_count: @loan.amortizations.count,
       limit: limit,
@@ -35,30 +39,27 @@ class Api::V1::LoansController < Api::V1::BaseController
 
   private
 
-    # Load and authorize the loan, stopping immediately on auth failure.
-    # Validates UUID shape before querying so a malformed :id renders a normal
-    # 404 instead of an unhandled 500 from an invalid Postgres UUID literal.
+    def amortization_schedule_status
+      return "current" if @loan.schedule_current?
+      @loan.amortizations.exists? ? "stale" : "missing"
+    end
+
+    # Load and authorize the loan in one scoped lookup so an inaccessible
+    # loan is indistinguishable from a nonexistent one -- an unscoped find
+    # followed by a separate authorization check would return 404 vs 403
+    # depending on whether the id merely exists, letting a caller enumerate
+    # valid loan ids they don't have access to.
     def set_loan
       unless valid_uuid?(params[:id])
         return render json: { error: "not_found", message: "Loan not found" }, status: :not_found
       end
 
-      @loan = Loan.find(params[:id])
-      if authorize_account!(@loan.account)
-        @loan
-      else
-        render json: { error: "unauthorized", message: "Access denied" }, status: :forbidden
-      end
+      @loan = Loan.joins(:account).find_by!(
+        id: params[:id],
+        accounts: { id: current_resource_owner.family.accounts.accessible_by(current_resource_owner) }
+      )
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Loan not found" }, status: :not_found
-    end
-
-    # Check if current user can access the given account. Returns boolean instead of rendering.
-    def authorize_account!(account)
-      current_resource_owner.family.accounts
-        .accessible_by(current_resource_owner)
-        .where(id: account&.id)
-        .exists?
     end
 
     # Ensure the API key has read scope

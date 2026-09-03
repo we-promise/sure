@@ -1,6 +1,8 @@
 require "test_helper"
 
 class LoanTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   test "rejects invalid subtype" do
     loan = Loan.new(subtype: "invalid")
 
@@ -14,6 +16,39 @@ class LoanTest < ActiveSupport::TestCase
     assert_not loan.valid?
     assert_includes loan.errors[:variable_rate_schedule], "contains an invalid effective date"
     assert_includes loan.errors[:variable_rate_schedule], "contains a non-numeric rate"
+  end
+
+  test "rejects a variable rate schedule entry outside the supported range" do
+    loan = Loan.new(variable_rate_schedule: { "2027-01-01" => -1, "2028-01-01" => 250 })
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:variable_rate_schedule], "contains a rate outside the supported 0-100 range"
+  end
+
+  test "quantizes variable rate schedule entries to 3 decimal places" do
+    loan = Loan.new(rate_type: "variable", variable_rate_schedule: { "2027-01-01" => 5.123456 })
+    assert loan.valid?
+    assert_equal 5.123, loan.variable_rate_schedule["2027-01-01"]
+  end
+
+  test "rejects term months outside the supported range" do
+    loan = Loan.new(term_months: 0)
+    assert_not loan.valid?
+    assert_includes loan.errors[:term_months], "must be greater than 0"
+
+    loan = Loan.new(term_months: Loan::MAX_TERM_MONTHS + 1)
+    assert_not loan.valid?
+    assert_includes loan.errors[:term_months], "must be less than or equal to #{Loan::MAX_TERM_MONTHS}"
+  end
+
+  test "rejects an interest rate outside the supported range" do
+    loan = Loan.new(interest_rate: -1)
+    assert_not loan.valid?
+    assert_includes loan.errors[:interest_rate], "must be greater than or equal to 0"
+
+    loan = Loan.new(interest_rate: 101)
+    assert_not loan.valid?
+    assert_includes loan.errors[:interest_rate], "must be less than or equal to 100"
   end
 
   test "calculates correct monthly payment for fixed rate loan" do
@@ -100,7 +135,7 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 0, loan.amortizations.count
   end
 
-  test "rebuild_amortization_schedule is triggered automatically when terms change" do
+  test "an amortization rebuild is enqueued (not run inline) when terms change" do
     loan_account = Account.create! \
       family: families(:dylan_family),
       name: "Mortgage Loan",
@@ -116,7 +151,12 @@ class LoanTest < ActiveSupport::TestCase
     loan = loan_account.loan
     assert_equal 0, loan.amortizations.count
 
-    loan.update!(interest_rate: 4.0)
+    assert_enqueued_with(job: LoanAmortizationRebuildJob, args: [ loan.id ]) do
+      loan.update!(interest_rate: 4.0)
+    end
+    assert_equal 0, loan.amortizations.count, "the save itself must not synchronously build the schedule"
+
+    perform_enqueued_jobs
     assert_equal 360, loan.amortizations.count
   end
 
@@ -137,7 +177,9 @@ class LoanTest < ActiveSupport::TestCase
     loan.rebuild_amortization_schedule
     assert_equal 360, loan.amortizations.count
 
-    loan.update!(interest_rate: nil)
+    perform_enqueued_jobs do
+      loan.update!(interest_rate: nil)
+    end
 
     assert_equal 0, loan.amortizations.count
   end

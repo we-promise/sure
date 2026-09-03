@@ -1756,7 +1756,7 @@ RSpec.configure do |config|
               interest_payment: { type: :string },
               beginning_balance: { type: :string },
               ending_balance: { type: :string },
-              interest_rate: { type: :number, description: 'Rate effective for this payment, as a percentage (e.g. 3.5 for 3.5%)' }
+              interest_rate: { type: :string, description: 'Rate effective for this payment, as a decimal percentage string (e.g. "3.500" for 3.5%)' }
             }
           },
           AmortizationScheduleResponse: {
@@ -1771,7 +1771,7 @@ RSpec.configure do |config|
                   account_id: { type: :string, format: :uuid },
                   name: { type: :string },
                   rate_type: { type: :string, enum: %w[fixed variable] },
-                  interest_rate: { type: :number },
+                  interest_rate: { type: :string, description: 'Base rate as a decimal percentage string (e.g. "3.500" for 3.5%)' },
                   term_months: { type: :integer, minimum: 1 },
                   original_balance: { type: :string },
                   currency: { type: :string },
@@ -1785,11 +1785,16 @@ RSpec.configure do |config|
               },
               schedule: {
                 type: :object,
-                required: %w[monthly_payment total_interest total_cost payoff_date payment_count has_rate_changes],
+                required: %w[status monthly_payment total_interest total_cost payoff_date payment_count has_rate_changes],
                 properties: {
-                  monthly_payment: { type: :string },
-                  total_interest: { type: :string },
-                  total_cost: { type: :string },
+                  status: {
+                    type: :string,
+                    enum: %w[current stale missing],
+                    description: 'Freshness of the persisted schedule relative to the loan\'s current inputs. "current" means the payments below reflect the loan as it stands now. "stale" means the loan changed since these payments were built and a rebuild has been enqueued -- the payments shown are the last successfully built schedule. "missing" means no schedule has ever been built yet; a rebuild has been enqueued and the payments array is empty. This endpoint never rebuilds synchronously, so a read-scoped API key can never trigger a write.'
+                  },
+                  monthly_payment: { type: :string, nullable: true },
+                  total_interest: { type: :string, nullable: true },
+                  total_cost: { type: :string, nullable: true },
                   payoff_date: { type: :string, format: :date, nullable: true },
                   payment_count: { type: :integer, minimum: 0 },
                   has_rate_changes: { type: :boolean, description: 'True for variable-rate loans with at least one recorded rate change.' }

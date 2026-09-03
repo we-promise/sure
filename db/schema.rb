@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_31_160656) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1320,6 +1320,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160656) do
     t.index ["loan_id", "payment_number"], name: "index_loan_amortizations_on_loan_id_and_payment_number", unique: true
     t.index ["loan_id", "schedule_signature"], name: "index_loan_amortizations_on_loan_id_and_schedule_signature"
     t.index ["loan_id"], name: "index_loan_amortizations_on_loan_id"
+    t.check_constraint "beginning_balance >= 0::numeric", name: "chk_loan_amortizations_beginning_balance_non_negative"
+    t.check_constraint "ending_balance >= 0::numeric", name: "chk_loan_amortizations_ending_balance_non_negative"
+    t.check_constraint "interest_payment >= 0::numeric", name: "chk_loan_amortizations_interest_payment_non_negative"
+    t.check_constraint "interest_rate >= 0::numeric AND interest_rate <= 100::numeric", name: "chk_loan_amortizations_interest_rate_bounds"
+    t.check_constraint "payment_amount >= 0::numeric", name: "chk_loan_amortizations_payment_amount_non_negative"
+    t.check_constraint "payment_number > 0", name: "chk_loan_amortizations_payment_number_positive"
+    t.check_constraint "principal_payment >= 0::numeric", name: "chk_loan_amortizations_principal_payment_non_negative"
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1333,6 +1340,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_31_160656) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
+    t.check_constraint "interest_rate IS NULL OR interest_rate >= 0::numeric AND interest_rate <= 100::numeric", name: "chk_loans_interest_rate_bounds"
+    t.check_constraint "term_months IS NULL OR term_months > 0 AND term_months <= 1200", name: "chk_loans_term_months_bounds"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
