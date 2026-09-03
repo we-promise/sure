@@ -586,6 +586,24 @@ class TransactionsController < ApplicationController
       @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
       @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
+      @recent_transaction_names = recent_transaction_names
+    end
+
+    # Autocomplete suggestions for the name field, only queried when the
+    # auto-generate setting is on: lets a user reuse an actual previous name
+    # instead of leaving the field blank (which would produce a generic
+    # fallback), the same way it curbs bulk-identical generated names.
+    def recent_transaction_names
+      return [] unless Current.family.auto_generate_transaction_names?
+
+      Entry.family_scope(Current.family)
+        .where(entryable_type: "Transaction")
+        .where.not(name: I18n.t("transactions.unknown_name"))
+        .order(created_at: :desc)
+        .limit(200)
+        .pluck(:name)
+        .uniq
+        .first(20)
     end
 
     # Filters entry_params based on the user's permission on the account.

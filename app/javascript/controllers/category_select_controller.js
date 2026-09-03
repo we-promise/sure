@@ -123,6 +123,7 @@ export default class extends Controller {
     });
 
     this.hiddenInputTarget.value = id;
+    this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }));
 
     const badge = option.querySelector("[data-category-select-badge]");
 

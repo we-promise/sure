@@ -1,6 +1,7 @@
-<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
+<%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:, recent_transaction_names: []) %>
+<% auto_generate_names = Current.family.auto_generate_transaction_names? %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: auto_generate_names ? "transaction-form transaction-name-preview" : "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json, transaction_name_preview_unknown_label_value: t("transactions.unknown_name") } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
@@ -13,7 +14,19 @@
   </section>
 
   <section class="space-y-2">
-    <%= f.text_field :name, label: t(".description"), placeholder: t(".description_placeholder"), required: true %>
+    <%= f.text_field :name, label: t(".description"),
+      placeholder: auto_generate_names ? t(".description_placeholder_optional") : t(".description_placeholder"),
+      required: !auto_generate_names,
+      list: auto_generate_names ? "transaction_name_suggestions" : nil,
+      data: { transaction_name_preview_target: "name" } %>
+
+    <% if auto_generate_names && recent_transaction_names.present? %>
+      <datalist id="transaction_name_suggestions">
+        <% recent_transaction_names.each do |name| %>
+          <option value="<%= name %>">
+        <% end %>
+      </datalist>
+    <% end %>
 
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>

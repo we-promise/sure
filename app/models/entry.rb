@@ -34,6 +34,10 @@ class Entry < ApplicationRecord
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
 
+  before_validation :set_default_name, if: -> {
+    name.blank? && entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
+  }
+
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
   scope :visible, -> {
@@ -298,6 +302,22 @@ class Entry < ApplicationRecord
 
   def entryable_name_short
     entryable_type.demodulize.underscore
+  end
+
+  # True when this entry's name isn't distinguishing on its own -- either it's
+  # the auto-generated fallback label, or it just repeats the entryable's own
+  # category name. Used to keep name-based grouping/matching (Quick Categorize,
+  # recurring smart-fill evidence) from treating unrelated transactions that
+  # happen to share a generic name as if they were the same thing.
+  def generic_name?
+    return false if name.blank?
+
+    normalized = name.strip
+    return true if normalized.casecmp?(I18n.t("transactions.unknown_name"))
+    return false unless entryable_type == "Transaction"
+
+    category_name = entryable.category&.name
+    category_name.present? && normalized.casecmp?(category_name)
   end
 
   def balance_trend(entries, balances)
@@ -580,5 +600,11 @@ class Entry < ApplicationRecord
       return if destroyed_by_association || unsplitting
 
       throw :abort
+    end
+
+    def set_default_name
+      self.name = entryable.merchant&.name.presence ||
+                   entryable.category&.name.presence ||
+                   I18n.t("transactions.unknown_name")
     end
 end

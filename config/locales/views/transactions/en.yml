@@ -38,6 +38,7 @@ en:
       date: Date
       description: Description
       description_placeholder: Describe transaction
+      description_placeholder_optional: Leave blank to use the merchant or category name
       expense: Expense
       income: Income
       merchant_label: Merchant
