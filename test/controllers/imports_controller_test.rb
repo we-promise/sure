@@ -327,8 +327,8 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_member)
     patch import_url(pdf_import), params: { import: { account_id: account.id } }
 
-    assert_redirected_to account_url(account)
-    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_redirected_to import_url(pdf_import)
+    assert_equal I18n.t("imports.update.invalid_account", default: "Account not found."), flash[:alert]
     assert_nil pdf_import.reload.account
     assert_nil statement.reload.account
   end

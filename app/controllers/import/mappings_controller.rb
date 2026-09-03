@@ -24,7 +24,11 @@ class Import::MappingsController < ApplicationController
     def mappable
       return nil unless mappable_class.present?
 
-      @mappable ||= mappable_class.find_by(id: mapping_params[:mappable_id], family: Current.family)
+      if mappable_class == Account
+        Import::AccountMapping.importable_accounts(@import).find_by(id: mapping_params[:mappable_id])
+      else
+        mappable_class.find_by(id: mapping_params[:mappable_id], family: Current.family)
+      end
     end
 
     def create_when_empty

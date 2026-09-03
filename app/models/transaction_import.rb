@@ -33,24 +33,37 @@ class TransactionImport < Import
         # Check for duplicate transactions using the adapter's deduplication logic
         # Pass claimed_entry_ids to exclude entries we've already matched in this import
         # This ensures identical rows within the CSV are all imported as separate transactions
+        #
+        # Only rows carrying a real CSV name may claim a provider-synced entry.
+        # A blank name cell falls back to default_row_name, so row.name is never
+        # actually blank -- gating on presence alone would always be true and let
+        # a placeholder row match a provider entry on date+amount+placeholder.
+        # Named rows still skip already-synced overlap (Enable Banking's ~90-day
+        # window); placeholder rows only reconcile against manual/CSV entries.
         adapter = Account::ProviderImportAdapter.new(mapped_account)
         duplicate_entry = adapter.find_duplicate_transaction(
           date: row.date_iso,
           amount: row.signed_amount,
           currency: effective_currency,
           name: row.name,
-          exclude_entry_ids: claimed_entry_ids
+          exclude_entry_ids: claimed_entry_ids,
+          include_provider_entries: csv_provided_name?(row)
         )
 
         if duplicate_entry
-          # Update existing transaction instead of creating a new one
+          claimed_entry_ids.add(duplicate_entry.id)
+
+          # Already synced from a provider — skip creating a CSV duplicate and
+          # do not mark the provider-owned row import_locked.
+          next if duplicate_entry.external_id.present?
+
+          # Update existing manual/CSV transaction instead of creating a new one
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
           duplicate_entry.import = self
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
-          claimed_entry_ids.add(duplicate_entry.id)
         else
           # Create new transaction (no duplicate found)
           # Mark as import_locked to protect from provider sync overwrites
@@ -116,4 +129,30 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  private
+    # True when the row's name came from the CSV rather than the
+    # default_row_name placeholder substituted for a blank cell. A row whose
+    # name cell literally holds the placeholder text still counts as provided,
+    # so it reconciles against provider-synced history like any other named row.
+    def csv_provided_name?(row)
+      return false if row.name.blank?
+      return true unless row.name == default_row_name
+
+      csv_name_cells[row.source_row_number].present?
+    end
+
+    # Maps source_row_number (1-based, assigned in Import#generate_rows_from_csv)
+    # to the raw name cell, so a supplied placeholder is distinguishable from a
+    # blank one. Empty without a CSV behind the import, which keeps the
+    # conservative "not provided" answer.
+    def csv_name_cells
+      @csv_name_cells ||= if raw_file_str.blank?
+        {}
+      else
+        csv_rows.each_with_index.to_h do |csv_row, index|
+          [ index + 1, csv_value(csv_row, name_col_label, "name") ]
+        end
+      end
+    end
 end

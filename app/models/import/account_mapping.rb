@@ -4,14 +4,38 @@ class Import::AccountMapping < Import::Mapping
   class << self
     def mappables_by_key(import)
       unique_values = import.rows.map(&:account).uniq
-      accounts = import.family.accounts.where(name: unique_values).index_by(&:name)
+      accounts = importable_accounts(import).where(name: unique_values).index_by(&:name)
 
       unique_values.index_with { |value| accounts[value] }
+    end
+
+    # Writable accounts the current user may target for this import.
+    # Linked (provider-managed) accounts are only offered for import types that
+    # reconcile against provider-synced rows (TransactionImport). TradeImport
+    # inserts unconditionally and would duplicate Plaid/Questrade trades.
+    def importable_accounts(import)
+      account_scope(
+        family: import.family,
+        user: Current.user,
+        allow_linked: allows_linked_account_targets?(import)
+      )
+    end
+
+    def account_scope(family:, user: nil, allow_linked: false)
+      scope = family.accounts
+      scope = scope.writable_by(user) if user
+      return scope if allow_linked
+
+      scope.where(id: family.accounts.manual.select(:id))
+    end
+
+    def allows_linked_account_targets?(import)
+      import.is_a?(TransactionImport)
     end
   end
 
   def selectable_values
-    family_accounts = import.family.accounts.manual.alphabetically.map { |account| [ account.name, account.id ] }
+    family_accounts = self.class.importable_accounts(import).visible.alphabetically.map { |account| [ account.name, account.id ] }
 
     unless key.blank?
       family_accounts.unshift [ "Add as new account", CREATE_NEW_KEY ]

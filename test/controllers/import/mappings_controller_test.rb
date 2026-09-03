@@ -26,4 +26,75 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to import_confirm_path(@import)
   end
+
+  test "account mapping lists connected accounts as targets" do
+    @import.update!(
+      raw_file_str: <<~CSV,
+        date,amount,account
+        #{Date.current.iso8601},25,Imported Checking
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d"
+    )
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    get import_confirm_path(@import, step: 3)
+
+    assert_response :success
+    assert_select "select option[value='#{accounts(:connected).id}']", text: "Plaid Depository Account"
+  end
+
+  test "account mapping excludes accounts the user cannot write" do
+    sign_in users(:family_member)
+
+    @import.update!(
+      raw_file_str: <<~CSV,
+        date,amount,account
+        #{Date.current.iso8601},25,Credit Card
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d"
+    )
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    get import_confirm_path(@import, step: 3)
+
+    assert_response :success
+    assert_select "select option", text: "Add as new account"
+    assert_select "select option", text: "Credit Card", count: 0
+  end
+
+  test "trade import account mapping excludes linked accounts without reconciliation" do
+    linked = accounts(:connected)
+    assert linked.linked?
+
+    trade_import = imports(:trade)
+    trade_import.update!(
+      raw_file_str: <<~CSV,
+        date,ticker,qty,price,account
+        #{Date.current.iso8601},AAPL,1,100,#{linked.name}
+      CSV
+      date_col_label: "date",
+      ticker_col_label: "ticker",
+      qty_col_label: "qty",
+      price_col_label: "price",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d"
+    )
+    trade_import.generate_rows_from_csv
+    trade_import.sync_mappings
+
+    get import_confirm_path(trade_import, step: 1)
+
+    assert_response :success
+    assert_select "select option", text: "Add as new account"
+    assert_select "select option[value='#{linked.id}']", count: 0
+    assert_nil trade_import.mappings.accounts.find_by(key: linked.name)&.mappable
+  end
 end

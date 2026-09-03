@@ -272,6 +272,154 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal 2, account.entries.where(date: Date.new(2024, 1, 1), amount: 100).count
   end
 
+  test "skips CSV rows that already exist as provider-synced transactions" do
+    account = accounts(:connected)
+    assert account.linked?
+
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      external_id: "enablebanking_txn_1",
+      source: "enable_banking",
+      entryable: Transaction.new
+    )
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,Coffee Shop,100
+      01/02/2024,Older History,50
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 1,
+                      -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    existing_entry.reload
+    assert_equal "enablebanking_txn_1", existing_entry.external_id
+    assert_nil existing_entry.import_id
+    assert_not existing_entry.import_locked?
+    assert account.entries.exists?(date: Date.new(2024, 1, 2), name: "Older History", import_locked: true)
+  end
+
+  # A blank name cell is replaced by Import#default_row_name ("Imported item"),
+  # so the placeholder is what reaches dedupe. Naming the provider entry with the
+  # same placeholder is the only way date+amount+name can collide, and it is the
+  # case the csv_provided_name? gate exists to stop.
+  test "placeholder-name CSV rows do not claim provider-synced transactions" do
+    account = accounts(:connected)
+    assert account.linked?
+
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: @import.send(:default_row_name),
+      external_id: "enablebanking_txn_blank_name",
+      source: "enable_banking",
+      entryable: Transaction.new
+    )
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,,100
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 1,
+                      -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    existing_entry.reload
+    assert_equal "enablebanking_txn_blank_name", existing_entry.external_id
+    assert_nil existing_entry.import_id
+    assert_not existing_entry.import_locked?
+    assert account.entries.exists?(date: Date.new(2024, 1, 1), amount: 100, import_locked: true, external_id: nil)
+  end
+
+  # The inverse of the placeholder case: a CSV that literally supplies the
+  # default_row_name text is a real name, so it must still reconcile against
+  # provider-synced history instead of creating a duplicate.
+  test "CSV rows naming the placeholder literally still claim provider-synced transactions" do
+    account = accounts(:connected)
+    assert account.linked?
+
+    literal_name = @import.send(:default_row_name)
+
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: literal_name,
+      external_id: "enablebanking_txn_literal_name",
+      source: "enable_banking",
+      entryable: Transaction.new
+    )
+
+    import_csv = <<~CSV
+      date,name,amount
+      01/01/2024,#{literal_name},100
+      01/02/2024,Older History,50
+    CSV
+
+    @import.update!(
+      account: account,
+      raw_file_str: import_csv,
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    # Only the older row is new; the placeholder-named row matches the synced entry.
+    assert_difference -> { Entry.count } => 1,
+                      -> { Transaction.count } => 1 do
+      @import.publish
+    end
+
+    existing_entry.reload
+    assert_equal "enablebanking_txn_literal_name", existing_entry.external_id
+    assert_nil existing_entry.import_id
+    assert_not existing_entry.import_locked?
+    assert_equal 1, account.entries.where(date: Date.new(2024, 1, 1), amount: 100, name: literal_name).count
+    assert account.entries.exists?(date: Date.new(2024, 1, 2), name: "Older History", import_locked: true)
+  end
+
   test "imports all identical transactions from CSV even when one exists in database" do
     account = accounts(:depository)
 
