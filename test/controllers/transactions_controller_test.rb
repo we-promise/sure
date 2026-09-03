@@ -73,14 +73,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }, as: :turbo_stream
 
     assert_response :success
-    assert_match new_rule_path(resource_type: "transaction", name: merchants(:amazon).name, merchant_id: merchants(:amazon).id), response.body
-    assert_no_match new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id), response.body
+    assert_select "turbo-stream[target='#{dom_id(entry, :create_rule)}']" do
+      assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:amazon).name, merchant_id: merchants(:amazon).id)
+      assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id), false
+    end
   end
 
   test "create rule link is repopulated when an update fails validation" do
     entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
 
-    patch transaction_url(entry), params: { entry: { date: nil } }, as: :turbo_stream
+    patch transaction_url(entry), params: { entry: { name: "" } }, as: :turbo_stream
 
     assert_response :unprocessable_entity
     assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id)
