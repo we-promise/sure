@@ -59,7 +59,9 @@ class Provider::Openai < Provider
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = self.class.request_timeout
     parsed_headers = self.class.extra_headers
-    client_options[:extra_headers] = parsed_headers if parsed_headers.present?
+    @session_extra_headers = parsed_headers.select { |_, value| value.include?("{session_id}") }
+    static_headers = parsed_headers.except(*@session_extra_headers.keys)
+    client_options[:extra_headers] = static_headers if static_headers.present?
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
@@ -396,6 +398,18 @@ class Provider::Openai < Provider
   private
     attr_reader :client
 
+    # Substitutes {session_id} into session-valued extra headers and merges
+    # them onto the client for this chat request. Static headers were already
+    # set at construction; a session header without a session_id is simply
+    # never merged (a merge can only add/overwrite, never delete).
+    def apply_session_headers(session_id:)
+      return if @session_extra_headers.blank? || session_id.blank?
+
+      client.add_headers(
+        @session_extra_headers.transform_values { |value| value.gsub("{session_id}") { session_id } }
+      )
+    end
+
     # Returns the first positive integer among env, setting, default. Treats
     # zero or negative values as "unset" and falls through — a 0-token budget
     # is never what the user meant.
@@ -433,6 +447,8 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
+        apply_session_headers(session_id: session_id)
+
         chat_config = ChatConfig.new(
           functions: functions,
           function_results: function_results
@@ -541,6 +557,8 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
+        apply_session_headers(session_id: session_id)
+
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,

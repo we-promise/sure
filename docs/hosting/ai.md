@@ -120,7 +120,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 # OPENAI_REQUEST_TIMEOUT=60
 
 # Optional: extra HTTP headers as a JSON object (see "Extra HTTP Headers" below)
-# OPENAI_EXTRA_HEADERS='{"x-session":"<value>"}'
+# OPENAI_EXTRA_HEADERS='{"x-opencode-session":"{session_id}"}'
 ```
 
 **Recommended models:**
@@ -178,12 +178,19 @@ to a JSON object mapping header names to values:
 
 ```bash
 # Single-quoted so the shell does not interpret braces or quotes.
-OPENAI_EXTRA_HEADERS='{"x-session":"b3f1c2d4-0000-0000-0000-000000000000"}'
+# A value containing the literal {session_id} is replaced with the chat's UUID
+# on each chat request, identifying the conversation rather than the install.
+OPENAI_EXTRA_HEADERS='{"x-opencode-session":"{session_id}"}'
+
+# Static value instead — sent on every OpenAI-provider request, including
+# batch jobs (auto-categorize, merchant detection, PDF processing):
+OPENAI_EXTRA_HEADERS='{"x-opencode-session":"b3f1c2d4-0000-0000-0000-000000000000"}'
 ```
 
 Behavior:
 
-- Extra headers are attached to **all requests** made by the OpenAI-compatible provider's client — chat and batch flows (auto-categorize, merchant detection, PDF processing) alike.
+- A value containing the literal `{session_id}` is substituted with the chat's UUID on each chat request, so requests are attributable per conversation. Batch flows only receive static (non-`{session_id}`) headers, because a session only exists for a chat. If your gateway requires the header on every endpoint, use a static value.
+- Extra headers are attached to **chat requests** made by the OpenAI-compatible provider. Batch flows (auto-categorize, merchant detection, PDF processing) only receive static headers.
 - Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
 - User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
 - Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.

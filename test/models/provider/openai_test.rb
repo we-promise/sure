@@ -85,9 +85,87 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   test "extra headers knob is documented in hosting docs and env examples" do
     doc = Rails.root.join("docs/hosting/ai.md").read
     assert_includes doc, "OPENAI_EXTRA_HEADERS"
+    assert_includes doc, "{session_id}"
 
     assert_includes Rails.root.join(".env.example").read, "OPENAI_EXTRA_HEADERS"
     assert_includes Rails.root.join(".env.local.example").read, "OPENAI_EXTRA_HEADERS"
+  end
+
+  test "client construction receives static extra_headers only; session values withheld" do
+    with_env_overrides(
+      "OPENAI_REQUEST_TIMEOUT" => nil,
+      "OPENAI_EXTRA_HEADERS" => '{"X-Static":"1","x-opencode-session":"sess-{session_id}"}'
+    ) do
+      Setting.stubs(:openai_request_timeout).returns(nil)
+      ::OpenAI::Client.expects(:new).with(
+        access_token: "test-token",
+        request_timeout: 60,
+        extra_headers: { "X-Static" => "1" }
+      ).returns(mock)
+
+      Provider::Openai.new("test-token")
+    end
+  end
+
+  test "session headers substitute the chat id and merge onto the client" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}","X-Static":"1"}') do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      fake_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      subject.stubs(:client).returns(fake_client)
+
+      subject.send(:apply_session_headers, session_id: "chat-42")
+    end
+  end
+
+  test "session headers are absent from the request when no session_id is given" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      fake_client.expects(:add_headers).never
+      subject.stubs(:client).returns(fake_client)
+
+      subject.send(:apply_session_headers, session_id: nil)
+    end
+  end
+
+  test "native chat path resolves session headers onto the client" do
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}') do
+      subject = Provider::Openai.new("test-token")
+      fake_responses = mock
+      fake_client = mock
+      fake_client.stubs(:responses).returns(fake_responses)
+      fake_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      fake_responses.stubs(:create).returns(
+        { "id" => "resp_1", "model" => "gpt-4.1", "output" => [], "usage" => { "total_tokens" => 1 } }
+      )
+      subject.stubs(:client).returns(fake_client)
+
+      response = subject.chat_response("hi", model: "gpt-4.1", session_id: "chat-42")
+
+      assert response.success?
+    end
+  end
+
+  test "generic chat path resolves session headers onto the client" do
+    with_env_overrides(
+      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "false",
+      "OPENAI_EXTRA_HEADERS" => '{"x-opencode-session":"sess-{session_id}"}'
+    ) do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      fake_client.expects(:add_headers).with({ "x-opencode-session" => "sess-chat-42" })
+      fake_client.stubs(:chat).returns(
+        { "id" => "resp_1", "model" => "gpt-4.1", "choices" => [ { "message" => { "content" => "Yes" } } ],
+          "usage" => { "total_tokens" => 1 } }
+      )
+      subject.stubs(:client).returns(fake_client)
+
+      response = subject.chat_response("hi", model: "gpt-4.1", session_id: "chat-42")
+
+      assert response.success?
+      assert_equal "Yes", response.data.messages.first.output_text
+    end
   end
 
   test "openai errors are automatically raised" do
