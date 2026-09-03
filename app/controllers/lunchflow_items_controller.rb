@@ -120,7 +120,7 @@ class LunchflowItemsController < ApplicationController
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      @error_message = t("lunchflow_items.api_error.unexpected_error")
       @return_path = safe_return_to_path
       render partial: "lunchflow_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
@@ -324,7 +324,7 @@ class LunchflowItemsController < ApplicationController
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      @error_message = t("lunchflow_items.api_error.unexpected_error")
       render partial: "lunchflow_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
              layout: false
