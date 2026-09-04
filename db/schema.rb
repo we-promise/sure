@@ -577,6 +577,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.datetime "created_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
+    t.decimal "fixed_return_rate", precision: 10, scale: 3
+    t.string "fixed_return_frequency"
+    t.date "fixed_return_start_date"
     t.datetime "updated_at", null: false
   end
 
