@@ -99,3 +99,53 @@ crypto:
   accountable_type: Crypto
   accountable: one
   status: active
+
+characterization_fixed:
+  family: dylan_family
+  owner: family_admin
+  name: Characterization Fixed Loan
+  balance: 1000
+  currency: USD
+  accountable_type: Loan
+  accountable: characterization_fixed
+  status: active
+
+characterization_variable:
+  family: dylan_family
+  owner: family_admin
+  name: Characterization Variable Loan
+  balance: 1000
+  currency: USD
+  accountable_type: Loan
+  accountable: characterization_variable
+  status: active
+
+characterization_zero_interest:
+  family: dylan_family
+  owner: family_admin
+  name: Characterization Zero Interest Loan
+  balance: 100
+  currency: USD
+  accountable_type: Loan
+  accountable: characterization_zero_interest
+  status: active
+
+characterization_short:
+  family: dylan_family
+  owner: family_admin
+  name: Characterization Short Loan
+  balance: 1000
+  currency: USD
+  accountable_type: Loan
+  accountable: characterization_short
+  status: active
+
+characterization_month_end:
+  family: dylan_family
+  owner: family_admin
+  name: Characterization Month End Loan
+  balance: 100
+  currency: USD
+  accountable_type: Loan
+  accountable: characterization_month_end
+  status: active

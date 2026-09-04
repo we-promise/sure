@@ -2,3 +2,36 @@ one:
   interest_rate: 3.5
   term_months: 360
   rate_type: fixed
+
+characterization_fixed:
+  interest_rate: 12
+  term_months: 3
+  rate_type: fixed
+  start_date: 2024-01-15
+
+characterization_variable:
+  interest_rate: 0
+  term_months: 3
+  rate_type: variable
+  start_date: 2024-01-01
+  variable_rate_schedule:
+    2024-03-01: 12
+    2024-04-01: 0
+
+characterization_zero_interest:
+  interest_rate: 0
+  term_months: 3
+  rate_type: fixed
+  start_date: 2024-01-01
+
+characterization_short:
+  interest_rate: 12
+  term_months: 1
+  rate_type: fixed
+  start_date: 2024-01-15
+
+characterization_month_end:
+  interest_rate: 0
+  term_months: 3
+  rate_type: fixed
+  start_date: 2024-01-31

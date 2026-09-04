@@ -1,7 +1,7 @@
 class Loan
   # Calculates amortization schedules for loans using the constant-payment method
   class AmortizationSchedule
-    ALGORITHM_VERSION = 2
+    ALGORITHM_VERSION = 3
 
     attr_reader :loan
 
@@ -123,103 +123,42 @@ class Loan
       # Generate the complete amortization schedule using the constant-payment method
       # For variable-rate loans, applies rate changes on their effective dates
       def generate_schedule
-        schedule = []
-        balance = loan.original_balance.amount
         payment_dates = scheduled_payment_dates
+        rate_resolver = RateResolver.for(loan)
 
-        # Build segments from actual payment dates. A rate change between two
-        # payments affects the next payment, but does not create a synthetic
-        # payment period of its own.
-        segments = build_rate_segments(payment_dates)
-
-        payment_num = 1
-        segments.each do |segment|
-          # Amortize over the payments remaining through loan maturity, not just
-          # this segment's own length -- otherwise a segment before the last one
-          # gets treated as if the loan ended when the rate changes again, which
-          # produces a payment far larger than the correct level payment.
-          remaining_payments = loan.term_months - payment_num + 1
-          segment_payment = calculate_segment_payment(segment, balance, remaining_payments)
-
-          segment[:payment_count].times do
-            break if balance <= 0
-
-            # Use the rate already computed for this segment
-            monthly_rate = (segment[:rate] / BigDecimal("100")) / BigDecimal("12")
-
-            interest = (balance * monthly_rate).round(currency_precision)
-            principal = segment_payment - interest
-
-            # On final payment, adjust principal to exactly clear the balance
-            if payment_num == loan.term_months
-              principal = balance
-            end
-
-            ending_balance = (balance - principal).round(currency_precision)
-            ending_balance = BigDecimal(0) if ending_balance < 0
-
-            # Recalculate payment_amount on final payment to match principal + interest after rounding
-            payment_amount = if payment_num == loan.term_months
-              (principal + interest).round(currency_precision)
-            else
-              segment_payment.round(currency_precision)
-            end
-
-            schedule << {
-              payment_number: payment_num,
-              payment_date: payment_dates[payment_num - 1],
-              payment_amount: payment_amount,
-              principal_payment: principal.round(currency_precision),
-              interest_payment: interest.round(currency_precision),
-              beginning_balance: balance.round(currency_precision),
-              ending_balance: ending_balance,
-              interest_rate: segment[:rate]
-            }
-
-            balance = ending_balance
-            payment_num += 1
-
-            break if balance <= 0
-          end
-        end
-
-        schedule
+        Simulator.new(
+          starting_balance: loan.original_balance.amount,
+          starting_balance_as_of: loan.start_date || loan.account_opening_anchor_date,
+          accrual_start_date: loan.start_date || loan.account_opening_anchor_date,
+          payment_schedule: payment_dates,
+          accrual_rate_for: rate_resolver.method(:accrual_rate_for),
+          re_amortisation_events: rate_resolver.method(:re_amortisation_events),
+          payment_strategy: :reamortize,
+          payment_amount_for: ->(rate:, balance:, remaining_payments:, **_kwargs) {
+            calculate_segment_payment(rate, balance, remaining_payments)
+          },
+          currency_precision: currency_precision
+        ).run.payments
       end
 
       # Get the interest rate effective at a given date
       def get_rate_at_date(date)
-        return loan.interest_rate unless variable_rate?
-
-        loan.current_variable_rate(date) || loan.interest_rate
-      end
-
-      # Build consecutive segments from the exact dates on which payments are
-      # scheduled. Rate changes are effective on the first payment date on or
-      # after the change date.
-      def build_rate_segments(payment_dates)
-        segments = []
-
-        payment_dates.each do |payment_date|
-          rate = get_rate_at_date(payment_date)
-          if segments.last && segments.last[:rate] == rate
-            segments.last[:payment_count] += 1
-          else
-            segments << {
-              rate: rate,
-              start_date: payment_date,
-              end_date: nil,
-              payment_count: 1
-            }
-          end
-        end
-
-        segments
+        RateResolver.for(loan).accrual_rate_for(date)
       end
 
       def first_payment_date
         scheduled_payment_dates.first
       end
 
+      # `Loan#start_date` (falling back to the account's opening-anchor
+      # valuation date when unset) is the loan's ORIGINATION/anchor date --
+      # e.g. the closing date on a mortgage -- not the first payment date.
+      # The first payment falls one calendar month after it, and every
+      # subsequent payment one month after that, regardless of which
+      # day-of-month the anchor falls on (`Date#next_month` clamps to the
+      # shorter month where needed, e.g. Jan 31 -> Feb 28/29 -> Mar 28/29,
+      # not Mar 31 -- see `Date#next_month` boundary tests in
+      # test/models/loan/amortization_schedule_test.rb).
       def scheduled_payment_dates
         @scheduled_payment_dates ||= begin
           date = loan.start_date || loan.account_opening_anchor_date
@@ -232,10 +171,10 @@ class Loan
       # Calculate the payment amount for a segment with a specific rate,
       # amortized over remaining_payments -- the payments left through loan
       # maturity, not just this segment's own length.
-      def calculate_segment_payment(segment, balance, remaining_payments)
+      def calculate_segment_payment(rate, balance, remaining_payments)
         return BigDecimal("0") if remaining_payments <= 0 || balance <= 0
 
-        monthly_rate = (segment[:rate] / BigDecimal("100")) / BigDecimal("12")
+        monthly_rate = (rate / BigDecimal("100")) / BigDecimal("12")
 
         if monthly_rate.zero?
           (balance / remaining_payments).round(currency_precision)

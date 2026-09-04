@@ -398,4 +398,95 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert payment.positive?
     assert payment < Money.new(1000, "USD")
   end
+
+  test "characterization golden master covers fixed-rate rows" do
+    loan = accounts(:characterization_fixed).loan
+
+    assert_characterized_schedule loan, [
+      characterized_row(1, "2024-02-15", "12.0", "340.02", "330.02", "10.00", "1000.00", "669.98"),
+      characterized_row(2, "2024-03-15", "12.0", "340.02", "333.32", "6.70", "669.98", "336.66"),
+      characterized_row(3, "2024-04-15", "12.0", "340.03", "336.66", "3.37", "336.66", "0.00")
+    ]
+  end
+
+  test "characterization golden master covers variable rate rows with two changes" do
+    loan = accounts(:characterization_variable).loan
+
+    assert_characterized_schedule loan, [
+      characterized_row(1, "2024-02-01", "0.0", "333.33", "333.33", "0.00", "1000.00", "666.67"),
+      characterized_row(2, "2024-03-01", "12.0", "338.34", "331.67", "6.67", "666.67", "335.00"),
+      characterized_row(3, "2024-04-01", "0.0", "335.00", "335.00", "0.00", "335.00", "0.00")
+    ]
+  end
+
+  test "characterization golden master covers zero-interest final settlement" do
+    loan = accounts(:characterization_zero_interest).loan
+
+    assert_characterized_schedule loan, [
+      characterized_row(1, "2024-02-01", "0.0", "33.33", "33.33", "0.00", "100.00", "66.67"),
+      characterized_row(2, "2024-03-01", "0.0", "33.33", "33.33", "0.00", "66.67", "33.34"),
+      characterized_row(3, "2024-04-01", "0.0", "33.34", "33.34", "0.00", "33.34", "0.00")
+    ]
+  end
+
+  test "characterization golden master covers a short one-period loan" do
+    loan = accounts(:characterization_short).loan
+
+    assert_characterized_schedule loan, [
+      characterized_row(1, "2024-02-15", "12.0", "1010.00", "1000.00", "10.00", "1000.00", "0.00")
+    ]
+  end
+
+  test "characterization golden master covers month-end clamping" do
+    loan = accounts(:characterization_month_end).loan
+
+    assert_characterized_schedule loan, [
+      characterized_row(1, "2024-02-29", "0.0", "33.33", "33.33", "0.00", "100.00", "66.67"),
+      characterized_row(2, "2024-03-29", "0.0", "33.33", "33.33", "0.00", "66.67", "33.34"),
+      characterized_row(3, "2024-04-29", "0.0", "33.34", "33.34", "0.00", "33.34", "0.00")
+    ]
+  end
+
+  test "characterization assertion fails on a deliberate one-cent mutation" do
+    expected = characterized_row(1, "2024-02-01", "0.0", "33.33", "33.33", "0.00", "100.00", "66.67")
+    mutated = expected.merge(payment_amount: BigDecimal("33.34"))
+
+    assert_raises(Minitest::Assertion) { assert_equal expected, mutated }
+  end
+
+  private
+
+    def characterized_row(number, date, rate, payment, principal, interest, beginning, ending)
+      {
+        payment_number: number,
+        payment_date: Date.iso8601(date),
+        interest_rate: BigDecimal(rate),
+        payment_amount: BigDecimal(payment),
+        principal_payment: BigDecimal(principal),
+        interest_payment: BigDecimal(interest),
+        beginning_balance: BigDecimal(beginning),
+        ending_balance: BigDecimal(ending)
+      }
+    end
+
+    def assert_characterized_schedule(loan, expected_rows)
+      actual_rows = loan.amortization_schedule.payments.map do |row|
+        row.slice(
+          :payment_number,
+          :payment_date,
+          :interest_rate,
+          :payment_amount,
+          :principal_payment,
+          :interest_payment,
+          :beginning_balance,
+          :ending_balance
+        )
+      end
+
+      assert_equal expected_rows, actual_rows
+      actual_rows.each_cons(2) do |current, following|
+        assert_equal current[:ending_balance], following[:beginning_balance]
+      end
+      assert_equal BigDecimal("0"), actual_rows.last[:ending_balance]
+    end
 end

@@ -176,6 +176,8 @@ class Loan < ApplicationRecord
           ending_balance: payment_data[:ending_balance],
           interest_rate: payment_data[:interest_rate],
           schedule_signature: signature,
+          algorithm_version: AmortizationSchedule::ALGORITHM_VERSION,
+          generated_at: now,
           created_at: now,
           updated_at: now
         }
