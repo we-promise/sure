@@ -19,6 +19,13 @@ class Rule::ActionTest < ActiveSupport::TestCase
     @rule_scope = @account.transactions
   end
 
+  # The inversion action schedules a balance resync per affected account. Stub
+  # it only where it is incidental, so the surrounding tests keep exercising
+  # their own real sync behavior.
+  def stub_account_sync
+    Account.any_instance.stubs(:sync_later)
+  end
+
   test "set_transaction_category" do
     # Does not modify transactions that are locked (user edited them)
     @txn1.lock_attr!(:category_id)
@@ -218,6 +225,177 @@ class Rule::ActionTest < ActiveSupport::TestCase
 
     category = @family.investment_contributions_category
     assert_equal category, transfer.outflow_transaction.category
+  end
+
+  test "invert_transaction_amount swaps deposits and withdrawals once" do
+    stub_account_sync
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "invert_transaction_amount"
+    )
+    scope = Transaction.where(id: [ @txn1.id, @txn2.id ])
+
+    assert_equal 2, action.apply(scope)
+    assert_equal(-100, @txn1.reload.entry.amount)
+    assert_equal 200, @txn2.reload.entry.amount
+
+    assert_equal 0, action.apply(scope)
+    assert_equal(-100, @txn1.reload.entry.amount)
+    assert_equal 200, @txn2.reload.entry.amount
+  end
+
+  test "invert_transaction_amount corrects an amount restored by provider sync" do
+    stub_account_sync
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "invert_transaction_amount"
+    )
+    scope = Transaction.where(id: @txn2.id)
+
+    assert_equal 1, action.apply(scope)
+    assert_equal 200, @txn2.reload.entry.amount
+    assert_equal(
+      { "source_amount" => "-200.0", "corrected_amount" => "200.0" },
+      @txn2.amount_inversion_state
+    )
+
+    @txn2.entry.update!(amount: -200)
+
+    assert_equal 1, action.apply(scope)
+    assert_equal 200, @txn2.reload.entry.amount
+    assert_equal 0, action.apply(scope)
+  end
+
+  test "invert_transaction_amount preserves provider metadata" do
+    stub_account_sync
+    @txn2.update!(extra: { "simplefin" => { "pending" => true } })
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "invert_transaction_amount"
+    )
+
+    action.apply(Transaction.where(id: @txn2.id))
+
+    assert_equal true, @txn2.reload.extra.dig("simplefin", "pending")
+    assert_equal "200.0", @txn2.extra.dig("rules", "invert_transaction_amount", "corrected_amount")
+  end
+
+  test "invert_transaction_amount schedules one recalculation per affected account from the earliest date" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "invert_transaction_amount"
+    )
+
+    Account.any_instance.expects(:sync_later).with(window_start_date: 1.day.ago.to_date).once
+
+    assert_equal 2, action.apply(Transaction.where(id: [ @txn1.id, @txn3.id ]))
+  end
+
+  test "overlapping invert actions share transaction state instead of cancelling each other" do
+    stub_account_sync
+    other_rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "invert_transaction_amount") ]
+    )
+    first_action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+    second_action = other_rule.actions.first
+    scope = Transaction.where(id: @txn2.id)
+
+    assert_equal 1, first_action.apply(scope)
+    assert_equal 0, second_action.apply(scope)
+    assert_equal 200, @txn2.reload.entry.amount
+
+    @txn2.entry.update!(amount: -200)
+
+    assert_equal 1, second_action.apply(scope)
+    assert_equal 0, first_action.apply(scope)
+    assert_equal 200, @txn2.reload.entry.amount
+  end
+
+  test "invert_transaction_amount skips transfer legs so the transfer keeps opposite amounts" do
+    stub_account_sync
+    other_account = @family.accounts.create!(name: "Transfer target", balance: 1000, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(date: Date.current, account: @account, amount: 500, name: "Transfer out").transaction
+    inflow = create_transaction(date: Date.current, account: other_account, amount: -500, name: "Transfer in").transaction
+    transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    assert_equal 0, action.apply(Transaction.where(id: [ inflow.id, outflow.id ]))
+    assert_equal 500, outflow.reload.entry.amount
+    assert_equal(-500, inflow.reload.entry.amount)
+    assert transfer.reload.valid?, "transfer must remain valid: #{transfer.errors.full_messages.inspect}"
+
+    # An explicit re-apply must not be an escape hatch around the invariant.
+    assert_equal 0, action.apply(Transaction.where(id: [ inflow.id, outflow.id ]), ignore_attribute_locks: true)
+    assert_equal 500, outflow.reload.entry.amount
+  end
+
+  test "invert_transaction_amount skips transfer fees so reported fees keep their sign" do
+    stub_account_sync
+    other_account = @family.accounts.create!(name: "Fee target", balance: 1000, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(date: Date.current, account: @account, amount: 500, name: "Fee transfer out").transaction
+    inflow = create_transaction(date: Date.current, account: other_account, amount: -500, name: "Fee transfer in").transaction
+    fee = create_transaction(date: Date.current, account: @account, amount: 5, name: "Transfer fee").transaction
+    transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+    transfer.fee_transactions << fee
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    # A fee hangs off transfer_id, not either leg association, and is an
+    # ordinary standard-kind row, so nothing else would filter it out.
+    assert_equal 0, action.apply(Transaction.where(id: fee.id))
+    assert_equal 5, fee.reload.entry.amount
+    assert_equal 5, transfer.reload.derived_source_fee_amount
+  end
+
+  test "invert_transaction_amount skips split children so the split still sums to its parent" do
+    stub_account_sync
+    parent_entry = create_transaction(date: Date.current, account: @account, amount: 300, name: "Split parent")
+    parent_entry.split!([
+      { amount: 100, name: "Split child A" },
+      { amount: 200, name: "Split child B" }
+    ])
+    child_ids = parent_entry.reload.child_entries.map(&:entryable_id)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    assert_equal 0, action.apply(Transaction.where(id: child_ids))
+
+    children = parent_entry.reload.child_entries
+    assert_equal [ 100, 200 ], children.map(&:amount).map(&:to_i).sort
+    assert_equal parent_entry.amount, children.sum(&:amount)
+  end
+
+  test "invert_transaction_amount still corrects a standalone transaction alongside skipped ones" do
+    stub_account_sync
+    other_account = @family.accounts.create!(name: "Transfer target 2", balance: 1000, currency: "USD", accountable: Depository.new)
+    outflow = create_transaction(date: Date.current, account: @account, amount: 500, name: "Transfer out").transaction
+    inflow = create_transaction(date: Date.current, account: other_account, amount: -500, name: "Transfer in").transaction
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "invert_transaction_amount")
+
+    assert_equal 1, action.apply(Transaction.where(id: [ @txn2.id, inflow.id, outflow.id ]))
+    assert_equal 200, @txn2.reload.entry.amount
+    assert_equal 500, outflow.reload.entry.amount
+  end
+
+  test "invert_transaction_amount respects amount locks unless explicitly reapplied" do
+    stub_account_sync
+    @txn1.entry.lock_attr!(:amount)
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "invert_transaction_amount"
+    )
+    scope = Transaction.where(id: @txn1.id)
+
+    assert_equal 0, action.apply(scope)
+    assert_equal 100, @txn1.reload.entry.amount
+
+    assert_equal 1, action.apply(scope, ignore_attribute_locks: true)
+    assert_equal(-100, @txn1.reload.entry.amount)
   end
 
   test "set_investment_activity_label ignores invalid values" do

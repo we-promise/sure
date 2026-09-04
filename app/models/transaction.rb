@@ -163,6 +163,46 @@ class Transaction < ApplicationRecord
     false
   end
 
+  # A direction correction is transaction state, not rule state. Multiple
+  # matching inversion rules must therefore share one watermark so they cannot
+  # cancel each other by each multiplying the same amount by -1.
+  def amount_inversion_state
+    raw_state = extra.is_a?(Hash) ? extra.dig("rules", "invert_transaction_amount") : nil
+    normalize_amount_inversion_state(raw_state)
+  end
+
+  def amount_inversion_corrected_amount
+    value = amount_inversion_state&.fetch("corrected_amount", nil)
+    BigDecimal(value) if value
+  end
+
+  def record_amount_inversion!(source_amount:, corrected_amount:)
+    state = normalize_amount_inversion_state(
+      "source_amount" => source_amount,
+      "corrected_amount" => corrected_amount
+    )
+    raise ArgumentError, "invalid amount inversion state" unless state
+
+    updated_extra = extra.is_a?(Hash) ? extra.deep_dup : {}
+    updated_extra["rules"] = {} unless updated_extra["rules"].is_a?(Hash)
+    updated_extra["rules"]["invert_transaction_amount"] = state
+    update!(extra: updated_extra)
+  end
+
+  # Used by the family backup importer. Only this narrowly-scoped rule state is
+  # restored; provider metadata and any unrelated Transaction#extra keys are
+  # neither accepted from nor overwritten by the portable export field.
+  def restore_amount_inversion_state(state)
+    normalized_state = normalize_amount_inversion_state(state)
+    return false unless normalized_state
+
+    updated_extra = extra.is_a?(Hash) ? extra.deep_dup : {}
+    updated_extra["rules"] = {} unless updated_extra["rules"].is_a?(Hash)
+    updated_extra["rules"]["invert_transaction_amount"] = normalized_state
+    self.extra = updated_extra
+    true
+  end
+
   def activity_security_id
     extra&.dig("security_id").presence || extra&.dig("security", "id").presence
   end
@@ -398,6 +438,21 @@ class Transaction < ApplicationRecord
     def potential_posted_match_data
       return nil unless extra.is_a?(Hash)
       extra["potential_posted_match"]
+    end
+
+    def normalize_amount_inversion_state(state)
+      return unless state.is_a?(Hash)
+
+      source_amount = BigDecimal(state["source_amount"].to_s)
+      corrected_amount = BigDecimal(state["corrected_amount"].to_s)
+      return if source_amount.zero? || corrected_amount != -source_amount
+
+      {
+        "source_amount" => source_amount.to_s("F"),
+        "corrected_amount" => corrected_amount.to_s("F")
+      }
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def clear_merchant_unlinked_association
