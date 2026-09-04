@@ -3,6 +3,7 @@ class Merchant < ApplicationRecord
 
   has_many :transactions, dependent: :nullify
   has_many :recurring_transactions, dependent: :destroy
+  has_many :physical_gold_lots, dependent: :nullify
 
   validates :name, presence: true
   validates :type, inclusion: { in: TYPES }

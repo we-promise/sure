@@ -82,4 +82,16 @@ class PhysicalGoldLotTest < ActiveSupport::TestCase
     assert_not lot.valid?
     assert_includes lot.errors.full_messages_for(:invoice).join, "must be a PDF or image"
   end
+
+  test "nullifies the merchant when it is deleted" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.investment.update!(subtype: "gold", gold_form: "physical")
+    merchant = merchants(:one)
+    lot = account.physical_gold_lots.create!(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000, merchant: merchant)
+
+    merchant.destroy!
+
+    assert_nil lot.reload.merchant
+  end
 end

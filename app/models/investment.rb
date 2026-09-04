@@ -107,6 +107,7 @@ class Investment < ApplicationRecord
   validates :gold_karat, numericality: { greater_than: 0, less_than_or_equal_to: MAX_GOLD_KARAT }, allow_nil: true
   validates :gold_manual_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :gold_form, inclusion: { in: GOLD_FORMS }, allow_nil: true
+  before_validation :clear_gold_form_for_non_gold_investments
   before_validation :default_gold_form
   before_validation :clear_physical_gold_details_for_digital_form
   validate :gold_form_only_for_gold_investments
@@ -185,6 +186,10 @@ class Investment < ApplicationRecord
   private
     def default_gold_form
       self.gold_form = "physical" if gold? && gold_form.blank?
+    end
+
+    def clear_gold_form_for_non_gold_investments
+      self.gold_form = nil unless gold?
     end
 
     def clear_physical_gold_details_for_digital_form

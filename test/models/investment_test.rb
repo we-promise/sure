@@ -52,6 +52,15 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_includes investment.errors[:gold_form], "cannot be changed to Digital gold while physical gold purchases exist."
   end
 
+  test "clears gold form when converting to another investment subtype" do
+    investment = Investment.new(subtype: "gold", gold_form: "physical")
+
+    investment.subtype = "brokerage"
+
+    assert investment.valid?
+    assert_nil investment.gold_form
+  end
+
   # Tax treatment derivation tests
 
   test "tax_treatment returns tax_deferred for US retirement accounts" do
