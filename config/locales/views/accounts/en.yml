@@ -82,6 +82,7 @@ en:
         activity: Activity
         holdings: Holdings
         overview: Overview
+        schedule: Schedule
         statements: Statements
       activity:
         amount: Amount
