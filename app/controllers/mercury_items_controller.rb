@@ -695,9 +695,6 @@ class MercuryItemsController < ApplicationController
     # Fetch Mercury accounts from the API and store them locally
     # Returns nil on success, or an error message string on failure
     def fetch_mercury_accounts_from_api
-      # Skip if we already have accounts cached
-      return nil unless @mercury_item.mercury_accounts.empty?
-
       # Validate API token is configured
       unless @mercury_item.credentials_configured?
         return t("mercury_items.setup_accounts.no_api_token")

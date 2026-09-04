@@ -174,6 +174,39 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, %(value="#{@second_item.id}")
   end
 
+  test "setup accounts refreshes provider accounts when local accounts already exist" do
+    existing_account = mercury_accounts(:checking_account)
+    provider = mock("mercury_provider")
+    provider.expects(:get_accounts).returns(accounts: [
+      {
+        id: "merc_acc_checking_1",
+        nickname: "Mercury Checking",
+        name: "Mercury Checking",
+        status: "active",
+        type: "checking",
+        currentBalance: 1000
+      },
+      {
+        id: "merc_acc_new_1",
+        nickname: "New Mercury Account",
+        name: "New Mercury Account",
+        status: "active",
+        type: "checking",
+        currentBalance: 2500
+      }
+    ])
+    MercuryItem.any_instance.expects(:mercury_provider).returns(provider)
+
+    assert_difference -> { MercuryAccount.where(mercury_item: @existing_item).count }, 1 do
+      get setup_accounts_mercury_item_url(@existing_item)
+    end
+
+    assert_response :success
+    assert existing_account.reload
+    assert @existing_item.mercury_accounts.exists?(account_id: "merc_acc_new_1")
+    assert_includes response.body, "New Mercury Account"
+  end
+
   test "link accounts uses selected mercury item and allows duplicate upstream ids across items" do
     @existing_item.mercury_accounts.create!(
       account_id: "shared_mercury_account",

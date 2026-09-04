@@ -78,6 +78,13 @@
 
             <%= render DS::Menu.new do |menu| %>
               <% menu.with_item(
+                variant: "link",
+                text: t(".setup_action"),
+                icon: "settings",
+                href: setup_accounts_brex_item_path(brex_item),
+                frame: :modal
+              ) %>
+              <% menu.with_item(
                 variant: "button",
                 text: t(".delete"),
                 icon: "trash-2",

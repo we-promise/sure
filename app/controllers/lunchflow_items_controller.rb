@@ -699,9 +699,6 @@ class LunchflowItemsController < ApplicationController
     # Fetch Lunchflow accounts from the API and store them locally
     # Returns nil on success, or an error message string on failure
     def fetch_lunchflow_accounts_from_api
-      # Skip if we already have accounts cached
-      return nil unless @lunchflow_item.lunchflow_accounts.empty?
-
       # Validate API key is configured
       unless @lunchflow_item.credentials_configured?
         return t("lunchflow_items.setup_accounts.no_api_key")

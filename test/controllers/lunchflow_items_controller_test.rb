@@ -8,6 +8,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
   test "setup accounts renders German subtype options without English fallbacks" do
     ensure_tailwind_build
     @user.update!(locale: "de")
+    stub_lunchflow_accounts
 
     get setup_accounts_lunchflow_item_url(lunchflow_items(:one))
 
@@ -45,6 +46,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
   test "setup accounts preserves the English title and placeholders" do
     ensure_tailwind_build
     @user.update!(locale: "en")
+    stub_lunchflow_accounts
 
     get setup_accounts_lunchflow_item_url(lunchflow_items(:one))
 
@@ -52,6 +54,32 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "title", text: "Set Up Lunch Flow Accounts"
     assert_select "option", text: "Select subtype"
     assert_select "option", text: "Select type"
+  end
+
+  test "setup accounts refreshes provider accounts when local accounts already exist" do
+    lunchflow_item = lunchflow_items(:one)
+    existing_account = lunchflow_accounts(:investment_account)
+    stub_lunchflow_accounts([
+      {
+        id: "lf_acc_investment_1",
+        name: "Test Investment Account",
+        currency: "USD"
+      },
+      {
+        id: "lf_acc_new_1",
+        name: "New Lunch Flow Account",
+        currency: "USD"
+      }
+    ])
+
+    assert_difference -> { LunchflowAccount.where(lunchflow_item: lunchflow_item).count }, 1 do
+      get setup_accounts_lunchflow_item_url(lunchflow_item)
+    end
+
+    assert_response :success
+    assert existing_account.reload
+    assert lunchflow_item.lunchflow_accounts.exists?(account_id: "lf_acc_new_1")
+    assert_includes response.body, "New Lunch Flow Account"
   end
 
   test "account setup localizes an unexpected error in German" do
@@ -134,4 +162,20 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert_match "Api key can't be blank", flash[:alert]
   end
+
+  private
+
+    def stub_lunchflow_accounts(accounts = nil)
+      accounts ||= [
+        {
+          id: "lf_acc_investment_1",
+          name: "Test Investment Account",
+          currency: "USD"
+        }
+      ]
+
+      provider = mock("lunchflow_provider")
+      provider.expects(:get_accounts).returns(accounts: accounts)
+      LunchflowItem.any_instance.expects(:lunchflow_provider).returns(provider)
+    end
 end
