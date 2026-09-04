@@ -564,6 +564,22 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     Setting["plaid_secret"] = nil
   end
 
+  test "GET show includes Trade Republic in bank sync providers" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_match(/Trade Republic/i, response.body)
+    assert_match(/Approve the login in your Trade Republic app/i, response.body)
+  end
+
+  test "GET connect_form renders Trade Republic panel" do
+    get connect_form_settings_providers_path(provider_key: "trade_republic")
+
+    assert_response :success
+    assert_match(/Trade Republic/i, response.body)
+    assert_match(I18n.t("settings.providers.trade_republic_panel.phone_number_label"), response.body)
+  end
+
   test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
     Provider::Snaptrade.stubs(:oauth_configured?).returns(false)
 

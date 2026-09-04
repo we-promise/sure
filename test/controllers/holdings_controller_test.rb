@@ -18,6 +18,14 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "shows exact share count without rounding" do
+    @holding.update!(qty: 10.374)
+
+    get holding_path(@holding)
+
+    assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
+  end
+
   test "destroys holding and associated entries" do
     assert_difference -> { Holding.count } => -1,
                       -> { Entry.count } => -1 do

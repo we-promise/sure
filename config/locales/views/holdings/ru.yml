@@ -30,6 +30,9 @@ ru:
       shares: "%{qty} акций"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} позиция"
+        other: "%{count} позиций"
       average_cost: Средняя стоимость
       holdings: Активы
       name: Название
