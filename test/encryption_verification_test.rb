@@ -320,6 +320,48 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     account.update!(raw_payload: original_payload)
   end
 
+  test "monobank item credentials and payloads are encrypted" do
+    skip "No monobank items in fixtures" unless MonobankItem.any?
+
+    item = MonobankItem.first
+    original_payload = item.raw_payload
+
+    # Should be able to read
+    assert item.access_token.present? || item.raw_payload.present?
+
+    # Update payload
+    item.update!(raw_payload: { test: "data" })
+    item.reload
+
+    assert_equal({ "test" => "data" }, item.raw_payload)
+
+    # Restore
+    item.update!(raw_payload: original_payload)
+  end
+
+  test "monobank account payloads and identifiers are encrypted" do
+    skip "No monobank accounts in fixtures" unless MonobankAccount.any?
+
+    account = MonobankAccount.first
+    original_payload = account.raw_payload
+
+    # Should be able to read encrypted fields without error
+    account.reload
+    assert_nothing_raised { account.raw_payload }
+    assert_nothing_raised { account.raw_transactions_payload }
+    assert_nothing_raised { account.masked_pan }
+    assert_nothing_raised { account.iban }
+
+    # Update and verify
+    account.update!(raw_payload: { account_test: "value" })
+    account.reload
+
+    assert_equal({ "account_test" => "value" }, account.raw_payload)
+
+    # Restore
+    account.update!(raw_payload: original_payload)
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================
