@@ -20,7 +20,8 @@
   <%= render layout: "settings/ai_prompts/prompt_section",
              locals: { icon_name: "message-circle",
                        title: t(".main_system_prompt.title"),
-                       subtitle: t(".main_system_prompt.subtitle") } do %>
+                       subtitle: t(".main_system_prompt.subtitle"),
+                       open: @family.errors[:ai_prompt_chat_system].present? } do %>
     <%= render "settings/ai_prompts/prompt_field",
                form: form, family: @family,
                prompts: [ { key: :chat_system, label: t(".main_system_prompt.label") } ],
@@ -30,7 +31,8 @@
   <%= render layout: "settings/ai_prompts/prompt_section",
              locals: { icon_name: "brain",
                        title: t(".transaction_categorizer.title"),
-                       subtitle: t(".transaction_categorizer.subtitle") } do %>
+                       subtitle: t(".transaction_categorizer.subtitle"),
+                       open: @family.errors[:ai_prompt_categorizer_openai].present? || @family.errors[:ai_prompt_categorizer_anthropic].present? } do %>
     <%= render "settings/ai_prompts/prompt_field",
                form: form, family: @family,
                prompts: [
@@ -43,7 +45,8 @@
   <%= render layout: "settings/ai_prompts/prompt_section",
              locals: { icon_name: "store",
                        title: t(".merchant_detector.title"),
-                       subtitle: t(".merchant_detector.subtitle") } do %>
+                       subtitle: t(".merchant_detector.subtitle"),
+                       open: @family.errors[:ai_prompt_merchant_openai].present? || @family.errors[:ai_prompt_merchant_anthropic].present? } do %>
     <%= render "settings/ai_prompts/prompt_field",
                form: form, family: @family,
                prompts: [

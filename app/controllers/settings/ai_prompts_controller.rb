@@ -18,13 +18,21 @@ class Settings::AiPromptsController < ApplicationController
   rescue ActiveRecord::RecordInvalid => e
     # Re-render rather than redirect so a rejected edit doesn't discard what the
     # admin typed into a multi-thousand-character textarea.
-    flash.now[:alert] = e.record.errors.full_messages.to_sentence
+    flash.now[:alert] = error_message_for(e.record)
     @family = e.record
     show
     render :show, status: :unprocessable_entity
   end
 
   private
+    def error_message_for(record)
+      if record.errors.size > 1
+        t(".multiple_errors", count: Family::AiPromptable::MAX_LENGTH.to_fs(:delimited))
+      else
+        record.errors.full_messages.first
+      end
+    end
+
     def prompt_params
       params.require(:family).permit(*Family::AiPromptable::FIELDS)
     end

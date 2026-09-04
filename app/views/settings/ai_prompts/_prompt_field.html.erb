@@ -3,7 +3,10 @@
     or built-in default. Saving an unedited default acts as a reset in the controller.
     Provider labels are derived from the key suffix (_openai / _anthropic). %>
 <% multi = prompts.size > 1 %>
-<% initial = prompts.first %>
+<% initial = prompts.find { |p| family.errors[:"ai_prompt_#{p[:key]}"].present? } || prompts.first %>
+<% initial_value = family.ai_prompt(initial[:key]) || family.ai_prompt_default(initial[:key]) %>
+<% initial_length = initial_value.to_s.length %>
+<% over_limit = initial_length > Family::AiPromptable::MAX_LENGTH %>
 <% provider_label = ->(key) { key.to_s.end_with?("openai") ? t(".provider_openai") : t(".provider_anthropic") } %>
 <% reset_confirm = { title: t(".reset_confirm_title"), body: t(".reset_confirm_body") }.to_json %>
 <div class="space-y-2"
@@ -11,7 +14,8 @@
      data-action="dropdown:select->ai-prompt-editor#change"
      data-ai-prompt-editor-reset-confirm-value="<%= reset_confirm %>"
      data-ai-prompt-editor-status-custom-value="<%= t(".status_custom") %>"
-     data-ai-prompt-editor-status-default-value="<%= t(".status_default") %>">
+     data-ai-prompt-editor-status-default-value="<%= t(".status_default") %>"
+     data-ai-prompt-editor-max-length-value="<%= Family::AiPromptable::MAX_LENGTH %>">
   <% prompts.each do |prompt| %>
     <%= form.hidden_field :"ai_prompt_#{prompt[:key]}",
                           value: family.ai_prompt(prompt[:key]),
@@ -37,7 +41,7 @@
     <%= render DS::Button.new(
       text: t(".reset"),
       variant: :primary,
-      disabled: !family.ai_prompt_customized?(initial[:key]),
+      disabled: family.ai_prompt(initial[:key]).blank?,
       data: {
         "ai-prompt-editor-target": "reset",
         action: "ai-prompt-editor#reset"
@@ -53,11 +57,16 @@
                 spellcheck="false"
                 class="form-field__input font-mono text-xs"
                 data-ai-prompt-editor-target="textarea"
-                data-action="input->ai-prompt-editor#update"><%= family.ai_prompt(initial[:key]) || family.ai_prompt_default(initial[:key]) %></textarea>
+                data-action="input->ai-prompt-editor#update"><%= initial_value %></textarea>
     </div>
   </div>
 
-  <p class="text-xs text-secondary mt-1" data-ai-prompt-editor-target="status">
-    <%= family.ai_prompt_customized?(initial[:key]) ? t(".status_custom") : t(".status_default") %>
-  </p>
+  <div class="flex items-center justify-between text-xs mt-1">
+    <p class="text-secondary" data-ai-prompt-editor-target="status">
+      <%= family.ai_prompt(initial[:key]).present? ? t(".status_custom") : t(".status_default") %>
+    </p>
+    <p data-ai-prompt-editor-target="counter" class="tabular-nums font-mono <%= over_limit ? "text-destructive" : "text-secondary" %>">
+      <%= number_with_delimiter(initial_length) %> / <%= number_with_delimiter(Family::AiPromptable::MAX_LENGTH) %>
+    </p>
+  </div>
 </div>

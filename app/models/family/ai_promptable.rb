@@ -36,7 +36,14 @@ module Family::AiPromptable
     # unambiguously dirty when only blanks were submitted (a reset).
     before_save { self.ai_prompt_overrides = ai_prompt_overrides.compact_blank }
 
-    validate :ai_prompt_overrides_within_limits
+    validates *FIELDS,
+      length: {
+        maximum: MAX_LENGTH,
+        message: ->(_object, _data) {
+          I18n.t("errors.messages.too_long", count: MAX_LENGTH.to_fs(:delimited))
+        }
+      },
+      allow_blank: true
   end
 
   # The family's override for `key`, or nil when it runs the default.
@@ -47,17 +54,4 @@ module Family::AiPromptable
   def ai_prompt_default(key)
     DEFAULTS.fetch(key.to_sym).call
   end
-
-  def ai_prompt_customized?(key)
-    ai_prompt(key).present?
-  end
-
-  private
-    def ai_prompt_overrides_within_limits
-      ai_prompt_overrides.each do |key, value|
-        next if value.to_s.length <= MAX_LENGTH
-
-        errors.add(:"ai_prompt_#{key}", :too_long, count: MAX_LENGTH)
-      end
-    end
 end

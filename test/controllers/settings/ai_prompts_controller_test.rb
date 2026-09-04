@@ -52,7 +52,7 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_nil member.family.reload.ai_prompt(:chat_system)
   end
 
-  test "rejects a prompt over the length cap and re-renders the form" do
+  test "rejects a prompt over the length cap and re-renders the form with single error message" do
     admin = users(:family_admin)
     sign_in admin
 
@@ -61,6 +61,23 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
+    assert_equal "Chat system prompt is too long (maximum is 20,000 characters)", flash[:alert]
+    assert_nil admin.family.reload.ai_prompt(:chat_system)
+  end
+
+  test "rejects multiple prompts over the length cap with multiple error message" do
+    admin = users(:family_admin)
+    sign_in admin
+
+    patch settings_ai_prompts_path, params: {
+      family: {
+        ai_prompt_chat_system: "x" * (Family::AiPromptable::MAX_LENGTH + 1),
+        ai_prompt_categorizer_openai: "x" * (Family::AiPromptable::MAX_LENGTH + 1)
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "Multiple prompts are too long (maximum is 20,000 characters)", flash[:alert]
     assert_nil admin.family.reload.ai_prompt(:chat_system)
   end
 end
