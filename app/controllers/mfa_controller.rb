@@ -20,6 +20,8 @@ class MfaController < ApplicationController
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")
     end
+  rescue ActiveRecord::RecordInvalid
+    redirect_to new_mfa_path, alert: t(".setup_failed")
   end
 
   def verify
@@ -107,6 +109,8 @@ class MfaController < ApplicationController
       SecurityAuditLog.log_mfa_disabled!(user: Current.user, request: request)
     end
     redirect_to settings_security_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid
+    redirect_to settings_security_path, alert: t(".failure")
   end
 
   private

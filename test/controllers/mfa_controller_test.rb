@@ -57,10 +57,9 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
     SecurityAuditLog.stubs(:log_mfa_enabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
 
-    assert_raises ActiveRecord::RecordInvalid do
-      post mfa_path, params: { code: totp.now }
-    end
+    post mfa_path, params: { code: totp.now }
 
+    assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
     assert_empty @user.otp_backup_codes
   end
@@ -323,10 +322,9 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     )
     SecurityAuditLog.stubs(:log_mfa_disabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
 
-    assert_raises ActiveRecord::RecordInvalid do
-      delete disable_mfa_path
-    end
+    delete disable_mfa_path
 
+    assert_redirected_to settings_security_path
     assert @user.reload.otp_required?
     assert @user.otp_secret.present?
     assert_not_empty @user.webauthn_credentials
