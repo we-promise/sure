@@ -324,6 +324,63 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert standard.raw_transactions_payload.any? { |a| a["type"] == "INTERBALANCE" }
   end
 
+  test "does not route currency-wallet INTERBALANCE activities to standard accounts" do
+    balances = [
+      {
+        "id" => "10000001",
+        "amount" => { "value" => 100.00, "currency" => "EUR" },
+        "type" => "STANDARD"
+      },
+      {
+        "id" => "10000002",
+        "amount" => { "value" => 108.25, "currency" => "USD" },
+        "type" => "STANDARD"
+      }
+    ]
+    interbalance = build_interbalance(
+      "To <strong>EUR</strong>",
+      resource_id: "4644180289",
+      primary_amount: "100 EUR",
+      secondary_amount: "108.25 USD"
+    )
+    provider = FakeWiseProvider.new(balances: balances, activities: [ interbalance ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    @wise_item.wise_accounts.each do |wise_account|
+      assert_empty wise_account.raw_transactions_payload.select { |entry| entry["type"] == "INTERBALANCE" }
+    end
+  end
+
+  test "drops previously stored currency-wallet INTERBALANCE activities from standard snapshots" do
+    interbalance = build_interbalance(
+      "To <strong>EUR</strong>",
+      resource_id: "4644180289",
+      primary_amount: "100 EUR",
+      secondary_amount: "108.25 USD"
+    )
+    wise_account = @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [ interbalance ]
+    )
+    provider = FakeWiseProvider.new(
+      balances: [
+        {
+          "id" => "10000001",
+          "amount" => { "value" => 100.00, "currency" => "EUR" },
+          "type" => "STANDARD"
+        }
+      ]
+    )
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_empty wise_account.reload.raw_transactions_payload.select { |entry| entry["type"] == "INTERBALANCE" }
+  end
+
   test "routes BALANCE_CASHBACK only to JAR account" do
     savings = {
       "id" => "10000002",
@@ -371,13 +428,14 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       }
     end
 
-    def build_interbalance(title, resource_id:)
+    def build_interbalance(title, resource_id:, primary_amount: "1,000 EUR", secondary_amount: nil)
       {
         "id" => "interbalance_#{resource_id}",
         "type" => "INTERBALANCE",
         "resource" => { "type" => "BALANCE_TRANSACTION", "id" => resource_id },
         "title" => title,
-        "primaryAmount" => "1,000 EUR",
+        "primaryAmount" => primary_amount,
+        "secondaryAmount" => secondary_amount,
         "status" => "COMPLETED",
         "createdOn" => 7.days.ago.iso8601
       }

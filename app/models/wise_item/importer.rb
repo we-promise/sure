@@ -299,9 +299,13 @@ class WiseItem::Importer
               t["targetCurrency"] == wise_account.currency
           end
           account_statements = statements[wise_account.id] || []
-          existing_legacy = Array(wise_account.raw_transactions_payload).reject { |transaction| transaction["wise_statement"].present? }
+          existing_legacy = Array(wise_account.raw_transactions_payload)
+                                 .reject { |transaction| transaction["wise_statement"].present? }
+                                 .reject { |transaction| transaction["type"] == "INTERBALANCE" && !activity_for_account?(transaction, wise_account) }
           existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
-          # Also include INTERBALANCE activities so the standard account shows outflows to the JAR.
+          # Include INTERBALANCE activities only when they are paired with a Wise Jar.
+          # Currency-wallet conversions are already represented by balance statements;
+          # importing their profile activities into every standard wallet duplicates them.
           interbalance = activities.select { |a| activity_for_account?(a, wise_account) }
           payload = merge_transaction_payloads(
             existing_legacy + account_transfers + existing_statements + account_statements + interbalance
@@ -355,23 +359,33 @@ class WiseItem::Importer
     # Routes an activity to the given WiseAccount.
     # JAR: receives INTERBALANCE where the activity title's <strong> tag matches the JAR name,
     #      plus BALANCE_CASHBACK and BALANCE_ASSET_FEE.
-    # STANDARD: receives all INTERBALANCE activities (outflow side of JAR transfers).
+    # STANDARD: receives INTERBALANCE activities only when the other side is a Jar,
+    # so the pair can be linked as a Sure Transfer. Currency-wallet conversions
+    # are intentionally excluded because balance statements already cover them.
     def activity_for_account?(activity, wise_account)
       type = activity["type"]
 
       case type
       when "INTERBALANCE"
+        destination_name = interbalance_destination_name(activity)
+        return false if destination_name.blank?
+
         if wise_account.jar?
-          jar_name_in_title = activity["title"].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last.to_s.strip
-          jar_name_in_title.present? && jar_name_in_title.casecmp?(wise_account.name.to_s.strip)
+          destination_name.casecmp?(wise_account.name.to_s.strip)
         else
-          true
+          wise_item.wise_accounts.any? do |candidate|
+            candidate.jar? && destination_name.casecmp?(candidate.name.to_s.strip)
+          end
         end
       when "BALANCE_ASSET_FEE", "BALANCE_CASHBACK"
         wise_account.jar?
       else
         false
       end
+    end
+
+    def interbalance_destination_name(activity)
+      activity["title"].to_s.scan(/<strong>([^<]+)<\/strong>/).flatten.last.to_s.strip
     end
 
     # Called after entries have been created to link interbalance pairs as Sure Transfers.

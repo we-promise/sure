@@ -83,7 +83,7 @@ class Provider::Wise
 
   def get_activities(profile_id, cursor: nil, size: 100)
     query = { size: size }
-    query[:cursor] = cursor if cursor
+    query[:nextCursor] = cursor if cursor
     get("/v1/profiles/#{profile_id}/activities", query: query)
   end
 
