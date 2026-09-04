@@ -21,6 +21,13 @@ class DS::Link < DS::Buttonish
       data = data.merge(turbo_frame: frame)
     end
 
+    # `link_to method:` has been inert since the UJS removal -- Turbo drives
+    # non-GET links via `data-turbo-method` instead. Translate so a caller
+    # writing the natural `method: :post` gets a real POST, not a silent GET.
+    if (http_method = merged_opts.delete(:method))
+      data = data.merge(turbo_method: http_method)
+    end
+
     # External link hardening: `target="_blank"` without `rel="noopener"`
     # exposes window.opener to the new tab (reverse-tabnabbing). Always
     # set `noopener noreferrer` when we send the user off-tab. Authors

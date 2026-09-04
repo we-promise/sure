@@ -402,7 +402,7 @@ GEM
       zeitwerk (~> 2.5)
     lucide-rails (0.7.3)
       railties (>= 4.1.0)
-    mail (2.9.0)
+    mail (2.9.1)
       logger
       mini_mime (>= 0.1.1)
       net-imap
@@ -429,12 +429,12 @@ GEM
       uri (>= 0.11.1)
     net-http2 (0.19.0)
       http-2 (>= 1.0)
-    net-imap (0.6.4.1)
+    net-imap (0.6.6)
       date
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.2)
+    net-protocol (0.3.0)
       timeout
     net-smtp (0.5.1)
       net-protocol
@@ -969,6 +969,7 @@ DEPENDENCIES
   web-console
   webauthn (~> 3.4)
   webmock
+  websocket-driver (~> 0.8)
 
 RUBY VERSION
    ruby 3.4.9p82

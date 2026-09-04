@@ -1,7 +1,32 @@
 ---
 en:
+  recurring_transactions:
+    allocator:
+      missing_rate: "no exchange rate from %{from} to %{to}; enter an amount explicitly"
+      unmeasurable: "this transaction carries an allocation that cannot be converted to %{currency}, so what is left of it cannot be measured. Add an exchange rate for %{date} or remove the existing payment first"
+      over_allocated: "allocating %{amount} exceeds the transaction's remaining %{capacity} %{currency}"
+      exceeds_remaining: "%{amount} exceeds the %{remaining} remaining on this cycle"
   activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: "Payment link"
     errors:
       models:
         recurring_transaction:
           merchant_or_name_required: "Either merchant or name must be present"
+          attributes:
+            payment_url:
+              invalid_scheme: "must be a valid http:// or https:// address"
+            anchor_date:
+              required_for_intervals: "is required when a rule repeats every 2 or more periods"
+            bill_type:
+              transfer_shape_mismatch: "can only be transfer when a destination account is set"
+            expected_amount_min:
+              greater_than_max: "cannot be greater than the expected maximum amount"
+            account:
+              required_for_transfer: "must be present on a recurring transfer"
+              wrong_family: "must belong to this family"
+            destination_account:
+              same_as_source: "cannot be the same as the source account"
+              family_mismatch: "must belong to the same family as the source account"
+              wrong_family: "must belong to this family"

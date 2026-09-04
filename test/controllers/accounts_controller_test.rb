@@ -3,6 +3,7 @@ require "test_helper"
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
   include OnchainTestHelper
+  include EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -13,6 +14,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "p.ml-auto.privacy-sensitive"
+  end
+
+  test "index localizes the Plaid add accounts action" do
+    ensure_tailwind_build
+    @user.update!(locale: "de")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]",
+                  edit_plaid_item_path(plaid_items(:one), add_accounts: true),
+                  text: "Konten hinzufügen",
+                  count: 1
   end
 
   test "index renders kraken items" do
@@ -80,7 +94,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do
-    PlaidItem.any_instance.expects(:request_transactions_refresh_later).once
+    sequence = sequence("manual sync all")
+    Family.any_instance
+      .expects(:request_plaid_transactions_refreshes_later)
+      .with(source: "AccountsController#sync_all")
+      .in_sequence(sequence)
+    Family.any_instance.expects(:sync_later).once.in_sequence(sequence)
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
+  end
+
+  test "sync all continues when Plaid refresh orchestration cannot be enqueued" do
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
     Family.any_instance.expects(:sync_later).once
 
     post sync_all_accounts_url
@@ -111,6 +138,59 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       q.match?(/FROM "entries".*WHERE.*"parent_entry_id"/) && !q.include?(" IN (")
     }
     assert_equal 0, per_row_split, "N+1 per-row split-parent queries detected (#{per_row_split})"
+  end
+
+  test "show groups split transactions into a single split-group row when grouping is enabled" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    assert_select ".split-group" do
+      assert_select "p", text: "Food", count: 0
+    end
+  end
+
+  test "show renders split children as flat rows when grouping is disabled" do
+    @user.update!(preferences: { "show_split_grouped" => false })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 0
+  end
+
+  test "show avoids N+1 queries when loading split parents for grouped display" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    3.times do |i|
+      entry = create_transaction(name: "Grocery Store #{i}", amount: 100, account: @account)
+      entry.split!([
+        { name: "Food", amount: 60 },
+        { name: "Household", amount: 40 }
+      ])
+    end
+
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # @split_parents loads all referenced split-parent entries in a single
+    # `WHERE "entries"."id" IN (...)` query — a per-row `"id" = $1` lookup
+    # would indicate the batching regressed into N+1.
+    per_row_split_parent = queries.count { |q|
+      q.match?(/FROM "entries".*WHERE.*"entries"\."id" = \$?\d+/) && !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_split_parent, "N+1 per-row split-parent lookups detected (#{per_row_split_parent})"
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do
