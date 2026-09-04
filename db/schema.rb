@@ -1456,7 +1456,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_120000) do
     t.decimal "credit_limit", precision: 19, scale: 4
     t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
-    t.date "history_synced_from"
+    t.datetime "history_synced_from"
     t.string "iban"
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"

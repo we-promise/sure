@@ -4,9 +4,13 @@
 
     <% dialog.with_body do %>
       <div class="space-y-4">
+        <%# A refresh failure is a notice, not a dead end: the accounts stored by the %>
+        <%# last sync are still linkable. %>
         <% if @api_error.present? %>
-          <%= render DS::Alert.new(message: @api_error, variant: :error) %>
-        <% elsif @monobank_accounts.empty? %>
+          <%= render DS::Alert.new(message: @api_error, variant: :warning) %>
+        <% end %>
+
+        <% if @monobank_accounts.empty? %>
           <p class="text-sm text-secondary"><%= t(".no_accounts_found") %></p>
         <% else %>
           <p class="text-sm text-secondary"><%= t(".description") %></p>

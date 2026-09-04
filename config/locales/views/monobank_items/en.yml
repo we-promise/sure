@@ -93,8 +93,7 @@ en:
       title: Link Monobank Accounts
       subtitle: Choose how each Monobank card or jar should appear in Sure.
       no_credentials: Configure Monobank credentials first.
-      api_error: Could not fetch Monobank accounts.
-      fetch_failed: Could not fetch accounts
+      api_error: Could not refresh accounts from Monobank, so the accounts saved by the last sync are shown instead.
       no_accounts_to_setup: No accounts to set up
       all_accounts_linked: All Monobank accounts are already linked.
       choose_account_type: Choose an account type

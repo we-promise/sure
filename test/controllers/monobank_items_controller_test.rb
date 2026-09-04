@@ -72,6 +72,35 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
     assert @monobank_account.reload.ignored?, "a skipped account stops resurfacing as needing setup"
   end
 
+  # Monobank allows one client-info request per minute, so the very first setup screen
+  # regularly collides with the sync that just ran. The screen must still offer the
+  # accounts already on file instead of blocking on a refresh failure.
+  test "setup_accounts still offers the stored accounts when the refresh fails" do
+    MonobankItemsController.any_instance
+      .stubs(:fetch_monobank_accounts_from_api)
+      .returns(I18n.t("monobank_items.setup_accounts.api_error"))
+
+    get setup_accounts_monobank_item_url(@monobank_item)
+
+    assert_response :success
+    assert_select "select[name='account_types[#{@monobank_account.id}]']", 1
+    assert_select "button[type=submit][disabled]", false, "the refresh failure must not block setup"
+    assert_select "body", text: /#{Regexp.escape(I18n.t("monobank_items.setup_accounts.api_error"))}/
+  end
+
+  test "select_accounts still offers the stored accounts when the refresh fails" do
+    MonobankItemsController.any_instance
+      .stubs(:fetch_monobank_accounts_from_api)
+      .returns(I18n.t("monobank_items.setup_accounts.api_error"))
+
+    get select_accounts_monobank_items_url, params: {
+      monobank_item_id: @monobank_item.id, accountable_type: "Depository"
+    }
+
+    assert_response :success
+    assert_select "input[name='account_ids[]'][value=?]", @monobank_account.id
+  end
+
   test "select_accounts renders the unlinked accounts" do
     MonobankItemsController.any_instance.stubs(:fetch_monobank_accounts_from_api).returns(nil)
 

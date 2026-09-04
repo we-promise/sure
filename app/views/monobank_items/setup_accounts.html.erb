@@ -15,13 +15,14 @@
                   data: { turbo_frame: "_top" },
                   class: "space-y-6" do %>
       <div class="space-y-4">
+        <%# A refresh failure (Monobank allows one request per minute) must not hide the %>
+        <%# accounts the last sync already stored: the notice is informational and setup %>
+        <%# carries on with what is on file. %>
         <% if @api_error.present? %>
-          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
-            <%= icon "alert-circle", size: "lg", class: "text-destructive" %>
-            <p class="text-primary font-medium"><%= t(".fetch_failed") %></p>
-            <p class="text-destructive text-sm"><%= @api_error %></p>
-          </div>
-        <% elsif @monobank_accounts.empty? %>
+          <%= render DS::Alert.new(message: @api_error, variant: :warning) %>
+        <% end %>
+
+        <% if @monobank_accounts.empty? %>
           <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
             <%= icon "check-circle", size: "lg", class: "text-success" %>
             <p class="text-primary font-medium"><%= t(".no_accounts_to_setup") %></p>
@@ -59,7 +60,7 @@
           icon: "plus",
           type: "submit",
           class: "flex-1",
-          disabled: @api_error.present? || @monobank_accounts.empty?
+          disabled: @monobank_accounts.empty?
         ) %>
         <%= render DS::Link.new(
           text: t(".cancel"),

@@ -153,11 +153,55 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 2, provider.statement_calls.count, "one forward window plus one history window"
 
     history_call = provider.statement_calls.last
-    assert_in_delta 60, (Time.current - history_call[:to]) / 1.day, 1.5
-    assert_in_delta 91, (Time.current - history_call[:from]) / 1.day, 1.5
+    assert_equal 60.days.ago.to_date.in_time_zone, history_call[:to]
+    assert_equal 60.days.ago.to_date.in_time_zone - Provider::Monobank::MAX_STATEMENT_WINDOW, history_call[:from]
+
+    # The cursor records exactly what was requested, to the second: rounding it down to
+    # a date would claim the untouched first 23 hours of that day as covered.
+    @monobank_account.reload
+    assert_equal history_call[:from], @monobank_account.history_synced_from
+  end
+
+  # Each backward step starts where the previous one stopped. Monobank's window is 31
+  # days *plus an hour*, so a step rarely lands on midnight; a day-granular cursor left
+  # a 23-hour hole at every boundary.
+  test "consecutive history windows are contiguous" do
+    @monobank_item.update!(sync_start_date: 200.days.ago.to_date)
+    @monobank_account.update!(
+      statement_synced_through: Time.current,
+      history_synced_from: 60.days.ago.to_date
+    )
+
+    first = FakeMonobankProvider.new
+    MonobankItem::Importer.new(@monobank_item, monobank_provider: first).import
+
+    second = FakeMonobankProvider.new
+    MonobankItem::Importer.new(@monobank_item, monobank_provider: second).import
+
+    assert_equal first.statement_calls.last[:from], second.statement_calls.last[:to],
+                 "the second window must resume exactly where the first one stopped"
+  end
+
+  # A window wider than Monobank's 31-day cap gets clamped, so the interval between the
+  # old cursor and the clamped start is never requested. It has to be handed to the
+  # backward walk instead of being reported as covered by both cursors.
+  test "a clamped forward window hands the skipped interval to the history walk" do
+    MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(1)
+    @monobank_item.update!(sync_start_date: 200.days.ago.to_date)
+    @monobank_account.update!(
+      statement_synced_through: 40.days.ago,
+      history_synced_from: 200.days.ago.to_date
+    )
+    provider = FakeMonobankProvider.new
+
+    MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    requested_from = provider.statement_calls.first[:from]
+    assert_operator requested_from, :>, 40.days.ago, "the window was clamped to the 31 day cap"
 
     @monobank_account.reload
-    assert_in_delta 91, (Date.current - @monobank_account.history_synced_from).to_i, 1.5
+    assert_equal requested_from.floor(6), @monobank_account.history_synced_from,
+                 "the interval the clamp skipped has to be re-walked from below"
   end
 
   test "stops backfilling once the configured start date is reached" do
@@ -214,7 +258,7 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
 
     @monobank_account.reload
-    assert_equal 100.days.ago.to_date, @monobank_account.history_synced_from
+    assert_equal 100.days.ago.to_date.in_time_zone, @monobank_account.history_synced_from
   end
 
   test "a truncated window moves the history cursor up when it leaves a gap" do
@@ -225,8 +269,8 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
 
     @monobank_account.reload
-    assert_equal 10.days.ago.to_date, @monobank_account.history_synced_from,
-                 "the gap below the oldest record received has to be re-walked"
+    assert_equal Time.at(10.days.ago.to_i), @monobank_account.history_synced_from,
+                 "the gap below the oldest record received has to be re-walked, from its exact time"
   end
 
   test "treats a rate limit as a skip rather than a failure" do
@@ -268,7 +312,75 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "tx_settled" ], stored_ids, "the hold is gone, the settled record remains"
   end
 
+  # A pre-authorization (hotel, car hire, fuel) can stay held for longer than the
+  # pending lookback, so the window has to keep reaching back to it. Otherwise the hold
+  # simply leaves the payload and its entry is pruned while the funds are still blocked.
+  test "the forward window reaches back to the oldest hold still on file" do
+    hold = held_transaction(id: "tx_hotel", at: 7.days.ago)
+    @monobank_account.update!(
+      raw_transactions_payload: [ hold ],
+      statement_synced_through: 1.hour.ago,
+      history_synced_from: 31.days.ago.to_date
+    )
+    # Monobank still reports the hold, because it is still unsettled.
+    provider = FakeMonobankProvider.new(statements: [ hold ])
+
+    MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    assert_operator provider.statement_calls.first[:from], :<=, Time.at(hold["time"]),
+                    "the forward window must cover the oldest hold still stored"
+    assert_equal [ "tx_hotel" ], @monobank_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  # A response at the item cap only accounts for its newest part, so a hold below that
+  # point was not reported on because Monobank was never asked, not because it settled.
+  test "keeps a hold the truncated response never reached" do
+    hold = held_transaction(id: "tx_hotel", at: 5.days.ago)
+    @monobank_account.update!(
+      raw_transactions_payload: [ hold ],
+      statement_synced_through: 1.hour.ago,
+      history_synced_from: 31.days.ago.to_date
+    )
+    MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(1)
+    provider = FakeMonobankProvider.new(statements: full_page(oldest: 1.day.ago))
+
+    MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    stored_ids = @monobank_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+    assert_includes stored_ids, "tx_hotel", "the hold is still blocking funds upstream"
+  end
+
+  # Monobank throttles client-info to one request per minute and the timer is per client
+  # instance, so a manual sync landing in the same minute as a scheduled one collides
+  # legitimately. That is a deferral, not a broken connection.
+  test "treats a throttled client-info as a skip rather than a failure" do
+    provider = FakeMonobankProvider.new
+    provider.stubs(:get_client_info).raises(
+      Provider::Monobank::RateLimitError.new("throttled", failure_code: :rate_limited)
+    )
+
+    result = MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    assert result[:success], "throttling must not fail the sync"
+    assert_equal 1, result[:accounts_skipped]
+    assert_equal 0, result[:accounts_failed]
+    assert @monobank_item.reload.good?, "throttling must not mark the connection as needing attention"
+  end
+
   private
+
+    # An unsettled authorization at +at+.
+    def held_transaction(id:, at:)
+      {
+        "id" => id,
+        "time" => at.to_i,
+        "description" => "Hotel",
+        "hold" => true,
+        "amount" => -50_000,
+        "operationAmount" => -50_000,
+        "currencyCode" => 980
+      }
+    end
 
     # A response at Monobank's per-response item cap, oldest record at +oldest+.
     def full_page(oldest:)

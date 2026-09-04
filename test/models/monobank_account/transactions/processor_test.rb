@@ -58,19 +58,57 @@ class MonobankAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert_nil entry.transaction.category_id
   end
 
-  test "prunes pending entries that are no longer in the stored payload" do
+  # Monobank may issue the settled record under a different id than the hold it
+  # replaces, so reconciliation has to match them up on amount and date instead. The
+  # user's own category and notes live on the pending entry and must survive.
+  test "reconciles a hold that settles under a different id" do
     @monobank_account.update!(raw_transactions_payload: [ transaction(id: "tx_hold", hold: true) ])
     MonobankAccount::Transactions::Processor.new(@monobank_account).process
 
     assert_equal 1, pending_entries.count
 
-    # The hold settled under a different id, so the hold is gone from the payload.
     @monobank_account.update!(raw_transactions_payload: [ transaction(id: "tx_settled", hold: false) ])
+    MonobankAccount::Transactions::Processor.new(@monobank_account).process
+
+    settled = @account.entries.find_by(external_id: "monobank_tx_settled")
+    assert_not_nil settled
+    assert_equal [ "monobank_tx_hold" ], settled.transaction.extra["auto_claimed_pending_ids"],
+                 "the settled record must claim the hold instead of duplicating it"
+    assert_empty pending_entries
+    assert_equal 1, @account.entries.count, "no orphaned pending entry is left behind"
+  end
+
+  test "prunes a hold that was cancelled rather than settled" do
+    @monobank_account.update!(raw_transactions_payload: [ transaction(id: "tx_hold", hold: true) ])
+    MonobankAccount::Transactions::Processor.new(@monobank_account).process
+
+    assert_equal 1, pending_entries.count
+
+    # Nothing settled: the hold simply dropped out of the statement.
+    @monobank_account.update!(raw_transactions_payload: [ unrelated_transaction ])
     result = MonobankAccount::Transactions::Processor.new(@monobank_account).process
 
     assert_equal 1, result[:pruned_pending]
     assert_empty pending_entries
-    assert_not_nil @account.entries.find_by(external_id: "monobank_tx_settled")
+  end
+
+  # Destroying an entry the user has taken over would take its splits (child entries)
+  # and any transfer it belongs to with it, so a stale hold only loses its pending flag.
+  test "keeps user-owned pending entries and clears their pending flag instead" do
+    @monobank_account.update!(raw_transactions_payload: [ transaction(id: "tx_hold", hold: true) ])
+    MonobankAccount::Transactions::Processor.new(@monobank_account).process
+
+    entry = @account.entries.find_by(external_id: "monobank_tx_hold")
+    entry.update!(excluded: true)
+    entry.mark_user_modified!
+
+    @monobank_account.update!(raw_transactions_payload: [ unrelated_transaction ])
+    result = MonobankAccount::Transactions::Processor.new(@monobank_account).process
+
+    assert_equal 0, result[:pruned_pending]
+    assert_equal 1, result[:protected_pending]
+    assert Entry.exists?(entry.id), "a user-owned entry must never be hard-deleted by the prune"
+    assert_empty pending_entries, "it is no longer held, so the pending flag is gone"
   end
 
   private
@@ -87,6 +125,12 @@ class MonobankAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
         "operationAmount" => amount,
         "currencyCode" => 980
       }
+    end
+
+    # A record that cannot be mistaken for the settled half of the hold above: neither
+    # the amount nor the description matches, so no reconciliation claims it.
+    def unrelated_transaction
+      transaction(id: "tx_other", amount: -12_345).merge("description" => "Нова пошта")
     end
 
     def pending_entries

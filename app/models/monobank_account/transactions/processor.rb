@@ -11,8 +11,11 @@ class MonobankAccount::Transactions::Processor
   def process
     unless monobank_account.raw_transactions_payload.present?
       Rails.logger.info "MonobankAccount::Transactions::Processor - No Monobank transactions available to process"
-      pruned_count = prune_stale_pending_entries([])
-      return { success: true, total: 0, imported: 0, failed: 0, pruned_pending: pruned_count, errors: [] }
+      prune_stats = prune_stale_pending_entries([])
+      return {
+        success: true, total: 0, imported: 0, failed: 0,
+        pruned_pending: prune_stats[:pruned], protected_pending: prune_stats[:protected], errors: []
+      }
     end
 
     total_count = monobank_account.raw_transactions_payload.count
@@ -44,14 +47,15 @@ class MonobankAccount::Transactions::Processor
       Rails.logger.error "MonobankAccount::Transactions::Processor - Error processing transaction #{transaction_id(transaction_data)}: #{e.class} - #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
     end
-    pruned_count = prune_stale_pending_entries(current_pending_external_ids)
+    prune_stats = prune_stale_pending_entries(current_pending_external_ids)
 
     {
       success: failed_count.zero?,
       total: total_count,
       imported: imported_count,
       failed: failed_count,
-      pruned_pending: pruned_count,
+      pruned_pending: prune_stats[:pruned],
+      protected_pending: prune_stats[:protected],
       errors: errors
     }
   end
@@ -100,11 +104,19 @@ class MonobankAccount::Transactions::Processor
       end
     end
 
-    # Delete previously-imported pending entries no longer present in the latest
-    # fetch (cancelled/settled holds), returning how many were removed.
+    # Retire previously-imported pending entries no longer present in the latest fetch
+    # (cancelled or settled holds), returning how many were destroyed and how many were
+    # kept because the user had taken them over.
+    #
+    # An entry the user has touched is never destroyed: the same three flags
+    # Account::ProviderImportAdapter refuses to overwrite (excluded, user-modified,
+    # import-locked) protect it here too, because destroying one would take its splits
+    # (has_many :child_entries, dependent: :destroy) and any transfer it belongs to
+    # (transfers.on_delete: :cascade) with it. Those entries just lose the pending flag,
+    # which is what the hold disappearing actually tells us.
     def prune_stale_pending_entries(current_pending_external_ids)
       account = monobank_account.current_account
-      return 0 unless account.present?
+      return { pruned: 0, protected: 0 } unless account.present?
 
       stale_pending_entries = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
@@ -112,8 +124,56 @@ class MonobankAccount::Transactions::Processor
         .where("(transactions.extra -> 'monobank' ->> 'pending')::boolean = true")
       stale_pending_entries = stale_pending_entries.where.not(external_id: current_pending_external_ids) if current_pending_external_ids.any?
 
-      count = stale_pending_entries.count
-      stale_pending_entries.find_each(&:destroy!) if count.positive?
-      count
+      pruned = 0
+      protected_count = 0
+
+      stale_pending_entries.includes(:entryable).find_each do |entry|
+        if entry.protected_from_sync?
+          clear_pending_flag(entry)
+          protected_count += 1
+        else
+          entry.destroy!
+          pruned += 1
+        end
+      end
+
+      capture_protected_pending(account, protected_count) if protected_count.positive?
+
+      { pruned: pruned, protected: protected_count }
+    end
+
+    # Drop only the pending flag, leaving the rest of the Monobank metadata and every
+    # user edit in place, so the entry stops being treated as an unsettled hold.
+    def clear_pending_flag(entry)
+      transaction = entry.entryable
+      return unless transaction.is_a?(Transaction)
+
+      extra = (transaction.extra || {}).deep_dup
+      monobank_extra = extra["monobank"]
+      return unless monobank_extra.is_a?(Hash)
+
+      monobank_extra.delete("pending")
+      extra.delete("monobank") if monobank_extra.empty?
+      transaction.update!(extra: extra)
+    end
+
+    # Surface kept-but-unflagged entries for support: the hold is gone upstream but the
+    # entry stays, so a family asking why a pending transaction turned into a normal one
+    # has an audit trail.
+    def capture_protected_pending(account, count)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Monobank kept user-owned pending entries and cleared their pending flag",
+        source: self.class.name,
+        provider_key: "monobank",
+        family: family,
+        account_provider: monobank_account.account_provider,
+        metadata: {
+          monobank_account_id: monobank_account.id,
+          account_id: account.id,
+          protected_pending: count
+        }
+      )
     end
 end

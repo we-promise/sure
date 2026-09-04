@@ -99,8 +99,7 @@ uk:
       title: Підключення рахунків Monobank
       subtitle: Виберіть, як кожна картка або банка Monobank має відображатися у Sure.
       no_credentials: Спершу налаштуйте доступ до Monobank.
-      api_error: Не вдалося отримати рахунки Monobank.
-      fetch_failed: Не вдалося отримати рахунки
+      api_error: Не вдалося оновити рахунки з Monobank, тому показані рахунки, збережені під час останньої синхронізації.
       no_accounts_to_setup: Немає рахунків для налаштування
       all_accounts_linked: Усі рахунки Monobank уже підключені.
       choose_account_type: Виберіть тип рахунку

@@ -128,7 +128,7 @@ Provider support notes:
 - Plaid: supports pending when the upstream Plaid payload includes `pending: true` (stored under `extra["plaid"]`).
 - Plaid investments: investment transactions currently do not store pending metadata.
 - Lunchflow: does not currently store pending metadata.
-- Monobank: pending via `hold: true` (stored at `extra["monobank"]["pending"]`). A hold may settle under a *different* id, so pending entries are pruned when the hold drops out of the latest statement window rather than matched by id. No FX metadata: the statement reports `operationAmount` but never the operation currency, so `operation_amount` is stored raw and `fx_from`/`fx_amount` are left unset. See `docs/hosting/monobank.md` for the rate-limit-driven sync design.
+- Monobank: pending via `hold: true` (stored at `extra["monobank"]["pending"]`). A hold may settle under a *different* id, so the settled record reconciles onto the pending entry through `Account::ProviderImportAdapter`'s amount/date lookup, and a hold that just disappears is pruned — but only when the statement request actually covered it, and never when the entry is `protected_from_sync?` (those only lose the pending flag). No FX metadata: the statement reports `operationAmount` but never the operation currency, so `operation_amount` is stored raw and `fx_from`/`fx_amount` are left unset. See `docs/hosting/monobank.md` for the rate-limit-driven sync design.
 
 ### Background Processing
 Sidekiq handles asynchronous tasks:

@@ -83,7 +83,8 @@ class Provider::Monobank < Provider
   # @param account_id [String] Monobank account/jar id, or "0" for the default account
   # @param from [Time, Date, Integer] window start
   # @param to [Time, Date, Integer, nil] window end (defaults to now)
-  # @raise [Error] when the requested window exceeds Monobank's 31-day cap
+  # @raise [Error] when the requested window exceeds Monobank's 31-day cap, or when the
+  #   response body is not the documented JSON array
   def get_statement(account_id:, from:, to: nil)
     from_unix = to_unix(from)
     to_unix_value = to.present? ? to_unix(to) : Time.current.to_i
@@ -102,7 +103,15 @@ class Provider::Monobank < Provider
     path = "/personal/statement/#{ERB::Util.url_encode(account_id.to_s)}/#{from_unix}/#{to_unix_value}"
     transactions = get(path, bucket: :statement)
 
-    Array(transactions).filter_map do |transaction|
+    # A statement is always a JSON array. Anything else (a 204, an empty body, an error
+    # object) would otherwise read as "no activity in this window", and the caller would
+    # record the window as permanently covered. Failing here leaves the cursors alone so
+    # the window is walked again on the next sync.
+    unless transactions.is_a?(Array)
+      raise Error.new("Unexpected Monobank statement response", failure_code: :parse_error)
+    end
+
+    transactions.filter_map do |transaction|
       next unless transaction.is_a?(Hash)
 
       transaction.with_indifferent_access.merge(account_id: account_id.to_s)

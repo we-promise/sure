@@ -41,8 +41,10 @@ class CreateMonobankItemsAndAccounts < ActiveRecord::Migration[7.2]
       # Statement backfill cursors. Monobank caps one statement request at 31 days and
       # throttles to one call per minute, so history is walked backwards across syncs
       # (history_synced_from) while new activity is fetched forward from the last
-      # covered timestamp (statement_synced_through).
-      t.date :history_synced_from
+      # covered timestamp (statement_synced_through). Both are timestamps, not dates: a
+      # window is requested in Unix seconds and rarely lands on midnight, so recording
+      # only the date would claim a partially covered day as complete.
+      t.datetime :history_synced_from
       t.datetime :statement_synced_through
 
       t.timestamps
