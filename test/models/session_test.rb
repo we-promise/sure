@@ -43,6 +43,21 @@ class SessionTest < ActiveSupport::TestCase
     assert Session.exists?(stale.id)
   end
 
+  test "clean rescues a session destroyed between the stale query and the row lock" do
+    stale = @user.sessions.create!
+    stale.update_column(:updated_at, Session::INACTIVITY_TIMEOUT.ago - 1.day)
+
+    # Simulate find_active_by_cookie destroying this session concurrently:
+    # with_lock reloads the row before yielding, so a destroy in that window
+    # surfaces as RecordNotFound instead of running the block. `clean` must
+    # rescue this and move on rather than aborting the sweep.
+    Session.any_instance.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
+
+    deleted_count = Session.clean
+
+    assert_equal 0, deleted_count
+  end
+
   test "find_active_by_cookie returns nil for a blank cookie" do
     assert_nil Session.find_active_by_cookie(nil)
     assert_nil Session.find_active_by_cookie("")
@@ -71,6 +86,25 @@ class SessionTest < ActiveSupport::TestCase
 
     assert_nil Session.find_active_by_cookie(session.id)
     assert_not Session.exists?(session.id)
+  end
+
+  test "find_active_by_cookie refreshes updated_at once past the touch interval" do
+    session = @user.sessions.create!
+    session.update_column(:updated_at, Session::SESSION_TOUCH_INTERVAL.ago - 1.minute)
+
+    Session.find_active_by_cookie(session.id)
+
+    assert session.reload.updated_at > Session::SESSION_TOUCH_INTERVAL.ago
+  end
+
+  test "find_active_by_cookie does not touch a recently active session" do
+    session = @user.sessions.create!
+    recent_updated_at = Session::SESSION_TOUCH_INTERVAL.ago + 1.minute
+    session.update_column(:updated_at, recent_updated_at)
+
+    Session.find_active_by_cookie(session.id)
+
+    assert_in_delta recent_updated_at, session.reload.updated_at, 1.second
   end
 
   test "set_preferred_tab only persists allowlisted keys" do
