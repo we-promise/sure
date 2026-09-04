@@ -70,7 +70,7 @@ class EntryTest < ActiveSupport::TestCase
       category: categories(:food_and_drink)
     )
 
-    assert_equal categories(:food_and_drink).name, entry.name
+    assert_equal categories(:food_and_drink).display_name, entry.name
   end
 
   test "blank name is still invalid when auto-generate is on but neither merchant nor category is set" do
@@ -99,7 +99,7 @@ class EntryTest < ActiveSupport::TestCase
       category: categories(:food_and_drink)
     )
 
-    assert_equal "#{categories(:food_and_drink).name} - #{merchants(:netflix).name}", entry.name
+    assert_equal "#{categories(:food_and_drink).display_name} - #{merchants(:netflix).name}", entry.name
   end
 
   test "does not overwrite an explicitly provided name even when auto-generate is on" do
@@ -123,7 +123,7 @@ class EntryTest < ActiveSupport::TestCase
   test "generic_name? is true when the name exactly matches the entry's category" do
     entry = create_transaction(
       account: accounts(:depository),
-      name: categories(:food_and_drink).name,
+      name: categories(:food_and_drink).display_name,
       category: categories(:food_and_drink)
     )
 

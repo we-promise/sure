@@ -316,7 +316,7 @@ class Entry < ApplicationRecord
     return true if normalized.casecmp?(I18n.t("transactions.unknown_name"))
     return false unless entryable_type == "Transaction"
 
-    category_name = entryable.category&.name
+    category_name = entryable.category&.display_name
     category_name.present? && normalized.casecmp?(category_name)
   end
 
@@ -608,7 +608,12 @@ class Entry < ApplicationRecord
     # validation below, so a transaction can never end up with no
     # information distinguishing it from any other.
     def set_default_name
-      parts = [ entryable.category&.name.presence, entryable.merchant&.name.presence ].compact
+      # Category#display_name, not #name -- default categories store the
+      # translated label in the `name` column itself (see Category#display_name),
+      # so using the raw column here would save whatever locale the category
+      # happened to be created under instead of the one the user just picked
+      # it in.
+      parts = [ entryable.category&.display_name.presence, entryable.merchant&.name.presence ].compact
       self.name = parts.join(" - ") if parts.any?
     end
 end
