@@ -301,6 +301,7 @@ class ImportSession < ApplicationRecord
     end
 
     def enqueue_family_sync
+      family.auto_match_transfers!
       family.sync_later
     rescue => error
       update!(error_details: sync_enqueue_error_details)
