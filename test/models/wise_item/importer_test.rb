@@ -319,6 +319,42 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     refute_includes refs, "st-outgoing-in-window"
   end
 
+  test "does not duplicate an already-imported incoming cross-currency transfer when its statement row backfills" do
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+      raw_transactions_payload: [
+        {
+          "id" => 10,
+          "targetAccount" => 99999001,
+          "sourceCurrency" => "USD",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 500.0,
+          "targetValue" => 450.0,
+          "status" => "incoming_payment_received",
+          "created" => "2024-02-01"
+        }
+      ]
+    )
+    statements = [
+      # Same conversion as the legacy transfer above (same date + amount) — must not be re-imported.
+      { "date" => "2024-02-01T09:00:00Z", "amount" => { "value" => "450.00", "currency" => "EUR" }, "referenceNumber" => "st-duplicate-conversion" },
+      # Genuine external incoming payment: different amount, no legacy counterpart.
+      { "date" => "2024-02-10T09:00:00Z", "amount" => { "value" => "6780.00", "currency" => "EUR" }, "referenceNumber" => "st-external-incoming" }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+
+    assert_includes refs, "st-external-incoming"
+    refute_includes refs, "st-duplicate-conversion"
+  end
+
   test "keeps transfer cutoff incremental after the first sync when full history is enabled" do
     @wise_item.update!(import_all_history: true)
     @wise_item.wise_accounts.create!(

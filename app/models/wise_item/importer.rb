@@ -197,9 +197,10 @@ class WiseItem::Importer
 
     # Fetches statement rows for STANDARD balances. Legacy transfer snapshots
     # are retained; statement rows dated on/after the oldest legacy transfer
-    # are filtered to incoming-only (see #legacy_overlap_outgoing_row?) so the
-    # already-imported outgoing transfers aren't duplicated, while incoming
-    # money the legacy transfer fallback could never capture gets backfilled.
+    # are dropped when they duplicate a transfer already imported for that
+    # window (see #legacy_overlap_outgoing_row?), while incoming money the
+    # legacy transfer fallback could never capture (external payments) gets
+    # backfilled.
     def fetch_statements
       @statement_fetch_attempted_accounts = []
       @statement_fetch_failed_accounts = []
@@ -212,6 +213,7 @@ class WiseItem::Importer
           transaction["wise_statement"].blank? && !jar_activity?(transaction)
         end
         legacy_cutoff = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
+        legacy_incoming = legacy_incoming_transfer_signatures(legacy, wise_account)
 
         start_date =
           if existing.any? { |transaction| transaction["wise_statement"].present? } &&
@@ -235,7 +237,7 @@ class WiseItem::Importer
           start_date: start_date,
           end_date: end_date
         )
-        rows = Array(rows).reject { |row| legacy_overlap_outgoing_row?(row, legacy_cutoff) }
+        rows = Array(rows).reject { |row| legacy_overlap_outgoing_row?(row, legacy_cutoff, legacy_incoming) }
         result[wise_account.id] = rows.map { |row| row.merge("wise_statement" => true) }
       rescue Provider::Wise::WiseError => e
         @statement_fetch_failed_accounts << wise_account.id
@@ -250,19 +252,52 @@ class WiseItem::Importer
       end
     end
 
-    # The legacy /v1/transfers fallback only ever captured outgoing money, so
-    # any statement row dated on/after the oldest legacy transfer that is
-    # itself outgoing (Wise reports debits as a non-positive amount) already
-    # has a legacy counterpart and would double-book it if imported. Incoming
-    # rows in that same window have no legacy counterpart — transfers never
-    # included received payments — so they're always kept.
-    def legacy_overlap_outgoing_row?(row, legacy_cutoff)
+    # The legacy /v1/transfers fallback captured outgoing money unconditionally,
+    # plus the incoming leg of any internal cross-currency conversion between
+    # the profile's own balances (Wise models those as transfers where this
+    # balance is the target). So a statement row dated on/after the oldest
+    # legacy transfer already has a legacy counterpart, and would double-book
+    # it, when it's either outgoing (non-positive amount) or an incoming row
+    # matching an already-known incoming transfer's date and amount. A genuine
+    # external incoming payment has no legacy counterpart in either case, so
+    # it's always kept.
+    def legacy_overlap_outgoing_row?(row, legacy_cutoff, legacy_incoming)
       return false unless legacy_cutoff
 
       date = parse_transaction_date(row)
       return false unless date && date >= legacy_cutoff
 
-      row.dig("amount", "value").to_d <= 0
+      amount = row.dig("amount", "value").to_d
+      return true if amount <= 0
+
+      legacy_incoming.any? { |transfer| transfer[:date] == date && transfer[:amount] == amount.abs }
+    end
+
+    # Incoming legs of legacy transfers: internal cross-currency conversions
+    # where this balance was the recipient (`WiseEntry::Processor#outgoing?`
+    # mirrors this via recipient_id, falling back to the transfer status).
+    # Used to recognize the matching statement row as an already-imported
+    # duplicate rather than a genuine external incoming payment.
+    def legacy_incoming_transfer_signatures(legacy, wise_account)
+      recipient_id = wise_account.raw_payload&.dig("recipient_id")
+
+      legacy.filter_map do |transaction|
+        next unless transaction["targetValue"].present? && transaction["sourceValue"].present?
+
+        incoming =
+          if recipient_id.present?
+            transaction["targetAccount"].to_s == recipient_id.to_s
+          else
+            status = transaction["status"].to_s.downcase
+            WiseEntry::Processor::INCOMING_STATUSES.any? { |s| status.include?(s) }
+          end
+        next unless incoming
+
+        date = parse_transaction_date(transaction)
+        next unless date
+
+        { date: date, amount: transaction["targetValue"].to_d.abs }
+      end
     end
 
     # Statements are only "unavailable" when every attempted standard balance
