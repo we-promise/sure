@@ -138,6 +138,16 @@ class AiHealthTest < ActiveSupport::TestCase
     end
   end
 
+  test "vector store failure kind does not hide pgvector failure behind generic embedding failure" do
+    health = probed_pgvector_health(
+      vector_store: failing_result(:request_failed),
+      embedding: failing_result(:request_failed)
+    )
+
+    assert_equal :failing, health.vector_store_status
+    assert_equal :pgvector_probe_failed, health.vector_store_failure_kind
+  end
+
   private
     def probed_health(llm:, function_calling:)
       AiHealth::Probe.any_instance.stubs(:llm).returns(result(llm))

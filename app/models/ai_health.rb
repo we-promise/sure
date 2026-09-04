@@ -110,9 +110,9 @@ class AiHealth
     return :pgvector_extension_not_enabled if failure_codes.include?(:extension_not_enabled)
     return :pgvector_table_not_found if failure_codes.include?(:table_not_found)
     return :embedding_dimensions_mismatch if failure_codes.include?(:dimensions_mismatch)
+    return :pgvector_probe_failed if vector_store_probe.failing?
     return :embedding_probe_timeout if failure_codes.include?(:timeout) && embedding_probe.failing?
     return :embedding_probe_failed if embedding_probe.failing?
-    return :pgvector_probe_failed if vector_store_probe.failing?
 
     :vector_probe_failed
   end
