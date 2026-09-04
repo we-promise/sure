@@ -1,7 +1,7 @@
 class Security::Resolver
   def initialize(symbol, exchange_operating_mic: nil, country_code: nil, price_provider: nil)
     @symbol = validate_symbol!(symbol)
-    @exchange_operating_mic = exchange_operating_mic
+    @exchange_operating_mic = Security.canonical_exchange_operating_mic(exchange_operating_mic)
     @country_code = country_code
     @price_provider = validated_price_provider(price_provider)
   end
@@ -38,9 +38,9 @@ class Security::Resolver
     end
 
     def offline_security
-      security = Security.find_or_initialize_by(
+      security = Security.find_or_initialize_by_ticker_and_exchange(
         ticker: symbol,
-        exchange_operating_mic: exchange_operating_mic,
+        exchange_operating_mic: exchange_operating_mic
       )
 
       security.assign_attributes(
@@ -54,12 +54,10 @@ class Security::Resolver
     end
 
     def exact_match_from_db
-      security = Security.find_by(
-        {
-          ticker: symbol,
-          exchange_operating_mic: exchange_operating_mic,
-          country_code: country_code.presence
-        }.compact
+      security = Security.find_by_ticker_and_exchange(
+        ticker: symbol,
+        exchange_operating_mic: exchange_operating_mic,
+        country_code: country_code.presence
       )
 
       return nil unless security
@@ -83,7 +81,10 @@ class Security::Resolver
 
       match = provider_search_result.find do |s|
         ticker_matches = s.ticker&.upcase.to_s == symbol.upcase.to_s
-        exchange_matches = s.exchange_operating_mic&.upcase.to_s == exchange_operating_mic.upcase.to_s
+        exchange_matches = exchange_operating_mics_equivalent?(
+          s.exchange_operating_mic,
+          exchange_operating_mic
+        )
 
         if country_code && exchange_operating_mic
           ticker_matches && exchange_matches && country_matches?(s.country_code)
@@ -114,9 +115,9 @@ class Security::Resolver
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
           s.ticker&.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
-          exchange_operating_mic.present? && s.exchange_operating_mic&.upcase.to_s == exchange_operating_mic.upcase.to_s ? 0 : 1,
+          exchange_operating_mic.present? && exchange_operating_mics_equivalent?(s.exchange_operating_mic, exchange_operating_mic) ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
-          sorted_exchange_operating_mics_by_relevance.index(s.exchange_operating_mic&.upcase.to_s) || sorted_exchange_operating_mics_by_relevance.length
+          sorted_exchange_operating_mics_by_relevance.index(Security.canonical_exchange_operating_mic(s.exchange_operating_mic)) || sorted_exchange_operating_mics_by_relevance.length
         ]
       end
 
@@ -128,9 +129,9 @@ class Security::Resolver
     end
 
     def find_or_create_provider_match!(match)
-      security = Security.find_or_initialize_by(
+      security = Security.find_or_initialize_by_ticker_and_exchange(
         ticker: match.ticker,
-        exchange_operating_mic: match.exchange_operating_mic,
+        exchange_operating_mic: match.exchange_operating_mic
       )
 
       security.country_code = match.country_code
@@ -170,6 +171,12 @@ class Security::Resolver
     def country_matches?(candidate_country)
       return true if candidate_country.blank?
       candidate_country.upcase == country_code.upcase
+    end
+
+    def exchange_operating_mics_equivalent?(left, right)
+      return false if left.blank? || right.blank?
+
+      Security.canonical_exchange_operating_mic(left) == Security.canonical_exchange_operating_mic(right)
     end
 
     def provider_search_result
