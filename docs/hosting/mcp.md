@@ -153,8 +153,6 @@ At the time of writing, `tools/list` includes:
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
-These are the same tools used by Sure's built-in AI assistant.
-
 ### Preview Tools
 
 These additional tools appear only when the MCP user has opted into preview
@@ -172,6 +170,20 @@ permissions enforced in the web UI.
 | `record_valuation` | Record an account's value on a date, with a required source citation |
 | `get_valuations` | List recorded valuations newest first, including the citation stored in each entry's notes; the read pair for `record_valuation` |
 | `get_insights` | Read the proactive insights feed (spending anomalies, cash-flow warnings, subscription audits and more) without marking anything read |
+| `get_bills` | List bills, subscriptions and other recurring obligations with each one's current payment state |
+| `get_bill_details` | One bill's full configuration, open occurrences, payment history, price-change history and cost analytics |
+| `get_paycheck_plan` | Income plan sliced into pay periods: what is due before the next payday, what stays reserved for later bills, what is safe to spend |
+| `get_bill_audit` | Deterministic bills review: possible duplicates, price changes, trials about to convert, upcoming renewals, long-overdue bills and undeclared recurring patterns |
+| `create_bill` | Create a bill, subscription, installment plan or income schedule |
+| `update_bill` | Update one bill's configuration; amount changes apply from today forward |
+| `record_bill_payment` | Record a partial payment against a bill's open occurrence, or settle it in full |
+
+Because tool calls never pass through the Bills pages' controllers, the bills
+tools re-check the family's recurring-transactions feature gate (Settings →
+Recurring transactions) and the MCP user's per-account access on every call.
+With the feature disabled they return an error result instead of data, bills
+tied to accounts the user cannot see are never returned, and the write tools
+refuse series on accounts shared with the user read-only.
 
 They exist for agents that maintain a document-backed record of a family's
 wealth over time. See

@@ -1,3 +1,10 @@
+<% function_calling_status = ai_health.function_calling_status %>
+<% function_calling_class = case function_calling_status
+   when :supported then "text-success"
+   when :unsupported, :failing then "text-destructive"
+   else "text-warning"
+   end %>
+
 <% pdf_checks = [
   {
     key: :pdf_text_extraction,
@@ -37,6 +44,14 @@
       title: t("admin.system_health.show.ai.alerts.llm_probe_failed.title"),
       message: t("admin.system_health.show.ai.alerts.llm_probe_failed.message"),
       variant: :error
+    ) %>
+  <% end %>
+
+  <% if function_calling_status.in?([ :unsupported, :not_used ]) %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.function_calling_#{function_calling_status}.title"),
+      message: t("admin.system_health.show.ai.alerts.function_calling_#{function_calling_status}.message"),
+      variant: function_calling_status == :unsupported ? :error : :warning
     ) %>
   <% end %>
 
@@ -123,6 +138,12 @@
         <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.endpoint") %></dt>
         <dd class="mt-1 break-all font-mono text-primary"><%= ai_health.llm_endpoint %></dd>
       </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.function_calling") %></dt>
+        <dd class="mt-1 font-medium <%= function_calling_class %>" data-testid="function-calling-status">
+          <%= t("admin.system_health.show.ai.function_calling_statuses.#{function_calling_status}") %>
+        </dd>
+      </div>
       <% pdf_checks.each do |check| %>
         <div>
           <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.#{check[:key]}") %></dt>
@@ -132,8 +153,12 @@
         </div>
       <% end %>
       <div>
-        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.request_timeout") %></dt>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.llm_request_timeout") %></dt>
         <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.llm_request_timeout) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.probe_request_timeout") %></dt>
+        <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.values.seconds", seconds: ai_health.probe_request_timeout) %></dd>
       </div>
       <div>
         <dt class="text-secondary">
@@ -153,6 +178,12 @@
         <div>
           <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.failure_reason") %></dt>
           <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.llm_probe.failure_code}") %></dd>
+        </div>
+      <% end %>
+      <% if ai_health.function_calling_probe.failure_code %>
+        <div>
+          <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.function_calling_failure_reason") %></dt>
+          <dd class="mt-1 font-medium text-destructive"><%= t("admin.system_health.show.ai.failure_codes.#{ai_health.function_calling_probe.failure_code}") %></dd>
         </div>
       <% end %>
       <% pdf_checks.select { |check| check[:probe].failure_code }.each do |check| %>

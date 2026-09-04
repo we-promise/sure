@@ -27,7 +27,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token external_assistant_token rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_token rentcast_api_key realie_api_key].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -550,28 +550,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: {
         llm_context_window: "4096",
         llm_max_response_tokens: "1024",
-        llm_max_items_per_call: "40"
+        llm_max_items_per_call: "40",
+        openai_request_timeout: "180",
+        ai_response_timeout: "240"
       } }
 
       assert_redirected_to settings_hosting_url
       assert_equal 4096, Setting.llm_context_window
       assert_equal 1024, Setting.llm_max_response_tokens
       assert_equal 40, Setting.llm_max_items_per_call
+      assert_equal 180, Setting.openai_request_timeout
+      assert_equal 240, Setting.ai_response_timeout
 
       patch settings_hosting_url, params: { setting: {
         llm_context_window: "",
         llm_max_response_tokens: "",
-        llm_max_items_per_call: ""
+        llm_max_items_per_call: "",
+        openai_request_timeout: "",
+        ai_response_timeout: ""
       } }
 
       assert_nil Setting.llm_context_window
       assert_nil Setting.llm_max_response_tokens
       assert_nil Setting.llm_max_items_per_call
+      assert_nil Setting.openai_request_timeout
+      assert_nil Setting.ai_response_timeout
     end
   ensure
     Setting.llm_context_window = nil
     Setting.llm_max_response_tokens = nil
     Setting.llm_max_items_per_call = nil
+    Setting.openai_request_timeout = nil
+    Setting.ai_response_timeout = nil
   end
 
   test "rejects llm budget below field minimum" do
@@ -593,11 +603,33 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_match(/must be a whole number/, flash[:alert])
       assert_nil Setting.llm_max_items_per_call
+
+      patch settings_hosting_url, params: { setting: { openai_request_timeout: "0" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/must be a whole number/, flash[:alert])
+      assert_nil Setting.openai_request_timeout
     end
   ensure
     Setting.llm_context_window = nil
     Setting.llm_max_response_tokens = nil
     Setting.llm_max_items_per_call = nil
+    Setting.openai_request_timeout = nil
+  end
+
+  test "shows environment backed OpenAI request timeout when field is disabled" do
+    with_self_hosting do
+      Setting.openai_request_timeout = 180
+
+      with_env_overrides("OPENAI_REQUEST_TIMEOUT" => "300") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name='setting[openai_request_timeout]'][value='300'][disabled='disabled']"
+      end
+    end
+  ensure
+    Setting.openai_request_timeout = nil
   end
 
   test "can clear data only when admin" do
@@ -678,5 +710,86 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   ensure
     Setting.securities_providers = ""
+  end
+
+  test "unchecking every securities provider does not re-enable twelve_data via the legacy fallback" do
+    with_self_hosting do
+      # Start from the out-of-the-box default (only twelve_data enabled)
+      assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+
+      patch settings_hosting_url, params: { setting: { securities_providers: [] } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal [], Setting.enabled_securities_providers
+    end
+  ensure
+    # Explicitly restore the real default value rather than assigning nil —
+    # rails-settings-cached's cache layer doesn't reliably invalidate on
+    # delete within a single test process, so a later test can still read
+    # back the just-deleted blank override instead of falling through to
+    # the field's default.
+    Setting.securities_providers = ""
+    Setting.securities_provider = "twelve_data"
+  end
+
+  # --- T-Invest visibility (issue #3089) ---
+
+  test "hides T-Invest settings when neither tinkoff_invest nor moex_public is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      # "T-Invest (T-Bank)" also appears as a checkbox label in the always-rendered
+      # securities checklist, so assert on the settings block's own field instead.
+      assert_select "input[name='setting[tinkoff_invest_api_key]']", false
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings when tinkoff_invest is enabled, without the moex-only notice" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "tinkoff_invest" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_not_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings with the moex-only notice when moex_public is enabled, even without tinkoff_invest" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "moex_public" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings when a token is already configured, even with neither checkbox enabled" do
+    with_self_hosting do
+      Setting.tinkoff_invest_api_key = "some-token"
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+    Setting.tinkoff_invest_api_key = nil
   end
 end

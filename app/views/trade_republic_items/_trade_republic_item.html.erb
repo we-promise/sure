@@ -1,0 +1,150 @@
+<%# locals: (trade_republic_item:) %>
+
+<%= tag.div id: dom_id(trade_republic_item) do %>
+  <% unlinked_count = trade_republic_item.unlinked_accounts_count %>
+
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
+            <span class="text-primary text-xs font-medium">TR</span>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p trade_republic_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if trade_republic_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <% if trade_republic_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif trade_republic_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".requires_update") %>
+              </div>
+            <% elsif trade_republic_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: trade_republic_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if trade_republic_item.last_synced_at %>
+                  <%= t(".synced", time: time_ago_in_words(trade_republic_item.last_synced_at), summary: trade_republic_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".never_synced") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_trade_republic_item_path(trade_republic_item),
+              disabled: trade_republic_item.syncing?
+            ) %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% if unlinked_count > 0 %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t(".setup_accounts"),
+                  icon: "settings",
+                  href: setup_accounts_trade_republic_item_path(trade_republic_item),
+                  frame: :modal
+                ) %>
+              <% end %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: trade_republic_item_path(trade_republic_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(trade_republic_item.institution_display_name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless trade_republic_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if trade_republic_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: trade_republic_item.accounts %>
+        <% end %>
+
+        <% stats = trade_republic_item.syncs.ordered.first&.sync_stats || {} %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: trade_republic_item) %>
+
+        <% quality = trade_republic_item.data_quality_summary %>
+        <% reconciliation = trade_republic_item.reconciliation_summary %>
+        <% expenses = trade_republic_item.expense_summary %>
+        <div class="rounded-lg border border-secondary bg-container-inset p-3 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-medium text-primary"><%= t(".data_quality.title") %></p>
+            <% if Current.user&.admin? %>
+              <%= button_to repair_trade_republic_item_path(trade_republic_item), method: :post,
+                          class: "text-xs text-primary underline", data: { turbo: false } do %>
+                <%= t(".data_quality.repair") %>
+              <% end %>
+            <% end %>
+          </div>
+          <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+            <span class="text-secondary"><%= t(".data_quality.positions", count: quality[:positions]) %></span>
+            <span class="text-secondary"><%= t(".data_quality.unpriced", count: quality[:unpriced_positions]) %></span>
+            <span class="text-secondary"><%= t(".data_quality.events", count: quality[:events]) %></span>
+            <span class="text-secondary"><%= t(".data_quality.unknown", count: quality[:unknown_events]) %></span>
+          </div>
+          <div class="grid gap-2 sm:grid-cols-2 text-xs">
+            <% expense_money = Money.new(expenses[:total].round(2), trade_republic_item.currency) %>
+            <span class="text-secondary"><%= t(".data_quality.expenses", count: expenses[:count], amount: format_money(expense_money)) %></span>
+            <span class="text-secondary"><%= t(".data_quality.reconciliation", matched: reconciliation.count { |check| check[:reconciled] }, total: reconciliation.size) %></span>
+          </div>
+          <% recent_syncs = trade_republic_item.sync_history(limit: 3) %>
+          <% if recent_syncs.any? %>
+            <div class="border-t border-secondary pt-2 space-y-1">
+              <p class="text-xs font-medium text-primary"><%= t(".data_quality.sync_history") %></p>
+              <% recent_syncs.each do |recent_sync| %>
+                <p class="text-xs text-secondary"><%= l(recent_sync.created_at, format: :short) %> · <%= t(".data_quality.sync_status.#{recent_sync.status}", default: recent_sync.status.to_s.humanize) %></p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <% if unlinked_count > 0 && trade_republic_item.accounts.empty? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".accounts_need_setup") %></p>
+              <p class="text-secondary text-sm"><%= t(".accounts_need_setup_description") %></p>
+              <%= render DS::Link.new(
+                text: t(".setup_accounts"),
+                icon: "settings",
+                variant: "primary",
+                href: setup_accounts_trade_republic_item_path(trade_republic_item),
+                frame: :modal
+              ) %>
+            </div>
+          <% elsif trade_republic_item.trade_republic_accounts.none? %>
+            <div class="p-4 flex flex-col gap-3 items-center justify-center">
+              <p class="text-primary font-medium text-sm"><%= t(".no_accounts_discovered") %></p>
+              <p class="text-secondary text-sm"><%= t(".no_accounts_discovered_description") %></p>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
