@@ -67,10 +67,7 @@ class Import::CategoryMapping < Import::Mapping
         if existing&.subcategory?
           parent = existing.parent
         else
-          parent = import.family.categories.roots.create!(name: parent_name) do |cat|
-            cat.color = Category::COLORS.sample
-            cat.lucide_icon = Category.suggested_icon(parent_name)
-          end
+          parent = create_root_category!(parent_name)
         end
       end
 
@@ -88,4 +85,18 @@ class Import::CategoryMapping < Import::Mapping
 
     save!
   end
+
+  private
+    def create_root_category!(name)
+      import.family.categories.roots.create!(name: name) do |cat|
+        cat.color = Category::COLORS.sample
+        cat.lucide_icon = Category.suggested_icon(name)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      import.family.categories.roots.find_by!(name: name)
+    rescue ActiveRecord::RecordInvalid => error
+      raise unless error.record.is_a?(Category) && error.record.errors.of_kind?(:name, :taken)
+
+      import.family.categories.roots.find_by!(name: name)
+    end
 end

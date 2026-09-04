@@ -44,4 +44,62 @@ class Import::CategoryMappingTest < ActiveSupport::TestCase
     assert add_sub.subcategory?
     assert_equal "Auto", add_sub.parent.name
   end
+
+  test "create_mappable! atomically creates shared root parent during concurrent imports" do
+    family = families(:empty)
+    parent_name = "Concurrent Parent #{SecureRandom.hex(4)}"
+    child_names = 8.times.map { |index| "Concurrent Child #{index} #{SecureRandom.hex(4)}" }
+    ready = Queue.new
+    start = Queue.new
+    errors = Queue.new
+    import_ids = Queue.new
+
+    threads = child_names.map do |child_name|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          import = TransactionImport.create!(family: Family.find(family.id), status: :pending)
+          import_ids << import.id
+
+          mapping = import.mappings.create!(
+            key: "#{parent_name}:#{child_name}",
+            create_when_empty: true,
+            type: "Import::CategoryMapping"
+          )
+
+          ready << true
+          start.pop
+          mapping.create_mappable!
+        rescue => error
+          errors << error
+        end
+      end
+    end
+
+    child_names.size.times { ready.pop }
+    child_names.size.times { start << true }
+    threads.each(&:join)
+
+    thread_errors = []
+    thread_errors << errors.pop until errors.empty?
+
+    assert_empty thread_errors, -> { thread_errors.map { |error| "#{error.class}: #{error.message}" }.join("\n") }
+    assert_equal 1, family.categories.roots.where(name: parent_name).count
+
+    parent = family.categories.roots.find_by!(name: parent_name)
+    assert_equal child_names.sort, parent.subcategories.where(name: child_names).pluck(:name).sort
+  ensure
+    if defined?(child_names)
+      Category.where(family: family, name: child_names).destroy_all
+    end
+
+    if defined?(parent_name)
+      Category.where(family: family, name: parent_name).destroy_all
+    end
+
+    if defined?(import_ids)
+      ids = []
+      ids << import_ids.pop until import_ids.empty?
+      Import.where(id: ids).destroy_all
+    end
+  end
 end
