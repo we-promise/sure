@@ -11,6 +11,7 @@
 <% reset_confirm = { title: t(".reset_confirm_title"), body: t(".reset_confirm_body") }.to_json %>
 <div class="space-y-2"
      data-controller="ai-prompt-editor"
+     data-ai-prompt-editor-confirm-dialog-outlet="#confirm-dialog"
      data-action="dropdown:select->ai-prompt-editor#change"
      data-ai-prompt-editor-reset-confirm-value="<%= reset_confirm %>"
      data-ai-prompt-editor-status-custom-value="<%= t(".status_custom") %>"

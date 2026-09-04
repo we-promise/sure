@@ -30,10 +30,10 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
       assert_text "/ 20,000"
       assert find_button("Reset to default", disabled: true)
 
-      find("textarea").fill_in with: "Custom text"
+      find("textarea").fill_in with: "Custom text 😀"
 
       assert_text "Using your custom prompt"
-      assert_text "11 / 20,000"
+      assert_text "13 / 20,000"
       assert find_button("Reset to default")
     end
   end
@@ -84,6 +84,23 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
       assert_equal default_text, find("textarea").value
       assert_text "Using the built-in default"
       assert find_button("Reset to default", disabled: true)
+    end
+
+    # Re-edit and cancel via dialog close button; ensure prompt is not reset
+    within editor do
+      fill_in "Prompt", with: "Another custom prompt"
+      click_button "Reset to default"
+    end
+
+    assert_selector "#confirm-dialog", visible: true
+    within "#confirm-dialog" do
+      find("[data-action='DS--dialog#close']").click
+    end
+    assert_no_selector "#confirm-dialog"
+
+    within editor do
+      assert_equal "Another custom prompt", find("textarea").value
+      assert_text "Using your custom prompt"
     end
   end
 
