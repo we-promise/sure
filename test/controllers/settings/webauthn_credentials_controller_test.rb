@@ -66,6 +66,36 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     assert_equal "MacBook Touch ID", log.metadata["nickname"]
   end
 
+  test "does not persist the credential when the audit log write fails" do
+    options = registration_options
+    credential = @client.create(challenge: options.fetch("challenge"), rp_id: "www.example.com")
+    SecurityAuditLog.stubs(:log_webauthn_credential_added!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    assert_no_difference -> { @user.webauthn_credentials.count } do
+      post settings_webauthn_credentials_path, params: {
+        webauthn_credential: { nickname: "MacBook Touch ID" },
+        credential: credential
+      }, as: :json
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "does not destroy the credential when the audit log write fails" do
+    credential = @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "credential-audit-fail",
+      public_key: "public-key"
+    )
+    SecurityAuditLog.stubs(:log_webauthn_credential_removed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    assert_no_difference -> { @user.webauthn_credentials.count } do
+      delete settings_webauthn_credential_path(credential)
+    end
+
+    assert_redirected_to settings_security_path
+  end
+
   test "a rejected registration does not write an audit log" do
     registration_options
 

@@ -78,6 +78,13 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
     assert_equal "YubiKey", log.metadata["nickname"]
   end
 
+  test "stores the user_email column encrypted at rest" do
+    log = SecurityAuditLog.log_mfa_enabled!(user: @user, request: @request)
+
+    raw_value = log.read_attribute_before_type_cast(:user_email).to_s
+    assert_not_includes raw_value, @user.email
+  end
+
   test "survives its user being deleted, preserving the user's email" do
     disposable_user = User.create!(
       email: "disposable-audit-test@example.com",
