@@ -300,6 +300,55 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(50, "USD"), totals.dividends
   end
 
+  test "a buy relabeled to Dividend is counted as income only, not also as a contribution" do
+    # The activity-label quick editor permits changing the label on its own and
+    # leaves qty untouched, so an income-labeled trade can carry qty > 0. It must
+    # not land in both the direction bucket and the income bucket.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    trade_entry = create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    trade_entry.trade.update!(investment_activity_label: "Dividend")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(120, "USD"), totals.dividends
+    assert_equal Money.new(120, "USD"), totals.total_income
+  end
+
+  test "a sell relabeled to Interest is counted as income only, not also as a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    trade_entry = create_trade(account: account, qty: -1, amount: -40, date: period.start_date)
+    trade_entry.trade.update!(investment_activity_label: "Interest")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(40, "USD"), totals.interest
+  end
+
+  test "labeled non-income trades still count by direction" do
+    # Only Dividend/Interest are excluded from the direction buckets; Buy, Sell
+    # and Reinvestment keep their existing contribution/withdrawal treatment.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    buy = create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    buy.trade.update!(investment_activity_label: "Buy")
+    reinvest = create_trade(account: account, qty: 1, amount: 30, date: period.start_date)
+    reinvest.trade.update!(investment_activity_label: "Reinvestment")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(150, "USD"), totals.contributions
+    # Reinvestment is deliberately not folded into dividend income; doing so
+    # would require removing it from contributions too.
+    assert_equal Money.new(0, "USD"), totals.dividends
+  end
+
   test "totals convert foreign-currency dividends into family currency" do
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     account = create_investment_account(balance: 500, currency: "EUR")
