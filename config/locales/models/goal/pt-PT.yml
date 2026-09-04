@@ -1,0 +1,36 @@
+---
+pt-PT:
+  activerecord:
+    attributes:
+      goal:
+        name: Nome
+        target_amount: Montante do objetivo
+        currency: Moeda
+        target_date: Data-alvo
+        color: Cor
+        notes: Notas
+        state: Estado
+        linked_accounts: Contas associadas
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Selecione pelo menos uma conta para financiar este objetivo.
+              whole_account_conflict_on_restore: "Não é possível restaurar este objetivo: “%{account_name}” está agora totalmente reservada para “%{goal_name}”. Introduza primeiro um montante numa delas."
+            target_mode:
+              months_requires_maintained: Apenas uma reserva que mantém pode ter o objetivo definido em meses de despesas.
+            target_months:
+              blank: Indique quantos meses de despesas esta reserva deve cobrir.
+              only_with_months_mode: Os meses de despesas só se aplicam quando o objetivo é definido dessa forma.
+            linked_accounts:
+              must_be_fundable: Todas as contas associadas têm de ser contas de dinheiro ou de investimento.
+              currency_mismatch: Todas as contas associadas têm de partilhar a mesma moeda.
+              must_belong_to_family: As contas associadas têm de pertencer à mesma família que o objetivo.
+            kind:
+              locked_while_released: Reabra este objetivo antes de o transformar numa reserva.
+              locked_once_consumed: Este objetivo já registou dinheiro como gasto, pelo que não pode tornar-se uma reserva.
+            target_amount:
+              below_consumed: Não é possível definir um objetivo abaixo do que este objetivo já registou como gasto.
+            currency:
+              locked_after_linked: Não é possível alterar a moeda depois de o objetivo estar associado a contas.
