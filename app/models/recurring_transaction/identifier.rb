@@ -99,6 +99,10 @@ class RecurringTransaction
       # row, and it lands as `suggested`, awaiting confirmation.
       existing_by_identity = family.recurring_transactions.to_a.group_by { |recurring| identity_key(recurring) }
 
+      # Rows to bulk-insert at the end; built during the loop to avoid N+1 INSERTs.
+      rows_to_insert = []
+      now = Time.current
+
       recurring_patterns.each do |pattern|
         identity = [ pattern[:merchant_id] ? [ :merchant, pattern[:merchant_id] ] : [ :name, pattern[:name] ],
                      pattern[:currency], pattern[:account_id], nil ]
@@ -114,18 +118,51 @@ class RecurringTransaction
           next
         end
 
-        begin
-          created = create_suggested_series(pattern, scoped: candidates.any?)
-          (existing_by_identity[identity] ||= []) << created
-        rescue ActiveRecord::RecordNotUnique
-          # Race: another process created the same identity between load and
-          # save. Re-read and treat it as the claimed series.
-          racer = family.recurring_transactions.find_by(identity_conditions(pattern, scoped: candidates.any?))
-          next unless racer
-          next if racer.manual? || racer.ended?
+        # Pre-compute classification before bulk-inserting so we avoid per-row
+        # round-trips later. A placeholder is added to existing_by_identity so
+        # a second pattern with the same identity in the same run is treated as
+        # claimed and doesn't produce a duplicate row.
+        scoped = candidates.any?
+        account = pattern[:account_id] && Account.find_by(id: pattern[:account_id])
+        classification = Classifier.classify(
+          name: pattern[:name] || pattern[:entries].first.name,
+          entries: pattern[:entries],
+          account: account
+        )
+        income = pattern[:amount].negative?
 
-          update_claimed_series(racer, pattern)
-        end
+        row = identity_conditions(pattern, scoped: scoped).merge(
+          family_id: family.id,
+          amount: pattern[:amount],
+          expected_amount_min: pattern[:expected_amount_min],
+          expected_amount_max: pattern[:expected_amount_max],
+          expected_amount_avg: pattern[:expected_amount_avg],
+          expected_day_of_month: pattern[:expected_day_of_month],
+          last_occurrence_date: pattern[:last_occurrence_date],
+          next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
+          occurrence_count: pattern[:occurrence_count],
+          status: "suggested",
+          bill_type: income ? "income" : classification.bill_type,
+          category_id: income ? nil : classification.category_id,
+          autopay: income ? false : classification.autopay,
+          manual: false,
+          created_at: now,
+          updated_at: now
+        )
+
+        rows_to_insert << row
+      end
+
+      # Two separate bulk-inserts because the partial unique indexes are split
+      # on merchant_id presence; ON CONFLICT DO NOTHING handles any race where
+      # another process inserted the same identity between our initial load and
+      # now (equivalent to the old RecordNotUnique rescue path).
+      unless rows_to_insert.empty?
+        merchant_rows = rows_to_insert.select { |r| r[:merchant_id].present? }
+        name_rows     = rows_to_insert.reject { |r| r[:merchant_id].present? }
+
+        RecurringTransaction.insert_all(merchant_rows, unique_by: :idx_recurring_txns_acct_merchant) if merchant_rows.any?
+        RecurringTransaction.insert_all(name_rows,     unique_by: :idx_recurring_txns_acct_name)     if name_rows.any?
       end
 
       # Also check for manual recurring transactions that might need variance updates
@@ -354,34 +391,6 @@ class RecurringTransaction
         # after_commit regenerates once on save. The explicit pass is only
         # for a rule that drifted out of agreement with an unchanged column.
         OccurrenceGenerator.new(recurring).regenerate_future! unless recurring.will_save_change_to_expected_day_of_month?
-      end
-
-      def create_suggested_series(pattern, scoped:)
-        account = pattern[:account_id] && Account.find_by(id: pattern[:account_id])
-        classification = Classifier.classify(
-          name: pattern[:name] || pattern[:entries].first.name,
-          entries: pattern[:entries],
-          account: account
-        )
-        income = pattern[:amount].negative?
-
-        family.recurring_transactions.create!(
-          identity_conditions(pattern, scoped: scoped).merge(
-            amount: pattern[:amount],
-            expected_amount_min: pattern[:expected_amount_min],
-            expected_amount_max: pattern[:expected_amount_max],
-            expected_amount_avg: pattern[:expected_amount_avg],
-            expected_day_of_month: pattern[:expected_day_of_month],
-            last_occurrence_date: pattern[:last_occurrence_date],
-            next_expected_date: calculate_next_expected_date(pattern[:last_occurrence_date], pattern[:expected_day_of_month]),
-            occurrence_count: pattern[:occurrence_count],
-            status: "suggested",
-            bill_type: income ? "income" : classification.bill_type,
-            category_id: income ? nil : classification.category_id,
-            autopay: income ? false : classification.autopay,
-            manual: false
-          )
-        )
       end
 
       # A second series for an already-taken identity is distinguished by
