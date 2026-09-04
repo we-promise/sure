@@ -56,7 +56,7 @@
       fixed for the rest of the row. %>
   <%= content_tag(income_trade ? :span : :button,
         type: income_trade ? nil : "button",
-        class: "inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 #{income_trade ? "cursor-default" : "cursor-pointer hover:opacity-80"} transition-opacity",
+        class: "inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 #{income_trade ? "cursor-pointer" : "cursor-pointer hover:opacity-80"} transition-opacity",
         style: (has_label ? "background-color: color-mix(in oklab, #{color} 15%, transparent); border: 1px solid color-mix(in oklab, #{color} 25%, transparent); color: #{color};" : "background-color: var(--color-surface-inset); border: 1px solid var(--color-border-secondary); color: var(--color-text-secondary);"),
         data: (income_trade ? {} : { action: "click->activity-label-quick-edit#toggle", activity_label_quick_edit_target: "badge" }),
         title: (has_label ? t("transactions.transaction.activity_type_tooltip") : t("transactions.show.activity_type"))) do %>
