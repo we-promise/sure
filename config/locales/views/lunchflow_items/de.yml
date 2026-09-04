@@ -187,6 +187,7 @@ de:
       service_down_label: Dienst nicht erreichbar
       title: Fehler bei der Lunch-Flow-Verbindung
       unable_to_connect: Die Verbindung zu Lunch Flow kam nicht zustande
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal.
     setup_required:
       api_key_description: Bevor du Lunch-Flow-Konten verknüpfen kannst, musst du deinen Lunch-Flow-API-Key hinterlegen.
       api_key_not_configured: API-Key nicht hinterlegt

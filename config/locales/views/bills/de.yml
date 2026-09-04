@@ -1,0 +1,14 @@
+---
+de:
+  bills:
+    views:
+      aria_label: Rechnungsansichten
+      overview: Übersicht
+      calendar: Kalender
+      paycheck: Einkommensplan
+      all: Alle Rechnungen
+    index:
+      title: Rechnungen
+      add_bill: Rechnung hinzufügen
+      add_income: Einkommen hinzufügen
+      review_with_ai: Mit KI prüfen
