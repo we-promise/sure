@@ -196,8 +196,10 @@ class WiseItem::Importer
     end
 
     # Fetches statement rows for STANDARD balances. Legacy transfer snapshots
-    # are retained and only backfilled with statements older than their oldest
-    # transfer, avoiding duplicate imports during the migration.
+    # are retained; statement rows dated on/after the oldest legacy transfer
+    # are filtered to incoming-only (see #legacy_overlap_outgoing_row?) so the
+    # already-imported outgoing transfers aren't duplicated, while incoming
+    # money the legacy transfer fallback could never capture gets backfilled.
     def fetch_statements
       @statement_fetch_attempted_accounts = []
       @statement_fetch_failed_accounts = []
@@ -209,6 +211,8 @@ class WiseItem::Importer
         legacy = existing.select do |transaction|
           transaction["wise_statement"].blank? && !jar_activity?(transaction)
         end
+        legacy_cutoff = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
+
         start_date =
           if existing.any? { |transaction| transaction["wise_statement"].present? } &&
              sync_start_date.blank? && wise_item.sync_start_date.blank? && wise_item.last_synced_at.present?
@@ -221,11 +225,6 @@ class WiseItem::Importer
           end
         end_date = Date.current
 
-        if legacy.any?
-          oldest = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
-          end_date = oldest - 1.day if oldest
-        end
-
         next if start_date > end_date
 
         @statement_fetch_attempted_accounts << wise_account.id
@@ -236,7 +235,8 @@ class WiseItem::Importer
           start_date: start_date,
           end_date: end_date
         )
-        result[wise_account.id] = Array(rows).map { |row| row.merge("wise_statement" => true) }
+        rows = Array(rows).reject { |row| legacy_overlap_outgoing_row?(row, legacy_cutoff) }
+        result[wise_account.id] = rows.map { |row| row.merge("wise_statement" => true) }
       rescue Provider::Wise::WiseError => e
         @statement_fetch_failed_accounts << wise_account.id
         capture_statement_error(wise_account, e, level: "warn")
@@ -248,6 +248,21 @@ class WiseItem::Importer
         Rails.logger.warn "WiseItem::Importer - Unexpected error fetching statements for wise_account #{wise_account.id}: #{e.message}"
         result[wise_account.id] = []
       end
+    end
+
+    # The legacy /v1/transfers fallback only ever captured outgoing money, so
+    # any statement row dated on/after the oldest legacy transfer that is
+    # itself outgoing (Wise reports debits as a non-positive amount) already
+    # has a legacy counterpart and would double-book it if imported. Incoming
+    # rows in that same window have no legacy counterpart — transfers never
+    # included received payments — so they're always kept.
+    def legacy_overlap_outgoing_row?(row, legacy_cutoff)
+      return false unless legacy_cutoff
+
+      date = parse_transaction_date(row)
+      return false unless date && date >= legacy_cutoff
+
+      row.dig("amount", "value").to_d <= 0
     end
 
     # Statements are only "unavailable" when every attempted standard balance

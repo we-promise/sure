@@ -284,6 +284,41 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     refute_includes provider.calls, :get_transfers
   end
 
+  test "backfills incoming statement rows into the window already covered by legacy transfers" do
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 1,
+          "sourceCurrency" => "EUR",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 100.0,
+          "targetValue" => 100.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-10"
+        }
+      ]
+    )
+    statements = [
+      { "date" => "2024-01-15T10:00:00Z", "amount" => { "value" => "-50.00", "currency" => "EUR" }, "referenceNumber" => "st-outgoing-in-window" },
+      { "date" => "2024-01-20T10:00:00Z", "amount" => { "value" => "6780.00", "currency" => "EUR" }, "referenceNumber" => "st-incoming-in-window" },
+      { "date" => "2024-01-05T10:00:00Z", "amount" => { "value" => "20.00", "currency" => "EUR" }, "referenceNumber" => "st-before-window" }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+
+    assert_includes refs, "st-incoming-in-window"
+    assert_includes refs, "st-before-window"
+    refute_includes refs, "st-outgoing-in-window"
+  end
+
   test "keeps transfer cutoff incremental after the first sync when full history is enabled" do
     @wise_item.update!(import_all_history: true)
     @wise_item.wise_accounts.create!(

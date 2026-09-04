@@ -90,9 +90,11 @@ en:
         description: Wise requires a signed one-time-token challenge to read full transaction statements, including incoming payments. Generate a keypair here and register the public key with Wise to enable this.
         public_key_label: Public key (PEM)
         registered_help_html: "Register this key with Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key."
+        copy: Copy
+        copied: Copied!
         generate: Generate keypair
         regenerate: Regenerate keypair
-        regenerate_confirm: "Regenerating invalidates the key registered with Wise. You'll need to register the new public key with Wise again before statements can sync. Continue?"
+        regenerate_confirm: "This generates a new keypair. Wise will keep accepting the previous public key until you remove it yourself in your Wise account — Sure has no way to revoke it remotely. You'll need to register the new public key with Wise before statements can sync again. Continue?"
     provider_connection:
       default_name: Wise
       default_description: Connect your Wise multi-currency account
