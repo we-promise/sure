@@ -4,6 +4,55 @@ module AccountsHelper
     render "accounts/summary_card", title: title, content: content
   end
 
+  # The accounts a viewer may actually see, out of a collection a provider card
+  # was about to render whole.
+  #
+  # A provider item is surfaced on the accounts page as soon as ONE of its
+  # accounts is accessible (AccountsController#visible_provider_items), but the
+  # cards then hand their entire item to accounts/index/_account_groups. A
+  # member shared into one account of a connection would otherwise read the
+  # names, balances and group totals of the ones nobody shared with them.
+  #
+  # The manual list already applies this rule upstream, through
+  # `where(id: @accessible_account_ids)`, and applies it to everyone: an admin
+  # does not see a member's unshared account there either. This keeps the
+  # provider cards to the same rule, in the one place they all render through.
+  def accounts_visible_to_viewer(accounts)
+    ids = viewer_accessible_account_ids
+    accounts.select { |account| ids.include?(account.id) }
+  end
+
+  # Stable id for the frame a background broadcast leaves in a provider card,
+  # and for the response that fills it. Derived from the accounts the card was
+  # asked to show — sorted, so the two sides agree whatever order they arrive
+  # in, and hashed rather than listed so the id stays a fixed length.
+  #
+  # Built from what was REQUESTED, never from what the viewer turns out to be
+  # allowed: the response is filtered, so keying on the filtered set would give
+  # the reply a different id from the frame waiting for it.
+  def account_groups_frame_id(account_ids)
+    "account_groups_#{Digest::SHA1.hexdigest(Array(account_ids).map(&:to_s).sort.join(","))}"
+  end
+
+  # Whether there is a viewer to scope to at all. A background broadcast renders
+  # these partials with `Current.user` nil, and "no accessible accounts" and
+  # "no viewer" are different answers that the empty-set fallback below
+  # collapses into one.
+  def viewer_present_for_account_scoping?
+    # `nil?`, not `present?`: an injected list that is empty is still a viewer
+    # — one who may see nothing, which is a real answer. Treating it as "no
+    # viewer" would hand a member with no shared accounts an "Updating…" card
+    # that never updates into anything.
+    !@accessible_account_ids.nil? || Current.user.present?
+  end
+
+  # Reuses the list the accounts index already loaded; falls back to a query for
+  # any other caller, once per request.
+  def viewer_accessible_account_ids
+    @viewer_accessible_account_ids ||=
+      (@accessible_account_ids || Current.user&.accessible_accounts&.pluck(:id) || []).to_set
+  end
+
   def sync_path_for(account)
     # Always use the account sync path, which handles syncing all providers
     sync_account_path(account)

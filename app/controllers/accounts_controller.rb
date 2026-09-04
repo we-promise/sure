@@ -40,11 +40,11 @@ class AccountsController < ApplicationController
     )
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
-    # so the card is told which of them this viewer may actually see. nil is the
-    # admin case, which visible_provider_items already lets through whole.
-    allowed_ids = Current.user&.admin? ? nil : @accessible_account_ids
+    # so the card is told which of them this viewer may actually see. No admin
+    # exemption: the manual list above does not grant one either, and the card's
+    # address count has to agree with what the card actually renders.
     @onchain_wallet_cards = @onchain_wallet_items.to_h do |item|
-      visible = item.accounts_visible_to(allowed_ids)
+      visible = item.accounts_visible_to(@accessible_account_ids)
       [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
     end
 
@@ -168,6 +168,37 @@ class AccountsController < ApplicationController
     end
 
     redirect_to account_path(@account)
+  end
+
+  # Fills the frame a background broadcast leaves in a provider card. The
+  # broadcast runs in a job with no `Current.user`, so it cannot decide which of
+  # the card's accounts a given reader may see; this is the reader asking for
+  # them back on their own authenticated request.
+  #
+  # The ids arrive from the frame's own src, so they are a request rather than
+  # an authorisation: everything is resolved through `accessible_accounts`, and
+  # an id for an account the reader may not see simply does not come back.
+  MAX_GROUP_ACCOUNTS = 500
+
+  def groups
+    @requested_account_ids = params[:ids].to_s.split(",").map(&:strip).reject(&:blank?).uniq
+    @groups_accounts =
+      if @requested_account_ids.empty? || @requested_account_ids.size > MAX_GROUP_ACCOUNTS
+        []
+      else
+        Current.user.accessible_accounts
+               .where(id: @requested_account_ids)
+               .with_attached_logo
+               .includes(:accountable, :account_providers)
+               .order(:name)
+               .to_a
+      end
+
+    # The partial scopes to the viewer on its own; this is the list it is
+    # allowed to consider, injected the same way the index injects it.
+    @accessible_account_ids = @groups_accounts.map(&:id)
+
+    render layout: false
   end
 
   def sparkline
