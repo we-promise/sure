@@ -129,6 +129,60 @@ class Transaction < ApplicationRecord
     joins(entry: :account).where(accounts: { family_id: family.id })
   end
 
+  # Minimum characters typed before searching past transactions for name suggestions.
+  MIN_LENGTH_FOR_NAME_SUGGESTION = 3
+
+  # Past transaction names resembling the given query, each paired with the category most
+  # commonly used for that exact name. Powers the "Libellé" autocomplete in the new
+  # transaction form — call on a family-scoped relation, e.g. `family.transactions.name_suggestions_for(query)`.
+  def self.name_suggestions_for(query, limit: 8)
+    sanitized_query = query.to_s.strip
+    return [] if sanitized_query.length < MIN_LENGTH_FOR_NAME_SUGGESTION
+
+    # distinct(false) cancels any DISTINCT inherited from the caller's scope (e.g.
+    # Account.accessible_by's left_joins(:account_shares).distinct) — Postgres rejects
+    # SELECT DISTINCT combined with an ORDER BY expression absent from the select list.
+    # Callers such as TransactionsController#name_suggestions merge in
+    # Account.accessible_by, whose left_joins(:account_shares) fans out to one row per
+    # share for accounts the current user owns (the owner predicate matches regardless of
+    # which share row it's paired with) — so COUNT(*) below would over-count transactions
+    # on any owned account shared with multiple family members. COUNT(DISTINCT
+    # transactions.id) counts each transaction once no matter how the caller's scope joins.
+    # Leading-wildcard ILIKE can't use index_entries_on_lower_name (a btree on
+    # lower(name), which only accelerates prefix/exact matches) and falls back
+    # to a scan — same tradeoff already accepted in EntrySearch#search and
+    # Entry.uncategorized_matching for the same reason. Revisit with a shared
+    # pg_trgm index across all three call sites if this becomes a bottleneck.
+    matching_names = with_entry
+      .distinct(false)
+      .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
+      .group("entries.name")
+      .order(Arel.sql("COUNT(DISTINCT transactions.id) DESC"))
+      .limit(limit)
+      .pluck(Arel.sql("entries.name"))
+
+    return [] if matching_names.empty?
+
+    # Winning (most-used) category_id per name, in one grouped query. Rows are ordered so
+    # that for each name, its highest-count category_id comes first — the `||=` below then
+    # keeps only that first (winning) row per name, avoiding a query per name.
+    category_id_by_name = {}
+    with_entry
+      .distinct(false)
+      .where(entries: { name: matching_names })
+      .where.not(category_id: nil)
+      .group("entries.name", :category_id)
+      .order(Arel.sql("entries.name ASC, COUNT(DISTINCT transactions.id) DESC"))
+      .pluck(Arel.sql("entries.name"), :category_id)
+      .each { |name, category_id| category_id_by_name[name] ||= category_id }
+
+    categories_by_id = Category.where(id: category_id_by_name.values.uniq).index_by(&:id)
+
+    matching_names.map do |name|
+      Transaction::NameSuggestion.new(name: name, category: categories_by_id[category_id_by_name[name]])
+    end
+  end
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     TRANSFER_KINDS.include?(kind)
