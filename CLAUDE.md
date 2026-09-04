@@ -119,12 +119,16 @@ Two primary data ingestion methods:
   - Set `PLAID_INCLUDE_PENDING=0` to disable pending fetching for Plaid.
   - Set `SIMPLEFIN_DEBUG_RAW=1` to enable raw payload debug logging.
   - Set `UP_DEBUG_RAW=1` to enable raw Up payload debug logging. DEV-ONLY: the dump contains PII and is gated to local environments, so it never logs in managed/production.
+  - Monobank: `config/initializers/monobank.rb` via `Rails.configuration.x.monobank.*`.
+  - Set `MONOBANK_INCLUDE_PENDING=0` to disable pending (held) fetching for Monobank.
+  - Set `MONOBANK_DEBUG_RAW=1` to enable raw Monobank payload debug logging. DEV-ONLY, same PII gating as Up.
 
 Provider support notes:
 - SimpleFIN: supports pending + FX metadata (stored under `extra["simplefin"]`).
 - Plaid: supports pending when the upstream Plaid payload includes `pending: true` (stored under `extra["plaid"]`).
 - Plaid investments: investment transactions currently do not store pending metadata.
 - Lunchflow: does not currently store pending metadata.
+- Monobank: pending via `hold: true` (stored at `extra["monobank"]["pending"]`). A hold may settle under a *different* id, so pending entries are pruned when the hold drops out of the latest statement window rather than matched by id. No FX metadata: the statement reports `operationAmount` but never the operation currency, so `operation_amount` is stored raw and `fx_from`/`fx_amount` are left unset. See `docs/hosting/monobank.md` for the rate-limit-driven sync design.
 
 ### Background Processing
 Sidekiq handles asynchronous tasks:

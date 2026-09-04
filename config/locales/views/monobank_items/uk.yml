@@ -1,0 +1,134 @@
+---
+uk:
+  providers:
+    monobank:
+      name: Monobank
+      description: Підключення карток і банок monobank за персональним токеном API
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Підключення Monobank
+  monobank_account:
+    jar_fallback: Банка Monobank
+    card_types:
+      black: Чорна картка
+      white: Біла картка
+      platinum: Платинова картка
+      iron: Картка Iron
+      yellow: Жовта картка
+      eaid: Картка єПідтримка
+      fop: Рахунок ФОП
+      jar: Банка
+      unknown: Картка Monobank
+  monobank_item:
+    errors:
+      account_processing_failed: Не вдалося синхронізувати рахунок Monobank
+      account_sync_schedule_failed: Не вдалося запланувати синхронізацію рахунку Monobank
+      transactions_failed: Не вдалося отримати виписку Monobank
+      sync_failed: Не вдалося синхронізувати підключення Monobank
+    sync_status:
+      no_accounts: Рахунків не знайдено
+      all_synced:
+        one: Синхронізовано 1 рахунок
+        few: "Синхронізовано %{count} рахунки"
+        many: "Синхронізовано %{count} рахунків"
+        other: "Синхронізовано %{count} рахунку"
+      partial: "%{linked} синхронізовано, %{unlinked} потребують налаштування"
+    institution_summary:
+      none: Установи не підключені
+      one: 1 установа
+      count:
+        one: 1 установа
+        few: "%{count} установи"
+        many: "%{count} установ"
+        other: "%{count} установи"
+  monobank_items:
+    provider_panel:
+      default_connection_name: Підключення Monobank
+      add_connection: Додати підключення Monobank
+      update_connection: Оновити підключення
+      connection_name_label: Назва підключення
+      connection_name_placeholder: Мій Monobank
+      access_token_label: Персональний токен API
+      access_token_placeholder: Вставте персональний токен Monobank
+      keep_access_token_placeholder: Залиште порожнім, щоб зберегти наявний токен
+      setup_accounts: Налаштувати рахунки
+      syncing: Синхронізація...
+      sync: Синхронізувати
+      disconnect: Відключити
+      disconnect_confirm: "Ви впевнені, що хочете відключити %{name}?"
+      rate_limit_notice: Monobank дозволяє один запит на хвилину, тому одна синхронізація опрацьовує кілька рахунків, а давніша історія завантажується за кілька синхронізацій.
+    create:
+      success: Підключення Monobank збережено.
+    update:
+      success: Підключення Monobank оновлено.
+    destroy:
+      success: Підключення Monobank заплановано на видалення.
+      unlink_failed: Не вдалося відключити підключення Monobank
+    select_accounts:
+      title: Підключити рахунки Monobank
+      description: Виберіть картки або банки Monobank, які потрібно додати.
+      no_accounts_found: Непідключених рахунків Monobank не знайдено.
+      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях провайдерів.
+      cancel: Скасувати
+      link_accounts: Підключити рахунки
+    link_accounts:
+      success:
+        one: Підключено 1 рахунок Monobank.
+        few: "Підключено %{count} рахунки Monobank."
+        many: "Підключено %{count} рахунків Monobank."
+        other: "Підключено %{count} рахунку Monobank."
+      no_accounts_selected: Виберіть щонайменше один рахунок.
+      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях провайдерів.
+      unsupported_account_type: Monobank не підтримує цей тип рахунку.
+      link_failed: Жодного рахунку не підключено.
+    select_existing_account:
+      title: "Підключити рахунок Monobank до %{account_name}"
+      description: Виберіть непідключений рахунок Monobank для цього рахунку.
+      no_accounts_found: Непідключених рахунків Monobank не знайдено.
+      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях провайдерів.
+      account_already_linked: Цей рахунок уже підключено до провайдера.
+      cancel: Скасувати
+      link_account: Підключити рахунок
+    link_existing_account:
+      success: "Рахунок Monobank підключено до %{account_name}."
+      account_already_linked: Цей рахунок уже підключено до провайдера.
+      monobank_account_already_linked: Цей рахунок Monobank уже підключено.
+      no_account_selected: Виберіть рахунок Monobank для підключення.
+    setup_accounts:
+      title: Підключення рахунків Monobank
+      subtitle: Виберіть, як кожна картка або банка Monobank має відображатися у Sure.
+      no_credentials: Спершу налаштуйте доступ до Monobank.
+      api_error: Не вдалося отримати рахунки Monobank.
+      fetch_failed: Не вдалося отримати рахунки
+      no_accounts_to_setup: Немає рахунків для налаштування
+      all_accounts_linked: Усі рахунки Monobank уже підключені.
+      choose_account_type: Виберіть тип рахунку
+      choose_account_type_description: Пропустіть рахунки, які не потрібно відслідковувати.
+      account_type_label: Тип рахунку
+      account_types:
+        skip: Пропустити
+        depository: Готівка
+      create_accounts: Створити рахунки
+      cancel: Скасувати
+    complete_account_setup:
+      success:
+        one: Створено 1 рахунок Monobank.
+        few: "Створено %{count} рахунки Monobank."
+        many: "Створено %{count} рахунків Monobank."
+        other: "Створено %{count} рахунку Monobank."
+      all_skipped: Рахунків Monobank не створено.
+      no_accounts: Рахунки Monobank не вибрано.
+      creation_failed: Не вдалося створити рахунки Monobank.
+    monobank_item:
+      deletion_in_progress: Видалення виконується
+      syncing: Синхронізація
+      error: Помилка
+      status_with_summary: "Синхронізовано %{timestamp} тому · %{summary}"
+      status_never: Ніколи не синхронізувалося
+      delete: Видалити
+      setup_needed: Потрібно налаштувати рахунки
+      setup_description: "Підключено %{linked} з %{total} рахунків."
+      setup_action: Налаштувати рахунки
+      no_accounts_title: Рахунки ще не імпортовано
+      no_accounts_description: Отримайте рахунки Monobank і виберіть, які підключити.

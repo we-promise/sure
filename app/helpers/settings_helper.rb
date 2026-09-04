@@ -63,6 +63,9 @@ module SettingsHelper
     when "up"
       return { status: :off } unless @up_items&.any?
       sync_based_summary(key)
+    when "monobank"
+      return { status: :off } unless @monobank_items&.any?
+      sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
       sync_based_summary(key)
