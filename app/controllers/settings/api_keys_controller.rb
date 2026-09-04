@@ -52,7 +52,7 @@ class Settings::ApiKeysController < ApplicationController
 
     begin
       SecurityAuditLog.log_api_key_revoked!(user: Current.user, api_key: @api_key, request: request)
-    rescue ActiveRecord::RecordInvalid => e
+    rescue ActiveRecord::ActiveRecordError => e
       Rails.logger.error("[Settings::ApiKeys] Failed to write audit log for revoked key #{@api_key.id}: #{e.message}")
     end
 

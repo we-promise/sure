@@ -299,7 +299,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "password_changed", log.event_type
     assert_equal target.id, log.user_id
     assert_equal users(:sure_support_staff).id, log.metadata["actor_user_id"]
-    assert_equal target.email, log.metadata["user_email"]
+    assert_equal target.email, log.user_email
   end
 
   test "update does not log an audit entry when the password is unchanged" do

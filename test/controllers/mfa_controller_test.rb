@@ -52,6 +52,19 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_enabled")
   end
 
+  test "does not enable MFA when the audit log write fails" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    SecurityAuditLog.stubs(:log_mfa_enabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    assert_raises ActiveRecord::RecordInvalid do
+      post mfa_path, params: { code: totp.now }
+    end
+
+    assert_not @user.reload.otp_required?
+    assert_empty @user.otp_backup_codes
+  end
+
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
@@ -298,6 +311,25 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_empty @user.webauthn_credentials
 
     assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
+  end
+
+  test "does not disable MFA when the audit log write fails" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "disable-mfa-audit-fail-credential",
+      public_key: "public-key"
+    )
+    SecurityAuditLog.stubs(:log_mfa_disabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    assert_raises ActiveRecord::RecordInvalid do
+      delete disable_mfa_path
+    end
+
+    assert @user.reload.otp_required?
+    assert @user.otp_secret.present?
+    assert_not_empty @user.webauthn_credentials
   end
 
   private
