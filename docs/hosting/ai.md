@@ -1251,9 +1251,11 @@ transaction categorizer and merchant detector for each of OpenAI and Anthropic.
 Those last two are worded independently per provider, which is why each gets its
 own field.
 
-Leaving a field blank falls back to the built-in prompt, and so does **Reset to
-default**. The built-in text stays visible under each field for reference.
-Overrides are capped at 20,000 characters, since they are sent on every request.
+Each field opens with its built-in default instructions, or the family override
+if one was saved. Leaving a field blank falls back to the default, and clicking
+**Reset to default** asks for confirmation before restoring the original text.
+A status label and live character counter sit below each field, with an override
+cap of 20,000 characters per prompt.
 
 Overriding the chat prompt gives up some prompt caching. The static half is
 byte-stable so providers discount the repeated prefix; a family that overrides it
