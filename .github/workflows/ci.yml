@@ -38,7 +38,17 @@ jobs:
           bundler-cache: true
 
       - name: Scan for security vulnerabilities in JavaScript dependencies
-        run: bin/importmap audit
+        run: |
+          for attempt in 1 2 3; do
+            echo "Running importmap audit, attempt ${attempt}/3"
+            bin/importmap audit && exit 0
+
+            if [ "$attempt" = 3 ]; then
+              exit 1
+            fi
+
+            sleep $((attempt * 10))
+          done
 
   lint:
     runs-on: ubuntu-latest
