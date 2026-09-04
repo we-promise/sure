@@ -14,19 +14,32 @@
   </section>
 
   <section class="space-y-2">
-    <%= f.text_field :name, label: t(".description"),
-      placeholder: auto_generate_names ? t(".description_placeholder_optional") : t(".description_placeholder"),
-      required: !auto_generate_names,
-      list: auto_generate_names ? "transaction_name_suggestions" : nil,
-      data: { transaction_name_preview_target: "name" } %>
+    <div class="relative">
+      <%= f.text_field :name, label: t(".description"),
+        placeholder: auto_generate_names ? t(".description_placeholder_optional") : t(".description_placeholder"),
+        required: !auto_generate_names,
+        autocomplete: "off",
+        data: {
+          transaction_name_preview_target: "name",
+          action: "input->transaction-name-preview#filterSuggestions focus->transaction-name-preview#showSuggestions blur->transaction-name-preview#scheduleHideSuggestions"
+        } %>
 
-    <% if auto_generate_names && recent_transaction_names.present? %>
-      <datalist id="transaction_name_suggestions">
-        <% recent_transaction_names.each do |name| %>
-          <option value="<%= name %>">
-        <% end %>
-      </datalist>
-    <% end %>
+      <% if auto_generate_names && recent_transaction_names.present? %>
+        <ul role="listbox"
+            class="absolute z-50 p-1.5 w-full min-w-48 max-h-64 overflow-auto rounded-lg shadow-lg bg-container mt-1.5 hidden"
+            data-transaction-name-preview-target="suggestions">
+          <% recent_transaction_names.each do |name| %>
+            <li role="option"
+                data-transaction-name-preview-target="suggestionOption"
+                data-name="<%= name %>"
+                data-action="mousedown->transaction-name-preview#selectSuggestion"
+                class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg cursor-pointer hover:bg-container-inset-hover">
+              <%= name %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
 
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>

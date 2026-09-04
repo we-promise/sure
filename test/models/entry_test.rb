@@ -91,7 +91,7 @@ class EntryTest < ActiveSupport::TestCase
       category: categories(:food_and_drink)
     )
 
-    assert_equal "#{merchants(:netflix).name} - #{categories(:food_and_drink).name}", entry.name
+    assert_equal "#{categories(:food_and_drink).name} - #{merchants(:netflix).name}", entry.name
   end
 
   test "does not overwrite an explicitly provided name even when auto-generate is on" do

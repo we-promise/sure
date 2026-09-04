@@ -603,7 +603,7 @@ class Entry < ApplicationRecord
     end
 
     def set_default_name
-      parts = [ entryable.merchant&.name.presence, entryable.category&.name.presence ].compact
+      parts = [ entryable.category&.name.presence, entryable.merchant&.name.presence ].compact
       self.name = parts.any? ? parts.join(" - ") : I18n.t("transactions.unknown_name")
     end
 end
