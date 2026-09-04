@@ -1485,6 +1485,109 @@ timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 
+#### Verifying Worker Configuration
+
+The checks above all run from the `web` process. Most AI work — assistant
+responses, PDF processing, embeddings, auto-categorization, and merchant
+detection — actually executes in a Sidekiq `worker` process, which can differ
+from `web` in network access, DNS, proxy rules, or even which credentials it
+loaded, especially in Kubernetes deployments using workload-specific overrides
+or a Secret updated without a pod restart. A passing web check does not prove
+a worker can reach the same provider.
+
+Click **Verify worker configuration** on the AI status tab to queue an
+asynchronous check (`WorkerAiHealthCheckJob`). It runs the same live probes
+from inside whichever worker process dequeues it, and the tab lists the
+result: that worker's process identity, when it checked, whether its
+effective configuration matches what `web` resolved, and probe outcomes.
+
+A few things this does and doesn't prove:
+
+- **One check verifies one worker.** Sidekiq doesn't broadcast a job to every
+  process, so a passing result confirms the process named on it is healthy —
+  not your whole fleet. With multiple worker replicas, queue the check again
+  to sample another; only the 5 most recently checked-in distinct processes
+  are kept (`WorkerAiHealth::MAX_RESULTS`) — a 6th eviction can push out an
+  older entry before its own `WorkerAiHealth::RETENTION` (15 minutes) is up —
+  and a result older than `WorkerAiHealth::STALE_AFTER` displays as **Stale**
+  rather than pass/fail.
+- **Worker checks never reuse a web-cached result, or vice versa.** The web
+  page's probes are cached briefly (see above) so repeat page loads don't
+  re-hit providers; the worker job deliberately bypasses that shared cache so
+  its result always reflects a live call from its own network context, and
+  never leaves an entry a web request could read back as if it had checked
+  itself.
+- **In local development, the web and worker results won't show up together.**
+  `bin/dev` runs `web` and `worker` as separate OS processes, and
+  `config/environments/development.rb` uses a process-local `:memory_store` /
+  `:null_store` cache there (production uses a shared Redis store). A worker
+  check queued locally writes to the worker process's own in-memory cache, so
+  the web page's "Verify worker configuration" button can appear to do
+  nothing — it isn't a bug, there's just no result for it to read back.
+- **Which settings need a restart depends on how they're set.** Provider,
+  model, and API-key settings changed in **Settings → Self-Hosting** are
+  stored in the database and take effect automatically for the next request
+  or queued job on both `web` and `worker` — no restart needed. Embedding
+  configuration, and anything only set through an environment variable, is
+  fixed when each container starts; changing it requires restarting or
+  recreating **both** `web` and `worker`. The AI status tab labels this
+  distinction next to the worker results.
+
+#### Troubleshooting Pgvector and Embeddings
+
+The AI status page reports separate failures for the PostgreSQL storage check
+and the embedding endpoint check.
+
+If PostgreSQL reports that the `vector` extension is not enabled, make sure the
+database image includes pgvector, then enable the extension as a database owner
+or superuser:
+
+```bash
+sudo -u postgres psql -d sure_production -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+If `vector_store_chunks` is missing, confirm the migration state and re-run the
+conditional vector-store migration with the pgvector provider selected:
+
+```bash
+RAILS_ENV=production bundle exec rails db:migrate:status
+VECTOR_STORE_PROVIDER=pgvector RAILS_ENV=production bundle exec rails db:migrate:redo VERSION=<migration_version>
+```
+
+If the embedding check reports a dimensions mismatch, align
+`EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS` with the embedding provider's
+documented vector size. For example, `gemini-embedding-2-preview` returns 3072
+dimensions by default, so a matching configuration is:
+
+```bash
+EMBEDDING_MODEL=gemini-embedding-2-preview
+EMBEDDING_DIMENSIONS=3072
+```
+
+Changing only `EMBEDDING_DIMENSIONS` does not reshape an existing pgvector
+column. If `vector_store_chunks` was already created with a different size,
+back up the database and source documents, remove the indexed documents from
+Sure, then alter or recreate the `embedding` column/table before uploading the
+documents again. Dropping the empty chunks table lets Sure recreate it with the
+new vector size:
+
+```bash
+docker compose -f compose.example.ai.yml exec web bin/rails runner \
+  'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+```
+
+Restart Sure after changing environment values so the new settings are present
+in both web and worker processes. If the embedding live check times out, raise
+the health-check probe timeout in the service environment:
+
+```bash
+AI_HEALTH_PROBE_TIMEOUT=180
+```
+
+If normal AI chat calls also time out, raise `OPENAI_REQUEST_TIMEOUT`
+separately; it controls OpenAI-compatible LLM requests, not the health-check
+probe budget.
+
 You can also check the adapter from the Rails console:
 
 ```ruby

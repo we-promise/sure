@@ -22,7 +22,7 @@ en:
           one: "1 txn"
           other: "%{count} txns"
         split_warning_title: Split transactions detected
-        split_warning_description: "This QIF file contains split transactions. Splits are not yet supported, so each split transaction will be imported as a single transaction with its full amount and no category. The individual split breakdowns will not be preserved."
+        split_warning_description: "This QIF file contains split transactions. Review the detected split categories and tags below before importing."
         split_badge: split
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
@@ -200,6 +200,7 @@ en:
     uploads:
       handle_qif_upload:
         qif_uploaded: "QIF file uploaded successfully."
+        qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
@@ -215,7 +216,7 @@ en:
         download_sample_csv: Download a sample CSV
         to_see_format: to see the required CSV format
         qif_title: Upload QIF file
-        qif_description: Select the account this QIF file belongs to, then upload your .qif export from Quicken.
+        qif_description: Select an account for single-account files, or leave blank when your QIF export includes account names.
         qif_account_label: Account
         qif_account_placeholder: Select an account…
         qif_file_prompt: to add your QIF file here
