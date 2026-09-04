@@ -379,6 +379,13 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
     )
 
+    # Native USD market prices make calculated rows USD while the provider snapshot is EUR.
+    [ snap_date, Date.current ].each do |date|
+      Security::Price.find_or_initialize_by(security: @aapl, date: date, currency: "USD").update!(
+        price: date == Date.current ? 220 : 210
+      )
+    end
+
     Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
 
     today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
@@ -403,6 +410,12 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       cost_basis: BigDecimal("100.00"), cost_basis_source: "provider"
     )
 
+    [ snap_date, Date.current ].each do |date|
+      Security::Price.find_or_initialize_by(security: @aapl, date: date, currency: "USD").update!(
+        price: date == Date.current ? 220 : 210
+      )
+    end
+
     assert_nothing_raised do
       Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
     end
@@ -410,6 +423,225 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     today_holding = @account.holdings.find_by!(security: @aapl, date: Date.current, currency: "USD")
     assert_nil today_holding.cost_basis,
       "Carry-forward should be skipped gracefully when currency conversion fails"
+  end
+
+  test "preserves locked manual cost basis original currency while mirroring converted value" do
+    account = @family.accounts.create!(
+      name: "CAD Brokerage",
+      balance: 20000,
+      cash_balance: 20000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MNLC", name: "Manual Locked Cost", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: trade_date, rate: 1.25)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.80)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: Date.current, rate: 1.25)
+
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "USD")
+
+    stale = Holding.create!(
+      account: account,
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 137.5,
+      amount: 1375,
+      currency: "CAD",
+      cost_basis: BigDecimal("125.00"),
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    stale.reload
+    assert Holding.exists?(stale.id), "Original CAD entry must remain recoverable"
+    assert_equal BigDecimal("125.00"), stale.cost_basis
+    assert_equal "CAD", stale.currency
+    assert_equal "manual", stale.cost_basis_source
+    assert stale.cost_basis_locked?
+    assert_equal 0, stale.qty
+    assert_equal 0, stale.amount
+
+    today = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert today.cost_basis_locked?
+    assert_equal "manual", today.cost_basis_source
+    # 125 CAD * 0.80 = 100 USD
+    assert_in_delta BigDecimal("100.00"), today.cost_basis, BigDecimal("0.01")
+  end
+
+  test "preserves locked calculated cost basis without relabeling as manual" do
+    account = @family.accounts.create!(
+      name: "CAD Brokerage Locked Calculated",
+      balance: 20000,
+      cash_balance: 20000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MNLCALC", name: "Locked Calculated", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: trade_date, rate: 1.25)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.80)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: Date.current, rate: 1.25)
+
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "USD")
+
+    stale = Holding.create!(
+      account: account,
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 137.5,
+      amount: 1375,
+      currency: "CAD",
+      cost_basis: BigDecimal("125.00"),
+      cost_basis_source: "calculated",
+      cost_basis_locked: true
+    )
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    stale.reload
+    assert Holding.exists?(stale.id)
+    assert_equal "calculated", stale.cost_basis_source
+    assert_equal BigDecimal("125.00"), stale.cost_basis
+    assert_equal 0, stale.qty
+
+    today = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert_equal "calculated", today.cost_basis_source
+    assert today.cost_basis_locked?
+    assert_in_delta BigDecimal("100.00"), today.cost_basis, BigDecimal("0.01")
+  end
+
+  test "preserves locked manual cost basis row when FX rates are absent" do
+    account = @family.accounts.create!(
+      name: "CAD Brokerage No FX",
+      balance: 20000,
+      cash_balance: 20000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MNFX", name: "Manual No FX", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "USD")
+
+    stale = Holding.create!(
+      account: account,
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 137.5,
+      amount: 1375,
+      currency: "CAD",
+      cost_basis: BigDecimal("125.00"),
+      cost_basis_source: "manual",
+      cost_basis_locked: true
+    )
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    stale.reload
+    assert Holding.exists?(stale.id), "Locked manual row must be kept when FX conversion is unavailable"
+    assert_equal BigDecimal("125.00"), stale.cost_basis
+    assert_equal "CAD", stale.currency
+    assert_equal 0, stale.qty
+
+    today = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert_not today.cost_basis_locked?,
+      "Native row must not inherit a locked basis when FX conversion failed"
+  end
+
+  test "holdings value in account currency is unchanged when rows switch to native currency" do
+    account = @family.accounts.create!(
+      name: "CAD Brokerage Balance Parity",
+      balance: 20000,
+      cash_balance: 20000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "PARI", name: "Parity", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: trade_date, rate: 1.25)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "CAD", date: Date.current, rate: 1.30)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: trade_date, rate: 0.80)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.7692307692)
+
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+    Security::Price.create!(security: security, date: Date.current, price: 110, currency: "USD")
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "USD")
+
+    # Legacy account-currency representation of today's holding
+    account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 143,
+      amount: 1430,
+      currency: "CAD"
+    )
+
+    legacy_value = Balance::SyncCache.new(account).get_holdings_value(Date.current)
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    account.holdings.reload
+
+    native = account.holdings.find_by!(security: security, date: Date.current, currency: "USD")
+    assert_equal BigDecimal("1100"), native.amount
+
+    native_value = Balance::SyncCache.new(account).get_holdings_value(Date.current)
+    assert_equal legacy_value, native_value
+    assert_equal BigDecimal("1430"), native_value
+  end
+
+  test "reverse materialization without Security::Price rows keeps holding currency through history" do
+    account = @family.accounts.create!(
+      name: "EUR Provider No Market Prices",
+      balance: 20000,
+      cash_balance: 5000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "NOPX", name: "No Prices", exchange_operating_mic: "XNAS")
+    trade_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "CAD", date: trade_date, rate: 1.5)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "CAD", date: Date.current, rate: 1.5)
+
+    create_trade(security, account: account, qty: 10, date: trade_date, price: 100, currency: "EUR")
+
+    # Provider snapshot only — no Security::Price rows exist for this security.
+    account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 120,
+      amount: 1200,
+      currency: "EUR",
+      account_provider_id: nil,
+      cost_basis: 100,
+      cost_basis_source: "provider"
+    )
+
+    assert_equal 0, Security::Price.where(security: security).count
+
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+
+    currencies = account.holdings.where(security: security).distinct.pluck(:currency)
+    assert_equal [ "EUR" ], currencies
+    assert account.holdings.where(security: security).where("date < ?", Date.current).exists?,
+           "Historical reverse holdings should be gapfilled from the provider/holding price series"
   end
 
   test "preserves same-day non-provider holdings for securities absent from the provider snapshot" do

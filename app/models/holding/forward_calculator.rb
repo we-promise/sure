@@ -4,8 +4,13 @@ class Holding::ForwardCalculator
   def initialize(account, security_ids: nil)
     @account = account
     @security_ids = security_ids
-    # Track cost basis per security: { security_id => { total_cost: BigDecimal, total_qty: BigDecimal } }
-    @cost_basis_tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+    # Track buy lots per security so cost basis can be converted into the holding's
+    # native price currency (not forced into account.currency).
+    @cost_basis_tracker = Hash.new { |h, k| h[k] = [] }
+    # Memoize cost basis by [security_id, currency, lot_count] so days without new
+    # buys are O(1), and memoize FX rates by [from, to, date] across lots/days.
+    @cost_basis_memo = {}
+    @fx_rate_memo = {}
     # Securities whose position has taken in a transfer. A coin moved in was
     # acquired at a price nothing here knows, and averaging the purchases alone
     # would apply their price to units that never cost it.
@@ -89,37 +94,69 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         next unless trade.qty > 0 # Only track buys
 
-        security_id = trade.security_id
-
         # A transfer is not a purchase: it contributes no cost and it makes the
         # whole position unknowable, not just its own units.
         if trade.investment_activity_label == Trade::TRANSFER_LABEL
-          @transferred_security_ids << security_id
+          @transferred_security_ids << trade.security_id
           next
         end
 
-        tracker = @cost_basis_tracker[security_id]
-
-        # Convert trade price to account currency if needed
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
-
-        tracker[:total_cost] += converted_price * trade.qty
-        tracker[:total_qty] += trade.qty
+        # Store the lot in its own currency; conversion happens in cost_basis_for,
+        # which knows the holding's native price currency and memoizes the rates.
+        @cost_basis_tracker[trade.security_id] << {
+          qty: trade.qty,
+          price: trade.price,
+          currency: trade.currency,
+          date: trade_entry.date
+        }
       end
     end
 
-    # Returns the current cost basis for a security, or nil if no buys recorded
+    # Returns the current cost basis for a security in the holding currency, or nil if no buys recorded
+    # or a cross-currency buy cannot be converted.
     def cost_basis_for(security_id, currency)
       return nil if @transferred_security_ids.include?(security_id)
 
-      tracker = @cost_basis_tracker[security_id]
-      return nil if tracker[:total_qty].zero?
+      buys = @cost_basis_tracker[security_id]
+      return nil if buys.empty?
 
-      tracker[:total_cost] / tracker[:total_qty]
+      memo_key = [ security_id, currency, buys.size ]
+      return @cost_basis_memo[memo_key] if @cost_basis_memo.key?(memo_key)
+
+      @cost_basis_memo[memo_key] = weighted_average_cost(buys, currency)
+    end
+
+    def weighted_average_cost(buys, currency)
+      total_qty = buys.sum { |buy| buy[:qty] }
+      return nil if total_qty.zero?
+
+      total_cost = BigDecimal("0")
+
+      buys.each do |buy|
+        converted_price = convert_buy_price(buy, currency)
+        return nil if converted_price.nil?
+
+        total_cost += converted_price * buy[:qty]
+      end
+
+      total_cost / total_qty
+    end
+
+    def convert_buy_price(buy, currency)
+      return buy[:price] if buy[:currency] == currency
+
+      rate = fx_rate(from: buy[:currency], to: currency, date: buy[:date])
+      # Match Money#exchange_to: absent or non-positive rates are unusable
+      # (ExchangeRate does not enforce positivity at the DB layer).
+      return nil unless rate&.positive?
+
+      buy[:price] * rate
+    end
+
+    def fx_rate(from:, to:, date:)
+      key = [ from, to, date ]
+      return @fx_rate_memo[key] if @fx_rate_memo.key?(key)
+
+      @fx_rate_memo[key] = ExchangeRate.find_or_fetch_rate(from: from, to: to, date: date)&.rate
     end
 end

@@ -36,7 +36,7 @@ class Holding::PortfolioSnapshot
       else
         account.holdings
           .select("DISTINCT ON (security_id) holdings.*")
-          .order(:security_id, date: :desc)
+          .order(Arel.sql(Holding.latest_security_order_sql(prefer_currency: account.currency)))
       end
     end
 end

@@ -27,6 +27,73 @@ class Holding < ApplicationRecord
   scope :for, ->(security) { where(security_id: security).order(:date) }
   scope :with_locked_cost_basis, -> { where(cost_basis_locked: true) }
   scope :with_unlocked_cost_basis, -> { where(cost_basis_locked: false) }
+  # Non-provider rows that are not user-entered/locked cost basis.
+  # Keep in sync with #calculated?
+  scope :calculated, -> {
+    where(account_provider_id: nil, cost_basis_locked: false)
+      .where("cost_basis_source IS DISTINCT FROM ?", "manual")
+  }
+
+  # In-memory counterpart of .calculated — used on already-loaded rows.
+  def calculated?
+    account_provider_id.nil? && !cost_basis_locked? && cost_basis_source != "manual"
+  end
+
+  # Columns allowed in DISTINCT ON / ORDER BY prefixes for +latest_security_order_sql+.
+  # Keep this allowlist tight — the fragment is wrapped in Arel.sql.
+  ALLOWED_LATEST_SECURITY_PARTITION_COLUMNS = %w[security_id account_id].freeze
+
+  # Deterministic ORDER BY fragment for DISTINCT ON (... security_id) latest-row
+  # selection when multiple currencies can exist on the same date.
+  # Prefers non-zero qty (so neutralized orphan-currency cost-basis rows lose),
+  # then provider rows, then a preferred currency (usually account currency),
+  # then alphabetical currency for stability across syncs.
+  #
+  # Identifiers are allowlisted/quoted. Pass partition_columns: [] when the caller
+  # already filtered to one security and only needs the date/currency tie-break
+  # (see Trade#realized_gain_loss).
+  def self.latest_security_order_sql(prefer_currency: nil, partition_columns: %w[security_id])
+    table = connection.quote_table_name(table_name)
+    columns = Array(partition_columns).map(&:to_s)
+    unknown = columns - ALLOWED_LATEST_SECURITY_PARTITION_COLUMNS
+    raise ArgumentError, "Unsupported partition_columns: #{unknown.join(', ')}" if unknown.any?
+
+    quoted_columns = columns.map { |column| "#{table}.#{connection.quote_column_name(column)}" }
+
+    parts = []
+    parts.concat(quoted_columns)
+    parts << "#{table}.#{connection.quote_column_name('date')} DESC"
+    parts << "(#{table}.#{connection.quote_column_name('qty')} <> 0) DESC"
+    parts << "(#{table}.#{connection.quote_column_name('account_provider_id')} IS NOT NULL) DESC"
+    if prefer_currency.present?
+      parts << sanitize_sql_array([
+        "(#{table}.#{connection.quote_column_name('currency')} = ?) DESC",
+        prefer_currency
+      ])
+    end
+    parts << "#{table}.#{connection.quote_column_name('currency')} ASC"
+    parts.join(", ")
+  end
+
+  # In-memory twin of +latest_security_order_sql+ — pick one row from already-loaded
+  # holdings when multiple currencies share the same security/date.
+  def self.pick_latest_for_security(holdings, prefer_currency: nil)
+    Array(holdings).min_by { |holding| latest_security_sort_key(holding, prefer_currency:) }
+  end
+
+  # Ascending sort key matching +latest_security_order_sql+ (lowest wins / first in SQL).
+  def self.latest_security_sort_key(holding, prefer_currency: nil)
+    prefer = prefer_currency.to_s
+    currency = holding.currency.to_s
+
+    [
+      -holding.date.jd,
+      holding.qty.to_d.zero? ? 1 : 0,
+      holding.account_provider_id.present? ? 0 : 1,
+      prefer.present? && currency == prefer ? 0 : 1,
+      currency
+    ]
+  end
 
   delegate :ticker, to: :security
 
@@ -38,7 +105,10 @@ class Holding < ApplicationRecord
     return nil unless amount
     return 0 if amount.zero?
 
-    account.balance.zero? ? 1 : amount_in_account_currency / account.balance * 100
+    converted = amount_in_account_currency
+    return nil if converted.nil?
+
+    account.balance.zero? ? 1 : converted / account.balance * 100
   end
 
   # Returns average cost per share, or nil if unknown.
@@ -261,7 +331,7 @@ class Holding < ApplicationRecord
 
       Money.new(amount, currency).exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
-      amount
+      nil
     end
 
     def calculate_trend
@@ -276,16 +346,28 @@ class Holding < ApplicationRecord
     end
 
     # Calculates weighted average cost from buy trades.
-    # Returns nil if no trades exist (cost basis is unknown).
+    # Returns nil if no trades exist or a cross-currency lot is missing an exchange rate.
+    # Uses the same nearest-rate lookback as Money#exchange_to / find_or_fetch_rate so
+    # weekend and holiday trade dates agree with calculator-stored cost_basis.
     def calculate_avg_cost
+      holding_currency = currency
+      lookback_days = ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
+
       trades = account.trades
         .with_entry
         .joins(ActiveRecord::Base.sanitize_sql_array([
-          "LEFT JOIN exchange_rates ON (
-            exchange_rates.date = entries.date AND
-            exchange_rates.from_currency = trades.currency AND
-            exchange_rates.to_currency = ?
-          )", account.currency
+          "LEFT JOIN LATERAL (
+            SELECT exchange_rates.rate
+            FROM exchange_rates
+            WHERE exchange_rates.from_currency = trades.currency
+              AND exchange_rates.to_currency = ?
+              AND exchange_rates.date <= entries.date
+              AND exchange_rates.date >= (entries.date - ?)
+            ORDER BY exchange_rates.date DESC
+            LIMIT 1
+          ) exchange_rates ON TRUE",
+          holding_currency,
+          lookback_days
         ]))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)
@@ -307,15 +389,24 @@ class Holding < ApplicationRecord
         "trades.investment_activity_label IS DISTINCT FROM ?", Trade::TRANSFER_LABEL
       )
 
-      total_cost, total_qty = trades.pick(
-        Arel.sql("SUM(trades.price * trades.qty * COALESCE(exchange_rates.rate, 1))"),
-        Arel.sql("SUM(trades.qty)")
+      # CASE rather than COALESCE(rate, 1): a same-currency trade needs no rate,
+      # but a cross-currency trade with no rate must stay NULL so missing_fx_count
+      # catches it below instead of silently costing it at 1:1.
+      total_cost, total_qty, missing_fx_count = trades.pick(
+        Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+          "SUM(trades.price * trades.qty * CASE WHEN trades.currency = ? THEN 1 ELSE exchange_rates.rate END)",
+          holding_currency
+        ])),
+        Arel.sql("SUM(trades.qty)"),
+        Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+          "COUNT(*) FILTER (WHERE trades.currency <> ? AND exchange_rates.rate IS NULL)",
+          holding_currency
+        ]))
       )
 
-      # Return nil when no trades exist - cost basis is genuinely unknown
-      # Previously this fell back to current market price, which was misleading
+      return nil if missing_fx_count.to_i > 0
       return nil unless total_qty && total_qty > 0
 
-      Money.new(total_cost / total_qty, currency)
+      Money.new(total_cost / total_qty, holding_currency)
     end
 end

@@ -60,6 +60,36 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows (forward + computed inverse)"
   end
 
+  test "required_exchange_rate_pairs includes trade-holding and security-price pairs" do
+    family = Family.create!(name: "FX Global", currency: "USD")
+    account = family.accounts.create!(
+      name: "CAD Brokerage",
+      currency: "CAD",
+      balance: 10_000,
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "GLOB", name: "Global FX", exchange_operating_mic: "XNAS")
+    trade_date = 10.days.ago.to_date
+
+    trade = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy GLOB", date: trade_date, amount: 100, currency: "USD", entryable: trade)
+    account.holdings.create!(
+      security: security,
+      date: trade_date,
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "EUR"
+    )
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "EUR")
+
+    pairs = MarketDataImporter.new(mode: :full).send(:required_exchange_rate_pairs)
+    pair_keys = pairs.map { |pair| [ pair[:source], pair[:target] ] }
+
+    assert_includes pair_keys, [ "USD", "EUR" ], "trade currency → holding currency"
+    assert_includes pair_keys, [ "EUR", "CAD" ], "security price currency → account currency"
+  end
+
   test "syncs security prices" do
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
 

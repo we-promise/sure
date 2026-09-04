@@ -37,19 +37,13 @@ class Holding::PortfolioCache
     price = price_with_priority.price
     return nil unless price
 
-    price_money = Money.new(price.price, price.currency)
-
-    begin
-      converted_amount = price_money.exchange_to(account.currency, date: date).amount
-    rescue Money::ConversionError
-      converted_amount = price.price
-    end
-
+    # Preserve the native price currency. Account/family views convert when aggregating
+    # so manual calculated holdings stay consistent with provider snapshots.
     Security::Price.new(
       security_id: security_id,
       date: price.date,
-      price: converted_amount,
-      currency: account.currency
+      price: price.price,
+      currency: price.currency
     )
   end
 
@@ -100,9 +94,11 @@ class Holding::PortfolioCache
 
       security_ids = securities.map(&:id)
 
-      # Bulk-load all DB prices for all securities in one query, grouped by security_id
+      # Bulk-load all DB prices for all securities in one query, grouped by security_id.
+      # Explicit currency order keeps same-priority ties deterministic across syncs.
       db_prices_by_security_id = Security::Price
         .where(security_id: security_ids, date: account.start_date..Date.current)
+        .order(:security_id, :date, :currency)
         .group_by(&:security_id)
 
       securities.each do |security|
@@ -139,9 +135,13 @@ class Holding::PortfolioCache
             )
           end
 
-        # Low priority prices from holdings (if applicable)
+        # Low priority prices from holdings (if applicable).
+        # Skip neutralized manual rows (qty/amount zeroed for cost-basis recovery).
+        # Sold-out calculated rows stay — their prices are still valid market data.
         holding_prices = if use_holdings
-          (holdings_by_security_id[security.id] || []).map do |holding|
+          (holdings_by_security_id[security.id] || [])
+            .reject { |holding| holding.qty.zero? && !holding.calculated? }
+            .map do |holding|
             PriceWithPriority.new(
               price: Security::Price.new(
                 security: security,
@@ -159,17 +159,44 @@ class Holding::PortfolioCache
 
         all_prices = db_prices + trade_prices + holding_prices
 
-        # Index by date for O(1) lookup in get_price instead of O(N) linear scan
+        # Prefer the security's most common observed currency (usually its listing /
+        # provider currency) when account currency is absent among tied prices.
+        preferred_security_currency = preferred_currency_for(all_prices)
+
+        # Index by date for O(1) lookup in get_price instead of O(N) linear scan.
+        # When priorities tie: account currency → security's preferred currency →
+        # alphabetical, so native-currency selection cannot flip between syncs.
         prices_by_date = all_prices.group_by { |p| p.price.date }
-          .transform_values { |ps| ps.min_by(&:priority) }
+          .transform_values { |ps| pick_preferred_price(ps, preferred_security_currency:) }
         prices_by_date_and_source = all_prices.group_by { |p| [ p.price.date, p.source ] }
-          .transform_values { |ps| ps.min_by(&:priority) }
+          .transform_values { |ps| pick_preferred_price(ps, preferred_security_currency:) }
 
         @security_cache[security.id] = {
           security: security,
           prices_by_date: prices_by_date,
           prices_by_date_and_source: prices_by_date_and_source
         }
+      end
+    end
+
+    def preferred_currency_for(price_with_priorities)
+      counts = Hash.new(0)
+      price_with_priorities.each { |candidate| counts[candidate.price.currency.to_s] += 1 }
+      return nil if counts.empty?
+
+      # Highest frequency, then alphabetical for a stable secondary key.
+      counts.min_by { |currency, count| [ -count, currency ] }.first
+    end
+
+    def pick_preferred_price(price_with_priorities, preferred_security_currency: nil)
+      price_with_priorities.min_by do |candidate|
+        currency = candidate.price.currency.to_s
+        [
+          candidate.priority,
+          currency == account.currency ? 0 : 1,
+          preferred_security_currency && currency == preferred_security_currency ? 0 : 1,
+          currency
+        ]
       end
     end
 end

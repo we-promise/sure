@@ -36,6 +36,20 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta 0.75, foreign_holding.weight, 0.001
   end
 
+  test "weight is nil when foreign-currency holding cannot be converted" do
+    foreign_security = Security.create!(ticker: "NOFX", name: "Missing FX Holding")
+    foreign_holding = @account.holdings.create!(
+      security: foreign_security,
+      date: Date.current,
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "EUR"
+    )
+
+    assert_nil foreign_holding.weight
+  end
+
   test "calculates average cost basis" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
@@ -63,20 +77,69 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(@nvda.security, account: @account, qty: 5, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
     create_trade(@nvda.security, account: @account, qty: 30, price: 124.00, date: Date.current, currency: "CAD")
 
-    # compute expected: sum(price * qty * rate) / sum(qty)
-    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * BigDecimal("1") +
-                     BigDecimal("15") * BigDecimal("216.00") * BigDecimal("1")
+    rate_yesterday = BigDecimal("0.75")
+    rate_today = BigDecimal("0.80")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: rate_yesterday)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: rate_today)
+
+    amzn_total_usd = BigDecimal("10") * BigDecimal("212.00") * rate_yesterday +
+                     BigDecimal("15") * BigDecimal("216.00") * rate_today
     amzn_qty = BigDecimal("10") + BigDecimal("15")
-    expected_amzn_usd = amzn_total_usd / amzn_qty
+    expected_amzn = amzn_total_usd / amzn_qty
 
-    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * BigDecimal("1") +
-                     BigDecimal("30") * BigDecimal("124.00") * BigDecimal("1")
+    nvda_total_usd = BigDecimal("5") * BigDecimal("128.00") * rate_yesterday +
+                     BigDecimal("30") * BigDecimal("124.00") * rate_today
     nvda_qty = BigDecimal("5") + BigDecimal("30")
-    expected_nvda_usd = nvda_total_usd / nvda_qty
+    expected_nvda = nvda_total_usd / nvda_qty
 
-    ExchangeRate.stubs(:find_or_fetch_rate).returns(OpenStruct.new(rate: 1))
-    assert_equal Money.new(expected_amzn_usd, "CAD").exchange_to("USD"), @amzn.avg_cost
-    assert_equal Money.new(expected_nvda_usd, "CAD").exchange_to("USD"), @nvda.avg_cost
+    assert_equal Money.new(expected_amzn, "USD"), @amzn.avg_cost
+    assert_equal Money.new(expected_nvda, "USD"), @nvda.avg_cost
+  end
+
+  test "avg_cost uses nearest lookback rate for weekend trade dates" do
+    # Matches Money#exchange_to / find_or_fetch_rate: FX often has no weekend row.
+    friday = Date.current.prev_occurring(:friday)
+    saturday = friday + 1.day
+    security = Security.create!(ticker: "WKND", name: "Weekend Trade")
+
+    create_trade(security, account: @account, qty: 10, price: 200.00, date: saturday, currency: "CAD")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: friday, rate: BigDecimal("0.80"))
+
+    holding = @account.holdings.create!(
+      security: security,
+      date: saturday,
+      qty: 10,
+      price: 160,
+      amount: 1600,
+      currency: "USD"
+    )
+
+    assert_equal Money.new(BigDecimal("160.00"), "USD"), holding.avg_cost
+  end
+
+  test "avg_cost returns nil when cross-currency exchange rate is missing" do
+    cad_account = families(:empty).accounts.create!(
+      name: "CAD Brokerage Avg Cost",
+      balance: 10000,
+      cash_balance: 0,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "USDCADFX", name: "Missing USD to CAD")
+    holding = cad_account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 10,
+      price: 100,
+      amount: 1000,
+      currency: "CAD"
+    )
+    create_trade(security, account: cad_account, qty: 10, price: 100.00, date: Date.current, currency: "USD")
+
+    # No USD→CAD rate exists for the trade date (or within lookback). Direct pair only —
+    # having CAD→USD does not satisfy this request.
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: BigDecimal("0.80"))
+    assert_nil holding.avg_cost
   end
 
   test "calculates total return trend" do
@@ -419,6 +482,26 @@ class HoldingTest < ActiveSupport::TestCase
 
     assert_equal old_security, @amzn.security
     assert_nil @amzn.provider_security_id
+  end
+
+  test "latest_security_order_sql quotes identifiers and allowlists partition columns" do
+    sql = Holding.latest_security_order_sql(
+      prefer_currency: "USD",
+      partition_columns: %w[account_id security_id]
+    )
+
+    assert_includes sql, %("holdings"."account_id")
+    assert_includes sql, %("holdings"."security_id")
+    assert_includes sql, %("holdings"."date" DESC)
+    assert_includes sql, %(("holdings"."currency" = 'USD') DESC)
+
+    empty_prefix = Holding.latest_security_order_sql(partition_columns: [])
+    refute_includes empty_prefix, "security_id"
+    assert_includes empty_prefix, %("holdings"."date" DESC)
+
+    assert_raises(ArgumentError) do
+      Holding.latest_security_order_sql(partition_columns: [ "security_id; DROP TABLE holdings--" ])
+    end
   end
 
   private

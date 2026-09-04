@@ -617,8 +617,66 @@ class AccountTest < ActiveSupport::TestCase
       cost_basis: 80
     )
 
-    assert_equal [ provider_holding.id, second_provider_holding.id ].sort, account.current_holdings.pluck(:id).sort
-    assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
+    assert_equal [ provider_holding.id, second_provider_holding.id ].sort, account.current_holdings.map(&:id).sort
+    assert_equal %w[CHF EUR], account.current_holdings.map(&:currency).sort
+  end
+
+  test "current_holdings includes manual holdings in native currencies" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Manual CAD Brokerage",
+      balance: 1000,
+      currency: "CAD",
+      accountable: Investment.new
+    )
+    security = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    usd_holding = account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 5,
+      price: 100,
+      amount: 500,
+      currency: "USD"
+    )
+
+    assert_equal [ usd_holding.id ], account.current_holdings.map(&:id)
+    assert_equal %w[USD], account.current_holdings.map(&:currency)
+  end
+
+  test "current_holdings orders by account-currency value not raw amount" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Mixed FX Brokerage",
+      balance: 10000,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    jpy_security = Security.create!(ticker: "JPYH", name: "Yen Holding")
+    eur_security = Security.create!(ticker: "EURH", name: "Euro Holding")
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0.007)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.20)
+
+    # Raw JPY amount is larger, but EUR converts to more USD.
+    jpy_holding = account.holdings.create!(
+      security: jpy_security,
+      date: Date.current,
+      qty: 1,
+      price: 10000,
+      amount: 10000,
+      currency: "JPY"
+    )
+    eur_holding = account.holdings.create!(
+      security: eur_security,
+      date: Date.current,
+      qty: 1,
+      price: 100,
+      amount: 100,
+      currency: "EUR"
+    )
+
+    assert_equal [ eur_holding.id, jpy_holding.id ], account.current_holdings.map(&:id)
   end
 
   test "on account destroyed cascade transfer destroyed" do

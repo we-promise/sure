@@ -25,7 +25,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
           end_cash_balance = derive_cash_balance_on_date_from_total(
             total_balance: valuation.amount,
             date: date
-          )
+          ) || start_cash_balance
           end_non_cash_balance = valuation.amount - end_cash_balance
         else
           end_cash_balance = derive_end_cash_balance(start_cash_balance: start_cash_balance, date: date)
@@ -97,13 +97,13 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       opening_starting_balances
     end
 
-    # Returns true when the account has entries in currencies other than the
-    # account currency, or when the account currency differs from the family
-    # currency. In either case, balance calculations depend on exchange rates
-    # that may have been missing (fallback_rate: 1) on a prior sync and later
-    # imported — so we must do a full recalculation to pick them up.
+    # Returns true when balance calculations depend on exchange rates that may
+    # have been missing on a prior sync and later imported — so we must do a
+    # full recalculation to pick them up. Includes native holding currencies
+    # (after manual/multi-currency holdings keep security-price FX).
     def multi_currency_account?
       account.entries.excluding_pending.where.not(currency: account.currency).exists? ||
+        account.holdings.where.not(currency: account.currency).exists? ||
         account.currency != account.family.currency
     end
 
@@ -119,7 +119,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       cash = derive_cash_balance_on_date_from_total(
         total_balance: account.opening_anchor_balance,
         date: account.opening_anchor_date
-      )
+      ) || 0
       [ cash, account.opening_anchor_balance - cash ]
     end
 
