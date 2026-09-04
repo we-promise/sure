@@ -386,6 +386,56 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     refute_includes provider.calls, :get_transfers
   end
 
+  test "does not merge the profile-wide transfer fallback into an account that already migrated to statements" do
+    balances = [
+      { "id" => "10000001", "amount" => { "value" => 1000.0, "currency" => "EUR" }, "type" => "STANDARD" },
+      { "id" => "10000002", "amount" => { "value" => 500.0, "currency" => "USD" }, "type" => "STANDARD" }
+    ]
+    eur_account = @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "wise_statement" => true,
+          "date" => "2024-01-20",
+          "amount" => { "value" => "10.0", "currency" => "EUR" },
+          "referenceNumber" => "already-migrated-eur"
+        }
+      ]
+    )
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000002",
+      name: "Wise USD",
+      currency: "USD",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 5,
+          "sourceCurrency" => "USD",
+          "targetCurrency" => "USD",
+          "sourceValue" => 20.0,
+          "targetValue" => 20.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-05"
+        }
+      ]
+    )
+    # USD still needs the legacy fallback, so transfers get fetched profile-wide --
+    # including this EUR-currency row, which must not land on the already-migrated
+    # EUR account.
+    transfers = [ build_transfer(id: 99, source_currency: "EUR", target_currency: "EUR", target_account: 9999) ]
+    provider = FakeWiseProvider.new(balances: balances, transfers: transfers, statement_fail_balance_ids: [ "10000002" ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    eur_account.reload
+    assert_includes provider.calls, :get_transfers
+    refute_includes eur_account.raw_transactions_payload.filter_map { |t| t["id"] }, 99
+    assert_includes eur_account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }, "already-migrated-eur"
+  end
+
   test "keeps transfer cutoff incremental after the first sync when full history is enabled" do
     @wise_item.update!(import_all_history: true)
     @wise_item.wise_accounts.create!(

@@ -330,13 +330,24 @@ class WiseItem::Importer
           wise_account.upsert_wise_transactions_snapshot!(jar_activities)
           transactions_imported += jar_activities.size
         else
-          account_transfers = transfers.select do |t|
-            t["sourceCurrency"] == wise_account.currency ||
-              t["targetCurrency"] == wise_account.currency
-          end
           account_statements = statements[wise_account.id] || []
           existing_legacy = Array(wise_account.raw_transactions_payload).reject { |transaction| transaction["wise_statement"].present? }
           existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
+          # `transfers` is fetched profile-wide as soon as ANY account still
+          # needs the legacy fallback (see #legacy_transfer_import_needed?),
+          # so it can contain movements for a currency this specific account
+          # already covers via its own statements. Only apply it here if this
+          # account hasn't migrated yet -- otherwise the same movement would
+          # be merged twice under different keys (see #merge_transaction_payloads).
+          account_transfers =
+            if existing_statements.any?
+              []
+            else
+              transfers.select do |t|
+                t["sourceCurrency"] == wise_account.currency ||
+                  t["targetCurrency"] == wise_account.currency
+              end
+            end
           # Also include INTERBALANCE activities so the standard account shows outflows to the JAR.
           interbalance = activities.select { |a| activity_for_account?(a, wise_account) }
           payload = merge_transaction_payloads(
