@@ -181,6 +181,27 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/router-secret/, response.body)
   end
 
+  test "AI status names an unavailable configured LLM model" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:llm).returns(
+      probe_result(:failing, failure_code: :model_not_available)
+    )
+
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "gemini-secret",
+      "OPENAI_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
+      "OPENAI_MODEL" => "retired-gemini-model"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The configured AI model is not available/, response.body)
+    assert_match(/gemini-2\.5-flash/, response.body)
+    assert_no_match(/gemini-secret/, response.body)
+  end
+
   test "AI status separates a model that ignores tools from one that cannot use them" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
@@ -297,6 +318,100 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/mxbai-embed-large/, response.body)
     assert_match(%r{http://ollama:11434/v1}, response.body)
     assert_match(/Live checks passed/, response.body)
+    assert_no_match(/anthropic-secret/, response.body)
+  end
+
+  test "AI status explains a missing pgvector table" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    AiHealth::Probe.any_instance.stubs(:pgvector).returns(
+      probe_result(:failing, failure_code: :table_not_found)
+    )
+
+    connection = stub("connection")
+    connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(false)
+    connection.stubs(:extension_enabled?).with("vector").returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(connection)
+
+    with_ai_environment(
+      "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
+      "ANTHROPIC_MODEL" => "claude-sonnet-4-6",
+      "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",
+      "EMBEDDING_MODEL" => "mxbai-embed-large",
+      "EMBEDDING_DIMENSIONS" => "1024"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The vector_store_chunks table is missing/, response.body)
+    assert_match(/VECTOR_STORE_PROVIDER=pgvector/, response.body)
+    assert_match(/table was not found/, response.body)
+    assert_no_match(/anthropic-secret/, response.body)
+  end
+
+  test "AI status explains an embedding dimensions mismatch" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    AiHealth::Probe.any_instance.stubs(:embedding).returns(
+      probe_result(:failing, failure_code: :dimensions_mismatch)
+    )
+
+    connection = stub("connection")
+    connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+    connection.stubs(:extension_enabled?).with("vector").returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(connection)
+
+    with_ai_environment(
+      "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
+      "ANTHROPIC_MODEL" => "claude-sonnet-4-6",
+      "EMBEDDING_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
+      "EMBEDDING_MODEL" => "gemini-embedding-2-preview",
+      "EMBEDDING_DIMENSIONS" => "1024"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The embedding dimensions do not match/, response.body)
+    assert_match(/EMBEDDING_MODEL and EMBEDDING_DIMENSIONS/, response.body)
+    assert_match(/alter or recreate the pgvector embedding column\/table/, response.body)
+    assert_match(/gemini-embedding-2-preview/, response.body)
+    assert_no_match(/anthropic-secret/, response.body)
+  end
+
+  test "AI status explains embedding probe timeouts" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    AiHealth::Probe.any_instance.stubs(:embedding).returns(
+      probe_result(:failing, failure_code: :timeout)
+    )
+
+    connection = stub("connection")
+    connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+    connection.stubs(:extension_enabled?).with("vector").returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(connection)
+
+    with_ai_environment(
+      "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
+      "ANTHROPIC_MODEL" => "claude-sonnet-4-6",
+      "EMBEDDING_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
+      "EMBEDDING_MODEL" => "gemini-embedding-2-preview",
+      "EMBEDDING_DIMENSIONS" => "3072"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The embedding live check timed out/, response.body)
+    assert_match(/AI_HEALTH_PROBE_TIMEOUT/, response.body)
+    assert_match(/OPENAI_REQUEST_TIMEOUT/, response.body)
     assert_no_match(/anthropic-secret/, response.body)
   end
 

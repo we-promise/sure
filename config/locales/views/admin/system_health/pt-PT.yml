@@ -1,0 +1,150 @@
+---
+pt-PT:
+  admin:
+    system_health:
+      show:
+        title: Estado do sistema
+        tabs:
+          background_jobs: Tarefas em segundo plano
+          ai: Estado da IA
+        alert:
+          title: As tarefas em segundo plano não estão a ser executadas
+        status_section_title: Estado do Sidekiq
+        status_section_description: Estado atual do worker em segundo plano que alimenta as sincronizações, os saldos e os cálculos do património líquido.
+        counters_section_title: Contadores de tarefas
+        counters_section_description: Contadores agregados do Sidekiq em todas as filas.
+        queues_section_title: Filas
+        queues_section_description: Profundidade por fila e idade da tarefa mais antiga. A latência é o número de segundos que a tarefa mais antiga está em espera.
+        labels:
+          status: Estado
+          processes: Processos do worker
+          last_heartbeat: Último heartbeat
+          max_queue_latency: Idade da tarefa mais antiga
+          enqueued: Em fila
+          retries: Repetições
+          failed: Falhadas
+          processed_total: Total processado
+          queue: Fila
+          size: Tamanho
+          latency: Latência
+        values:
+          healthy: Saudável
+          unhealthy: Degradado
+          time_ago: "há %{time_ago}"
+          never: Nunca
+          seconds: "%{seconds}s"
+          no_queues: "Não existem filas registadas. O worker pode não estar a ser executado."
+        ai:
+          run_checks: Executar verificações novamente
+          last_checked: "As verificações em direto foram concluídas há %{time_ago}. Os resultados ficam em cache por breves instantes."
+          not_checked_help: Abra diretamente o URL de estado da IA ou execute as verificações para confirmar que o serviço está operacional.
+          alerts:
+            custom_openai:
+              title: A verificação do armazenamento de vetores alojado falhou neste endpoint personalizado
+              message: O endpoint configurado não passou na verificação de funcionamento /v1/vector_stores. A maioria dos endpoints locais e compatíveis com OpenAI não implementa essa API. O chat e o processamento de PDF podem continuar a funcionar; para a configuração local habitual, utilize pgvector com um endpoint de embeddings separado. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            llm_probe_failed:
+              title: A verificação em direto do serviço de AI falhou
+              message: A Sure não conseguiu verificar tanto o endpoint como o modelo configurados. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            pdf_text_extraction_failed:
+              title: A verificação sintética de extração de texto de PDF falhou
+              message: A Sure não conseguiu concluir o percurso de extração de texto que extrai localmente o texto incorporado no PDF e o envia para o modelo configurado. Não foram enviados dados de clientes. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            pdf_vision_processing_failed:
+              title: A verificação sintética de visão/nativo de PDF falhou
+              message: A Sure não conseguiu concluir o percurso de imagem ou documento nativo em PDF através do modelo configurado. Não foram enviados dados de clientes. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            vector_probe_failed:
+              title: A verificação em direto da pesquisa de documentos falhou
+              message: A Sure não conseguiu verificar o armazenamento de vetores selecionado e todos os serviços de embeddings exigidos. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            qdrant:
+              title: O suporte para Qdrant ainda não está implementado
+              message: O adaptador Qdrant está estruturado, mas as operações de carregamento e pesquisa de documentos falham atualmente. Selecione OpenAI ou pgvector para a pesquisa de documentos.
+            missing_vector_store:
+              title: Não existe nenhum armazenamento de vetores configurado
+              message: Os documentos carregados não podem ser indexados nem pesquisados até serem configurados um adaptador de armazenamento de vetores e os seus requisitos.
+            unavailable_vector_store:
+              title: O armazenamento de vetores selecionado está indisponível
+              message: Verifique os requisitos do adaptador abaixo. Para pgvector, a base de dados deve fornecer a extensão vector ou uma tabela vector_store_chunks existente.
+          llm:
+            title: Processamento AI e de PDF
+            description: As verificações em direto confirmam o modelo configurado e, em seguida, testam separadamente a extração de texto e o processamento de visão/nativo com um PDF sintético de uma página que não contém dados de clientes. Os valores das credenciais nunca são apresentados.
+          vector_store:
+            title: Armazenamento de vetores e pesquisa de documentos
+            description: A verificação em direto consulta a API do armazenamento de vetores alojado, ou testa a tabela pgvector e cria um embedding curto sem o armazenar.
+          labels:
+            selected_provider: Serviço selecionado
+            effective_provider: Serviço efetivo
+            model: Modelo
+            endpoint: Endpoint
+            pdf_text_extraction: Percurso de extração de texto de PDF
+            pdf_vision_processing: Percurso de visão/nativo de PDF
+            request_timeout: Tempo limite do pedido
+            openai_credentials: Credenciais OpenAI
+            openai_compatible_credentials: Credenciais de API compatíveis com OpenAI
+            anthropic_credentials: Credenciais Anthropic
+            adapter: Adaptador
+            adapter_available: Adaptador disponível
+            pgvector_extension: Extensão vector do PostgreSQL
+            pgvector_table: Tabela de blocos de vetores
+            embedding_model: Modelo de embeddings
+            embedding_endpoint: Endpoint de embeddings
+            embedding_dimensions: Dimensões dos embeddings
+            pdf_text_extraction_failure_reason: Motivo da falha na extração de texto
+            pdf_vision_processing_failure_reason: Motivo da falha em visão/nativo
+            storage_probe: Verificação do armazenamento pgvector
+            embedding_probe: Verificação do endpoint de embeddings
+            failure_reason: Motivo da falha
+          providers:
+            openai: OpenAI
+            openai_compatible: Compatível com OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalizado
+          adapters:
+            openai: Armazenamento de vetores alojado OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configurado
+            not_configured: Não configurado
+            fallback: "(fallback)"
+            not_set: Não definido
+            "yes": "Sim"
+            "no": "Não"
+            enabled: Ativado
+            available_not_enabled: Disponível, não ativado
+            not_available: Não disponível
+            available: Disponível
+            not_found: Não encontrado
+          pdf_statuses:
+            supported: Verificação sintética de PDF passou
+            failing: Verificação sintética de PDF falhou
+            unsupported: Desativado ou não suportado pelo serviço/modelo efetivo
+            not_checked: Não verificado
+            unavailable: Indisponível até ser configurado um serviço de AI
+          probe_statuses:
+            passing: Verificação em direto passou
+            failing: Verificação em direto falhou
+            not_checked: Não verificado
+            not_configured: Não configurado
+          vector_statuses:
+            passing: Verificações em direto passaram
+            failing: Verificação em direto falhou
+            not_checked: Não verificado
+            not_configured: Não configurado
+            scaffolded: Estruturado
+            missing: Não configurado
+          failure_codes:
+            model_not_available: O modelo configurado não foi devolvido pelo serviço
+            invalid_response: O serviço devolveu uma resposta inesperada
+            dimensions_mismatch: As dimensões dos vetores de embeddings não correspondem às dimensões configuradas
+            extension_not_enabled: A extensão vector do PostgreSQL não está ativada
+            table_not_found: A tabela vector_store_chunks não foi encontrada
+            timeout: O serviço não respondeu antes do tempo limite da verificação
+            request_failed: O pedido ao serviço falhou
+            unsupported_provider: O serviço não suporta esta verificação
+          local_setup:
+            title: Configuração local recomendada
+            description: Execute AI através do seu endpoint local compatível com OpenAI, armazene os vetores de documentos em pgvector e aponte as definições de embeddings para um endpoint de embeddings compatível com OpenAI. A imagem PostgreSQL deve incluir a extensão vector e as dimensões dos embeddings devem corresponder ao modelo selecionado.

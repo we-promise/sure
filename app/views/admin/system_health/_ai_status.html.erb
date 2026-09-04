@@ -4,6 +4,7 @@
    when :unsupported, :failing then "text-destructive"
    else "text-warning"
    end %>
+<% vector_store_failure_kind = ai_health.vector_store_failure_kind %>
 
 <% pdf_checks = [
   {
@@ -39,7 +40,13 @@
     ) %>
   </div>
 
-  <% if ai_health.llm_status == :failing %>
+  <% if ai_health.llm_status == :failing && ai_health.llm_probe.failure_code == :model_not_available %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.llm_model_not_available.title"),
+      message: t("admin.system_health.show.ai.alerts.llm_model_not_available.message"),
+      variant: :error
+    ) %>
+  <% elsif ai_health.llm_status == :failing %>
     <%= render DS::Alert.new(
       title: t("admin.system_health.show.ai.alerts.llm_probe_failed.title"),
       message: t("admin.system_health.show.ai.alerts.llm_probe_failed.message"),
@@ -69,6 +76,12 @@
       <%= render DS::Alert.new(title: t("admin.system_health.show.ai.alerts.custom_openai.title"), variant: :error) do %>
         <p><%= t("admin.system_health.show.ai.alerts.custom_openai.message") %></p>
       <% end %>
+    <% elsif vector_store_failure_kind %>
+      <%= render DS::Alert.new(
+        title: t("admin.system_health.show.ai.alerts.#{vector_store_failure_kind}.title"),
+        message: t("admin.system_health.show.ai.alerts.#{vector_store_failure_kind}.message"),
+        variant: :error
+      ) %>
     <% else %>
       <%= render DS::Alert.new(
         title: t("admin.system_health.show.ai.alerts.vector_probe_failed.title"),

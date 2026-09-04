@@ -1,0 +1,80 @@
+---
+pt-BR:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Conecte uma conta de investimentos da Trade Republic por meio de login web seguro"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Conta de corretora"
+      private_markets: "Mercados privados"
+      interest_products: "Produtos de juros"
+      crypto_wallet: "Carteira de criptomoedas"
+    trade_republic_item:
+      syncing: "Sincronizando"
+      requires_update: "É necessário reautenticar"
+      error: "Erro"
+      synced: "Sincronizado há %{time}. %{summary}."
+      setup_accounts: "Configurar contas"
+      delete: "Excluir"
+      accounts_need_setup: "A conta precisa ser configurada"
+      accounts_need_setup_description: "Sua conta da Trade Republic precisa ser vinculada a uma conta Sure."
+      no_accounts_discovered: "Nenhuma conta da Trade Republic foi descoberta ainda."
+      no_accounts_discovered_description: "Conclua o login e execute uma sincronização para descobrir sua conta."
+      data_quality:
+        title: "Qualidade dos dados e detalhes da sincronização"
+        repair: "Reparar dados importados"
+    setup_accounts:
+      page_title: "Configurar conta da Trade Republic"
+      subtitle: "Vincule sua conta de investimentos da Trade Republic."
+      buttons:
+        refresh: "Atualizar"
+        cancel: "Cancelar"
+        link: "Vincular"
+        done: "Concluído"
+    sync:
+      errors:
+        phone_number_missing: "O número de telefone da Trade Republic está ausente."
+        reauthentication_required: "A sessão da Trade Republic está ausente ou expirou. Reconecte em Configurações > Provedores."
+      status:
+        checking_credentials: "Verificando as credenciais da Trade Republic..."
+        importing_account: "Importando a conta da Trade Republic..."
+        processing_activity: "Processando posições e atividades..."
+        calculating_balances: "Calculando saldos..."
+    repair:
+      scheduled: "Reparo dos dados da Trade Republic agendado."
+    select_existing_account:
+      title: "Vincular conta da Trade Republic"
+      link: "Vincular"
+      cancel: "Cancelar"
+    initiate_login:
+      verification_required: "Login iniciado. Confirme por %{method} e pressione Confirmar login."
+    complete_login:
+      approval_pending: "Ainda não confirmado. Aprove o login no aplicativo da Trade Republic e tente novamente."
+      success: "Trade Republic conectada com sucesso."
+      login_expired: "A solicitação de login expirou. Inicie novamente."
+    link_existing_account:
+      not_found: "Conta ou configuração da Trade Republic não encontrada."
+      success: "Conta vinculada com sucesso à Trade Republic."
+    complete_account_setup:
+      success:
+        one: "Foi criada com sucesso %{count} conta da Trade Republic."
+        other: "Foram criadas com sucesso %{count} contas da Trade Republic."
+      none_created: "Nenhuma conta foi criada."
+      partial_failure:
+        one: "Não foi possível concluir uma conta selecionada da Trade Republic. Verifique o log de depuração e tente novamente."
+        other: "Não foi possível concluir %{count} contas selecionadas da Trade Republic. Verifique o log de depuração e tente novamente."
+    activities:
+      labels:
+        contribution: Aporte
+        withdrawal: Retirada
+        interest: Juros
+        dividend: Dividendo
+        card_payment: Pagamento com cartão
+        cash_withdrawal: Saque em dinheiro
+        card_fee: Tarifa do cartão
+        card_refund: Reembolso no cartão
+        tax_refund: Restituição de imposto
+        buy: Compra
+        sell: Venda

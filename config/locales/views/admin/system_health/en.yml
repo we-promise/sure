@@ -53,6 +53,9 @@ en:
             llm_probe_failed:
               title: The LLM live check failed
               message: Sure could not verify both the configured endpoint and model. The failure was recorded in Settings → Debug logs and Rails.logger.
+            llm_model_not_available:
+              title: The configured AI model is not available
+              message: The endpoint answered, but it did not list or serve the configured model. Pick an active model for the selected provider, then run the checks again. For Gemini through an OpenAI-compatible translation layer, use a currently supported model such as gemini-2.5-flash.
             pdf_text_extraction_failed:
               title: The synthetic PDF text-extraction check failed
               message: Sure could not complete the text-first path that extracts embedded PDF text locally and sends it to the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
@@ -62,6 +65,24 @@ en:
             vector_probe_failed:
               title: The document-search live check failed
               message: Sure could not verify the selected vector store and every required embedding service. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pgvector_extension_not_enabled:
+              title: The PostgreSQL vector extension is not enabled
+              message: The pgvector adapter is selected, but PostgreSQL has not enabled the vector extension for this database. Use a PostgreSQL image that includes pgvector, then enable the extension as a database owner or superuser and re-run migrations with VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: The vector_store_chunks table is missing
+              message: The pgvector extension is enabled, but the chunks table was not found. Check migration status, then re-run the vector-store migration with VECTOR_STORE_PROVIDER=pgvector so Sure can create vector_store_chunks.
+            pgvector_probe_failed:
+              title: The pgvector storage check failed
+              message: Sure could not query the pgvector chunks table. Check PostgreSQL permissions, the vector extension, and the vector_store_chunks migration. The failure was recorded in Settings → Debug logs and Rails.logger.
+            embedding_dimensions_mismatch:
+              title: The embedding dimensions do not match
+              message: The embedding endpoint returned a vector whose length does not match EMBEDDING_DIMENSIONS. Set EMBEDDING_MODEL and EMBEDDING_DIMENSIONS to the model's documented vector size, restart Sure so the environment persists, then alter or recreate the pgvector embedding column/table and re-embed documents if existing data used a different size.
+            embedding_probe_timeout:
+              title: The embedding live check timed out
+              message: The embedding endpoint did not answer before AI_HEALTH_PROBE_TIMEOUT. Increase that health-check timeout if the provider is slow, then restart Sure so the environment persists in every process. If normal AI chat calls also time out, raise OPENAI_REQUEST_TIMEOUT separately.
+            embedding_probe_failed:
+              title: The embedding live check failed
+              message: Sure could not create a short test embedding through the configured endpoint and model. Check EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN, and the embedding provider logs. The failure was recorded in Settings → Debug logs and Rails.logger.
             qdrant:
               title: Qdrant support is not implemented yet
               message: The Qdrant adapter is scaffolded, but document upload and search operations currently fail. Select OpenAI or pgvector for document search.
