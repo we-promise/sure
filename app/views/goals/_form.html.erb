@@ -1,9 +1,9 @@
-<%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: [], pooled_allocations: {}) %>
+<%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: [], pooled_allocations: {}, selectable_categories: []) %>
 
 <%# goal-kind lives on this wrapper, not on the kind selector: its
      dateField target is a sibling of the radios, and a controller only sees
      targets inside its own element. Scoped to the selector, dateFieldTargets
-     came back empty and picking "Reserve to maintain" never hid the date. %>
+     came back empty and picking "Maintained reserve" never hid the date. %>
 <div data-controller="goal-form goal-kind"
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
@@ -30,7 +30,7 @@
         <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
           <%= f.radio_button :kind, kind,
                              class: "radio mt-0.5 shrink-0",
-                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
+                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh change->goal-form#suggestedChanged" } %>
           <span class="min-w-0">
             <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
             <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
@@ -68,6 +68,62 @@
                          step: 1,
                          placeholder: "6" %>
       <p class="mt-1 text-xs text-secondary"><%= t("goals.form.fields.target_months_hint") %></p>
+      <%# The derived amount has no field of its own to carry an error, so the
+          one explaining that the window is empty is shown here — beside the
+          months and the categories, which are what the user can change. %>
+      <% goal.errors[:target_months].each do |message| %>
+        <p class="mt-1.5 text-xs text-destructive"><%= message %></p>
+      <% end %>
+    </div>
+
+    <%# Which spending the months are counted from. Nothing ticked means every
+        expense, which is what a reserve meant before it could be narrowed — so
+        the section opens closed and costs an untouched form nothing. %>
+    <div data-goal-kind-target="categoryField" class="hidden">
+      <% selected_category_ids = goal.selected_category_ids.map(&:to_s) %>
+      <%= render DS::Disclosure.new(
+            variant: :card,
+            open: selected_category_ids.any? || goal.include_uncategorized_expenses?,
+            body_class: nil
+          ) do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <div class="flex w-full items-center justify-between gap-3">
+            <div class="min-w-0">
+              <span class="block text-sm font-medium text-primary"><%= t("goals.form.fields.expense_categories") %></span>
+              <p class="mt-0.5 text-xs text-secondary"><%= t("goals.form.fields.expense_categories_hint") %></p>
+            </div>
+            <%= icon "chevron-down", size: "sm", color: "secondary", class: "shrink-0 group-open:rotate-180 motion-safe:transition-transform" %>
+          </div>
+        <% end %>
+
+        <div class="max-h-72 overflow-y-auto border-t border-subdued bg-container-inset p-1">
+          <%# Submitted even when every box is cleared, so "none of them" reaches
+              the server as an empty list rather than as an absent parameter it
+              would read as "leave the selection alone". %>
+          <%= hidden_field_tag "goal[expense_category_ids][]", "", id: nil %>
+
+          <label class="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 hover:bg-surface-hover">
+            <%= hidden_field_tag "goal[include_uncategorized_expenses]", "0", id: nil %>
+            <%= check_box_tag "goal[include_uncategorized_expenses]", "1",
+                              goal.include_uncategorized_expenses?,
+                              id: "goal_include_uncategorized_expenses",
+                              class: "checkbox checkbox--light shrink-0" %>
+            <%= render partial: "categories/badge", locals: { category: Category.uncategorized } %>
+          </label>
+
+          <% selectable_categories.each do |category| %>
+            <label class="flex cursor-pointer items-center gap-3 rounded-md border-t border-subdued px-3 py-2.5 hover:bg-surface-hover">
+              <%= check_box_tag "goal[expense_category_ids][]", category.id,
+                                selected_category_ids.include?(category.id.to_s),
+                                id: "goal_expense_category_#{category.id}",
+                                class: "checkbox checkbox--light shrink-0" %>
+              <span class="min-w-0 <%= "pl-5" if category.parent_id.present? %>">
+                <%= render partial: "categories/badge", locals: { category: category } %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
     <div class="grid grid-cols-2 gap-3 items-start">

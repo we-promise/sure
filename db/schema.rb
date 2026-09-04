@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -851,6 +851,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.check_constraint "allocated_amount IS NULL OR allocated_amount >= 0::numeric", name: "chk_goal_accounts_allocation_non_negative"
   end
 
+  create_table "goal_expense_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "category_id", null: false
+    t.datetime "created_at", null: false
+    t.uuid "goal_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_goal_expense_categories_on_category_id"
+    t.index ["goal_id", "category_id"], name: "index_goal_expense_categories_on_goal_id_and_category_id", unique: true
+    t.index ["goal_id"], name: "index_goal_expense_categories_on_goal_id"
+  end
+
   create_table "goal_pledges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.decimal "amount", precision: 19, scale: 4, null: false
@@ -879,6 +889,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.string "currency", null: false
     t.uuid "family_id", null: false
     t.string "icon"
+    t.boolean "include_uncategorized_expenses", default: false, null: false
     t.string "kind", default: "one_off", null: false
     t.string "name", null: false
     t.text "notes"
@@ -2631,6 +2642,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
   add_foreign_key "family_merchant_associations", "merchants"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict
   add_foreign_key "goal_accounts", "goals", on_delete: :cascade
+  add_foreign_key "goal_expense_categories", "categories"
+  add_foreign_key "goal_expense_categories", "goals"
   add_foreign_key "goal_pledges", "accounts", on_delete: :restrict
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify

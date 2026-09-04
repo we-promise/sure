@@ -704,7 +704,7 @@ class GoalTest < ActiveSupport::TestCase
   test "refreshing the floor moves every figure that reads target_amount" do
     goal = reserve_goal(balance: 3_000, target: 1_000)
     goal.update!(target_mode: "months_of_expenses", target_months: 6)
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    seed_monthly_expenses(500)
 
     assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!
 
@@ -714,16 +714,16 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal 100, refreshed.progress_percent
   end
 
-  # A family with no spending history computes a floor of zero, which would
-  # both break the target_amount > 0 constraint and read as "your reserve is
-  # complete". The figure the user has been saving against stands.
-  test "a zero median leaves the floor untouched" do
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+  # A window with nothing in it computes zero, which would both break the
+  # target_amount > 0 constraint and read as "your reserve is complete". The
+  # figure the user has been saving against stands.
+  test "an empty window leaves the target untouched" do
+    account = seed_monthly_expenses(500)
     goal = reserve_goal(balance: 3_000, target: 1_000)
     goal.update!(target_mode: "months_of_expenses", target_months: 6)
     assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
 
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
+    account.entries.destroy_all
 
     assert_nil goal.refresh_target_from_expenses!
     assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
@@ -732,7 +732,7 @@ class GoalTest < ActiveSupport::TestCase
   # A reserve created in months mode must be right immediately: waiting for
   # the 1st would make the feature's first impression its least convincing.
   test "creating a months-mode reserve computes its floor straight away" do
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    seed_monthly_expenses(500)
     account = Account.create!(
       family: @family, accountable: Depository.new,
       name: "Fresh Reserve Pot", currency: "USD", balance: 100
@@ -747,7 +747,7 @@ class GoalTest < ActiveSupport::TestCase
   end
 
   test "changing the number of months recomputes the floor at once" do
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    seed_monthly_expenses(500)
     goal = reserve_goal(balance: 100, target: 1)
     goal.update!(target_mode: "months_of_expenses", target_months: 6)
     assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
@@ -759,21 +759,218 @@ class GoalTest < ActiveSupport::TestCase
   # The monthly job owns the cadence: an unrelated edit must not quietly move
   # a financial figure the user has been saving against.
   test "renaming a months-mode reserve leaves its floor alone" do
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    seed_monthly_expenses(500)
     goal = reserve_goal(balance: 100, target: 1)
     goal.update!(target_mode: "months_of_expenses", target_months: 6)
 
-    IncomeStatement.any_instance.unstub(:median_expense)
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("900"))
+    seed_monthly_expenses(400)
     goal.update!(name: "Renamed reserve")
 
     assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d,
                  "only the job, or a change of months, may move the floor"
   end
 
+  # "Six months of expenses" has to mean the six months that just happened. The
+  # old reading took a median across every month on record, so a household with
+  # years of partial imports got a target drawn from its emptiest month.
+  test "the target is what the window actually cost" do
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(500)
+
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!
+  end
+
+  # Spending older than the window says nothing about what the next six months
+  # will cost, and used to drag the figure down for years.
+  test "spending outside the window is not counted" do
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 3)
+    seed_monthly_expenses(500, months: 3)
+    seed_monthly_expenses(9_000, months: 3, offset: 3)
+
+    assert_equal BigDecimal("1500"), goal.refresh_target_from_expenses!,
+                 "the months before the window were counted"
+  end
+
+  # The current month is still filling up. Counting it would make the target sag
+  # by whatever is left of the month — worst on the 1st, the day the job runs.
+  test "the month in progress is not counted" do
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(500)
+    spending_account.entries.create!(
+      date: Date.current, name: "Today", amount: 4_000, currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!,
+                 "the month in progress leaked into the window"
+  end
+
+  # A month nobody spent in is a month that cost nothing, not a month to skip.
+  # Skipping it would divide by fewer months and inflate the target.
+  test "a month with no spending counts as a month that cost nothing" do
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(600, months: 2)
+
+    assert_equal BigDecimal("1200"), goal.refresh_target_from_expenses!
+  end
+
+  # The reserve covers what you must keep paying, which is rarely everything.
+  test "a reserve narrowed to categories counts only those" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    luxuries = @family.categories.create!(name: "Trips #{SecureRandom.hex(2)}", color: "#e5484d", lucide_icon: "plane")
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(2_000, category: luxuries)
+
+    goal.expense_categories = [ essentials ]
+
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!,
+                 "a category the reserve does not cover was counted"
+  end
+
+  # Selecting a parent has to carry its children, or a reserve on "Housing"
+  # would silently exclude the rent filed under it.
+  test "a selected parent carries its subcategories" do
+    parent = @family.categories.create!(name: "Housing #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    child = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home", parent: parent)
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(500, category: child)
+
+    goal.expense_categories = [ parent ]
+
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!
+  end
+
+  # Uncategorised spending vanishing from a narrowed reserve is the trap this
+  # design has to avoid: it must be a visible choice, not an omission.
+  test "uncategorised spending joins a narrowed reserve only when asked" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(100)
+
+    goal.expense_categories = [ essentials ]
+    assert_equal BigDecimal("3000"), goal.refresh_target_from_expenses!
+
+    goal.update!(include_uncategorized_expenses: true)
+    assert_equal BigDecimal("3600"), goal.reload.target_amount.to_d
+  end
+
+  # Empty means every expense, which is what a reserve meant before it could be
+  # narrowed at all — so existing reserves keep their figure.
+  test "selecting no category counts every expense" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(100)
+
+    assert_equal BigDecimal("3600"), goal.refresh_target_from_expenses!
+  end
+
+  # The join carries a foreign key with no cleanup of its own, so a category a
+  # reserve counts could not be deleted at all — the delete failed, and with it
+  # merging, resetting financial data, and removing the family.
+  test "deleting a counted category leaves the reserve standing" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ essentials ]
+
+    assert_nothing_raised { essentials.destroy! }
+    assert_empty goal.reload.expense_categories
+    assert goal.persisted?
+  end
+
+  # Losing its only selection widens the reserve back to every expense, so the
+  # target has to follow. Left alone it would keep a figure worked out from
+  # spending it no longer counts, under a label saying it was computed.
+  test "losing its only category widens the reserve and its target" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    seed_monthly_expenses(500, category: essentials)
+    seed_monthly_expenses(2_000)
+    goal = reserve_goal(balance: 100, target: 1)
+    goal.update!(target_mode: "months_of_expenses", target_months: 6)
+    goal.expense_categories = [ essentials ]
+    goal.refresh_target_from_expenses!
+    assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
+
+    essentials.destroy!
+
+    assert_equal BigDecimal("15000"), goal.reload.target_amount.to_d,
+                 "the reserve kept a target derived from spending it no longer counts"
+  end
+
+  # Destroying the goal must not send it back through a recompute on its way
+  # out — there is nothing left to recompute, and reloading it would raise.
+  test "destroying a narrowed reserve does not trip over its own selection" do
+    essentials = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ essentials ]
+
+    assert_nothing_raised { goal.destroy! }
+  end
+
+  # Merging moves the reserve onto the surviving category rather than dropping
+  # it: the goal said "count this spending", and the spending has moved.
+  test "merging a counted category moves the reserve onto the survivor" do
+    source = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    target = @family.categories.create!(name: "Housing #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ source ]
+
+    Category::Merger.new(family: @family, target_category: target, source_categories: [ source ]).merge!
+
+    assert_equal [ target.id ], goal.reload.expense_categories.map(&:id)
+  end
+
+  # The unique index allows one row per goal, and the intent — "count this
+  # category" — is already satisfied by the row that survives.
+  test "merging into a category the reserve already counts keeps one row" do
+    source = @family.categories.create!(name: "Rent #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    target = @family.categories.create!(name: "Housing #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    goal = reserve_goal(balance: 100, target: 1_000)
+    goal.expense_categories = [ source, target ]
+
+    Category::Merger.new(family: @family, target_category: target, source_categories: [ source ]).merge!
+
+    assert_equal [ target.id ], goal.reload.expense_categories.map(&:id)
+  end
+
+  # Narrowing to a category nobody has spent in leaves nothing to derive. The
+  # amount is not typed in this mode, so "can't be blank" would land on a field
+  # the form hides — the error has to name the cause, on a field the user can
+  # act on.
+  test "a reserve narrowed to spending that does not exist says why" do
+    empty = @family.categories.create!(name: "Unused #{SecureRandom.hex(2)}", color: "#4da568", lucide_icon: "home")
+    account = @family.accounts.create!(accountable: Depository.new, name: "Pot", currency: "USD", balance: 100)
+    seed_monthly_expenses(500)
+
+    goal = @family.goals.new(
+      name: "Precaution", currency: "USD", color: "#4da568", kind: "maintained",
+      target_mode: "months_of_expenses", target_months: 6
+    )
+    goal.goal_accounts.build(account: account)
+    goal.goal_expense_categories.build(category: empty)
+
+    assert_not goal.valid?
+    assert_empty goal.errors[:target_amount],
+                 "the blank derived amount was reported as if the user had left it out"
+    # The message, not just the attribute: nesting the key under the wrong one
+    # resolves to nothing, and only reading the text catches that.
+    assert_equal [ I18n.t("activerecord.errors.models.goal.attributes.target_months.no_spending_in_window") ],
+                 goal.errors[:target_months]
+  end
+
   test "a fixed reserve ignores the refresh entirely" do
     goal = reserve_goal(balance: 3_000, target: 1_000)
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    seed_monthly_expenses(500)
 
     assert_nil goal.refresh_target_from_expenses!
     assert_equal BigDecimal("1000"), goal.reload.target_amount.to_d
@@ -783,7 +980,7 @@ class GoalTest < ActiveSupport::TestCase
   # to decide whether to keep offering the amount field. So it must answer for
   # the family alone, not for what this goal happens to be right now.
   test "derivability is answered for the family, whatever the goal is set to" do
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("500"))
+    seed_monthly_expenses(500)
     goal = reserve_goal(balance: 3_000, target: 1_000)
 
     assert goal.months_target_derivable?,
@@ -794,7 +991,6 @@ class GoalTest < ActiveSupport::TestCase
   # reserve a target. The form has to be told, or it hides the only field that
   # would let the user do it.
   test "a family with no spending history can derive nothing" do
-    IncomeStatement.any_instance.stubs(:median_expense).returns(BigDecimal("0"))
     goal = reserve_goal(balance: 3_000, target: 1_000)
 
     assert_not goal.months_target_derivable?
@@ -1198,7 +1394,7 @@ class GoalTest < ActiveSupport::TestCase
     ) { |g| g.goal_accounts.build(account: account, allocated_amount: 1_000) }
 
     # 500/month family currency x 6 months = 3,000, at a rate of 0.9 = 2,700.
-    IncomeStatement.any_instance.stubs(:median_expense).returns(500)
+    seed_monthly_expenses(500)
     Money.any_instance.stubs(:exchange_to).returns(Money.new(2_700, "EUR"))
 
     goal.update!(target_amount: 1)
@@ -1319,6 +1515,34 @@ class GoalTest < ActiveSupport::TestCase
       @family.goals.create!(name: name, target_amount: 5_000, currency: "USD") do |goal|
         goal.goal_accounts.build(account: account)
       end
+    end
+
+    # One expense of `amount` in each of the last `months` COMPLETE months.
+    # Real rows rather than a stub: which months are counted is the whole
+    # behaviour under test, and a stub cannot get that wrong.
+    def spending_account
+      @spending_account ||= @family.accounts.create!(
+        accountable: Depository.new, name: "Spending #{SecureRandom.hex(3)}",
+        currency: "USD", balance: 0
+      )
+    end
+
+    def seed_monthly_expenses(amount, months: 6, category: nil, offset: 0)
+      account = @family.accounts.create!(
+        accountable: Depository.new, name: "Spending #{SecureRandom.hex(3)}",
+        currency: "USD", balance: 0
+      )
+      months.times do |i|
+        month = Date.current.prev_month.beginning_of_month - (i + offset).months
+        account.entries.create!(
+          date: month + 5,
+          name: "Living cost",
+          amount: amount,
+          currency: "USD",
+          entryable: Transaction.new(category: category)
+        )
+      end
+      account
     end
 
     def reserve_goal(balance:, target:, allocated: nil, name: "Emergency reserve")

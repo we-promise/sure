@@ -4,7 +4,7 @@ import { Controller } from "@hotwired/stimulus"
 // something due on a date. Hiding the target-date field keeps a stale value from being
 // submitted and driving a pace the goal does not have.
 export default class extends Controller {
-  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "amountField", "amountDerived"]
+  static targets = ["radio", "dateField", "modeField", "modeSelect", "monthsField", "categoryField", "amountField", "amountDerived"]
 
   static values = {
     amountLabel: String,
@@ -31,6 +31,15 @@ export default class extends Controller {
     const months = maintained && this.hasModeSelectTarget && this.modeSelectTarget.value === "months_of_expenses"
     this.monthsFieldTargets.forEach((field) => field.classList.toggle("hidden", !months))
     if (!months) this.#clearInputs(this.monthsFieldTargets)
+
+    // Disabled rather than cleared, unlike the months field above. A disabled
+    // control is not submitted, so leaving months mode neither carries hidden
+    // filters into the save nor asks the server to touch a selection the user
+    // can no longer see — and coming back finds the boxes as they were left.
+    this.categoryFieldTargets.forEach((field) => {
+      field.classList.toggle("hidden", !months)
+      field.querySelectorAll("input").forEach((input) => { input.disabled = !months })
+    })
 
     // Three states. A one-off saves toward a target amount; a fixed reserve
     // holds a target balance you type; a months-based reserve holds one worked

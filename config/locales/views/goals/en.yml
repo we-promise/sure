@@ -296,14 +296,14 @@ en:
     form:
       target_modes:
         fixed: A fixed amount
-        months_of_expenses: A number of months of expenses
+        months_of_expenses: Months of expenses
       kinds:
         one_off:
           hint: Save toward something, then close it when you spend it.
           label: One-off goal
         maintained:
           hint: A balance to keep, like an emergency fund. Never closed.
-          label: Reserve to maintain
+          label: Maintained reserve
       create: Create goal
       save: Save changes
       suggested_with_date: "Save {monthly}/mo across {accounts} to hit it on time."
@@ -318,15 +318,17 @@ en:
         whole_balance: This account will fund whatever is left after the other earmarks.
         whole_balance_alone: "This goal will use this account's whole balance."
       fields:
-        target_mode: How the target balance is set
+        target_mode: Target basis
         target_months: Months of expenses
-        target_months_hint: Recomputed on the 1st of each month from your median monthly spending.
+        target_months_hint: What those months cost, recomputed on the 1st of each month. The month in progress is not counted.
         name: Name
         name_placeholder: Emergency fund, House down payment…
         target_amount: Target amount
         target_balance: "Target balance"
+        expense_categories: Categories counted
+        expense_categories_hint: Tick nothing to count every expense.
         target_balance_pending: "Worked out when you save"
-        target_balance_hint: "From your median monthly spending over the months above. Refreshed each month."
+        target_balance_hint: "What the months above cost. Recomputed on the 1st of each month."
         target_date: Target date
         color: Color
         notes: Notes (optional)

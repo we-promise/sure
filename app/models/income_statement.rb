@@ -148,6 +148,20 @@ class IncomeStatement
     end
   end
 
+  # Total spending between two dates, as opposed to the shape of a typical
+  # month. A reserve sized in months of expenses asks this: "six months of
+  # expenses" is what six months actually cost, not six times a median drawn
+  # from every month on record.
+  def expense_total(date_range:, category_ids: nil, include_uncategorized: false)
+    IncomeStatement::ExpenseWindow.new(
+      family,
+      date_range: date_range,
+      account_ids: included_account_ids,
+      category_ids: category_ids,
+      include_uncategorized: include_uncategorized
+    ).total
+  end
+
   def avg_expense(interval: "month", category: nil)
     if category.present?
       category_stats(interval: interval).find { |stat| stat.classification == "expense" && stat.category_id == category.id }&.avg || 0

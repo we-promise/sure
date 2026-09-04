@@ -25,6 +25,8 @@ class Goal < ApplicationRecord
   # persist through goal.save! — without it Rails only saves newly built
   # children, silently dropping changes to existing goal_accounts.
   has_many :goal_accounts, dependent: :destroy, autosave: true
+  has_many :goal_expense_categories, dependent: :destroy
+  has_many :expense_categories, through: :goal_expense_categories, source: :category
   has_many :linked_accounts, through: :goal_accounts, source: :account
   has_many :goal_pledges, dependent: :destroy
   has_many :open_pledges,
@@ -32,7 +34,12 @@ class Goal < ApplicationRecord
            class_name: "GoalPledge"
 
   validates :name, presence: true, length: { maximum: 255 }
-  validates :target_amount, presence: true, numericality: { greater_than: 0 }
+  # Not in months mode: the amount is derived there, so "can't be blank" would
+  # name a field the form has hidden and say nothing about why it is empty.
+  # `months_target_must_be_derivable` guards the same ground with the actual
+  # reason, and the column's NOT NULL / > 0 constraint stays covered either way.
+  validates :target_amount, presence: true, numericality: { greater_than: 0 },
+            unless: :months_of_expenses_target?
   validates :currency, presence: true
   # before_save (not before_validation) so it only mutates on persistence, not
   # on every valid? call — a goal can be inspected without its basis flipping.
@@ -58,10 +65,18 @@ class Goal < ApplicationRecord
                         new_record? ||
                         target_months_changed? ||
                         target_mode_changed? ||
-                        target_amount_changed?
+                        target_amount_changed? ||
+                        include_uncategorized_expenses_changed?
                       )
                     }
 
+  # Narrowing a reserve to a set of categories changes what it should hold, and
+  # the answer has to move with it. The association is saved after this record,
+  # so the recompute cannot ride on the same validation pass — it runs once the
+  # new selection is actually readable.
+  after_save :reapply_target_after_category_change, if: :expense_categories_changed_in_place?
+
+  validate :months_target_must_be_derivable, if: :months_of_expenses_target?
   validate :must_have_at_least_one_linked_account
   validate :linked_accounts_must_be_fundable
   validate :linked_accounts_must_match_goal_currency
@@ -140,6 +155,12 @@ class Goal < ApplicationRecord
   # Goal.summary_for, the ring, the card) keeps working untouched, where an
   # effective_target_amount would have to be threaded through all of them.
   TARGET_MODES = %w[fixed months_of_expenses].freeze
+
+  # The window the form probes when deciding whether a months-based target can
+  # be derived at all. It asks before the user has typed a number, so it needs
+  # one to ask with; this is the same figure the months field offers as its
+  # placeholder.
+  DEFAULT_TARGET_MONTHS = 6
 
   validates :kind, inclusion: { in: KINDS }
   validates :target_mode, inclusion: { in: TARGET_MODES }
@@ -447,6 +468,30 @@ class Goal < ApplicationRecord
     kind == "maintained"
   end
 
+  # Set by the controller when it assigns a selection, so the recompute after
+  # save knows the list moved. `expense_categories` is a through association:
+  # its writes land after this record is saved, and nothing on the goal itself
+  # records that they happened.
+  attr_accessor :expense_categories_changed_in_place
+
+  def expense_categories_changed_in_place? = expense_categories_changed_in_place.present?
+
+  # Empty means every expense counts, which is what an unconfigured reserve
+  # wants and what every reserve did before this existed.
+  def narrowed_to_categories?
+    selected_category_ids.any?
+  end
+
+  # Read from the loaded join records rather than through the association, so it
+  # is right for a goal whose selection was built but not yet saved — a create
+  # derives its target during validation, before any child row exists.
+  def selected_category_ids
+    goal_expense_categories
+      .reject { |gec| gec.marked_for_destruction? || gec.destroyed? }
+      .filter_map(&:category_id)
+      .uniq
+  end
+
   def months_of_expenses_target?
     target_mode == "months_of_expenses"
   end
@@ -470,17 +515,33 @@ class Goal < ApplicationRecord
   # ignores the goal's own kind, mode and months: it answers "is there spending
   # history to derive from", nothing else. With none, the typed amount is the
   # only way to set a target, so the form must keep offering the field.
+  # The form asks this BEFORE the user has picked anything, so it falls back to
+  # a probe window. It does honour the category selection, because that is what
+  # decides whether the window holds anything — a reserve narrowed to a
+  # category with no spending is exactly the case where the typed amount has to
+  # stay available.
   def months_target_derivable?
     return false if family.nil? || currency.blank?
 
-    median = median_monthly_expense
-    return false unless median.positive?
+    months = target_months.to_i.positive? ? target_months.to_i : DEFAULT_TARGET_MONTHS
+    spent = expenses_over_window(months: months)
+    return false unless spent.positive?
 
-    convert_to_goal_currency(median).to_d.positive?
+    convert_to_goal_currency(spent).to_d.positive?
   end
 
   private
-    # The family's median monthly spend, in FAMILY currency.
+    # What the last `months` complete months actually cost, in FAMILY currency.
+    #
+    # The window ENDS with the last complete month. The current one is still
+    # filling up, and counting it would drag the target down by whatever is
+    # left of the month — most visibly on the 1st, the very day the refresh job
+    # runs.
+    #
+    # A month inside the window with no spending counts as a zero rather than
+    # being skipped. "Six months of expenses" is what six months cost, and a
+    # household that spent nothing in August did not thereby need a bigger
+    # reserve; it also means the figure grows on its own as history fills in.
     #
     # ⚠️ The account scope is passed EXPLICITLY, and that is the whole point
     # of this method. IncomeStatement's constructor does `user || Current.user`
@@ -490,27 +551,47 @@ class Goal < ApplicationRecord
     # whole family: derived from a viewer's slice of the accounts it would
     # change depending on who last triggered it. The rollover chain hit
     # exactly this and had to be pinned the same way.
-    # Deliberately not memoized. The refresh job derives again on an instance
-    # it has already saved through, and a median frozen on first read would
-    # hand it back the figure it started with.
-    def median_monthly_expense
+    # Deliberately not memoized. The refresh job derives again on an instance it
+    # has already saved through, and a total frozen on first read would hand it
+    # back the figure it started with.
+    def expenses_over_window(months: target_months.to_i)
+      return 0.to_d unless months.positive?
+
+      last_complete = Date.current.prev_month.end_of_month
+      first = (last_complete - (months - 1).months).beginning_of_month
+
       IncomeStatement.new(family, accounts: family.accounts.visible.included_in_reports)
-                     .median_expense(interval: "month").to_d
+                     .expense_total(
+                       date_range: first..last_complete,
+                       category_ids: selected_expense_category_ids,
+                       include_uncategorized: include_uncategorized_expenses?
+                     ).to_d
+    end
+
+    # nil when nothing is selected, which the window reads as "every category".
+    # A parent stands for its children: picking "Housing" and then having to
+    # pick each subcategory separately would be a trap, and the two readings
+    # cannot both be right.
+    def selected_expense_category_ids
+      chosen = selected_category_ids
+      return nil if chosen.empty?
+
+      (chosen + Category.where(parent_id: chosen).pluck(:id)).uniq
     end
 
     # The balance this reserve should hold, or nil when it cannot be computed.
     def months_of_expenses_amount
       return nil unless maintained? && months_of_expenses_target? && target_months.to_i.positive?
 
-      median = median_monthly_expense
-      return nil unless median.positive?
-
-      computed = (median * target_months).round(2)
+      # The sum over the window IS the target: the window is `target_months`
+      # long, so working out a monthly average and multiplying it back by those
+      # same months returns the figure unchanged.
+      computed = expenses_over_window.round(2)
       return nil unless computed.positive?
 
-      # The median comes back in FAMILY currency; `target_amount` is stored in
+      # The total comes back in FAMILY currency; `target_amount` is stored in
       # the GOAL's. A EUR reserve in a USD family would otherwise read a 3,000
-      # dollar floor as 3,000 euros, and rewrite it that way every month.
+      # dollar target as 3,000 euros, and rewrite it that way every month.
       converted = convert_to_goal_currency(computed)
       converted&.positive? ? converted : nil
     end
@@ -1370,6 +1451,24 @@ class Goal < ApplicationRecord
       return unless state_in_database.in?(RELEASED_STATES)
 
       errors.add(:kind, :locked_while_released)
+    end
+
+    def reapply_target_after_category_change
+      self.expense_categories_changed_in_place = nil
+      return unless months_of_expenses_target?
+
+      computed = months_of_expenses_amount
+      update_column(:target_amount, computed) if computed && computed != target_amount.to_d
+    end
+
+    # Reached when the window holds nothing to read: a family with no history
+    # yet, or — more often — a reserve narrowed to categories nobody has spent
+    # in. The error goes on the months, which the user can see and change,
+    # rather than on the derived amount they cannot type into.
+    def months_target_must_be_derivable
+      return if target_amount.to_d.positive?
+
+      errors.add(:target_months, :no_spending_in_window)
     end
 
     def clear_target_date_for_maintained

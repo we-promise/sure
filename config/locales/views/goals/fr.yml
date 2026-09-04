@@ -32,11 +32,11 @@ fr:
     form:
       target_modes:
         fixed: Un montant fixe
-        months_of_expenses: Un nombre de mois de dépenses
+        months_of_expenses: Mois de dépenses
       kinds:
         maintained:
           hint: Un solde à maintenir, comme une épargne de précaution. Jamais clôturée.
-          label: Réserve à maintenir
+          label: Réserve maintenue
         one_off:
           hint: Épargner pour quelque chose, puis clôturer une fois la dépense faite.
           label: Objectif ponctuel
@@ -51,9 +51,9 @@ fr:
         whole_balance: Ce compte financera le solde restant après les autres affectations.
         whole_balance_alone: "Cet objectif utilisera tout le solde de ce compte."
       fields:
-        target_mode: Comment le solde cible est fixé
+        target_mode: Base de la cible
         target_months: Mois de dépenses
-        target_months_hint: Recalculé le 1er de chaque mois à partir de vos dépenses mensuelles médianes.
+        target_months_hint: Ce que ces mois ont coûté, recalculé le 1er de chaque mois. Le mois en cours n'est pas compté.
         color: Couleur
         earmark_for: Affecter un montant pour %{account}
         earmark_hint: Laissez le montant vide pour dédier la totalité du solde de ce compte.
@@ -65,8 +65,10 @@ fr:
         notes_placeholder: Un rappel pour plus tard…
         target_amount: Montant cible
         target_balance: "Solde cible"
+        expense_categories: Catégories prises en compte
+        expense_categories_hint: Ne rien cocher revient à compter toutes les dépenses.
         target_balance_pending: "Calculé à l'enregistrement"
-        target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
+        target_balance_hint: "Ce que les mois ci-dessus ont coûté. Recalculé le 1er de chaque mois."
         target_date: Date cible
         whole_balance: Solde total
       save: Enregistrer les modifications

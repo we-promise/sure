@@ -23,6 +23,7 @@ en:
             target_months:
               blank: Say how many months of expenses this reserve should cover.
               only_with_months_mode: Months of expenses only apply when the target is set that way.
+              no_spending_in_window: No spending to work a target out from over these months. Widen the categories, change the months, or set the amount yourself.
             linked_accounts:
               must_be_fundable: All linked accounts must be cash or investment accounts.
               currency_mismatch: All linked accounts must share the same currency.

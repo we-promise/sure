@@ -140,6 +140,13 @@ export default class extends Controller {
     firstInvalid?.focus();
   }
 
+  // Read from the DOM rather than held as state: the kind radios belong to the
+  // goal-kind controller, and duplicating the selection here would give the two
+  // a chance to disagree.
+  get #isMaintained() {
+    return this.element.querySelector('input[name="goal[kind]"]:checked')?.value === "maintained";
+  }
+
   // Hook for any input that influences the suggested-pace hint
   // (target_amount, target_date). Also re-evaluates as accounts toggle.
   suggestedChanged() {
@@ -149,6 +156,15 @@ export default class extends Controller {
 
   updateSuggested() {
     if (!this.hasSuggestedTarget) return;
+
+    // A reserve has no finish line to project: its date field is hidden and the
+    // model nils the value. Telling the reader to set a target date was advice
+    // they had no way to follow, on the one screen where it cannot apply.
+    if (this.#isMaintained) {
+      this.suggestedTarget.classList.add("hidden");
+      this.suggestedTarget.textContent = "";
+      return;
+    }
 
     const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
     const dateValue = this.hasDateInputTarget ? this.dateInputTarget.value : null;

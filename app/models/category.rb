@@ -5,6 +5,10 @@ class Category < ApplicationRecord
   belongs_to :family
 
   has_many :budget_categories, dependent: :destroy
+  # A reserve sized on this category simply stops counting it. Without this the
+  # foreign key (NO ACTION) would refuse the delete outright, and taking a
+  # category away would fail on a goal the user may not even remember making.
+  has_many :goal_expense_categories, dependent: :destroy
   has_many :subcategories,
          -> { order(:name) },
          class_name: "Category",
