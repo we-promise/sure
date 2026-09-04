@@ -1,0 +1,10 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        entry:
+          attributes:
+            base:
+              invalid_sell_quantity: não é possível vender %{sell_qty} ações de %{ticker} porque
+                apenas possui %{current_qty} ações
