@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/category.dart';
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 class CategoriesService {
   Future<Map<String, dynamic>> getCategories({
@@ -32,7 +32,7 @@ class CategoriesService {
         : baseUri;
 
     try {
-      final response = await http.get(
+      final response = await ApiHttpClient.instance.get(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),

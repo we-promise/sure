@@ -382,13 +382,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 18,
                             height: 18,
                           ),
-                          onPressed: authProvider.isLoading
+                          onPressed: authProvider.isLoading ||
+                                  ApiConfig.customCertificateBytes != null
                               ? null
                               : () =>
                                   authProvider.startSsoLogin('google_oauth2'),
                         );
                       },
                     ),
+
+                    if (ApiConfig.customCertificateBytes != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l.loginSsoCustomCertificateUnsupported,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
 
                     const SizedBox(height: 24),
 
