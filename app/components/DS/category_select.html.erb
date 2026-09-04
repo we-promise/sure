@@ -80,13 +80,22 @@
           </button>
         <% end %>
 
-        <% categories.each do |category| %>
+        <% Category::Group.for(categories).each do |group| %>
           <%= render partial: "DS/category_select/option",
                      locals: {
-                       category: category,
-                       selected: category.id.to_s == selected_id,
+                       category: group.category,
+                       selected: group.category.id.to_s == selected_id,
                        view_helpers: helpers
                      } %>
+
+          <% group.subcategories.each do |category| %>
+            <%= render partial: "DS/category_select/option",
+                       locals: {
+                         category: category,
+                         selected: category.id.to_s == selected_id,
+                         view_helpers: helpers
+                       } %>
+          <% end %>
         <% end %>
 
         <button type="button"
