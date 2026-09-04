@@ -11,15 +11,19 @@ import { Controller } from "@hotwired/stimulus";
 //    generic fallback for "neither is set": the field's original hint text
 //    comes back instead, since a name is still required in that case.
 //
-// 2. A custom suggestion dropdown for recently used names, filtered as the
-//    user types. This exists instead of a native <datalist> because iOS
-//    Safari doesn't render datalist suggestions for text inputs at all --
-//    a plain <datalist> works on desktop but is silently a no-op there.
+// 2. A keyboard- and mouse-accessible suggestion dropdown for recently used
+//    names, filtered as the user types (an ARIA combobox: the input keeps
+//    focus throughout, arrow keys move an active-descendant highlight,
+//    Enter/click applies it). This exists instead of a native <datalist>
+//    because iOS Safari doesn't render datalist suggestions for text inputs
+//    at all -- a plain <datalist> works on desktop but is silently a no-op
+//    there.
 export default class extends Controller {
   static targets = ["name", "suggestions", "suggestionOption"];
 
   connect() {
     if (this.hasNameTarget) this.originalPlaceholder = this.nameTarget.placeholder;
+    this.activeIndex = -1;
   }
 
   update() {
@@ -70,7 +74,9 @@ export default class extends Controller {
       if (matches) anyVisible = true;
     });
 
+    this.activeIndex = -1;
     this.suggestionsTarget.classList.toggle("hidden", !anyVisible);
+    this.nameTarget.setAttribute("aria-expanded", anyVisible ? "true" : "false");
   }
 
   // Hiding on a delay (rather than immediately on blur) lets the
@@ -81,15 +87,71 @@ export default class extends Controller {
 
     this.hideTimeout = setTimeout(() => {
       this.suggestionsTarget.classList.add("hidden");
+      this.activeIndex = -1;
+      this.nameTarget.setAttribute("aria-expanded", "false");
+      this.nameTarget.removeAttribute("aria-activedescendant");
     }, 150);
+  }
+
+  // Arrow keys move a highlighted "active descendant" without moving DOM
+  // focus off the input (so typing keeps working); Enter applies whichever
+  // option is highlighted; Escape closes the list.
+  handleKeydown(event) {
+    if (!this.hasSuggestionsTarget || this.suggestionsTarget.classList.contains("hidden")) return;
+
+    const visible = this.visibleSuggestions;
+    if (visible.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      this.activeIndex = (this.activeIndex + 1) % visible.length;
+      this.highlightActive(visible);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      this.activeIndex = (this.activeIndex - 1 + visible.length) % visible.length;
+      this.highlightActive(visible);
+    } else if (event.key === "Enter" && this.activeIndex >= 0) {
+      event.preventDefault();
+      this.applySuggestion(visible[this.activeIndex]);
+    } else if (event.key === "Escape") {
+      this.suggestionsTarget.classList.add("hidden");
+      this.activeIndex = -1;
+      this.nameTarget.setAttribute("aria-expanded", "false");
+      this.nameTarget.removeAttribute("aria-activedescendant");
+    }
+  }
+
+  get visibleSuggestions() {
+    return this.suggestionOptionTargets.filter((option) => !option.classList.contains("hidden"));
+  }
+
+  highlightActive(visible) {
+    visible.forEach((option, index) => {
+      const active = index === this.activeIndex;
+      option.classList.toggle("bg-container-inset", active);
+      option.setAttribute("aria-selected", active ? "true" : "false");
+    });
+
+    const activeOption = visible[this.activeIndex];
+    if (!activeOption) return;
+
+    activeOption.scrollIntoView({ block: "nearest" });
+    this.nameTarget.setAttribute("aria-activedescendant", activeOption.id);
   }
 
   selectSuggestion(event) {
     event.preventDefault();
     if (this.hideTimeout) clearTimeout(this.hideTimeout);
 
-    this.nameTarget.value = event.currentTarget.dataset.name;
+    this.applySuggestion(event.currentTarget);
+  }
+
+  applySuggestion(option) {
+    this.nameTarget.value = option.dataset.name;
     this.suggestionsTarget.classList.add("hidden");
+    this.activeIndex = -1;
+    this.nameTarget.setAttribute("aria-expanded", "false");
+    this.nameTarget.removeAttribute("aria-activedescendant");
     this.nameTarget.focus();
   }
 }

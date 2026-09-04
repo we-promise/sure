@@ -34,8 +34,14 @@ class Entry < ApplicationRecord
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
 
+  # new_record? && import_id.blank? keeps this to genuinely new manual
+  # entries -- excludes CSV imports (which have their own, separately
+  # decided blank-name handling) and any unrelated re-validation of an
+  # already-persisted entry (background jobs, resaves) that happens to see
+  # a blank name for some other reason.
   before_validation :set_default_name, if: -> {
-    name.blank? && entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
+    new_record? && import_id.blank? && name.blank? &&
+      entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
@@ -313,11 +319,14 @@ class Entry < ApplicationRecord
     return false if name.blank?
 
     normalized = name.strip
-    return true if normalized.casecmp?(I18n.t("transactions.unknown_name"))
+    # Checked across every supported locale, not just the current one -- a
+    # name generated (or saved by a background job) under one locale must
+    # still read as generic when this is later checked under another.
+    return true if LanguagesHelper::SUPPORTED_LOCALES.any? { |locale| normalized.casecmp?(I18n.t("transactions.unknown_name", locale: locale)) }
     return false unless entryable_type == "Transaction"
 
-    category_name = entryable.category&.display_name
-    category_name.present? && normalized.casecmp?(category_name)
+    category = entryable&.category
+    category.present? && category.any_locale_display_name_matches?(normalized)
   end
 
   def balance_trend(entries, balances)
@@ -616,7 +625,10 @@ class Entry < ApplicationRecord
       # so using the raw column here would save whatever locale the category
       # happened to be created under instead of the one the user just picked
       # it in.
-      parts = [ entryable.category&.display_name.presence, entryable.merchant&.name.presence ].compact
+      # entryable can be unset if entryable_type was assigned without the
+      # nested entryable_attributes that would normally build it (e.g. a
+      # malformed API request) -- guard the dereference instead of raising.
+      parts = [ entryable&.category&.display_name.presence, entryable&.merchant&.name.presence ].compact
       self.name = parts.join(" - ") if parts.any?
     end
 end

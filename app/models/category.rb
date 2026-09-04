@@ -364,6 +364,28 @@ class Category < ApplicationRecord
     self.class.localized_default_name_for(name)
   end
 
+  # True if `candidate` matches this category's display name in ANY
+  # supported locale, not just the current one -- a name generated (or
+  # persisted by a background job) under one locale must still be
+  # recognized as "this category" when compared under a different one. For
+  # a default category this checks every locale's translation of its i18n
+  # key; for a custom (non-default) category the raw `name` is the only
+  # locale-independent label there is.
+  def any_locale_display_name_matches?(candidate)
+    return false if candidate.blank?
+
+    normalized = candidate.strip
+    return true if normalized.casecmp?(name)
+
+    i18n_key = self.class.send(:default_category_translation_key_for, name)
+    return false unless i18n_key
+
+    LanguagesHelper::SUPPORTED_LOCALES.any? do |locale|
+      translated = I18n.t(i18n_key, locale: locale, default: nil)
+      translated.present? && normalized.casecmp?(translated)
+    end
+  end
+
   def display_name_with_parent
     subcategory? ? "#{parent.display_name} > #{display_name}" : display_name
   end

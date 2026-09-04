@@ -129,6 +129,7 @@ class TransactionsController < ApplicationController
     if account.nil?
       @entry = Current.family.entries.new(entry_params)
       @entry.valid?
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
       return
@@ -158,6 +159,7 @@ class TransactionsController < ApplicationController
 
       respond_with_created_entry(@entry)
     else
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
@@ -637,6 +639,16 @@ class TransactionsController < ApplicationController
       set_entry
     end
 
+    # Entry#set_default_name may have already filled in a category/merchant
+    # -derived name during this failed validation attempt. A blank
+    # submission must still render blank -- otherwise the generated text
+    # becomes the field's literal value, and if the user then changes the
+    # category/merchant and resubmits, that stale generated name (no longer
+    # blank) skips the callback entirely and gets saved as-is.
+    def clear_stale_auto_generated_name!(entry)
+      entry.name = "" if entry_params[:name].blank?
+    end
+
     def set_new_transaction_form_options
       accessible_accounts_scope = accessible_accounts
 
@@ -660,7 +672,10 @@ class TransactionsController < ApplicationController
     def recent_transaction_names
       return [] unless Current.family.auto_generate_transaction_names?
 
-      Entry.family_scope(Current.family)
+      # Current.accessible_entries (not Entry.family_scope), so a non-admin
+      # family member never sees names from accounts that weren't shared
+      # with them -- family-wide settings still respect per-account sharing.
+      Current.accessible_entries
         .where(entryable_type: "Transaction")
         .where.not(name: I18n.t("transactions.unknown_name"))
         .order(created_at: :desc)

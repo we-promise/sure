@@ -30,17 +30,24 @@
         placeholder: auto_generate_names ? t(".description_placeholder_optional") : t(".description_placeholder"),
         required: !auto_generate_names,
         autocomplete: "off",
+        role: (auto_generate_names && recent_transaction_names.present? ? "combobox" : nil),
+        "aria-autocomplete": (auto_generate_names && recent_transaction_names.present? ? "list" : nil),
+        "aria-expanded": (auto_generate_names && recent_transaction_names.present? ? "false" : nil),
+        "aria-controls": (auto_generate_names && recent_transaction_names.present? ? "transaction_name_suggestions" : nil),
         data: {
           transaction_name_preview_target: "name",
-          action: "input->transaction-name-preview#filterSuggestions focus->transaction-name-preview#showSuggestions blur->transaction-name-preview#scheduleHideSuggestions"
+          action: "input->transaction-name-preview#filterSuggestions focus->transaction-name-preview#showSuggestions blur->transaction-name-preview#scheduleHideSuggestions keydown->transaction-name-preview#handleKeydown"
         } %>
 
       <% if auto_generate_names && recent_transaction_names.present? %>
-        <ul role="listbox"
+        <ul id="transaction_name_suggestions"
+            role="listbox"
             class="absolute z-50 p-1.5 w-full min-w-48 max-h-64 overflow-auto rounded-lg shadow-lg bg-container mt-1.5 hidden"
             data-transaction-name-preview-target="suggestions">
-          <% recent_transaction_names.each do |name| %>
-            <li role="option"
+          <% recent_transaction_names.each_with_index do |name, index| %>
+            <li id="transaction_name_suggestion_<%= index %>"
+                role="option"
+                aria-selected="false"
                 data-transaction-name-preview-target="suggestionOption"
                 data-name="<%= name %>"
                 data-action="mousedown->transaction-name-preview#selectSuggestion"

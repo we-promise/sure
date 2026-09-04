@@ -135,4 +135,66 @@ class EntryTest < ActiveSupport::TestCase
 
     assert_not entry.generic_name?
   end
+
+  test "generic_name? recognizes the unknown-name fallback saved under a different locale" do
+    entry = create_transaction(account: accounts(:depository), name: "Unbekannte Transaktion")
+
+    assert entry.generic_name?
+  end
+
+  test "generic_name? recognizes a category name saved under a different locale" do
+    entry = create_transaction(
+      account: accounts(:depository),
+      name: "Restaurants & Bars", # German translation of categories(:food_and_drink)
+      category: categories(:food_and_drink)
+    )
+
+    assert entry.generic_name?
+  end
+
+  test "does not auto-generate a name for an already-persisted entry" do
+    families(:dylan_family).update!(auto_generate_transaction_names: true)
+    entry = create_transaction(account: accounts(:depository), name: "Original name")
+
+    entry.entryable.category = categories(:food_and_drink)
+    entry.name = ""
+
+    assert_not entry.valid?
+    assert_includes entry.errors[:name], "can't be blank"
+  end
+
+  test "does not auto-generate a name for an imported entry" do
+    families(:dylan_family).update!(auto_generate_transaction_names: true)
+    import = imports(:transaction)
+
+    entry = Entry.new(
+      account: accounts(:depository),
+      import: import,
+      name: "",
+      date: Date.current,
+      currency: "USD",
+      amount: 100,
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    assert_not entry.valid?
+    assert_includes entry.errors[:name], "can't be blank"
+  end
+
+  test "set_default_name does not raise when entryable is missing" do
+    families(:dylan_family).update!(auto_generate_transaction_names: true)
+
+    entry = Entry.new(
+      account: accounts(:depository),
+      entryable_type: "Transaction",
+      name: "",
+      date: Date.current,
+      currency: "USD",
+      amount: 100
+    )
+
+    assert_nothing_raised { entry.valid? }
+    assert_not entry.valid?
+    assert_includes entry.errors[:name], "can't be blank"
+  end
 end
