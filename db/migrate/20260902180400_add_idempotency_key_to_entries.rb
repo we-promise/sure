@@ -31,7 +31,7 @@ class AddIdempotencyKeyToEntries < ActiveRecord::Migration[7.2]
   end
 
   def down
-    remove_index :entries, name: INDEX_NAME, if_exists: true
+    remove_index :entries, name: INDEX_NAME, if_exists: true, algorithm: :concurrently
     remove_column :entries, :idempotency_key, if_exists: true
   end
 
