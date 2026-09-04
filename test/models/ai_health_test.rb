@@ -4,7 +4,8 @@ class AiHealthTest < ActiveSupport::TestCase
   AI_ENVIRONMENT = %w[
     OPENAI_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_MODEL
     ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY VECTOR_STORE_PROVIDER
-    OPENAI_SUPPORTS_RESPONSES_ENDPOINT
+    OPENAI_SUPPORTS_RESPONSES_ENDPOINT EMBEDDING_URI_BASE EMBEDDING_MODEL
+    EMBEDDING_DIMENSIONS EMBEDDING_ACCESS_TOKEN
   ].index_with(nil).freeze
 
   setup do
@@ -106,6 +107,47 @@ class AiHealthTest < ActiveSupport::TestCase
     end
   end
 
+  test "vector store failure kind explains pgvector storage setup failures" do
+    {
+      extension_not_enabled: :pgvector_extension_not_enabled,
+      table_not_found: :pgvector_table_not_found
+    }.each do |failure_code, failure_kind|
+      health = probed_pgvector_health(
+        vector_store: failing_result(failure_code),
+        embedding: result(:passing)
+      )
+
+      assert_equal :failing, health.vector_store_status
+      assert_equal failure_kind, health.vector_store_failure_kind
+    end
+  end
+
+  test "vector store failure kind explains embedding setup failures" do
+    {
+      dimensions_mismatch: :embedding_dimensions_mismatch,
+      timeout: :embedding_probe_timeout,
+      request_failed: :embedding_probe_failed
+    }.each do |failure_code, failure_kind|
+      health = probed_pgvector_health(
+        vector_store: result(:passing),
+        embedding: failing_result(failure_code)
+      )
+
+      assert_equal :failing, health.vector_store_status
+      assert_equal failure_kind, health.vector_store_failure_kind
+    end
+  end
+
+  test "vector store failure kind does not hide pgvector failure behind generic embedding failure" do
+    health = probed_pgvector_health(
+      vector_store: failing_result(:request_failed),
+      embedding: failing_result(:request_failed)
+    )
+
+    assert_equal :failing, health.vector_store_status
+    assert_equal :pgvector_probe_failed, health.vector_store_failure_kind
+  end
+
   private
     def probed_health(llm:, function_calling:)
       AiHealth::Probe.any_instance.stubs(:llm).returns(result(llm))
@@ -118,6 +160,29 @@ class AiHealthTest < ActiveSupport::TestCase
           "OPENAI_ACCESS_TOKEN" => "test-token",
           "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1",
           "OPENAI_MODEL" => "test-model"
+        )
+      ) { AiHealth.new }
+    end
+
+    def probed_pgvector_health(vector_store:, embedding:)
+      AiHealth::Probe.any_instance.stubs(:llm).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:function_calling).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(result(:passing))
+      AiHealth::Probe.any_instance.stubs(:pgvector).returns(vector_store)
+      AiHealth::Probe.any_instance.stubs(:embedding).returns(embedding)
+      ActiveRecord::Base.connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+      ActiveRecord::Base.connection.stubs(:extension_enabled?).with("vector").returns(true)
+      VectorStore::Pgvector.stubs(:available?).returns(true)
+
+      ClimateControl.modify(
+        AI_ENVIRONMENT.merge(
+          "OPENAI_ACCESS_TOKEN" => "test-token",
+          "OPENAI_MODEL" => "test-model",
+          "VECTOR_STORE_PROVIDER" => "pgvector",
+          "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",
+          "EMBEDDING_MODEL" => "mxbai-embed-large",
+          "EMBEDDING_DIMENSIONS" => "1024"
         )
       ) { AiHealth.new }
     end
