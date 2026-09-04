@@ -22,9 +22,15 @@ class AiHealth
               :function_calling_probe, :pdf_text_extraction_probe,
               :pdf_vision_processing_probe, :vector_store_probe, :embedding_probe
 
-  def initialize(run_probes: true, force_probes: false)
+  # probe_cache lets a caller isolate where probe results are cached. The web
+  # admin page shares the default `Rails.cache`-backed probe cache so repeat
+  # page loads within the TTL don't re-hit providers; worker-originated
+  # verification (see WorkerAiHealthCheckJob) passes an isolated store so its
+  # results can never be served back to a web request, and vice versa (#3169).
+  def initialize(run_probes: true, force_probes: false, probe_cache: Rails.cache)
     @run_probes = run_probes
     @force_probes = force_probes
+    @probe_cache = probe_cache
     load_llm_status
     load_vector_store_status
     load_probes
@@ -199,7 +205,7 @@ class AiHealth
       @embedding_probe = vector_store_adapter == :pgvector ? Probe.not_checked : Probe.not_configured
       return unless run_probes?
 
-      probe = Probe.new(force: @force_probes)
+      probe = Probe.new(force: @force_probes, cache: @probe_cache)
       if llm_configured?
         @llm_probe = probe.llm(
           provider: @effective_llm_protocol,
