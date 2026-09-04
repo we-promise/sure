@@ -10,10 +10,11 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
-
   # Mark logo_source as "manual" when a logo is uploaded without an
   # explicit source selection. This ensures uploads are prioritized
   # over auto-fetched logos.
+  # The !@logo_source_explicitly_set check allows the callback to distinguish
+  # between "user chose auto" (via form) and "user didn't specify".
   before_save :mark_manual_if_logo_uploaded, if: -> { logo.attached? && !@attaching_fetched_logo && logo_upload_in_this_save? && !@logo_source_explicitly_set }
 
   # Queue logo fetch after save to avoid blocking the save operation
@@ -267,7 +268,7 @@ class Account < ApplicationRecord
             date: Date.current
           )
           raise reconciliation.error_message unless reconciliation.success?
-        end
+      end
 
         account.auto_share_with_family! if account.family.share_all_by_default?
       end
@@ -309,7 +310,7 @@ class Account < ApplicationRecord
           )
           # Fallback to zero as suggested
           cash_balance = 0
-        end
+      end
       end
 
       family = simplefin_account.simplefin_item.family
@@ -516,7 +517,7 @@ class Account < ApplicationRecord
       }
 
       create_and_sync(attributes, skip_initial_sync: true)
-        end
+    end
 
     def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
       attributes = {}
@@ -528,7 +529,7 @@ class Account < ApplicationRecord
         # For credit cards, available_balance often represents available credit
         if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
           attributes[:available_credit] = simplefin_account.available_balance
-        end
+      end
       when "Loan"
         # For loans, we might get additional data from the raw_payload
         # This is where loan-specific information could be extracted if available
@@ -603,13 +604,17 @@ class Account < ApplicationRecord
     # logo_url evaluation perform a synchronous remote storage request
     # (S3/R2/GCS), which can significantly slow down account lists and can
     # cause storage outages to break page rendering.
-    if logo_source_manual? && logo.attached?
+    #
+    # Only render the attachment URL when the blob is persisted. An unsaved
+    # blob (e.g., after a failed validation re-render) has no signed_id and
+    # rails_blob_path would raise an error.
+    if logo_source_manual? && logo.attached? && logo.blob.persisted?
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
     # Auto source: if LogoFetcher successfully downloaded and attached a logo,
     # serve that attachment before falling back to remote logo providers.
-    if logo_source_auto? && logo.attached?
+    if logo_source_auto? && logo.attached? && logo.blob.persisted?
       return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
     end
 
