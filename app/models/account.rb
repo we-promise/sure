@@ -1,3 +1,5 @@
+require "uri"
+
 class Account < ApplicationRecord
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
@@ -8,8 +10,21 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
+  # Mark logo_source as "manual" when a logo is uploaded without an
+  # explicit source selection. This ensures uploads are prioritized
+  # over auto-fetched logos.
+  # The !@logo_source_explicitly_set check allows the callback to distinguish
+  # between "user chose auto" (via form) and "user didn't specify".
+  before_save :mark_manual_if_logo_uploaded, if: -> { logo.attached? && !@attaching_fetched_logo && logo_upload_in_this_save? && !@logo_source_explicitly_set }
+
+  # Queue logo fetch after save to avoid blocking the save operation
+  after_save_commit :queue_logo_fetch, if: :should_queue_logo_fetch?
+  after_save_commit :purge_manual_logo_on_auto_switch, if: :should_purge_manual_logo?
+  before_validation :clean_institution_domain, if: -> { read_attribute(:institution_domain).present? }
+
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
+  validate :validate_logo_file, if: -> { logo.attached? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
@@ -92,8 +107,65 @@ class Account < ApplicationRecord
   }
 
   has_one_attached :logo, dependent: :purge_later
+
+  # Upper bound for logo attachments, enforced on uploads and on fetched
+  # logos in Account::LogoFetcher. Matches the other upload caps (imports,
+  # account statements).
+  MAX_LOGO_BYTES = 25.megabytes
+
+  ACCEPTED_LOGO_CONTENT_TYPES = %w[
+    image/avif image/bmp image/gif image/heic image/heif image/jpeg
+    image/jpg image/png image/svg+xml image/tiff image/webp image/x-icon
+    image/vnd.microsoft.icon
+  ].freeze
+
+  # Rails defers the physical blob upload of an attachment to an after_commit
+  # hook (`attachment_changes.delete(name).try(:upload)`, see
+  # ActiveStorage::Attached::Model), while the blob/attachment rows are written
+  # during after_save. That deferral breaks for accounts: account saves always
+  # happen inside an outer transaction (create_and_sync, the account form's
+  # balance path), so the after-commit upload only fires at the outer commit.
+  # Before that commit runs, create_and_sync calls sync_later -> with_lock ->
+  # reload, and reload resets `attachment_changes` — silently dropping the
+  # pending upload. The result is an attachment row with no file on the
+  # storage service: `logo.attached?` is true, so `logo_url` serves the blob
+  # path, which 404s — a permanently broken logo image.
+  #
+  # Upload the bytes during after_save instead, before anything can reload the
+  # record, and remove the pending change so the after-commit hook no-ops.
+  # Only CreateOne carries bytes to upload; DeleteOne is left to Rails.
+  # Registered after `has_one_attached` so Rails' row-saving after_save
+  # callback runs first.
+  after_save :upload_pending_logo_blob,
+             if: -> { attachment_changes["logo"].is_a?(ActiveStorage::Attached::Changes::CreateOne) }
+  # Clean up orphaned storage file if the outer transaction rolls back after
+  # the after_save upload (blob/attachment rows disappear but the uploaded
+  # bytes remain on storage).
+  after_rollback :purge_uploaded_logo_on_rollback
+  # Clear the rollback tracker after a successful commit so a later unrelated
+  # rollback can't destroy a previously committed logo.
+  after_commit :clear_uploaded_logo_rollback_tracker
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
+
+  # Track whether logo is manually uploaded or auto-fetched
+  enum :logo_source, { auto: "auto", manual: "manual" }, default: "auto", prefix: :logo_source, validate: true
+
+  # Track whether logo_source was explicitly set by the user.
+  # This allows the before_save callback to distinguish between
+  # "user chose auto" and "user didn't specify".
+  #
+  # The form always submits logo_source=auto as its hidden-field default, so
+  # every assignment currently flips this flag — which wrongly suppresses the
+  # mark_manual_if_logo_uploaded callback and lets FetchLogoJob replace a
+  # manually uploaded logo. Only treat the assignment as explicit when the
+  # user picked "manual" (a deliberate upload) or switched from "manual" back
+  # to "auto" (a deliberate change). The bare form default of "auto" on an
+  # already-auto record stays non-explicit so uploads still classify as manual.
+  def logo_source=(value)
+    @logo_source_explicitly_set = value == "manual" || logo_source_was == "manual"
+    super
+  end
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true
@@ -211,7 +283,7 @@ class Account < ApplicationRecord
             date: Date.current
           )
           raise reconciliation.error_message unless reconciliation.success?
-        end
+      end
 
         account.auto_share_with_family! if account.family.share_all_by_default?
       end
@@ -253,7 +325,7 @@ class Account < ApplicationRecord
           )
           # Fallback to zero as suggested
           cash_balance = 0
-        end
+      end
       end
 
       family = simplefin_account.simplefin_item.family
@@ -442,44 +514,45 @@ class Account < ApplicationRecord
       )
     end
 
-    private
 
-      def create_from_crypto_exchange_account(provider_account, family:)
-        attributes = {
-          family: family,
-          name: provider_account.name,
-          balance: (provider_account.current_balance || 0).to_d,
-          cash_balance: 0,
-          currency: provider_account.currency.presence || family.currency,
-          accountable_type: "Crypto",
-          accountable_attributes: {
-            subtype: "exchange",
-            tax_treatment: "taxable"
-          }
+  private
+
+    def create_from_crypto_exchange_account(provider_account, family:)
+      attributes = {
+        family: family,
+        name: provider_account.name,
+        balance: (provider_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: provider_account.currency.presence || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
         }
+      }
 
-        create_and_sync(attributes, skip_initial_sync: true)
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
+    def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
+      attributes = {}
+      attributes[:subtype] = subtype if subtype.present?
+
+      # Set account-type-specific attributes from SimpleFin data
+      case account_type
+      when "CreditCard"
+        # For credit cards, available_balance often represents available credit
+        if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
+          attributes[:available_credit] = simplefin_account.available_balance
+      end
+      when "Loan"
+        # For loans, we might get additional data from the raw_payload
+        # This is where loan-specific information could be extracted if available
+        # Currently we don't have specific loan fields from SimpleFin protocol
       end
 
-      def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
-        attributes = {}
-        attributes[:subtype] = subtype if subtype.present?
-
-        # Set account-type-specific attributes from SimpleFin data
-        case account_type
-        when "CreditCard"
-          # For credit cards, available_balance often represents available credit
-          if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
-            attributes[:available_credit] = simplefin_account.available_balance
-          end
-        when "Loan"
-          # For loans, we might get additional data from the raw_payload
-          # This is where loan-specific information could be extracted if available
-          # Currently we don't have specific loan fields from SimpleFin protocol
-        end
-
-        attributes
-      end
+      attributes
+    end
   end
 
   def institution_name
@@ -539,16 +612,204 @@ class Account < ApplicationRecord
   end
 
   def logo_url
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
+    # Manual source: prioritize the user-uploaded logo.
+    #
+    # We intentionally do not check whether the blob exists on the backing
+    # storage service here. Calling blob.service.exist? would make every
+    # logo_url evaluation perform a synchronous remote storage request
+    # (S3/R2/GCS), which can significantly slow down account lists and can
+    # cause storage outages to break page rendering.
+    #
+    # Only render the attachment URL when the blob is persisted. An unsaved
+    # blob (e.g., after a failed validation re-render) has no signed_id and
+    # rails_blob_path would raise an error.
+    if logo_source_manual? && logo.attached? && logo.blob.persisted?
+      return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
 
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-    elsif provider&.logo_url.present?
-      provider.logo_url
-    elsif logo.attached?
-      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    # Auto source: if LogoFetcher successfully downloaded and attached a logo,
+    # serve that attachment before falling back to remote logo providers.
+    if logo_source_auto? && logo.attached? && logo.blob.persisted?
+      return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
+    end
+
+    # No usable attachment: fall back to the auto-fetch chain.
+    brandfetch = brandfetch_logo_url
+    return brandfetch if brandfetch.present?
+
+    return provider.logo_url if provider&.logo_url.present?
+
+    favicon_url
+  end
+
+
+  def favicon_url(domain = institution_domain)
+    return nil unless domain.present?
+
+    # Use DuckDuckGo's privacy-friendly favicon service
+    "https://icons.duckduckgo.com/ip3/#{domain}.ico"
+  end
+
+  def brandfetch_logo_url(domain = institution_domain)
+    return nil unless domain.present? && Setting.brand_fetch_client_id.present?
+
+    logo_size = Setting.brand_fetch_logo_size
+    "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+  end
+
+  # Always purge manual logo when switching from manual to auto source.
+  # This happens independently of fetch-source availability.
+  # The previous logo_source is checked so a fetched-logo attach save (whose
+  # previous source is already "auto") never purges the freshly attached
+  # replacement, even when FetchLogoJob runs inline between callbacks.
+  def purge_manual_logo_on_auto_switch
+    if logo_source_auto? && logo.attached? && logo_source_before_last_save == "manual"
+      old_blob = logo.blob
+      logo.detach
+      old_blob.purge_later
     end
   end
+
+  # Callback condition: should we purge manual logo on auto switch?
+  # Must be public because it's used in after_save_commit callback
+  def should_purge_manual_logo?
+    logo_source_auto? && logo.attached?
+  end
+
+  def queue_logo_fetch
+    # Pass the domain the queue decision was made on so Account::LogoFetcher
+    # can discard the fetch if the domain changes while the job is in flight.
+    #
+    # A domain change also invalidates the previously fetched logo: purge it
+    # so a failed replacement fetch falls back to the new domain's Brandfetch
+    # or favicon URL instead of serving the old institution's logo
+    # indefinitely. Only runs while logo_source is auto, so manual uploads
+    # are never touched here.
+    #
+    # Evaluate the effective previous domain with a presence-aware fallback to
+    # provider-derived values when the stored attribute was blank or empty.
+    # The purge must not depend on a previous domain being present: a logo
+    # fetched from the linked provider (or before unlinking) is just as stale
+    # once a domain is set. Create-time saves are skipped because a logo
+    # attached alongside the new domain is not stale.
+    previous_effective_domain = institution_domain_before_last_save.presence || provider&.institution_domain
+    if !previously_new_record? && saved_change_to_institution_domain? && logo.attached? && previous_effective_domain != institution_domain
+      old_blob = logo.blob
+      logo.detach
+      old_blob.purge_later
+    end
+
+    # Pass the current institution_domain for domain-based fetches.
+    # For provider-only logo fetches, this will be nil but the fetcher handles that.
+    FetchLogoJob.perform_later(id, institution_domain)
+  end
+
+  # Attach a logo fetched by the background job without marking it as a
+  # manual upload. Attaching on an unchanged record saves the parent record,
+  # so without this opt-out the save would reclassify the fetched logo as a
+  # manual upload (see set_logo_source).
+  def attach_fetched_logo(*attachables)
+    @attaching_fetched_logo = true
+    logo.attach(*attachables)
+  ensure
+    @attaching_fetched_logo = false
+  end
+
+  # Callback condition: should we queue logo fetch?
+  # Must be public because it's used in after_save_commit callback
+  def should_queue_logo_fetch?
+    return false unless logo_source_auto?
+
+    # Only queue if there's actually a source to fetch from
+    has_domain = institution_domain.present?
+    has_provider_logo = provider&.logo_url.present?
+    return false unless has_domain || has_provider_logo
+    # Queue on relevant changes or if no logo attached yet
+    saved_change_to_institution_domain? ||
+      saved_change_to_logo_source? ||
+      !logo.attached?
+  end
+
+  private
+
+    def mark_manual_if_logo_uploaded
+      write_attribute(:logo_source, "manual")
+    end
+
+    # Uploads the logo blob bytes synchronously during after_save (see the
+    # comment on the callback registration for why Rails' default
+    # after_commit upload is unsafe here). Removing the pending change also
+    # stops Rails' after_commit hook from attempting a duplicate upload.
+    def upload_pending_logo_blob
+      change = attachment_changes.delete("logo")
+      change.upload
+      # Track the blob for rollback cleanup: if the outer transaction rolls
+      # back, the blob/attachment rows disappear but the uploaded bytes
+      # remain on storage. purge_uploaded_logo_on_rollback removes them.
+      @_uploaded_logo_blob_for_rollback = change.blob
+    end
+
+    def clear_uploaded_logo_rollback_tracker
+      @_uploaded_logo_blob_for_rollback = nil
+    end
+
+    def purge_uploaded_logo_on_rollback
+      blob = @_uploaded_logo_blob_for_rollback
+      return unless blob
+
+      # The blob record may already be gone due to rollback, but the file
+      # on storage still exists. Delete it directly using the tracked key.
+      blob.service.delete(blob.key)
+    rescue => e
+      # Log but don't raise - we're already in rollback and can't recover.
+      Rails.logger.warn("Failed to clean up orphaned logo blob: #{e.message}")
+    ensure
+      @_uploaded_logo_blob_for_rollback = nil
+    end
+
+
+
+    # True when this save carries an attachment that is not yet persisted for
+    # the account. A params upload defers its blob to the save (pending blob
+    # id nil or different from the persisted row), while a fetcher attach on
+    # an unchanged record persists immediately, making the pending and
+    # persisted blob ids equal — so an unrelated later save stays neutral.
+    def logo_upload_in_this_save?
+      persisted_blob_id =
+        ActiveStorage::Attachment.where(record_id: id, record_type: self.class.name, name: "logo").pick(:blob_id)
+      return true if persisted_blob_id.nil?
+
+      logo.blob&.id != persisted_blob_id
+    end
+
+    # Server-side guard for logo uploads: the form's accept="image/*" is only
+    # a picker hint, so content type and size are enforced here too.
+    def validate_logo_file
+      blob = logo.blob
+
+      if blob.content_type.present? && ACCEPTED_LOGO_CONTENT_TYPES.exclude?(blob.content_type)
+        errors.add(:logo, :invalid_type)
+      end
+
+      if blob.byte_size > MAX_LOGO_BYTES
+        errors.add(:logo, :too_large, max_megabytes: MAX_LOGO_BYTES / 1.megabyte)
+      end
+    end
+
+    def clean_institution_domain
+      return unless read_attribute(:institution_domain).present?
+
+      value = read_attribute(:institution_domain).strip
+      value = "//#{value}" unless value.match?(/\Ahttps?:\/\//i)
+
+      domain = URI.parse(value).host&.downcase&.sub(/\Awww\./, "")
+
+      self.institution_domain = domain if domain.present?
+    rescue URI::InvalidURIError
+      # Preserve the original value when it cannot be parsed as a URI.
+    end
+
+  public
 
   def destroy_later
     transaction do

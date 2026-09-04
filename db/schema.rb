@@ -113,6 +113,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.string "institution_domain"
     t.string "institution_name"
     t.jsonb "locked_attributes", default: {}
+    t.string "logo_source", default: "auto"
     t.string "name"
     t.text "notes"
     t.uuid "owner_id"

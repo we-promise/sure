@@ -50,6 +50,16 @@ en:
       institution_domain_placeholder: e.g., chase.com
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
+      logo_label: Custom icon
+      logo_hint: Upload an image to use as this account's icon (PNG, JPG, or SVG, up to %{max_size}). If left blank, the institution logo will be used automatically.
+      logo_too_large: That file is too large. Please choose an image under %{max_size}.
+      logo_file_chosen: Chose %{filename} (%{size} of %{max_size})
+      logo_attached: Current icon
+      logo_fallback: Using logo from institution or provider
+      change_logo: Change icon
+      auto_logo: Auto (from institution)
+      manual_logo: Manual (custom upload)
+      logo_source_aria: Logo source
       exclude_from_reports: Exclude from all reports
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.

@@ -1,10 +1,10 @@
-<%# locals: (account:, url:) %>
+<%# locals: (account:, url:, method: nil) %>
 
 <% if @error_message.present? %>
   <%= render DS::Alert.new(message: @error_message, variant: :error) %>
 <% end %>
 
-<%= styled_form_with model: account, url: url, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
+<%= styled_form_with model: account, url: url, method: method, scope: :account, data: { turbo: false }, class: "flex flex-col gap-4 justify-between grow text-primary" do |form| %>
   <div class="grow space-y-2">
     <%= form.hidden_field :accountable_type %>
     <%= form.hidden_field :return_to, value: params[:return_to] %>
@@ -48,6 +48,60 @@
         <%= form.text_field :institution_domain,
             label: t(".institution_domain_label"),
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
+
+        <div class="space-y-2"
+             data-controller="logo-source logo-file"
+             data-logo-source-max-size-value="<%= Account::MAX_LOGO_BYTES %>"
+             data-logo-file-max-size-value="<%= Account::MAX_LOGO_BYTES %>">
+          <p class="text-sm text-primary"><%= t(".logo_label") %></p>
+          <% if account.logo.attached? && account.logo.blob.present? %>
+            <%# image-fallback keeps a stored-but-broken logo (missing blob
+                bytes, corrupt image) from rendering as a broken image. %>
+            <div class="flex items-center gap-2 p-2 bg-surface-inset rounded-lg">
+              <%= render LogoWithFallback.new(account: account, size: "sm") %>
+              <span class="text-sm text-secondary"><%= t(".logo_attached") %></span>
+            </div>
+          <% elsif account.logo_url.present? %>
+            <div class="flex items-center gap-2 p-2 bg-surface-inset rounded-lg">
+              <%= render LogoWithFallback.new(account: account, size: "sm") %>
+              <span class="text-sm text-secondary"><%= t(".logo_fallback") %></span>
+            </div>
+          <% end %>
+
+          <div class="flex items-center gap-2">
+            <%# opacity-0 (not display:none) so the file is always submitted with the form across all browsers %>
+            <%= form.file_field :logo,
+                accept: "image/*",
+                class: "absolute opacity-0 w-0 h-0",
+                data: { logo_file_target: "fileInput", action: "change->logo-file#fileSelected" } %>
+            <%= render DS::Button.new(
+                  variant: :outline,
+                  text: account.logo.attached? ? t(".change_logo") : t(".logo_label"),
+                  icon: "image-plus",
+                  data: { action: "click->logo-file#pickFile" }
+                ) %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".logo_hint", max_size: number_to_human_size(Account::MAX_LOGO_BYTES)) %></p>
+          <p class="hidden text-xs text-destructive" data-logo-file-target="sizeError"><%= t(".logo_too_large", max_size: number_to_human_size(Account::MAX_LOGO_BYTES)) %></p>
+
+          <%# Local preview of the chosen picture, populated by the logo-file controller. %>
+          <%= image_tag "", alt: "", class: "hidden w-16 h-16 rounded-lg object-cover", loading: "lazy", data: { logo_file_target: "preview" } %>
+
+          <div class="flex items-center gap-4 text-sm pt-1">
+            <%= form.hidden_field :logo_source, value: account.logo_source || "auto", data: { logo_source_target: "input" } %>
+
+            <%= render DS::SegmentedControl.new(full_width: false, aria_label: t(".logo_source_aria")) do |sc| %>
+              <% sc.with_segment t(".auto_logo"), active: account.logo_source_auto?, data: { action: "click->logo-source#select", logo_source_source_param: "auto", logo_source_target: "segment" } %>
+              <% sc.with_segment t(".manual_logo"), active: account.logo_source_manual?, data: { action: "click->logo-source#select", logo_source_source_param: "manual", logo_source_target: "segment" } %>
+            <% end %>
+          </div>
+
+          <div data-logo-file-target="fileInfo" class="hidden text-xs text-success flex items-center gap-1">
+            <%= icon "check", size: "xs" %>
+            <span data-logo-file-target="fileName" class="font-medium"></span>
+            <span data-logo-file-target="fileSize" class="text-secondary"></span>
+          </div>
+        </div>
 
         <%= form.text_area :notes,
             label: t(".notes_label"),
