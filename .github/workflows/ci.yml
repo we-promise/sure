@@ -155,6 +155,9 @@ jobs:
           bin/rails db:schema:load
           bin/rails db:seed
 
+      - name: Verify loan contract test traceability
+        run: bin/rails loans:verify_contract_coverage
+
       - name: Unit and integration tests
         run: bin/rails test
 

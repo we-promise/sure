@@ -1,4 +1,41 @@
 namespace :loans do
+  desc "Verify every C1-C16 contract row maps to an existing test"
+  task verify_contract_coverage: :environment do
+    require "yaml"
+
+    contract_path = Rails.root.join("docs/loans/calculation-contract.md")
+    manifest_path = Rails.root.join("config/loan_contract_tests.yml")
+    rows = File.readlines(contract_path).filter_map do |line|
+      match = line.match(/^\| C(\d+) \|.*?\| `([^`]+)`/)
+      next unless match
+
+      [ "C#{match[1]}", match[2] ]
+    end.to_h
+    manifest = YAML.load_file(manifest_path)
+    expected_ids = (1..16).map { |id| "C#{id}" }
+
+    contract_ids = rows.keys.sort_by { |id| id.delete_prefix("C").to_i }
+    manifest_ids = manifest.keys.sort_by { |id| id.delete_prefix("C").to_i }
+    abort "contract rows must cover C1-C16" unless contract_ids == expected_ids
+    abort "contract manifest must cover C1-C16" unless manifest_ids == expected_ids
+
+    manifest.each do |id, entry|
+      file_path = Rails.root.join(entry.fetch("file"))
+      abort "#{id}: missing #{file_path}" unless file_path.file?
+
+      source = File.read(file_path)
+      class_name = entry.fetch("class")
+      abort "#{id}: #{class_name} is not declared in #{file_path}" unless source.include?("class #{class_name} <")
+      entry.fetch("tests").each do |test_name|
+        next if source.include?(%(test "#{test_name}"))
+
+        abort "#{id}: missing test #{test_name.inspect} in #{file_path}"
+      end
+    end
+
+    puts "Verified #{manifest.length} contract rows against existing tests"
+  end
+
   desc "Rebuild loan amortization schedules in bounded, rate-limited batches"
   task :rebuild_schedules, [ :batch_size, :limit, :sleep ] => :environment do |_, args|
     raw_batch_size = args[:batch_size].presence || ENV["BATCH_SIZE"].presence || "100"
