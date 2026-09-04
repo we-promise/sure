@@ -4,6 +4,7 @@ import { Controller } from "@hotwired/stimulus";
 // custom override or built-in default. Clears the input when text matches
 // the default to avoid storing duplicate copies.
 export default class extends Controller {
+  static outlets = ["confirm-dialog"];
   static targets = [
     "textarea",
     "prompt",
@@ -37,13 +38,9 @@ export default class extends Controller {
   }
 
   async reset() {
-    const dialogEl = document.getElementById("confirm-dialog");
-    const confirmDialog =
-      dialogEl &&
-      this.application.getControllerForElementAndIdentifier(
-        dialogEl,
-        "confirm-dialog",
-      );
+    const confirmDialog = this.hasConfirmDialogOutlet
+      ? this.confirmDialogOutlet
+      : null;
     const confirmed = confirmDialog
       ? await confirmDialog.handleConfirm(this.resetConfirmValue)
       : window.confirm(this.resetConfirmValue);
@@ -79,7 +76,7 @@ export default class extends Controller {
     }
 
     if (this.hasCounterTarget && this.hasMaxLengthValue) {
-      const length = this.textareaTarget.value.length;
+      const length = Array.from(this.textareaTarget.value).length;
       const over = length > this.maxLengthValue;
       this.counterTarget.textContent = `${length.toLocaleString()} / ${this.maxLengthValue.toLocaleString()}`;
       this.counterTarget.classList.toggle("text-destructive", over);
