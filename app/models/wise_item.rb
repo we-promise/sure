@@ -9,6 +9,7 @@ class WiseItem < ApplicationRecord
   if encryption_ready?
     encrypts :token, deterministic: true
     encrypts :raw_payload
+    encrypts :sca_private_key
   end
 
   validates :name, :profile_id, :profile_type, presence: true
@@ -122,6 +123,28 @@ class WiseItem < ApplicationRecord
     token.to_s.strip.present?
   end
 
+  def sca_configured?
+    sca_private_key.present?
+  end
+
+  # Generates a new RSA keypair for Wise's Strong Customer Authentication (SCA)
+  # flow, used to sign the one-time-token challenge on the balance-statement
+  # endpoint. The private key stays here (encrypted at rest); the public key
+  # must be registered with Wise by the user (Settings > API tokens > Public keys).
+  def generate_sca_keypair!
+    key = OpenSSL::PKey::RSA.generate(2048)
+    update!(sca_private_key: key.to_pem)
+    sca_public_key
+  end
+
+  def sca_public_key
+    return nil unless sca_configured?
+
+    OpenSSL::PKey::RSA.new(sca_private_key).public_key.to_pem
+  rescue OpenSSL::PKey::RSAError
+    nil
+  end
+
   def sync_status_summary
     total = total_accounts_count
     linked = linked_accounts_count
@@ -155,7 +178,7 @@ class WiseItem < ApplicationRecord
   def wise_provider
     return nil unless credentials_configured?
 
-    Provider::Wise.new(token.to_s.strip, base_url: Rails.configuration.x.wise.base_url)
+    Provider::Wise.new(token.to_s.strip, base_url: Rails.configuration.x.wise.base_url, sca_private_key: sca_private_key)
   end
 
   private

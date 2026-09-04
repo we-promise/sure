@@ -59,6 +59,29 @@
               ) %>
             </div>
 
+            <div class="p-3 rounded-md bg-container-inset space-y-2">
+              <p class="text-sm font-medium text-primary"><%= t("wise_items.provider_panel.sca.title") %></p>
+              <p class="text-xs text-secondary"><%= t("wise_items.provider_panel.sca.description") %></p>
+
+              <% if item.sca_configured? %>
+                <label class="text-xs text-secondary" for="wise-sca-public-key-<%= item.id %>"><%= t("wise_items.provider_panel.sca.public_key_label") %></label>
+                <textarea id="wise-sca-public-key-<%= item.id %>" readonly rows="6"
+                          class="w-full text-xs font-mono p-2 rounded border border-primary bg-container"
+                          onclick="this.select()"><%= item.sca_public_key %></textarea>
+                <p class="text-xs text-secondary"><%= t("wise_items.provider_panel.sca.registered_help_html").html_safe %></p>
+              <% end %>
+
+              <%= render DS::Button.new(
+                text: item.sca_configured? ? t("wise_items.provider_panel.sca.regenerate") : t("wise_items.provider_panel.sca.generate"),
+                icon: "key-round",
+                variant: :outline,
+                size: :sm,
+                href: generate_sca_keypair_wise_item_path(item),
+                method: :post,
+                confirm: item.sca_configured? ? t("wise_items.provider_panel.sca.regenerate_confirm") : nil
+              ) %>
+            </div>
+
             <%= styled_form_with model: item,
                                  url: wise_item_path(item),
                                  scope: :wise_item,
