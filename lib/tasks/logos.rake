@@ -8,7 +8,7 @@ namespace :logos do
     repaired = 0
     checked = 0
 
-    Account.joins(:logo_attachment).includes(:logo_attachment).find_each do |account|
+    Account.joins(:logo_attachment).with_attached_logo.find_each do |account|
       blob = account.logo.blob
       next if blob.nil?
 
