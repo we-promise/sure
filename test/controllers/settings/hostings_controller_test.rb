@@ -52,6 +52,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "renders OpenAI model and timeout guidance in German" do
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      get settings_hosting_url(locale: :de)
+
+      assert_response :success
+      assert_includes response.body, "Konfiguriertes Modell prüfen"
+      assert_includes response.body, "Tools beziehungsweise Function Calling unterstützt"
+      assert_includes response.body, "Zeitlimits"
+      assert_includes response.body, "Anfragezeitlimit in Sekunden (optional)"
+      assert_includes response.body, "OPENAI_REQUEST_TIMEOUT"
+      assert_includes response.body, "Antwortzeitlimit in Sekunden (optional)"
+      assert_includes response.body, "(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit"
+      assert_includes response.body, "AI_RESPONSE_TIMEOUT"
+      refute_includes response.body, "Request Timeout in Seconds"
+    end
+
+    %w[
+      model_function_calling_help
+      model_function_calling_link
+      timeout_heading
+      timeout_description
+      openai_request_timeout_label
+      openai_request_timeout_help
+      ai_response_timeout_label
+      ai_response_timeout_help
+    ].each do |key|
+      assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
   test "can update rentcast api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }

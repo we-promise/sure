@@ -181,6 +181,27 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/router-secret/, response.body)
   end
 
+  test "AI status names an unavailable configured LLM model" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    AiHealth::Probe.any_instance.stubs(:llm).returns(
+      probe_result(:failing, failure_code: :model_not_available)
+    )
+
+    with_ai_environment(
+      "OPENAI_ACCESS_TOKEN" => "gemini-secret",
+      "OPENAI_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
+      "OPENAI_MODEL" => "retired-gemini-model"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The configured AI model is not available/, response.body)
+    assert_match(/gemini-2\.5-flash/, response.body)
+    assert_no_match(/gemini-secret/, response.body)
+  end
+
   test "AI status separates a model that ignores tools from one that cannot use them" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
@@ -300,6 +321,100 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/anthropic-secret/, response.body)
   end
 
+  test "AI status explains a missing pgvector table" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    AiHealth::Probe.any_instance.stubs(:pgvector).returns(
+      probe_result(:failing, failure_code: :table_not_found)
+    )
+
+    connection = stub("connection")
+    connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(false)
+    connection.stubs(:extension_enabled?).with("vector").returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(connection)
+
+    with_ai_environment(
+      "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
+      "ANTHROPIC_MODEL" => "claude-sonnet-4-6",
+      "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",
+      "EMBEDDING_MODEL" => "mxbai-embed-large",
+      "EMBEDDING_DIMENSIONS" => "1024"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The vector_store_chunks table is missing/, response.body)
+    assert_match(/VECTOR_STORE_PROVIDER=pgvector/, response.body)
+    assert_match(/table was not found/, response.body)
+    assert_no_match(/anthropic-secret/, response.body)
+  end
+
+  test "AI status explains an embedding dimensions mismatch" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    AiHealth::Probe.any_instance.stubs(:embedding).returns(
+      probe_result(:failing, failure_code: :dimensions_mismatch)
+    )
+
+    connection = stub("connection")
+    connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+    connection.stubs(:extension_enabled?).with("vector").returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(connection)
+
+    with_ai_environment(
+      "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
+      "ANTHROPIC_MODEL" => "claude-sonnet-4-6",
+      "EMBEDDING_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
+      "EMBEDDING_MODEL" => "gemini-embedding-2-preview",
+      "EMBEDDING_DIMENSIONS" => "1024"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The embedding dimensions do not match/, response.body)
+    assert_match(/EMBEDDING_MODEL and EMBEDDING_DIMENSIONS/, response.body)
+    assert_match(/alter or recreate the pgvector embedding column\/table/, response.body)
+    assert_match(/gemini-embedding-2-preview/, response.body)
+    assert_no_match(/anthropic-secret/, response.body)
+  end
+
+  test "AI status explains embedding probe timeouts" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    Setting.stubs(:llm_provider).returns("anthropic")
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    AiHealth::Probe.any_instance.stubs(:embedding).returns(
+      probe_result(:failing, failure_code: :timeout)
+    )
+
+    connection = stub("connection")
+    connection.stubs(:table_exists?).with(VectorStore::Pgvector::TABLE_NAME).returns(true)
+    connection.stubs(:extension_enabled?).with("vector").returns(true)
+    ActiveRecord::Base.stubs(:connection).returns(connection)
+
+    with_ai_environment(
+      "ANTHROPIC_ACCESS_TOKEN" => "anthropic-secret",
+      "ANTHROPIC_MODEL" => "claude-sonnet-4-6",
+      "EMBEDDING_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
+      "EMBEDDING_MODEL" => "gemini-embedding-2-preview",
+      "EMBEDDING_DIMENSIONS" => "3072"
+    ) do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/The embedding live check timed out/, response.body)
+    assert_match(/AI_HEALTH_PROBE_TIMEOUT/, response.body)
+    assert_match(/OPENAI_REQUEST_TIMEOUT/, response.body)
+    assert_no_match(/anthropic-secret/, response.body)
+  end
+
   test "AI status explains when no vector store is configured" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
@@ -339,7 +454,169 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/qdrant-secret|query-secret|header-secret/, response.body)
   end
 
+  test "AI status explains when no worker has checked in yet" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get admin_system_health_url(tab: "ai")
+    end
+
+    assert_response :success
+    assert_match(/Worker verification/, response.body)
+    assert_match(/No worker has checked in yet/, response.body)
+  end
+
+  test "AI status renders a worker result and flags it matching the web configuration" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+        WorkerAiHealth.record!(worker_snapshot(
+          process_identity: "worker-1:123",
+          effective_provider: :openai,
+          llm_model: "gpt-4.1",
+          llm_endpoint: "https://api.openai.com/v1",
+          vector_store_adapter: :openai
+        ))
+
+        get admin_system_health_url(tab: "ai")
+      end
+    end
+
+    assert_response :success
+    assert_select "[data-testid='worker-process-identity']", text: "worker-1:123"
+    assert_match(/Matches web/, response.body)
+    assert_no_match(/sk-secret-openai/, response.body)
+  end
+
+  test "AI status flags a worker result whose configuration differs from the web process" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+        WorkerAiHealth.record!(worker_snapshot(
+          process_identity: "worker-1:123",
+          effective_provider: :openai,
+          llm_model: "a-different-model-than-web-resolves",
+          llm_endpoint: "https://api.openai.com/v1"
+        ))
+
+        get admin_system_health_url(tab: "ai")
+      end
+    end
+
+    assert_response :success
+    assert_match(/Differs from web/, response.body)
+  end
+
+  test "AI status shows a failing worker result with its failure reason" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+        WorkerAiHealth.record!(worker_snapshot(
+          process_identity: "worker-1:123",
+          llm_status: :failing,
+          failure_codes: [ :model_not_available ]
+        ))
+
+        get admin_system_health_url(tab: "ai")
+      end
+    end
+
+    assert_response :success
+    assert_match(/The configured model was not returned by the provider/, response.body)
+  end
+
+  test "AI status shows a stale worker result as stale rather than passing" do
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+        WorkerAiHealth.record!(worker_snapshot(
+          process_identity: "worker-1:123",
+          checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago
+        ))
+
+        get admin_system_health_url(tab: "ai")
+      end
+    end
+
+    assert_response :success
+    assert_match(/Stale/, response.body)
+  end
+
+  test "verify_worker_ai queues an asynchronous worker check and redirects to the AI tab" do
+    sign_in users(:sure_support_staff)
+
+    assert_enqueued_with(job: WorkerAiHealthCheckJob) do
+      post verify_worker_ai_admin_system_health_url
+    end
+
+    assert_redirected_to admin_system_health_path(tab: "ai")
+    follow_redirect!
+    assert_match(/Worker check queued/, response.body)
+  end
+
+  test "non super admin cannot queue a worker check" do
+    sign_in users(:family_admin)
+
+    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
+      post verify_worker_ai_admin_system_health_url
+    end
+
+    assert_redirected_to root_path
+  end
+
+  test "unauthenticated user cannot queue a worker check" do
+    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
+      post verify_worker_ai_admin_system_health_url
+    end
+
+    assert_redirected_to new_session_path
+  end
+
   private
+    # Stubs Rails.cache with an in-process MemoryStore for the duration of
+    # the block. Test env normally runs a NullStore (see config/environments/test.rb),
+    # under which WorkerAiHealth.record!/.recent (both cache: Rails.cache by
+    # default) would silently no-op -- fine for controller tests that don't
+    # care about worker results, but these need the round trip to actually work.
+    def with_memory_cache
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      yield
+    ensure
+      Rails.unstub(:cache)
+    end
+
+    def worker_snapshot(overrides = {})
+      WorkerAiHealth::Snapshot.new(
+        **{
+          process_identity: "worker:1",
+          hostname: "worker",
+          pid: 1,
+          checked_at: Time.current,
+          effective_provider: :openai,
+          llm_model: "gpt-4.1",
+          llm_endpoint: "https://api.openai.com/v1",
+          llm_request_timeout: 60,
+          function_calling_status: :supported,
+          vector_store_adapter: nil,
+          embedding_model: nil,
+          embedding_endpoint: nil,
+          embedding_dimensions: nil,
+          llm_status: :passing,
+          vector_store_status: :not_configured,
+          failure_codes: []
+        }.merge(overrides)
+      )
+    end
+
     def credentialed_url(scheme:, host:, port:, user:, password:, path: nil, query: nil)
       URI::Generic.build(
         scheme: scheme,

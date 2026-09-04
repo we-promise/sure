@@ -129,7 +129,21 @@ class AccountsController < ApplicationController
       Set.new
     end
 
-    @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
+    # Load split parent entries for grouped display (only when grouping is enabled)
+    @split_parents = if Current.user.show_split_grouped?
+      split_parent_ids = @entries.filter_map(&:parent_entry_id).uniq
+      if split_parent_ids.any?
+        Entry.where(id: split_parent_ids)
+             .includes(:account, entryable: [ :category, :merchant ])
+             .index_by(&:id)
+      else
+        {}
+      end
+    else
+      {}
+    end
+
+    @activity_feed_data = Account::ActivityFeedData.new(@account, @entries, split_parents: @split_parents)
   end
 
   def sync
