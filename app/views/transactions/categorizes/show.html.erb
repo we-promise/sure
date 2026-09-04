@@ -122,6 +122,7 @@
               </p>
               <% Category::Group.for(@categories).each do |group| %>
                 <% [ group.category, *group.subcategories ].each do |category| %>
+                  <% category_label = category.parent_id.present? ? category.display_name_with_parent : category.display_name %>
                   <button type="submit"
                           name="category_id"
                           value="<%= category.id %>"
@@ -129,11 +130,11 @@
                           style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
                                  border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
                                  color: <%= category.color %>;"
-                          data-filter-name="<%= category.display_name %>">
+                          data-filter-name="<%= category_label %>">
                     <% if category.lucide_icon.present? %>
                       <%= icon(category.lucide_icon, size: "sm", color: "current") %>
                     <% end %>
-                    <%= category.parent_id.present? ? category.display_name_with_parent : category.display_name %>
+                    <%= category_label %>
                   </button>
                 <% end %>
               <% end %>
