@@ -36,7 +36,7 @@ class MonobankAccountTest < ActiveSupport::TestCase
         "creditLimit" => 100_00,
         "currencyCode" => 980,
         "maskedPan" => [ "537541******1234" ],
-        "iban" => "UA733220010000026201234567890"
+        "iban" => "UA-TEST-IBAN-SNAPSHOT"
       }
     )
 

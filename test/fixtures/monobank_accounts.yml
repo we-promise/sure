@@ -7,4 +7,4 @@ black_card:
   account_kind: "card"
   account_type: "black"
   masked_pan: "537541******1234"
-  iban: "UA123456789012345678901234567"
+  iban: "UA-TEST-IBAN-FIXTURE"

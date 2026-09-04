@@ -94,13 +94,13 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
       currencyCode: 980,
       hold: false,
       counterEdrpou: "3096889974",
-      counterIban: "UA898999980000355639201001404",
+      counterIban: "UA-TEST-IBAN-COUNTERPARTY",
       counterName: "ТОВ «ВОРОНА»"
     )
 
     extra = entry.entryable.extra["monobank"]
     assert_equal "3096889974", extra["counter_edrpou"]
-    assert_equal "UA898999980000355639201001404", extra["counter_iban"]
+    assert_equal "UA-TEST-IBAN-COUNTERPARTY", extra["counter_iban"]
   end
 
   test "non-UAH accounts convert using their own minor units" do

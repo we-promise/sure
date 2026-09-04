@@ -345,17 +345,17 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
       raw_payload: { account_test: "value" },
       raw_transactions_payload: [ { id: "tx_probe" } ],
       masked_pan: "537541******9999",
-      iban: "UA903052992990004149123456789"
+      iban: "UA-TEST-IBAN-ENCRYPTION-PROBE"
     )
     account.reload
 
     assert_equal({ "account_test" => "value" }, account.raw_payload)
     assert_equal "537541******9999", account.masked_pan
-    assert_equal "UA903052992990004149123456789", account.iban
+    assert_equal "UA-TEST-IBAN-ENCRYPTION-PROBE", account.iban
 
     # A partial card number and an IBAN are exactly the fields worth proving opaque.
     assert_column_not_plaintext(MonobankAccount, account.id, :masked_pan, "537541******9999")
-    assert_column_not_plaintext(MonobankAccount, account.id, :iban, "UA903052992990004149123456789")
+    assert_column_not_plaintext(MonobankAccount, account.id, :iban, "UA-TEST-IBAN-ENCRYPTION-PROBE")
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_payload, "account_test")
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_transactions_payload, "tx_probe")
   end
