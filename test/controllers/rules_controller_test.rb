@@ -27,6 +27,17 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name*='[value]'] option[selected][value='#{category.id}']"
   end
 
+  test "should get new with malformed merchant_id falling back to name-only prefill" do
+    get new_rule_url(
+      resource_type: "transaction",
+      name: "Starbucks",
+      merchant_id: "not-a-uuid"
+    )
+    assert_response :success
+
+    assert_select "select[name*='[condition_type]'] option[selected][value='transaction_name']"
+  end
+
   test "should get edit" do
     get edit_rule_url(rules(:one))
     assert_response :success
