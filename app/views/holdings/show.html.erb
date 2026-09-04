@@ -96,7 +96,7 @@
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".shares_label") %></dt>
-            <dd class="text-primary"><%= format_quantity(@holding.qty) %></dd>
+            <dd id="<%= dom_id(@holding, :shares) %>" class="text-primary"><%= format_quantity(@holding.qty, exact: true) %></dd>
           </div>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".portfolio_weight_label") %></dt>
@@ -141,7 +141,7 @@
                     class: "space-y-3",
                     data: drawer_form_data do |f| %>
                 <p class="text-xs text-secondary mb-2">
-                  <%= t("holdings.cost_basis_cell.set_cost_basis_header", ticker: @holding.ticker, qty: format_quantity(@holding.qty)) %>
+                  <%= t("holdings.cost_basis_cell.set_cost_basis_header", ticker: @holding.ticker, qty: format_quantity(@holding.qty, exact: true)) %>
                 </p>
                 <!-- Total cost basis input -->
                 <div class="form-field">

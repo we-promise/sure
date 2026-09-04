@@ -118,6 +118,9 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 
 # Optional: Request timeout in seconds (default: 60)
 # OPENAI_REQUEST_TIMEOUT=60
+
+# Optional: extra HTTP headers as a JSON object (see "Extra HTTP Headers" below)
+# OPENAI_EXTRA_HEADERS='{"x-opencode-session":"{session_id}"}'
 ```
 
 **Recommended models:**
@@ -166,6 +169,33 @@ Any service offering an OpenAI-compatible API should work:
 - [Together AI](https://together.ai/) - Various open models
 - [Anyscale](https://www.anyscale.com/) - Llama models
 - [Replicate](https://replicate.com/) - Various models
+
+### Extra HTTP Headers
+
+Some gateways require custom headers on requests to OpenAI-compatible
+endpoints (e.g. OpenRouter's `HTTP-Referer`). Set `OPENAI_EXTRA_HEADERS`
+to a JSON object mapping header names to values:
+
+```bash
+# Single-quoted so the shell does not interpret braces or quotes.
+# A value containing the literal {session_id} is replaced with the chat's UUID
+# on each chat request, identifying the conversation rather than the install.
+OPENAI_EXTRA_HEADERS='{"x-opencode-session":"{session_id}"}'
+
+# Static value instead — sent on every OpenAI-provider request, including
+# batch jobs (auto-categorize, merchant detection, PDF processing):
+OPENAI_EXTRA_HEADERS='{"x-opencode-session":"b3f1c2d4-0000-0000-0000-000000000000"}'
+```
+
+Behavior:
+
+- A value containing the literal `{session_id}` is substituted with the chat's UUID on each chat request, so requests are attributable per conversation. Batch flows only receive static (non-`{session_id}`) headers, because a session only exists for a chat. If your gateway requires the header on every endpoint, use a static value.
+- Extra headers are attached to **chat requests** made by the OpenAI-compatible provider. Batch flows (auto-categorize, merchant detection, PDF processing) only receive static headers.
+- Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
+- User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
+- Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.
+- These headers are NOT sent to embedding, vector-store, or AI-health-probe calls — those build separate clients. A gateway requiring the header on those endpoints is not supported.
+- ENV-only: there is no settings-page equivalent. The value is re-read every time a provider client is built (nothing is cached), but updating the environment requires restarting the app.
 
 ## Local LLM Setup (Ollama)
 
@@ -220,7 +250,7 @@ OPENAI_MODEL=llama3.1:13b
 # have enough prompt budget for categories + schemas before transaction rows are added.
 LLM_CONTEXT_WINDOW=8192
 
-# Slow local models often need a longer HTTP timeout once the prompt budget issue is fixed.
+# Slow local models often need a longer per-request HTTP timeout once the prompt budget issue is fixed.
 OPENAI_REQUEST_TIMEOUT=180
 
 # Chained tool calls per turn. Each iteration is another call to the model, so
@@ -245,7 +275,7 @@ AI_DEBUG_MODE=true
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
-- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits
+- If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 
 ### Docker Compose Example
@@ -1082,6 +1112,30 @@ ollama list  # See what's installed
 ollama pull model-name  # Install a model
 ```
 
+### Chat Fails With a Bare "404" (Model Without Function Calling)
+
+**Symptom:** The assistant answers every message with an unexplained `404` (or
+another opaque provider error), while the same endpoint and model work for
+auto-categorization.
+
+**Cause:** The assistant reads accounts, transactions, and holdings through
+function calls, so every chat request carries a `tools` payload. A model
+without function-calling support rejects it — OpenRouter answers `404` for
+models such as `tngtech/deepseek-r1t2-chimera:free`.
+
+**Confirm it:** Open **System health → AI status**
+(`/admin/system_health?tab=ai`). **Function calling (tools)** reports *Not
+supported by the effective provider/model* when the endpoint served the plain
+chat check but rejected the same request carrying tools, and *Tools accepted,
+but the model called none* when the model answered with text instead of
+calling the tool.
+
+**Fix:** Set `OPENAI_MODEL` to a model your provider documents as supporting
+tools/function calling — see [For Chat Assistant](#for-chat-assistant) above —
+then run the checks again. Free tiers are a poor place to look: providers
+commonly log their prompts and completions for training, and the assistant
+sends your accounts, transactions, and holdings in every tool call.
+
 ### "Fixed prompt tokens exceed context budget"
 
 **Symptom:** Auto-categorization or merchant detection fails immediately with an error like:
@@ -1157,7 +1211,7 @@ Keeping the full eight iterations at 300s per call would instead need `9 × 300 
 
 If `AI_RESPONSE_TIMEOUT` ends up below what the turn actually takes, you get a generic "no response" instead of the specific timeout error, and the job keeps running and burning tokens after the chat has given up.
 
-`AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Chat Response Timeout**, which takes effect without a restart. The environment variable wins if both are set. The minimum accepted value is `30`.
+`OPENAI_REQUEST_TIMEOUT` and `AI_RESPONSE_TIMEOUT` can also be set at **Settings → Self-Hosting → OpenAI → Timeouts**, which takes effect without a restart when the corresponding environment variable is not configured. Environment variables win over the settings fields. The minimum accepted chat response timeout is `30`.
 
 Restart `web` and `worker` after changing the environment variables, and make sure your Docker Compose file forwards them into the containers.
 
@@ -1408,6 +1462,9 @@ live checks against the effective configuration:
 
 - OpenAI-compatible and Anthropic providers must return the configured model
   from their models API.
+- The configured model must complete one trivial function call, sent the way
+  the assistant sends its own tools. A model that serves plain chat but rejects
+  or ignores the `tools` parameter cannot answer questions about your data.
 - The hosted OpenAI vector-store adapter must answer a list request without
   creating or changing a store.
 - The pgvector adapter must have its extension enabled, its chunks table
@@ -1427,6 +1484,109 @@ cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
 timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
+
+#### Verifying Worker Configuration
+
+The checks above all run from the `web` process. Most AI work — assistant
+responses, PDF processing, embeddings, auto-categorization, and merchant
+detection — actually executes in a Sidekiq `worker` process, which can differ
+from `web` in network access, DNS, proxy rules, or even which credentials it
+loaded, especially in Kubernetes deployments using workload-specific overrides
+or a Secret updated without a pod restart. A passing web check does not prove
+a worker can reach the same provider.
+
+Click **Verify worker configuration** on the AI status tab to queue an
+asynchronous check (`WorkerAiHealthCheckJob`). It runs the same live probes
+from inside whichever worker process dequeues it, and the tab lists the
+result: that worker's process identity, when it checked, whether its
+effective configuration matches what `web` resolved, and probe outcomes.
+
+A few things this does and doesn't prove:
+
+- **One check verifies one worker.** Sidekiq doesn't broadcast a job to every
+  process, so a passing result confirms the process named on it is healthy —
+  not your whole fleet. With multiple worker replicas, queue the check again
+  to sample another; only the 5 most recently checked-in distinct processes
+  are kept (`WorkerAiHealth::MAX_RESULTS`) — a 6th eviction can push out an
+  older entry before its own `WorkerAiHealth::RETENTION` (15 minutes) is up —
+  and a result older than `WorkerAiHealth::STALE_AFTER` displays as **Stale**
+  rather than pass/fail.
+- **Worker checks never reuse a web-cached result, or vice versa.** The web
+  page's probes are cached briefly (see above) so repeat page loads don't
+  re-hit providers; the worker job deliberately bypasses that shared cache so
+  its result always reflects a live call from its own network context, and
+  never leaves an entry a web request could read back as if it had checked
+  itself.
+- **In local development, the web and worker results won't show up together.**
+  `bin/dev` runs `web` and `worker` as separate OS processes, and
+  `config/environments/development.rb` uses a process-local `:memory_store` /
+  `:null_store` cache there (production uses a shared Redis store). A worker
+  check queued locally writes to the worker process's own in-memory cache, so
+  the web page's "Verify worker configuration" button can appear to do
+  nothing — it isn't a bug, there's just no result for it to read back.
+- **Which settings need a restart depends on how they're set.** Provider,
+  model, and API-key settings changed in **Settings → Self-Hosting** are
+  stored in the database and take effect automatically for the next request
+  or queued job on both `web` and `worker` — no restart needed. Embedding
+  configuration, and anything only set through an environment variable, is
+  fixed when each container starts; changing it requires restarting or
+  recreating **both** `web` and `worker`. The AI status tab labels this
+  distinction next to the worker results.
+
+#### Troubleshooting Pgvector and Embeddings
+
+The AI status page reports separate failures for the PostgreSQL storage check
+and the embedding endpoint check.
+
+If PostgreSQL reports that the `vector` extension is not enabled, make sure the
+database image includes pgvector, then enable the extension as a database owner
+or superuser:
+
+```bash
+sudo -u postgres psql -d sure_production -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+If `vector_store_chunks` is missing, confirm the migration state and re-run the
+conditional vector-store migration with the pgvector provider selected:
+
+```bash
+RAILS_ENV=production bundle exec rails db:migrate:status
+VECTOR_STORE_PROVIDER=pgvector RAILS_ENV=production bundle exec rails db:migrate:redo VERSION=<migration_version>
+```
+
+If the embedding check reports a dimensions mismatch, align
+`EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS` with the embedding provider's
+documented vector size. For example, `gemini-embedding-2-preview` returns 3072
+dimensions by default, so a matching configuration is:
+
+```bash
+EMBEDDING_MODEL=gemini-embedding-2-preview
+EMBEDDING_DIMENSIONS=3072
+```
+
+Changing only `EMBEDDING_DIMENSIONS` does not reshape an existing pgvector
+column. If `vector_store_chunks` was already created with a different size,
+back up the database and source documents, remove the indexed documents from
+Sure, then alter or recreate the `embedding` column/table before uploading the
+documents again. Dropping the empty chunks table lets Sure recreate it with the
+new vector size:
+
+```bash
+docker compose -f compose.example.ai.yml exec web bin/rails runner \
+  'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+```
+
+Restart Sure after changing environment values so the new settings are present
+in both web and worker processes. If the embedding live check times out, raise
+the health-check probe timeout in the service environment:
+
+```bash
+AI_HEALTH_PROBE_TIMEOUT=180
+```
+
+If normal AI chat calls also time out, raise `OPENAI_REQUEST_TIMEOUT`
+separately; it controls OpenAI-compatible LLM requests, not the health-check
+probe budget.
 
 You can also check the adapter from the Rails console:
 

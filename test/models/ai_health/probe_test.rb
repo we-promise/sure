@@ -27,6 +27,30 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "timeout honors AI_HEALTH_PROBE_TIMEOUT and falls back for missing or non-positive values" do
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "42") do
+      assert_equal 42, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: nil) do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "0") do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "-3") do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "not-a-number") do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+
+    assert_equal AiHealth::Probe.timeout, @probe.send(:timeout)
+  end
+
   test "OpenAI-compatible LLM probe calls chat completions instead of the models endpoint" do
     endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
     request = stub_request(:post, "#{endpoint}/chat/completions")
@@ -378,4 +402,188 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert result.failing?
     assert_equal :dimensions_mismatch, result.failure_code
   end
+
+  test "function-calling probe sends the assistant's tools payload and passes when the model calls one" do
+    endpoint = "https://openrouter.example.test/api/v1"
+    request = stub_request(:post, "#{endpoint}/chat/completions")
+              .with { |req|
+                body = JSON.parse(req.body)
+                tool = body.dig("tools", 0, "function")
+
+                body["model"] == "tools-model" &&
+                  body.dig("messages", 0, "content") == AiHealth::Probe::FUNCTION_CALL_TEST_INPUT &&
+                  tool["name"] == AiHealth::Probe::FUNCTION_CALL_TEST_TOOL[:name] &&
+                  tool["strict"] == true
+              }
+              .to_return(
+                status: 200,
+                headers: { "Content-Type" => "application/json" },
+                body: {
+                  choices: [
+                    {
+                      message: {
+                        tool_calls: [
+                          { id: "call_1", type: "function", function: { name: "sure_health_check", arguments: "{}" } }
+                        ]
+                      }
+                    }
+                  ]
+                }.to_json
+              )
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "tools-model"
+    )
+
+    assert result.passing?
+    assert_requested request
+  end
+
+  test "function-calling probe fails when the model answers without calling the tool" do
+    endpoint = "https://openrouter.example.test/api/v1"
+    stub_request(:post, "#{endpoint}/chat/completions").to_return(
+      status: 200,
+      headers: { "Content-Type" => "application/json" },
+      body: { choices: [ { message: { content: "ok" } } ] }.to_json
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "chat-only-model"
+    )
+
+    assert result.failing?
+    assert_equal :no_tool_call, result.failure_code
+  end
+
+  test "function-calling probe confirms a refusal by re-asking without the tools" do
+    endpoint = "https://openrouter.example.test/api/v1"
+    stub_tools_request(endpoint).to_return(
+      status: 404,
+      headers: { "Content-Type" => "application/json" },
+      body: { error: { message: "No endpoints found that support tool use." } }.to_json
+    )
+    control = stub_control_request(endpoint).to_return(
+      status: 200,
+      headers: { "Content-Type" => "application/json" },
+      body: { choices: [ { message: { content: "ok" } } ] }.to_json
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "tngtech/deepseek-r1t2-chimera:free"
+    )
+
+    assert result.failing?
+    assert_equal :tools_refused, result.failure_code
+    assert_requested control
+  end
+
+  test "function-calling probe does not blame the tools for a client error the request gets either way" do
+    endpoint = "https://models.example.test/v1"
+    stub_tools_request(endpoint).to_return(status: 422, body: "{}", headers: { "Content-Type" => "application/json" })
+    control = stub_control_request(endpoint).to_return(
+      status: 422,
+      body: "{}",
+      headers: { "Content-Type" => "application/json" }
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "picky-model"
+    )
+
+    assert result.failing?
+    assert_equal :request_failed, result.failure_code
+    assert_equal 422, result.http_status
+    assert_requested control
+  end
+
+  test "function-calling probe does not re-ask when the service said not now" do
+    endpoint = "https://models.example.test/v1"
+    stub_tools_request(endpoint).to_return(status: 429, body: "{}", headers: { "Content-Type" => "application/json" })
+    control = stub_control_request(endpoint)
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: endpoint,
+      access_token: "token",
+      model: "busy-model"
+    )
+
+    assert result.failing?
+    assert_equal :request_failed, result.failure_code
+    assert_equal 429, result.http_status
+    assert_not_requested control
+  end
+
+  test "function-calling probe uses the responses endpoint when the assistant would" do
+    request = stub_request(:post, "https://api.openai.example.test/v1/responses")
+              .with { |req|
+                tool = JSON.parse(req.body).dig("tools", 0)
+
+                tool["type"] == "function" && tool["name"] == AiHealth::Probe::FUNCTION_CALL_TEST_TOOL[:name]
+              }
+              .to_return(
+                status: 200,
+                headers: { "Content-Type" => "application/json" },
+                body: { output: [ { type: "function_call", name: "sure_health_check", arguments: "{}" } ] }.to_json
+              )
+
+    result = @probe.function_calling(
+      provider: :openai,
+      endpoint: "https://api.openai.example.test/v1",
+      access_token: "token",
+      model: "gpt-4.1",
+      use_responses_endpoint: true
+    )
+
+    assert result.passing?
+    assert_requested request
+  end
+
+  test "function-calling probe reads an Anthropic tool_use block" do
+    response = Struct.new(:content).new([ Struct.new(:type, :name).new(:tool_use, "sure_health_check") ])
+    messages = mock("anthropic_messages")
+    messages.expects(:create).with do |params|
+      params[:tools].first[:input_schema] == AiHealth::Probe::FUNCTION_CALL_TEST_TOOL[:schema] &&
+        !params[:tools].first.key?(:strict)
+    end.returns(response)
+    @probe.stubs(:anthropic_client).returns(stub(messages: messages))
+
+    result = @probe.function_calling(
+      provider: :anthropic,
+      endpoint: "https://api.anthropic.com",
+      access_token: "token",
+      model: "claude-sonnet-4-6"
+    )
+
+    assert result.passing?
+  end
+
+  private
+    def stub_tools_request(endpoint)
+      stub_request(:post, "#{endpoint}/chat/completions").with { |request| JSON.parse(request.body).key?("tools") }
+    end
+
+    def stub_control_request(endpoint)
+      stub_request(:post, "#{endpoint}/chat/completions").with { |request| !JSON.parse(request.body).key?("tools") }
+    end
 end

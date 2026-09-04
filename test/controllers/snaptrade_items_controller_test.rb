@@ -7,9 +7,12 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def sign_out
-    @user.sessions.each do |session|
-      delete session_path(session)
-    end
+    # Deleting sessions through the controller de-authenticates the request the
+    # moment our own session dies, so every later delete in the loop is a
+    # silent no-op and whichever sessions sort after it survive. The order is
+    # unspecified, which made every suite that signs out this way flaky.
+    # Teardown hygiene is not the behavior under test, so destroy directly.
+    @user.sessions.destroy_all
   end
 
   # A deployment with a confidential OAuth client: both the browser redirect and
@@ -50,6 +53,38 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   def start_device_flow(item, **params)
     Provider::Snaptrade.stubs(:start_device_authorization).returns(DEVICE_AUTHORIZATION.dup)
     post start_oauth_device_flow_snaptrade_items_url, params: { item_id: item.id }.merge(params)
+  end
+
+  test "device OAuth copy resolves directly in German" do
+    flatten_keys = lambda do |translations, prefix = nil|
+      translations.flat_map do |key, value|
+        path = [ prefix, key ].compact.join(".")
+        value.is_a?(Hash) ? flatten_keys.call(value, path) : path
+      end
+    end
+
+    scoped_keys = %w[
+      snaptrade_items.oauth_device_flow
+      snaptrade_items.start_oauth_device_flow
+      snaptrade_items.complete_oauth_device_flow
+    ].flat_map do |scope|
+      translations = I18n.t(scope, locale: :en, fallback: false, default: nil)
+      assert_kind_of Hash, translations, "#{scope} must remain a translation subtree"
+
+      flatten_keys.call(translations).map { |key| "#{scope}.#{key}" }
+    end
+
+    scoped_keys.concat %w[
+      providers.snaptrade.oauth_setup_step_1_html
+      providers.snaptrade.oauth_setup_step_2_html
+      providers.snaptrade.oauth_setup_step_3
+      providers.snaptrade.oauth_status_ready_device
+      providers.snaptrade.oauth_device_button
+    ]
+
+    scoped_keys.each do |key|
+      assert I18n.t(key, locale: :de, fallback: false, default: nil).present?, "de is missing #{key}"
+    end
   end
 
   test "connect redirects to portal when successful" do

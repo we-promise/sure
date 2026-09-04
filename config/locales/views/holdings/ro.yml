@@ -9,6 +9,9 @@ ro:
       per_share: per acțiune
       shares: "%{qty} acțiuni"
     index:
+      positions:
+        one: "%{count} poziție"
+        other: "%{count} poziții"
       average_cost: Cost mediu
       holdings: Dețineri
       name: Nume

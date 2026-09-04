@@ -1,0 +1,109 @@
+<%# One period in the paycheck timeline: when money arrives and what is left
+    of it, the due / reserved / safe split with its allocation bar, the bills
+    due in the window, and an expandable footer for what is held for later. %>
+
+<%
+  segments = paycheck_allocation_segments(period)
+  segment_class = {
+    due: "bg-inverse",
+    reserved: "bg-subdued",
+    safe: "bg-success",
+    covered: "bg-subdued",
+    short: "bg-destructive"
+  }
+  safe_tone = period.short? ? "text-destructive" : "text-primary"
+  safe_amount = format_money(Money.new(period.short? ? period.shortfall : period.remaining, currency))
+  safe_label = period.short? ? t("bills.paycheck.short_after_bills") : t("bills.paycheck.safe_after_bills")
+%>
+
+<section class="flex gap-3 px-4 sm:px-5">
+  <div class="shrink-0 flex flex-col items-center py-4 <%= "border-t border-transparent" unless first %>" aria-hidden="true">
+    <span class="h-7 flex items-center">
+      <span class="w-1.5 h-1.5 rounded-full <%= period.short? ? "bg-destructive" : "bg-subdued" %>"></span>
+    </span>
+    <% unless last %>
+      <span class="flex-1 w-px bg-subdued opacity-40"></span>
+    <% end %>
+  </div>
+
+  <div class="flex-1 min-w-0 py-4 space-y-3 <%= "border-t border-subdued" unless first %>">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="text-lg font-medium text-primary truncate leading-7">
+          <%= l(period.starts_on, format: :short) %><span class="text-base font-normal text-secondary"><%= paycheck_period_source(period) %></span>
+        </p>
+        <p class="text-xs text-secondary tabular-nums privacy-sensitive">
+          <% if period.bridge? %>
+            <%= t("bills.paycheck.no_income_arriving") %>
+          <% else %>
+            <%= t("bills.paycheck.income_amount", amount: format_money(Money.new(period.income, currency))) %>
+          <% end %>
+        </p>
+      </div>
+
+      <div class="text-right shrink-0">
+        <p class="text-lg font-medium leading-7 tabular-nums privacy-sensitive <%= safe_tone %>"><%= safe_amount %></p>
+        <p class="text-xs text-secondary"><%= safe_label %></p>
+      </div>
+    </div>
+
+    <div>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="min-w-0">
+          <p class="text-xs text-secondary truncate"><%= t("bills.paycheck.due_this_period") %></p>
+          <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= format_money(Money.new(period.due_total, currency)) %></p>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-secondary truncate"><%= t("bills.paycheck.reserved_ahead") %></p>
+          <p class="text-sm font-medium text-primary tabular-nums privacy-sensitive"><%= format_money(Money.new(period.reserved_total, currency)) %></p>
+        </div>
+        <div class="min-w-0">
+          <p class="text-xs text-secondary truncate"><%= period.short? ? t("bills.paycheck.short_short") : t("bills.paycheck.safe_short") %></p>
+          <p class="text-sm font-medium tabular-nums privacy-sensitive <%= safe_tone %>"><%= safe_amount %></p>
+        </div>
+      </div>
+
+      <% if segments.any? %>
+        <div class="flex h-0.5 rounded-full overflow-hidden bg-surface-inset mt-2"
+             role="img"
+             aria-label="<%= paycheck_allocation_aria(period, currency) %>">
+          <% segments.each do |key, percent| %>
+            <div class="<%= segment_class[key] %>" style="width: <%= percent %>%"></div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <% if period.items_due.any? %>
+      <div>
+        <p class="text-xs text-secondary">
+          <% if period.bridge? %>
+            <%= t("bills.paycheck.bills_before_payday", count: period.items_due.size) %>
+          <% else %>
+            <%= t("bills.paycheck.bills_this_period", count: period.items_due.size) %>
+          <% end %>
+        </p>
+        <div class="mt-1">
+          <% period.items_due.each do |item| %>
+            <%= render "bills/paycheck_item", item: item, currency: currency, reserved: false %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <% if period.items_reserved.any? %>
+      <%= render DS::Disclosure.new(variant: :inline, body_class: "mt-1") do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <span class="flex items-center gap-1 text-xs text-secondary hover:text-primary">
+            <%= t("bills.paycheck.reserved_footer", count: period.items_reserved.size) %>
+            <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+          </span>
+        <% end %>
+
+        <% period.items_reserved.each do |item| %>
+          <%= render "bills/paycheck_item", item: item, currency: currency, reserved: true %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>
