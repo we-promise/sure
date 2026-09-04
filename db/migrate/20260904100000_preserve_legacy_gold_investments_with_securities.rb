@@ -1,4 +1,4 @@
-class PreserveLegacyGoldInvestmentsWithSecurities < ActiveRecord::Migration[8.0]
+class PreserveLegacyGoldInvestmentsWithSecurities < ActiveRecord::Migration[7.2]
   def up
     execute <<~SQL.squish
       UPDATE investments

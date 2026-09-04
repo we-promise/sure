@@ -39,6 +39,19 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_nil investment.gold_karat
   end
 
+  test "refuses conversion to digital gold while physical purchases exist" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    investment = account.investment
+    investment.update!(subtype: "gold", gold_form: "physical")
+    account.physical_gold_lots.create!(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000)
+
+    investment.gold_form = "digital"
+
+    assert_not investment.valid?
+    assert_includes investment.errors[:gold_form], "cannot be changed to Digital gold while physical gold purchases exist."
+  end
+
   # Tax treatment derivation tests
 
   test "tax_treatment returns tax_deferred for US retirement accounts" do

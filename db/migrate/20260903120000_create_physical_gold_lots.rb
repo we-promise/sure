@@ -1,4 +1,4 @@
-class CreatePhysicalGoldLots < ActiveRecord::Migration[8.0]
+class CreatePhysicalGoldLots < ActiveRecord::Migration[7.2]
   def change
     create_table :physical_gold_lots, id: :uuid do |t|
       t.references :account, null: false, type: :uuid, foreign_key: true

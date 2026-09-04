@@ -1,4 +1,4 @@
-class AddPhysicalGoldConstraintsToInvestments < ActiveRecord::Migration[8.0]
+class AddPhysicalGoldConstraintsToInvestments < ActiveRecord::Migration[7.2]
   def change
     add_check_constraint :investments,
                          "gold_weight IS NULL OR gold_weight > 0",

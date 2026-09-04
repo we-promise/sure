@@ -17,6 +17,7 @@ en:
       gold_details_only_for_gold: Physical gold details require the Physical gold form.
       gold_form_only_for_gold: can only be selected for a Gold investment.
       gold_cannot_have_holdings: Gold accounts cannot contain securities holdings. Remove or move the holdings before changing this account to Gold.
+      digital_gold_cannot_have_physical_lots: cannot be changed to Digital gold while physical gold purchases exist.
     new:
       title: Enter account balance
     show:

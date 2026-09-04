@@ -4,6 +4,7 @@
 # per day.
 class GoldValuation
   TROY_OUNCE_GRAMS = BigDecimal("31.1034768")
+  RATE_LOCK_NAMESPACE = 1_713_589_406
 
   Error = Class.new(StandardError)
 
@@ -38,19 +39,40 @@ class GoldValuation
     def gold_rate
       return Provider::GoldApi::Price.new(date:, currency: account.currency, price_per_troy_ounce: 0) unless account.investment.gold_spot_price_required?
 
-      cached = ExchangeRate.find_by(from_currency: "XAU", to_currency: account.currency, date: date)
-      return Provider::GoldApi::Price.new(date:, currency: account.currency, price_per_troy_ounce: cached.rate) if cached.present?
+      twelve_data_error = nil
+      twelve_data_failure_logged = false
+      rate = ExchangeRate.transaction do
+        lock_rate_cache!
 
-      price = fetch_twelve_data_gold_price || fetch_gold_api_price
-      raise Error, "No physical gold price provider is configured" unless price.present?
+        cached = ExchangeRate.find_by(from_currency: "XAU", to_currency: account.currency, date: date)
+        return Provider::GoldApi::Price.new(date:, currency: account.currency, price_per_troy_ounce: cached.rate) if cached.present?
 
-      exchange_rate = ExchangeRate.create_or_find_by!(from_currency: "XAU", to_currency: account.currency, date: date) do |exchange_rate|
-        exchange_rate.rate = price.price_per_troy_ounce
+        price = fetch_twelve_data_gold_price { |error| twelve_data_error = error } || fetch_gold_api_price
+        raise Error, "No physical gold price provider is configured" unless price.present?
+
+        exchange_rate = ExchangeRate.create_or_find_by!(from_currency: "XAU", to_currency: account.currency, date: date) do |exchange_rate|
+          exchange_rate.rate = price.price_per_troy_ounce
+        end
+        Provider::GoldApi::Price.new(
+          date: exchange_rate.date,
+          currency: account.currency,
+          price_per_troy_ounce: exchange_rate.rate
+        )
       end
-      Provider::GoldApi::Price.new(
-        date: exchange_rate.date,
-        currency: account.currency,
-        price_per_troy_ounce: exchange_rate.rate
+      if twelve_data_error
+        log_twelve_data_fallback(twelve_data_error)
+        twelve_data_failure_logged = true
+      end
+      rate
+    ensure
+      log_twelve_data_fallback(twelve_data_error) if twelve_data_error && !twelve_data_failure_logged
+    end
+
+    def lock_rate_cache!
+      ExchangeRate.connection.execute(
+        ExchangeRate.sanitize_sql_array(
+          [ "SELECT pg_advisory_xact_lock(?, hashtext(?))", RATE_LOCK_NAMESPACE, "gold_rate:XAU:#{account.currency}:#{date}" ]
+        )
       )
     end
 
@@ -61,6 +83,12 @@ class GoldValuation
       response = provider.fetch_gold_price(date:)
       return convert_twelve_data_price(response.data) if response.success?
 
+      yield response.error if block_given?
+
+      nil
+    end
+
+    def log_twelve_data_fallback(error)
       DebugLogEntry.capture(
         category: "gold_valuation",
         level: "warn",
@@ -71,12 +99,10 @@ class GoldValuation
         account: account,
         metadata: {
           account_id: account.id,
-          error: response.error&.message,
-          failure_code: response.error&.failure_code
+          error: error.message,
+          failure_code: error.failure_code
         }
       )
-
-      nil
     end
 
     def convert_twelve_data_price(price)

@@ -1,4 +1,4 @@
-class AddRequiredPurchaseConstraintsToPhysicalGoldLots < ActiveRecord::Migration[8.0]
+class AddRequiredPurchaseConstraintsToPhysicalGoldLots < ActiveRecord::Migration[7.2]
   def up
     change_column_null :physical_gold_lots, :cost_amount, false
     add_check_constraint :physical_gold_lots,

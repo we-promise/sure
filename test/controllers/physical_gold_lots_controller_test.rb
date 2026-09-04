@@ -30,6 +30,8 @@ class PhysicalGoldLotsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "form[action='#{physical_gold_lots_path}'][method='post'][data-turbo-frame='_top']"
     assert_select "input[type='file'][name='physical_gold_lot[invoice]']"
+    assert_select "input[name='physical_gold_lot[weight]'][min='0.001']"
+    assert_select "input[name='physical_gold_lot[karat]'][min='0.1']"
   end
 
   test "edits an individual physical gold purchase" do

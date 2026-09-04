@@ -1,4 +1,4 @@
-class AddGoldFormToInvestments < ActiveRecord::Migration[8.0]
+class AddGoldFormToInvestments < ActiveRecord::Migration[7.2]
   def up
     add_column :investments, :gold_form, :string
     execute <<~SQL.squish

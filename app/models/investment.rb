@@ -112,6 +112,7 @@ class Investment < ApplicationRecord
   validate :gold_form_only_for_gold_investments
   validate :physical_gold_details_only_for_physical_gold_investments
   validate :physical_gold_cannot_have_securities
+  validate :digital_gold_cannot_have_physical_lots
 
   def gold?
     subtype == "gold"
@@ -187,7 +188,7 @@ class Investment < ApplicationRecord
     end
 
     def clear_physical_gold_details_for_digital_form
-      return unless digital_gold?
+      return unless digital_gold? && !physical_gold_lots.exists?
 
       self.gold_weight = nil
       self.gold_weight_unit = nil
@@ -211,6 +212,12 @@ class Investment < ApplicationRecord
       return unless physical_gold? && account&.persisted? && account.holdings.exists?
 
       errors.add(:subtype, I18n.t("investments.errors.gold_cannot_have_holdings"))
+    end
+
+    def digital_gold_cannot_have_physical_lots
+      return unless digital_gold? && physical_gold_lots.exists?
+
+      errors.add(:gold_form, I18n.t("investments.errors.digital_gold_cannot_have_physical_lots"))
     end
 
     class << self

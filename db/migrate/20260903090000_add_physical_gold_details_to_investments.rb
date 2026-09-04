@@ -1,4 +1,4 @@
-class AddPhysicalGoldDetailsToInvestments < ActiveRecord::Migration[8.0]
+class AddPhysicalGoldDetailsToInvestments < ActiveRecord::Migration[7.2]
   def change
     change_table :investments, bulk: true do |t|
       t.decimal :gold_weight, precision: 18, scale: 6

@@ -109,6 +109,25 @@ class GoldValuationTest < ActiveSupport::TestCase
     assert_equal "Commodity access requires a higher plan", diagnostic.metadata["error"]
   end
 
+  test "records the Twelve Data failure when GoldAPI fallback also fails" do
+    twelve_data = mock
+    gold_api = mock
+    Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(twelve_data)
+    Provider::Registry.stubs(:get_provider).with(:gold_api).returns(gold_api)
+    twelve_data.expects(:fetch_gold_price).returns(
+      Provider::Response.new(success?: false, data: nil, error: Provider::TwelveData::Error.new("Commodity access requires a higher plan"))
+    )
+    gold_api.expects(:fetch_gold_price).with(currency: "USD").returns(
+      Provider::Response.new(success?: false, data: nil, error: Provider::GoldApi::Error.new("GoldAPI unavailable"))
+    )
+
+    assert_difference -> { DebugLogEntry.with_provider_key("twelve_data").count }, 1 do
+      assert_raises(GoldValuation::Error) { GoldValuation.new(account: @account).refresh! }
+    end
+
+    assert_equal "Commodity access requires a higher plan", DebugLogEntry.with_provider_key("twelve_data").recent.first.metadata["error"]
+  end
+
   test "reuses a newly cached XAU rate when another refresh stores it first" do
     provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
