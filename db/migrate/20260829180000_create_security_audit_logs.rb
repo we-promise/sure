@@ -16,6 +16,12 @@ class CreateSecurityAuditLogs < ActiveRecord::Migration[7.2]
       t.string :event_type, null: false
       t.string :ip_address
       t.string :user_agent
+      # AR-encrypted (see SecurityAuditLog) rather than folded into `metadata`
+      # (plain jsonb): these rows deliberately outlive the user (see the FK
+      # below), so this is the only copy of the user's email left once the
+      # account is gone, and it needs the same encryption boundary that
+      # `User#email` has.
+      t.text :user_email
       t.jsonb :metadata, default: {}, null: false
 
       t.timestamps

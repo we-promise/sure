@@ -7,6 +7,15 @@
 class SecurityAuditLog < ApplicationRecord
   belongs_to :user, optional: true
 
+  # Non-deterministic: this column is never queried by value, only ever
+  # displayed to an investigator, so there's no reason to give up the
+  # stronger (non-deterministic) ciphertext for lookup capability we don't
+  # need. Keeping the email out of `metadata` (plain jsonb) matters because
+  # these rows deliberately survive the user's deletion (see the FK comment
+  # in the migration) — a plaintext copy would otherwise outlive and bypass
+  # the encryption boundary `User#email` is under.
+  encrypts :user_email
+
   EVENT_TYPES = %w[
     api_key_created
     api_key_revoked
@@ -27,60 +36,64 @@ class SecurityAuditLog < ApplicationRecord
     def log_api_key_created!(user:, api_key:, request:)
       create!(
         user: user,
+        user_email: user.email,
         event_type: "api_key_created",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
-        metadata: identity_snapshot(user).merge(api_key_id: api_key.id, name: api_key.name, scopes: api_key.scopes)
+        metadata: { api_key_id: api_key.id, name: api_key.name, scopes: api_key.scopes }
       )
     end
 
     def log_api_key_revoked!(user:, api_key:, request:)
       create!(
         user: user,
+        user_email: user.email,
         event_type: "api_key_revoked",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
-        metadata: identity_snapshot(user).merge(api_key_id: api_key.id, name: api_key.name)
+        metadata: { api_key_id: api_key.id, name: api_key.name }
       )
     end
 
     def log_mfa_enabled!(user:, request:)
       create!(
         user: user,
+        user_email: user.email,
         event_type: "mfa_enabled",
         ip_address: request.remote_ip,
-        user_agent: request.user_agent&.truncate(500),
-        metadata: identity_snapshot(user)
+        user_agent: request.user_agent&.truncate(500)
       )
     end
 
     def log_mfa_disabled!(user:, request:)
       create!(
         user: user,
+        user_email: user.email,
         event_type: "mfa_disabled",
         ip_address: request.remote_ip,
-        user_agent: request.user_agent&.truncate(500),
-        metadata: identity_snapshot(user)
+        user_agent: request.user_agent&.truncate(500)
       )
     end
 
     def log_webauthn_credential_added!(user:, credential:, request:)
       create!(
         user: user,
+        user_email: user.email,
         event_type: "webauthn_credential_added",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
-        metadata: identity_snapshot(user).merge(credential_id: credential.id, nickname: credential.nickname)
+        metadata: { credential_id: credential.id, nickname: credential.nickname }
       )
     end
 
     def log_webauthn_credential_removed!(user:, credential:, request:)
       create!(
         user: user,
+        user_email: user.email,
         event_type: "webauthn_credential_removed",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
-        metadata: identity_snapshot(user).merge(credential_id: credential.id, nickname: credential.nickname)
+        metadata: { credential_id: credential.id, nickname: credential.nickname }
       )
     end
 
@@ -89,26 +102,17 @@ class SecurityAuditLog < ApplicationRecord
     # from Admin::UsersController). Self-service changes (PasswordsController,
     # PasswordResetsController) leave it nil.
     def log_password_changed!(user:, request:, actor: nil)
-      metadata = identity_snapshot(user)
+      metadata = {}
       metadata[:actor_user_id] = actor.id if actor && actor.id != user.id
 
       create!(
         user: user,
+        user_email: user.email,
         event_type: "password_changed",
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
         metadata: metadata
       )
     end
-
-    private
-
-      # The user_id column is nullified (not cascaded) when the user is
-      # deleted, so it alone can't identify who a row was about afterward.
-      # Snapshotting the email into metadata keeps that identity legible to
-      # an investigator even after the account is gone.
-      def identity_snapshot(user)
-        { user_email: user.email }
-      end
   end
 end

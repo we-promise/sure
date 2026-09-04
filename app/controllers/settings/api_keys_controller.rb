@@ -31,13 +31,15 @@ class Settings::ApiKeysController < ApplicationController
     @api_key = Current.user.api_keys.build(api_key_params)
     @api_key.key = @plain_key
 
-    if @api_key.save
+    ActiveRecord::Base.transaction do
+      @api_key.save!
       SecurityAuditLog.log_api_key_created!(user: Current.user, api_key: @api_key, request: request)
-      flash[:notice] = t(".success")
-      redirect_to settings_api_key_path(@api_key, newly_created: true)
-    else
-      render :new, status: :unprocessable_entity
     end
+
+    flash[:notice] = t(".success")
+    redirect_to settings_api_key_path(@api_key, newly_created: true)
+  rescue ActiveRecord::RecordInvalid
+    render :new, status: :unprocessable_entity
   end
 
   def destroy
