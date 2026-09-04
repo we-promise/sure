@@ -14,6 +14,12 @@ en:
       manual_value: Manual current value (optional)
       manual_value_hint: Overrides the spot-price estimate for this purchase only.
       notes: Notes (optional)
+      invoice: Invoice or receipt (optional)
+      invoice_hint: PDF or image, up to %{max_size} MB. Saved with this purchase.
+      invoice_attached: Invoice attached
+      view_invoice: View invoice
+      remove_invoice: Remove invoice
+      remove_invoice_confirm: Remove this invoice?
       grams: Grams
       troy_ounces: Troy ounces
       kilograms: Kilograms
@@ -47,3 +53,6 @@ en:
       success: Gold purchase updated
     destroy:
       deleted: Gold purchase deleted
+  physical_gold_lot_invoices:
+    destroy:
+      deleted: Invoice removed

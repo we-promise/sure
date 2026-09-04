@@ -48,6 +48,24 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     assert_instance_of Provider::TwelveData::RateLimitError, result.error
   end
 
+  test "fetches the XAU USD Gold Spot price" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({ "price" => "3110.34768" }.to_json)
+    request = Struct.new(:params).new({})
+    mock_client = mock
+    mock_client.expects(:get).with("https://api.twelvedata.com/price").yields(request).returns(mock_response)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client)
+
+    result = @provider.fetch_gold_price(date: Date.new(2026, 9, 4))
+
+    assert result.success?
+    assert_equal "XAU/USD", request.params["symbol"]
+    assert_equal "USD", result.data.currency
+    assert_equal Date.new(2026, 9, 4), result.data.date
+    assert_in_delta 3110.34768, result.data.price_per_troy_ounce, 0.00001
+  end
+
   test "does not fall through to cross API when rate limited" do
     rate_limit_body = {
       "code" => 429,

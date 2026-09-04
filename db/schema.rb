@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1212,9 +1212,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "gold_form"
+    t.decimal "gold_karat", precision: 4, scale: 1
+    t.decimal "gold_manual_value", precision: 18, scale: 2
+    t.decimal "gold_weight", precision: 18, scale: 6
+    t.string "gold_weight_unit"
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.check_constraint "gold_form IS NULL OR (gold_form::text = ANY (ARRAY['physical'::character varying, 'digital'::character varying]::text[]))", name: "investments_gold_form_valid"
+    t.check_constraint "gold_form IS NULL OR subtype::text = 'gold'::text", name: "investments_gold_form_requires_gold_subtype"
+    t.check_constraint "gold_form::text = 'physical'::text OR gold_weight IS NULL AND gold_weight_unit IS NULL AND gold_karat IS NULL AND gold_manual_value IS NULL", name: "investments_physical_gold_details_require_physical_form"
+    t.check_constraint "gold_karat IS NULL OR gold_karat > 0::numeric AND gold_karat <= 24::numeric", name: "investments_gold_karat_valid"
+    t.check_constraint "gold_manual_value IS NULL OR gold_manual_value >= 0::numeric", name: "investments_gold_manual_value_nonnegative"
+    t.check_constraint "gold_weight IS NULL OR gold_weight > 0::numeric", name: "investments_gold_weight_positive"
+    t.check_constraint "gold_weight_unit IS NULL OR (gold_weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[]))", name: "investments_gold_weight_unit_valid"
+    t.check_constraint "subtype::text = 'gold'::text OR gold_weight IS NULL AND gold_weight_unit IS NULL AND gold_karat IS NULL AND gold_manual_value IS NULL", name: "investments_gold_details_require_gold_subtype"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1572,6 +1585,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
+  end
+
+  create_table "physical_gold_lots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.date "acquired_on", null: false
+    t.decimal "cost_amount", precision: 18, scale: 2, null: false
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.string "description"
+    t.decimal "karat", precision: 4, scale: 1, null: false
+    t.decimal "making_charge", precision: 18, scale: 2
+    t.decimal "manual_value", precision: 18, scale: 2
+    t.uuid "merchant_id"
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.decimal "weight", precision: 18, scale: 6, null: false
+    t.string "weight_unit", null: false
+    t.index ["account_id"], name: "index_physical_gold_lots_on_account_id"
+    t.index ["merchant_id"], name: "index_physical_gold_lots_on_merchant_id"
+    t.check_constraint "cost_amount IS NULL OR cost_amount >= 0::numeric", name: "physical_gold_lots_cost_amount_nonnegative"
+    t.check_constraint "description IS NOT NULL AND btrim(description::text) <> ''::text", name: "physical_gold_lots_description_present"
+    t.check_constraint "karat > 0::numeric AND karat <= 24::numeric", name: "physical_gold_lots_karat_valid"
+    t.check_constraint "making_charge IS NULL OR making_charge >= 0::numeric", name: "physical_gold_lots_making_charge_nonnegative"
+    t.check_constraint "manual_value IS NULL OR manual_value >= 0::numeric", name: "physical_gold_lots_manual_value_nonnegative"
+    t.check_constraint "weight > 0::numeric", name: "physical_gold_lots_weight_positive"
+    t.check_constraint "weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[])", name: "physical_gold_lots_weight_unit_valid"
   end
 
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2673,6 +2712,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
   add_foreign_key "oidc_identities", "users"
   add_foreign_key "onchain_wallet_accounts", "onchain_wallet_items"
   add_foreign_key "onchain_wallet_items", "families"
+  add_foreign_key "physical_gold_lots", "accounts"
+  add_foreign_key "physical_gold_lots", "merchants"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "push_subscriptions", "users"

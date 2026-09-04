@@ -1,14 +1,14 @@
 require "test_helper"
 
 class UI::AccountPageTest < ViewComponent::TestCase
-  test "uses the gold overview rather than the securities holdings tab" do
+  test "uses the gold overview and omits statements for physical gold" do
     account = accounts(:investment)
     account.holdings.destroy_all
-    account.investment.update!(subtype: "gold")
+    account.investment.update!(subtype: "gold", gold_form: "physical")
 
     component = UI::AccountPage.new(account:)
 
-    assert_equal [ :activity, :overview, :statements ], component.tabs
+    assert_equal [ :activity, :overview ], component.tabs
   end
 
   test "keeps the holdings tab for non-physical investment accounts" do

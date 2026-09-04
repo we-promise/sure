@@ -1,6 +1,7 @@
-# Calculates and records a physical-gold account's value. GoldAPI is queried at
-# most once per quote currency per day; the resulting XAU rate is shared via the
-# existing exchange_rates table.
+# Calculates and records a physical-gold account's value. A configured Twelve
+# Data provider is preferred, with GoldAPI as a fallback. The resulting XAU
+# rate is shared via the existing exchange_rates table once per quote currency
+# per day.
 class GoldValuation
   TROY_OUNCE_GRAMS = BigDecimal("31.1034768")
 
@@ -40,19 +41,49 @@ class GoldValuation
       cached = ExchangeRate.find_by(from_currency: "XAU", to_currency: account.currency, date: date)
       return Provider::GoldApi::Price.new(date:, currency: account.currency, price_per_troy_ounce: cached.rate) if cached.present?
 
-      provider = Provider::Registry.get_provider(:gold_api)
-      raise Error, "GoldAPI is not configured" unless provider.present?
+      price = fetch_twelve_data_gold_price || fetch_gold_api_price
+      raise Error, "No physical gold price provider is configured" unless price.present?
 
-      response = provider.fetch_gold_price(currency: account.currency)
-      raise Error, response.error.message unless response.success?
-
-      price = response.data
-      # A refresh is a point-in-time valuation for the requested account date.
-      # GoldAPI timestamps are UTC, which can otherwise put a late-night quote
-      # into the prior local day and bypass this cache on the next refresh.
-      ExchangeRate.create_or_find_by!(from_currency: "XAU", to_currency: account.currency, date: date) do |exchange_rate|
+      exchange_rate = ExchangeRate.create_or_find_by!(from_currency: "XAU", to_currency: account.currency, date: date) do |exchange_rate|
         exchange_rate.rate = price.price_per_troy_ounce
       end
-      price
+      Provider::GoldApi::Price.new(
+        date: exchange_rate.date,
+        currency: account.currency,
+        price_per_troy_ounce: exchange_rate.rate
+      )
+    end
+
+    def fetch_twelve_data_gold_price
+      provider = Provider::Registry.get_provider(:twelve_data)
+      return unless provider.present?
+
+      response = provider.fetch_gold_price(date:)
+      return convert_twelve_data_price(response.data) if response.success?
+
+      nil
+    end
+
+    def convert_twelve_data_price(price)
+      return price if account.currency == "USD"
+
+      fx_rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: account.currency, date: date)
+      return unless fx_rate.present?
+
+      Provider::TwelveData::GoldPrice.new(
+        date:,
+        currency: account.currency,
+        price_per_troy_ounce: price.price_per_troy_ounce.to_d * fx_rate.rate.to_d
+      )
+    end
+
+    def fetch_gold_api_price
+      provider = Provider::Registry.get_provider(:gold_api)
+      return unless provider.present?
+
+      response = provider.fetch_gold_price(currency: account.currency)
+      raise Error, response.error&.message || "GoldAPI could not provide a gold price" unless response.success?
+
+      response.data
     end
 end

@@ -1,0 +1,10 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        physical_gold_lot:
+          attributes:
+            invoice:
+              too_large: must be smaller than %{max_mb} MB
+              invalid_format: must be a PDF or image

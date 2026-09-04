@@ -33,7 +33,6 @@ class Settings::HostingsController < ApplicationController
     @show_tiingo_settings = enabled_securities.include?("tiingo")
     @show_eodhd_settings = enabled_securities.include?("eodhd")
     @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
-    @show_gold_api_settings = ENV["GOLD_API_KEY"].present? || Setting.gold_api_enabled
     tinkoff_invest_checked = enabled_securities.include?("tinkoff_invest")
     tinkoff_invest_configured = ENV["TINKOFF_INVEST_API_KEY"].present? || Setting.tinkoff_invest_api_key.present?
     @show_tinkoff_invest_settings = tinkoff_invest_checked || enabled_securities.include?("moex_public") || tinkoff_invest_configured

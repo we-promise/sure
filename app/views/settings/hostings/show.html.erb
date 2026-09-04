@@ -21,9 +21,6 @@
 <%= settings_section title: t(".financial_data_providers") do %>
   <div class="space-y-6">
     <%= render "settings/hostings/provider_selection" %>
-    <% if @show_gold_api_settings %>
-      <%= render "settings/hostings/gold_api_settings" %>
-    <% end %>
     <% if @show_yahoo_finance_settings %>
       <%= render "settings/hostings/yahoo_finance_settings" %>
     <% end %>

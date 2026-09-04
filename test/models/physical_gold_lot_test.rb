@@ -33,6 +33,16 @@ class PhysicalGoldLotTest < ActiveSupport::TestCase
     assert_includes lot.errors[:cost_amount], "is not a number"
   end
 
+  test "rejects a blank description" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.investment.update!(subtype: "gold", gold_form: "physical")
+    lot = account.physical_gold_lots.build(description: "  ", acquired_on: Date.current, weight: 1, weight_unit: "gram", karat: 24, cost_amount: 1)
+
+    assert_not lot.valid?
+    assert_includes lot.errors[:description], "can't be blank"
+  end
+
   test "uses its individual manual value when present" do
     account = accounts(:investment)
     account.holdings.destroy_all
@@ -50,5 +60,26 @@ class PhysicalGoldLotTest < ActiveSupport::TestCase
     lot = account.physical_gold_lots.create!(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000, making_charge: 50)
 
     assert_equal 1_050, lot.total_cost_amount
+  end
+
+  test "accepts a PDF invoice" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.investment.update!(subtype: "gold", gold_form: "physical")
+    lot = account.physical_gold_lots.build(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000)
+    lot.invoice.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    assert lot.valid?
+  end
+
+  test "rejects an unsupported invoice format" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.investment.update!(subtype: "gold", gold_form: "physical")
+    lot = account.physical_gold_lots.build(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000)
+    lot.invoice.attach(io: StringIO.new("invoice"), filename: "invoice.txt", content_type: "text/plain")
+
+    assert_not lot.valid?
+    assert_includes lot.errors.full_messages_for(:invoice).join, "must be a PDF or image"
   end
 end

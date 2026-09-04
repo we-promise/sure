@@ -6,7 +6,9 @@
     <% menu.with_item(variant: "link", text: t(".edit"), href: edit_account_path(account), icon: "pencil-line", data: { turbo_frame: :modal }) %>
   <% end %>
   <% menu.with_item(variant: "link", text: t(".sharing"), href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
-  <% menu.with_item(variant: "link", text: t(".statements"), href: account_path(account, tab: "statements"), icon: "archive") %>
+  <% unless account.investment&.physical_gold? %>
+    <% menu.with_item(variant: "link", text: t(".statements"), href: account_path(account, tab: "statements"), icon: "archive") %>
+  <% end %>
 
   <% if permission.in?([ :owner, :full_control ]) %>
     <% menu.with_item(variant: "divider") %>

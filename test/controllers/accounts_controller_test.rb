@@ -151,6 +151,17 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame[src='#{statements_path}']"
   end
 
+  test "physical gold accounts do not show or load the statements tab" do
+    @account.holdings.destroy_all
+    @account.investment.update!(subtype: "gold", gold_form: "physical")
+
+    get account_url(@account, tab: "statements")
+
+    assert_response :success
+    assert_select "button[role='tab']", text: I18n.t("accounts.show.tabs.statements"), count: 0
+    assert_select "turbo-frame[id='#{dom_id(@account, :statements_tab)}']", count: 0
+  end
+
   test "statements tab links escape turbo frame for full-page navigation" do
     # Upload a statement to ensure table rows render
     statement = AccountStatement.create_from_upload!(

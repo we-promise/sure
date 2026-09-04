@@ -73,6 +73,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       Setting.gold_api_enabled = false
       get settings_hosting_url
       assert_not_includes response.body, "Enter your GoldAPI key"
+      assert_select "input[name='setting[gold_api_enabled]'][type='checkbox']", count: 1
+      assert_operator response.body.index("T-Invest (T-Bank)"), :<, response.body.index("GoldAPI")
 
       patch settings_hosting_url, params: { setting: { gold_api_enabled: "1" } }
       assert Setting.gold_api_enabled

@@ -404,7 +404,7 @@ class AccountsController < ApplicationController
     end
 
     def statement_tab_active?
-      @tab == "statements"
+      @tab == "statements" && !@account.investment&.physical_gold?
     end
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views

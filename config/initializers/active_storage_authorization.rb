@@ -2,7 +2,7 @@
 Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement].freeze
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement PhysicalGoldLot].freeze
 
     included do
       include Authentication
@@ -32,6 +32,8 @@ Rails.application.config.to_prepare do
           transaction_attachment_authorized?(attachment)
         when "AccountStatement"
           account_statement_attachment_authorized?(attachment)
+        when "PhysicalGoldLot"
+          physical_gold_lot_invoice_authorized?(attachment)
         else
           false
         end
@@ -52,6 +54,15 @@ Rails.application.config.to_prepare do
 
         statement.viewable_by?(Current.user)
       rescue ActiveRecord::RecordNotFound
+        false
+      end
+
+      def physical_gold_lot_invoice_authorized?(attachment)
+        lot = attachment.record
+        return false if lot.nil?
+
+        Account.accessible_by(Current.user).exists?(id: lot.account_id)
+      rescue ActiveRecord::RecordNotFound, NoMethodError
         false
       end
 

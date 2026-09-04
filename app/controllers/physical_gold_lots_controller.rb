@@ -50,6 +50,6 @@ class PhysicalGoldLotsController < ApplicationController
     end
 
     def lot_params
-      params.require(:physical_gold_lot).permit(:description, :acquired_on, :weight, :weight_unit, :karat, :cost_amount, :making_charge, :manual_value, :notes, :merchant_id)
+      params.require(:physical_gold_lot).permit(:description, :acquired_on, :weight, :weight_unit, :karat, :cost_amount, :making_charge, :manual_value, :notes, :merchant_id, :invoice)
     end
 end

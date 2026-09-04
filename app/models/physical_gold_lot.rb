@@ -1,6 +1,16 @@
 class PhysicalGoldLot < ApplicationRecord
+  INVOICE_MAX_SIZE = 10.megabytes
+  ALLOWED_INVOICE_CONTENT_TYPES = %w[
+    image/jpeg image/jpg image/png image/gif image/webp
+    application/pdf
+  ].freeze
+
   belongs_to :account
   belongs_to :merchant, optional: true
+
+  # A purchase has one supporting invoice or receipt. Keeping it on the lot
+  # preserves the proof for the exact weight, purity, merchant, and price.
+  has_one_attached :invoice
 
   validates :description, :acquired_on, :weight, :weight_unit, :karat, presence: true
   validates :weight, numericality: { greater_than: 0 }
@@ -11,6 +21,7 @@ class PhysicalGoldLot < ApplicationRecord
   validates :manual_value, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :account_is_physical_gold
   validate :merchant_belongs_to_account_family
+  validate :validate_invoice, if: -> { invoice.attached? }
 
   def weight_in_grams
     case weight_unit
@@ -40,6 +51,18 @@ class PhysicalGoldLot < ApplicationRecord
   end
 
   private
+    def validate_invoice
+      return unless invoice.blob
+
+      if invoice.byte_size > INVOICE_MAX_SIZE
+        errors.add(:invoice, :too_large, max_mb: INVOICE_MAX_SIZE / 1.megabyte)
+      end
+
+      unless ALLOWED_INVOICE_CONTENT_TYPES.include?(invoice.content_type)
+        errors.add(:invoice, :invalid_format)
+      end
+    end
+
     def account_is_physical_gold
       return if account&.investment&.physical_gold?
 

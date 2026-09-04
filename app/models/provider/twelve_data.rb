@@ -7,6 +7,7 @@ class Provider::TwelveData < Provider
   InvalidExchangeRateError = Class.new(Error)
   InvalidSecurityPriceError = Class.new(Error)
   RateLimitError = Class.new(Error)
+  GoldPrice = Data.define(:date, :currency, :price_per_troy_ounce)
 
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
@@ -130,6 +131,25 @@ class Provider::TwelveData < Provider
   # ================================
   #           Securities
   # ================================
+
+  # Gold Spot is exposed by Twelve Data as the XAU/USD commodity. Physical-gold
+  # valuations convert this USD quote through Sure's existing FX-rate path when
+  # the account uses another currency.
+  def fetch_gold_price(date: Date.current)
+    with_provider_response do
+      throttle_request
+      response = client.get("#{base_url}/price") do |req|
+        req.params["symbol"] = "XAU/USD"
+      end
+
+      parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
+      price = parsed["price"].to_d
+      raise InvalidSecurityPriceError, "Twelve Data returned no Gold Spot price" unless price.positive?
+
+      GoldPrice.new(date: date.to_date, currency: "USD", price_per_troy_ounce: price)
+    end
+  end
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do

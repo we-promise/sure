@@ -23,32 +23,18 @@ en:
       chart_title: Total value
     tabs:
       overview:
-        market_value: Market value
-        purchases: Purchases
         gross_weight: Gross weight
         fine_gold_content: 24k gold equivalent
-        valuation: Valuation
-        valuation_description: The account value is the sum of each purchase's purity-adjusted spot estimate or individual manual value.
         refresh_valuation: Refresh valuation
-        valuation_method: Valuation method
-        manual_override: Manual override
-        goldapi_spot: GoldAPI spot price
-        goldapi_spot_with_overrides: GoldAPI spot price with purchase overrides
         spot_price: 24k spot price
         spot_price_hint: Fine (24k) gold per gram. Each purchase is valued using its own karat purity.
         last_price_date: Price date
         lots: Gold purchases
-        lots_description: Record each physical-gold purchase separately.
         add_lot: Add gold purchase
         no_lots: No individual purchases recorded yet.
         gold_purchase: Physical gold purchase
-        purchase_count:
-          one: 1 purchase
-          other: "%{count} purchases"
         gross_weight_value: "%{amount} g gross"
-        fine_weight_value: "%{amount} g of 24k gold"
         individual_manual_value: Manual valuation
-        spot_price_basis: "GoldAPI estimate (%{karat}k)"
         total_paid: "Total paid: %{value}"
         delete_lot: Delete gold purchase
         edit_lot: Edit gold purchase
@@ -60,6 +46,8 @@ en:
         gram: gram
         grams_value: "%{amount} g"
         karat_value: "%{karat}k"
+        invoice_attached: Invoice attached
+        view_invoice: View invoice
         weight_value: "%{amount} %{unit}"
         units:
           gram: g

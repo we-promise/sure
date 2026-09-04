@@ -32,6 +32,8 @@
     <h3 class="font-medium text-sm"><%= t(".securities_title") %></h3>
     <p class="text-secondary text-xs mb-2"><%= t(".securities_description") %></p>
 
+    <% gold_api_from_env = ENV["GOLD_API_KEY"].present? %>
+
     <%= styled_form_with model: Setting.new,
                          url: settings_hosting_path,
                          method: :patch,
@@ -70,32 +72,26 @@
             <% end %>
           </label>
         <% end %>
+
+        <input type="hidden" name="setting[gold_api_enabled]" value="0">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox"
+                 name="setting[gold_api_enabled]"
+                 value="1"
+                 class="checkbox checkbox--light"
+                 <%= "checked" if gold_api_from_env || Setting.gold_api_enabled %>
+                 <%= "disabled" if gold_api_from_env %>
+                 data-auto-submit-form-target="auto">
+          <span class="text-sm"><%= t(".providers.gold_api") %></span>
+          <span class="text-xs text-secondary">(<%= t(".gold_api_hint") %>)</span>
+        </label>
       </div>
     <% end %>
-  </div>
 
-  <%# Physical gold provider %>
-  <div class="space-y-2">
-    <h3 class="font-medium text-sm"><%= t(".physical_gold_title") %></h3>
-    <p class="text-secondary text-xs mb-2"><%= t(".physical_gold_description") %></p>
-
-    <%= styled_form_with model: Setting.new,
-                         url: settings_hosting_path,
-                         method: :patch,
-                         data: { controller: "auto-submit-form" } do %>
-      <% gold_api_from_env = ENV["GOLD_API_KEY"].present? %>
-      <input type="hidden" name="setting[gold_api_enabled]" value="0">
-      <label class="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox"
-               name="setting[gold_api_enabled]"
-               value="1"
-               class="checkbox checkbox--light"
-               <%= "checked" if gold_api_from_env || Setting.gold_api_enabled %>
-               <%= "disabled" if gold_api_from_env %>
-               data-auto-submit-form-target="auto">
-        <span class="text-sm"><%= t(".providers.gold_api") %></span>
-        <span class="text-xs text-secondary">(<%= t(".gold_api_hint") %>)</span>
-      </label>
+    <% if gold_api_from_env || Setting.gold_api_enabled %>
+      <div class="pt-2">
+        <%= render "settings/hostings/gold_api_settings" %>
+      </div>
     <% end %>
   </div>
 

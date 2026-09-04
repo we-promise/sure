@@ -517,7 +517,9 @@ Rails.application.routes.draw do
     post :confirm_create, on: :collection
     post :confirm_update, on: :member
   end
-  resources :physical_gold_lots, only: %i[new create edit update destroy]
+  resources :physical_gold_lots, only: %i[new create edit update destroy] do
+    resource :invoice, only: %i[show destroy], controller: :physical_gold_lot_invoices
+  end
 
   namespace :transactions do
     resource :bulk_deletion, only: :create

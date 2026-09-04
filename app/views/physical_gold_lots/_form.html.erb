@@ -14,5 +14,30 @@
   <%= form.money_field :manual_value, label: t("physical_gold_lots.form.manual_value"), default_currency: account.currency %>
   <p class="text-xs text-secondary"><%= t("physical_gold_lots.form.manual_value_hint") %></p>
   <%= form.text_area :notes, label: t("physical_gold_lots.form.notes") %>
+  <% if lot.invoice.attached? %>
+    <div class="rounded-xl bg-container-inset p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t("physical_gold_lots.form.invoice") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p>1</p>
+      </div>
+      <div class="flex items-center justify-between gap-3 rounded-lg bg-container px-3 py-3 shadow-border-xs">
+        <%= link_to physical_gold_lot_invoice_path(lot), target: "_blank", data: { turbo_frame: :_top }, class: "flex min-w-0 items-center gap-2 text-sm font-medium text-primary hover:underline" do %>
+          <%= icon(lot.invoice.image? ? "image" : "file-text", size: "sm") %>
+          <span class="truncate"><%= lot.invoice.filename %></span>
+        <% end %>
+        <div class="flex shrink-0 items-center gap-1">
+          <%= render DS::Link.new(variant: :icon, icon: "eye", aria_label: t("physical_gold_lots.form.view_invoice"), title: t("physical_gold_lots.form.view_invoice"), href: physical_gold_lot_invoice_path(lot), target: "_blank") %>
+          <%= render DS::Button.new(variant: :icon, icon: "trash-2", aria_label: t("physical_gold_lots.form.remove_invoice"), title: t("physical_gold_lots.form.remove_invoice"), href: physical_gold_lot_invoice_path(lot), method: :delete, data: { turbo_confirm: t("physical_gold_lots.form.remove_invoice_confirm"), turbo_frame: :_top }) %>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="rounded-xl bg-container-inset p-4">
+      <%= form.label :invoice, t("physical_gold_lots.form.invoice"), class: "form-field__label" %>
+      <%= form.file_field :invoice, accept: PhysicalGoldLot::ALLOWED_INVOICE_CONTENT_TYPES.join(","), class: "form-field__input" %>
+      <p class="mt-2 text-xs text-secondary"><%= t("physical_gold_lots.form.invoice_hint", max_size: PhysicalGoldLot::INVOICE_MAX_SIZE / 1.megabyte) %></p>
+    </div>
+  <% end %>
   <%= form.submit submit_label %>
 <% end %>
