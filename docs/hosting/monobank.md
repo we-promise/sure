@@ -22,7 +22,8 @@ behalf — no third-party aggregator sits in between.
 2. Sign in by scanning the QR code with the monobank app.
 3. Generate a personal token and copy it. **It is shown only once.**
 
-The token is read-only: it can list your accounts and read statements, nothing else.
+The token is scoped to your own data: it can list your accounts, read statements, and
+register a statement webhook (`POST /personal/webhook`). It cannot move money.
 
 ## 2. Add monobank to Sure
 

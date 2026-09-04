@@ -120,7 +120,13 @@ class MonobankItem::Importer
         end
       rescue => e
         stats[:failed] += 1
-        Rails.logger.error "MonobankItem::Importer - Failed to import account #{account_id}: #{e.message}"
+        Rails.logger.error "MonobankItem::Importer - Failed to import account #{account_id}: #{e.class}"
+        capture_sync_error(
+          "Failed to import Monobank account",
+          e,
+          monobank_account: monobank_item.monobank_accounts.find_by(account_id: account_id.to_s),
+          extra_metadata: { provider_account_id: account_id.to_s }
+        )
       end
 
       stats
@@ -187,8 +193,13 @@ class MonobankItem::Importer
       backward = fetch_history_window(monobank_account)
       fetched.concat(backward[:transactions]) if backward[:transactions]
 
+      # Persist before propagating a backward failure: the forward window is already in
+      # hand, and dropping it would leave the account further behind next sync for no
+      # gain. The forward cursor is only advanced by what was actually covered.
       store_transactions(monobank_account, fresh_transactions: fetched, pending_covered_from: forward[:covered_from])
       monobank_account.save! if monobank_account.changed?
+
+      return backward.merge(transactions_count: fetched.count) if backward[:error]
 
       { success: true, transactions_count: fetched.count }
     end
@@ -264,7 +275,13 @@ class MonobankItem::Importer
       return { transactions: [] } if from >= to
 
       result = fetch_window(monobank_account, from: from, to: to, direction: :backward)
-      return { transactions: [] } unless result[:success]
+      # A throttled backward walk is a soft skip, not a failure: the forward window
+      # still landed and the backfill simply resumes next sync, exactly as it does when
+      # the request budget runs out. A hard failure (auth, parse, provider error) has to
+      # reach the caller instead, or the sync reports success while silently never
+      # having fetched the configured history.
+      return { transactions: [] } if result[:skipped]
+      return result unless result[:success]
 
       transactions = result[:transactions]
       monobank_account.history_synced_from = if truncated?(transactions)
@@ -466,10 +483,11 @@ class MonobankItem::Importer
 
     # Record a provider sync problem as a DebugLogEntry with structured metadata for
     # support, attaching family and account provider when available.
-    def capture_sync_error(message, error, monobank_account: nil, error_type: nil, level: "error")
+    def capture_sync_error(message, error, monobank_account: nil, error_type: nil, level: "error", extra_metadata: {})
       metadata = { monobank_item_id: monobank_item.id, error_class: error.class.name, error_message: error.message }
       metadata[:monobank_account_id] = monobank_account.id if monobank_account
       metadata[:error_type] = error_type if error_type
+      metadata.merge!(extra_metadata)
 
       DebugLogEntry.capture(
         category: "provider_sync_error",

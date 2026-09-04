@@ -22,6 +22,10 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create saves the connection and starts a sync" do
+    # The setup-wide stub allows zero calls, so the enqueue is asserted explicitly here:
+    # a regression that stops kicking off the first sync would otherwise pass.
+    SyncJob.expects(:perform_later).with { |sync| sync.syncable.is_a?(MonobankItem) }.once
+
     assert_difference "MonobankItem.count", 1 do
       post monobank_items_url, params: {
         monobank_item: { name: "Second Monobank", access_token: "another-token" }
@@ -29,7 +33,10 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to settings_providers_path
-    assert_equal "another-token", MonobankItem.order(:created_at).last.access_token
+
+    created = MonobankItem.order(:created_at).last
+    assert_equal "another-token", created.access_token
+    assert_equal 1, created.syncs.count
   end
 
   test "update keeps the existing token when the field is left blank" do
@@ -130,13 +137,15 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sync enqueues a sync for the connection" do
+    SyncJob.expects(:perform_later).with { |sync| sync.syncable == @monobank_item }.once
+
     post sync_monobank_item_url(@monobank_item)
 
     assert_redirected_to accounts_path
   end
 
   test "destroy schedules the connection for deletion" do
-    DestroyJob.stubs(:perform_later)
+    DestroyJob.expects(:perform_later).with(@monobank_item).once
 
     delete monobank_item_url(@monobank_item)
 

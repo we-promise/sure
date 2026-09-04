@@ -26,6 +26,17 @@ uk:
       account_sync_schedule_failed: Не вдалося запланувати синхронізацію рахунку Monobank
       transactions_failed: Не вдалося отримати виписку Monobank
       sync_failed: Не вдалося синхронізувати підключення Monobank
+    sync:
+      status:
+        importing: Імпортуємо рахунки з monobank...
+        checking_setup: Перевіряємо налаштування рахунків...
+        needs_setup:
+          one: 1 рахунок потребує налаштування...
+          few: "%{count} рахунки потребують налаштування..."
+          many: "%{count} рахунків потребують налаштування..."
+          other: "%{count} рахунків потребують налаштування..."
+        processing: Обробляємо транзакції...
+        calculating: Обчислюємо баланси...
     sync_status:
       no_accounts: Рахунків не знайдено
       all_synced:

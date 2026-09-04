@@ -143,6 +143,10 @@ class MonobankItemsController < ApplicationController
     else
       redirect_to select_accounts_monobank_items_path(monobank_item_id: monobank_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
     end
+  rescue ActiveRecord::RecordNotUnique
+    # A concurrent submit linked one of these accounts first; the transaction rolled the
+    # whole batch back, so send the user back to the picker rather than a 500.
+    redirect_to select_accounts_monobank_items_path(monobank_item_id: monobank_item.id, accountable_type: params[:accountable_type], return_to: safe_return_to_path), alert: t(".link_failed")
   end
 
   # Render the picker to attach a Monobank account to an existing Sure account.
@@ -201,7 +205,16 @@ class MonobankItemsController < ApplicationController
       return
     end
 
-    AccountProvider.create!(account: account, provider: monobank_account)
+    begin
+      AccountProvider.create!(account: account, provider: monobank_account)
+    rescue ActiveRecord::RecordNotUnique
+      # The two guards above are reads; a double submit gets both requests past them and
+      # the unique indexes on account_providers are what actually settle it. The request
+      # that loses that race gets the same answer the guard would have given it.
+      redirect_to accounts_path, alert: t(".account_already_linked")
+      return
+    end
+
     monobank_item.sync_later
 
     redirect_to safe_return_to_path || accounts_path, notice: t(".success", account_name: account.name)
@@ -258,7 +271,7 @@ class MonobankItemsController < ApplicationController
     end
 
     redirect_to accounts_path, status: :see_other
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved, ActiveRecord::RecordNotUnique => e
     DebugLogEntry.capture(
       category: "provider_sync_error",
       level: "error",

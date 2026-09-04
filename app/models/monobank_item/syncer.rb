@@ -24,11 +24,11 @@ class MonobankItem::Syncer
   # Run the full sync: import, account setup detection, transaction processing,
   # balance sync scheduling, and stats/health collection. Raises on failures.
   def perform_sync(sync)
-    sync.update!(status_text: "Importing accounts from Monobank...") if sync.respond_to?(:status_text)
+    sync.update!(status_text: I18n.t("monobank_item.sync.status.importing")) if sync.respond_to?(:status_text)
     import_result = monobank_item.import_latest_monobank_data
     raise_if_failed_result!(import_result, stage: "Monobank import")
 
-    sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
+    sync.update!(status_text: I18n.t("monobank_item.sync.status.checking_setup")) if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: monobank_item.monobank_accounts)
 
     linked_accounts = monobank_item.monobank_accounts.joins(:account_provider)
@@ -36,18 +36,18 @@ class MonobankItem::Syncer
 
     if unlinked_accounts.any?
       monobank_item.update!(pending_account_setup: true)
-      sync.update!(status_text: "#{unlinked_accounts.count} accounts need setup...") if sync.respond_to?(:status_text)
+      sync.update!(status_text: I18n.t("monobank_item.sync.status.needs_setup", count: unlinked_accounts.count)) if sync.respond_to?(:status_text)
     else
       monobank_item.update!(pending_account_setup: false)
     end
 
     if linked_accounts.any?
-      sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
+      sync.update!(status_text: I18n.t("monobank_item.sync.status.processing")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
       process_results = monobank_item.process_accounts
       raise_if_failed_results!(process_results, stage: "Monobank account processing")
 
-      sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
+      sync.update!(status_text: I18n.t("monobank_item.sync.status.calculating")) if sync.respond_to?(:status_text)
       schedule_results = monobank_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,

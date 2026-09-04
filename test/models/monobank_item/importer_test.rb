@@ -6,13 +6,16 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
   class FakeMonobankProvider
     attr_reader :statement_calls, :client_info_calls
 
-    def initialize(accounts: nil, jars: nil, statements: nil, statement_error: nil)
+    def initialize(accounts: nil, jars: nil, statements: nil, statement_error: nil, statement_error_after: 0)
       @statement_calls = []
       @client_info_calls = 0
       @accounts = accounts
       @jars = jars
       @statements = statements
       @statement_error = statement_error
+      # Lets a test fail only the backward window: the first N statement requests
+      # succeed, everything after that raises.
+      @statement_error_after = statement_error_after
     end
 
     def get_client_info
@@ -36,7 +39,7 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
 
     def get_statement(account_id:, from:, to: nil)
       @statement_calls << { account_id: account_id, from: from, to: to }
-      raise @statement_error if @statement_error
+      raise @statement_error if @statement_error && @statement_calls.count > @statement_error_after
 
       @statements || [ settled_transaction ]
     end
@@ -263,13 +266,17 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
 
   test "a truncated window moves the history cursor up when it leaves a gap" do
     MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(1)
+    # Bound once: evaluating 10.days.ago separately for the fixture and the assertion
+    # races the wall clock and disagrees by a second whenever the two calls straddle a
+    # second boundary.
+    oldest = 10.days.ago
     @monobank_item.update!(sync_start_date: 31.days.ago.to_date)
-    provider = FakeMonobankProvider.new(statements: full_page(oldest: 10.days.ago))
+    provider = FakeMonobankProvider.new(statements: full_page(oldest: oldest))
 
     MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
 
     @monobank_account.reload
-    assert_equal Time.at(10.days.ago.to_i), @monobank_account.history_synced_from,
+    assert_equal Time.at(oldest.to_i), @monobank_account.history_synced_from,
                  "the gap below the oldest record received has to be re-walked, from its exact time"
   end
 
@@ -285,6 +292,54 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, result[:transactions_failed]
     @monobank_item.reload
     assert @monobank_item.good?, "throttling must not mark the connection as needing attention"
+  end
+
+  test "a hard failure on the history window is reported rather than swallowed" do
+    MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(2)
+    @monobank_item.update!(sync_start_date: 90.days.ago.to_date)
+    @monobank_account.update!(history_synced_from: 40.days.ago)
+    provider = FakeMonobankProvider.new(
+      statement_error: Provider::Monobank::Error.new("boom", failure_code: :server_error),
+      statement_error_after: 1
+    )
+
+    result = MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    assert_equal 2, provider.statement_calls.count, "the backward window must still be attempted"
+    assert_equal 1, result[:transactions_failed],
+                 "configured history was not fetched, so the sync cannot report success"
+    assert_equal 0, result[:accounts_skipped], "a server error is not a soft skip"
+  end
+
+  test "a hard failure on the history window still persists the forward window" do
+    MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(2)
+    @monobank_item.update!(sync_start_date: 90.days.ago.to_date)
+    @monobank_account.update!(history_synced_from: 40.days.ago)
+    provider = FakeMonobankProvider.new(
+      statement_error: Provider::Monobank::Error.new("boom", failure_code: :server_error),
+      statement_error_after: 1
+    )
+
+    MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    @monobank_account.reload
+    assert @monobank_account.raw_transactions_payload.present?,
+           "new activity already in hand must not be thrown away because the backfill failed"
+  end
+
+  test "a rate limit on the history window stays a success" do
+    MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(2)
+    @monobank_item.update!(sync_start_date: 90.days.ago.to_date)
+    @monobank_account.update!(history_synced_from: 40.days.ago)
+    provider = FakeMonobankProvider.new(
+      statement_error: Provider::Monobank::RateLimitError.new("throttled", failure_code: :rate_limited),
+      statement_error_after: 1
+    )
+
+    result = MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+
+    assert result[:success], "the backfill just resumes next sync, exactly as on budget exhaustion"
+    assert_equal 0, result[:transactions_failed]
   end
 
   test "marks the connection as requiring update when the token is rejected" do
