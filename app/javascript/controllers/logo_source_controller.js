@@ -19,5 +19,18 @@ export default class extends Controller {
       segment.classList.toggle("segmented-control__segment--active", isActive);
       segment.setAttribute("aria-pressed", String(isActive));
     });
+
+    // When switching to Auto, clear any pending file the user selected before
+    // clicking the segment. Without this, the file would still be submitted
+    // and persisted with logo_source=auto, so the custom image would keep
+    // displaying despite the user's Auto selection.
+    if (source === "auto") {
+      const fileController =
+        this.application.getControllerForElementAndIdentifier(
+          this.element,
+          "logo-file",
+        );
+      fileController?.clearFile();
+    }
   }
 }

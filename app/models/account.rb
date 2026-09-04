@@ -147,8 +147,16 @@ class Account < ApplicationRecord
   # Track whether logo_source was explicitly set by the user.
   # This allows the before_save callback to distinguish between
   # "user chose auto" and "user didn't specify".
+  #
+  # The form always submits logo_source=auto as its hidden-field default, so
+  # every assignment currently flips this flag — which wrongly suppresses the
+  # mark_manual_if_logo_uploaded callback and lets FetchLogoJob replace a
+  # manually uploaded logo. Only treat the assignment as explicit when the
+  # user picked "manual" (a deliberate upload) or switched from "manual" back
+  # to "auto" (a deliberate change). The bare form default of "auto" on an
+  # already-auto record stays non-explicit so uploads still classify as manual.
   def logo_source=(value)
-    @logo_source_explicitly_set = true
+    @logo_source_explicitly_set = value == "manual" || logo_source_was == "manual"
     super
   end
 

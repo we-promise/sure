@@ -1079,7 +1079,9 @@ class AccountTest < ActiveSupport::TestCase
 
   test "auto logo source uses an attached fetched logo" do
     # When logo_source is "auto", a logo successfully attached by LogoFetcher
-    # should be served before falling back to remote logo providers.
+    # (via attach_fetched_logo, which sets @attaching_fetched_logo) should be
+    # served before falling back to remote logo providers — and must keep
+    # logo_source as "auto", not be reclassified as "manual".
     logo_file = uploaded_file(
       filename: "test_logo.png",
       content_type: "image/png",
@@ -1096,6 +1098,49 @@ class AccountTest < ActiveSupport::TestCase
         accountable_type: "Depository",
         accountable_attributes: {},
         institution_domain: "example.com",
+        logo_source: "auto"
+      },
+      skip_initial_sync: true
+    )
+
+    assert account.persisted?, "Account should be created successfully"
+
+    # Attach the logo the same way LogoFetcher does: via attach_fetched_logo,
+    # which opts out of mark_manual_if_logo_uploaded. A direct upload (without
+    # that opt-out) would now be classified as "manual".
+    account.attach_fetched_logo(logo_file)
+
+    assert account.logo.attached?, "Logo should be attached to the account"
+    assert account.logo_source_auto?, "a fetched logo must keep logo_source auto"
+
+    # An attached fetched logo should take priority over remote fallbacks.
+    logo_url = account.logo_url
+
+    assert logo_url.present?, "logo_url should be present"
+    assert logo_url.include?("/rails/active_storage/"),
+      "logo_url should be the attached blob URL"
+  end
+
+  test "direct logo upload with default auto source is classified as manual" do
+    # The form always submits logo_source=auto as its hidden-field default.
+    # A direct upload with that default must be classified as "manual" so
+    # FetchLogoJob cannot replace a manually uploaded logo.
+    logo_file = uploaded_file(
+      filename: "test_logo.png",
+      content_type: "image/png",
+      content: "valid-image-data"
+    )
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Test Manual Upload Account",
+        balance: 1000,
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable_attributes: {},
+        institution_domain: "example.com",
         logo: logo_file,
         logo_source: "auto"
       },
@@ -1104,14 +1149,8 @@ class AccountTest < ActiveSupport::TestCase
 
     assert account.persisted?, "Account should be created successfully"
     assert account.logo.attached?, "Logo should be attached to the account"
-    assert account.logo_source_auto?, "Logo source should be auto"
-
-    # An attached fetched logo should take priority over remote fallbacks.
-    logo_url = account.logo_url
-
-    assert logo_url.present?, "logo_url should be present"
-    assert logo_url.include?("/rails/active_storage/"),
-      "logo_url should be the attached blob URL"
+    assert account.logo_source_manual?,
+      "a direct upload with the default auto source must be classified as manual"
   end
 
   test "manual logo source falls back to auto-fetch when no logo attached" do

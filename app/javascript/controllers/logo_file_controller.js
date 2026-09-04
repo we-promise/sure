@@ -21,6 +21,16 @@ export default class extends Controller {
     this.fileInputTarget.click();
   }
 
+  // Public so logo-source-controller can call it when Auto is selected.
+  // Clears the file input, metadata, and preview — the same teardown as
+  // #setSource("auto"), but without touching the source input or segments.
+  clearFile() {
+    this.fileInputTarget.value = "";
+    this.#setSizeErrorVisible(false);
+    this.#setFileInfoVisible(false);
+    this.#hidePreview();
+  }
+
   disconnect() {
     this.#revokePreviewUrl();
   }
@@ -54,10 +64,7 @@ export default class extends Controller {
     // Clear pending manual file input when switching to auto mode.
     // Without this, a file selected before switching would still be submitted.
     if (source === "auto") {
-      this.fileInputTarget.value = "";
-      this.#setSizeErrorVisible(false);
-      this.#setFileInfoVisible(false);
-      this.#hidePreview();
+      this.clearFile();
     }
 
     // Notify logo-source-controller to update the source input and segments.
