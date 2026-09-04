@@ -11,9 +11,9 @@
 %>
 
 <tr data-category="category-<%= item[:category_id] %>"
-    class="text-secondary text-sm <%= show_border ? "table-divider" : "" %> <%= clickable ? "relative group/category-row" : "" %>">
+    class="text-secondary text-sm <%= show_border ? "table-divider" : "" %> <%= clickable ? "group/category-row" : "" %>">
   <td colspan="2" class="py-3 px-4 lg:px-6 <%= is_sub ? "pl-7 lg:pl-9" : "" %>">
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 <%= clickable ? "relative" : "" %>">
       <% if is_sub %>
         <div class="text-subdued">
           <%= icon "corner-down-right" %>
@@ -38,8 +38,12 @@
         ) %>
       <% end %>
       <% if clickable %>
-        <%# Stretched link covers the full row (mirrors dashboard outflows).
-            `before:absolute before:inset-0` is positioned against the relative <tr>. %>
+        <%# Stretched link covers the category cell. The overlay is anchored to the
+            flex wrapper above, NOT to the <tr>: `position: relative` on a table row
+            does not establish a containing block in WebKit (it is left undefined by
+            CSS 2.1 9.3.1, and Safari does not implement it). Anchoring to the row
+            therefore let the overlay escape and blanket the whole page in Safari,
+            swallowing every click on /reports into this drill-down. %>
         <%= link_to item[:category_name],
               transactions_href,
               class: "font-medium text-primary hover:underline before:absolute before:inset-0 before:content-['']",
