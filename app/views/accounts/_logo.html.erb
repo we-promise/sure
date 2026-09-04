@@ -1,39 +1,4 @@
 <%# locals: (account:, size: "md", color: nil) %>
 
-<% size_classes = {
-  "sm" => "w-6 h-6",
-  "md" => "w-9 h-9",
-  "lg" => "w-10 h-10",
-  "full" => "w-full h-full"
-} %>
+<%= render LogoWithFallback.new(account: account, size: size, color: color) %>
 
-<% if account.logo_url.present? %>
-  <%# image-fallback swaps a broken logo (missing blob bytes, corrupt image,
-      or a failed remote Brandfetch/favicon URL) for the default filled icon
-      so the user never sees a broken image. %>
-  <div class="shrink-0" data-controller="image-fallback">
-    <%= image_tag account.logo_url,
-          class: "rounded-full #{size_classes[size]}",
-          loading: "lazy",
-          data: { image_fallback_target: "image" } %>
-    <div class="hidden #{size_classes[size]} flex items-center justify-center" data-image-fallback-target="fallback">
-      <%# FilledIcon has no :full size; the wrapper div above carries the
-          full sizing and the icon renders at :lg inside it. %>
-      <%= render DS::FilledIcon.new(
-            variant: :text,
-            hex_color: color || account.accountable&.color,
-            text: account.name,
-            size: size == "full" ? "lg" : size,
-            rounded: true
-          ) %>
-    </div>
-  </div>
-<% else %>
-  <%= render DS::FilledIcon.new(
-        variant: :text,
-        hex_color: color || account.accountable&.color,
-        text: account.name,
-        size: size,
-        rounded: true
-      ) %>
-<% end %>
