@@ -28,14 +28,12 @@ class PlaidAccount::Transactions::Processor
       @category_matcher ||= PlaidAccount::Transactions::CategoryMatcher.new(family_categories)
     end
 
+    # Importing Plaid transactions must be non-destructive: we never bootstrap
+    # default categories for the family here. A family with no categories simply
+    # gets uncategorised transactions, and category matching resumes once they
+    # set their own categories up. See issue #2531.
     def family_categories
-      @family_categories ||= begin
-        if account.family.categories.none?
-          account.family.categories.bootstrap!
-        end
-
-        account.family.categories
-      end
+      @family_categories ||= account.family.categories
     end
 
     def account
