@@ -55,3 +55,24 @@ external reconciliation review where applicable.
 No characterisation suite substitutes for G2. A real statement is handled
 outside the repository; only aggregate residuals, explanations, and approval
 metadata are recorded here.
+
+## 17.5 Definition of done
+
+Every change in this epic is complete only when the following evidence is
+available in the issue or pull request:
+
+1. The change maps to one issue and one reviewable pull request.
+2. The relevant calculation-contract rows and named tests are linked, and the
+   full test suite passes.
+3. Financial changes include targeted boundary, rounding, sign, and
+   conservation tests; mutation evidence is recorded where the gate requires
+   it.
+4. Fixtures and generated test data use documented token-shaped allowlists and
+   pass internal-consistency checks before the application suite runs.
+5. Security-sensitive changes include domain/service-layer authorization tests
+   and adversarial cases, not only controller or UI coverage.
+6. Performance-sensitive changes include production-shaped workload details,
+   p95/p99 measurements, and the applicable release threshold.
+7. The issue, design record, API documentation, release evidence, and gate
+   status agree; unresolved external approvals are named explicitly rather
+   than represented as passing evidence.
