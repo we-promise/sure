@@ -142,6 +142,9 @@ class Account < ApplicationRecord
   # the after_save upload (blob/attachment rows disappear but the uploaded
   # bytes remain on storage).
   after_rollback :purge_uploaded_logo_on_rollback
+  # Clear the rollback tracker after a successful commit so a later unrelated
+  # rollback can't destroy a previously committed logo.
+  after_commit :clear_uploaded_logo_rollback_tracker
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -744,6 +747,10 @@ class Account < ApplicationRecord
       # back, the blob/attachment rows disappear but the uploaded bytes
       # remain on storage. purge_uploaded_logo_on_rollback removes them.
       @_uploaded_logo_blob_for_rollback = change.blob
+    end
+
+    def clear_uploaded_logo_rollback_tracker
+      @_uploaded_logo_blob_for_rollback = nil
     end
 
     def purge_uploaded_logo_on_rollback
