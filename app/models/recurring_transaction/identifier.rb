@@ -103,6 +103,19 @@ class RecurringTransaction
       rows_to_insert = []
       now = Time.current
 
+      # Lightweight placeholder pushed into existing_by_identity as each new
+      # row is queued. This ensures a second amount-cluster for the same
+      # identity (e.g. two subscription tiers) sees candidates.any? == true and
+      # therefore receives a non-empty dedup_scope — the same behaviour as
+      # before when each created row was added to the map immediately.
+      # manual? returns true so the guard "next if claimed.manual?" fires if a
+      # same-tier duplicate somehow appears, preventing a spurious
+      # update_claimed_series call on the placeholder object.
+      queued_series_placeholder = Struct.new(:amount) do
+        def manual? = true
+        def ended?  = false
+      end
+
       recurring_patterns.each do |pattern|
         identity = [ pattern[:merchant_id] ? [ :merchant, pattern[:merchant_id] ] : [ :name, pattern[:name] ],
                      pattern[:currency], pattern[:account_id], nil ]
@@ -151,6 +164,10 @@ class RecurringTransaction
         )
 
         rows_to_insert << row
+        # Update the in-memory identity map so that a subsequent pattern for
+        # the same identity (a different amount tier) sees candidates.any? and
+        # receives the correct non-empty dedup_scope.
+        (existing_by_identity[identity] ||= []) << queued_series_placeholder.new(row[:amount])
       end
 
       # Two separate bulk-inserts because the partial unique indexes are split
