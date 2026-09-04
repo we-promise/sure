@@ -1,0 +1,666 @@
+---
+pt-PT:
+  views:
+    settings:
+      payments:
+        renewal: "A sua contribuição continua em %{date}."
+        cancellation: "A sua contribuição termina em %{date}."
+  settings:
+    background_jobs:
+      show:
+        page_title: "Tarefas em segundo plano"
+        title: "Estado dos worker"
+        subtitle: "Estado de execução do Sidekiq em tempo real: processos de worker, profundidades de fila e conjuntos de repetir/mortas."
+        redis_unreachable: "O estado do Sidekiq não está disponível (Redis inacessível). A atividade é desconhecida, pelo que as ações estão desativadas."
+        operations_title: "Operações em curso"
+        operations_subtitle: "Sincronizações, importações e exportações em todas as famílias que ainda não atingiram um estado terminal. As operações inativas durante mais de 30 minutos sem tarefa visível são consideradas perdidas e podem ser marcadas como tal."
+        empty: "Sem operações em curso."
+        missing_value: "-"
+        stats:
+          workers: "Workers"
+          busy: "Ocupados"
+          enqueued: "Em fila"
+          retries: "Reintentações"
+          scheduled: "Agendadas"
+          dead: "Mortas"
+          queue_label: "%{name}: %{size} · latência de %{latency}s"
+        table:
+          type: "Operação"
+          family: "Família"
+          status: "Estado"
+          last_activity: "Última atividade"
+          liveness: "Atividade"
+          action: "Ação"
+      operation:
+        ago: "há %{time}"
+        sync_label: "Sincronização · %{type}"
+        running: "Em execução"
+        queued: "Em fila"
+        recent: "Recente"
+        unknown: "Desconhecido"
+        stuck: "Bloqueada — presumida perdida"
+        confirm: "Marcar esta operação como perdida? O registo é movido para um estado terminal para poder ser reintentado. Os dados subjacentes não são alterados."
+        missing_value: "-"
+        actions:
+          mark_stale: "Marcar como obsoleta"
+          mark_failed: "Marcar como falhada"
+          release_claim: "Libertar reivindicação"
+      cancel:
+        cancelled: "%{type} marcada como perdida."
+        not_cancellable: "Esta operação não pode ser modificada neste momento — a respetiva tarefa pode ainda estar em fila ou em execução. Tente novamente depois de ter estado inativa durante 30 minutos."
+        cancelled_error: "Marcada como falhada por um administrador — a tarefa em segundo plano foi considerada perdida."
+    debugs:
+      show:
+        page_title: "Depuração"
+        title: "Registo de eventos de depuração"
+        subtitle: "Eventos operacionais relevantes para super administradores. Os mais recentes primeiro."
+        empty: "Não foram encontrados eventos de depuração."
+        missing_value: "-"
+        filters:
+          all: "Tudo"
+          category: "Categoria"
+          level: "Nível"
+          source: "Origem"
+          provider: "Serviço"
+          start_date: "De"
+          end_date: "Até"
+          family_id: "ID da família"
+          account_id: "ID da conta"
+          user_id: "ID do utilizador"
+          account_provider_id: "ID do serviço da conta"
+          submit: "Filtrar"
+          reset: "Repor"
+        table:
+          time: "Hora"
+          level: "Nível"
+          category: "Categoria"
+          source: "Origem"
+          message: "Mensagem"
+          context: "Contexto"
+          metadata: "Metadados"
+          view_metadata: "Ver"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"
+    llm_usages:
+      show:
+        page_title: "Utilização e custos dos modelos de IA"
+        subtitle: "Acompanhe a utilização da IA e os custos previstos"
+        start_date: "Data de início"
+        end_date: "Data de fim"
+        filter: "Filtrar"
+        total_requests: "Total de Pedidos"
+        total_tokens: "Total de Tokens"
+        prompt: "pré-preenchimento"
+        completion: "conclusão"
+        total_cost: "Custo Total"
+        avg_cost_per_request: "Custo Médio/Pedido"
+        based_on_requests: "Com base em %{with_cost} de %{total} pedidos com dados de custo"
+        cost_by_operation: "Custo por Operação"
+        cost_by_model: "Custo por Modelo"
+        recent_usage: "Utilização Recente"
+        col_date: "Data"
+        col_operation: "Operação"
+        col_model: "Modelo"
+        col_tokens: "Tokens"
+        col_cost: "Custo"
+        failed: "Falhadas"
+        no_usage_data: "Não foram encontrados dados de utilização para o período selecionado"
+        cost_estimates_title: "Sobre as Estimativas de Custo"
+        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, incluindo os preços da OpenAI a partir de julho de 2026. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
+    ai_prompts:
+      show:
+        page_title: Prompts de IA
+        openai_label: OpenAI
+        disable_ai: Desativar Assistente de IA
+        prompt_instructions: Instruções do Prompt
+        main_system_prompt:
+          title: Prompt de Sistema Principal
+          subtitle: Instruções centrais que definem como o assistente de IA se comporta em todas as conversas de chat
+        transaction_categorizer:
+          title: Categorizador de Transações
+          subtitle: A IA categoriza automaticamente as suas transações com base nas suas categorias definidas
+        merchant_detector:
+          title: Detetor de Comerciantes
+          subtitle: A IA identifica e enriquece os dados das transações com informação sobre o comerciante
+    payments:
+      show:
+        page_title: Pagamentos
+        subscription_subtitle: Atualize os dados do seu cartão de crédito
+        subscription_title: Gerir contribuições
+        currently_on_plan: "Atualmente no"
+        trialing: "Atualmente a utilizar a demonstração aberta de %{product_name}"
+        trial_days_left:
+          one: "Os dados serão eliminados em %{count} dia"
+          other: "Os dados serão eliminados em %{count} dias"
+        not_contributing_prefix: "De momento está"
+        not_contributing_emphasis: "a não contribuir"
+        contributions_note: "As contribuições para %{product_name} serão mostradas aqui."
+        manage: "Gerir"
+        choose_level: "Escolher nível"
+        payment_via_stripe: "Pagamento via Stripe"
+    appearances:
+      show:
+        page_title: Aparência
+        theme_title: Tema
+        theme_subtitle: Escolha um tema preferido para a aplicação
+        theme_dark: Escuro
+        theme_light: Claro
+        theme_system: Sistema
+        modals_title: Modais
+        modals_subtitle: Personalize o comportamento dos modais
+        disable_modal_click_outside_title: Manter os modais abertos ao clicar fora
+        disable_modal_click_outside_description: Impede que os modais fechem ao clicar fora. Útil para evitar perder alterações não guardadas acidentalmente.
+        transactions_title: Transações
+        transactions_subtitle: Personalize como as transações são apresentadas
+        dashboard_title: Visão geral
+        dashboard_subtitle: Personalize a apresentação da sua visão geral
+        dashboard_two_column_title: Disposição de duas colunas
+        dashboard_two_column_description: Apresenta os widgets da visão geral em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
+        split_grouped_title: Agrupar transações divididas
+        split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
+    preferences:
+      show:
+        country: País
+        currency: Moeda
+        date_format: Formato da data
+        general_subtitle: Configure as suas preferências
+        general_title: Geral
+        default_period: Período predefinido
+        default_account_order: Ordem predefinida das contas
+        language: Idioma
+        language_auto: Idioma do navegador
+        page_title: Preferências
+        timezone: Fuso horário
+        translations_notice: Tenha em consideração que ainda estamos a trabalhar nas traduções para vários idiomas.
+        budget_title: Orçamento
+        budget_subtitle: Configure o funcionamento dos seus orçamentos
+        month_start_day: O mês do orçamento começa em
+        month_start_day_hint: Defina quando começa o seu mês orçamental (por exemplo, no dia do salário)
+        month_start_day_warning: Os seus orçamentos e cálculos MTD utilizarão este dia de início personalizado em vez do dia 1 de cada mês.
+        personal_budgets: Orçamentos pessoais
+        personal_budgets_hint: Ative orçamentos individuais para cada membro da família.
+        household_budget_enabled: Orçamento do agregado familiar
+        household_budget_enabled_hint: Mantenha um orçamento partilhado do agregado familiar juntamente com os orçamentos pessoais. Desative para utilizar apenas orçamentos pessoais.
+        budget_sharing_title: Partilha de orçamentos
+        budget_sharing_subtitle: Permita que outros membros vejam ou editem o seu orçamento pessoal
+        budget_sharing_no_members: Sem outros membros no seu %{moniker} com quem partilhar
+        budget_sharing_permission_label: "Acesso de %{name}"
+        budget_sharing_permissions:
+          none: Sem acesso
+          read_only: Apenas ver
+          read_write: Pode editar
+        currencies_title: "%{moniker} - Moedas"
+        currencies_subtitle: Escolha quais as moedas que aparecem nos campos de dinheiro da sua %{moniker}
+        base_currency_label: Moeda base
+        base_currency_badge: Moeda base
+        additional_currencies_label: Moedas adicionais
+        no_additional_currencies: Nenhuma selecionada
+        currencies_more: "+%{count} mais"
+        manage_currencies: Gerir moedas
+        manage_currencies_subtitle: Desmarque as moedas que nunca utiliza ou reduza a lista para apenas algumas.
+        select_all_currencies: Selecionar tudo
+        select_base_only: Apenas a moeda base
+        currency_search_placeholder: Pesquisar moedas
+        no_matching_currencies: Não foram encontradas moedas
+        selected_currencies_count:
+          one: "%{count} selecionada"
+          other: "%{count} selecionadas"
+        save_currencies: Guardar moedas
+        sharing_title: "%{moniker} - Partilha"
+        sharing_subtitle: "Controle a forma como as contas são partilhadas dentro da sua %{moniker}"
+        sharing_default_label: Partilha predefinida para novas contas
+        sharing_shared: Partilhar com todos os membros
+        sharing_private: Manter privado por predefinição
+        preview:
+          title: Ativar funcionalidades de pré-visualização
+          description: Adira a funcionalidades em desenvolvimento identificadas como pré-visualização ou canary.
+    budget_shares:
+      update:
+        success: Definições de partilha de orçamento atualizadas
+    profiles:
+      destroy:
+        cannot_remove_self: Não pode remover-se a si próprio da conta.
+        member_owns_other_family_data: Este membro ainda possui contas noutro agregado familiar e não pode ser removido. Transfira ou remova essas contas primeiro.
+        member_removal_failed: Houve um problema ao remover o membro.
+        member_removed: O membro foi removido com sucesso.
+        not_authorized: Não está autorizado a remover membros.
+      show:
+        confirm_delete:
+          body: Tem a certeza de que pretende eliminar permanentemente a sua conta? Esta ação
+            é irreversível.
+          title: Eliminar conta?
+        confirm_reset:
+          body: Tem a certeza de que pretende repor a sua conta? Isto eliminará todas as suas contas, categorias, comerciantes, etiquetas e outros dados. Esta ação é irreversível.
+          title: Repor conta?
+        confirm_reset_with_sample_data:
+          body: Tem a certeza de que pretende repor a sua conta e carregar dados de exemplo? Isto eliminará os seus dados existentes e substituí-los-á por dados de demonstração para poder explorar o Sure em segurança.
+          title: Repor conta e carregar dados de exemplo?
+        confirm_remove_invitation:
+          body: Tem a certeza de que pretende remover o convite para %{email}?
+          title: Remover Convite
+        confirm_remove_member:
+          body: Tem a certeza de que pretende remover %{name} da sua conta?
+          title: Remover Membro
+        danger_zone_title: Zona de Perigo
+        delete_account: Eliminar conta
+        delete_account_warning: Eliminar a sua conta removerá permanentemente todos
+          os seus dados. Esta ação é irreversível.
+        reset_account: Repor conta
+        reset_account_warning: Repor a sua conta eliminará todas as suas contas financeiras, categorias, comerciantes, etiquetas e outros dados, mas manterá a sua conta de utilizador intacta.
+        reset_account_with_sample_data: Repor e pré-carregar
+        reset_account_with_sample_data_warning: Elimine todos os seus dados existentes e carregue depois novos dados de exemplo para poder explorar um ambiente pré-preenchido.
+        email: Email
+        first_name: Primeiro Nome
+        group_form_input_placeholder: Introduza o nome do grupo
+        group_form_label: Nome do grupo
+        group_title: Membros do Grupo
+        household_form_input_placeholder: Introduza o nome do agregado familiar
+        household_form_label: Nome do agregado familiar
+        household_subtitle: Os convidados podem iniciar sessão na sua conta %{moniker} e aceder aos recursos partilhados.
+        household_title: Agregado familiar
+        invitation_link: Link de convite
+        invite_member: Adicionar membro
+        last_name: Apelido
+        page_title: Informações do Perfil
+        pending: Pendente
+        profile_subtitle: Personalize a sua apresentação no %{product_name}
+        profile_title: Pessoal
+        remove_invitation: Remover Convite
+        remove_member: Remover Membro
+        resend_confirmation_link: solicitar um novo email de confirmação
+        save: Guardar
+        unconfirmed_email_notice_html: Solicitou a alteração do seu email para %{email}. Aceda ao seu email e confirme para que a alteração produza efeito. Se não recebeu o email, verifique a pasta de spam ou %{resend_link}.
+    securities:
+      show:
+        page_title: Segurança
+        encryption_warning:
+          title: Faltam as chaves de encriptação
+          intro: "Os dados sensíveis (chaves de API, tokens de serviços, segredos de MFA e PII) estão a ser armazenados sem encriptação. Para ativar a encriptação, defina as seguintes chaves nas suas variáveis de ambiente ou nas credenciais do Rails:"
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: "Gerar um conjunto com: bin/rails db:encryption:init"
+        mfa_title: Autenticação de Dois Fatores
+        mfa_description: Adicione uma camada extra de segurança à sua conta, exigindo um código da sua aplicação de autenticação ao iniciar sessão
+        enable_mfa: Ativar 2FA
+        disable_mfa: Desativar 2FA
+        disable_mfa_confirm: Tem a certeza de que pretende desativar a autenticação de dois fatores?
+        sso_title: Contas associadas
+        sso_subtitle: Ligações às suas contas SSO
+        sso_disconnect: Desligar
+        sso_last_used: Última utilização
+        sso_never: Nunca
+        sso_no_email: Sem email
+        sso_no_identities: Sem contas SSO associadas
+        sso_connect_hint: Termine a sessão e inicie-a novamente com um serviço SSO para ligar uma conta.
+        sso_confirm_title: Desligar Conta?
+        sso_confirm_body: Tem a certeza de que pretende desligar a sua conta %{provider}? Pode voltar a ligá-la mais tarde ao iniciar sessão com esse serviço novamente.
+        sso_confirm_button: Desligar
+        sso_warning_message: Este é o seu único método de início de sessão. Deve definir uma palavra-passe nas suas definições de segurança antes de desligar, caso contrário poderá ficar bloqueado na sua conta.
+    mcp:
+      show:
+        page_title: Servidor MCP
+        connect_title: Ligar um assistente de IA
+        connect_subtitle: Cole este URL no Claude.ai (ou em qualquer cliente compatível com MCP) para o ligar à sua conta Sure.
+        copy_url: Copiar
+        copied: Copiado!
+        how_to_connect_title: Como ligar o Claude
+        step_1: "Abra o Claude.ai e vá a Definições → Personalizar → Conectores."
+        step_2: Clique em "Adicionar conector" e cole o URL do servidor MCP acima.
+        step_3: Clique em Ligar — será redirecionado para o Sure para iniciar sessão e autorizar o acesso.
+        step_4: Uma vez autorizado, o Claude pode ler os seus dados de contas, transações e saldo.
+        connected_title: Clientes ligados
+        connected_subtitle: Estas aplicações têm atualmente acesso aos seus dados Sure. Revogue qualquer uma que já não utilize.
+        unknown_client: Cliente desconhecido
+        connected_ago: "Ligado há %{time}"
+        revoke: Revogar
+        revoke_confirm: Revogar o acesso deste cliente?
+      revoke:
+        revoked: Ligação revogada.
+    settings_nav:
+      accounts_label: Contas
+      advanced_section_title: Avançado
+      ai_prompts_label: Prompts de IA
+      background_jobs_label: Tarefas em segundo plano
+      api_key_label: Chaves de API
+      payment_label: Pagamento
+      categories_label: Categorias
+      feedback_label: Feedback
+      general_section_title: Geral
+      imports_label: Importações
+      exports_label: Exportações
+      llm_usage_label: Utilização de AI
+      logout: Terminar sessão
+      merchants_label: Comerciantes
+      providers_label: Serviços
+      guides_label: Guias
+      other_section_title: Mais
+      preferences_label: Preferências
+      profile_label: Informações do Perfil
+      recurring_transactions_label: Recorrentes
+      rules_label: Regras
+      mcp_label: MCP
+      security_label: Segurança
+      self_hosting_label: Self-Hosting
+      sso_providers_label: Serviços SSO
+      statement_vault_label: Arquivo de Extratos
+      system_health_label: Estado do sistema
+      tags_label: Etiquetas
+      transactions_section_title: Transações
+      users_label: Utilizadores
+      whats_new_label: Novidades
+      api_keys_label: Chaves de API
+      appearance_label: Aparência
+      bank_sync_label: Sincronização bancária
+      debug_label: Depuração
+    settings_nav_link_large:
+      next: Seguinte
+      previous: Voltar
+    user_avatar_field:
+      accepted_formats: JPG ou PNG. Máx. 5MB.
+      choose: Carregar foto
+      choose_label: (opcional)
+      change: Alterar foto
+    providers:
+      update:
+        updated_successfully: Definições do serviço atualizadas com sucesso
+        no_changes: Não foram feitas alterações
+      not_authorized: Não autorizado
+      bank_sync:
+        page_title: Sincronização bancária
+        lede: Associe as suas contas externas para sincronizar automaticamente transações, saldos e posições com o Sure.
+      status:
+        ok: Ligado
+        warn: Requer ação
+        err: Erro
+        "off": Não configurado
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro e as suas credenciais são armazenadas encriptadas."
+      drawer_trust_statement_encryption_unconfigured: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro. Configure chaves de encriptação explícitas antes de armazenar credenciais de serviços em produção."
+      provider_setup_encryption_warning:
+        title: Faltam as chaves de encriptação
+        message: "Esta instalação autoalojada não configurou chaves de encriptação explícitas do Active Record. Configure primary_key, deterministic_key e key_derivation_salt antes de guardar credenciais de serviços em produção."
+      setup_steps:
+        eyebrow: Configuração
+        need_help: "Precisa de ajuda?"
+      connect: Ligar
+      groups:
+        your_connections: As suas ligações
+        available: Disponível
+        empty_available: Todos os serviços disponíveis estão ligados.
+      health_strip:
+        connected: ligado
+        needs_attention: requer atenção
+        accounts_syncing: contas a sincronizar
+        last_synced: Última sincronização há %{time}
+      meta:
+        sync_error: Erro de sincronização
+        no_recent_sync: Sincronização em atraso
+        reconsent_required: Necessário novo consentimento
+        reconsent_needed:
+          one: Necessário novo consentimento em 1 dia
+          other: Necessário novo consentimento em %{count} dias
+        last_synced: Sincronizado há %{time}
+      sync_all: Sincronizar tudo
+      sync_all_in_progress: A sincronizar todos os serviços ligados…
+      sync_all_recently: Sincronização já em curso. Tente novamente daqui a um momento.
+      sync_provider: Sincronizar agora
+      sync_provider_in_progress: Sincronização iniciada.
+      recently_synced: Sincronizado recentemente. Tente novamente daqui a um momento.
+      taglines:
+        akahu: Sincronize instituições financeiras da Nova Zelândia via Akahu.
+        simplefin: Ligue contas bancárias dos EUA através do protocolo aberto SimpleFIN.
+        lunchflow: Ligue 20 mil+ bancos de 40+ países (RU, UE, EUA e mais!)
+        redbark: Sincronize contas bancárias australianas através do open banking Redbark.
+        enable_banking: Sincronize contas bancárias europeias através do open banking PSD2.
+        coinstats: Acompanhe toda a sua carteira de criptomoedas em carteiras e exchanges.
+        wise: Sincronize automaticamente os seus saldos multi-moeda Wise e transferências internacionais.
+        mercury: Sincronize automaticamente as suas contas bancárias empresariais Mercury.
+        brex: Sincronize o numerário e a atividade do cartão empresarial Brex com acesso apenas de leitura.
+        coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
+        binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
+        kraken: Sincronize os saldos Kraken e as execuções de negociação à vista utilizando uma chave de API apenas de leitura.
+        onchain_wallet: Acompanhe carteiras Bitcoin, EVM e Solana de autocustódia a partir dos seus endereços públicos.
+        snaptrade: Ligue contas de corretagem através da rede de agregação SnapTrade.
+        trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
+        ibkr: Sincronize contas de investimento Interactive Brokers através de importações de Flex Query.
+        questrade: Sincronize as suas contas de investimento Questrade diretamente através da API Questrade.
+        indexa_capital: Acompanhe a sua carteira de investimento automatizada Indexa Capital.
+        sophtron: Ligue bancos e utilities dos EUA e do Canadá.
+        plaid: Ligue milhares de instituições financeiras dos EUA via Plaid.
+        plaid_eu: Ligue instituições financeiras europeias via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Pesquisar serviços
+        placeholder: Pesquisar serviços
+        chips:
+          all: Tudo
+          bank: Bancos
+          crypto: Cripto
+          investment: Investimentos
+      empty_filter: Nenhum serviço corresponde ao seu filtro.
+      clear_filter: Limpar filtros
+      encryption_error:
+        title: Faltam as chaves de encriptação
+        message: "A sincronização bancária necessita de encriptação do Active Record configurada. Defina primary_key, deterministic_key e key_derivation_salt nas suas credenciais do Rails ou variáveis de ambiente."
+      provider_form:
+        save_and_connect: "Guardar e ligar"
+      coinbase_panel:
+        setup_instructions: "Para ligar a Coinbase:"
+        step1_html: Aceda a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Definições da API Coinbase</a>
+        step2: Crie uma nova chave de API com permissões apenas de leitura (ver contas, ver transações)
+        step3: Copie a sua chave de API e segredo de API e cole-os abaixo
+        api_key_label: Chave de API
+        api_key_placeholder: Introduza a sua chave de API Coinbase
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Introduza o seu segredo de API Coinbase
+        connect_button: Ligar Coinbase
+        syncing: A sincronizar...
+        sync: Sincronizar
+        disconnect_confirm: Tem a certeza de que pretende desligar esta ligação Coinbase? As suas contas sincronizadas tornar-se-ão contas manuais.
+      binance_panel:
+        setup_instructions: "Para ligar a Binance, crie uma chave de API apenas de leitura:"
+        step1_html: 'Aceda a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestão de API Binance</a>'
+        step2: "Crie uma nova chave de API apenas com a permissão Ativar Leitura"
+        step3: "Cole abaixo a sua Chave de API e Segredo"
+        no_withdraw_title: "Apenas chave de leitura"
+        no_withdraw_body: "Não ative as permissões de levantamento ao criar a sua chave de API Binance. O Sure precisa apenas de acesso de leitura."
+        ip_hint_title: "Lista de permissões de IP necessária"
+        ip_hint_body: "Adicione o IP de saída do servidor da aplicação à lista de permissões da Chave de API Binance:"
+        ip_hint_contact_admin: "Contacte o seu administrador para obter o endereço IP de saída do servidor da aplicação."
+        api_key_label: Chave de API
+        api_key_placeholder: Cole a sua Chave de API Binance
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Cole o seu Segredo de API Binance
+        connect_button: Ligar Binance
+        syncing: A sincronizar...
+        sync: Sincronizar
+        historical_import: "Definições de Importação Histórica"
+        sync_start_date_label: "Importar dados desde"
+        sync_start_date_help: "Selecione até que ponto no passado pretende obter as negociações históricas."
+        disconnect_confirm: "Tem a certeza de que pretende desligar a Binance?"
+      kraken_panel:
+        step1_html: 'Aceda a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Definições de API Kraken</a>'
+        step2: "Crie uma chave de API apenas com Query Funds e Query Closed Orders & Trades."
+        step3: "Cole abaixo a chave de API e a chave privada."
+        read_only_title: "Apenas sincronização de exchange de leitura"
+        read_only_body: "Não conceda permissões de negociação, cancelamento, levantamento, exportação, ledger, Earn, staking ou transferência. O Sure importa apenas saldos, posições e execuções de negociação à vista."
+        default_connection_name: Kraken
+        add_connection: Adicionar ligação Kraken
+        update_connection: Atualizar ligação
+        connection_name_label: Nome da ligação
+        connection_name_placeholder: Kraken Principal
+        api_key_label: Chave de API
+        api_key_placeholder: Cole a sua chave de API Kraken
+        keep_api_key_placeholder: Deixe em branco para manter a chave de API existente
+        api_secret_label: Chave Privada
+        api_secret_placeholder: Cole a sua chave privada Kraken
+        keep_api_secret_placeholder: Deixe em branco para manter a chave privada existente
+        setup_accounts: Configurar conta
+        syncing: A sincronizar...
+        sync: Sincronizar
+        disconnect: Desligar
+        disconnect_confirm: "Tem a certeza de que pretende desligar %{name}?"
+      onchain_wallet_panel:
+        add_wallet: Adicionar carteira
+        advanced: Avançado
+        disconnect_all: Desligar todas as carteiras
+        disconnect_all_confirm: Isto remove todos os endereços monitorizados e as respetivas contas. Continuar?
+        etherscan_api_key_label: Chave de API Etherscan (opcional)
+        etherscan_api_key_placeholder: Cole uma chave de API Etherscan
+        etherscan_hint: As leituras do Ethereum funcionam sem chave. Adicionar uma chave Etherscan apenas aumenta o limite de frequência para o Ethereum.
+        keep_etherscan_api_key: Deixe em branco para manter a chave existente
+        manage_wallets: Gerir carteiras
+        keyless_body: O Sure apenas lê dados públicos da cadeia. Não estão envolvidas chaves, frases-semente ou assinaturas, e nada pode ser gasto.
+        keyless_title: Apenas leitura, sem necessidade de chaves
+        save: Guardar
+        sync_start_date_hint: As transferências anteriores a esta data são ignoradas. Deixe em branco para importar tudo o que o explorador reportar.
+        sync_start_date_label: Ignorar transferências anteriores a
+      enable_banking_panel:
+        callback_url_instruction: "Para o URL de callback, utilize %{callback_url}."
+        connection_error: Erro de Ligação
+        step_1_html: "Aceda a %{link} e obtenha as suas credenciais de programador."
+        step_2: "Escolha o seu país e cole abaixo o Application ID + Client Certificate."
+        step_3: "Guarde e, em seguida, utilize Adicionar Ligação para ligar o seu banco."
+        config_locked_title: "Configuração bloqueada"
+        config_locked_message: "Desligue todos os bancos ligados antes de alterar estas credenciais."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Introduza o application ID"
+        application_id_placeholder_update: "Introduza o novo ID para atualizar"
+        client_certificate_label: "Client Certificate (com Chave Privada)"
+        save_and_connect: "Guardar e ligar"
+        update_connection: "Atualizar ligação"
+        connected_bank: "Banco Ligado"
+        session_expires: "A sessão expira: %{date}"
+        unknown: "Desconhecido"
+        connection: "Ligação"
+        session_expired_reconnect: "Sessão expirada - voltar a ligar"
+        configured: "Configurado"
+        ready_to_link: "Pronto para ligar contas"
+        sync: "Sincronizar"
+        reconnect: "Voltar a ligar"
+        connect_bank: "Ligar banco"
+        remove: "Remover"
+        remove_confirm: "Tem a certeza de que pretende remover esta ligação?"
+        add_connection: "Adicionar Ligação"
+        syncing: "A sincronizar"
+        select_country: "Selecione o país..."
+        country_label: "País"
+      lunchflow_panel:
+        step_1_html: "Aceda a %{link} e crie uma chave de API."
+        step_2: "Cole abaixo a sua chave e ligue."
+        step_3: "Depois, aceda a Contas para ligar as suas contas sincronizadas."
+        api_key_label: "Chave de API"
+        api_key_placeholder_new: "Cole aqui a chave de API"
+        api_key_placeholder_update: "Introduza a nova chave de API para atualizar"
+        base_url_label: "URL Base (Opcional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (predefinido)"
+        save_and_connect: "Guardar e ligar"
+        update_connection: "Atualizar ligação"
+      akahu_panel:
+        step_1_html: "Aceda a %{link} e crie uma aplicação pessoal."
+        step_2: "Copie o seu token de aplicação e token de utilizador."
+        step_3: "Cole abaixo os tokens, guarde e, em seguida, ligue as suas contas sincronizadas."
+      up_panel:
+        step_1_html: "Aceda a %{link} e gere um token de acesso pessoal."
+        step_2: "Copie o seu token de acesso pessoal."
+        step_3: "Cole abaixo o token, guarde e, em seguida, ligue as suas contas sincronizadas."
+      simplefin_panel:
+        step_1_html: "Aceda a %{link} para obter um token de configuração de utilização única."
+        step_2: "Cole abaixo o token e ligue."
+        step_3: "Depois, aceda a Contas para ligar as suas contas sincronizadas."
+        setup_token_label: "Token de Configuração"
+        setup_token_placeholder: "Cole o token de configuração SimpleFIN"
+        save_and_connect: "Guardar e ligar"
+      plaid_panel:
+        step_1_html: "Abra %{link} e copie o seu Client ID e Secret Key."
+        step_2: "Escolha um ambiente. Utilize sandbox para testar e production para contas reais."
+        step_3: "Cole abaixo as suas credenciais e ligue."
+      plaid_eu_panel:
+        step_1_html: "Abra %{link} e copie o seu EU Client ID e Secret Key."
+      not_found: Serviço não encontrado.
+      sync_provider_no_items: Sem ligações disponíveis para sincronizar.
+      ibkr_panel:
+        steps:
+          step_1: 'No seu Client Portal IBKR, navegue até "Performance & Reports" > "Flex Queries".'
+          step_2: 'Clique no ícone "+" na secção "Activity Flex Query" para criar uma nova consulta.'
+          step_3: 'Dê um nome à consulta (por exemplo, "Sure Sync"), reveja depois os detalhes da Flex Query abaixo e ative as secções, campos e opções de configuração listados.'
+          step_4: 'Guarde a consulta, anote o seu "Query ID" e utilize depois o ícone de engrenagem na secção "Flex Web Service Configuration" para gerar um Token de acesso.'
+          step_5: "Cole abaixo o seu Query ID e Token, guarde a configuração e aceda depois a Contas para ligar as contas IBKR descobertas."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Secções, campos e configuração
+          summary: Expanda para ver as secções, campos e definições exatos que a sua Activity Flex Query IBKR deve incluir.
+          sections_heading: Ative estas secções e campos
+          configuration_heading: Defina estas opções de consulta
+        sections:
+          account_information: "Informações da Conta: Account ID, Currency"
+          cash_report: "Relatório de Numerário:"
+          cash_report_options: "Opções: None"
+          cash_report_fields: "Campos: Currency, Ending Cash"
+          cash_transactions: "Transações de Numerário:"
+          cash_transactions_options: "Opções: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Campos: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Alteração no Resumo do Valor da Posição: Currency, End Of Period Value"
+          net_asset_value: "Valor Líquido dos Ativos (NAV) em Base:"
+          net_asset_value_options: "Opções: None"
+          net_asset_value_fields: "Campos: Currency, Report Date, Total"
+          open_positions: "Posições Abertas:"
+          open_positions_options: "Opções: Summary"
+          open_positions_fields: "Campos: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Negociações:"
+          trades_options: "Opções: Execution"
+          trades_fields: "Campos: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Modelos: Opcional"
+          format: "Formato: XML"
+          period: "Período: Últimos 365 Dias de Calendário"
+          date_format: "Formato de Data: yyyy-MM-dd"
+          time_format: "Formato de Hora: HH:mm:ss"
+          date_time_separator: "Separador Data/Hora: ; (ponto e vírgula)"
+          profit_and_loss: "Ganhos e Perdas: Predefinição"
+          all_other_options: 'Todas as outras opções de configuração: "No"'
+        report_window_note: "Os relatórios Flex IBKR estão limitados à janela de consulta que configurou no IBKR. O Sure importará as posições atuais completas mais até aos últimos 365 dias de atividade deste relatório."
+        sync: Sincronizar
+        disconnect_confirm: Desligar Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Introduza o seu IBKR Flex Query ID
+        query_id_placeholder_existing: Deixe em branco para manter o Query ID atual
+        token_label: Token
+        token_placeholder_new: Introduza o seu IBKR Flex Web Service Token
+        token_placeholder_existing: Deixe em branco para manter o Token atual
+        save_configuration: Guardar Configuração
+        update_configuration: Atualizar Configuração
+        status_configured_prefix: "%{summary}. Visite o"
+        accounts_tab: Contas
+        status_configured_suffix: separador para gerir as contas descobertas.
+        not_configured: Não configurado.
+      trading212_panel:
+        steps:
+          step_1: Aceda a Trading 212 → Definições → API (aplicação web ou móvel).
+          step_2: Gere uma nova chave de API — a Trading 212 mostrar-lhe-á um API ID e um Secret Key.
+          step_3: Cole ambos abaixo, selecione o seu ambiente e moeda da conta e guarde.
+        api_key_label: API ID
+        api_key_placeholder_new: Cole o seu Trading 212 API ID
+        api_key_placeholder_existing: Deixe em branco para manter o API ID atual
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Cole o seu Trading 212 Secret Key
+        api_secret_placeholder_existing: Deixe em branco para manter o Secret Key atual
+        environment_label: Ambiente
+        environment_live: Conta ao vivo
+        environment_demo: Conta de demonstração
+        currency_label: Moeda da conta
+        save_configuration: Guardar Configuração
+        update_configuration: Atualizar Configuração
+        sync: Sincronizar
+        disconnect_confirm: Desligar Trading 212?
+        status_configured_prefix: "Configurado. Visite o"
+        accounts_tab: Contas
+        status_configured_suffix: separador para gerir as contas descobertas.
+        not_configured: Não configurado.

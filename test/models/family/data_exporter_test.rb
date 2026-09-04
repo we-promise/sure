@@ -674,6 +674,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       status: "active",
       occurrence_count: 6,
       manual: true,
+      payment_url: "https://pay.example.com/internet",
       expected_amount_min: -95,
       expected_amount_max: -85,
       expected_amount_avg: -89.99
@@ -695,6 +696,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "-89.99", BigDecimal(recurring_data["data"]["amount"].to_s).to_s("F")
       assert_equal "active", recurring_data["data"]["status"]
       assert_equal true, recurring_data["data"]["manual"]
+      assert_equal "https://pay.example.com/internet", recurring_data["data"]["payment_url"]
       assert_not recurring_data["data"].key?("family_id")
     end
   end

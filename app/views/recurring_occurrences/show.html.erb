@@ -1,0 +1,314 @@
+<% series = @occurrence.recurring_transaction %>
+<% expected = @occurrence.resolved_expected_amount_money %>
+<% paid = @occurrence.confirmed_allocated_money %>
+<% percent = expected.amount.positive? ? [ (paid.amount / expected.amount * 100).round, 100 ].min : 0 %>
+
+<%# Where a bill gets resolved.
+
+    This is the ACT surface: it answers "what do I need to do about this bill
+    right now", which is a different question from "what is this bill", and it
+    is why it opens in the drawer while the bill's own story lives on its page.
+
+    frame: "drawer", responsive: true matches every other detail surface in the
+    app -- a centred card on a phone, a right-hand drawer from lg up. The close
+    button is ours rather than dialog.close_button, because that one carries
+    `hidden lg:flex` under `responsive`, which leaves a phone with no visible
+    way out. %>
+
+<%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
+  <% dialog.with_header(custom_header: true) do %>
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h2 id="<%= dialog.title_id %>" class="text-lg font-medium text-primary truncate">
+          <%= series.display_name %>
+        </h2>
+        <p class="text-sm <%= @occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
+          <%= occurrence_due_label(@occurrence) %>
+        </p>
+      </div>
+      <%= render DS::Button.new(
+            variant: "icon",
+            size: :sm,
+            icon: "x",
+            class: "ml-auto shrink-0",
+            title: t("ds.dialog.close"),
+            aria_label: t("ds.dialog.close"),
+            data: { action: "DS--dialog#close" }
+          ) %>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <%# What is owed leads, because it is the number the next decision turns
+          on. Progress reports; it does not prompt. %>
+      <div class="flex items-center gap-4">
+        <div class="min-w-0 space-y-0.5">
+          <p class="text-2xl font-medium text-primary privacy-sensitive">
+            <% if @occurrence.paid? %>
+              <%= t(".paid_headline", amount: format_money(paid)) %>
+            <% elsif @occurrence.skipped? %>
+              <%= t(".skipped") %>
+            <% elsif @occurrence.missed? %>
+              <%= t(".missed") %>
+            <% else %>
+              <%= t(".remaining", amount: format_money(@occurrence.remaining_amount_money)) %>
+            <% end %>
+          </p>
+          <p class="text-sm text-secondary privacy-sensitive">
+            <%= t(".paid_of", paid: format_money(paid), expected: format_money(expected)) %>
+            <% if @occurrence.overpaid? %>
+              &middot; <%= t(".overpaid") %>
+            <% end %>
+          </p>
+        </div>
+        <div class="ml-auto shrink-0">
+          <%= render DS::ProgressRing.new(
+                percent: percent,
+                size: 56,
+                tone: @occurrence.paid? ? :success : (@occurrence.overdue? ? :destructive : :neutral)
+              ) %>
+        </div>
+      </div>
+
+      <%# What has already paid this, and the only route in the app to undo it. %>
+      <% if @occurrence.allocations.any? %>
+        <div class="space-y-1">
+          <p class="text-xs font-medium text-secondary uppercase"><%= t(".payments") %></p>
+          <div class="bg-container-inset rounded-lg divide-y divide-subdued">
+            <% @occurrence.allocations.order(:paid_on).each do |allocation| %>
+              <div class="flex items-center justify-between gap-3 px-3 py-2">
+                <div class="min-w-0">
+                  <p class="text-sm text-primary truncate">
+                    <%= allocation.entry&.name.presence || t(".manual_payment") %>
+                  </p>
+                  <% if allocation.paid_on %>
+                    <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                  <% end %>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-sm text-primary privacy-sensitive"><%= format_money(allocation.allocated_amount_money) %></span>
+                  <%= render DS::Link.new(
+                        text: t(".unlink"),
+                        variant: "ghost",
+                        size: "sm",
+                        href: recurring_allocation_path(allocation),
+                        method: :delete
+                      ) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# The primary workflow, chosen by what this bill actually needs. A
+          generic transaction picker regardless of state is what made this feel
+          like a database rather than a reconciliation. %>
+      <% if @pending_suggestion %>
+        <div class="space-y-2">
+          <p class="text-xs font-medium text-secondary uppercase"><%= t(".review_heading") %></p>
+          <div class="bg-container-inset rounded-lg p-3 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 space-y-0.5">
+                <p class="text-sm font-medium text-primary truncate">
+                  <%= @pending_suggestion.entry&.name.presence || t(".manual_payment") %>
+                </p>
+                <% if @pending_suggestion.paid_on %>
+                  <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short) %></p>
+                <% end %>
+              </div>
+              <p class="text-sm font-medium text-primary privacy-sensitive shrink-0">
+                <%= format_money(@pending_suggestion.allocated_amount_money) %>
+              </p>
+            </div>
+
+            <%# The matcher has always stored why it proposed this. Until now
+                the page showed a bare percentage of it instead. %>
+            <% reasons = bills_match_reasons(
+                 @pending_suggestion.match_signals,
+                 currency: @occurrence.currency,
+                 expected: @occurrence.resolved_expected_amount,
+                 actual: @pending_suggestion.entry&.amount&.abs,
+                 due_on: @occurrence.effective_due_on,
+                 paid_on: @pending_suggestion.paid_on
+               ) %>
+            <% if reasons.any? %>
+              <div class="flex flex-wrap gap-1.5">
+                <% reasons.each do |reason| %>
+                  <%= render DS::Pill.new(label: reason, tone: :neutral, marker: false) %>
+                <% end %>
+              </div>
+            <% end %>
+
+            <div class="flex items-center gap-2">
+              <%= render DS::Link.new(
+                    text: t(".link_payment"),
+                    variant: "primary",
+                    href: confirm_recurring_allocation_path(@pending_suggestion),
+                    method: :post
+                  ) %>
+              <%= render DS::Link.new(
+                    text: t(".not_this_one"),
+                    variant: "ghost",
+                    href: reject_recurring_allocation_path(@pending_suggestion),
+                    method: :post
+                  ) %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @occurrence.scheduled? %>
+        <div class="space-y-2">
+          <p class="text-xs font-medium text-secondary uppercase">
+            <%= @occurrence.partially_paid? ? t(".add_heading") : t(".find_heading") %>
+          </p>
+
+          <%# Ranked by the engine that decides auto-links, so the app agrees
+              with itself about what a match is. The strongest gets a card; the
+              rest are rows that post on tap. %>
+          <% if @ranked_candidates.any? %>
+            <% best_entry, best_explanation = @ranked_candidates.first %>
+            <%= render "recurring_occurrences/candidate",
+                  occurrence: @occurrence,
+                  entry: best_entry,
+                  promoted: true,
+                  reasons: bills_match_reasons(
+                    best_explanation.signals,
+                    currency: @occurrence.currency,
+                    expected: @occurrence.resolved_expected_amount,
+                    actual: best_entry.amount.abs,
+                    due_on: @occurrence.effective_due_on,
+                    paid_on: best_entry.date
+                  ) %>
+
+            <% rest = @ranked_candidates.drop(1) %>
+            <% if rest.any? %>
+              <p class="text-xs font-medium text-secondary uppercase pt-1"><%= t(".other_matches") %></p>
+              <div class="divide-y divide-subdued">
+                <% rest.each do |entry, explanation| %>
+                  <%= render "recurring_occurrences/candidate",
+                        occurrence: @occurrence,
+                        entry: entry,
+                        reasons: bills_match_reasons(
+                          explanation.signals,
+                          currency: @occurrence.currency,
+                          expected: @occurrence.resolved_expected_amount,
+                          actual: entry.amount.abs,
+                          due_on: @occurrence.effective_due_on,
+                          paid_on: entry.date
+                        ) %>
+                <% end %>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-sm text-secondary px-1"><%= t(".no_ranked_candidates") %></p>
+          <% end %>
+
+          <%# Search and the wider list stay available, but underneath the
+              suggestions rather than instead of them.
+
+              Open when there is nothing to suggest: a newly declared bill has
+              taught the matcher no aliases yet, so "WATSON PROPERTY LLC" is
+              not yet a known name for a bill called "Watson Property" and the
+              ranked list is legitimately empty. Leaving the only way forward
+              collapsed behind a summary would make that a dead end. %>
+          <%= render DS::Disclosure.new(
+                title: t(".search_all"),
+                align: "left",
+                open: @candidate_query.present? || @ranked_candidates.empty?
+              ) do %>
+            <div class="space-y-2 pt-1">
+              <%= form_with url: recurring_occurrence_path(@occurrence), method: :get,
+                            data: { turbo_frame: "drawer" } do %>
+                <%= render DS::SearchInput.new(
+                      name: "q",
+                      value: @candidate_query,
+                      placeholder: t(".search_placeholder"),
+                      aria_label: t(".search_placeholder")
+                    ) %>
+              <% end %>
+
+              <% if @other_entries.any? %>
+                <div class="divide-y divide-subdued">
+                  <% @other_entries.each do |entry| %>
+                    <%= render "recurring_occurrences/candidate", occurrence: @occurrence, entry: entry %>
+                  <% end %>
+                </div>
+              <% else %>
+                <p class="text-sm text-secondary px-1">
+                  <%= @candidate_query.present? ? t(".no_search_results", query: @candidate_query) : t(".no_candidates") %>
+                </p>
+              <% end %>
+            </div>
+          <% end %>
+
+          <%# The fallback, and deliberately a deliberate one: the amount field
+              used to sit unlabelled at the foot of the transaction list, where
+              its purpose was guessable only from the button beside it. %>
+          <%= render DS::Disclosure.new(title: t(".cant_find"), align: "left") do %>
+            <div class="space-y-2 pt-1">
+              <p class="text-xs text-secondary"><%= t(".manual_explainer") %></p>
+              <%= form_with url: recurring_occurrence_allocations_path(@occurrence), class: "flex items-end gap-2" do |form| %>
+                <div class="grow">
+                  <%= form.label :amount, t(".manual_amount_label"), class: "form-field__label" %>
+                  <%= form.number_field :amount, step: 0.01, min: 0.01,
+                        value: @occurrence.remaining_amount.positive? ? @occurrence.remaining_amount : nil,
+                        class: "form-field__input" %>
+                </div>
+                <div class="grow">
+                  <%= form.label :paid_on, t(".manual_date_label"), class: "form-field__label" %>
+                  <%= form.date_field :paid_on, value: Date.current, class: "form-field__input" %>
+                </div>
+                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary") %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%# Ranked by importance, and inside the body rather than the dialog's
+          action slot: that slot sits outside the scroller, so on a phone with
+          the keyboard up its buttons cannot be reached. %>
+      <div class="pt-2 border-t border-subdued space-y-3">
+        <% if @occurrence.scheduled? %>
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <%= render DS::Link.new(text: t(".mark_paid"), variant: "secondary",
+                    href: mark_paid_recurring_occurrence_path(@occurrence), method: :post) %>
+              <p class="text-xs text-secondary pt-1"><%= t(".mark_paid_hint") %></p>
+            </div>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(variant: "button", text: t(".skip"), icon: "skip-forward",
+                    href: skip_recurring_occurrence_path(@occurrence), method: :post) %>
+              <% menu.with_item(variant: "button", text: t(".snooze_week"), icon: "alarm-clock",
+                    href: snooze_recurring_occurrence_path(@occurrence, until: Date.current + 7), method: :patch) %>
+              <% menu.with_item(variant: "divider") %>
+              <% menu.with_item(variant: "link", text: t("bills.show.edit"), icon: "pencil",
+                    href: edit_recurring_transaction_path(series), data: { turbo_frame: :modal }) %>
+              <% menu.with_item(variant: "button",
+                    text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+                    icon: series.active? ? "pause" : "play",
+                    href: toggle_status_recurring_transaction_path(series), method: :post) %>
+            <% end %>
+          </div>
+        <% else %>
+          <%= render DS::Link.new(text: t(".reopen"), variant: "outline",
+                href: reopen_recurring_occurrence_path(@occurrence), method: :post) %>
+        <% end %>
+
+        <div class="flex items-center justify-between gap-2">
+          <%= render DS::Link.new(
+                text: t(".view_bill"),
+                variant: "default",
+                href: bill_path(series),
+                data: { turbo_frame: "_top" }
+              ) %>
+          <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+<% end %>

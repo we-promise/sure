@@ -64,6 +64,36 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#{uncategorized_form_selector} p.text-secondary.privacy-sensitive", text: /\/m avg/
   end
 
+  test "show localizes the abbreviated budget month and recent transaction dates" do
+    ensure_tailwind_build
+    users(:family_admin).update!(locale: "de")
+    @budget.update!(start_date: Date.new(2026, 3, 1), end_date: Date.new(2026, 3, 31))
+    create_transaction(
+      date: Date.new(2026, 3, 7),
+      account: accounts(:depository),
+      amount: 42,
+      category: @parent_category,
+      name: "Synthetic March expense"
+    )
+
+    get budget_budget_category_path(@budget, @parent_budget_category)
+
+    assert_response :success
+    assert_select "dt", text: "Ausgaben Mär 2026"
+    assert_select "p.text-secondary.text-xs.uppercase", text: "7. Mär"
+  end
+
+  test "show preserves the abbreviated English budget month" do
+    ensure_tailwind_build
+    users(:family_admin).update!(locale: "en")
+    @budget.update!(start_date: Date.new(2026, 3, 1), end_date: Date.new(2026, 3, 31))
+
+    get budget_budget_category_path(@budget, @parent_budget_category)
+
+    assert_response :success
+    assert_select "dt", text: "Mar 2026 spending"
+  end
+
   test "updating a subcategory adjusts the parent budget by the same delta" do
     assert_changes -> { @parent_budget_category.reload.budgeted_spending.to_f }, from: 500.0, to: 550.0 do
       patch budget_budget_category_path(@budget, @electric_budget_category),
