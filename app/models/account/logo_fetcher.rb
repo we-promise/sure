@@ -193,6 +193,10 @@ class Account::LogoFetcher
       return false if ip.private?
       return false if ip.link_local?
 
+      # Normalize IPv4-mapped IPv6 addresses (e.g., ::ffff:100.100.100.200)
+      # to their IPv4 form so the shared address space check applies.
+      ip = ip.native if ip.ipv6? && ip.to_s.start_with?("::ffff:")
+
       # Reject shared address space (100.64.0.0/10) - RFC 6598
       # This includes addresses like 100.64.0.1 used by cloud metadata endpoints
       if ip.ipv4?
