@@ -4,6 +4,7 @@
    when :unsupported, :failing then "text-destructive"
    else "text-warning"
    end %>
+<% vector_store_failure_kind = ai_health.vector_store_failure_kind %>
 
 <% pdf_checks = [
   {
@@ -39,7 +40,13 @@
     ) %>
   </div>
 
-  <% if ai_health.llm_status == :failing %>
+  <% if ai_health.llm_status == :failing && ai_health.llm_probe.failure_code == :model_not_available %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.ai.alerts.llm_model_not_available.title"),
+      message: t("admin.system_health.show.ai.alerts.llm_model_not_available.message"),
+      variant: :error
+    ) %>
+  <% elsif ai_health.llm_status == :failing %>
     <%= render DS::Alert.new(
       title: t("admin.system_health.show.ai.alerts.llm_probe_failed.title"),
       message: t("admin.system_health.show.ai.alerts.llm_probe_failed.message"),
@@ -69,6 +76,12 @@
       <%= render DS::Alert.new(title: t("admin.system_health.show.ai.alerts.custom_openai.title"), variant: :error) do %>
         <p><%= t("admin.system_health.show.ai.alerts.custom_openai.message") %></p>
       <% end %>
+    <% elsif vector_store_failure_kind %>
+      <%= render DS::Alert.new(
+        title: t("admin.system_health.show.ai.alerts.#{vector_store_failure_kind}.title"),
+        message: t("admin.system_health.show.ai.alerts.#{vector_store_failure_kind}.message"),
+        variant: :error
+      ) %>
     <% else %>
       <%= render DS::Alert.new(
         title: t("admin.system_health.show.ai.alerts.vector_probe_failed.title"),
@@ -306,6 +319,103 @@
         </div>
       <% end %>
     </dl>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.worker.title") %></h2>
+        <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.description") %></p>
+      </div>
+      <%= render DS::Button.new(
+        href: verify_worker_ai_admin_system_health_path,
+        method: :post,
+        variant: :outline,
+        size: :sm,
+        icon: "server",
+        text: t("admin.system_health.show.ai.worker.verify_button")
+      ) %>
+    </div>
+
+    <p class="text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.coverage_notice") %></p>
+
+    <% worker_ai_health_results = Array(worker_ai_health_results) %>
+    <% if worker_ai_health_results.empty? %>
+      <%= render DS::Alert.new(title: t("admin.system_health.show.ai.worker.empty.title"), variant: :info) do %>
+        <p><%= t("admin.system_health.show.ai.worker.empty.description") %></p>
+      <% end %>
+    <% else %>
+      <div class="space-y-3" data-testid="worker-ai-health-results">
+        <% worker_ai_health_results.each do |result| %>
+          <% status_tone = { passing: :success, failing: :error, stale: :neutral }.fetch(result.status) %>
+          <% status_icon = { passing: "circle-check", failing: "circle-x", stale: "circle-help" }.fetch(result.status) %>
+          <% matches_web = result.matches_web?(ai_health) %>
+          <div class="rounded-lg border border-primary p-3" data-testid="worker-ai-health-result">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p class="font-mono text-sm text-primary" data-testid="worker-process-identity"><%= result.process_identity %></p>
+                <p class="text-xs text-secondary">
+                  <%= t("admin.system_health.show.ai.worker.labels.checked_at") %>
+                  <%= t("admin.system_health.show.values.time_ago", time_ago: time_ago_in_words(result.checked_at)) %>
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <%= render DS::Pill.new(
+                  label: t("admin.system_health.show.ai.worker.configuration_statuses.#{matches_web ? :match : :mismatch}"),
+                  tone: matches_web ? :neutral : :warning,
+                  marker: false
+                ) %>
+                <%= render DS::Pill.new(
+                  label: t("admin.system_health.show.ai.worker.statuses.#{result.status}"),
+                  tone: status_tone,
+                  marker: false,
+                  icon: status_icon
+                ) %>
+              </div>
+            </div>
+            <dl class="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.effective_provider") %></dt>
+                <dd class="mt-1 font-medium text-primary">
+                  <% if result.effective_provider %>
+                    <%= t("admin.system_health.show.ai.providers.#{result.effective_provider}") %>
+                  <% else %>
+                    <span class="text-warning"><%= t("admin.system_health.show.ai.values.not_configured") %></span>
+                  <% end %>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.model") %></dt>
+                <dd class="mt-1 break-all font-mono text-primary"><%= result.llm_model.presence || t("admin.system_health.show.ai.values.not_set") %></dd>
+              </div>
+              <div>
+                <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.endpoint") %></dt>
+                <dd class="mt-1 break-all font-mono text-primary"><%= result.llm_endpoint %></dd>
+              </div>
+              <% if result.vector_store_adapter %>
+                <div>
+                  <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.adapter") %></dt>
+                  <dd class="mt-1 font-medium text-primary"><%= t("admin.system_health.show.ai.adapters.#{result.vector_store_adapter}") %></dd>
+                </div>
+              <% end %>
+              <% if result.failure_codes.present? %>
+                <div class="sm:col-span-2 lg:col-span-3">
+                  <dt class="text-secondary"><%= t("admin.system_health.show.ai.labels.failure_reason") %></dt>
+                  <dd class="mt-1 font-medium text-destructive">
+                    <%= result.failure_codes.map { |code| t("admin.system_health.show.ai.failure_codes.#{code}") }.join(" · ") %>
+                  </dd>
+                </div>
+              <% end %>
+            </dl>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= render DS::Alert.new(title: t("admin.system_health.show.ai.worker.settings_origin.title"), variant: :info) do %>
+    <p><%= t("admin.system_health.show.ai.worker.settings_origin.database_backed") %></p>
+    <p><%= t("admin.system_health.show.ai.worker.settings_origin.env_backed") %></p>
   <% end %>
 
   <%= render DS::Alert.new(title: t("admin.system_health.show.ai.local_setup.title"), variant: :info) do %>
