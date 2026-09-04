@@ -43,20 +43,27 @@ class InvestmentStatement::Totals
     #
     # Investment income (dividends, interest) is aggregated by activity label
     # rather than by direction. Since #1311 these are recorded as Trades with
-    # qty: 0 and price: 0 (Trade::CreateForm#create_income_trade), so they fall
-    # outside both the qty > 0 and qty < 0 branches above and cannot be
-    # double-counted as contributions or withdrawals.
+    # qty: 0 and price: 0 (Trade::CreateForm#create_income_trade).
+    #
+    # The direction branches additionally exclude income labels rather than
+    # relying on qty: 0 to keep the buckets disjoint. Without this guard such
+    # a row would be counted twice: once by direction and once as income.
     #
     # Missing FX rates preserve InvestmentStatement's existing 1:1 fallback.
     #
     # account_ids is already scoped to the family's visible (draft/active)
     # investment accounts, so the query trusts that input and skips a join back
     # to accounts for family/status filtering.
+    # COALESCE keeps an unlabeled trade (NULL) out of the set.
+    def income_label_sql
+      "COALESCE(trades.investment_activity_label, '') IN ('Dividend', 'Interest')"
+    end
+
     def aggregation_sql
       <<~SQL
         SELECT
-          COALESCE(SUM(CASE WHEN trades.qty > 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
-          COALESCE(SUM(CASE WHEN trades.qty < 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
+          COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
+          COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
           COALESCE(SUM(CASE WHEN trades.investment_activity_label = 'Dividend' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
           COALESCE(SUM(CASE WHEN trades.investment_activity_label = 'Interest' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
           COUNT(trades.id) as trades_count
