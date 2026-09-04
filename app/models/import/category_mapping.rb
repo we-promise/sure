@@ -59,10 +59,19 @@ class Import::CategoryMapping < Import::Mapping
       parent_name = parts[0].strip
       child_name  = parts[1].strip
 
-      # Ensure the parent category exists before creating the child.
-      parent = import.family.categories.find_or_create_by!(name: parent_name) do |cat|
-        cat.color = Category::COLORS.sample
-        cat.lucide_icon = Category.suggested_icon(parent_name)
+      # Ensure parent is a top-level category (subcategories cannot have children in Sure).
+      parent = import.family.categories.roots.find_by(name: parent_name)
+
+      if parent.nil?
+        existing = import.family.categories.find_by(name: parent_name)
+        if existing&.subcategory?
+          parent = existing.parent
+        else
+          parent = import.family.categories.roots.create!(name: parent_name) do |cat|
+            cat.color = Category::COLORS.sample
+            cat.lucide_icon = Category.suggested_icon(parent_name)
+          end
+        end
       end
 
       self.mappable = import.family.categories.find_or_create_by!(name: child_name) do |cat|
