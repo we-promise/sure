@@ -71,10 +71,14 @@ class Account::LogoFetcher
       resolved_addresses = public_http_url?(uri)
       return false unless resolved_addresses
 
-      # Pin the connection to a validated address to prevent DNS rebinding.
-      # We use the first validated address for the connection while keeping the
-      # original host for HTTP Host header and TLS SNI verification.
-      http = Net::HTTP.new(resolved_addresses.first, uri.port)
+      # Pin the connection to a validated address to prevent DNS rebinding
+      # (the DNS could resolve differently between validation and connection).
+      # Net::HTTP#ipaddr= dials the given IP while keeping the original
+      # hostname for TLS SNI and certificate verification — constructing
+      # Net::HTTP with the raw IP instead would fail certificate verification
+      # for every HTTPS logo URL.
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.ipaddr = resolved_addresses.first
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = HTTP_TIMEOUT
       http.read_timeout = HTTP_TIMEOUT
@@ -82,7 +86,8 @@ class Account::LogoFetcher
       tempfile = nil
 
       request = Net::HTTP::Get.new(uri)
-      # Explicitly set Host header to the original hostname for SNI and HTTP Host
+      # Keep the HTTP Host header on the original hostname (the socket dials
+      # the pinned IP, so the default Host header would be the IP).
       request["Host"] = uri.host
 
       http.request(request) do |res|

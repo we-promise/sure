@@ -9,8 +9,11 @@ export default class extends Controller {
     "fileInfo",
     "fileName",
     "fileSize",
+    "preview",
   ];
   static values = { maxSize: Number };
+
+  #previewUrl = null;
 
   select(event) {
     this.#setSource(event.params.source);
@@ -22,6 +25,10 @@ export default class extends Controller {
     this.fileInputTarget.click();
   }
 
+  disconnect() {
+    this.#revokePreviewUrl();
+  }
+
   fileSelected(event) {
     const file = event.target.files[0];
 
@@ -30,6 +37,7 @@ export default class extends Controller {
       event.target.value = "";
       this.#setSizeErrorVisible(true);
       this.#setFileInfoVisible(false);
+      this.#hidePreview();
       return;
     }
 
@@ -39,8 +47,10 @@ export default class extends Controller {
 
     if (file) {
       this.#updateFileInfo(file);
+      this.#showPreview(file);
     } else {
       this.#setFileInfoVisible(false);
+      this.#hidePreview();
     }
   }
 
@@ -60,6 +70,34 @@ export default class extends Controller {
     if (!this.hasSizeErrorTarget) return;
 
     this.sizeErrorTarget.classList.toggle("hidden", !visible);
+  }
+
+  // Shows a local preview of the chosen picture so the user can confirm the
+  // image before submitting (previously there was no preview at all). If the
+  // browser cannot decode the file the preview simply stays hidden — the
+  // upload itself is still allowed, since the server decides what to accept.
+  #showPreview(file) {
+    if (!this.hasPreviewTarget) return;
+
+    this.#revokePreviewUrl();
+    this.#previewUrl = URL.createObjectURL(file);
+    this.previewTarget.src = this.#previewUrl;
+    this.previewTarget.classList.remove("hidden");
+  }
+
+  #hidePreview() {
+    if (!this.hasPreviewTarget) return;
+
+    this.#revokePreviewUrl();
+    this.previewTarget.src = "";
+    this.previewTarget.classList.add("hidden");
+  }
+
+  #revokePreviewUrl() {
+    if (this.#previewUrl) {
+      URL.revokeObjectURL(this.#previewUrl);
+      this.#previewUrl = null;
+    }
   }
 
   #updateFileInfo(file) {

@@ -22,6 +22,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     fake_response.stubs(:read_body).yields("fake-brandfetch-image-data")
 
     http_mock = mock
+    http_mock.expects(:ipaddr=).with("18.160.41.3")
     http_mock.expects(:use_ssl=).with(true)
     http_mock.expects(:open_timeout=).with(5)
     http_mock.expects(:read_timeout=).with(5)
@@ -53,12 +54,14 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
 
     bf_http = mock
     bf_http.stubs(:use_ssl=)
+    bf_http.stubs(:ipaddr=)
     bf_http.stubs(:open_timeout=)
     bf_http.stubs(:read_timeout=)
     bf_http.expects(:request).yields(brandfetch_fail)
 
     ddg_http = mock
     ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:ipaddr=)
     ddg_http.stubs(:open_timeout=)
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
@@ -89,6 +92,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
 
     provider_http = mock
     provider_http.stubs(:use_ssl=)
+    provider_http.stubs(:ipaddr=)
     provider_http.stubs(:open_timeout=)
     provider_http.stubs(:read_timeout=)
     provider_http.expects(:request).yields(provider_response)
@@ -122,12 +126,14 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
 
     bf_http = mock
     bf_http.stubs(:use_ssl=)
+    bf_http.stubs(:ipaddr=)
     bf_http.stubs(:open_timeout=)
     bf_http.stubs(:read_timeout=)
     bf_http.expects(:request).yields(html_response)
 
     ddg_http = mock
     ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:ipaddr=)
     ddg_http.stubs(:open_timeout=)
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)
@@ -178,12 +184,14 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
 
     bf_http = mock
     bf_http.stubs(:use_ssl=)
+    bf_http.stubs(:ipaddr=)
     bf_http.stubs(:open_timeout=)
     bf_http.stubs(:read_timeout=)
     bf_http.expects(:request).yields(odd_image)
 
     ddg_http = mock
     ddg_http.stubs(:use_ssl=)
+    ddg_http.stubs(:ipaddr=)
     ddg_http.stubs(:open_timeout=)
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).yields(ddg_success)

@@ -631,13 +631,15 @@ class AccountTest < ActiveSupport::TestCase
     ddg_failure = Net::HTTPNotFound.new("1.1", "404", "Not Found")
     ddg_failure.stubs(:body).returns(nil)
     ddg_http = mock
+    ddg_http.stubs(:ipaddr=)
     ddg_http.stubs(:use_ssl=)
     ddg_http.stubs(:open_timeout=)
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).returns(ddg_failure)
-    # LogoFetcher pins the connection to the DNS-validated address (DNS rebinding
-    # protection), so the HTTP connection targets the resolved IP, not the host.
-    Net::HTTP.stubs(:new).with("52.149.246.247", 443).returns(ddg_http)
+    # LogoFetcher dials the DNS-validated address (DNS rebinding protection)
+    # via Net::HTTP#ipaddr=, while the connection itself is constructed with
+    # the hostname so TLS SNI/certificate verification keeps working.
+    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
 
     @account.update!(institution_domain: "new.example.com")
     FetchLogoJob.perform_now(@account.id, "new.example.com")
@@ -710,6 +712,78 @@ class AccountTest < ActiveSupport::TestCase
     assert @account.logo.attached?
     assert_equal "fetched.png", @account.logo.blob.filename.to_s
     assert @account.logo_source_auto?
+  end
+
+  # Regression: Rails defers the physical blob upload to an after_commit hook,
+  # but the account is always saved inside an outer transaction (the
+  # controller's create wraps create_and_sync). create_and_sync then calls
+  # sync_later -> with_lock -> reload, which resets attachment_changes before
+  # the outer commit runs the upload — leaving an attachment row with no file
+  # on storage (a permanently broken image). The bytes must be uploaded during
+  # the save itself.
+  test "logo uploaded through create_and_sync inside an outer transaction is stored" do
+    account = nil
+    Account.transaction do
+      account = Account.create_and_sync(
+        {
+          family: @family,
+          name: "Upload Survives Outer Tx",
+          balance: 100,
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: Depository.new(subtype: :checking),
+          logo: { io: StringIO.new("user-upload-bytes"), filename: "upload.png", content_type: "image/png" }
+        },
+        opening_balance_date: Date.current - 2.years
+      )
+    end
+
+    assert account.logo.attached?
+    blob = account.logo.blob
+    assert blob.service.exist?(blob.key), "blob bytes must be uploaded to the storage service, not just the rows"
+  end
+
+  # Same regression for the edit flow: the balance-changed branch of
+  # AccountableResource#update wraps the save and set_current_balance in an
+  # outer transaction and re-saves the account, so the pending upload used to
+  # be dropped the same way.
+  test "logo uploaded while editing an account with a balance change is stored" do
+    Account.transaction do
+      @account.assign_attributes(notes: "edited with balance")
+      @account.logo.attach(
+        io: StringIO.new("edited-upload-bytes"),
+        filename: "edited.png",
+        content_type: "image/png"
+      )
+      @account.save!
+      @account.set_current_balance(500)
+    end
+
+    @account.reload
+    assert @account.logo.attached?
+    blob = @account.logo.blob
+    assert blob.service.exist?(blob.key), "blob bytes must be uploaded to the storage service, not just the rows"
+  end
+
+  # A broken manual upload (attachment row present, file missing from storage)
+  # must fall back to the auto chain once the broken attachment is detached —
+  # the fallback must be persistent, not retried on every request.
+  test "detaching a broken manual logo falls back to the auto-fetch chain" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    @account.institution_domain = "example.com"
+    @account.logo.attach(
+      io: StringIO.new("broken-logo"),
+      filename: "broken.png",
+      content_type: "image/png"
+    )
+    @account.update!(logo_source: "manual")
+    assert @account.logo_url.include?("/rails/active_storage")
+
+    # Simulates the repair task / user choosing Auto: the broken attachment is
+    # detached, so the persistent fallback chain takes over.
+    @account.logo.detach
+
+    assert_equal "https://icons.duckduckgo.com/ip3/example.com.ico", @account.logo_url
   end
 
   test "destroying account moves linked statements to inbox after commit" do

@@ -117,6 +117,26 @@ class Account < ApplicationRecord
     image/jpg image/png image/svg+xml image/tiff image/webp image/x-icon
     image/vnd.microsoft.icon
   ].freeze
+
+  # Rails defers the physical blob upload of an attachment to an after_commit
+  # hook (`attachment_changes.delete(name).try(:upload)`, see
+  # ActiveStorage::Attached::Model), while the blob/attachment rows are written
+  # during after_save. That deferral breaks for accounts: account saves always
+  # happen inside an outer transaction (create_and_sync, the account form's
+  # balance path), so the after-commit upload only fires at the outer commit.
+  # Before that commit runs, create_and_sync calls sync_later -> with_lock ->
+  # reload, and reload resets `attachment_changes` — silently dropping the
+  # pending upload. The result is an attachment row with no file on the
+  # storage service: `logo.attached?` is true, so `logo_url` serves the blob
+  # path, which 404s — a permanently broken logo image.
+  #
+  # Upload the bytes during after_save instead, before anything can reload the
+  # record, and remove the pending change so the after-commit hook no-ops.
+  # Only CreateOne carries bytes to upload; DeleteOne is left to Rails.
+  # Registered after `has_one_attached` so Rails' row-saving after_save
+  # callback runs first.
+  after_save :upload_pending_logo_blob,
+             if: -> { attachment_changes["logo"].is_a?(ActiveStorage::Attached::Changes::CreateOne) }
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -694,6 +714,14 @@ class Account < ApplicationRecord
 
     def mark_manual_if_logo_uploaded
       write_attribute(:logo_source, "manual")
+    end
+
+    # Uploads the logo blob bytes synchronously during after_save (see the
+    # comment on the callback registration for why Rails' default
+    # after_commit upload is unsafe here). Removing the pending change also
+    # stops Rails' after_commit hook from attempting a duplicate upload.
+    def upload_pending_logo_blob
+      attachment_changes.delete("logo").upload
     end
 
 
