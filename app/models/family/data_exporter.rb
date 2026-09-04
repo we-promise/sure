@@ -186,7 +186,7 @@ class Family::DataExporter
     end
 
     def attachment_manifest_items
-      (transaction_attachment_manifest_items + family_document_attachment_manifest_items)
+      (transaction_attachment_manifest_items + family_document_attachment_manifest_items + physical_gold_lot_invoice_manifest_items)
         .sort_by { |item| [ item[:record_type], item[:record_id].to_s, item[:filename].to_s, item[:id].to_s ] }
     end
 
@@ -220,6 +220,22 @@ class Family::DataExporter
           extra: {
             status: document.status
           }
+        )
+      end
+    end
+
+    def physical_gold_lot_invoice_manifest_items
+      PhysicalGoldLot.joins(:account)
+                     .where(accounts: { family_id: @family.id })
+                     .with_attached_invoice
+                     .filter_map do |lot|
+        next unless lot.invoice.attached?
+
+        attachment_manifest_item(
+          lot.invoice.attachment,
+          record_type: "PhysicalGoldLot",
+          record_id: lot.id,
+          extra: { account_id: lot.account_id }
         )
       end
     end
@@ -309,6 +325,33 @@ class Family::DataExporter
         lines << {
           type: "Merchant",
           data: merchant.as_json
+        }.to_json
+      end
+
+      # Export physical-gold purchases after accounts and merchants so their
+      # ownership and optional merchant can be remapped on restore.
+      PhysicalGoldLot.joins(:account)
+                     .where(accounts: { family_id: @family.id })
+                     .find_each do |lot|
+        lines << {
+          type: "PhysicalGoldLot",
+          data: {
+            id: lot.id,
+            account_id: lot.account_id,
+            merchant_id: lot.merchant_id,
+            description: lot.description,
+            acquired_on: lot.acquired_on,
+            weight: lot.weight,
+            weight_unit: lot.weight_unit,
+            karat: lot.karat,
+            cost_amount: lot.cost_amount,
+            currency: lot.currency,
+            making_charge: lot.making_charge,
+            manual_value: lot.manual_value,
+            notes: lot.notes,
+            created_at: lot.created_at,
+            updated_at: lot.updated_at
+          }
         }.to_json
       end
 

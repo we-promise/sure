@@ -61,6 +61,21 @@ class GoldValuation
       response = provider.fetch_gold_price(date:)
       return convert_twelve_data_price(response.data) if response.success?
 
+      DebugLogEntry.capture(
+        category: "gold_valuation",
+        level: "warn",
+        message: "Twelve Data Gold Spot quote unavailable; falling back to GoldAPI",
+        source: "GoldValuation#fetch_twelve_data_gold_price",
+        provider_key: "twelve_data",
+        family: account.family,
+        account: account,
+        metadata: {
+          account_id: account.id,
+          error: response.error&.message,
+          failure_code: response.error&.failure_code
+        }
+      )
+
       nil
     end
 

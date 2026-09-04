@@ -1,7 +1,27 @@
 class AddGoldFormToInvestments < ActiveRecord::Migration[8.0]
   def up
     add_column :investments, :gold_form, :string
-    execute "UPDATE investments SET gold_form = 'physical' WHERE subtype = 'gold'"
+    execute <<~SQL.squish
+      UPDATE investments
+      SET gold_form = CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM accounts
+          WHERE accounts.accountable_type = 'Investment'
+            AND accounts.accountable_id = investments.id
+            AND (
+              EXISTS (SELECT 1 FROM holdings WHERE holdings.account_id = accounts.id)
+              OR EXISTS (
+                SELECT 1 FROM entries
+                WHERE entries.account_id = accounts.id
+                  AND entries.entryable_type = 'Trade'
+              )
+            )
+        ) THEN 'digital'
+        ELSE 'physical'
+      END
+      WHERE subtype = 'gold'
+    SQL
 
     add_check_constraint :investments,
                          "gold_form IS NULL OR gold_form IN ('physical', 'digital')",

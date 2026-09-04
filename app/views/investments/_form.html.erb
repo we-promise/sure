@@ -14,7 +14,7 @@
         <%= investment_form.select :gold_form,
                                    [[t("investments.form.physical_gold"), "physical"], [t("investments.form.digital_gold"), "digital"]],
                                    { label: t("investments.form.gold_form"), include_blank: false },
-                                   data: { action: "change->gold-investment-form#toggle" } %>
+                                   data: { gold_investment_form_target: "goldForm", action: "change->gold-investment-form#toggle" } %>
       </fieldset>
 
     </div>

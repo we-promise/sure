@@ -10,6 +10,7 @@ class SureImport < Import
     "Category" => :categories,
     "Tag" => :tags,
     "Merchant" => :merchants,
+    "PhysicalGoldLot" => :physical_gold_lots,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
     "Transfer" => :transfers,

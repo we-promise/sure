@@ -639,7 +639,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
   test "round trips physical gold investment details, including a zero override" do
     source_family = Family.create!(name: "Gold Source", currency: "USD")
-    source_family.accounts.create!(
+    merchant = source_family.merchants.create!(name: "Gold Dealer")
+    source_account = source_family.accounts.create!(
       name: "Physical Gold",
       accountable: Investment.new(
         subtype: "gold",
@@ -652,6 +653,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       balance: 12_000,
       currency: "USD"
     )
+    source_account.physical_gold_lots.create!(
+      description: "Wedding bracelet",
+      acquired_on: Date.parse("2026-01-15"),
+      weight: 25.5,
+      weight_unit: "gram",
+      karat: 22,
+      cost_amount: 2_000,
+      making_charge: 150,
+      manual_value: 0,
+      merchant: merchant,
+      notes: "Hallmarked"
+    )
 
     ndjson = nil
     Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
@@ -660,13 +673,26 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     Family::DataImporter.new(@family, ndjson).import!
 
-    gold = @family.accounts.find_by!(name: "Physical Gold").investment
+    restored_account = @family.accounts.find_by!(name: "Physical Gold")
+    gold = restored_account.investment
     assert_equal "gold", gold.subtype
     assert_equal "physical", gold.gold_form
     assert_equal 100.25, gold.gold_weight.to_f
     assert_equal "gram", gold.gold_weight_unit
     assert_equal 22.0, gold.gold_karat.to_f
     assert_equal 0.0, gold.gold_manual_value.to_f
+
+    lot = restored_account.physical_gold_lots.sole
+    assert_equal "Wedding bracelet", lot.description
+    assert_equal Date.parse("2026-01-15"), lot.acquired_on
+    assert_equal 25.5, lot.weight.to_f
+    assert_equal "gram", lot.weight_unit
+    assert_equal 22.0, lot.karat.to_f
+    assert_equal 2_000.0, lot.cost_amount.to_f
+    assert_equal 150.0, lot.making_charge.to_f
+    assert_equal 0.0, lot.manual_value.to_f
+    assert_equal "Gold Dealer", lot.merchant.name
+    assert_equal "Hallmarked", lot.notes
   end
 
   test "imports recurring transactions with unknown status fallback" do

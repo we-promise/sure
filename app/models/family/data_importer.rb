@@ -31,7 +31,7 @@ class Family::DataImporter
     end
   end
 
-  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant PhysicalGoldLot RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -47,6 +47,7 @@ class Family::DataImporter
     categories: "Category",
     tags: "Tag",
     merchants: "Merchant",
+    physical_gold_lots: "PhysicalGoldLot",
     recurring_transactions: "RecurringTransaction",
     recurring_occurrences: "RecurringOccurrence",
     transactions: "Transaction",
@@ -60,6 +61,7 @@ class Family::DataImporter
     "Category" => "categories",
     "Tag" => "tags",
     "Merchant" => "merchants",
+    "PhysicalGoldLot" => "physical_gold_lots",
     "RecurringTransaction" => "recurring_transactions",
     "RecurrenceRule" => "recurrence_rules",
     "RecurringOccurrence" => "recurring_occurrences",
@@ -88,6 +90,7 @@ class Family::DataImporter
       categories: {},
       tags: {},
       merchants: {},
+      physical_gold_lots: {},
       recurring_transactions: {},
       recurring_occurrences: {},
       transactions: {},
@@ -114,6 +117,7 @@ class Family::DataImporter
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
       import_merchants(records["Merchant"] || [])
+      import_physical_gold_lots(records["PhysicalGoldLot"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
       # Bills: rules and occurrences need their series, allocations and the
@@ -491,6 +495,45 @@ class Family::DataImporter
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)
+      end
+    end
+
+    def import_physical_gold_lots(records)
+      records.each do |record|
+        data = record["data"] || {}
+        old_id = data["id"]
+
+        require_source_id!("PhysicalGoldLot", old_id)
+
+        account_id = mapped_id(:accounts, data["account_id"], record_type: "PhysicalGoldLot")
+        next unless account_id
+
+        account = @family.accounts.find(account_id)
+        unless account.investment&.physical_gold?
+          invalid_record!("PhysicalGoldLot", "account_id", data["account_id"])
+          next
+        end
+
+        lot = mapped_record(:physical_gold_lots, old_id, account.physical_gold_lots, record_type: "PhysicalGoldLot")
+        created = lot.blank?
+        lot ||= account.physical_gold_lots.build
+        lot.assign_attributes(
+          description: data["description"],
+          acquired_on: parse_import_date(data["acquired_on"]),
+          weight: data["weight"].to_d,
+          weight_unit: data["weight_unit"],
+          karat: data["karat"].to_d,
+          cost_amount: data["cost_amount"].to_d,
+          currency: data["currency"] || account.currency,
+          making_charge: data["making_charge"].presence&.to_d,
+          manual_value: data["manual_value"].presence&.to_d,
+          notes: data["notes"],
+          merchant_id: remap_optional_id(:merchants, data["merchant_id"], record_type: "PhysicalGoldLot")
+        )
+        lot.save!
+
+        map_source!(:physical_gold_lots, old_id, lot)
+        increment_summary("PhysicalGoldLot", created ? :created : :updated)
       end
     end
 

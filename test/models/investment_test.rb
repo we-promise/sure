@@ -1,6 +1,16 @@
 require "test_helper"
 
 class InvestmentTest < ActiveSupport::TestCase
+  test "digital gold remains valid when it has existing holdings" do
+    account = accounts(:investment)
+    investment = account.investment
+
+    investment.update!(subtype: "gold", gold_form: "digital")
+
+    assert investment.valid?
+    assert account.supports_trades?
+  end
+
   test "calculates physical gold value from weight, purity, and a troy-ounce quote" do
     investment = Investment.new(subtype: "gold", gold_weight: 100, gold_weight_unit: "gram", gold_karat: 18)
 

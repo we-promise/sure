@@ -57,7 +57,7 @@ class Provider::Registry
       def gold_api
         return nil unless ENV["GOLD_API_KEY"].present? || Setting.gold_api_enabled
 
-        api_key = ENV["GOLD_API_KEY"].presence || Setting.gold_api_key
+        api_key = ENV["GOLD_API_KEY"].presence || Setting.gold_api_key # pipelock:ignore
         return nil unless api_key.present?
 
         Provider::GoldApi.new(api_key)

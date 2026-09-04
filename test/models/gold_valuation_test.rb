@@ -98,9 +98,15 @@ class GoldValuationTest < ActiveSupport::TestCase
       )
     )
 
-    GoldValuation.new(account: @account).refresh!
+    assert_difference -> { DebugLogEntry.with_provider_key("twelve_data").count }, 1 do
+      GoldValuation.new(account: @account).refresh!
+    end
 
     assert_in_delta 10_000, @account.reload.balance, 0.01
+    diagnostic = DebugLogEntry.with_provider_key("twelve_data").recent.first
+    assert_equal "gold_valuation", diagnostic.category
+    assert_equal @account, diagnostic.account
+    assert_equal "Commodity access requires a higher plan", diagnostic.metadata["error"]
   end
 
   test "reuses a newly cached XAU rate when another refresh stores it first" do
