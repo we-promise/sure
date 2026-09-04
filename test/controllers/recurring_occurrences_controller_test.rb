@@ -80,6 +80,31 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       assert_equal text, I18n.t("recurring_occurrences.#{key}", locale: :de, fallback: false)
     end
 
+    due_label_translations = {
+      "overdue.one" => "Seit 1 Tag überfällig · fällig am %{date}",
+      "overdue.other" => "Seit %{count} Tagen überfällig · fällig am %{date}",
+      "today" => "Heute fällig",
+      "settled" => "War am %{date} fällig",
+      "due_since" => "Fällig am %{date}",
+      "snoozed" => "Verschoben bis %{date}",
+      "upcoming.one" => "Morgen fällig · %{date}",
+      "upcoming.other" => "In %{count} Tagen fällig · %{date}"
+    }
+
+    due_label_translations.each do |key, text|
+      assert_equal text, I18n.t("bills.due_label.#{key}", locale: :de, fallback: false)
+    end
+
+    days_until_due = (@occurrence.effective_due_on - Date.current).to_i
+    localized_due_date = I18n.l(@occurrence.effective_due_on, locale: :de, format: :short).strip
+    german_due_label = I18n.t("bills.due_label.upcoming", count: days_until_due,
+      date: localized_due_date, locale: :de, fallback: false)
+    english_due_label = I18n.t("bills.due_label.upcoming", count: days_until_due,
+      date: localized_due_date, locale: :en)
+
+    assert_select "h2 + p", text: german_due_label
+    assert_select "h2 + p", text: english_due_label, count: 0
+
     assert_select "p", text: /ausstehend/
     assert_select "p", text: translations.fetch("show.find_heading")
     assert_select "summary", text: translations.fetch("show.search_all")
