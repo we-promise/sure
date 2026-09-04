@@ -2,6 +2,8 @@
 en:
   admin:
     system_health:
+      verify_worker_ai:
+        queued: "Worker check queued. It will appear below once a worker process picks it up, usually within a few seconds."
       show:
         title: System health
         tabs:
@@ -185,6 +187,29 @@ en:
             timeout: The service did not respond before the probe timeout
             request_failed: The service request failed
             unsupported_provider: The provider does not support this check
+          worker:
+            title: Worker verification
+            description: The checks above ran from this web process. Most AI work -- assistant responses, PDF processing, embeddings, auto-categorization, and merchant detection -- actually runs in a Sidekiq worker process, which can differ in network access, DNS, proxy rules, or even loaded credentials. Queue a check to verify a worker's own configuration and connectivity.
+            verify_button: Verify worker configuration
+            coverage_notice: Each check verifies exactly one worker process -- whichever one dequeues it. With more than one worker replica, a passing result does not confirm every worker is healthy; queue the check again to sample another.
+            empty:
+              title: No worker has checked in yet
+              description: Click "Verify worker configuration" to queue an asynchronous check. The result appears here once a worker process picks it up.
+            labels:
+              process: Worker process
+              checked_at: Checked
+              configuration: Configuration
+            configuration_statuses:
+              match: Matches web
+              mismatch: Differs from web
+            statuses:
+              passing: Passing
+              failing: Failing
+              stale: Stale
+            settings_origin:
+              title: Which settings need a restart?
+              database_backed: "Provider, model, and API-key settings changed in Settings → Self-Hosting are stored in the database. rails-settings-cached invalidates the shared cache on write, so both web and worker resolve the new value for the next request or queued job -- no restart needed."
+              env_backed: "Embedding configuration, and any value only set through an environment variable, is fixed when each container starts. Rails cannot change another container's environment, so changing these requires restarting or recreating both the web and worker services -- and any deployment tooling that only restarts one of them (partial rollout, an updated Secret without a pod restart) will not pick up the change."
           local_setup:
             title: Recommended local setup
             description: Run the LLM through your local OpenAI-compatible endpoint, store document vectors in pgvector, and point the embedding settings at an OpenAI-compatible embeddings endpoint. The PostgreSQL image must include the vector extension, and embedding dimensions must match the selected model.

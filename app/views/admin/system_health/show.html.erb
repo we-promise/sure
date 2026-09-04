@@ -16,6 +16,6 @@
   <% end %>
 
   <% tabs.with_panel(tab_id: "ai") do %>
-    <%= render "ai_status", ai_health: @ai_health %>
+    <%= render "ai_status", ai_health: @ai_health, worker_ai_health_results: @worker_ai_health_results %>
   <% end %>
 <% end %>
