@@ -131,8 +131,13 @@
     <div data-controller="reports-sortable" data-action="dragover->reports-sortable#dragOver drop->reports-sortable#drop" role="list" aria-label="Reports sections">
       <% @reports_sections.each do |section| %>
         <% next unless section[:visible] %>
+        <%# [-webkit-touch-callout:none] suppresses iOS Safari's native long-press
+            link preview on the amount/percentage anchors inside this section —
+            without it, the callout preempts the touch, fires touchcancel, and
+            the press-and-hold drag gesture never gets a chance to activate
+            (see #3132 review). %>
         <section
-          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 [-webkit-touch-callout:none]"
           data-reports-sortable-target="section"
           data-section-key="<%= section[:key] %>"
           data-controller="reports-section"
@@ -150,6 +155,7 @@
             touchmove->reports-sortable#touchMove
             touchend->reports-sortable#touchEnd
             touchcancel->reports-sortable#touchCancel
+            contextmenu->reports-sortable#suppressContextMenu
             keydown->reports-sortable#handleKeyDown">
           <div class="px-4 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">

@@ -15,6 +15,16 @@ module Admin
         run_probes: ai_tab,
         force_probes: ai_tab && params[:refresh_ai_health] == "1"
       )
+      @worker_ai_health_results = WorkerAiHealth.recent if ai_tab
+    end
+
+    # Queues an asynchronous worker-side verification (see
+    # WorkerAiHealthCheckJob) and returns immediately -- the result appears
+    # in the AI status tab once whichever worker process dequeues it
+    # finishes, typically within a few seconds.
+    def verify_worker_ai
+      WorkerAiHealth.request_check!
+      redirect_to admin_system_health_path(tab: "ai"), notice: t(".queued")
     end
   end
 end

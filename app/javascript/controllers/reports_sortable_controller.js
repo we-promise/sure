@@ -184,6 +184,15 @@ export default class extends Controller {
     this.resetTouchState();
   }
 
+  // Belt-and-suspenders alongside the `[-webkit-touch-callout:none]` class:
+  // if a long-press context menu/link-preview still fires (e.g. a browser
+  // that ignores the CSS property), don't let it interrupt the hold gesture.
+  suppressContextMenu(event) {
+    if (this.pendingSection || this.isTouching) {
+      event.preventDefault();
+    }
+  }
+
   cancelHold() {
     if (this.holdTimer) {
       clearTimeout(this.holdTimer);
