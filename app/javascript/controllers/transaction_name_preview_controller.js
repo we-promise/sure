@@ -72,9 +72,16 @@ export default class extends Controller {
       const matches = option.dataset.name.toLowerCase().includes(query);
       option.classList.toggle("hidden", !matches);
       if (matches) anyVisible = true;
+
+      // Re-filtering can hide whichever option was previously highlighted
+      // by arrow-key navigation -- clear that stale highlight/ARIA state
+      // along with resetting activeIndex below, not just the index itself.
+      option.classList.remove("bg-container-inset");
+      option.setAttribute("aria-selected", "false");
     });
 
     this.activeIndex = -1;
+    this.nameTarget.removeAttribute("aria-activedescendant");
     this.suggestionsTarget.classList.toggle("hidden", !anyVisible);
     this.nameTarget.setAttribute("aria-expanded", anyVisible ? "true" : "false");
   }
