@@ -945,7 +945,9 @@ Rails.application.routes.draw do
     # name even for singular resources, unlike its plural siblings above
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
-    resource :system_health, only: :show, controller: "system_health"
+    resource :system_health, only: :show, controller: "system_health" do
+      post :verify_worker_ai
+    end
   end
 
   # Defines the root path route ("/")
