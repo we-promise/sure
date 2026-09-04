@@ -88,7 +88,10 @@ module AccountableResource
           raise ActiveRecord::Rollback
         end
       end
-      # Return immediately after transaction completes - prevents success redirect after failed balance
+      # Return immediately after successful transaction to prevent fall-through
+      # to the success redirect below (which would cause double-render if the
+      # transaction was rolled back).
+      return
     else
       unless @account.update(update_params)
         @error_message = @account.errors.full_messages.join(", ")
