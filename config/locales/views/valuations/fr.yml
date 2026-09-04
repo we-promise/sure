@@ -1,6 +1,18 @@
 ---
 fr:
   valuations:
+    names:
+      current_account_value: Valeur actuelle du compte
+      current_balance: Solde actuel
+      current_loan_balance: Solde actuel du prêt
+      current_market_value: Valeur marchande actuelle
+      manual_balance_update: Mise à jour manuelle du solde
+      manual_principal_update: Mise à jour manuelle du principal
+      manual_value_update: Mise à jour manuelle de la valeur
+      opening_account_value: Valeur d'ouverture du compte
+      opening_balance: Solde d'ouverture
+      original_principal: Principal initial
+      original_purchase_price: Prix d'achat initial
     confirmation_contents:
       account_balance: solde du compte
       asset_value: valeur de l'actif
