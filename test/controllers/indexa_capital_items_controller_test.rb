@@ -141,4 +141,19 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
   end
+
+  test "Indexa Capital username, document, and password are filtered from logs" do
+    parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered_params = parameter_filter.filter(
+      indexa_capital_item: {
+        username: "investor@example.com",
+        document: "12345678A",
+        password: "super-secret"
+      }
+    )
+
+    assert_equal "[FILTERED]", filtered_params[:indexa_capital_item][:username]
+    assert_equal "[FILTERED]", filtered_params[:indexa_capital_item][:document]
+    assert_equal "[FILTERED]", filtered_params[:indexa_capital_item][:password]
+  end
 end
