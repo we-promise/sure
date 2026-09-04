@@ -35,6 +35,7 @@ class AccountsController < ApplicationController
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
+    @pluggy_items = visible_provider_items(family.pluggy_items.ordered.with_attached_logo.includes(:syncs, :pluggy_accounts))
     @trade_republic_items = visible_provider_items(
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
     )
@@ -370,6 +371,7 @@ class AccountsController < ApplicationController
         @kraken_items,
         @questrade_items,
         @wise_items,
+        @pluggy_items,
         @trade_republic_items,
         @onchain_wallet_items
       ].flatten.compact
@@ -625,6 +627,13 @@ class AccountsController < ApplicationController
       @wise_items.each do |item|
         latest_sync = item.latest_sync_record
         @wise_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Pluggy sync stats
+      @pluggy_sync_stats_map = {}
+      @pluggy_items.each do |item|
+        latest_sync = item.syncs.ordered.first
+        @pluggy_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end

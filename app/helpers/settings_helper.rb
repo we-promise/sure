@@ -116,6 +116,9 @@ module SettingsHelper
     when "questrade"
       return { status: :off } unless @questrade_items&.any?
       sync_based_summary(key)
+    when "pluggy"
+      return { status: :off } unless @pluggy_items&.any?
+      sync_based_summary(key)
     else
       { status: :off }
     end

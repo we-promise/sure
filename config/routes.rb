@@ -391,6 +391,7 @@ Rails.application.routes.draw do
       collection do
         post :sync_all
         post ":provider_key/sync", action: :sync, as: :sync_provider
+        post ":provider_key/connect_form", action: :connect_form, as: :post_connect_form
         get ":provider_key/connect_form", action: :connect_form, as: :connect_form
       end
     end
@@ -813,6 +814,22 @@ Rails.application.routes.draw do
   end
 
   resources :lunchflow_items, only: %i[index new create show edit update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :pluggy_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
       get :select_accounts
