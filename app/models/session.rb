@@ -17,6 +17,11 @@ class Session < ApplicationRecord
   # from the client and writes it straight into this record's jsonb column.
   ALLOWED_TAB_KEYS = %w[account_sidebar_tab].freeze
 
+  # How often an active session's `updated_at` is bumped. Touching on every
+  # request would mean a write per page load; this keeps the inactivity
+  # clock reasonably accurate without that cost.
+  SESSION_TOUCH_INTERVAL = 1.hour
+
   belongs_to :user, counter_cache: :sessions_count
   belongs_to :active_impersonator_session,
     -> { where(status: :in_progress) },
@@ -39,6 +44,11 @@ class Session < ApplicationRecord
           session.destroy
           count += 1
         end
+      rescue ActiveRecord::RecordNotFound
+        # with_lock reloads the row before yielding; if find_active_by_cookie
+        # destroyed it concurrently (expired user, invalid session) in that
+        # window, there's nothing left to clean up here.
+        next
       end
       count
     end
@@ -47,6 +57,9 @@ class Session < ApplicationRecord
     # via the signed session_token cookie (Authentication concern, Doorkeeper
     # authenticators, SuperAdminConstraint), so inactivity expiry can't be
     # bypassed by adding a new entry point that forgets to check `expired?`.
+    #
+    # Also refreshes the activity clock here (not per-caller) so any of these
+    # paths keeps a session alive, not just cookie-based web requests.
     def find_active_by_cookie(cookie_value)
       return nil if cookie_value.blank?
 
@@ -54,6 +67,7 @@ class Session < ApplicationRecord
       return nil unless session_record
 
       if session_record.user&.active? && !session_record.expired?
+        session_record.touch if session_record.updated_at < SESSION_TOUCH_INTERVAL.ago
         session_record
       else
         session_record.destroy!
