@@ -1648,12 +1648,49 @@ components:
         transfer:
           "$ref": "#/components/schemas/Transfer"
           nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID of the parent transaction when this transaction is a split
+            child
+        splits:
+          type: array
+          description: Child parts when this transaction is a split parent; empty
+            otherwise
+          items:
+            "$ref": "#/components/schemas/SplitPart"
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+    SplitPart:
+      type: object
+      required:
+      - id
+      - date
+      - name
+      - amount
+      - excluded
+      - category
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        name:
+          type: string
+        amount:
+          type: string
+        excluded:
+          type: boolean
+        category:
+          "$ref": "#/components/schemas/Category"
+          nullable: true
     TransactionCollection:
       type: object
       required:
@@ -7856,6 +7893,137 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
+        '404':
+          description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions/{id}/split":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: string
+        format: uuid
+      required: true
+      description: Transaction ID. Passing a split child ID resolves to its parent.
+    post:
+      summary: Split a transaction into categorized parts
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Splitting replaces any existing split on the transaction with the
+        provided parts.
+      parameters: []
+      responses:
+        '200':
+          description: transaction split
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: missing or malformed split parameters
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - split
+              properties:
+                split:
+                  type: object
+                  required:
+                  - splits
+                  properties:
+                    splits:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                        - name
+                        - amount
+                        properties:
+                          name:
+                            type: string
+                            description: Name of the split part
+                          amount:
+                            type: number
+                            description: Signed amount of the split part. Parts must
+                              sum to the parent transaction amount (positive = expense,
+                              negative = income).
+                          category_id:
+                            type: string
+                            format: uuid
+                            description: Optional category ID for this part
+                          excluded:
+                            type: boolean
+                            description: Exclude this part from cash flow and analytics
+        required: true
+    delete:
+      summary: Remove a split and restore the parent transaction
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Removes the split parts and restores the parent transaction. Passing
+        a split child ID resolves to its parent.
+      responses:
+        '200':
+          description: split removed and parent restored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Transaction"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: transaction is not split
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:

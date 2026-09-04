@@ -31,6 +31,18 @@ RSpec.describe 'API V1 Transactions', type: :request do
     )
   end
 
+  let(:api_key_without_read_scope) do
+    key = ApiKey.generate_secure_key
+    ApiKey.new(
+      user: user,
+      name: 'No Read Docs Key',
+      key: key,
+      display_key: "no_read_scope_#{SecureRandom.hex(8)}",
+      scopes: [],
+      source: 'mobile'
+    ).tap { |api_key| api_key.save!(validate: false) }
+  end
+
   let(:'X-Api-Key') { api_key.plain_key }
 
   let(:account) do
@@ -39,6 +51,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
+      owner: user,
       accountable: Depository.create!
     )
   end
@@ -360,6 +373,181 @@ RSpec.describe 'API V1 Transactions', type: :request do
 
       response '200', 'transaction deleted' do
         schema '$ref' => '#/components/schemas/DeleteResponse'
+
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/transactions/{id}/split' do
+    parameter name: :id, in: :path, schema: { type: :string, format: :uuid }, required: true,
+              description: 'Transaction ID. Passing a split child ID resolves to its parent.'
+
+    let(:split_entry) do
+      account.entries.create!(
+        name: 'Grocery shopping',
+        date: Date.current,
+        amount: 100,
+        currency: 'USD',
+        entryable: Transaction.new
+      )
+    end
+
+    post 'Split a transaction into categorized parts' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      description 'Splitting replaces any existing split on the transaction with the provided parts.'
+
+      let(:id) { split_entry.transaction.id }
+
+      parameter name: :body, in: :body, required: true, schema: {
+        type: :object,
+        required: %w[split],
+        properties: {
+          split: {
+            type: :object,
+            required: %w[splits],
+            properties: {
+              splits: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[name amount],
+                  properties: {
+                    name: { type: :string, description: 'Name of the split part' },
+                    amount: {
+                      type: :number,
+                      description: 'Signed amount of the split part. Parts must sum to the parent transaction amount (positive = expense, negative = income).'
+                    },
+                    category_id: { type: :string, format: :uuid, description: 'Optional category ID for this part' },
+                    excluded: { type: :boolean, description: 'Exclude this part from cash flow and analytics' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      let(:body) do
+        {
+          split: {
+            splits: [
+              { name: 'Groceries', amount: 70, category_id: category.id },
+              { name: 'Household', amount: 30 }
+            ]
+          }
+        }
+      end
+
+      response '200', 'transaction split' do
+        schema '$ref' => '#/components/schemas/Transaction'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { nil }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+        run_test!
+      end
+
+      response '400', 'missing or malformed split parameters' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { split: {} } }
+
+        run_test!
+      end
+
+      response '422', 'validation failed' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) do
+          {
+            split: {
+              splits: [
+                { name: 'Groceries', amount: 50 },
+                { name: 'Household', amount: 30 }
+              ]
+            }
+          }
+        end
+
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+
+    delete 'Remove a split and restore the parent transaction' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+      description 'Removes the split parts and restores the parent transaction. Passing a split child ID resolves to its parent.'
+
+      let(:split_entry) do
+        entry = account.entries.create!(
+          name: 'Grocery shopping',
+          date: Date.current,
+          amount: 100,
+          currency: 'USD',
+          entryable: Transaction.new
+        )
+        entry.split!([ { name: 'Part 1', amount: 60 }, { name: 'Part 2', amount: 40 } ])
+        entry
+      end
+
+      let(:id) { split_entry.transaction.id }
+
+      response '200', 'split removed and parent restored' do
+        schema '$ref' => '#/components/schemas/Transaction'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { nil }
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+        run_test!
+      end
+
+      response '422', 'transaction is not split' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { split_entry.transaction.id }
+
+        before do
+          split_entry.unsplit!
+        end
 
         run_test!
       end

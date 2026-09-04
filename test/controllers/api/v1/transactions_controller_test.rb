@@ -862,6 +862,425 @@ end
     assert_empty queries.grep(/SELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id" =/)
   end
 
+  # SPLIT action tests
+  test "should split a transaction into categorized parts" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    category = @family.categories.create!(name: "Food", color: "#4CAF50")
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "Groceries", amount: "70", category_id: category.id },
+               { name: "Household", amount: "30" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal 2, response_data["splits"].size
+    assert_equal [ "Groceries", "Household" ], response_data["splits"].map { |s| s["name"] }
+    assert_equal "Food", response_data["splits"].first["category"]["name"]
+    assert_nil response_data["splits"].second["category"]
+
+    entry.reload
+    assert entry.split_parent?
+    assert entry.excluded?
+    assert_equal 2, entry.child_entries.count
+    by_name = entry.child_entries.index_by(&:name)
+    assert_equal 70, by_name["Groceries"].amount.to_i
+    assert_equal 30, by_name["Household"].amount.to_i
+  end
+
+  test "should expose transaction ids for split children and parent" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "Groceries", amount: "70" },
+               { name: "Household", amount: "30" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :success
+
+    entry.reload
+    response_data = JSON.parse(response.body)
+    by_name = entry.child_entries.index_by(&:name)
+    response_data["splits"].each do |split|
+      assert_equal by_name.fetch(split["name"]).transaction.id, split["id"]
+    end
+
+    child = entry.child_entries.first
+    get api_v1_transaction_url(child.transaction), headers: api_headers(@api_key)
+    assert_response :success
+    child_data = JSON.parse(response.body)
+    assert_equal entry.transaction.id, child_data["parent_id"]
+  end
+
+  test "should reject split when splits key is missing" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: {} },
+         headers: api_headers(@api_key)
+    assert_response :bad_request
+
+    response_data = JSON.parse(response.body)
+    assert_equal "bad_request", response_data["error"]
+
+    entry.reload
+    assert_not entry.split_parent?
+  end
+
+  test "should reject split request without API key" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [ { name: "Part 1", amount: "100" } ] } }
+    assert_response :unauthorized
+  end
+
+  test "should reject unsplit request without API key" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    entry.split!([ { name: "Part 1", amount: 100 } ])
+
+    delete split_api_v1_transaction_url(entry.transaction)
+    assert_response :unauthorized
+  end
+
+  test "should reject split with malformed split parameter shapes" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    [
+      { split: "not-an-object" },
+      { split: { splits: "not-an-array" } },
+      { split: { splits: [ "not-an-object" ] } },
+      { split: { splits: [ { name: "Part 1", amount: [ 100 ] } ] } },
+      { split: { splits: [ { name: "Part 1", amount: { value: 100 } } ] } },
+      { split: { splits: [ { name: "Part 1", amount: "not-a-number" } ] } }
+    ].each do |payload|
+      post split_api_v1_transaction_url(entry.transaction), params: payload, headers: api_headers(@api_key)
+      assert_includes [ 400, 422 ], response.status, "expected 400/422 for #{payload.inspect}"
+    end
+
+    entry.reload
+    assert_not entry.split_parent?
+  end
+
+  test "concurrent split replacements leave only the winning split set" do
+    entry = create_transaction(account: @account, name: "Concurrent", amount: 100)
+
+    barrier = Queue.new
+    results = Queue.new
+    threads = 2.times.map do |i|
+      Thread.new do
+        session = open_session
+        barrier.pop
+        session.post split_api_v1_transaction_url(entry.transaction),
+                     params: {
+                       split: {
+                         splits: [
+                           { name: "Set #{i} A", amount: 60 },
+                           { name: "Set #{i} B", amount: 40 }
+                         ]
+                       }
+                     },
+                     headers: api_headers(@api_key)
+        results << session.response.status
+      end
+    end
+    threads.each { barrier << true }
+    threads.each(&:join)
+
+    assert_equal [ 200, 200 ], [ results.pop, results.pop ].sort
+
+    entry.reload
+    children = entry.child_entries.to_a
+    assert_equal 2, children.size
+    names = children.map(&:name).sort
+    assert [ [ "Set 0 A", "Set 0 B" ].sort, [ "Set 1 A", "Set 1 B" ].sort ].include?(names)
+  end
+
+  test "should not split a transaction on a read-only shared account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Test Member RW Key",
+      scopes: [ "read_write" ],
+      display_key: "test_mem_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+
+    entry = create_transaction(account: accounts(:credit_card), name: "Shared Purchase", amount: 50)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [ { name: "Part 1", amount: "50" } ] } },
+         headers: api_headers(member_key)
+    assert_response :not_found
+
+    entry.reload
+    assert_not entry.split_parent?
+  end
+
+  test "should split a transaction on a fully shared account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    member_key = ApiKey.create!(
+      user: member,
+      name: "Test Member RW Key",
+      scopes: [ "read_write" ],
+      display_key: "test_mem_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{member_key.id}")
+
+    entry = create_transaction(account: accounts(:depository), name: "Shared Purchase", amount: 50)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [ { name: "Part 1", amount: "50" } ] } },
+         headers: api_headers(member_key)
+    assert_response :success
+  end
+
+  test "index avoids per-child category queries for split transactions" do
+    category = @family.categories.create!(name: "Split Food", color: "#4CAF50")
+
+    split_parent = create_transaction(account: @account, name: "Split Me", amount: 200)
+    split_parent.split!([
+      { name: "Part A", amount: 120, category_id: category.id },
+      { name: "Part B", amount: 80, category_id: category.id }
+    ])
+    baseline_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    3.times do |i|
+      parent = create_transaction(account: @account, name: "Split Me #{i}", amount: 300)
+      parent.split!([
+        { name: "Part C", amount: 100, category_id: category.id },
+        { name: "Part D", amount: 200, category_id: category.id }
+      ])
+    end
+    expanded_queries = count_db_queries do
+      get api_v1_transactions_url, params: { per_page: 200 }, headers: api_headers(@api_key)
+      assert_response :success
+    end
+
+    assert_equal baseline_queries, expanded_queries
+  end
+
+  test "should split income transaction with negative parts" do
+    entry = create_transaction(account: @account, name: "Reimbursement", amount: -100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "Part 1", amount: "-60" },
+               { name: "Part 2", amount: "-40" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :success
+
+    entry.reload
+    assert_equal 2, entry.child_entries.count
+    assert_equal [ -60, -40 ], entry.child_entries.map { |c| c.amount.to_i }.sort
+  end
+
+  test "should reject split when parts do not sum to parent amount" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "Groceries", amount: "50" },
+               { name: "Household", amount: "30" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+
+    entry.reload
+    assert_not entry.split_parent?
+    assert_not entry.excluded?
+  end
+
+  test "should reject split with no split parts" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: { split: { splits: [] } },
+         headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+  end
+
+  test "should reject split with missing split parameter" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {},
+         headers: api_headers(@api_key)
+    assert_response :bad_request
+  end
+
+  test "should reject split on a transfer transaction" do
+    to_account = @family.accounts.second || @family.accounts.create!(
+      name: "Second Account",
+      balance: 0,
+      currency: @family.currency,
+      accountable: Depository.new
+    )
+    transfer = create_transfer(from_account: @account, to_account: to_account, amount: 10)
+    transaction = transfer.outflow_transaction
+
+    post split_api_v1_transaction_url(transaction),
+         params: {
+           split: {
+             splits: [ { name: "Part 1", amount: "10" } ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+  end
+
+  test "should replace an existing split on a split parent" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    entry.split!([ { name: "Old 1", amount: 60 }, { name: "Old 2", amount: 40 } ])
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "New 1", amount: "50" },
+               { name: "New 2", amount: "30" },
+               { name: "New 3", amount: "20" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :success
+
+    entry.reload
+    assert_equal 3, entry.child_entries.count
+    assert_equal %w[New\ 1 New\ 2 New\ 3], entry.child_entries.map(&:name).sort
+    assert entry.excluded?
+  end
+
+  test "should resolve split child to parent when splitting" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    children = entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    post split_api_v1_transaction_url(children.first.transaction),
+         params: {
+           split: {
+             splits: [
+               { name: "A", amount: "25" },
+               { name: "B", amount: "75" }
+             ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :success
+
+    entry.reload
+    assert_equal 2, entry.child_entries.count
+    assert_equal %w[A B], entry.child_entries.map(&:name).sort
+  end
+
+  test "should reject split with read-only API key" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    post split_api_v1_transaction_url(entry.transaction),
+         params: {
+           split: {
+             splits: [ { name: "Groceries", amount: "100" } ]
+           }
+         },
+         headers: api_headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "should return 404 when splitting unknown transaction" do
+    post split_api_v1_transaction_url(SecureRandom.uuid),
+         params: {
+           split: {
+             splits: [ { name: "Groceries", amount: "100" } ]
+           }
+         },
+         headers: api_headers(@api_key)
+    assert_response :not_found
+  end
+
+  # UNSPLIT action tests
+  test "should unsplit a transaction and restore parent" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    delete split_api_v1_transaction_url(entry.transaction), headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_empty response_data["splits"]
+    assert_nil response_data["parent_id"]
+
+    entry.reload
+    assert_not entry.split_parent?
+    assert_not entry.excluded?
+    assert_empty entry.child_entries
+  end
+
+  test "should reject unsplit on a transaction that is not split" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+
+    delete split_api_v1_transaction_url(entry.transaction), headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+  end
+
+  test "should resolve split child to parent when unsplitting" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    children = entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    delete split_api_v1_transaction_url(children.first.transaction), headers: api_headers(@api_key)
+    assert_response :success
+
+    entry.reload
+    assert_not entry.split_parent?
+    assert_not entry.excluded?
+  end
+
+  test "should reject unsplit with read-only API key" do
+    entry = create_transaction(account: @account, name: "Grocery Store", amount: 100)
+    entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    delete split_api_v1_transaction_url(entry.transaction), headers: api_headers(@read_only_api_key)
+    assert_response :forbidden
+  end
+
+  test "should include split fields in index response" do
+    get api_v1_transactions_url, headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    first = response_data["transactions"].first
+    assert first.key?("parent_id")
+    assert first.key?("splits")
+    assert_kind_of Array, first["splits"]
+  end
+
   private
 
     def api_headers(api_key)

@@ -82,6 +82,7 @@ RSpec.describe 'API V1 Merchants', type: :request do
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { nil }
+        let(:file) { nil }
         run_test!
       end
 
