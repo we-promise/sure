@@ -268,17 +268,19 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry.account.family.update!(auto_generate_transaction_names: true)
 
     # Name is blank but a category is selected, so Entry#set_default_name
-    # fills it in during validation; currency is deliberately left blank so
-    # the record still fails to save for an unrelated reason. The
-    # re-rendered form must show the name field blank again (not the
-    # generated text), or a resubmission after changing the category would
-    # save that now-stale name instead of a fresh one.
+    # fills it in during validation; the date is deliberately out of the
+    # supported range so the record still fails to save for an unrelated
+    # reason (an invalid currency would break rendering the money field
+    # itself, not just validation). The re-rendered form must show the name
+    # field blank again (not the generated text), or a resubmission after
+    # changing the category would save that now-stale name instead of a
+    # fresh one.
     post transactions_url, params: {
       entry: {
         account_id: @entry.account_id,
         name: "",
-        date: Date.current,
-        currency: "",
+        date: 40.years.ago.to_date,
+        currency: "USD",
         amount: 100,
         nature: "inflow",
         entryable_type: "Transaction",
@@ -297,8 +299,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       entry: {
         account_id: @entry.account_id,
         name: "Explicit name",
-        date: Date.current,
-        currency: "",
+        date: 40.years.ago.to_date,
+        currency: "USD",
         amount: 100,
         nature: "inflow",
         entryable_type: "Transaction",

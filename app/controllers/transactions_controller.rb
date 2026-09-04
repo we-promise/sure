@@ -675,12 +675,18 @@ class TransactionsController < ApplicationController
       # Current.accessible_entries (not Entry.family_scope), so a non-admin
       # family member never sees names from accounts that weren't shared
       # with them -- family-wide settings still respect per-account sharing.
+      # Its underlying Account.accessible_by scope is itself a `.distinct`
+      # query, so ORDER BY created_at must stay in the pluck'd column list
+      # (a plain "pluck(:name)" here would hit Postgres's "SELECT DISTINCT
+      # ... ORDER BY expressions must appear in select list"); dedup by name
+      # happens in Ruby afterward instead.
       Current.accessible_entries
         .where(entryable_type: "Transaction")
         .where.not(name: I18n.t("transactions.unknown_name"))
         .order(created_at: :desc)
         .limit(200)
-        .pluck(:name)
+        .pluck(:name, :created_at)
+        .map(&:first)
         .uniq
         .first(20)
     end
