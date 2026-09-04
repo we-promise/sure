@@ -1485,6 +1485,61 @@ timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 
+#### Troubleshooting Pgvector and Embeddings
+
+The AI status page reports separate failures for the PostgreSQL storage check
+and the embedding endpoint check.
+
+If PostgreSQL reports that the `vector` extension is not enabled, make sure the
+database image includes pgvector, then enable the extension as a database owner
+or superuser:
+
+```bash
+sudo -u postgres psql -d sure_production -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+If `vector_store_chunks` is missing, confirm the migration state and re-run the
+conditional vector-store migration with the pgvector provider selected:
+
+```bash
+RAILS_ENV=production bundle exec rails db:migrate:status
+VECTOR_STORE_PROVIDER=pgvector RAILS_ENV=production bundle exec rails db:migrate:redo VERSION=<migration_version>
+```
+
+If the embedding check reports a dimensions mismatch, align
+`EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS` with the embedding provider's
+documented vector size. For example, `gemini-embedding-2-preview` returns 3072
+dimensions by default, so a matching configuration is:
+
+```bash
+EMBEDDING_MODEL=gemini-embedding-2-preview
+EMBEDDING_DIMENSIONS=3072
+```
+
+Changing only `EMBEDDING_DIMENSIONS` does not reshape an existing pgvector
+column. If `vector_store_chunks` was already created with a different size,
+back up the database and source documents, remove the indexed documents from
+Sure, then alter or recreate the `embedding` column/table before uploading the
+documents again. Dropping the empty chunks table lets Sure recreate it with the
+new vector size:
+
+```bash
+docker compose -f compose.example.ai.yml exec web bin/rails runner \
+  'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+```
+
+Restart Sure after changing environment values so the new settings are present
+in both web and worker processes. If the embedding live check times out, raise
+the health-check probe timeout in the service environment:
+
+```bash
+AI_HEALTH_PROBE_TIMEOUT=180
+```
+
+If normal AI chat calls also time out, raise `OPENAI_REQUEST_TIMEOUT`
+separately; it controls OpenAI-compatible LLM requests, not the health-check
+probe budget.
+
 You can also check the adapter from the Rails console:
 
 ```ruby
