@@ -765,6 +765,45 @@ class AccountTest < ActiveSupport::TestCase
     assert blob.service.exist?(blob.key), "blob bytes must be uploaded to the storage service, not just the rows"
   end
 
+  # Regression: when an account save with a logo upload happens inside an outer
+  # transaction that later rolls back, the uploaded file must be cleaned up.
+  # Otherwise orphaned files (up to 25MB each) accumulate on storage with no
+  # blob/attachment row to purge them.
+  test "logo upload inside a rolled-back transaction cleans up the storage file" do
+    blob_key = nil
+
+    assert_raises(RuntimeError) do
+      Account.transaction do
+        account = Account.create_and_sync(
+          {
+            family: @family,
+            name: "Rollback Test Account",
+            balance: 100,
+            currency: "USD",
+            accountable_type: "Depository",
+            accountable: Depository.new(subtype: :checking),
+            logo: { io: StringIO.new("rollback-test-bytes"), filename: "rollback.png", content_type: "image/png" }
+          },
+          opening_balance_date: Date.current - 2.years
+        )
+
+        # Capture the blob key before rollback so we can verify cleanup
+        blob_key = account.logo.blob.key
+
+        # Verify the file was uploaded
+        assert account.logo.blob.service.exist?(blob_key), "blob should exist before rollback"
+
+        # Simulate a later failure that triggers rollback
+        raise "Simulated balance reconciliation failure"
+      end
+    end
+
+    # After rollback, the blob row is gone but we tracked the key.
+    # The orphaned file should have been cleaned up.
+    refute ActiveStorage::Blob.service.exist?(blob_key),
+      "orphaned logo file should be cleaned up after rollback, but still exists on storage"
+  end
+
   # A broken manual upload (attachment row present, file missing from storage)
   # must fall back to the auto chain once the broken attachment is detached —
   # the fallback must be persistent, not retried on every request.

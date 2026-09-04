@@ -138,6 +138,10 @@ class Account < ApplicationRecord
   # callback runs first.
   after_save :upload_pending_logo_blob,
              if: -> { attachment_changes["logo"].is_a?(ActiveStorage::Attached::Changes::CreateOne) }
+  # Clean up orphaned storage file if the outer transaction rolls back after
+  # the after_save upload (blob/attachment rows disappear but the uploaded
+  # bytes remain on storage).
+  after_rollback :purge_uploaded_logo_on_rollback
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -734,7 +738,26 @@ class Account < ApplicationRecord
     # after_commit upload is unsafe here). Removing the pending change also
     # stops Rails' after_commit hook from attempting a duplicate upload.
     def upload_pending_logo_blob
-      attachment_changes.delete("logo").upload
+      change = attachment_changes.delete("logo")
+      change.upload
+      # Track the blob for rollback cleanup: if the outer transaction rolls
+      # back, the blob/attachment rows disappear but the uploaded bytes
+      # remain on storage. purge_uploaded_logo_on_rollback removes them.
+      @_uploaded_logo_blob_for_rollback = change.blob
+    end
+
+    def purge_uploaded_logo_on_rollback
+      blob = @_uploaded_logo_blob_for_rollback
+      return unless blob
+
+      # The blob record may already be gone due to rollback, but the file
+      # on storage still exists. Delete it directly using the tracked key.
+      blob.service.delete(blob.key)
+    rescue => e
+      # Log but don't raise - we're already in rollback and can't recover.
+      Rails.logger.warn("Failed to clean up orphaned logo blob: #{e.message}")
+    ensure
+      @_uploaded_logo_blob_for_rollback = nil
     end
 
 
