@@ -202,32 +202,32 @@ class Account::ProviderImportAdapter
         entry.transaction.save!
       end
 
-      # Auto-detect investment activity labels for investment accounts
+      # Auto-detect investment activity labels for investment accounts. A label
+      # from a previous sync is metadata, not proof that this transaction is an
+      # internal transfer, so do not reuse it for classification.
       detected_label = investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
         detected_label = detect_activity_label(name, amount)
       end
 
-      # Determine the transaction kind. Activity-label and account-type classification
-      # take precedence; an explicit kind supplied by the provider is used as a fallback
-      # for the standard case. A provider such as Up flags internal transfers and
-      # round-ups (via relationships.transferAccount) and passes funds_movement, but a
-      # repayment imported onto a linked Loan/CreditCard account must stay
-      # loan_payment/cc_payment (a budgeted expense) rather than being reclassified, so
-      # the account-type branches below win over the provider hint.
+      # Determine the transaction kind. A provider's transfer/contribution label or
+      # transfer kind is not enough to establish an internal transfer: only a real
+      # Sure Transfer record can do that. The family matcher assigns transfer kinds
+      # once it has both accounts. Account-type branches below still classify loan and
+      # credit-card payments, which are budgeted expenses rather than transfers.
+      previous_kind = entry.transaction.kind
       auto_kind = nil
-      auto_category = nil
-      if Transaction::INTERNAL_MOVEMENT_LABELS.include?(detected_label)
-        auto_kind = "funds_movement"
-      elsif detected_label == "Contribution"
-        auto_kind = "investment_contribution"
-        auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
+      if account.accountable_type == "Loan" && amount.negative?
         auto_kind = "loan_payment"
       elsif account.accountable_type == "CreditCard" && amount.negative?
         auto_kind = "cc_payment"
+      elsif kind.present? && !Transaction::TRANSFER_KINDS.include?(kind)
+        auto_kind = kind
+      elsif Transaction::TRANSFER_KINDS.include?(previous_kind) && !transfer_record_exists?(entry.transaction)
+        # Clear a stale provider classification when a later import no longer
+        # supplies an internal counterpart or transfer relationship.
+        auto_kind = "standard"
       end
-      auto_kind ||= kind.presence
 
       # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
@@ -239,8 +239,10 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(kind: auto_kind)
         end
 
-        if auto_category.present? && entry.transaction.category_id.blank?
-          entry.transaction.assign_attributes(category: auto_category)
+        if category_id.blank? &&
+              previous_kind == "investment_contribution" &&
+              entry.transaction.category == account.family.investment_contributions_category
+          entry.transaction.assign_attributes(category: nil)
         end
       end
 
@@ -1041,6 +1043,12 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    def transfer_record_exists?(transaction)
+      Transfer.where(inflow_transaction_id: transaction.id)
+        .or(Transfer.where(outflow_transaction_id: transaction.id))
+        .exists?
+    end
 
     # Memoized per adapter instance (which is per-account). Membership in
     # goal_accounts is stable across a sync batch.
