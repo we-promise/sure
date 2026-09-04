@@ -4,11 +4,19 @@ import { Controller } from "@hotwired/stimulus";
 // custom override or built-in default. Clears the input when text matches
 // the default to avoid storing duplicate copies.
 export default class extends Controller {
-  static targets = ["textarea", "prompt", "provider", "status", "reset"];
+  static targets = [
+    "textarea",
+    "prompt",
+    "provider",
+    "status",
+    "counter",
+    "reset",
+  ];
   static values = {
     resetConfirm: String,
     statusCustom: String,
     statusDefault: String,
+    maxLength: Number,
   };
 
   connect() {
@@ -60,12 +68,24 @@ export default class extends Controller {
 
   updateStatus() {
     const prompt = this.selectedPrompt();
-    if (!prompt || !this.hasStatusTarget) return;
+    if (!prompt) return;
 
     const customized = (prompt.value || "").trim().length > 0;
-    this.statusTarget.textContent = customized
-      ? this.statusCustomValue
-      : this.statusDefaultValue;
+
+    if (this.hasStatusTarget) {
+      this.statusTarget.textContent = customized
+        ? this.statusCustomValue
+        : this.statusDefaultValue;
+    }
+
+    if (this.hasCounterTarget && this.hasMaxLengthValue) {
+      const length = this.textareaTarget.value.length;
+      const over = length > this.maxLengthValue;
+      this.counterTarget.textContent = `${length.toLocaleString()} / ${this.maxLengthValue.toLocaleString()}`;
+      this.counterTarget.classList.toggle("text-destructive", over);
+      this.counterTarget.classList.toggle("text-secondary", !over);
+    }
+
     if (this.hasResetTarget) {
       this.resetTarget.disabled = !customized;
     }

@@ -8,7 +8,6 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
   test "every key has a built-in default and no override out of the box" do
     Family::AiPromptable::KEYS.each do |key|
       assert_nil @family.ai_prompt(key), "#{key} should start with no override"
-      assert_not @family.ai_prompt_customized?(key)
       assert @family.ai_prompt_default(key).present?, "#{key} resolved no built-in default"
     end
   end
@@ -43,7 +42,7 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
 
   test "a blank value resets the key rather than storing an empty prompt" do
     @family.update!(ai_prompt_chat_system: "Be terse.")
-    assert @family.ai_prompt_customized?(:chat_system)
+    assert_equal "Be terse.", @family.ai_prompt(:chat_system)
 
     @family.update!(ai_prompt_chat_system: "")
 
@@ -51,10 +50,12 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_not @family.reload.ai_prompt_overrides.key?("chat_system")
   end
 
-  test "rejects an override longer than the cap" do
+  test "rejects an override longer than the cap with formatted error message" do
     @family.ai_prompt_chat_system = "x" * (Family::AiPromptable::MAX_LENGTH + 1)
 
     assert_not @family.valid?
     assert_includes @family.errors.attribute_names, :ai_prompt_chat_system
+    assert_equal "Chat system prompt is too long (maximum is 20,000 characters)",
+      @family.errors.full_messages_for(:ai_prompt_chat_system).first
   end
 end

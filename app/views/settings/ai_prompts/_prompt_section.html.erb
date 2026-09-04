@@ -1,5 +1,5 @@
-<%# locals: (icon_name:, title:, subtitle:) %>
-<details class="group bg-container hover:bg-container-inset p-4 shadow-border-xs rounded-xl transition-colors">
+<%# locals: (icon_name:, title:, subtitle:, open: false) %>
+<details class="group bg-container hover:bg-container-inset p-4 shadow-border-xs rounded-xl transition-colors" <%= "open" if open %>>
   <summary class="flex items-center justify-between gap-4 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden focus-ring rounded-lg">
     <div class="flex items-center gap-3 min-w-0">
       <div class="w-9 h-9 rounded-full bg-surface-inset flex justify-center items-center shrink-0">
