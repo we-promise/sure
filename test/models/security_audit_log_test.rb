@@ -22,7 +22,7 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
     assert_equal "api_key_created", log.event_type
     assert_equal api_key.id, log.metadata["api_key_id"]
     assert_equal "Test Key", log.metadata["name"]
-    assert_equal @user.email, log.metadata["user_email"]
+    assert_equal @user.email, log.user_email
     assert_equal "203.0.113.5", log.ip_address
   end
 
@@ -30,7 +30,7 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
     log = SecurityAuditLog.log_password_changed!(user: @user, request: @request)
 
     assert_equal "password_changed", log.event_type
-    assert_equal @user.email, log.metadata["user_email"]
+    assert_equal @user.email, log.user_email
     assert_not_includes log.metadata.to_s, "password"
   end
 
@@ -61,7 +61,7 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
     assert_equal "webauthn_credential_added", log.event_type
     assert_equal credential.id, log.metadata["credential_id"]
     assert_equal "YubiKey", log.metadata["nickname"]
-    assert_equal @user.email, log.metadata["user_email"]
+    assert_equal @user.email, log.user_email
   end
 
   test "log_webauthn_credential_removed! records the credential id and nickname" do
@@ -78,7 +78,7 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
     assert_equal "YubiKey", log.metadata["nickname"]
   end
 
-  test "survives its user being deleted, preserving the user's email in metadata" do
+  test "survives its user being deleted, preserving the user's email" do
     disposable_user = User.create!(
       email: "disposable-audit-test@example.com",
       password: "somesecurepassword12345",
@@ -92,6 +92,6 @@ class SecurityAuditLogTest < ActiveSupport::TestCase
 
     log.reload
     assert_nil log.user_id
-    assert_equal "disposable-audit-test@example.com", log.metadata["user_email"]
+    assert_equal "disposable-audit-test@example.com", log.user_email
   end
 end

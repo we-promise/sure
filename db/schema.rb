@@ -1992,6 +1992,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "updated_at", null: false
     t.string "user_agent"
+    t.text "user_email"
     t.uuid "user_id"
     t.index ["created_at"], name: "index_security_audit_logs_on_created_at"
     t.index ["event_type"], name: "index_security_audit_logs_on_event_type"
