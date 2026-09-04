@@ -6,6 +6,5 @@ class AddPhysicalGoldDetailsToInvestments < ActiveRecord::Migration[8.0]
       t.decimal :gold_karat, precision: 4, scale: 1
       t.decimal :gold_manual_value, precision: 18, scale: 2
     end
-
   end
 end

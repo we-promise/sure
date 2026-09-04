@@ -213,52 +213,52 @@ class Investment < ApplicationRecord
       errors.add(:subtype, I18n.t("investments.errors.gold_cannot_have_holdings"))
     end
 
-  class << self
-    def color
-      "#1570EF"
-    end
-
-    def classification
-      "asset"
-    end
-
-    def icon
-      "chart-line"
-    end
-
-    def region_label_for(region)
-      I18n.t("accounts.subtype_regions.#{region || 'generic'}")
-    end
-
-    # Maps currency codes to regions for prioritizing user's likely region
-    CURRENCY_REGION_MAP = {
-      "USD" => "us",
-      "GBP" => "uk",
-      "CAD" => "ca",
-      "AUD" => "au",
-      "EUR" => "eu",
-      "CHF" => "eu",
-      "INR" => "in"
-    }.freeze
-
-    # Returns subtypes grouped by region for use with grouped_options_for_select
-    # Optionally accepts currency to prioritize user's region first
-    def subtypes_grouped_for_select(currency: nil)
-      user_region = CURRENCY_REGION_MAP[currency]
-      grouped = SUBTYPES.group_by { |_, v| v[:region] }
-
-      # Build region order: user's region first (if known), then Generic, then others
-      other_regions = %w[us uk ca au eu in] - [ user_region ].compact
-      region_order = if user_region
-        [ user_region, nil, *other_regions ].uniq
-      else
-        [ nil, *other_regions ].uniq
+    class << self
+      def color
+        "#1570EF"
       end
 
-      region_order.filter_map do |region|
-        next unless grouped[region]
-        [ region_label_for(region), grouped[region].map { |k, _v| [ long_subtype_label_for(k), k ] } ]
+      def classification
+        "asset"
+      end
+
+      def icon
+        "chart-line"
+      end
+
+      def region_label_for(region)
+        I18n.t("accounts.subtype_regions.#{region || 'generic'}")
+      end
+
+      # Maps currency codes to regions for prioritizing user's likely region
+      CURRENCY_REGION_MAP = {
+        "USD" => "us",
+        "GBP" => "uk",
+        "CAD" => "ca",
+        "AUD" => "au",
+        "EUR" => "eu",
+        "CHF" => "eu",
+        "INR" => "in"
+      }.freeze
+
+      # Returns subtypes grouped by region for use with grouped_options_for_select
+      # Optionally accepts currency to prioritize user's region first
+      def subtypes_grouped_for_select(currency: nil)
+        user_region = CURRENCY_REGION_MAP[currency]
+        grouped = SUBTYPES.group_by { |_, v| v[:region] }
+
+        # Build region order: user's region first (if known), then Generic, then others
+        other_regions = %w[us uk ca au eu in] - [ user_region ].compact
+        region_order = if user_region
+          [ user_region, nil, *other_regions ].uniq
+        else
+          [ nil, *other_regions ].uniq
+        end
+
+        region_order.filter_map do |region|
+          next unless grouped[region]
+          [ region_label_for(region), grouped[region].map { |k, _v| [ long_subtype_label_for(k), k ] } ]
+        end
       end
     end
-  end
 end
