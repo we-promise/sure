@@ -478,62 +478,45 @@ class Account < ApplicationRecord
       )
     end
 
-  
-  def purge_manual_logo_on_auto_switch
-    # Always purge manual logo when switching from manual to auto source
-    # This happens independently of fetch-source availability.
-    # Check if logo_source changed from manual to auto by comparing with previous value
-    if logo_source_auto? && logo.attached? && logo_source_before_last_save == "manual"
-      old_blob = logo.blob
-      logo.detach
-      old_blob.purge_later
-    end
-  end
-
-  # Callback condition: should we purge manual logo on auto switch?
-  # Must be public because it's used in after_save_commit callback
-  def should_purge_manual_logo?
-    logo_source_auto? && logo.attached?
-  end
 
   private
 
-  def create_from_crypto_exchange_account(provider_account, family:)
-        attributes = {
-          family: family,
-          name: provider_account.name,
-          balance: (provider_account.current_balance || 0).to_d,
-          cash_balance: 0,
-          currency: provider_account.currency.presence || family.currency,
-          accountable_type: "Crypto",
-          accountable_attributes: {
-            subtype: "exchange",
-            tax_treatment: "taxable"
-          }
+    def create_from_crypto_exchange_account(provider_account, family:)
+      attributes = {
+        family: family,
+        name: provider_account.name,
+        balance: (provider_account.current_balance || 0).to_d,
+        cash_balance: 0,
+        currency: provider_account.currency.presence || family.currency,
+        accountable_type: "Crypto",
+        accountable_attributes: {
+          subtype: "exchange",
+          tax_treatment: "taxable"
         }
+      }
 
-        create_and_sync(attributes, skip_initial_sync: true)
-      end
-
-      def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
-        attributes = {}
-        attributes[:subtype] = subtype if subtype.present?
-
-        # Set account-type-specific attributes from SimpleFin data
-        case account_type
-        when "CreditCard"
-          # For credit cards, available_balance often represents available credit
-          if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
-            attributes[:available_credit] = simplefin_account.available_balance
-          end
-        when "Loan"
-          # For loans, we might get additional data from the raw_payload
-          # This is where loan-specific information could be extracted if available
-          # Currently we don't have specific loan fields from SimpleFin protocol
+      create_and_sync(attributes, skip_initial_sync: true)
         end
 
-        attributes
+    def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
+      attributes = {}
+      attributes[:subtype] = subtype if subtype.present?
+
+      # Set account-type-specific attributes from SimpleFin data
+      case account_type
+      when "CreditCard"
+        # For credit cards, available_balance often represents available credit
+        if simplefin_account.available_balance.present? && simplefin_account.available_balance > 0
+          attributes[:available_credit] = simplefin_account.available_balance
+        end
+      when "Loan"
+        # For loans, we might get additional data from the raw_payload
+        # This is where loan-specific information could be extracted if available
+        # Currently we don't have specific loan fields from SimpleFin protocol
       end
+
+      attributes
+    end
   end
 
   def institution_name
@@ -634,6 +617,25 @@ class Account < ApplicationRecord
     "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
   end
 
+  # Always purge manual logo when switching from manual to auto source.
+  # This happens independently of fetch-source availability.
+  # The previous logo_source is checked so a fetched-logo attach save (whose
+  # previous source is already "auto") never purges the freshly attached
+  # replacement, even when FetchLogoJob runs inline between callbacks.
+  def purge_manual_logo_on_auto_switch
+    if logo_source_auto? && logo.attached? && logo_source_before_last_save == "manual"
+      old_blob = logo.blob
+      logo.detach
+      old_blob.purge_later
+    end
+  end
+
+  # Callback condition: should we purge manual logo on auto switch?
+  # Must be public because it's used in after_save_commit callback
+  def should_purge_manual_logo?
+    logo_source_auto? && logo.attached?
+  end
+
   def queue_logo_fetch
     # Pass the domain the queue decision was made on so Account::LogoFetcher
     # can discard the fetch if the domain changes while the job is in flight.
@@ -644,10 +646,14 @@ class Account < ApplicationRecord
     # indefinitely. Only runs while logo_source is auto, so manual uploads
     # are never touched here.
     #
-    # Evaluate effective previous domain, including provider-derived values
-    # when persisted attribute was blank
-    previous_effective_domain = institution_domain_before_last_save || provider&.institution_domain
-    if saved_change_to_institution_domain? && logo.attached? && previous_effective_domain.present?
+    # Evaluate the effective previous domain with a presence-aware fallback to
+    # provider-derived values when the stored attribute was blank or empty.
+    # The purge must not depend on a previous domain being present: a logo
+    # fetched from the linked provider (or before unlinking) is just as stale
+    # once a domain is set. Create-time saves are skipped because a logo
+    # attached alongside the new domain is not stale.
+    previous_effective_domain = institution_domain_before_last_save.presence || provider&.institution_domain
+    if !previously_new_record? && saved_change_to_institution_domain? && logo.attached? && previous_effective_domain != institution_domain
       old_blob = logo.blob
       logo.detach
       old_blob.purge_later

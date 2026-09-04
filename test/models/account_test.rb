@@ -635,13 +635,81 @@ class AccountTest < ActiveSupport::TestCase
     ddg_http.stubs(:open_timeout=)
     ddg_http.stubs(:read_timeout=)
     ddg_http.expects(:request).returns(ddg_failure)
-    Net::HTTP.stubs(:new).with("icons.duckduckgo.com", 443).returns(ddg_http)
+    # LogoFetcher pins the connection to the DNS-validated address (DNS rebinding
+    # protection), so the HTTP connection targets the resolved IP, not the host.
+    Net::HTTP.stubs(:new).with("52.149.246.247", 443).returns(ddg_http)
 
     @account.update!(institution_domain: "new.example.com")
     FetchLogoJob.perform_now(@account.id, "new.example.com")
 
     assert_not @account.logo.attached?
     assert_equal "https://icons.duckduckgo.com/ip3/new.example.com.ico", @account.logo_url
+  end
+
+  test "setting a domain when no previous domain or provider exists purges the fetched logo" do
+    @account.attach_fetched_logo(
+      io: StringIO.new("stale-logo"),
+      filename: "stale.png",
+      content_type: "image/png"
+    )
+    @account.reload
+    assert @account.logo.attached?
+    assert @account.logo_source_auto?
+
+    @account.update!(institution_domain: "new.example.com")
+
+    assert_not @account.reload.logo.attached?
+  end
+
+  test "setting a domain on a provider-logo account with a blank stored domain purges the stale logo" do
+    @account.update_columns(institution_domain: "")
+    @account.stubs(:provider).returns(
+      OpenStruct.new(institution_domain: "provider.example.com", logo_url: "https://provider.example.com/logo.png")
+    )
+    @account.attach_fetched_logo(
+      io: StringIO.new("provider-logo"),
+      filename: "provider.png",
+      content_type: "image/png"
+    )
+    @account.reload
+    assert @account.logo.attached?
+    assert @account.logo_source_auto?
+
+    @account.update!(institution_domain: "new.example.com")
+
+    assert_not @account.reload.logo.attached?
+  end
+
+  test "a fetched replacement attached between callbacks survives the manual-source purge" do
+    @account.update!(institution_domain: "example.com")
+    @account.logo.attach(
+      io: StringIO.new("manual-logo"),
+      filename: "manual.png",
+      content_type: "image/png"
+    )
+    assert @account.logo_source_manual?
+
+    # Simulate FetchLogoJob executing inline between the two after_save_commit
+    # callbacks: the replacement is attached on a fresh instance whose logo
+    # association is unloaded, mirroring what the job does in production.
+    FetchLogoJob.stubs(:perform_later).with do |account_id, _expected_domain|
+      Account.find(account_id).attach_fetched_logo(
+        io: StringIO.new("fetched-logo"),
+        filename: "fetched.png",
+        content_type: "image/png"
+      )
+      true
+    end
+
+    @account.logo_source = "auto"
+    perform_enqueued_jobs do
+      @account.save!
+    end
+
+    @account.reload
+    assert @account.logo.attached?
+    assert_equal "fetched.png", @account.logo.blob.filename.to_s
+    assert @account.logo_source_auto?
   end
 
   test "destroying account moves linked statements to inbox after commit" do
