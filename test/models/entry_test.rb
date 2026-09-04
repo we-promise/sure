@@ -81,7 +81,7 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal I18n.t("transactions.unknown_name"), entry.name
   end
 
-  test "merchant takes priority over category for the auto-generated name" do
+  test "combines merchant and category with a dash when both are set" do
     families(:dylan_family).update!(auto_generate_transaction_names: true)
 
     entry = create_transaction(
@@ -91,7 +91,7 @@ class EntryTest < ActiveSupport::TestCase
       category: categories(:food_and_drink)
     )
 
-    assert_equal merchants(:netflix).name, entry.name
+    assert_equal "#{merchants(:netflix).name} - #{categories(:food_and_drink).name}", entry.name
   end
 
   test "does not overwrite an explicitly provided name even when auto-generate is on" do

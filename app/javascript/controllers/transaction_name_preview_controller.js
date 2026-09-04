@@ -18,11 +18,12 @@ export default class extends Controller {
   }
 
   previewName() {
-    return (
-      this.selectionText("merchant-select") ||
-      this.selectionText("category-select") ||
-      this.unknownLabelValue
-    );
+    const parts = [
+      this.selectionText("merchant-select"),
+      this.selectionText("category-select"),
+    ].filter(Boolean);
+
+    return parts.length > 0 ? parts.join(" - ") : this.unknownLabelValue;
   }
 
   selectionText(controllerName) {
