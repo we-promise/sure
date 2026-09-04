@@ -73,12 +73,20 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal categories(:food_and_drink).name, entry.name
   end
 
-  test "auto-generates a generic fallback name when blank and neither merchant nor category is set" do
+  test "blank name is still invalid when auto-generate is on but neither merchant nor category is set" do
     families(:dylan_family).update!(auto_generate_transaction_names: true)
 
-    entry = create_transaction(account: accounts(:depository), name: "")
+    entry = Entry.new(
+      account: accounts(:depository),
+      name: "",
+      date: Date.current,
+      currency: "USD",
+      amount: 100,
+      entryable: Transaction.new
+    )
 
-    assert_equal I18n.t("transactions.unknown_name"), entry.name
+    assert_not entry.valid?
+    assert_includes entry.errors[:name], "can't be blank"
   end
 
   test "combines merchant and category with a dash when both are set" do

@@ -163,7 +163,7 @@ en:
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
         auto_generate_transaction_names_title: Auto-generate transaction names
-        auto_generate_transaction_names_description: When a manually entered transaction's name is left blank, fill it in from the selected merchant and category (e.g. "Netflix - Entertainment"), or a generic label if neither is set. Applies to the whole family, and only affects new transactions.
+        auto_generate_transaction_names_description: When a manually entered transaction's name is left blank, fill it in from the selected category and merchant (e.g. "Entertainment - Netflix"). A name is still required if neither is selected. Applies to the whole family, and only affects new transactions.
     preferences:
       show:
         country: Country

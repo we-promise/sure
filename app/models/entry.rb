@@ -602,8 +602,13 @@ class Entry < ApplicationRecord
       throw :abort
     end
 
+    # Deliberately does not fall back to a generic label like "Unknown
+    # transaction" when neither is set -- leaving the name blank with no
+    # category or merchant selected either still fails the presence
+    # validation below, so a transaction can never end up with no
+    # information distinguishing it from any other.
     def set_default_name
       parts = [ entryable.category&.name.presence, entryable.merchant&.name.presence ].compact
-      self.name = parts.any? ? parts.join(" - ") : I18n.t("transactions.unknown_name")
+      self.name = parts.join(" - ") if parts.any?
     end
 end

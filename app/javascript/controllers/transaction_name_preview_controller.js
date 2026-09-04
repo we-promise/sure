@@ -4,10 +4,12 @@ import { Controller } from "@hotwired/stimulus";
 //
 // 1. Live-updates its placeholder to preview what the server-side fallback
 //    (Entry#set_default_name) will save if the field is left blank: category,
-//    then merchant, then a generic label. Only ever touches the placeholder,
-//    never the field's value, so it can't clobber anything the user typed --
-//    and since placeholders aren't submitted, the preview can never drift
-//    from what actually gets saved as long as both follow the same order.
+//    then merchant. Only ever touches the placeholder, never the field's
+//    value, so it can't clobber anything the user typed -- and since
+//    placeholders aren't submitted, the preview can never drift from what
+//    actually gets saved as long as both follow the same order. There is no
+//    generic fallback for "neither is set": the field's original hint text
+//    comes back instead, since a name is still required in that case.
 //
 // 2. A custom suggestion dropdown for recently used names, filtered as the
 //    user types. This exists instead of a native <datalist> because iOS
@@ -15,12 +17,15 @@ import { Controller } from "@hotwired/stimulus";
 //    a plain <datalist> works on desktop but is silently a no-op there.
 export default class extends Controller {
   static targets = ["name", "suggestions", "suggestionOption"];
-  static values = { unknownLabel: String };
+
+  connect() {
+    if (this.hasNameTarget) this.originalPlaceholder = this.nameTarget.placeholder;
+  }
 
   update() {
     if (!this.hasNameTarget) return;
 
-    this.nameTarget.placeholder = this.previewName();
+    this.nameTarget.placeholder = this.previewName() || this.originalPlaceholder;
   }
 
   previewName() {
@@ -29,7 +34,7 @@ export default class extends Controller {
       this.selectionText("merchant-select", "[data-merchant-select-name]"),
     ].filter(Boolean);
 
-    return parts.length > 0 ? parts.join(" - ") : this.unknownLabelValue;
+    return parts.length > 0 ? parts.join(" - ") : null;
   }
 
   // `nameSelector` picks out just the label text within the cloned
