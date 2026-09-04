@@ -24,9 +24,10 @@ class Account::ProviderImportAdapter
   # @param notes [String, nil] Optional transaction notes/memo
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
+  # @param extra_keys_to_remove [Array<Array<String>>] Nested metadata paths to remove after merging
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, extra_keys_to_remove: [], investment_activity_label: nil)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -195,10 +196,15 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      if extra.present? && entry.entryable.is_a?(Transaction)
+      if (extra.present? || extra_keys_to_remove.present?) && entry.entryable.is_a?(Transaction)
         existing = entry.transaction.extra || {}
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
+        merged = existing.deep_merge(incoming)
+        extra_keys_to_remove.each do |path|
+          parent = merged.dig(*path[0...-1])
+          parent.delete(path.last) if parent.is_a?(Hash)
+        end
+        entry.transaction.extra = merged
         entry.transaction.save!
       end
 

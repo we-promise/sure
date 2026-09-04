@@ -59,7 +59,8 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
-      extra: extra_metadata
+      extra: extra_metadata,
+      extra_keys_to_remove: amount_normalization_keys_to_remove
     )
   end
 
@@ -180,6 +181,12 @@ class SimplefinEntry::Processor
 
     def amount_normalization
       amount_normalization_rule&.first&.to_s
+    end
+
+    # Remove a marker from a prior Fidelity sync when current institution metadata no
+    # longer selects Fidelity's rules. New unsupported-institution imports remain keyless.
+    def amount_normalization_keys_to_remove
+      institution_amount_normalization_rules ? [] : [ %w[simplefin amount_normalization] ]
     end
 
     def amount_normalization_direction

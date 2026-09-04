@@ -1483,6 +1483,33 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   # entry is found by find_or_initialize_by (persisted), bypassing auto-claim.
   # =========================================================================
 
+  test "removes only explicitly requested extra metadata keys" do
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_metadata_cleanup",
+      amount: 10.0,
+      currency: "USD",
+      date: Date.today,
+      name: "DIRECT DEBIT",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false, "amount_normalization" => "direct_debit" } }
+    )
+
+    entry = @adapter.import_transaction(
+      external_id: "simplefin_metadata_cleanup",
+      amount: -10.0,
+      currency: "USD",
+      date: Date.today,
+      name: "DIRECT DEBIT",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } },
+      extra_keys_to_remove: [ %w[simplefin amount_normalization] ]
+    )
+
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_equal false, sf.fetch("pending")
+    assert_not sf.key?("amount_normalization")
+  end
+
   test "clears pending flag when same external_id is reused for booked version (not user-modified)" do
     pending_entry = @adapter.import_transaction(
       external_id: "eb_same_id_123",

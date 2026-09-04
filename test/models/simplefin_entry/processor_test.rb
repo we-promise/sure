@@ -471,6 +471,35 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
   end
 
+  test "clears stale normalization metadata when account changes from Fidelity" do
+    {
+      "unsupported" => { name: "Example Credit Union" },
+      "malformed" => "Fidelity Investments"
+    }.each do |label, org_data|
+      @simplefin_account.update!(org_data: { name: "Fidelity Investments" })
+      tx = {
+        id: "tx_normalization_institution_transition_#{label}",
+        amount: "10.00",
+        currency: "USD",
+        description: "DIRECT DEBIT",
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      entry = @account.entries.find_by!(external_id: "simplefin_#{tx[:id]}", source: "simplefin")
+      assert_equal BigDecimal("10.00"), entry.amount
+      assert_equal "direct_debit", entry.transaction.extra.dig("simplefin", "amount_normalization")
+
+      @simplefin_account.update!(org_data: org_data)
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry.reload
+      assert_equal BigDecimal("-10.00"), entry.amount
+      sf = entry.transaction.extra.fetch("simplefin")
+      assert_not sf.key?("amount_normalization"), "expected #{label} transition to remove stale normalization metadata"
+    end
+  end
+
   test "clears stale normalization metadata when a resynced descriptor becomes unmapped" do
     tx = {
       id: "tx_normalization_resync_2",
