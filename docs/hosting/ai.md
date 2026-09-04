@@ -118,6 +118,9 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 
 # Optional: Request timeout in seconds (default: 60)
 # OPENAI_REQUEST_TIMEOUT=60
+
+# Optional: extra HTTP headers as a JSON object (see "Extra HTTP Headers" below)
+# OPENAI_EXTRA_HEADERS='{"x-opencode-session":"{session_id}"}'
 ```
 
 **Recommended models:**
@@ -166,6 +169,33 @@ Any service offering an OpenAI-compatible API should work:
 - [Together AI](https://together.ai/) - Various open models
 - [Anyscale](https://www.anyscale.com/) - Llama models
 - [Replicate](https://replicate.com/) - Various models
+
+### Extra HTTP Headers
+
+Some gateways require custom headers on requests to OpenAI-compatible
+endpoints (e.g. OpenRouter's `HTTP-Referer`). Set `OPENAI_EXTRA_HEADERS`
+to a JSON object mapping header names to values:
+
+```bash
+# Single-quoted so the shell does not interpret braces or quotes.
+# A value containing the literal {session_id} is replaced with the chat's UUID
+# on each chat request, identifying the conversation rather than the install.
+OPENAI_EXTRA_HEADERS='{"x-opencode-session":"{session_id}"}'
+
+# Static value instead — sent on every OpenAI-provider request, including
+# batch jobs (auto-categorize, merchant detection, PDF processing):
+OPENAI_EXTRA_HEADERS='{"x-opencode-session":"b3f1c2d4-0000-0000-0000-000000000000"}'
+```
+
+Behavior:
+
+- A value containing the literal `{session_id}` is substituted with the chat's UUID on each chat request, so requests are attributable per conversation. Batch flows only receive static (non-`{session_id}`) headers, because a session only exists for a chat. If your gateway requires the header on every endpoint, use a static value.
+- Extra headers are attached to **chat requests** made by the OpenAI-compatible provider. Batch flows (auto-categorize, merchant detection, PDF processing) only receive static headers.
+- Values are stringified: nested JSON objects/arrays become Ruby inspect-style strings, not valid JSON. Header values must be plain strings.
+- User headers merge over the client's managed headers — setting `Authorization` here would override the access token.
+- Unset, blank, malformed, or non-object JSON is ignored with an error in the logs; chat keeps working. The raw value is never logged.
+- These headers are NOT sent to embedding, vector-store, or AI-health-probe calls — those build separate clients. A gateway requiring the header on those endpoints is not supported.
+- ENV-only: there is no settings-page equivalent. The value is re-read every time a provider client is built (nothing is cached), but updating the environment requires restarting the app.
 
 ## Local LLM Setup (Ollama)
 
@@ -1454,6 +1484,61 @@ cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
 timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
+
+#### Troubleshooting Pgvector and Embeddings
+
+The AI status page reports separate failures for the PostgreSQL storage check
+and the embedding endpoint check.
+
+If PostgreSQL reports that the `vector` extension is not enabled, make sure the
+database image includes pgvector, then enable the extension as a database owner
+or superuser:
+
+```bash
+sudo -u postgres psql -d sure_production -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
+
+If `vector_store_chunks` is missing, confirm the migration state and re-run the
+conditional vector-store migration with the pgvector provider selected:
+
+```bash
+RAILS_ENV=production bundle exec rails db:migrate:status
+VECTOR_STORE_PROVIDER=pgvector RAILS_ENV=production bundle exec rails db:migrate:redo VERSION=<migration_version>
+```
+
+If the embedding check reports a dimensions mismatch, align
+`EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS` with the embedding provider's
+documented vector size. For example, `gemini-embedding-2-preview` returns 3072
+dimensions by default, so a matching configuration is:
+
+```bash
+EMBEDDING_MODEL=gemini-embedding-2-preview
+EMBEDDING_DIMENSIONS=3072
+```
+
+Changing only `EMBEDDING_DIMENSIONS` does not reshape an existing pgvector
+column. If `vector_store_chunks` was already created with a different size,
+back up the database and source documents, remove the indexed documents from
+Sure, then alter or recreate the `embedding` column/table before uploading the
+documents again. Dropping the empty chunks table lets Sure recreate it with the
+new vector size:
+
+```bash
+docker compose -f compose.example.ai.yml exec web bin/rails runner \
+  'ActiveRecord::Base.connection_pool.with_connection { |connection| connection.drop_table(VectorStore::Pgvector::TABLE_NAME, if_exists: true) }'
+```
+
+Restart Sure after changing environment values so the new settings are present
+in both web and worker processes. If the embedding live check times out, raise
+the health-check probe timeout in the service environment:
+
+```bash
+AI_HEALTH_PROBE_TIMEOUT=180
+```
+
+If normal AI chat calls also time out, raise `OPENAI_REQUEST_TIMEOUT`
+separately; it controls OpenAI-compatible LLM requests, not the health-check
+probe budget.
 
 You can also check the adapter from the Rails console:
 
