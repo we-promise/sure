@@ -108,7 +108,18 @@ Doorkeeper.configure do
   # Prefer access_token_expires_in 100.years or similar,
   # which would be functionally equivalent and avoid the risk of unexpected behavior by callers.
   #
-  access_token_expires_in 1.year
+  # Only governs tokens minted by the standard OAuth endpoints
+  # (Doorkeeper::TokensController, i.e. the authorization_code flow used by
+  # third-party OAuth apps and the desktop/mobile system-browser SSO flow via
+  # app/views/doorkeeper/authorizations/form_post.html.erb). The mobile app's
+  # own login/refresh flow (Api::V1::AuthController#login/#refresh,
+  # MobileDevice#issue_token!) mints Doorkeeper::AccessToken records directly
+  # and already hardcodes a 30-day expires_in independent of this setting —
+  # shortening this value here does not affect that flow. use_refresh_token
+  # is enabled below, so clients renew via the refresh_token grant instead of
+  # re-authorizing; matches Doorkeeper's own upstream default rather than an
+  # arbitrarily chosen value.
+  access_token_expires_in 2.hours
 
   # Assign custom TTL for access tokens. Will be used instead of access_token_expires_in
   # option if defined. In case the block returns `nil` value Doorkeeper fallbacks to
