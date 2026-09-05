@@ -439,7 +439,8 @@ class Entry < ApplicationRecord
 
   # Splits this entry into child entries. Marks parent as excluded.
   #
-  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
+  #   merchant_id and tag_ids are optional per split and fall back to the parent's merchant / no tags.
   # @return [Array<Entry>] the created child entries
   def split!(splits)
     total = splits.sum { |s| s[:amount].to_d }
@@ -451,7 +452,8 @@ class Entry < ApplicationRecord
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
-          merchant_id: entryable.try(:merchant_id),
+          merchant_id: split_attrs[:merchant_id].presence || entryable.try(:merchant_id),
+          tag_ids: split_attrs[:tag_ids] || [],
           kind: entryable.try(:kind)
         )
 
