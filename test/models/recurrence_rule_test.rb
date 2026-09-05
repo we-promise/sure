@@ -175,12 +175,47 @@ class RecurrenceRuleTest < ActiveSupport::TestCase
     end
   end
 
+  test "nested validation errors use English recurrence rule names" do
+    attribute_names = {
+      frequency: "Frequency",
+      interval: "Interval",
+      day_of_month: "Day of month",
+      weekday: "Weekday",
+      weekday_ordinal: "Week of month",
+      month_of_year: "Month"
+    }
+
+    I18n.with_locale(:en) do
+      attribute_names.each do |attribute, expected|
+        assert_equal expected, RecurringTransaction.human_attribute_name("recurrence_rules.#{attribute}")
+      end
+
+      assert_nested_rule_error(
+        { frequency: "monthly" },
+        "Recurrence rule: Choose exactly one of a day of the month or a weekday"
+      )
+      assert_nested_rule_error(
+        { frequency: "weekly" },
+        "Weekday is required for a weekly rule"
+      )
+    end
+  end
+
   private
     def assert_rule_errors(attributes, expected)
       rule = @recurring.recurrence_rules.build(**attributes)
 
       assert_not rule.valid?
       assert_equal expected, rule.errors.full_messages
+    ensure
+      @recurring.recurrence_rules.reset
+    end
+
+    def assert_nested_rule_error(attributes, expected)
+      @recurring.recurrence_rules.build(**attributes)
+
+      assert_not @recurring.valid?
+      assert_equal [ expected ], @recurring.errors.full_messages
     ensure
       @recurring.recurrence_rules.reset
     end
