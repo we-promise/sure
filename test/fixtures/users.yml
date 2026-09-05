@@ -101,7 +101,7 @@ sso_only:
   last_name: User
   email: sso-user@example.com
   password_digest: ~
-  role: admin
+  role: member
   onboarded_at: <%= 1.day.ago %>
   ai_enabled: true
 
