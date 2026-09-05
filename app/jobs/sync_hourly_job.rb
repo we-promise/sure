@@ -18,14 +18,10 @@ class SyncHourlyJob < ApplicationJob
   private
 
     def sync_items(syncable_class)
-      items = syncable_class.active.to_a
-
-      Rails.logger.info("Enqueueing sync for #{items.size} #{syncable_class.name} item(s)")
-
-      items.each do |item|
+      syncable_class.active.find_each do |item|
         item.sync_later
       rescue => e
-        Rails.logger.error("Failed to enqueue sync for #{syncable_class.name} #{item.id}: #{e.message}")
+        Rails.logger.error("Failed to sync #{syncable_class.name} #{item.id}: #{e.message}")
       end
     end
 end
