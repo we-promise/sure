@@ -324,22 +324,14 @@ class MonobankItemsController < ApplicationController
       end
 
       nil
-    rescue Provider::Monobank::Error => e
-      DebugLogEntry.capture(
-        category: "provider_sync_error",
-        level: "error",
-        message: "Monobank API error while fetching accounts",
-        source: self.class.name,
-        provider_key: "monobank",
-        family: monobank_item.family,
-        metadata: { monobank_item_id: monobank_item.id, error_class: e.class.name, error_message: e.message }
-      )
-      t("monobank_items.setup_accounts.api_error")
+    # One branch: a Provider::Monobank::Error and an unexpected one produced the same
+    # entry and the same message for the user, and error_class already tells them apart
+    # in /settings/debug.
     rescue StandardError => e
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "error",
-        message: "Unexpected error fetching Monobank accounts",
+        message: "Failed to fetch Monobank accounts",
         source: self.class.name,
         provider_key: "monobank",
         family: monobank_item.family,
