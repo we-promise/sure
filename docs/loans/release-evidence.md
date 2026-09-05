@@ -3,6 +3,13 @@
 Status: release evidence is pending execution against production-shaped data
 and approval of the lender reconciliation gate in #11.
 
+**There is currently no calculation change to release.**
+`Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL` is `false` and
+`ALGORITHM_VERSION` is `2`, so the persisted schedule accrues monthly and is
+byte-identical to what is deployed. The tooling below is real and exercised, but
+until daily accrual is enabled (#36) the variance report compares a shipped path
+against an unshipped one, and G3 has nothing to rehearse.
+
 ## Release train
 
 Daily accrual, its algorithm version, sampled monthly-versus-daily variance,
@@ -13,7 +20,11 @@ calculation code. Reads must not rebuild or replace schedule rows.
 ## Performance SLO
 
 `loans:amortization_benchmark` measures one complete daily-accrual simulation
-per sample and reports p95/p99 latency. The default production-shaped workload
+per sample and reports p95/p99 latency. **This is not the measurement #10 asks
+for** — #10 specifies a 4-simulation comparison request under ~50ms. That
+comparison path does not exist yet (it arrives with scenario comparison, #19 and
+#20), so this SLO bounds the unit four of which the comparison will call. It
+does not discharge #10's criterion; see the note recorded on #10. The default production-shaped workload
 is 100 loans, 360 monthly periods per loan, and 30 offset change points per
 period. The default SLO is p95 <= 100 ms and p99 <= 150 ms; deployment may not
 claim the gate without recording the command, output, and workload parameters.
