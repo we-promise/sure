@@ -5,6 +5,7 @@ class Provider
       simplefin:      { region: "US",      kinds: %w[Bank Investment], maturity: :stable, logo_text: "SF", logo_bg: "bg-blue-600" },
       lunchflow:      { region: "Global",  kinds: %w[Bank],            maturity: :stable, logo_text: "LF", logo_bg: "bg-orange-500" },
       up:             { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "UP", logo_bg: "bg-orange-600" },
+      monobank:       { region: "UA",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "MB", logo_bg: "bg-primary" },
       enable_banking: { region: "EU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "EB", logo_bg: "bg-purple-600" },
       coinstats:      { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CS", logo_bg: "bg-pink-600" },
       wise:           { region: "Global",  kinds: %w[Bank],            maturity: :beta,   logo_text: "WI", logo_bg: "bg-green-500" },

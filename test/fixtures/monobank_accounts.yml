@@ -1,0 +1,10 @@
+black_card:
+  monobank_item: one
+  account_id: "mono_acc_black_1"
+  name: "Black card"
+  currency: UAH
+  current_balance: 1500.00
+  account_kind: "card"
+  account_type: "black"
+  masked_pan: "537541******1234"
+  iban: "UA-TEST-IBAN-FIXTURE"

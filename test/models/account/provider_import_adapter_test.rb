@@ -1251,6 +1251,32 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  # Every provider in Transaction::PENDING_PROVIDERS must be reconcilable, not just the
+  # ones the lookup happened to spell out.
+  test "find_pending_transaction covers every pending-capable provider" do
+    Transaction::PENDING_PROVIDERS.each_with_index do |provider, index|
+      amount = 10.00 + index
+      pending = @adapter.import_transaction(
+        external_id: "#{provider}_pending_#{index}",
+        amount: amount,
+        currency: "USD",
+        date: Date.today - 1.day,
+        name: "Pending #{provider}",
+        source: provider,
+        extra: { provider => { "pending" => true } }
+      )
+
+      result = @adapter.find_pending_transaction(
+        date: Date.today,
+        amount: amount,
+        currency: "USD",
+        source: provider
+      )
+
+      assert_equal pending.id, result&.id, "#{provider} pending transactions must be findable"
+    end
+  end
+
   test "find_pending_transaction returns nil when no pending transactions exist" do
     # Create a non-pending transaction
     @adapter.import_transaction(
