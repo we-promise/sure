@@ -62,7 +62,8 @@
           disabled: options[:disabled],
           data: (options[:amount_data] || {}).merge({
             "money-field-target": "amount",
-            "auto-submit-form-target": ("auto" if options[:auto_submit])
+            "auto-submit-form-target": ("auto" if options[:auto_submit]),
+            action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount" ].compact.join(" ")
           }.compact),
           required: options[:required] %>
       </div>
