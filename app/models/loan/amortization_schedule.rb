@@ -67,7 +67,25 @@ class Loan
     # Get the complete payment schedule as an array of hashes
     def payments
       return [] unless amortizable?
-      @schedule_cache ||= generate_schedule
+      @schedule_cache ||= generate_simulation(daily_accrual: SCHEDULE_DAILY_ACCRUAL).payments
+    end
+
+    # Run an uncached simulation for release comparisons and projections.
+    #
+    # `daily_accrual:` defaults to the value the persisted schedule uses, so a
+    # caller that passes nothing gets the same numbers `#payments` produces.
+    # Passing `daily_accrual: true` is a comparison tool -- `loans:amortization_variance`
+    # is its only caller -- and its output is NOT what users see while
+    # SCHEDULE_DAILY_ACCRUAL is false.
+    def simulation(daily_accrual: SCHEDULE_DAILY_ACCRUAL)
+      return Loan::SimulationResult.new(
+        payments: [],
+        converged: true,
+        balloon_amount: BigDecimal("0"),
+        currency_precision: currency_precision
+      ) unless amortizable?
+
+      generate_simulation(daily_accrual: daily_accrual)
     end
 
     # Get the total number of payments in the schedule
@@ -133,9 +151,11 @@ class Loan
 
     private
 
-      # Generate the complete amortization schedule using the constant-payment method
-      # For variable-rate loans, applies rate changes on their effective dates
-      def generate_schedule
+      # Configure and run the simulator. This is the ONLY place the production
+      # calculation is constructed, so `#payments` and `#simulation` cannot
+      # drift apart, and the accrual mode is a required argument rather than an
+      # omitted keyword defaulting silently.
+      def generate_simulation(daily_accrual:)
         payment_dates = scheduled_payment_dates
         rate_resolver = RateResolver.for(loan)
 
@@ -151,8 +171,8 @@ class Loan
             calculate_segment_payment(rate, balance, remaining_payments)
           },
           currency_precision: currency_precision,
-          daily_accrual: SCHEDULE_DAILY_ACCRUAL
-        ).run.payments
+          daily_accrual: daily_accrual
+        ).run
       end
 
       # Get the interest rate effective at a given date
