@@ -77,7 +77,7 @@ class SessionsController < ApplicationController
 
       if user.otp_required?
         log_super_admin_override_login(user)
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user)
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
@@ -235,7 +235,7 @@ class SessionsController < ApplicationController
     end
 
     if user.otp_required?
-      session[:mfa_user_id] = user.id
+      begin_mfa_handoff(user)
       redirect_to verify_mfa_path
     else
       @session = create_session_for(user)
@@ -318,10 +318,10 @@ class SessionsController < ApplicationController
 
       # MFA check: If user has MFA enabled, require verification
       if user.otp_required?
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user, from_oidc: true)
         redirect_to verify_mfa_path
       else
-        @session = create_session_for(user)
+        @session = create_session_for(user, preserve_oidc_handoff: true)
         unless @session
           redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
           return
