@@ -1,0 +1,25 @@
+---
+de:
+  bills:
+    due_label:
+      overdue:
+        one: Seit 1 Tag überfällig · fällig am %{date}
+        other: Seit %{count} Tagen überfällig · fällig am %{date}
+      today: Heute fällig
+      settled: War am %{date} fällig
+      due_since: Fällig am %{date}
+      snoozed: Verschoben bis %{date}
+      upcoming:
+        one: Morgen fällig · %{date}
+        other: In %{count} Tagen fällig · %{date}
+    views:
+      aria_label: Rechnungsansichten
+      overview: Übersicht
+      calendar: Kalender
+      paycheck: Einkommensplan
+      all: Alle Rechnungen
+    index:
+      title: Rechnungen
+      add_bill: Rechnung hinzufügen
+      add_income: Einkommen hinzufügen
+      review_with_ai: Mit KI prüfen

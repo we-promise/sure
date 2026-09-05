@@ -559,6 +559,9 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
+          notes: split_attrs[:notes],
+          import: import,
+          import_locked: import_locked,
           excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
           entryable: child_transaction
         )

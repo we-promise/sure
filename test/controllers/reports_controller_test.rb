@@ -442,8 +442,11 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
     assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
 
-    # Full-row hit target via stretched ::before (mirrors dashboard outflows)
-    assert_select "tr.relative.group\\/category-row[data-category='category-#{expense_category.id}'] a[class*='before:absolute'][class*='before:inset-0']"
+    # Hit target via stretched ::before, anchored to the category cell's flex
+    # wrapper. Deliberately NOT the <tr>: CSS 2.1 9.3.1 leaves position:relative
+    # undefined on table rows and WebKit does not implement it, so anchoring
+    # there let the overlay escape and swallow every click on the page in Safari.
+    assert_select "tr.group\\/category-row[data-category='category-#{expense_category.id}'] td div.relative a[class*='before:absolute'][class*='before:inset-0']"
   end
 
   test "index uncategorized category link uses localized name that Search accepts" do
