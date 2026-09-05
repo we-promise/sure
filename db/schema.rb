@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2570,6 +2570,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.string "profile_id", null: false
     t.string "profile_type", null: false
     t.jsonb "raw_payload"
+    t.text "sca_private_key"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.string "status", default: "good", null: false
     t.datetime "sync_start_date"
