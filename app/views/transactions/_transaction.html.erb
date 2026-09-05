@@ -107,6 +107,9 @@
                       ) %>
                     <% end %>
 
+                    <%# Manual reconciliation status (manual accounts only) %>
+                    <%= render "transactions/reconcile_badge", entry: entry %>
+
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>

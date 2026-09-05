@@ -671,6 +671,47 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes pending_ids, confirmed.entryable.id
   end
 
+  test "reconcile_status filter matches the selected manual reconciliation statuses" do
+    unreconciled = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    cleared = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    reconciled = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    cleared.update!(reconciled_status: "cleared")
+    reconciled.update!(reconciled_status: "reconciled")
+
+    cleared_ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "cleared" ] }).transactions_scope.pluck(:id)
+    assert_includes cleared_ids, cleared.entryable.id
+    assert_not_includes cleared_ids, unreconciled.entryable.id
+    assert_not_includes cleared_ids, reconciled.entryable.id
+
+    cleared_or_reconciled_ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "cleared", "reconciled" ] }).transactions_scope.pluck(:id)
+    assert_includes cleared_or_reconciled_ids, cleared.entryable.id
+    assert_includes cleared_or_reconciled_ids, reconciled.entryable.id
+    assert_not_includes cleared_or_reconciled_ids, unreconciled.entryable.id
+  end
+
+  test "reconcile_status filter is a no-op when blank" do
+    entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+
+    ids = Transaction::Search.new(@family, filters: { reconcile_status: [] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, entry.entryable.id
+  end
+
+  test "reconcile_status filter excludes synced accounts even though they default to unreconciled" do
+    manual_entry = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    synced_account = accounts(:connected)
+    synced_entry = create_transaction(account: synced_account, amount: 100, kind: "standard")
+
+    assert_equal "unreconciled", manual_entry.reconciled_status
+    assert_equal "unreconciled", synced_entry.reconciled_status
+
+    ids = Transaction::Search.new(@family, filters: { reconcile_status: [ "unreconciled" ] }).transactions_scope.pluck(:id)
+
+    assert_includes ids, manual_entry.entryable.id
+    assert_not_includes ids, synced_entry.entryable.id
+  end
+
   # Regression for https://github.com/we-promise/sure/issues/3174
   # The summary box (COUNT / SUM) on the Transactions page inflated when a
   # transaction was tagged with multiple of the filtered tags, because the

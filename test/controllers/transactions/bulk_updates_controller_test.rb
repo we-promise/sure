@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in @user = users(:family_admin)
   end
@@ -135,5 +137,77 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
 
     transaction_entry.reload
     assert_equal [ new_tag.id ], transaction_entry.transaction.tag_ids
+  end
+
+  test "bulk update sets reconciled_status on manual accounts" do
+    manual_entry = create_transaction(account: accounts(:depository))
+    assert accounts(:depository).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ manual_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "reconciled", manual_entry.reload.reconciled_status
+  end
+
+  test "bulk update ignores reconciled_status on synced accounts" do
+    synced_entry = create_transaction(account: accounts(:connected))
+    assert_not accounts(:connected).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ synced_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "unreconciled", synced_entry.reload.reconciled_status
+  end
+
+  test "bulk update does not modify entries on accounts the user only has read-only access to" do
+    read_only_user = users(:family_member)
+    sign_in read_only_user
+
+    # family_member has read_only access to credit_card (see account_shares fixture)
+    read_only_account = accounts(:credit_card)
+    assert_not Account.writable_by(read_only_user).exists?(id: read_only_account.id)
+
+    read_only_entry = create_transaction(account: read_only_account, name: "Not mine to edit")
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ read_only_entry.id ],
+        reconciled_status: "reconciled",
+        notes: "Should not be applied"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "0 transactions updated", flash[:notice]
+
+    read_only_entry.reload
+    assert_equal "unreconciled", read_only_entry.reconciled_status
+    assert_nil read_only_entry.notes
+  end
+
+  test "bulk update rejects an invalid reconciled_status value without raising" do
+    manual_entry = create_transaction(account: accounts(:depository))
+
+    assert_no_changes -> { manual_entry.reload.reconciled_status } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          reconciled_status: "not_a_real_status"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
   end
 end

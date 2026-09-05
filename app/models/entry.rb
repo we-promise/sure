@@ -26,6 +26,29 @@ class Entry < ApplicationRecord
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
 
+  # Manual, Bluecoins-style reconciliation status. Distinct from Transaction#pending?
+  # (which reflects the bank/provider's own pending-vs-posted status) and from the
+  # sync-time duplicate-claim logic in Account::ProviderImportAdapter (which already
+  # auto-matches/merges manual entries against later bank-synced transactions).
+  #
+  # This is a user-controlled flag for manually checking entries off against a
+  # paper/PDF statement — line-by-line, the way a checkbook register works. The
+  # column exists on every entry, but the UI only surfaces it for manual
+  # (unsynced) accounts, i.e. `account.manual?` — synced accounts already have
+  # duplicate-matching (Account::ProviderImportAdapter) and statement-level
+  # reconciliation (AccountStatement, Account::ReconciliationManager).
+  enum :reconciled_status, {
+    unreconciled: "unreconciled", # default — not yet checked against a statement
+    cleared: "cleared",           # confirmed to appear on a statement, not yet locked in
+    reconciled: "reconciled"      # statement period fully reconciled; treat as locked
+  }, default: "unreconciled", validate: true
+
+  # Order the manual reconciliation status advances through when a user
+  # clicks the reconcile badge, e.g. on the transaction row or detail view.
+  # Derived from the enum (not hardcoded) so it can't drift from it if a
+  # status is ever renamed or added.
+  RECONCILED_STATUS_CYCLE = reconciled_statuses.keys.freeze
+
   validates :date, :name, :amount, :currency, presence: true
   validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
@@ -58,10 +81,18 @@ class Entry < ApplicationRecord
     )
   }
 
-  # Reconciliation scopes - see AddReconciliationToEntries
-  scope :reconciled, -> { where.not(reconciled_at: nil) }
-  scope :unreconciled, -> { where(reconciled_at: nil) }
-  scope :reconciled_by, ->(statement) { where(reconciled_by_statement_id: statement) }
+  # Manual reconciliation scopes (see reconciled_status enum above)
+  scope :needs_reconciliation, -> { where(reconciled_status: [ :unreconciled, :cleared ]) }
+  scope :cleared_or_reconciled, -> { where(reconciled_status: [ :cleared, :reconciled ]) }
+
+  # Statement-import reconciliation scopes - see AddReconciliationToEntries.
+  # Named distinctly from the reconciled_status enum's auto-generated
+  # `reconciled` / `unreconciled` scopes above (different concept: this is
+  # import-time dedup against AccountStatement, not the manual clear/reconcile
+  # toggle on manual accounts).
+  scope :statement_reconciled, -> { where.not(reconciled_at: nil) }
+  scope :statement_unreconciled, -> { where(reconciled_at: nil) }
+  scope :reconciled_by_statement, ->(statement) { where(reconciled_by_statement_id: statement) }
 
   # Pending transaction scopes - check Transaction.extra for provider pending flags
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
@@ -313,8 +344,8 @@ class Entry < ApplicationRecord
   #
   # @return [Symbol] :uncleared, :cleared or :reconciled
   def reconciliation_state
-    return :reconciled if reconciled?
-    return :cleared if cleared?
+    return :reconciled if statement_reconciled?
+    return :cleared if statement_cleared?
 
     :uncleared
   end
@@ -324,14 +355,20 @@ class Entry < ApplicationRecord
   # external_id and source -- see Account::ProviderImportAdapter). Derived rather
   # than stored so it cannot drift, and deliberately not user-settable: this is a
   # fact about where the entry came from, not an opinion about it.
-  def cleared?
+  #
+  # Named distinctly from the reconciled_status enum's auto-generated `cleared?`
+  # (manual clear/reconcile toggle on manual accounts -- a different concept).
+  def statement_cleared?
     external_id.present? || source.present?
   end
 
-  # A statement has been matched against this transaction. Unlike cleared?, this
-  # is a judgement -- made by a statement import, or by the user directly -- so
-  # it is stored and can be undone.
-  def reconciled?
+  # A statement has been matched against this transaction. Unlike
+  # statement_cleared?, this is a judgement -- made by a statement import, or by
+  # the user directly -- so it is stored and can be undone.
+  #
+  # Named distinctly from the reconciled_status enum's auto-generated
+  # `reconciled?` (manual clear/reconcile toggle on manual accounts).
+  def statement_reconciled?
     reconciled_at.present?
   end
 
@@ -476,6 +513,16 @@ class Entry < ApplicationRecord
     end
   end
 
+  # Advances reconciled_status to the next state in RECONCILED_STATUS_CYCLE,
+  # wrapping back to :unreconciled after :reconciled. Used by the quick-toggle
+  # UI control so a single click/tap moves a transaction through the same
+  # None -> Cleared -> Reconciled flow Bluecoins uses.
+  def advance_reconciled_status!
+    current_index = RECONCILED_STATUS_CYCLE.index(reconciled_status) || 0
+    next_status = RECONCILED_STATUS_CYCLE[(current_index + 1) % RECONCILED_STATUS_CYCLE.length]
+    update!(reconciled_status: next_status)
+  end
+
   # Removes split children and restores parent entry.
   def unsplit!
     self.class.transaction do
@@ -514,6 +561,7 @@ class Entry < ApplicationRecord
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
         name: bulk_update_params[:name],
+        reconciled_status: bulk_update_params[:reconciled_status],
         entryable_attributes: {
           category_id: bulk_update_params[:category_id],
           merchant_id: bulk_update_params[:merchant_id]
@@ -525,15 +573,28 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      updated_count = 0
+
       transaction do
-        all.each do |entry|
+        all.includes(:account).each do |entry|
           changed = false
+          # Whether this row's changes should lock saved attributes / mark
+          # user-modified. Reconciling is a verification action, not an
+          # edit — the single-row Entry#advance_reconciled_status! (used by
+          # the quick-toggle badge) never locks anything, so a bulk
+          # reconcile-only update shouldn't either. If reconciled_status is
+          # combined with a real edit (category, notes, etc.) in the same
+          # bulk update, the usual locking still applies to those fields.
+          lockable_change = false
 
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
             attrs.delete(:date) if entry.split_child?
             attrs.delete(:entryable_attributes) unless entry.transaction?
+            # reconciled_status is a manual-accounts-only concept — synced accounts
+            # already have duplicate-matching + statement-level reconciliation.
+            attrs.delete(:reconciled_status) unless entry.account.manual?
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
@@ -541,6 +602,7 @@ class Entry < ApplicationRecord
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
+              lockable_change = attrs.except(:reconciled_status).present?
             end
           end
 
@@ -550,16 +612,20 @@ class Entry < ApplicationRecord
             entry.transaction.save!
             entry.entryable.lock_attr!(:tag_ids) if entry.transaction.tags.any?
             changed = true
+            lockable_change = true
           end
 
           if changed
-            entry.lock_saved_attributes!
-            entry.mark_user_modified!
+            if lockable_change
+              entry.lock_saved_attributes!
+              entry.mark_user_modified!
+            end
+            updated_count += 1
           end
         end
       end
 
-      all.size
+      updated_count
     end
   end
 
