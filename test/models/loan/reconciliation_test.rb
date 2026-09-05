@@ -112,7 +112,107 @@ class Loan::ReconciliationTest < ActiveSupport::TestCase
       )
   end
 
+  # #11 acceptance criterion: the fixture is fed to the engine, not merely
+  # validated for shape.
+  #
+  # Every interest row is reconciled by walking the fixture's own movements into
+  # a change-point list and charging `Loan::InterestAccrual` over the window
+  # since the previous charge. Expected values come from the fixture, and the
+  # windows and segments come from the fixture -- nothing here is hardcoded from
+  # the engine, so this fails if the engine's segmentation, day count, event
+  # inclusivity or charge-point rounding changes.
+  #
+  # The second charge covers an extra repayment AND a mid-cycle rate change in
+  # one window, so it exercises C6, C7, C10 and C13 together.
+  test "every interest charge in the fixture reconciles through Loan::InterestAccrual" do
+    charges = interest_charges
+
+    assert_equal 3, charges.length, "the fixture must retain three charge windows"
+
+    charges.each do |charge|
+      actual = Loan::InterestAccrual.charge(
+        currency_precision: 2,
+        from_date: charge[:from_date],
+        to_date: charge[:to_date],
+        balance: charge[:opening_balance],
+        annual_rate: charge[:opening_rate],
+        change_points: charge[:change_points]
+      )
+
+      assert_equal charge[:expected], actual,
+        "charge on #{charge[:to_date]} over #{charge[:from_date]}..#{charge[:to_date]} " \
+        "(#{charge[:change_points].length} intra-window change point(s))"
+    end
+  end
+
+  test "the mid-cycle rate change is segmented, not applied across the whole window" do
+    charge = interest_charges.find { |c| c[:change_points].any? { |point| point.key?(:rate) } }
+
+    assert_not_nil charge, "the fixture must contain a charge window with a mid-cycle rate change"
+
+    flat_at_new_rate = Loan::InterestAccrual.charge(
+      currency_precision: 2,
+      from_date: charge[:from_date], to_date: charge[:to_date],
+      balance: charge[:opening_balance],
+      annual_rate: charge[:change_points].reverse.find { |point| point[:rate] }.fetch(:rate)
+    )
+
+    assert_not_equal flat_at_new_rate, charge[:expected],
+      "if the whole window at the new rate matched the statement, the fixture could not " \
+      "distinguish a segmented accrual from a retroactive one (C7)"
+  end
+
   private
+
+    # Walk the fixture into one charge window per `interest` row: the opening
+    # balance and rate carried from the previous charge, and every movement in
+    # between as a change point.
+    def interest_charges
+      charges = []
+      window_start = nil
+      opening_balance = nil
+      opening_rate = nil
+      running_balance = nil
+      change_points = []
+
+      rows.each do |row|
+        date = Date.iso8601(row.fetch("date"))
+        row_rate = decimal(row.fetch("annual_rate"))
+
+        case row.fetch("category")
+        when "loan_disbursal"
+          window_start = date
+          opening_balance = decimal(row.fetch("balance")).abs
+          running_balance = opening_balance
+          opening_rate = row_rate
+        when "extra_repayment"
+          # The window's OPENING balance must not move -- only the running
+          # balance does, and it does so from this row's own date.
+          running_balance -= decimal(row.fetch("amount"))
+          change_points << { date: date, balance: running_balance }
+        when "rate_change"
+          change_points << { date: date, rate: row_rate }
+        when "interest"
+          charges << {
+            from_date: window_start,
+            to_date: date,
+            opening_balance: opening_balance,
+            opening_rate: opening_rate,
+            change_points: change_points,
+            expected: decimal(row.fetch("amount")).abs
+          }
+          # Interest is capitalised, so the next window opens on the stated
+          # closing balance rather than on the pre-charge balance.
+          window_start = date
+          opening_balance = decimal(row.fetch("balance")).abs
+          running_balance = opening_balance
+          opening_rate = row_rate
+          change_points = []
+        end
+      end
+
+      charges
+    end
 
     def rows
       @rows ||= CSV.parse(File.read(FIXTURE), headers: true).map(&:to_h)
