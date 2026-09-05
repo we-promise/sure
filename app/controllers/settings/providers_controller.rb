@@ -340,6 +340,7 @@ class Settings::ProvidersController < ApplicationController
       {
         "akahu"          => @akahu_items,
         "up"             => @up_items,
+        "monobank"       => @monobank_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,

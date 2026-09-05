@@ -33,6 +33,19 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A panel that has a syncable type but is missing from family_panel_items reports
+  # :ok forever: compute_provider_sync_health skips it, so a failing connection never
+  # raises an error or stale badge on the settings page.
+  test "every syncable family panel supplies its items for sync health" do
+    get settings_providers_url
+    assert_response :success
+
+    wired = @controller.send(:family_panel_items).keys
+    missing = Settings::ProvidersController::PANEL_SYNCABLE_TYPES.keys - wired
+
+    assert_empty missing, "family panels missing from family_panel_items: #{missing.join(', ')}"
+  end
+
   test "shows configured Brex connections in bank sync settings" do
     get settings_providers_url
 
