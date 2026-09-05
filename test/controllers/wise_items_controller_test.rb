@@ -4,6 +4,7 @@ require "test_helper"
 
 class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
     SyncJob.stubs(:perform_later)
     @family = families(:dylan_family)
@@ -113,6 +114,34 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert @family.wise_items.find_by!(profile_id: "99999999").import_all_history?
     assert @family.wise_items.find_by!(profile_id: "88888888").import_all_history?
     assert_nil session[:wise_pending_import_all_history]
+  end
+
+  test "complete_account_setup stores explicit account usage type" do
+    wise_account = wise_accounts(:checking)
+
+    assert_difference "Account.count", 1 do
+      post complete_account_setup_wise_item_url(@wise_item), params: {
+        wise_account_id: wise_account.id,
+        usage_type: "personal"
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert Account.order(:created_at).last.personal?
+  end
+
+  test "link_existing_account updates the account usage type" do
+    account = accounts(:depository)
+    wise_account = wise_accounts(:checking)
+
+    post link_existing_account_wise_items_url, params: {
+      account_id: account.id,
+      wise_account_id: wise_account.id,
+      usage_type: "business"
+    }
+
+    assert_redirected_to accounts_path
+    assert account.reload.business?
   end
 
   test "link_profiles redirects to providers when there is no pending session" do

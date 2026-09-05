@@ -40,6 +40,7 @@ class Account < ApplicationRecord
   monetize :balance, :cash_balance
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
+  enum :usage_type, { personal: "personal", business: "business" }, default: :personal, validate: true
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
@@ -306,7 +307,7 @@ class Account < ApplicationRecord
       )
     end
 
-    def create_from_wise_account(wise_account)
+    def create_from_wise_account(wise_account, usage_type: nil)
       family = wise_account.wise_item.family
 
       create_and_sync(
@@ -316,6 +317,7 @@ class Account < ApplicationRecord
           balance: wise_account.current_balance || 0,
           cash_balance: wise_account.current_balance || 0,
           currency: wise_account.currency,
+          usage_type: usage_type.presence || wise_account.wise_item.profile_type,
           accountable_type: "Depository",
           accountable_attributes: { subtype: wise_account.account_subtype }
         },
@@ -488,6 +490,14 @@ class Account < ApplicationRecord
 
   def institution_domain
     read_attribute(:institution_domain).presence || provider&.institution_domain
+  end
+
+  def business_usage
+    business?
+  end
+
+  def business_usage=(value)
+    self.usage_type = ActiveModel::Type::Boolean.new.cast(value) ? "business" : "personal"
   end
 
   def manual_crypto_exchange?

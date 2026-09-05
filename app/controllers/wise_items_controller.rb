@@ -144,7 +144,7 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t(".not_found") and return
     end
 
-    account = Account.create_from_wise_account(wise_account)
+    account = Account.create_from_wise_account(wise_account, usage_type: account_usage_type_param(wise_account))
 
     AccountProvider.create!(
       account: account,
@@ -182,7 +182,7 @@ class WiseItemsController < ApplicationController
       redirect_to safe_return_to_path || accounts_path, alert: t("wise_items.link_accounts.not_found") and return
     end
 
-    account = Account.create_from_wise_account(wise_account)
+    account = Account.create_from_wise_account(wise_account, usage_type: account_usage_type_param(wise_account))
     AccountProvider.create!(account: account, provider: wise_account)
     wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
 
@@ -214,6 +214,7 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
 
+    account.update!(usage_type: account_usage_type_param(wise_account))
     AccountProvider.create!(account: account, provider: wise_account)
     wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
 
@@ -256,6 +257,11 @@ class WiseItemsController < ApplicationController
       WiseAccount.joins(:wise_item)
                  .merge(Current.family.wise_items.active)
                  .find_by(id: wise_account_id)
+    end
+
+    def account_usage_type_param(wise_account)
+      value = params[:usage_type].presence || wise_account.wise_item.profile_type
+      Account.usage_types.key?(value) ? value : "personal"
     end
 
     def profile_display_name(profile)

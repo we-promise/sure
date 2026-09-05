@@ -73,6 +73,39 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 500, account.balance
   end
 
+  test "usage type defaults to personal and can be set through business usage switch" do
+    account = @family.accounts.build(
+      name: "Usage test",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    assert account.personal?
+
+    account.business_usage = "1"
+    assert account.business?
+
+    account.business_usage = "0"
+    assert account.personal?
+  end
+
+  test "create_from_wise_account inherits the Wise profile type" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_from_wise_account(wise_accounts(:checking))
+
+    assert account.business?
+  end
+
+  test "create_from_wise_account accepts an explicit usage type override" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_from_wise_account(wise_accounts(:checking), usage_type: "personal")
+
+    assert account.personal?
+  end
+
   test "create_and_sync creates opening anchor with correct currency" do
     Account.any_instance.stubs(:sync_later)
 

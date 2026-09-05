@@ -27,6 +27,7 @@
             <%= hidden_field_tag :wise_item_id, @wise_item&.id %>
             <%= hidden_field_tag :account_id, @account.id %>
             <%= hidden_field_tag :return_to, @return_to %>
+            <%= hidden_field_tag :usage_type, "personal", id: nil %>
 
             <div class="space-y-2">
               <% @available_accounts.each do |wise_account| %>
@@ -43,6 +44,11 @@
                 </label>
               <% end %>
             </div>
+
+            <label class="flex items-center gap-2 text-sm text-primary">
+              <%= check_box_tag :usage_type, "business", @account.business? || @wise_item&.business?, class: "rounded border-secondary" %>
+              <span><%= t("accounts.form.business_usage_label") %></span>
+            </label>
 
             <div class="flex gap-2 justify-end pt-4">
               <%= render DS::Link.new(
