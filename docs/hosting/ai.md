@@ -755,6 +755,9 @@ an account roster and category names. The roster collapses to counts beyond
 25 accounts, categories beyond 60 names, and both collapse whenever the
 configured context window is below 4096 tokens.
 
+A family admin can replace the static half from **Settings → AI Prompts**
+without a redeploy; see [Custom System Prompts](#custom-system-prompts).
+
 ### Adding a New Assistant Type
 
 To add a custom assistant implementation:
@@ -1287,18 +1290,51 @@ byte-identical on every request (providers cache and discount an
 exactly-repeated prefix), and a trailing `## Session context` block holding
 everything volatile (date, currency, account roster, categories).
 
-To customize:
-1. Fork the repository
-2. Edit the `STATIC_INSTRUCTIONS` constant (keep customizations there so the
-   prompt stays cacheable; only put genuinely per-request data in the session
-   context builders)
-3. Rebuild and deploy
-
 **What you can customize:**
 - Tone and personality
 - Response format
 - Rules and constraints
 - Domain expertise
+
+#### In the browser (per family, no redeploy)
+
+A family admin can edit the prompts at **Settings → AI Prompts**. Overrides are
+stored per family, so one family's edits never affect another on the same
+deployment. Five prompts are editable: the chat system prompt, plus the
+transaction categorizer and merchant detector for each of OpenAI and Anthropic.
+Those last two are worded independently per provider, which is why each gets its
+own field.
+
+Each field opens with its built-in default instructions, or the family override
+if one was saved. Leaving a field blank falls back to the default, and clicking
+**Reset to default** asks for confirmation before restoring the original text.
+A status label and live character counter sit below each field, with an override
+cap of 20,000 characters per prompt.
+
+Overriding the chat prompt gives up some prompt caching. The static half is
+byte-stable so providers discount the repeated prefix; a family that overrides it
+gets its own prefix, which no longer shares a cache entry with other families on
+the same API key. The first request after each edit also pays full price. The
+result is a small, temporary increase in cost.
+
+Evals always score the default. `Eval::Runners::ChatRunner` reads
+`STATIC_INSTRUCTIONS` directly, which keeps eval scores reproducible. Editing a
+family's prompt does not change them.
+
+Custom OpenAI-compatible endpoints need more care. When `LLM_JSON_MODE=none`
+there is no server-side schema, and the categorizer and merchant response parser
+falls back to matching the `{"categorizations": [...]}` or `{"merchants": [...]}`
+wrapper key in the prompt's example JSON. Keep that block and its top-level key
+intact. Native OpenAI (strict schema) and Anthropic (forced tool use) enforce the
+shape server-side, so you can reword those two freely.
+
+#### In code (the default every family starts from)
+
+1. Fork the repository
+2. Edit the `STATIC_INSTRUCTIONS` constant (keep customizations there so the
+   prompt stays cacheable; only put genuinely per-request data in the session
+   context builders)
+3. Rebuild and deploy
 
 ### Function Calling
 

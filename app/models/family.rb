@@ -9,6 +9,7 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include AiPromptable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],

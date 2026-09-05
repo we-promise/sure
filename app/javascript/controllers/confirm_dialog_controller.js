@@ -10,6 +10,7 @@ export default class extends Controller {
 
     this.#prepareDialog(data);
 
+    this.element.returnValue = "";
     this.element.showModal();
 
     return new Promise((resolve) => {

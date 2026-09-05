@@ -112,20 +112,33 @@ en:
         cost_estimates_title: "About Cost Estimates"
         cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
+      prompt_field:
+        provider_label: Provider
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Reset to default
+        reset_confirm_title: Reset to default prompt?
+        reset_confirm_body: This will discard your custom prompt and restore the built-in default instructions.
+        status_custom: Using your custom prompt
+        status_default: Using the built-in default
       show:
         page_title: AI Prompts
-        openai_label: OpenAI
         disable_ai: Disable AI Assistant
-        prompt_instructions: Prompt Instructions
+        save: Save prompts
         main_system_prompt:
           title: Main System Prompt
           subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+          label: Chat system prompt
         transaction_categorizer:
           title: Transaction Categorizer
           subtitle: AI automatically categorizes your transactions based on your defined categories
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+      update:
+        success: AI prompts updated
+        multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"
     payments:
       show:
         page_title: Payments

@@ -797,6 +797,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.integer "month_start_day", default: 1, null: false
     t.string "name"
     t.boolean "personal_budgets", default: false, null: false
+    t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.boolean "recurring_transactions_disabled", default: false, null: false
     t.string "stripe_customer_id"
     t.string "timezone"
