@@ -164,3 +164,4 @@ en:
       failed: Failed to create account. Please try again.
     generate_sca_keypair:
       success: New SCA keypair generated. Register the public key with Wise to finish enabling it.
+      failed: Failed to generate a new SCA keypair. Please try again.

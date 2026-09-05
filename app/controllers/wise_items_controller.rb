@@ -142,6 +142,10 @@ class WiseItemsController < ApplicationController
   def generate_sca_keypair
     @wise_item.generate_sca_keypair!
     render_provider_panel_success(t(".success"))
+  rescue => e
+    Rails.logger.error "WiseItemsController#generate_sca_keypair - #{e.class}: #{e.message}"
+    @wise_item.errors.add(:base, t(".failed"))
+    render_provider_panel_error
   end
 
   def complete_account_setup

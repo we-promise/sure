@@ -123,8 +123,12 @@ class WiseItem < ApplicationRecord
     token.to_s.strip.present?
   end
 
+  # True only when there's a private key AND it actually parses -- a stored
+  # key that's corrupted or unparsable (e.g. an encryption misconfig or a
+  # manual DB edit) should fall back to the "not configured" UI state rather
+  # than rendering a blank public key box.
   def sca_configured?
-    sca_private_key.present?
+    sca_public_key.present?
   end
 
   # Generates a new RSA keypair for Wise's Strong Customer Authentication (SCA)
@@ -138,7 +142,7 @@ class WiseItem < ApplicationRecord
   end
 
   def sca_public_key
-    return nil unless sca_configured?
+    return nil unless sca_private_key.present?
 
     OpenSSL::PKey::RSA.new(sca_private_key).public_key.to_pem
   rescue OpenSSL::PKey::RSAError

@@ -51,6 +51,13 @@ class WiseItemTest < ActiveSupport::TestCase
     assert_nil @wise_item.sca_public_key
   end
 
+  test "sca_configured? is false when the stored private key is corrupted" do
+    @wise_item.update_column(:sca_private_key, "not a real PEM")
+
+    assert_nil @wise_item.sca_public_key
+    assert_not @wise_item.sca_configured?
+  end
+
   test "generate_sca_keypair! stores a private key and returns a matching public key" do
     public_pem = @wise_item.generate_sca_keypair!
 
