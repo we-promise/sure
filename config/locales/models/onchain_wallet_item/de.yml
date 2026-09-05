@@ -1,0 +1,6 @@
+---
+de:
+  onchain_wallet_item:
+    movement:
+      received: "Eingang: %{quantity} %{symbol}"
+      sent: "Ausgang: %{quantity} %{symbol}"
