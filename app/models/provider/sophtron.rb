@@ -5,8 +5,10 @@
 # - V1 RPC-style endpoints for institution connection, jobs, MFA, accounts, and transactions.
 class Provider::Sophtron < Provider
   include HTTParty
+  extend BaseUrlAllowlistable
 
   DEFAULT_BASE_URL = "https://api.sophtron.com/api"
+  ALLOWED_BASE_URLS = [ DEFAULT_BASE_URL ].freeze
   USER_AGENT = "Sure Finance Sophtron Client"
   FAILURE_JOB_STATUSES = %w[Completed Timeout Failed Failure Error].freeze
 
@@ -380,13 +382,18 @@ class Provider::Sophtron < Provider
       body
     end
 
+    # Accepts the shapes operators have historically pasted (a bare host, a
+    # trailing slash, the /v2 suffix) and reduces them to the API root before
+    # the allow-list decides. The allow-list is what makes the value safe; this
+    # only stops a well-meaning operator from being refused over a slash.
     def normalize_base_url(value)
-      url = value.presence || DEFAULT_BASE_URL
-      url = url.to_s.chomp("/")
-      url = url.delete_suffix("/v2") if url.end_with?("/v2")
+      url = value.to_s.strip.chomp("/")
+      return DEFAULT_BASE_URL if url.blank?
 
-      parsed = URI.parse(url)
-      parsed.path.to_s.end_with?("/api") ? url : "#{url}/api"
+      url = url.delete_suffix("/v2") if url.end_with?("/v2")
+      url = "#{url}/api" unless URI.parse(url).path.to_s.chomp("/").end_with?("/api")
+
+      self.class.normalize_base_url(url) || DEFAULT_BASE_URL
     rescue URI::InvalidURIError
       DEFAULT_BASE_URL
     end
