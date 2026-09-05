@@ -399,13 +399,16 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
   test "dashboard spending trend axis labels follow the month that owns each day" do
     account = @family.accounts.create!(name: "Spending Trend Axis Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
-    create_transaction(account: account, name: "Spend", amount: 10, date: 2.months.ago.to_date)
 
     # Find a recent past month whose previous month is longer (e.g. February
     # after January), so the axis has tail days owned by the previous month.
     selected_month = (1..11).map { |i| i.months.ago.beginning_of_month.to_date }
       .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
     previous_month = (selected_month - 1.month).beginning_of_month
+
+    # Spending in both months so the widget renders the chart, not the empty state.
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+    create_transaction(account: account, name: "Prior spend", amount: 10, date: previous_month)
 
     get root_path, params: { spending_month: selected_month.iso8601 }
 
@@ -432,7 +435,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     chart = spending_trend_chart_data
-    assert_equal Date.current.beginning_of_month.iso8601, chart.fetch("start_date")
+    assert_equal Date.current.beginning_of_month.iso8601, chart.fetch("current").first.fetch("date")
   end
 
   private
