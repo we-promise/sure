@@ -1,7 +1,10 @@
 require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
+  include ProviderTestHelper
+
   setup do
+    ensure_tailwind_build
     sign_in users(:family_admin)
     @account = accounts(:investment)
     @holding = @account.holdings.first
@@ -24,6 +27,101 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     get holding_path(@holding)
 
     assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
+  end
+
+  test "show uses current market price for market value" do
+    holding = create_manual_holding(
+      ticker: "WBIT.HM",
+      qty: 931,
+      price: 14.69,
+      amount: 13676.39,
+      currency: "EUR"
+    )
+    Security::Price.create!(
+      security: holding.security,
+      date: Date.current,
+      price: 16.21,
+      currency: "EUR"
+    )
+
+    get holding_path(holding)
+
+    assert_response :success
+    assert_includes response.body, ApplicationController.helpers.format_money(Money.new(15091.51, "EUR"))
+  end
+
+  test "show uses freshly fetched market price for market value" do
+    holding = create_manual_holding(
+      ticker: "WBIT-FETCH.HM",
+      qty: 931,
+      price: 14.69,
+      amount: 13676.39,
+      currency: "EUR"
+    )
+    provider = mock("provider")
+    provider.expects(:fetch_security_price)
+            .with(symbol: holding.ticker, exchange_operating_mic: holding.security.exchange_operating_mic, date: Date.current)
+            .returns(provider_success_response(
+              Provider::SecurityConcept::Price.new(
+                symbol: holding.ticker,
+                date: Date.current,
+                price: 16.21,
+                currency: "EUR",
+                exchange_operating_mic: holding.security.exchange_operating_mic
+              )
+            ))
+    Security.any_instance.stubs(:price_data_provider).returns(provider)
+
+    assert_difference "Security::Price.count", 1 do
+      get holding_path(holding)
+    end
+
+    assert_response :success
+    assert_includes response.body, ApplicationController.helpers.format_money(Money.new(16.21, "EUR"))
+    assert_includes response.body, ApplicationController.helpers.format_money(Money.new(15091.51, "EUR"))
+  end
+
+  test "show falls back to stored holding amount when current market price is unknown" do
+    holding = create_manual_holding(
+      ticker: "WBIT-FALLBACK.HM",
+      qty: 931,
+      price: 14.69,
+      amount: 13676.39,
+      currency: "EUR",
+      offline: true
+    )
+
+    get holding_path(holding)
+
+    assert_response :success
+    assert_includes response.body, ApplicationController.helpers.format_money(Money.new(13676.39, "EUR"))
+  end
+
+  test "show converts current market price into holding currency for market value" do
+    holding = create_manual_holding(
+      ticker: "WBIT-USD.HM",
+      qty: 100,
+      price: 14.00,
+      amount: 1400.00,
+      currency: "EUR"
+    )
+    ExchangeRate.create!(
+      from_currency: "USD",
+      to_currency: "EUR",
+      date: Date.current,
+      rate: 0.9
+    )
+    Security::Price.create!(
+      security: holding.security,
+      date: Date.current,
+      price: 20.00,
+      currency: "USD"
+    )
+
+    get holding_path(holding)
+
+    assert_response :success
+    assert_includes response.body, ApplicationController.helpers.format_money(Money.new(1800.00, "EUR"))
   end
 
   test "destroys holding and associated entries" do
@@ -126,4 +224,30 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
+
+  private
+    def create_manual_holding(ticker:, qty:, price:, amount:, currency:, offline: false)
+      security = Security.create!(
+        ticker: ticker,
+        name: "Manual Holding #{ticker}",
+        offline: offline
+      )
+      account = users(:family_admin).family.accounts.create!(
+        name: "Manual Brokerage #{ticker}",
+        balance: amount,
+        cash_balance: 0,
+        currency: currency,
+        accountable: Investment.new
+      )
+      account.holdings.create!(
+        security: security,
+        date: Date.current,
+        qty: qty,
+        price: price,
+        amount: amount,
+        currency: currency,
+        cost_basis: price,
+        cost_basis_source: "calculated"
+      )
+    end
 end
