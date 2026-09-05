@@ -20,6 +20,20 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:openid_connect] = nil
   end
 
+  def stub_provider(name)
+    ProviderLoader.stubs(:load_providers).returns([
+      { name: name, strategy: "openid_connect", issuer: "https://idp.example", label: "IdP" }
+    ])
+  end
+
+  def stub_discovery(end_session_endpoint)
+    body = { "end_session_endpoint" => end_session_endpoint }.to_json
+    response = OpenStruct.new(success?: true, body: body)
+    connection = mock
+    connection.stubs(:get).returns(response)
+    Faraday.stubs(:new).returns(connection)
+  end
+
   def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
@@ -1142,5 +1156,42 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil session[:id_token_hint], "a local sign-in must not inherit SSO logout hints"
     assert_nil session[:sso_login_provider]
+  end
+
+  # The end_session_endpoint comes out of the provider's discovery document, so
+  # the app does not choose it. Forwarding the ID token to an http:// endpoint
+  # would put the user's claims in a cleartext URL.
+  test "federated logout is skipped when the provider advertises a cleartext endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("http://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_no_match(/an-id-token/, response.location.to_s, "the token must not travel over http")
+    assert_no_match(%r{^http://idp\.example}, response.location.to_s)
+  end
+
+  test "federated logout still runs for an https endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("https://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_match(%r{^https://idp\.example/logout}, response.location.to_s)
+    assert_match(/an-id-token/, response.location.to_s)
   end
 end

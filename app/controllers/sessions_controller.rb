@@ -578,6 +578,21 @@ class SessionsController < ApplicationController
 
           return nil unless end_session_endpoint.present?
 
+          # The endpoint comes out of the provider's discovery document, so the
+          # app does not choose it. Forwarding the ID token to a cleartext
+          # endpoint would put the user's claims in a plain URL (CWE-319), so
+          # fall back to a local logout instead.
+          endpoint_uri = begin
+            URI.parse(end_session_endpoint)
+          rescue URI::InvalidURIError
+            nil
+          end
+
+          unless endpoint_uri&.scheme == "https" && endpoint_uri.host.present?
+            Rails.logger.warn("[SSO] Ignoring non-HTTPS end_session_endpoint for #{oidc_identity.provider}")
+            return nil
+          end
+
           # Build the logout URL with post_logout_redirect_uri
           post_logout_redirect = "#{request.base_url}/auth/logout/callback"
           params = {
