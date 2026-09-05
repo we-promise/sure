@@ -65,7 +65,7 @@
 
             <% if params[:type].nil? || params[:type] == "SureImport" %>
               <li>
-                <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full", data: { turbo: false } do |form| %>
+                <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full", data: { turbo: false, controller: "auto-submit-form" } do |form| %>
                   <%= form.hidden_field :type, value: "SureImport" %>
                   <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
                     <div class="flex items-center gap-2">
@@ -84,7 +84,7 @@
                       </div>
                     </div>
                     <%= icon("chevron-right") %>
-                    <%= form.file_field :import_file, accept: ".ndjson,.json", class: "hidden", onchange: "this.form.submit()" %>
+                    <%= form.file_field :import_file, accept: ".ndjson,.json", class: "hidden", data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
                   </label>
                 <% end %>
 
@@ -130,7 +130,7 @@
 
             <% if (params[:type].nil? || params[:type].in?(%w[DocumentImport PdfImport])) && @document_upload_extensions.any? %>
               <li>
-                <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full", data: { turbo: false } do |form| %>
+                <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full", data: { turbo: false, controller: "auto-submit-form" } do |form| %>
                   <%= form.hidden_field :type, value: "DocumentImport" %>
                   <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
                     <div class="flex items-center gap-2">
@@ -149,7 +149,7 @@
                       </div>
                     </div>
                     <%= icon("chevron-right") %>
-                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.submit()" %>
+                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
                   </label>
                 <% end %>
 
