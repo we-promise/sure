@@ -25,6 +25,96 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan(/<turbo-frame[^>]*id="drawer"/).size
   end
 
+  test "recurring occurrence feedback is localized in German" do
+    @user.update!(locale: "de")
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+
+    translations = {
+      "history_status.paid" => "Bezahlt",
+      "history_status.skipped" => "Übersprungen",
+      "history_status.missed" => "Verpasst",
+      "history_status.scheduled" => "Offen",
+      "show.paid_of" => "%{paid} von %{expected} bezahlt",
+      "show.paid_headline" => "%{amount} bezahlt",
+      "show.remaining" => "%{amount} ausstehend",
+      "show.overpaid" => "mehr als erwartet",
+      "show.skipped" => "Übersprungen",
+      "show.missed" => "Als verpasst markiert",
+      "show.payments" => "Zahlungen",
+      "show.manual_payment" => "Manuelle Zahlung",
+      "show.unlink" => "Verknüpfung aufheben",
+      "show.review_heading" => "Zahlung prüfen",
+      "show.find_heading" => "Zahlung finden",
+      "show.add_heading" => "Weitere Zahlung hinzufügen",
+      "show.other_matches" => "Weitere mögliche Treffer",
+      "show.no_ranked_candidates" => "Derzeit sieht hier keine Transaktion nach einer Zahlung für diese Rechnung aus.",
+      "show.search_all" => "Alle Transaktionen durchsuchen",
+      "show.search_placeholder" => "Transaktionen suchen",
+      "show.no_candidates" => "Keine passenden Transaktionen in zeitlicher Nähe gefunden.",
+      "show.no_search_results" => "Keine Treffer für „%{query}“.",
+      "show.link_payment" => "Zahlung verknüpfen",
+      "show.not_this_one" => "Nicht diese Transaktion",
+      "show.cant_find" => "Transaktion nicht gefunden?",
+      "show.manual_explainer" => "Erfasse eine tatsächlich erfolgte Zahlung, wenn hier keine passende Transaktion dabei ist.",
+      "show.manual_amount_label" => "Betrag",
+      "show.manual_date_label" => "Datum",
+      "show.record_payment" => "Zahlung erfassen",
+      "show.mark_paid" => "Als bezahlt markieren",
+      "show.mark_paid_hint" => "Markiert den Restbetrag als bezahlt, ohne eine Transaktion zu erfassen.",
+      "show.skip" => "Überspringen",
+      "show.snooze_week" => "Um eine Woche verschieben",
+      "show.reopen" => "Wieder öffnen",
+      "show.view_bill" => "Vollständige Rechnung anzeigen",
+      "mark_paid.success" => "Rechnung als bezahlt markiert",
+      "skip.success" => "Rechnung übersprungen",
+      "reopen.success" => "Rechnung wieder geöffnet",
+      "snooze.success" => "Bis %{date} verschoben",
+      "snooze.invalid_date" => "Das Datum konnte nicht erkannt werden",
+      "override_amount.success" => "Erwarteter Betrag aktualisiert"
+    }
+
+    translations.each do |key, text|
+      assert_equal text, I18n.t("recurring_occurrences.#{key}", locale: :de, fallback: false)
+    end
+
+    due_label_translations = {
+      "overdue.one" => "Seit 1 Tag überfällig · fällig am %{date}",
+      "overdue.other" => "Seit %{count} Tagen überfällig · fällig am %{date}",
+      "today" => "Heute fällig",
+      "settled" => "War am %{date} fällig",
+      "due_since" => "Fällig am %{date}",
+      "snoozed" => "Verschoben bis %{date}",
+      "upcoming.one" => "Morgen fällig · %{date}",
+      "upcoming.other" => "In %{count} Tagen fällig · %{date}"
+    }
+
+    due_label_translations.each do |key, text|
+      assert_equal text, I18n.t("bills.due_label.#{key}", locale: :de, fallback: false)
+    end
+
+    days_until_due = (@occurrence.effective_due_on - Date.current).to_i
+    localized_due_date = I18n.l(@occurrence.effective_due_on, locale: :de, format: :short).strip
+    german_due_label = I18n.t("bills.due_label.upcoming", count: days_until_due,
+      date: localized_due_date, locale: :de, fallback: false)
+    english_due_label = I18n.t("bills.due_label.upcoming", count: days_until_due,
+      date: localized_due_date, locale: :en)
+
+    assert_select "h2 + p", text: german_due_label
+    assert_select "h2 + p", text: english_due_label, count: 0
+
+    assert_select "p", text: /ausstehend/
+    assert_select "p", text: translations.fetch("show.find_heading")
+    assert_select "summary", text: translations.fetch("show.search_all")
+    assert_select "input[placeholder=?]", translations.fetch("show.search_placeholder")
+    assert_select "summary", text: translations.fetch("show.cant_find")
+    assert_select "a", text: translations.fetch("show.mark_paid")
+    assert_select "p", text: translations.fetch("show.mark_paid_hint")
+    assert_select "a", text: translations.fetch("show.view_bill")
+  end
+
   # The dialog used to list the fifteen most RECENT transactions in the window.
   # On a real bill that hid every plausible match behind unrelated larger
   # charges, so the exact payment was invisible.

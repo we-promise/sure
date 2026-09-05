@@ -12,6 +12,16 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "excludes disabled accounts from the new transfer form" do
+    disabled_account = accounts(:depository)
+    disabled_account.update!(status: "disabled")
+
+    get new_transfer_url
+
+    assert_response :success
+    assert_no_match disabled_account.name, response.body
+  end
+
   test "can create transfers" do
     assert_difference "Transfer.count", 1 do
       post transfers_url, params: {

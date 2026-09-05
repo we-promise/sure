@@ -227,6 +227,7 @@ class TransfersController < ApplicationController
 
     def set_accounts
       @accounts = accessible_accounts
+        .active
         .alphabetically
         .includes(
           :account_providers,
