@@ -83,8 +83,9 @@
 
     <% unless trading212_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if trading212_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: trading212_item.accounts %>
+        <% visible_accounts = trading212_item.accounts & Current.user.accessible_accounts.to_a %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = trading212_item.syncs.ordered.first&.sync_stats || {} %>
