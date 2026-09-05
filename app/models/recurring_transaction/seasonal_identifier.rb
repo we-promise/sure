@@ -88,10 +88,11 @@ class RecurringTransaction
               .where(entryable_type: "Transaction")
               .where("entries.date >= ?", LOOKBACK_MONTHS.months.ago.to_date)
               .where(entries: { excluded: false })
+              .where("entries.amount > 0")
               .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
               .includes(:entryable)
               .to_a
-              .select { |entry| entry.entryable.is_a?(Transaction) && entry.amount.positive? }
+              .select { |entry| entry.entryable.is_a?(Transaction) }
               .group_by do |entry|
                 transaction = entry.entryable
                 identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]

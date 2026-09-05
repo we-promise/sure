@@ -21,7 +21,9 @@ class Assistant::Function::GetDocumentText < Assistant::Function
 
         Pass the account_statement_id from list_account_statements or
         search_family_files. Use `from_page` to walk a long document; the
-        response says whether more pages remain.
+        response says whether more pages remain. When a single page is larger
+        than one response, the reply carries `next_from_char` alongside
+        `next_page`: pass both back to read the rest of that same page.
 
         If `extractable` is false the PDF is a scan with no text layer. There is
         no OCR here, so do not guess at its contents: ask the user for the
@@ -49,6 +51,11 @@ class Assistant::Function::GetDocumentText < Assistant::Function
           type: "integer",
           minimum: 1,
           description: "First page to return (defaults to 1)"
+        },
+        from_char: {
+          type: "integer",
+          minimum: 0,
+          description: "Character offset within from_page, from a previous response's next_from_char. Only needed to continue a page too large to fit in one reply."
         }
       }
     )
@@ -75,45 +82,63 @@ class Assistant::Function::GetDocumentText < Assistant::Function
     payload[:note] = result.note if result.note
     return payload unless result.extractable
 
-    payload.merge(page_window(result, from_page))
+    from_char = (Integer(params["from_char"].to_s, exception: false) || 0).clamp(0, MAX_CHARS * 1_000)
+
+    payload.merge(page_window(result, from_page, from_char))
   end
 
   private
-    # Whole pages only, never a mid-page cut: a statement split across a
-    # character boundary reads as a truncated number, which is worse than one
-    # fewer page.
-    def page_window(result, from_page)
+    # Whole pages wherever they fit, because a statement split across a
+    # character boundary reads as a truncated number. A page too large to fit
+    # at all is the exception: it is served in MAX_CHARS chunks with a cursor
+    # into it, so its tail stays reachable instead of being cut and abandoned.
+    def page_window(result, from_page, from_char)
       selected = []
       chars = 0
-      last_page = from_page - 1
+      page_number = from_page
+      offset = from_char
+      continuation = nil
+      continuation_from = from_char
 
-      result.pages[(from_page - 1)..].to_a.each_with_index do |text, index|
-        break if chars.positive? && chars + text.length > MAX_CHARS
+      while page_number <= result.page_count
+        remaining = result.pages[page_number - 1].to_s[offset..].to_s
 
-        # The guard above only fires once something is already selected, so a
-        # first page longer than the whole budget would otherwise be emitted
-        # entire. Cutting it is the lesser evil against a response that blows
-        # the context window, and the cut is declared rather than silent.
-        page = { page: from_page + index, text: text.first(MAX_CHARS) }
-        page[:truncated] = true if text.length > MAX_CHARS
+        if remaining.length > MAX_CHARS
+          # Only ever the first slot: a chunk this size fills the whole budget,
+          # and starting it after a whole page would push past it.
+          break if chars.positive?
 
+          selected << { page: page_number, from_char: offset, text: remaining.first(MAX_CHARS), continued: true }
+          continuation = offset + MAX_CHARS
+          continuation_from = offset
+          break
+        end
+
+        break if chars.positive? && chars + remaining.length > MAX_CHARS
+
+        page = { page: page_number, text: remaining }
+        page[:from_char] = offset if offset.positive?
         selected << page
-        chars += page[:text].length
-        last_page = from_page + index
+        chars += remaining.length
+        page_number += 1
+        offset = 0
       end
 
-      more = last_page < result.page_count
-      cut = selected.any? { |page| page[:truncated] }
+      last_page = selected.any? ? selected.last[:page] : from_page - 1
+      more = continuation.present? || last_page < result.page_count
 
       {
         from_page: from_page,
         to_page: last_page,
         pages: selected,
         has_more_pages: more,
-        next_page: more ? last_page + 1 : nil,
-        note: cut ? "A page was longer than one response can carry and was cut at #{MAX_CHARS} characters. " \
-                    "The rest of that page cannot be reached through paging. Say the page was truncated " \
-                    "rather than treating what is here as the whole page." : nil
+        # The cursor stays on the same page until that page's text runs out.
+        # Advancing next_page here would skip everything after the cut.
+        next_page: more ? (continuation ? last_page : last_page + 1) : nil,
+        next_from_char: continuation,
+        note: continuation ? "Page #{last_page} is longer than one response can carry, so only #{MAX_CHARS} " \
+                             "characters of it from offset #{continuation_from} are here. Call again with " \
+                             "from_page=#{last_page} and from_char=#{continuation} for the rest of it." : nil
       }.compact
     end
 

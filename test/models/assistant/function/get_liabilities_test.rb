@@ -65,6 +65,19 @@ class Assistant::Function::GetLiabilitiesTest < ActiveSupport::TestCase
     assert_not payload[:unavailable]&.key?(:monthly_payment)
   end
 
+  # The last instalment clears the remainder rather than being another full
+  # payment, so an interest-free loan must report no interest whatever the
+  # balance divides into.
+  test "reports no interest on a zero-rate loan whose balance is not divisible by the payment" do
+    @account.update!(balance: 1_201)
+    @loan.update!(rate_type: "variable", interest_rate: 0, scheduled_payment: 12)
+
+    payload = loan_payload
+
+    assert_equal 101, payload[:schedule][:remaining_payments]
+    assert_equal 0, payload[:schedule][:remaining_interest].to_f
+  end
+
   test "says so when the payment can never amortize the balance" do
     @account.update!(balance: 100_000)
     @loan.update!(rate_type: "variable", interest_rate: 12, scheduled_payment: 100)

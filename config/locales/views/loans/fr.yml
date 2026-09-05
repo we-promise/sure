@@ -14,7 +14,7 @@ fr:
       interest_rate_placeholder: '5,25'
       maturity_date: Date de dernière échéance
       none: Aucun
-      origination_date: Date de première échéance
+      origination_date: Date de début du prêt
       rate_type: Type de taux
       scheduled_payment: Mensualité réelle
       scheduled_payment_hint: Utile seulement pour un taux variable ou révisable, où la mensualité ne peut pas être calculée. À laisser vide pour un taux fixe.

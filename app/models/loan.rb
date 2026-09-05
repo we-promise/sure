@@ -109,9 +109,12 @@ class Loan < ApplicationRecord
     remaining = remaining_payments
     payment = effective_payment
     return nil if remaining.nil? || payment.nil?
+    return Money.new(0, account.currency) if remaining.zero?
 
-    total = payment.amount * remaining
-    Money.new([ total - account.balance.to_d, 0 ].max, account.currency)
+    balance = account.balance.to_d
+    total = payment.amount * (remaining - 1) + final_installment(balance, payment.amount, remaining)
+
+    Money.new([ total - balance, 0 ].max, account.currency)
   end
 
   class << self
@@ -129,6 +132,24 @@ class Loan < ApplicationRecord
   end
 
   private
+    # The last instalment settles whatever is left; it is not another full
+    # payment. Counting a full one invents interest that a 0% loan cannot
+    # charge: 1,201 repaid in instalments of 12 ends on a 1, not on a 12, and
+    # that 11 was being reported as interest still owed.
+    def final_installment(balance, payment, remaining)
+      rate = monthly_rate
+
+      return [ balance - payment * (remaining - 1), 0.to_d ].max if rate.zero?
+
+      # Balance after the first `remaining - 1` full payments, from the same
+      # amortization identity `remaining_payments` inverts, plus the month of
+      # interest the final payment still carries.
+      growth = (1 + rate) ** (remaining - 1)
+      outstanding = balance * growth - payment * (growth - 1) / rate
+
+      [ outstanding * (1 + rate), 0.to_d ].max
+    end
+
     # interest_rate is the NOMINAL annual rate. `apr` is deliberately not used
     # here: a French TAEG bundles fees and insurance, and feeding it to the
     # amortization formula would overstate the interest every month.

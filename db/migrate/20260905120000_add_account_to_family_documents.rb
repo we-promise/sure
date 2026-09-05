@@ -12,12 +12,19 @@ class AddAccountToFamilyDocuments < ActiveRecord::Migration[8.1]
     add_reference :family_documents, :account, type: :uuid, null: true, foreign_key: true, index: true
 
     # Backfill from the metadata key written since the vault bridge landed.
+    #
+    # The pattern is the canonical 8-4-4-4-12 form, not "36 hex-or-dash
+    # characters": the loose version admits 36 dashes, and `~` alone does not
+    # bind Postgres to an evaluation order, so such a row could still reach a
+    # `::uuid` cast and abort the whole migration. Matching the account on TEXT
+    # keeps the cast off the untrusted value entirely; anything malformed
+    # simply matches nothing and is skipped, which is the intended behaviour.
     execute <<~SQL
       UPDATE family_documents
-      SET account_id = (metadata->>'account_id')::uuid
-      WHERE metadata->>'account_id' IS NOT NULL
-        AND (metadata->>'account_id') ~ '^[0-9a-fA-F-]{36}$'
-        AND EXISTS (SELECT 1 FROM accounts WHERE accounts.id = (family_documents.metadata->>'account_id')::uuid)
+      SET account_id = accounts.id
+      FROM accounts
+      WHERE family_documents.metadata->>'account_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        AND accounts.id::text = lower(family_documents.metadata->>'account_id')
     SQL
   end
 

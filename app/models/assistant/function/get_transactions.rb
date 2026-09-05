@@ -174,10 +174,12 @@ class Assistant::Function::GetTransactions < Assistant::Function
     search_params = params.except("order", "page", "page_size", "sort_by")
     search_params["status"] = search_params.delete("statuses") if search_params.key?("statuses")
 
+    accessible_account_ids = user.accessible_accounts.visible.pluck(:id)
+
     search = Transaction::Search.new(
       family,
       filters: search_params,
-      accessible_account_ids: user.accessible_accounts.visible.pluck(:id)
+      accessible_account_ids: accessible_account_ids
     )
     transactions_query = search.transactions_scope
     pagy_query = ordered(transactions_query, params)
@@ -220,8 +222,12 @@ class Assistant::Function::GetTransactions < Assistant::Function
       row[:pending] = true if txn.pending?
       row[:excluded] = true if entry.excluded?
 
+      # A transfer's two legs can sit on either side of a sharing boundary: the
+      # visible leg is legitimately in this result, but naming the account on
+      # the other end would disclose an account this user cannot reach. The key
+      # is then left out rather than blanked, matching the sparse convention.
       counterparty = transfer_counterparty_account(txn)
-      row[:transfer_account] = counterparty.name if counterparty
+      row[:transfer_account] = counterparty.name if counterparty && accessible_account_ids.include?(counterparty.id)
 
       apply_label_hints(row, entry)
 

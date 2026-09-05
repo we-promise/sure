@@ -17,6 +17,25 @@ class DepositoryTest < ActiveSupport::TestCase
     assert_equal(-400, @depository.overdraft_floor)
   end
 
+  # An agios rate on its own is a recorded term. Reading only the limit and the
+  # fee amount dropped it from the assistant payload entirely.
+  test "recognizes an overdraft interest rate on its own as recorded terms" do
+    @depository.update!(overdraft_interest_rate: 13.9)
+
+    assert @depository.overdraft_terms?
+  end
+
+  test "recognizes the fee threshold and caps on their own as recorded terms" do
+    @depository.update!(intervention_fee_threshold: 20)
+    assert @depository.overdraft_terms?
+
+    @depository.update!(intervention_fee_threshold: nil, intervention_fee_monthly_cap: 80)
+    assert @depository.overdraft_terms?
+
+    @depository.update!(intervention_fee_monthly_cap: nil, intervention_fee_monthly_count_cap: 5)
+    assert @depository.overdraft_terms?
+  end
+
   test "returns nil rather than zero when the fee terms are unknown" do
     assert_nil @depository.intervention_fee_for(50),
                "unknown terms must be distinguishable from a zero fee"

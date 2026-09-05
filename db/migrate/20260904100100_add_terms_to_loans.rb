@@ -31,6 +31,16 @@ class AddTermsToLoans < ActiveRecord::Migration[8.1]
     add_check_constraint :loans,
                          "scheduled_payment IS NULL OR scheduled_payment >= 0",
                          name: "chk_loans_scheduled_payment_non_negative"
+
+    # Both stay nullable (an unknown TAEG or premium is a legitimate state),
+    # but neither can be negative: a negative TAEG would be reported to the
+    # user as a rate, and a negative premium would understate the monthly cost.
+    add_check_constraint :loans,
+                         "apr IS NULL OR apr >= 0",
+                         name: "chk_loans_apr_non_negative"
+    add_check_constraint :loans,
+                         "insurance_monthly_amount IS NULL OR insurance_monthly_amount >= 0",
+                         name: "chk_loans_insurance_non_negative"
     add_check_constraint :loans,
                          "origination_date IS NULL OR maturity_date IS NULL OR origination_date <= maturity_date",
                          name: "chk_loans_term_dates_order"

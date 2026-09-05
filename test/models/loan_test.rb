@@ -136,6 +136,29 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 0, @loan.remaining_interest.amount, "a zero-rate loan owes no interest"
   end
 
+  # 1,201 at 0% in instalments of 12 needs 101 payments, and the last one is a
+  # single unit, not a twelfth full payment. Counting it full quoted 11 of
+  # interest on an interest-free loan.
+  test "the final instalment of a non-divisible zero-rate balance is not a full payment" do
+    @account.update!(balance: 1_201)
+    @loan.update!(rate_type: "variable", interest_rate: 0, scheduled_payment: 12)
+
+    assert_equal 101, @loan.remaining_payments
+    assert_equal 0, @loan.remaining_interest.amount, "a zero-rate loan owes no interest at any balance"
+  end
+
+  test "an interest-bearing loan still reports the interest it really owes" do
+    @account.update!(balance: 10_000)
+    @loan.update!(rate_type: "variable", interest_rate: 6, scheduled_payment: 500)
+
+    interest = @loan.remaining_interest.amount
+
+    assert_operator interest, :>, 0
+    # 10k at 6% cleared in ~21 monthly payments of 500 costs a few hundred in
+    # interest; the old full-final-payment total overstated it by up to 500.
+    assert_operator interest, :<, 600
+  end
+
   # ---- payoff date ---------------------------------------------------------
 
   test "a recorded maturity date wins over the projected one" do

@@ -7,8 +7,9 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
-  def build_statement(filename: "releve.pdf")
+  def build_statement(filename: "releve.pdf", account: nil)
     statement = @family.account_statements.build(
+      account: account,
       filename: filename,
       content_type: "application/pdf",
       byte_size: 42,
@@ -21,6 +22,15 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     )
     statement.original_file.attach(io: StringIO.new("%PDF-1.4 fake"), filename: filename, content_type: "application/pdf")
     statement
+  end
+
+  def stub_upload(file_id)
+    VectorStore::Registry.stubs(:adapter).returns(
+      stub(
+        upload_file: VectorStore::Response.new(success?: true, data: { file_id: file_id }, error: nil)
+      )
+    )
+    @family.update!(vector_store_id: "vs_test")
   end
 
   test "creating a statement enqueues its indexing" do
@@ -83,21 +93,59 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
   # column rather than a jsonb key: metadata cannot be joined, indexed or
   # constrained, and the store itself is one family-wide index.
   test "an indexed statement lands with its owning account on the document" do
-    statement = build_statement
+    account = accounts(:connected)
+    statement = build_statement(account: account)
+    statement.review_status = :linked
     statement.save!
 
-    VectorStore::Registry.stubs(:adapter).returns(
-      stub(
-        upload_file: VectorStore::Response.new(success?: true, data: { file_id: "file_acct" }, error: nil)
-      )
-    )
-    @family.update!(vector_store_id: "vs_test")
+    stub_upload("file_acct")
 
     statement.index_in_vector_store!
     document = @family.family_documents.find_by(provider_file_id: "file_acct")
 
-    assert_equal statement.account_id, document.account_id
+    assert_equal account.id, document.account_id
     assert_includes @family.family_documents.readable_by(users(:family_admin)), document
+    assert_not_includes @family.family_documents.readable_by(users(:family_member)), document
+  end
+
+  # Indexing runs on upload, which is often before anyone has said which account
+  # the statement belongs to. The document therefore starts family-wide and only
+  # the link narrows it, so the link has to reach the document too.
+  test "linking a statement narrows its indexed document to the account" do
+    statement = build_statement
+    statement.save!
+
+    stub_upload("file_link")
+    statement.index_in_vector_store!
+    document = @family.family_documents.find_by(provider_file_id: "file_link")
+
+    assert_nil document.account_id
+    assert_includes @family.family_documents.readable_by(users(:family_member)), document
+
+    statement.link_to_account!(accounts(:connected))
+
+    assert_equal accounts(:connected).id, document.reload.account_id
+    assert_equal accounts(:connected).id, document.metadata["account_id"]
+    assert_not_includes @family.family_documents.readable_by(users(:family_member)), document
+  end
+
+  test "unlinking a statement releases its indexed document from the account" do
+    statement = build_statement(account: accounts(:connected))
+    statement.review_status = :linked
+    statement.save!
+
+    stub_upload("file_unlink")
+    statement.index_in_vector_store!
+    document = @family.family_documents.find_by(provider_file_id: "file_unlink")
+
+    assert_equal accounts(:connected).id, document.account_id
+
+    AccountStatement::AccountMatcher.any_instance.stubs(:best_match).returns(nil)
+    statement.unlink!
+
+    assert_nil document.reload.account_id
+    assert_not document.metadata.key?("account_id"), "a released document must not keep the account it left"
+    assert_includes @family.family_documents.readable_by(users(:family_member)), document
   end
 
   test "an install with no vector store still accepts the upload" do

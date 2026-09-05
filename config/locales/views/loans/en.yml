@@ -14,7 +14,7 @@ en:
       interest_rate_placeholder: '5.25'
       maturity_date: Final payment date
       none: None
-      origination_date: First payment date
+      origination_date: Loan start date
       rate_type: Rate type
       rate_type_adjustable: Adjustable
       rate_type_fixed: Fixed

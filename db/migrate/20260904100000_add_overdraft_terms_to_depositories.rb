@@ -38,5 +38,18 @@ class AddOverdraftTermsToDepositories < ActiveRecord::Migration[8.1]
     add_check_constraint :depositories,
                          "intervention_fee_monthly_count_cap IS NULL OR intervention_fee_monthly_count_cap >= 0",
                          name: "chk_depositories_intervention_count_cap_non_negative"
+
+    # The remaining terms are optional too, so each stays nullable, but a
+    # negative agios rate, threshold or cap is the same data-entry error and
+    # would invert the same projections.
+    add_check_constraint :depositories,
+                         "overdraft_interest_rate IS NULL OR overdraft_interest_rate >= 0",
+                         name: "chk_depositories_overdraft_rate_non_negative"
+    add_check_constraint :depositories,
+                         "intervention_fee_threshold IS NULL OR intervention_fee_threshold >= 0",
+                         name: "chk_depositories_intervention_threshold_non_negative"
+    add_check_constraint :depositories,
+                         "intervention_fee_monthly_cap IS NULL OR intervention_fee_monthly_cap >= 0",
+                         name: "chk_depositories_intervention_monthly_cap_non_negative"
   end
 end

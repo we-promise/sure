@@ -48,6 +48,13 @@ class Transaction::LabelNormalizer
     [ "refund",        /\A(?:AVOIR|ANNULATION|REMBOURSEMENT|REMBT|REMB)\b[\s:.-]*/i ]
   ].freeze
 
+  # A refund label usually nests the rail it reverses ("ANNULATION CB FNAC",
+  # "REMBOURSEMENT CARTE FNAC"). The prefix loop stops at the first match, so
+  # the card marker would survive into the merchant name and split the refund
+  # away from the purchase it reverses, which is exactly the grouping this
+  # class exists to fix. The rail stays "refund": that is the useful signal.
+  NESTED_CARD_PREFIXES = RAIL_PREFIXES.select { |rail, _| rail == "card" }.map(&:last).freeze
+
   # Payment aggregators put the real merchant after a star. The aggregator name
   # is dropped: it identifies the rail, not who was paid.
   AGGREGATOR = /\A(?:PAYPAL|SUMUP|SQ|SQC?\*?|STRIPE|IZETTLE|ZETTLE|LYDIA)\s*\*\s*/i
@@ -79,6 +86,11 @@ class Transaction::LabelNormalizer
         working = working.sub(pattern, "")
         rail = candidate_rail
         break
+      end
+
+      if rail == "refund"
+        nested = NESTED_CARD_PREFIXES.find { |pattern| working.match?(pattern) }
+        working = working.sub(nested, "") if nested
       end
 
       operation_date, working = extract_operation_date(working, on: on)

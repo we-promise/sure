@@ -585,7 +585,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
     t.string "subtype"
     t.datetime "updated_at", null: false
     t.check_constraint "intervention_fee_amount IS NULL OR intervention_fee_amount >= 0::numeric", name: "chk_depositories_intervention_fee_non_negative"
+    t.check_constraint "intervention_fee_monthly_cap IS NULL OR intervention_fee_monthly_cap >= 0::numeric", name: "chk_depositories_intervention_monthly_cap_non_negative"
     t.check_constraint "intervention_fee_monthly_count_cap IS NULL OR intervention_fee_monthly_count_cap >= 0", name: "chk_depositories_intervention_count_cap_non_negative"
+    t.check_constraint "intervention_fee_threshold IS NULL OR intervention_fee_threshold >= 0::numeric", name: "chk_depositories_intervention_threshold_non_negative"
+    t.check_constraint "overdraft_interest_rate IS NULL OR overdraft_interest_rate >= 0::numeric", name: "chk_depositories_overdraft_rate_non_negative"
     t.check_constraint "overdraft_limit IS NULL OR overdraft_limit >= 0::numeric", name: "chk_depositories_overdraft_limit_non_negative"
   end
 
@@ -1333,6 +1336,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
     t.string "subtype"
     t.integer "term_months"
     t.datetime "updated_at", null: false
+    t.check_constraint "apr IS NULL OR apr >= 0::numeric", name: "chk_loans_apr_non_negative"
+    t.check_constraint "insurance_monthly_amount IS NULL OR insurance_monthly_amount >= 0::numeric", name: "chk_loans_insurance_non_negative"
     t.check_constraint "origination_date IS NULL OR maturity_date IS NULL OR origination_date <= maturity_date", name: "chk_loans_term_dates_order"
     t.check_constraint "scheduled_payment IS NULL OR scheduled_payment >= 0::numeric", name: "chk_loans_scheduled_payment_non_negative"
   end

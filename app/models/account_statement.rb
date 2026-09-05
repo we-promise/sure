@@ -254,13 +254,16 @@ class AccountStatement < ApplicationRecord
   end
 
   def link_to_account!(target_account, confidence: 1.0)
-    update!(
-      account: target_account,
-      suggested_account: nil,
-      match_confidence: confidence,
-      review_status: :linked,
-      currency: currency.presence || target_account.currency
-    )
+    transaction do
+      update!(
+        account: target_account,
+        suggested_account: nil,
+        match_confidence: confidence,
+        review_status: :linked,
+        currency: currency.presence || target_account.currency
+      )
+      sync_vector_store_document_account!
+    end
   end
 
   def unlink!
@@ -272,6 +275,7 @@ class AccountStatement < ApplicationRecord
       )
       assign_account_match
       save!
+      sync_vector_store_document_account!
     end
   end
 
@@ -410,6 +414,21 @@ class AccountStatement < ApplicationRecord
   end
 
   private
+
+    # `FamilyDocument#readable_by` filters on the document's own account_id, so
+    # a statement that changes hands has to take its indexed copy with it.
+    # Left alone, a document indexed while the statement was still unmatched
+    # stays readable by every member after linking, and one indexed under an
+    # account stays owned by that account after unlinking.
+    def sync_vector_store_document_account!
+      document = vector_store_document
+      return if document.nil?
+
+      document.update!(
+        account_id: account_id,
+        metadata: (document.metadata || {}).merge("account_id" => account_id).compact
+      )
+    end
 
     def reconciliation_check(key:, statement_amount:, ledger_amount:)
       difference = statement_amount.to_d - ledger_amount.to_d

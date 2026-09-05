@@ -90,8 +90,11 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     assert_equal result[:to_page] + 1, result[:next_page]
   end
 
-  test "a single page longer than the budget is cut and says so" do
-    oversized = "A" * (Assistant::Function::GetDocumentText::MAX_CHARS + 5_000)
+  # The tail of an oversized page used to be unreachable: it was cut and the
+  # note said so, and no combination of from_page could get at the rest.
+  test "a single page longer than the budget is served in chunks with a cursor" do
+    max = Assistant::Function::GetDocumentText::MAX_CHARS
+    oversized = ("A" * max) + ("B" * 5_000)
     statement = create_statement
 
     AccountStatement::TextExtractor.any_instance.stubs(:extract).returns(
@@ -100,12 +103,45 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
       )
     )
 
-    result = @fn.call("account_statement_id" => statement.id)
-    page = result[:pages].first
+    first = @fn.call("account_statement_id" => statement.id)
+    page = first[:pages].first
 
-    assert_equal Assistant::Function::GetDocumentText::MAX_CHARS, page[:text].length
-    assert_equal true, page[:truncated]
-    assert_match(/truncated/, result[:note])
+    assert_equal max, page[:text].length
+    assert_equal true, page[:continued]
+    assert_equal true, first[:has_more_pages]
+    assert_equal 1, first[:next_page], "the cursor stays on the page until its text runs out"
+    assert_equal max, first[:next_from_char]
+
+    second = @fn.call("account_statement_id" => statement.id,
+                      "from_page" => first[:next_page], "from_char" => first[:next_from_char])
+    tail = second[:pages].first
+
+    assert_equal "B" * 5_000, tail[:text], "the rest of the page is reachable"
+    assert_equal max, tail[:from_char]
+    assert_equal false, second[:has_more_pages]
+    assert_nil second[:next_from_char]
+  end
+
+  test "an oversized page hands the following pages back once it is exhausted" do
+    max = Assistant::Function::GetDocumentText::MAX_CHARS
+    statement = create_statement
+
+    AccountStatement::TextExtractor.any_instance.stubs(:extract).returns(
+      AccountStatement::TextExtractor::Result.new(
+        pages: [ "A" * (max + 100), "page two" ], page_count: 2, extractable: true, note: nil
+      )
+    )
+
+    first = @fn.call("account_statement_id" => statement.id)
+
+    assert_equal 1, first[:next_page]
+    assert_equal max, first[:next_from_char]
+
+    second = @fn.call("account_statement_id" => statement.id, "from_page" => 1, "from_char" => max)
+
+    assert_equal [ 1, 2 ], second[:pages].map { |p| p[:page] }
+    assert_equal "page two", second[:pages].last[:text]
+    assert_equal false, second[:has_more_pages]
   end
 
   test "reports a scan with no text layer as unreadable and names the reason" do

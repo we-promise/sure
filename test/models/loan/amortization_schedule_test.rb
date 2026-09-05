@@ -19,6 +19,26 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_match(/monthly payment/, schedule.unavailable_reason)
   end
 
+  # An unknown rate used to be read as 0%, which produced a confident,
+  # interest-free schedule for a loan whose rate was simply never entered.
+  test "is unavailable without an interest rate and names it" do
+    @account.update!(balance: 10_000)
+    @loan.update!(rate_type: "variable", interest_rate: nil, scheduled_payment: 500,
+                  origination_date: nil)
+
+    assert_not schedule.available?
+    assert_match(/interest rate/, schedule.unavailable_reason)
+  end
+
+  test "an explicit zero rate is a real rate and still builds" do
+    @account.update!(balance: 10_000)
+    @loan.update!(rate_type: "variable", interest_rate: 0, scheduled_payment: 500,
+                  origination_date: nil)
+
+    assert schedule.available?
+    assert_nil schedule.unavailable_reason
+  end
+
   test "is available from the live balance when no origination is recorded" do
     @account.update!(balance: 10_000)
     @loan.update!(rate_type: "variable", interest_rate: 0, scheduled_payment: 500,

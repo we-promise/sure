@@ -29,14 +29,21 @@ class Loan
     # nil when the terms cannot support a schedule, never a plausible guess.
     # `reason` says which field is missing so a caller can tell the user.
     def available?
-      anchor_balance.present? && anchor_balance.positive? && payment.present? && payment.positive?
+      anchor_balance.present? && anchor_balance.positive? &&
+        payment.present? && payment.positive? &&
+        loan.interest_rate.present?
     end
 
     def unavailable_reason
       return nil if available?
       return "No monthly payment is known: a fixed rate needs interest_rate and term_months, any other rate needs the actual payment recorded." if payment.nil? || payment.zero?
+      return "No starting principal is known: record the loan's original balance or an opening valuation." if anchor_balance.blank? || !anchor_balance.positive?
 
-      "No starting principal is known: record the loan's original balance or an opening valuation."
+      # An unknown rate is not a zero rate. Reading it as zero builds an
+      # interest-free schedule that clears the loan early and reports no
+      # interest at all, which is a confident wrong answer. A declared 0% is a
+      # real rate and still produces a schedule.
+      "No interest rate is recorded: enter the loan's nominal interest rate (0 is a valid value)."
     end
 
     # Anchored at origination when the user recorded one, which is what makes a
@@ -107,9 +114,9 @@ class Loan
         end
       end
 
+      # Only reached through `build_points`, which refuses to run unless
+      # `available?` has already established that a rate was recorded.
       def monthly_rate
-        return 0.to_d if loan.interest_rate.nil?
-
         loan.interest_rate.to_d / 100 / 12
       end
 

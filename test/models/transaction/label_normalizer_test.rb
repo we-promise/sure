@@ -110,6 +110,17 @@ class Transaction::LabelNormalizerTest < ActiveSupport::TestCase
     assert_equal "refund", normalize("ANNULATION CB FNAC").rail
   end
 
+  # A refund that keeps its nested card marker groups as a different payee from
+  # the purchase it reverses, which defeats the whole point of normalizing.
+  test "a refund reduces to the same merchant as the purchase it reverses" do
+    purchase = normalize("CB FNAC")
+
+    assert_equal purchase.name, normalize("ANNULATION CB FNAC").name
+    assert_equal purchase.name, normalize("REMBOURSEMENT CARTE FNAC").name
+    assert_equal "refund", normalize("ANNULATION CB FNAC").rail
+    assert_equal "refund", normalize("REMBOURSEMENT CARTE FNAC").rail
+  end
+
   test "reads a loan instalment as a loan payment, not as a refund" do
     assert_equal "loan_payment", normalize("REMB PRET IMMO").rail
     assert_equal "loan_payment", normalize("ECHEANCE PRET ETUDIANT").rail

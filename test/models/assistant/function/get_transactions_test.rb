@@ -144,6 +144,38 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
     assert_equal accounts(:credit_card).name, row[:transfer_account]
   end
 
+  # The visible leg belongs in the result; the account on the far end does not
+  # belong to this user and naming it would disclose it.
+  test "hides the counterparty account when the far leg is inaccessible" do
+    outflow_entry = Entry.create!(
+      account: accounts(:depository),
+      name: "Transfer to private account",
+      date: Date.current,
+      amount: 250,
+      currency: "USD",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    inflow_entry = Entry.create!(
+      account: accounts(:investment),
+      name: "Transfer in",
+      date: Date.current,
+      amount: -250,
+      currency: "USD",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(
+      inflow_transaction: inflow_entry.entryable,
+      outflow_transaction: outflow_entry.entryable
+    )
+
+    result = Assistant::Function::GetTransactions.new(users(:family_member)).call("search" => "Transfer to private account")
+    row = result[:transactions].find { |item| item[:id] == outflow_entry.entryable.id }
+
+    assert_not_nil row, "the leg on the shared account is still visible"
+    assert_equal true, row[:is_transfer]
+    assert_not row.key?(:transfer_account), "an inaccessible counterparty must not be named"
+  end
+
   test "omits transfer_account on a plain transaction" do
     result = @function.call("search" => @transaction.entry.name)
     row = result[:transactions].find { |item| item[:id] == @transaction.id }

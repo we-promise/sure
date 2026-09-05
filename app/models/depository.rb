@@ -43,8 +43,21 @@ class Depository < ApplicationRecord
     -overdraft_limit
   end
 
+  # Every recorded overdraft term counts, not just the two headline ones: a
+  # holder who entered only the agios rate, or only the fee threshold, has
+  # recorded terms, and answering false here drops them from the assistant's
+  # account serialization and collapses the form disclosure that holds them.
+  OVERDRAFT_TERM_ATTRIBUTES = %i[
+    overdraft_limit
+    overdraft_interest_rate
+    intervention_fee_amount
+    intervention_fee_threshold
+    intervention_fee_monthly_cap
+    intervention_fee_monthly_count_cap
+  ].freeze
+
   def overdraft_terms?
-    overdraft_limit.present? || intervention_fee_amount.present?
+    OVERDRAFT_TERM_ATTRIBUTES.any? { |attribute| public_send(attribute).present? }
   end
 
   # The fee a bank charges for one payment presented while the account is past
