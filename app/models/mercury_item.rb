@@ -1,4 +1,6 @@
 class MercuryItem < ApplicationRecord
+  validate :base_url_must_be_an_official_host
+
   include Syncable, Provided, Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -171,7 +173,16 @@ class MercuryItem < ApplicationRecord
     token.to_s.strip.present?
   end
 
+  # The value an operator typed decides where the app sends their token, so it
+  # is checked against the provider's allow-list rather than used as given.
   def effective_base_url
-    base_url.presence || "https://api.mercury.com/api/v1"
+    Provider::Mercury.normalize_base_url(base_url) || Provider::Mercury::DEFAULT_BASE_URL
   end
+
+  private
+    def base_url_must_be_an_official_host
+      return if base_url.blank? || Provider::Mercury.allowed_base_url?(base_url)
+
+      errors.add(:base_url, :official_hosts_only)
+    end
 end

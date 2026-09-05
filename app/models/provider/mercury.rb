@@ -1,15 +1,21 @@
 class Provider::Mercury
   include HTTParty
   extend SslConfigurable
+  extend BaseUrlAllowlistable
+
+  DEFAULT_BASE_URL = "https://api.mercury.com/api/v1"
+  SANDBOX_BASE_URL = "https://api-sandbox.mercury.com/api/v1"
+  ALLOWED_BASE_URLS = [ DEFAULT_BASE_URL, SANDBOX_BASE_URL ].freeze
 
   headers "User-Agent" => "Sure Finance Mercury Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   attr_reader :token, :base_url
 
-  def initialize(token, base_url: "https://api.mercury.com/api/v1")
+  def initialize(token, base_url: DEFAULT_BASE_URL)
     @token = token
-    @base_url = base_url
+    @base_url = self.class.normalize_base_url(base_url)
+    raise ArgumentError, "Mercury base URL must be blank or one of: #{ALLOWED_BASE_URLS.join(', ')}" if @base_url.blank?
   end
 
   # Get all accounts
