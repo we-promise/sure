@@ -191,7 +191,7 @@ class RulesController < ApplicationController
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]
         ],
         actions_attributes: [
-          :id, :action_type, :value, :_destroy
+          :id, :action_type, :value, :_destroy, { value: [] }
         ]
       )
     end

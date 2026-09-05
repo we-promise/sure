@@ -790,12 +790,29 @@ class Family::DataExporter
         return rule_operand(action.value, type: "Merchant", relation: @family.merchants, fallback_to_name: true)
       end
 
-      # Map tag UUIDs to names for portability
+      # Map tag UUIDs to names for portability. Stored as a comma-separated
+      # list of tag ids (see Rule::Action#value=), so each id is resolved
+      # independently rather than treating the whole string as one operand.
       if action.action_type == "set_transaction_tags"
-        return rule_operand(action.value, type: "Tag", relation: @family.tags, fallback_to_name: true)
+        return resolve_multi_tag_operand(action.value)
       end
 
       rule_operand(action.value)
+    end
+
+    def resolve_multi_tag_operand(value)
+      ids = value.to_s.split(",")
+      records = ids.map { |id| resolve_rule_operand_record(@family.tags, id, fallback_to_name: true) }
+      names = records.each_with_index.map { |record, i| record&.name || ids[i] }
+      refs = records.compact.map { |record| rule_value_ref("Tag", record) }
+
+      {
+        value: names.join(","),
+        # A single tag keeps the pre-existing scalar value_ref shape for
+        # backward compatibility with older exports; only genuinely
+        # multi-tag actions use an array.
+        value_ref: refs.size <= 1 ? refs.first : refs
+      }
     end
 
     def rule_operand(value, type: nil, relation: nil, fallback_to_name: false)
