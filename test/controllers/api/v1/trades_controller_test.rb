@@ -99,6 +99,90 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Sell", body["investment_activity_label"]
   end
 
+  test "create sweep in trade returns 201" do
+    security = Security.create!(ticker: "SWIN", name: "Sweep In Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "sweep_in",
+        date: Date.current,
+        qty: 10,
+        price: 1.00,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Sweep In", body["investment_activity_label"]
+    assert_equal 10, body["qty"].to_i
+  end
+
+  test "create sweep out trade returns 201" do
+    security = Security.create!(ticker: "SWOUT", name: "Sweep Out Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "sweep_out",
+        date: Date.current,
+        qty: 10,
+        price: 1.00,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Sweep Out", body["investment_activity_label"]
+    assert_equal(-10, body["qty"].to_i)
+  end
+
+  test "create reinvestment trade returns 201" do
+    security = Security.create!(ticker: "REINV", name: "Reinvestment Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "reinvestment",
+        date: Date.current,
+        qty: 2,
+        price: 12.34,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Reinvestment", body["investment_activity_label"]
+    assert_equal 2, body["qty"].to_i
+  end
+
+  test "create fee trade returns 201" do
+    security = Security.create!(ticker: "FEESEC", name: "Fee Security", country_code: "US")
+
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "fee",
+        date: Date.current,
+        amount: 0.68,
+        currency: "USD",
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "Fee", body["investment_activity_label"]
+    assert_equal 0, body["qty"].to_d
+    assert_in_delta 0.68, Trade.find(body["id"]).entry.amount.to_f, 0.001
+  end
+
   test "invalid type returns 422" do
     post "/api/v1/trades",
       params: { trade: {

@@ -204,18 +204,21 @@ class Api::V1::TradesController < Api::V1::BaseController
       entry_params
     end
 
-    # True for sell: "sell" or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
+    # True for sell: "sell", "sweep_out", or "inflow". False for buy: "buy", "outflow", or blank. Keeps create (buy/sell) and update (type or nature) consistent.
     def trade_sell_from_type_or_nature?(value)
       return false if value.blank?
 
       normalized = value.to_s.downcase.strip
-      %w[sell inflow].include?(normalized)
+      %w[sell sweep_out inflow].include?(normalized)
     end
 
     def build_create_form_params(account)
       type = params.dig(:trade, :type).to_s.downcase
-      unless %w[buy sell dividend deposit withdrawal interest].include?(type)
-        render_validation_error("Invalid type", [ "type must be 'buy', 'sell', 'dividend', 'deposit', 'withdrawal', or 'interest'" ])
+      unless Trade::CreateForm::SUPPORTED_TYPES.include?(type)
+        render_validation_error(
+          "Invalid type",
+          [ "type must be one of: #{Trade::CreateForm::SUPPORTED_TYPES.join(', ')}" ]
+        )
         return nil
       end
 
@@ -240,7 +243,7 @@ class Api::V1::TradesController < Api::V1::BaseController
           transfer_account_id: trade_params[:transfer_account_id]
         }.compact
 
-      when "interest"
+      when "interest", "fee"
         unless trade_params[:date].present?
           render_validation_error("Date is required", [ "date must be present" ])
           return nil
@@ -253,7 +256,10 @@ class Api::V1::TradesController < Api::V1::BaseController
 
         ticker_value = nil
         manual_ticker_value = nil
-        if trade_params[:ticker].present?
+        if trade_params[:security_id].present?
+          security = Security.find(trade_params[:security_id])
+          ticker_value = ticker_from_security(security)
+        elsif trade_params[:ticker].present?
           ticker_value = trade_params[:ticker]
         elsif trade_params[:manual_ticker].present?
           manual_ticker_value = trade_params[:manual_ticker]
@@ -262,7 +268,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         {
           account: account,
           date: trade_params[:date],
-          amount: parse_positive_amount!(trade_params[:amount], context: "interest"),
+          amount: parse_positive_amount!(trade_params[:amount], context: type),
           currency: trade_params[:currency].presence || account.currency,
           type: type,
           ticker: ticker_value,
@@ -288,7 +294,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       if trade_params[:security_id].present?
         security = Security.find(trade_params[:security_id])
-        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+        ticker_value = ticker_from_security(security)
       elsif trade_params[:ticker].present?
         ticker_value = trade_params[:ticker]
       elsif trade_params[:manual_ticker].present?
@@ -335,7 +341,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
       if trade_params[:security_id].present?
         security = Security.find(trade_params[:security_id])
-        ticker_value = security.exchange_operating_mic.present? ? "#{security.ticker}|#{security.exchange_operating_mic}" : security.ticker
+        ticker_value = ticker_from_security(security)
       elsif trade_params[:ticker].present?
         ticker_value = trade_params[:ticker]
       elsif trade_params[:manual_ticker].present?
@@ -380,6 +386,12 @@ class Api::V1::TradesController < Api::V1::BaseController
         attrs[:category_id] = category.id
       end
       @trade.update!(attrs) if attrs.any?
+    end
+
+    def ticker_from_security(security)
+      return security.ticker if security.exchange_operating_mic.blank?
+
+      "#{security.ticker}|#{security.exchange_operating_mic}"
     end
 
     def render_validation_error(message, errors)
