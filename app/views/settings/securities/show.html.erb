@@ -34,19 +34,25 @@
       </div>
 
       <div class="mt-4 md:mt-0">
-        <% if Current.user.otp_required? %>
-          <%= render DS::Button.new(
-            text: t(".disable_mfa"),
-            variant: "secondary",
-            href: disable_mfa_path,
-            method: :delete,
-            confirm: CustomConfirm.new(
-              title: t(".disable_mfa_confirm"),
-              body: t(".disable_mfa_confirm"),
-              btn_text: t(".disable_mfa"),
-              destructive: true
-            )
-          ) %>
+        <% if !Current.user.has_local_password? %>
+          <%# No local password to confirm with, so there is no form to show. %>
+          <p class="text-sm text-subdued"><%= t(".mfa_sso_only") %></p>
+        <% elsif Current.user.otp_required? %>
+          <%# Turning MFA off asks for the password, so the confirm dialog is
+              replaced by a form that can carry it. %>
+          <%= render DS::Disclosure.new(variant: :inline, open: flash[:alert].present?) do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <span class="text-sm font-medium text-destructive"><%= t(".disable_mfa") %></span>
+            <% end %>
+            <%= styled_form_with url: disable_mfa_path, method: :delete, class: "mt-3 space-y-3", data: { turbo: false } do |f| %>
+              <%= f.password_field :password,
+                required: true,
+                autocomplete: "current-password",
+                label: t(".disable_mfa_password_label"),
+                placeholder: t(".disable_mfa_password_placeholder") %>
+              <%= f.submit t(".disable_mfa") %>
+            <% end %>
+          <% end %>
         <% else %>
           <%= render DS::Link.new(
             text: t(".enable_mfa"),

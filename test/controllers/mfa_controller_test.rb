@@ -37,7 +37,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
-    post mfa_path, params: { code: totp.now }
+    post mfa_path, params: { code: totp.now, password: user_password_test }
 
     assert_response :success
     assert @user.reload.otp_required?
@@ -53,7 +53,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid" }
+    post mfa_path, params: { code: "invalid", password: user_password_test }
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
@@ -297,7 +297,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
       public_key: "public-key"
     )
 
-    delete disable_mfa_path
+    delete disable_mfa_path, params: { password: user_password_test }
 
     assert_redirected_to settings_security_path
     assert_not @user.reload.otp_required?
@@ -306,7 +306,75 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_empty @user.webauthn_credentials
   end
 
+
+  # Turning MFA on or off is a change to how the account is protected, so it
+  # asks for the password. Without it, anyone who walks up to an unlocked
+  # session can strip the second factor.
+  test "enabling MFA requires the password" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+
+    post mfa_path, params: { code: totp.now, password: "wrong-password" }
+
+    assert_redirected_to new_mfa_path
+    assert_not @user.reload.otp_required?
+  end
+
+  test "a wrong password while enabling does not discard the setup in progress" do
+    @user.setup_mfa!
+    secret = @user.otp_secret
+    totp = ROTP::TOTP.new(secret, issuer: "Sure Finances")
+
+    post mfa_path, params: { code: totp.now, password: "wrong-password" }
+
+    assert_equal secret, @user.reload.otp_secret, "the in-progress secret must survive a wrong password"
+  end
+
+  test "disabling MFA requires the password" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    delete disable_mfa_path, params: { password: "wrong-password" }
+
+    assert_redirected_to settings_security_path
+    assert @user.reload.otp_required?, "MFA must stay on"
+  end
+
+  # A user with no local password can never satisfy that prompt, so the MFA
+  # pages are closed to them rather than left as a dead end. Visiting /mfa/new
+  # would otherwise call setup_mfa! and strand an otp_secret they cannot
+  # finish wiring up.
+  test "a user without a local password cannot reach the MFA pages" do
+    identity = oidc_identities(:sso_only_identity)
+    sso_user = identity.user
+    sign_in_through_sso(identity)
+
+    get new_mfa_path
+    assert_redirected_to settings_security_path
+    assert_nil sso_user.reload.otp_secret, "no half-finished secret may be left behind"
+
+    delete disable_mfa_path
+    assert_redirected_to settings_security_path
+  end
+
   private
+    # The SSO-only fixture has no password, so the normal sign_in helper, which
+    # posts to /sessions, cannot be used. Sign in the way that user actually
+    # would, through the identity provider.
+    def sign_in_through_sso(identity)
+      @user.sessions.destroy_all
+      OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new(
+        provider: identity.provider,
+        uid: identity.uid,
+        info: { email: identity.user.email, name: identity.user.display_name },
+        credentials: {}
+      )
+      get "/auth/openid_connect/callback"
+      assert Session.exists?(user_id: identity.user_id), "the SSO sign-in must establish a session"
+    ensure
+      OmniAuth.config.mock_auth[:openid_connect] = nil
+    end
+
     def register_webauthn_credential(origin: "http://www.example.com", rp_id: "www.example.com")
       client = WebAuthn::FakeClient.new(origin)
 

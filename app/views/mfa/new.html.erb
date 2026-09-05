@@ -46,7 +46,7 @@
       </div>
 
       <%= styled_form_with url: mfa_path, method: :post, class: "mt-5", data: { turbo: false } do |f| %>
-        <div>
+        <div class="space-y-4">
           <%= f.text_field :code,
             required: true,
             autofocus: true,
@@ -55,6 +55,12 @@
             pattern: "[0-9]*",
             label: t(".code_label"),
             placeholder: t(".code_placeholder") %>
+
+          <%= f.password_field :password,
+            required: true,
+            autocomplete: "current-password",
+            label: t(".password_label"),
+            placeholder: t(".password_placeholder") %>
 
           <div class="flex justify-end mt-4">
             <%= f.submit t(".verify_button") %>

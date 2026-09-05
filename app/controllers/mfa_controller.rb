@@ -3,6 +3,7 @@ class MfaController < ApplicationController
 
   layout :determine_layout
   skip_authentication only: [ :verify, :verify_code, :webauthn_options, :verify_webauthn ]
+  before_action :require_local_password, only: [ :new, :create, :disable ]
 
   def new
     redirect_to root_path if Current.user.otp_required?
@@ -10,6 +11,14 @@ class MfaController < ApplicationController
   end
 
   def create
+    unless password_confirmed?
+      # Deliberately not disable_mfa! here: a wrong password must not throw away
+      # the otp_secret and backup codes the user is midway through setting up.
+      # Only a code mismatch below does that.
+      redirect_to new_mfa_path, alert: t(".invalid_password")
+      return
+    end
+
     if Current.user.verify_otp?(params[:code])
       @backup_codes = Current.user.enable_mfa!
       render :backup_codes
@@ -113,11 +122,33 @@ class MfaController < ApplicationController
   end
 
   def disable
+    unless password_confirmed?
+      redirect_to settings_security_path, alert: t(".invalid_password")
+      return
+    end
+
     Current.user.disable_mfa!
     redirect_to settings_security_path, notice: t(".success")
   end
 
   private
+
+    # Turning the second factor on or off changes how the account is protected,
+    # so it is confirmed with the password rather than with possession of an
+    # already-open session.
+    def password_confirmed?
+      Current.user.authenticate(params[:password]).present?
+    end
+
+    # A user who signs in through an identity provider has no local password to
+    # confirm with, so these pages are closed to them rather than left as a
+    # dead end. GET /mfa/new matters as much as the writes: it calls setup_mfa!
+    # and would strand an otp_secret they could never finish wiring up.
+    def require_local_password
+      return if Current.user.has_local_password?
+
+      redirect_to settings_security_path, alert: t("mfa.local_password_required")
+    end
 
     def determine_layout
       if action_name.in?(%w[webauthn_options verify_webauthn])
