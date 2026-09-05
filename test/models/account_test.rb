@@ -90,6 +90,19 @@ class AccountTest < ActiveSupport::TestCase
     assert account.personal?
   end
 
+  test "usage type may be unknown for accounts created before classification" do
+    account = @family.accounts.build(
+      name: "Historical usage test",
+      balance: 100,
+      currency: "USD",
+      usage_type: nil,
+      accountable: Depository.new
+    )
+
+    assert account.valid?
+    assert_nil account.usage_type
+  end
+
   test "create_from_wise_account inherits the Wise profile type" do
     Account.any_instance.stubs(:sync_later)
 

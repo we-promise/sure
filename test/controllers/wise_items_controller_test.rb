@@ -144,6 +144,23 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert account.reload.business?
   end
 
+  test "link_existing_account rolls back usage type when provider link fails" do
+    account = accounts(:depository)
+    wise_account = wise_accounts(:checking)
+    account.update!(usage_type: "personal")
+    AccountProvider.stubs(:create!).raises(ActiveRecord::RecordNotUnique)
+
+    assert_no_changes -> { account.reload.usage_type } do
+      post link_existing_account_wise_items_url, params: {
+        account_id: account.id,
+        wise_account_id: wise_account.id,
+        usage_type: "business"
+      }
+    end
+
+    assert_redirected_to accounts_path
+  end
+
   test "link_profiles redirects to providers when there is no pending session" do
     post link_profiles_wise_items_url, params: { profile_ids: [ "99999999" ] }
 

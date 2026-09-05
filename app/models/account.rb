@@ -40,7 +40,7 @@ class Account < ApplicationRecord
   monetize :balance, :cash_balance
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
-  enum :usage_type, { personal: "personal", business: "business" }, default: :personal, validate: true
+  enum :usage_type, { personal: "personal", business: "business" }, default: :personal, validate: { allow_nil: true }
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze

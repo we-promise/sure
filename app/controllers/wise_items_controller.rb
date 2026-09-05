@@ -214,8 +214,10 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
 
-    account.update!(usage_type: account_usage_type_param(wise_account))
-    AccountProvider.create!(account: account, provider: wise_account)
+    Account.transaction do
+      account.update!(usage_type: account_usage_type_param(wise_account))
+      AccountProvider.create!(account: account, provider: wise_account)
+    end
     wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
 
     redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_existing_account.success", account_name: account.name)

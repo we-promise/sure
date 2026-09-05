@@ -121,7 +121,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
     t.string "status", default: "active"
     t.string "subtype"
     t.datetime "updated_at", null: false
-    t.string "usage_type", default: "personal", null: false
+    t.string "usage_type"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
     t.index ["currency"], name: "index_accounts_on_currency"
@@ -136,6 +136,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
     t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
+    t.check_constraint "usage_type IS NULL OR usage_type::text = ANY (ARRAY['personal'::character varying::text, 'business'::character varying::text])", name: "chk_accounts_usage_type"
   end
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
