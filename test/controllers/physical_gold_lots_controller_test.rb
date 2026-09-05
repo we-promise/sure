@@ -24,6 +24,20 @@ class PhysicalGoldLotsControllerTest < ActionDispatch::IntegrationTest
     assert @account.physical_gold_lots.last.invoice.attached?
   end
 
+  test "rejects a merchant from another family" do
+    outside_merchant = FamilyMerchant.create!(name: "Outside merchant", family: families(:empty))
+
+    assert_no_difference -> { @account.physical_gold_lots.count } do
+      post physical_gold_lots_path, params: {
+        account_id: @account.id,
+        physical_gold_lot: { description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000, merchant_id: outside_merchant.id }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match(/must belong to the account family/, response.body)
+  end
+
   test "renders a new form that posts to the purchase collection" do
     get new_physical_gold_lot_path(account_id: @account.id)
 

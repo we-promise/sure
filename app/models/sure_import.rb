@@ -328,6 +328,7 @@ class SureImport < Import
         categories: family.categories.count,
         tags: family.tags.count,
         merchants: family.merchants.count,
+        physical_gold_lots: PhysicalGoldLot.joins(:account).where(accounts: { family_id: family.id }).count,
         recurring_transactions: family.recurring_transactions.count,
         transactions: family.entries.where(entryable_type: "Transaction").count,
         transfers: Transfer.joins(inflow_transaction: { entry: :account }).where(accounts: { family_id: family.id }).count,

@@ -3,7 +3,7 @@
 # rate is shared via the existing exchange_rates table once per quote currency
 # per day.
 class GoldValuation
-  TROY_OUNCE_GRAMS = BigDecimal("31.1034768")
+  TROY_OUNCE_GRAMS = GoldWeight::TROY_OUNCE_GRAMS
   RATE_LOCK_NAMESPACE = 1_713_589_406
 
   Error = Class.new(StandardError)
@@ -46,6 +46,8 @@ class GoldValuation
 
         cached = ExchangeRate.find_by(from_currency: "XAU", to_currency: account.currency, date: date)
         return Provider::GoldApi::Price.new(date:, currency: account.currency, price_per_troy_ounce: cached.rate) if cached.present?
+
+        raise Error, "Gold spot prices can only be refreshed for today" unless date == Date.current
 
         price = fetch_twelve_data_gold_price { |error| twelve_data_error = error } || fetch_gold_api_price
         raise Error, "No physical gold price provider is configured" unless price.present?

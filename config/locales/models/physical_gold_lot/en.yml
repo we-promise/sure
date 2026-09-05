@@ -5,6 +5,10 @@ en:
       models:
         physical_gold_lot:
           attributes:
+            account:
+              must_be_physical_gold_investment: must be a physical gold investment
+            merchant:
+              must_belong_to_account_family: must belong to the account family
             invoice:
               too_large: must be smaller than %{max_mb} MB
               invalid_format: must be a PDF or image

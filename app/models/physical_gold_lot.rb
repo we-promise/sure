@@ -24,12 +24,7 @@ class PhysicalGoldLot < ApplicationRecord
   validate :validate_invoice, if: -> { invoice.attached? }
 
   def weight_in_grams
-    case weight_unit
-    when "gram" then weight.to_d
-    when "kilogram" then weight.to_d * 1_000
-    when "troy_ounce" then weight.to_d * GoldValuation::TROY_OUNCE_GRAMS
-    else BigDecimal(0)
-    end
+    GoldWeight.in_grams(weight, weight_unit)
   end
 
   def fine_weight_in_grams
@@ -66,12 +61,12 @@ class PhysicalGoldLot < ApplicationRecord
     def account_is_physical_gold
       return if account&.investment&.physical_gold?
 
-      errors.add(:account, "must be a physical gold investment")
+      errors.add(:account, :must_be_physical_gold_investment)
     end
 
     def merchant_belongs_to_account_family
       return if merchant.blank? || merchant.is_a?(FamilyMerchant) && merchant.family_id == account&.family_id
 
-      errors.add(:merchant, "must belong to the account family")
+      errors.add(:merchant, :must_belong_to_account_family)
     end
 end

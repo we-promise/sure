@@ -11,6 +11,8 @@ class Provider::TwelveData < Provider
 
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
+  OPEN_TIMEOUT = 5
+  REQUEST_TIMEOUT = 20
 
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
@@ -286,6 +288,8 @@ class Provider::TwelveData < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.options.open_timeout = OPEN_TIMEOUT
+        faraday.options.timeout = REQUEST_TIMEOUT
         faraday.request(:retry, {
           max: 3,
           interval: 1.0,

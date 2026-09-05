@@ -66,6 +66,13 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     assert_in_delta 3110.34768, result.data.price_per_troy_ounce, 0.00001
   end
 
+  test "uses bounded connection and request timeouts" do
+    client = @provider.send(:client)
+
+    assert_equal Provider::TwelveData::OPEN_TIMEOUT, client.options.open_timeout
+    assert_equal Provider::TwelveData::REQUEST_TIMEOUT, client.options.timeout
+  end
+
   test "does not fall through to cross API when rate limited" do
     rate_limit_body = {
       "code" => 429,

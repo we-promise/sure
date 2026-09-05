@@ -35,6 +35,16 @@ class GoldValuationTest < ActiveSupport::TestCase
     assert_raises(GoldValuation::Error) { GoldValuation.new(account: @account).refresh! }
   end
 
+  test "does not fetch or store a latest quote for a historical date" do
+    Provider::Registry.expects(:get_provider).never
+
+    assert_raises(GoldValuation::Error) do
+      GoldValuation.new(account: @account, date: Date.current - 1.day).refresh!
+    end
+
+    assert_nil ExchangeRate.find_by(from_currency: "XAU", to_currency: "USD", date: Date.current - 1.day)
+  end
+
   test "uses an individual manual value without requesting a spot price" do
     @account.physical_gold_lots.first.update!(manual_value: 12_500)
     Provider::Registry.expects(:get_provider).with(:twelve_data).never

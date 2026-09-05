@@ -286,6 +286,13 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 1, other_family.accounts.count
   end
 
+  test "readback snapshot counts physical gold lots within the import family" do
+    account = @family.accounts.create!(name: "Gold", balance: 0, currency: "USD", accountable: Investment.new(subtype: "gold", gold_form: "physical"))
+    account.physical_gold_lots.create!(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000)
+
+    assert_equal 1, @import.send(:readback_count_snapshot)["physical_gold_lots"]
+  end
+
   test "publish verifies expected zero record types against unexpected readback deltas" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {

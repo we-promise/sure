@@ -7,6 +7,7 @@ Rails.application.config.to_prepare do
     included do
       include Authentication
       before_action :authorize_protected_attachment
+      around_action :prevent_protected_redirect_caching
     end
 
     private
@@ -21,9 +22,25 @@ Rails.application.config.to_prepare do
 
         protected_attachments = attachments.select { |attachment| attachment.record_type.in?(PROTECTED_RECORD_TYPES) }
         return if protected_attachments.empty?
-        return if protected_attachments.all? { |attachment| protected_attachment_authorized?(attachment) }
+        @protected_attachment_requested = true
+        raise ActiveRecord::RecordNotFound unless protected_attachments.all? { |attachment| protected_attachment_authorized?(attachment) }
+      end
 
-        raise ActiveRecord::RecordNotFound
+      def prevent_protected_redirect_caching!
+        return unless @protected_attachment_requested
+        return unless redirect_controller?
+
+        no_store
+      end
+
+      def prevent_protected_redirect_caching
+        yield
+      ensure
+        prevent_protected_redirect_caching!
+      end
+
+      def redirect_controller?
+        is_a?(ActiveStorage::Blobs::RedirectController) || is_a?(ActiveStorage::Representations::RedirectController)
       end
 
       def protected_attachment_authorized?(attachment)

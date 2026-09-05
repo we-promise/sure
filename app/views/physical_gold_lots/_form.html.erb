@@ -2,6 +2,9 @@
 <% form_url = lot.persisted? ? physical_gold_lot_path(lot) : physical_gold_lots_path %>
 <% form_method = lot.persisted? ? :patch : :post %>
 <%= styled_form_with model: lot, url: form_url, method: form_method, class: "space-y-4", data: { turbo_frame: :_top } do |form| %>
+  <% if lot.errors.any? %>
+    <%= render DS::Alert.new(message: lot.errors.full_messages.to_sentence, variant: :error, live: :assertive) %>
+  <% end %>
   <%= hidden_field_tag :account_id, account.id if lot.new_record? %>
   <%= form.text_field :description, label: t("physical_gold_lots.form.description"), required: true %>
   <%= form.date_field :acquired_on, label: t("physical_gold_lots.form.acquired_on"), required: true, max: Date.current %>

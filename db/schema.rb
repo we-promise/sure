@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -895,11 +895,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
     t.check_constraint "consumed_amount >= 0::numeric", name: "chk_goals_consumed_amount_non_negative"
-    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying::text, 'maintained'::character varying::text])", name: "chk_goals_kind_enum"
+    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying, 'maintained'::character varying]::text[])", name: "chk_goals_kind_enum"
     t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying::text, 'contributions'::character varying::text])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
-    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying::text, 'months_of_expenses'::character varying::text])", name: "chk_goals_target_mode_enum"
+    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying, 'months_of_expenses'::character varying]::text[])", name: "chk_goals_target_mode_enum"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1222,14 +1222,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.check_constraint "NOT gold_form::text IS DISTINCT FROM 'physical'::text OR gold_weight IS NULL AND gold_weight_unit IS NULL AND gold_karat IS NULL AND gold_manual_value IS NULL", name: "investments_physical_gold_details_require_physical_form"
+    t.check_constraint "NOT subtype::text IS DISTINCT FROM 'gold'::text OR gold_weight IS NULL AND gold_weight_unit IS NULL AND gold_karat IS NULL AND gold_manual_value IS NULL", name: "investments_gold_details_require_gold_subtype"
     t.check_constraint "gold_form IS NULL OR (gold_form::text = ANY (ARRAY['physical'::character varying, 'digital'::character varying]::text[]))", name: "investments_gold_form_valid"
-    t.check_constraint "gold_form IS NULL OR subtype::text = 'gold'::text", name: "investments_gold_form_requires_gold_subtype"
-    t.check_constraint "gold_form::text = 'physical'::text OR gold_weight IS NULL AND gold_weight_unit IS NULL AND gold_karat IS NULL AND gold_manual_value IS NULL", name: "investments_physical_gold_details_require_physical_form"
+    t.check_constraint "gold_form IS NULL OR NOT subtype::text IS DISTINCT FROM 'gold'::text", name: "investments_gold_form_requires_gold_subtype"
     t.check_constraint "gold_karat IS NULL OR gold_karat > 0::numeric AND gold_karat <= 24::numeric", name: "investments_gold_karat_valid"
     t.check_constraint "gold_manual_value IS NULL OR gold_manual_value >= 0::numeric", name: "investments_gold_manual_value_nonnegative"
     t.check_constraint "gold_weight IS NULL OR gold_weight > 0::numeric", name: "investments_gold_weight_positive"
     t.check_constraint "gold_weight_unit IS NULL OR (gold_weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[]))", name: "investments_gold_weight_unit_valid"
-    t.check_constraint "subtype::text = 'gold'::text OR gold_weight IS NULL AND gold_weight_unit IS NULL AND gold_karat IS NULL AND gold_manual_value IS NULL", name: "investments_gold_details_require_gold_subtype"
   end
 
   create_table "invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1555,7 +1555,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
     t.index ["onchain_wallet_item_id", "chain", "wallet_address"], name: "index_onchain_wallet_accounts_unique_native", unique: true, where: "((asset_kind)::text = 'native'::text)"
     t.index ["onchain_wallet_item_id"], name: "index_onchain_wallet_accounts_on_onchain_wallet_item_id"
     t.check_constraint "asset_kind::text = 'native'::text OR contract_address IS NOT NULL", name: "chk_onchain_wallet_accounts_token_has_contract"
-    t.check_constraint "asset_kind::text = ANY (ARRAY['native'::character varying::text, 'erc20'::character varying::text, 'spl'::character varying::text])", name: "chk_onchain_wallet_accounts_known_asset_kind"
+    t.check_constraint "asset_kind::text = ANY (ARRAY['native'::character varying, 'erc20'::character varying, 'spl'::character varying]::text[])", name: "chk_onchain_wallet_accounts_known_asset_kind"
   end
 
   create_table "onchain_wallet_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1691,7 +1691,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_110000) do
     t.index "lower((token)::text)", name: "index_push_subscriptions_on_lower_token", unique: true
     t.index ["last_registered_at"], name: "index_push_subscriptions_on_last_registered_at"
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
-    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying::text, 'production'::character varying::text])", name: "chk_push_subscriptions_environment"
+    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying, 'production'::character varying]::text[])", name: "chk_push_subscriptions_environment"
     t.check_constraint "platform::text = 'ios'::text", name: "chk_push_subscriptions_platform"
   end
 

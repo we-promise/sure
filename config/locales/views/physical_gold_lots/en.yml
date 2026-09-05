@@ -29,7 +29,7 @@ en:
       weight: Weight
       weight_unit: Weight unit
       karat: Purity (karat)
-      cost_amount: Purchase cost (optional)
+      cost_amount: Purchase price
       notes: Notes (optional)
       grams: Grams
       troy_ounces: Troy ounces
@@ -41,7 +41,7 @@ en:
       weight: Weight
       weight_unit: Weight unit
       karat: Purity (karat)
-      cost_amount: Purchase cost (optional)
+      cost_amount: Purchase price
       notes: Notes (optional)
       grams: Grams
       troy_ounces: Troy ounces

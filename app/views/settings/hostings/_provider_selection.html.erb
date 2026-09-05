@@ -73,7 +73,9 @@
           </label>
         <% end %>
 
-        <input type="hidden" name="setting[gold_api_enabled]" value="0">
+        <% unless gold_api_from_env %>
+          <input type="hidden" name="setting[gold_api_enabled]" value="0">
+        <% end %>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox"
                  name="setting[gold_api_enabled]"

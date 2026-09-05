@@ -136,14 +136,7 @@ class Investment < ApplicationRecord
   end
 
   def gold_weight_in_grams
-    return BigDecimal(0) unless gold_weight.present?
-
-    case gold_weight_unit
-    when "gram" then gold_weight.to_d
-    when "kilogram" then gold_weight.to_d * 1_000
-    when "troy_ounce" then gold_weight.to_d * GoldValuation::TROY_OUNCE_GRAMS
-    else BigDecimal(0)
-    end
+    GoldWeight.in_grams(gold_weight, gold_weight_unit)
   end
 
   # `price_per_troy_ounce` is the XAU quote; karat adjusts it to the item's

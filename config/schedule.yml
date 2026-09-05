@@ -31,6 +31,12 @@ sync_property_valuations:
   queue: "scheduled"
   description: "Refreshes AVM property valuations once a month (providers enforce tight monthly request caps)"
 
+sync_gold_valuations:
+  cron: "45 1 * * *" # daily at 1:45 AM UTC, before daily insights
+  class: "SyncGoldValuationsJob"
+  queue: "scheduled"
+  description: "Refreshes physical-gold valuations daily using the configured spot-price provider"
+
 clean_data:
   cron: "0 3 * * *" # daily at 3:00 AM
   class: "DataCleanerJob"
