@@ -2572,6 +2572,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
     t.string "profile_id", null: false
     t.string "profile_type", null: false
     t.jsonb "raw_payload"
+    t.text "sca_private_key"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.string "status", default: "good", null: false
     t.datetime "sync_start_date"

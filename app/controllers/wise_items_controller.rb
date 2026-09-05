@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class WiseItemsController < ApplicationController
-  before_action :set_wise_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_wise_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup, :generate_sca_keypair ]
   before_action :require_admin!, except: [ :index ]
 
   def index
@@ -134,6 +134,18 @@ class WiseItemsController < ApplicationController
 
   def setup_accounts
     @wise_accounts = @wise_item.wise_accounts.unlinked
+  end
+
+  # Generates a fresh SCA keypair for this item. The private key is stored
+  # (encrypted); the public key is derived from it on every render so the user
+  # can register it with Wise. Regenerating invalidates the previous keypair.
+  def generate_sca_keypair
+    @wise_item.generate_sca_keypair!
+    render_provider_panel_success(t(".success"))
+  rescue => e
+    Rails.logger.error "WiseItemsController#generate_sca_keypair - #{e.class}: #{e.message}"
+    @wise_item.errors.add(:base, t(".failed"))
+    render_provider_panel_error
   end
 
   def complete_account_setup
