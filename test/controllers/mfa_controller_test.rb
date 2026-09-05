@@ -121,6 +121,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
       post verify_mfa_path, params: { code: totp.now }
     end
     assert_redirected_to new_session_path
+    assert_nil session[:mfa_user_id], "a rejected user must not stay parked in the MFA step"
   end
 
   test "verify_code authenticates with valid backup code" do
