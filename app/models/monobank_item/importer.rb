@@ -175,6 +175,14 @@ class MonobankItem::Importer
       rescue => e
         stats[:failed] += 1
         Rails.logger.error "MonobankItem::Importer - Failed to fetch/store statement for Monobank account #{monobank_account.id}: #{e.class}"
+        # fetch_window captures its own provider errors; what lands here instead is a
+        # persistence failure (an invalid snapshot, a cursor that will not save), which
+        # otherwise showed up only as an incremented failure count.
+        capture_sync_error(
+          "Failed to fetch or store a Monobank statement",
+          e,
+          monobank_account: monobank_account
+        )
       end
 
       stats

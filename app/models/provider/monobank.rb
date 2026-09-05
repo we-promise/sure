@@ -230,6 +230,7 @@ class Provider::Monobank < Provider
         if retries <= max_retries
           delay = calculate_retry_delay(retries)
           capture_request_error(
+            category: "provider_sync",
             level: "warn",
             message: "Monobank API request will be retried",
             operation: operation_name,
@@ -237,8 +238,15 @@ class Provider::Monobank < Provider
               error_class: e.class.name,
               retry_attempt: retries,
               retry_limit: max_retries,
-              retry_delay: delay
+              retry_delay: delay.round(2)
             }
+          )
+          # Kept alongside the debug entry, as Provider::Lunchflow does: a retry that
+          # then succeeds is local noise an operator will not go looking for, but it is
+          # what you want in the terminal during `bin/dev`.
+          Rails.logger.warn(
+            "Monobank API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
+            "#{e.class}. Retrying in #{delay.round(2)}s..."
           )
           sleep(delay)
           retry
@@ -315,9 +323,9 @@ class Provider::Monobank < Provider
     # connection. What only exists here is the transport detail (status, retry attempt),
     # which never reaches that layer, so it is captured here rather than left in the
     # application log. The body is never included: it carries statement PII.
-    def capture_request_error(level:, message:, operation:, metadata: {})
+    def capture_request_error(level:, message:, operation:, category: "provider_sync_error", metadata: {})
       DebugLogEntry.capture(
-        category: "provider_sync_error",
+        category: category,
         level: level,
         message: message,
         source: self.class.name,

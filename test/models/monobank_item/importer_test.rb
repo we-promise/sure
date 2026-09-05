@@ -294,6 +294,27 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     assert @monobank_item.good?, "throttling must not mark the connection as needing attention"
   end
 
+  # fetch_window captures provider errors itself. What lands in the outer rescue is a
+  # persistence failure, which used to increment a counter and leave nothing an operator
+  # could find in /settings/debug.
+  test "a failure while storing a statement is captured in the debug log" do
+    provider = FakeMonobankProvider.new
+    MonobankItem::Importer.any_instance.stubs(:store_transactions).raises(StandardError, "cursor would not save")
+
+    result = nil
+    assert_difference "DebugLogEntry.count", 1 do
+      result = MonobankItem::Importer.new(@monobank_item, monobank_provider: provider).import
+    end
+
+    assert_equal 1, result[:transactions_failed]
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "monobank", entry.provider_key
+    assert_equal @family, entry.family
+    assert_equal @monobank_account.account_provider, entry.account_provider
+    assert_equal "StandardError", entry.metadata["error_class"]
+  end
+
   test "a hard failure on the history window is reported rather than swallowed" do
     MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(2)
     @monobank_item.update!(sync_start_date: 90.days.ago.to_date)
