@@ -680,9 +680,18 @@ class TransactionsController < ApplicationController
       # (a plain "pluck(:name)" here would hit Postgres's "SELECT DISTINCT
       # ... ORDER BY expressions must appear in select list"); dedup by name
       # happens in Ruby afterward instead.
+      #
+      # Checked across every supported locale (like Entry#generic_name?'s
+      # unknown-name check), not just the current one -- otherwise an old
+      # entry named under a different locale's fallback (e.g. "Unbekannte
+      # Transaktion") would still surface as a "recent name" suggestion. A
+      # full generic_name? reuse isn't practical here since it also needs a
+      # loaded entryable.category, which isn't available cheaply from a pluck.
+      unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+
       Current.accessible_entries
         .where(entryable_type: "Transaction")
-        .where.not(name: I18n.t("transactions.unknown_name"))
+        .where.not(name: unknown_names)
         .order(created_at: :desc)
         .limit(200)
         .pluck(:name, :created_at)

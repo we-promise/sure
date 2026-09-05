@@ -38,9 +38,15 @@ class Entry < ApplicationRecord
   # entries -- excludes CSV imports (which have their own, separately
   # decided blank-name handling) and any unrelated re-validation of an
   # already-persisted entry (background jobs, resaves) that happens to see
-  # a blank name for some other reason.
+  # a blank name for some other reason. external_id/source are also excluded
+  # (via !cleared?) because Account::ProviderImportAdapter sets both at
+  # find_or_initialize_by time, before this callback runs -- without that
+  # guard, a first-time sync of a provider transaction with no name (e.g.
+  # Plaid omitting both merchant_name and original_description) would get a
+  # synthetic "Category - Merchant" name instead of surfacing the blank-name
+  # presence error the same way a manual blank submission would.
   before_validation :set_default_name, if: -> {
-    new_record? && import_id.blank? && name.blank? &&
+    new_record? && import_id.blank? && name.blank? && !cleared? &&
       entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
   }
 

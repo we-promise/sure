@@ -181,6 +181,24 @@ class EntryTest < ActiveSupport::TestCase
     assert_includes entry.errors[:name], "can't be blank"
   end
 
+  test "does not auto-generate a name for a provider-synced entry" do
+    families(:dylan_family).update!(auto_generate_transaction_names: true)
+
+    entry = Entry.new(
+      account: accounts(:depository),
+      external_id: "plaid_txn_123",
+      source: "plaid",
+      name: "",
+      date: Date.current,
+      currency: "USD",
+      amount: 100,
+      entryable: Transaction.new(category: categories(:food_and_drink))
+    )
+
+    assert_not entry.valid?
+    assert_includes entry.errors[:name], "can't be blank"
+  end
+
   test "set_default_name does not raise when entryable is missing" do
     families(:dylan_family).update!(auto_generate_transaction_names: true)
 
