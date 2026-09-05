@@ -90,7 +90,7 @@
             <% end %>
 
             <% if category[:clickable] != false %>
-              <%= link_to transactions_path(q: { categories: [category[:name]], start_date: period.date_range.first, end_date: period.date_range.last }),
+              <%= link_to transactions_path(q: { categories: [category[:filter_value]], start_date: period.date_range.first, end_date: period.date_range.last }),
                   class: "flex items-center justify-between mx-3 p-3 rounded-lg cursor-pointer group gap-3",
                   data: {
                     turbo_frame: "_top",

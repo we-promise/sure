@@ -123,10 +123,8 @@ class Transaction::Search
     def apply_category_filter(query, categories)
       return query unless categories.present?
 
-      # Check for "Uncategorized" in any supported locale (handles URL params in different languages)
-      all_uncategorized_names = Category.all_uncategorized_names
-      include_uncategorized = (categories & all_uncategorized_names).any?
-      real_categories = categories - all_uncategorized_names
+      include_uncategorized = categories.include?(Category::UNCATEGORIZED_FILTER_VALUE)
+      real_categories = categories - [ Category::UNCATEGORIZED_FILTER_VALUE ]
 
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
@@ -184,7 +182,15 @@ class Transaction::Search
 
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
-      query.joins(:merchant).where(merchants: { name: merchants })
+
+      include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
+      real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
+
+      if include_no_merchant
+        query.left_joins(:merchant).where("merchants.name IN (?) OR merchants.id IS NULL", real_merchants)
+      else
+        query.joins(:merchant).where(merchants: { name: real_merchants })
+      end
     end
 
     # Filter transactions by tag name, matching any transaction that carries
@@ -192,13 +198,24 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
 
+      include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
+      real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
+
       # Use a subquery instead of an INNER JOIN: `.joins(:tags)` fans out to
       # one row per matching tag, so a transaction tagged with two of the
       # filtered tags produces two rows and double-counts in the summary
       # box (COUNT / SUM) even though the list renders it once.
       # See https://github.com/we-promise/sure/issues/3174
-      matching_ids = query.joins(:tags).where(tags: { name: tags }).distinct.select(:id)
-      query.where(id: matching_ids)
+      #
+      # A top-level `.distinct` would break controller-level ordering (e.g. reverse_chronological's
+      # CASE expression) under PostgreSQL, since DISTINCT requires all ORDER BY expressions to appear in
+      # the select list. Deduplicate via a subquery instead so `query`'s own select/order stay untouched.
+      matching_transaction_ids = if include_untagged
+        family.transactions.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).select(:id)
+      else
+        family.transactions.joins(:tags).where(tags: { name: real_tags }).select(:id)
+      end
+      query.where(transactions: { id: matching_transaction_ids })
     end
 
     def apply_status_filter(query, statuses)

@@ -7,7 +7,7 @@
   # /transactions only lists Transaction rows. Skip trade-only buckets (e.g. Other
   # Investments) so the destination is not empty relative to the report row.
   clickable = item[:has_transactions] && row_start_date.present? && row_end_date.present?
-  transactions_href = clickable ? transactions_path(q: { categories: [ item[:category_name] ], start_date: row_start_date, end_date: row_end_date }) : nil
+  transactions_href = clickable ? transactions_path(q: { categories: [ item[:category_filter_value] ], start_date: row_start_date, end_date: row_end_date }) : nil
 %>
 
 <tr data-category="category-<%= item[:category_id] %>"

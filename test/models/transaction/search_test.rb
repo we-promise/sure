@@ -114,7 +114,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Search for uncategorized transactions
-    uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
+    uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] }).transactions_scope
     uncategorized_ids = uncategorized_results.pluck(:id)
 
     # Should include standard uncategorized transactions
@@ -139,7 +139,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Filter for only uncategorized
-    results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
+    results = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] }).transactions_scope
     result_ids = results.pluck(:id)
 
     # Should only include uncategorized transaction
@@ -174,7 +174,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     )
 
     # Filter for food category + uncategorized
-    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink", Category.uncategorized.name ] }).transactions_scope
+    results = Transaction::Search.new(@family, filters: { categories: [ "Food & Drink", Category::UNCATEGORIZED_FILTER_VALUE ] }).transactions_scope
     result_ids = results.pluck(:id)
 
     # Should include both food and uncategorized
@@ -533,8 +533,9 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes result_ids, no_match.entryable.id
   end
 
-  test "uncategorized filter returns same results across all supported locales" do
-    # Create uncategorized transactions
+  test "uncategorized filter works regardless of current locale since the filter value is a stable sentinel" do
+    # The category filter now matches on the stable Category::UNCATEGORIZED_FILTER_VALUE sentinel
+    # (not the translated display name), so the current locale can no longer affect matching.
     uncategorized1 = create_transaction(
       account: @checking_account,
       amount: 100,
@@ -547,7 +548,6 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    # Create a categorized transaction to ensure filter is working
     categorized = create_transaction(
       account: @checking_account,
       amount: 300,
@@ -555,75 +555,273 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard"
     )
 
-    # Get the expected count using English locale (known working case)
-    I18n.with_locale(:en) do
-      english_uncategorized_name = Category.uncategorized.name
-      english_results = Transaction::Search.new(@family, filters: { categories: [ english_uncategorized_name ] }).transactions_scope
-      @expected_count = english_results.count
-      assert_equal 2, @expected_count, "English locale should return 2 uncategorized transactions"
-    end
-
-    # Test every supported locale returns the same count when filtering by that locale's uncategorized name
     LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
       I18n.with_locale(locale) do
-        localized_uncategorized_name = Category.uncategorized.name
-        results = Transaction::Search.new(@family, filters: { categories: [ localized_uncategorized_name ] }).transactions_scope
-        result_count = results.count
+        results = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] }).transactions_scope
+        result_ids = results.pluck(:id)
 
-        assert_equal @expected_count, result_count,
-          "Locale '#{locale}' with uncategorized name '#{localized_uncategorized_name}' should return #{@expected_count} transactions but got #{result_count}"
+        assert_includes result_ids, uncategorized1.entryable.id
+        assert_includes result_ids, uncategorized2.entryable.id
+        assert_not_includes result_ids, categorized.entryable.id
       end
     end
   end
 
-  test "uncategorized filter works with English parameter name regardless of current locale" do
-    # This tests the bug where URL contains English "Uncategorized" but user's locale is different
-    # Bug: /transactions/?q[categories][]=Uncategorized fails when locale is French
+  test "a real category literally named like the localized Uncategorized label remains selectable" do
+    # Regression test: filter values are opaque sentinels (Category::UNCATEGORIZED_FILTER_VALUE), not the
+    # translated display name, so a category a user happens to name "Uncategorized" can't be misdetected
+    # as the synthetic filter option.
+    lookalike_category = @family.categories.create!(
+      name: Category.uncategorized_name,
+      color: "#123456"
+    )
 
-    # Create uncategorized transactions
-    uncategorized1 = create_transaction(
+    lookalike_transaction = create_transaction(
       account: @checking_account,
       amount: 100,
+      category: lookalike_category,
       kind: "standard"
     )
 
-    uncategorized2 = create_transaction(
+    uncategorized_transaction = create_transaction(
       account: @checking_account,
       amount: 200,
       kind: "standard"
     )
 
-    # Create a categorized transaction to ensure filter is working
-    categorized = create_transaction(
+    results = Transaction::Search.new(@family, filters: { categories: [ lookalike_category.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, lookalike_transaction.entryable.id
+    assert_not_includes result_ids, uncategorized_transaction.entryable.id
+  end
+
+  test "filtering for only No merchant returns only transactions without a merchant" do
+    with_merchant = create_transaction(
       account: @checking_account,
-      amount: 300,
-      category: categories(:food_and_drink),
+      amount: 100,
+      merchant: merchants(:netflix),
       kind: "standard"
     )
 
-    # Get the English uncategorized name (this is what URLs typically contain)
-    english_uncategorized_name = I18n.t("models.category.uncategorized", locale: :en)
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
 
-    # Get the expected count using English locale (known working case)
-    expected_count = nil
-    I18n.with_locale(:en) do
-      results = Transaction::Search.new(@family, filters: { categories: [ english_uncategorized_name ] }).transactions_scope
-      expected_count = results.count
-      assert_equal 2, expected_count, "English locale should return 2 uncategorized transactions"
+    results = Transaction::Search.new(@family, filters: { merchants: [ Merchant::NO_MERCHANT_FILTER_VALUE ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, without_merchant.entryable.id
+    assert_not_includes result_ids, with_merchant.entryable.id
+  end
+
+  test "filtering for No merchant plus a real merchant returns both" do
+    with_netflix = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: merchants(:netflix),
+      kind: "standard"
+    )
+
+    with_amazon = create_transaction(
+      account: @checking_account,
+      amount: 150,
+      merchant: merchants(:amazon),
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(
+      @family,
+      filters: { merchants: [ merchants(:netflix).name, Merchant::NO_MERCHANT_FILTER_VALUE ] }
+    ).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_netflix.entryable.id
+    assert_includes result_ids, without_merchant.entryable.id
+    assert_not_includes result_ids, with_amazon.entryable.id
+  end
+
+  test "filtering excludes transactions without a merchant when No merchant is not in the filter" do
+    with_merchant = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: merchants(:netflix),
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { merchants: [ merchants(:netflix).name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_merchant.entryable.id
+    assert_not_includes result_ids, without_merchant.entryable.id
+  end
+
+  test "filtering for only Untagged returns only transactions without tags" do
+    with_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ Tag::UNTAGGED_FILTER_VALUE ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, without_tag.entryable.id
+    assert_not_includes result_ids, with_tag.entryable.id
+  end
+
+  test "filtering for Untagged plus a real tag returns both" do
+    with_trips_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    with_other_tag = create_transaction(
+      account: @checking_account,
+      amount: 150,
+      tags: [ tags(:two) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(
+      @family,
+      filters: { tags: [ tags(:one).name, Tag::UNTAGGED_FILTER_VALUE ] }
+    ).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_trips_tag.entryable.id
+    assert_includes result_ids, without_tag.entryable.id
+    assert_not_includes result_ids, with_other_tag.entryable.id
+  end
+
+  test "filtering excludes transactions without tags when Untagged is not in the filter" do
+    with_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ tags(:one).name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, with_tag.entryable.id
+    assert_not_includes result_ids, without_tag.entryable.id
+  end
+
+  test "a real merchant literally named like the localized No merchant label remains selectable" do
+    # Regression test: filter values are opaque sentinels (Merchant::NO_MERCHANT_FILTER_VALUE), not the
+    # translated display name, so a merchant a user happens to name "No merchant" can't be misdetected
+    # as the synthetic filter option.
+    lookalike_merchant = @family.merchants.create!(
+      name: Merchant.no_merchant_name,
+      color: "#123456"
+    )
+
+    lookalike_transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      merchant: lookalike_merchant,
+      kind: "standard"
+    )
+
+    without_merchant = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { merchants: [ lookalike_merchant.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, lookalike_transaction.entryable.id
+    assert_not_includes result_ids, without_merchant.entryable.id
+  end
+
+  test "a real tag literally named like the localized Untagged label remains selectable" do
+    lookalike_tag = @family.tags.create!(name: Tag.untagged_name)
+
+    lookalike_transaction = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ lookalike_tag ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ lookalike_tag.name ] }).transactions_scope
+    result_ids = results.pluck(:id)
+
+    assert_includes result_ids, lookalike_transaction.entryable.id
+    assert_not_includes result_ids, without_tag.entryable.id
+  end
+
+  test "Untagged filter works with controller-style reverse_chronological ordering" do
+    # Regression test for a PostgreSQL error: a top-level `.distinct` combined with `reverse_chronological`'s
+    # CASE-expression ORDER BY raises PG::InvalidColumnReference, since DISTINCT requires every ORDER BY
+    # expression to appear in the select list. apply_tag_filter must not add one.
+    with_tag = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      tags: [ tags(:one), tags(:two) ],
+      kind: "standard"
+    )
+
+    without_tag = create_transaction(
+      account: @checking_account,
+      amount: 200,
+      kind: "standard"
+    )
+
+    results = Transaction::Search.new(@family, filters: { tags: [ Tag::UNTAGGED_FILTER_VALUE ] }).transactions_scope
+
+    assert_nothing_raised do
+      results.reverse_chronological.to_a
     end
 
-    # Test that using the English parameter name works in every supported locale
-    # This catches the bug where French locale fails with English "Uncategorized" parameter
-    LanguagesHelper::SUPPORTED_LOCALES.each do |locale|
-      I18n.with_locale(locale) do
-        # Simulate URL parameter: q[categories][]=Uncategorized (English, regardless of user's locale)
-        results = Transaction::Search.new(@family, filters: { categories: [ english_uncategorized_name ] }).transactions_scope
-        result_count = results.count
-
-        assert_equal expected_count, result_count,
-          "Locale '#{locale}' should return #{expected_count} transactions when filtering with English 'Uncategorized' parameter, but got #{result_count}"
-      end
-    end
+    result_ids = results.pluck(:id)
+    assert_includes result_ids, without_tag.entryable.id
+    assert_not_includes result_ids, with_tag.entryable.id
   end
 
   test "empty accessible_account_ids yields no visible transactions" do

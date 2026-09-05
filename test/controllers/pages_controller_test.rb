@@ -134,6 +134,30 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
+    parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")
+
+    # Parent nets as an expense; the subcategory nets as income (more refunded than spent),
+    # which routes it into the "opposite_subs" branch as its own standalone node.
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 100, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "Rebate refund", amount: -30, category: subcategory)
+
+    get root_path
+    assert_response :ok
+
+    chart = css_select("[data-controller='sankey-chart']").first
+    sankey_data = JSON.parse(chart["data-sankey-chart-data-value"])
+    nodes = sankey_data.fetch("nodes")
+
+    opposite_node = nodes.find { |node| node.fetch("id").start_with?("income_sub_") }
+    assert_not_nil opposite_node, "expected an opposite-direction subcategory node"
+    assert_equal subcategory.name, opposite_node["filter_value"]
+
+    parent_node = nodes.find { |node| node.fetch("id") == "expense_#{parent_category.id}" }
+    assert_equal parent_category.name, parent_node["filter_value"]
+  end
+
   test "dashboard renders money flow widget" do
     get root_path
 
