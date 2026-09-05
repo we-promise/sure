@@ -315,6 +315,23 @@ class MonobankItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "StandardError", entry.metadata["error_class"]
   end
 
+  # An unauthorized response flips the connection to requires_update. If that update
+  # fails, the connection keeps rendering as healthy, so the failure must reach
+  # /settings/debug rather than only the application log.
+  test "a failure while flagging the connection for re-authorization is captured in the debug log" do
+    importer = MonobankItem::Importer.new(@monobank_item, monobank_provider: FakeMonobankProvider.new)
+    @monobank_item.stubs(:update!).raises(ActiveRecord::RecordInvalid)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_nothing_raised { importer.send(:mark_requires_update!) }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "monobank", entry.provider_key
+    assert_equal @family, entry.family
+    assert_equal "ActiveRecord::RecordInvalid", entry.metadata["error_class"]
+  end
+
   test "a hard failure on the history window is reported rather than swallowed" do
     MonobankItem::Importer.stubs(:max_statement_requests_per_sync).returns(2)
     @monobank_item.update!(sync_start_date: 90.days.ago.to_date)

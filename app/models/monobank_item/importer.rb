@@ -509,11 +509,14 @@ class MonobankItem::Importer
       )
     end
 
-    # Flag the item as requiring re-authorization, swallowing update errors.
+    # Flag the item as requiring re-authorization, swallowing update errors. A failure
+    # here means the connection keeps showing as healthy after its token was rejected,
+    # so it is recorded where support can find it rather than only in the app log.
     def mark_requires_update!
       monobank_item.update!(status: :requires_update)
     rescue => e
-      Rails.logger.error "MonobankItem::Importer - Failed to update item status: #{e.message}"
+      Rails.logger.error "MonobankItem::Importer - Failed to update item status: #{e.class}"
+      capture_sync_error("Failed to flag connection as requiring re-authorization", e)
     end
 
     # Build a skip result mirroring +import+'s shape. Monobank throttles client-info to
