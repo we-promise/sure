@@ -101,6 +101,28 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
+#### Restricting who can reach your instance
+
+Two optional variables tighten things once your instance is reachable from the
+internet. Both are off by default, so leaving them unset keeps the behaviour you
+have today.
+
+| Variable | Purpose |
+|---|---|
+| `ALLOWED_ORIGINS` | Comma-separated list of browser origins allowed to call the app cross-origin, including the scheme, for example `https://app.example.com,https://staging.example.com`. Without it the app answers cross-origin requests the way any site does by default: it does not. Native mobile clients are unaffected, since they send no `Origin` header. |
+| `APP_DOMAIN` | The single host your instance is served on. Used as the fallback for `ALLOWED_ORIGINS`, and as part of the `Host` allow-list below. |
+| `ALLOWED_HOSTS` | Comma-separated extra hostnames the app answers to. Unioned with `APP_DOMAIN`. |
+
+Setting `APP_DOMAIN` or `ALLOWED_HOSTS` turns on DNS-rebinding protection: any
+request whose `Host` header is not on the list is refused with a 403. If you set
+`APP_DOMAIN` for outgoing mail but also reach the app over a LAN address, a
+Tailscale name or `localhost`, add those to `ALLOWED_HOSTS` or they will stop
+working. The `/up` health endpoint is always exempt, so container probes keep
+passing.
+
+With neither set, the app answers to any `Host` and logs a `[SECURITY]` warning
+at boot.
+
 #### Using HTTPS
 
 Assuming you want to access your instance from the internet, you should have secured your URL address with an SSL certificate.  
