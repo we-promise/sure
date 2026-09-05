@@ -59,7 +59,7 @@ fr:
   budgets:
     available_cash:
       heading: Trésorerie disponible
-      subtitle: À côté du plan ci-dessus, pas dedans.
+      subtitle: "Le plan ci-dessus est ce que vous comptez dépenser. Ceci est ce avec quoi vous pouvez le faire."
       available: Disponible en cash
       earmarked: Déjà fléché vers des objectifs
       free: Réellement libre
