@@ -87,4 +87,16 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     sso_user.reload
     assert_nil sso_user.password_digest, "SSO-only user should still have nil password_digest"
   end
+
+  test "update signs the user out everywhere" do
+    sign_in @user
+    @user.sessions.create!
+    assert_operator @user.sessions.count, :>=, 2
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewPassword123!", password_confirmation: "NewPassword123!" } }
+
+    assert_redirected_to new_session_path
+    assert_equal 0, @user.sessions.reload.count
+  end
 end
