@@ -10,6 +10,7 @@ class TransactionsController < ApplicationController
   def show
     super
     assign_mark_recurring_state
+    assign_create_rule_state
   end
 
   def new
@@ -198,6 +199,7 @@ class TransactionsController < ApplicationController
       @entry.reload
 
       assign_mark_recurring_state
+      assign_create_rule_state
 
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
@@ -224,6 +226,11 @@ class TransactionsController < ApplicationController
               partial: "transactions/mark_recurring",
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
+            (turbo_stream.replace(
+              dom_id(@entry, :create_rule),
+              partial: "transactions/create_rule",
+              locals: { entry: @entry }
+            ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -235,6 +242,7 @@ class TransactionsController < ApplicationController
       end
     else
       assign_mark_recurring_state
+      assign_create_rule_state
       render :show, status: :unprocessable_entity
     end
   end
@@ -512,6 +520,19 @@ class TransactionsController < ApplicationController
       @mark_recurring_disabled = existing.present?
       @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
       @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+    end
+
+    def assign_create_rule_state
+      return unless can_edit_entry? && !@entry.split_child?
+
+      merchant = @entry.transaction.merchant
+      rule_name = merchant&.name || @entry.name
+
+      @create_rule_href = if merchant
+        new_rule_path(resource_type: "transaction", name: rule_name, merchant_id: merchant.id)
+      else
+        new_rule_path(resource_type: "transaction", name: rule_name)
+      end
     end
 
     def accessible_transactions

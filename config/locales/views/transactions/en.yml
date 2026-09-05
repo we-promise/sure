@@ -65,6 +65,9 @@ en:
       create_bill: Create a bill
       mark_recurring_subtitle: Track this as a recurring transaction. Amount variance is automatically calculated from past 6 months of similar transactions.
       mark_recurring_title: Recurring Transaction
+      create_rule: Create rule
+      create_rule_subtitle: Automate future transactions like this one.
+      create_rule_title: Create rule
       applied_to_title: Bills this paid
       applied_to_detail: "%{amount} toward the bill due %{date}"
       applied_to_unreviewed: Needs review
