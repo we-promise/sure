@@ -460,6 +460,34 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
       "persisted row for every loan while producing identical numbers (#36)"
   end
 
+  test "payments and an unqualified simulation are the same calculation" do
+    schedule = accounts(:characterization_fixed).loan.amortization_schedule
+
+    assert_equal schedule.payments, schedule.simulation.payments
+  end
+
+  test "daily accrual is a different calculation, and is not the one production runs" do
+    schedule = accounts(:characterization_fixed).loan.amortization_schedule
+
+    monthly = schedule.simulation(daily_accrual: false)
+    daily = schedule.simulation(daily_accrual: true)
+
+    assert_not_equal daily.total_interest, monthly.total_interest,
+      "if these agree the daily path is not doing anything and this test proves nothing"
+    assert_equal monthly.payments, schedule.payments,
+      "production must run the monthly path while SCHEDULE_DAILY_ACCRUAL is false (#36)"
+  end
+
+  test "simulation returns an empty converged result for a non-amortizable loan" do
+    loan = accounts(:characterization_fixed).loan
+    loan.update!(term_months: nil)
+
+    result = loan.amortization_schedule.simulation
+
+    assert_empty result.payments
+    assert result.converged?
+  end
+
   test "characterization assertion fails on a deliberate one-cent mutation" do
     expected = characterized_row(1, "2024-02-01", "0.0", "33.33", "33.33", "0.00", "100.00", "66.67")
     mutated = expected.merge(payment_amount: BigDecimal("33.34"))
