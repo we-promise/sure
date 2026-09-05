@@ -1,5 +1,5 @@
 <%# locals: (form:) %>
-<div data-controller="list-filter">
+<div data-controller="list-filter category-filter">
   <%= render DS::SearchInput.new(
         variant: :embedded,
         placeholder: t(".filter_category"),
@@ -17,7 +17,13 @@
                            {
                              multiple: true,
                              checked: @q[:categories]&.include?(category.name),
-                             class: "checkbox checkbox--light"
+                             class: "checkbox checkbox--light",
+                             data: {
+                               category_filter_target: "checkbox",
+                               action: "change->category-filter#toggle",
+                               category_id: category.id,
+                               parent_id: category.parent_id
+                             }
                            },
                            category.name,
                            nil %>
