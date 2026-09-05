@@ -44,6 +44,8 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
 
   test "retries transient errors then raises Assistant::Error" do
     Net::HTTP.any_instance.stubs(:request).raises(Net::OpenTimeout, "connection timed out")
+    # Skip the real 1s/2s retry backoff sleeps
+    Assistant::External::Client.any_instance.stubs(:sleep)
 
     error = assert_raises(Assistant::Error) do
       @client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
