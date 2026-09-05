@@ -500,18 +500,34 @@ class PagesController < ApplicationController
       previous_total = previous_series.last&.fetch(:value) || 0
       currency = income_statement.family.currency
 
+      # The axis spans the longer of the two months so both curves share it.
+      axis_days = [ month_end.day, previous_period.end_date.day ].max
+
       {
         month: month_start,
         current_period: current_period,
         previous_period: previous_period,
-        # The axis spans the longer of the two months so both curves share it.
-        days: [ month_end.day, previous_period.end_date.day ].max,
+        days: axis_days,
+        axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
         current: current_series,
         previous: previous_series,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency)
       }
+    end
+
+    # Localized tick labels, one per axis day. The selected month owns the
+    # axis up to its length; when the previous month is longer, its dates
+    # label the tail so a tick never rolls past month-end into the next month
+    # (e.g. day 31 of a February view is "Jan 31", not "Mar 3").
+    def spending_trend_axis_labels(month_start, previous_month_start, days)
+      month_length = month_start.end_of_month.day
+
+      (1..days).map do |day|
+        date = day <= month_length ? month_start + (day - 1) : previous_month_start + (day - 1)
+        I18n.l(date, format: :short)
+      end
     end
 
     # One point per day (spend-free days included) so flat stretches render

@@ -48,7 +48,7 @@ export default class extends Controller {
     const height = this.element.clientHeight;
     const {
       days = 30,
-      start_date: startDate,
+      axis_labels: axisLabels = [],
       current = [],
       previous = [],
     } = this.dataValue || {};
@@ -84,7 +84,7 @@ export default class extends Controller {
       .range([innerHeight, 0]);
 
     this._drawGridlines(group, y, innerWidth, innerHeight);
-    this._drawXAxis(group, x, startDate, days, innerHeight);
+    this._drawXAxis(group, x, days, innerHeight, axisLabels);
 
     const line = d3
       .line()
@@ -171,14 +171,7 @@ export default class extends Controller {
       .style("font-weight", "500");
   }
 
-  _drawXAxis(group, x, startDate, days, innerHeight) {
-    const first = new Date(`${startDate}T00:00:00`);
-    const dayToDate = (day) => {
-      const d = new Date(first);
-      d.setDate(d.getDate() + day - 1);
-      return d;
-    };
-
+  _drawXAxis(group, x, days, innerHeight, axisLabels) {
     const tickDays = [...new Set([1, Math.round((1 + days) / 2), days])];
 
     group
@@ -190,7 +183,10 @@ export default class extends Controller {
           .tickValues(tickDays)
           .tickSize(0)
           .tickPadding(8)
-          .tickFormat((day) => d3.timeFormat("%b %d")(dayToDate(day))),
+          // Labels come pre-localized from the server (one per axis day), so
+          // ticks follow the app's locale instead of D3's default English
+          // one and never roll past the selected month's end.
+          .tickFormat((day) => axisLabels[day - 1] ?? String(day)),
       )
       .call((g) => g.select(".domain").remove())
       .selectAll("text")

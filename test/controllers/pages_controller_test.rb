@@ -397,6 +397,30 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert chart.fetch("days") >= Date.current.day
   end
 
+  test "dashboard spending trend axis labels follow the month that owns each day" do
+    account = @family.accounts.create!(name: "Spending Trend Axis Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: account, name: "Spend", amount: 10, date: 2.months.ago.to_date)
+
+    # Find a recent past month whose previous month is longer (e.g. February
+    # after January), so the axis has tail days owned by the previous month.
+    selected_month = (1..11).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
+    previous_month = (selected_month - 1.month).beginning_of_month
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    chart = spending_trend_chart_data
+    labels = chart.fetch("axis_labels")
+
+    assert_equal previous_month.end_of_month.day, chart.fetch("days")
+    assert_equal chart.fetch("days"), labels.size
+    assert_equal I18n.l(selected_month, format: :short), labels.first
+    # The tail day belongs to the previous, longer month - not a date rolled
+    # past the selected month's end (e.g. "Jan 31", not "Mar 3").
+    assert_equal I18n.l(previous_month.end_of_month, format: :short), labels.last
+  end
+
   test "dashboard spending trend widget clamps invalid and future month params" do
     account = @family.accounts.create!(name: "Spending Trend Clamp Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
     create_transaction(account: account, name: "Today", amount: 10, date: Date.current)
