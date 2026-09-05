@@ -28,13 +28,9 @@ module Authentication
     end
 
     def find_session_by_cookie
-      cookie_value = cookies.signed[:session_token]
-      return if cookie_value.blank?
+      session_record = Session.find_active_by_cookie(cookies.signed[:session_token])
+      return session_record if session_record
 
-      session_record = Session.includes(:user).find_by(id: cookie_value)
-      return session_record if session_record&.user&.active?
-
-      session_record&.destroy!
       cookies.delete(:session_token)
       nil
     end

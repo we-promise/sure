@@ -9,15 +9,14 @@ Doorkeeper.configure do
   resource_owner_authenticator do
     # Manually replicate the app's session-based authentication logic, since
     # Doorkeeper controllers don't include our Authentication concern.
-    if (session_id = cookies.signed[:session_token]).present?
-      if (session_record = Session.find_by(id: session_id))
-        # Set Current.session so downstream code expecting it behaves normally.
-        Current.session = session_record
-        # Return the authenticated user object as the resource owner.
-        session_record.user
-      else
-        redirect_to new_session_url
-      end
+    # Session.find_active_by_cookie enforces the same inactivity expiry as
+    # Authentication#find_session_by_cookie (nil for a missing, inactive-user,
+    # or expired session).
+    if (session_record = Session.find_active_by_cookie(cookies.signed[:session_token]))
+      # Set Current.session so downstream code expecting it behaves normally.
+      Current.session = session_record
+      # Return the authenticated user object as the resource owner.
+      session_record.user
     else
       redirect_to new_session_url
     end
@@ -29,13 +28,9 @@ Doorkeeper.configure do
   # every time somebody will try to access the admin web interface.
   #
   admin_authenticator do
-    if (session_id = cookies.signed[:session_token]).present?
-      if (session_record = Session.find_by(id: session_id))
-        Current.session = session_record
-        head :forbidden unless session_record.user&.super_admin?
-      else
-        redirect_to new_session_url
-      end
+    if (session_record = Session.find_active_by_cookie(cookies.signed[:session_token]))
+      Current.session = session_record
+      head :forbidden unless session_record.user&.super_admin?
     else
       redirect_to new_session_url
     end
