@@ -473,6 +473,10 @@ class EnableBankingItem::Importer
 
       all_transactions = all_transactions + tag_as_pending(pending_transactions)
 
+      # Drop the merchant-side twin of each card purchase before content dedup,
+      # so the customer-side row is the one that reaches the snapshot.
+      all_transactions = discard_merchant_card_twins(all_transactions, enable_banking_account)
+
       # Deduplicate API response: Enable Banking sometimes returns the same logical
       # transaction with different entry_reference IDs in the same response.
       # Remove content-level duplicates before storing. (Issue #954)
@@ -486,6 +490,7 @@ class EnableBankingItem::Importer
       existing_transactions = enable_banking_account.raw_transactions_payload.to_a
 
       removed_pending = false
+      new_transactions = []
 
       unless include_pending
         removed_pending = existing_transactions.reject! do |tx|
@@ -534,14 +539,28 @@ class EnableBankingItem::Importer
           ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
           ext_id.present? && !existing_ids.include?(ext_id)
         end
+      end
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
-        end
-      elsif removed_pending
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
-          existing_transactions
-        )
+      # The stored half of the snapshot has never been filtered. Accounts that
+      # synced before the twin discard landed still hold both rows of every card
+      # purchase, and neither pass above reaches them: new_transactions excludes
+      # what is already stored, and the incremental window never asks for those
+      # dates again. Filtering the merged snapshot is what stops the stored MCRD
+      # row from re-creating its entry on every sync.
+      #
+      # This does not remove the duplicate entries already created - nothing on
+      # the Enable Banking import path deletes transactions, the processor only
+      # upserts. What it buys is that deleting the duplicate by hand finally
+      # sticks instead of coming back with the next sync.
+      merged_transactions = discard_merchant_card_twins(
+        existing_transactions + new_transactions,
+        enable_banking_account,
+        stage: :stored_snapshot
+      )
+      twins_removed = merged_transactions.size != existing_transactions.size + new_transactions.size
+
+      if new_transactions.any? || removed_pending || twins_removed
+        enable_banking_account.upsert_enable_banking_transactions_snapshot!(merged_transactions)
       end
 
       { success: true, transactions_count: transactions_count }
@@ -551,6 +570,149 @@ class EnableBankingItem::Importer
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Unexpected error fetching transactions for account #{enable_banking_account.uid}: #{e.class} - #{e.message}"
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
+    end
+
+    # ISO 20022 bank transaction codes for the two halves of a card purchase.
+    # Only the point-of-sale purchase sub-codes take part in pairing: the other
+    # members of these families are separate movements that merely happen to
+    # share a family. CCRD/CWDL is a cash withdrawal, which has no merchant-side
+    # counterpart, and MCRD/DAJT and MCRD/OTHR are adjustments. Any of them can
+    # collide with an unrelated purchase on every field of the grouping key.
+    #
+    # This errs towards leaving a duplicate rather than discarding a real
+    # movement: an ASPSP that pairs some other sub-code keeps its duplicates,
+    # which is visible and recoverable, whereas discarding a genuine row is not.
+    CUSTOMER_CARD_CODE = "CCRD".freeze # Customer Card Transactions - the cardholder's view
+    CUSTOMER_CARD_PURCHASE = [ CUSTOMER_CARD_CODE, "POSD" ].freeze # point-of-sale purchase
+    MERCHANT_CARD_CODE = "MCRD".freeze # Merchant Card Transactions - the merchant's view
+    MERCHANT_CARD_PURCHASE = [ MERCHANT_CARD_CODE, "UPCT" ].freeze # the merchant's view of one
+
+    # Some ASPSPs book a single card purchase twice: once as PMNT-CCRD-* (the
+    # cardholder's view) and once as PMNT-MCRD-* (the merchant's view). N26 does
+    # this for point-of-sale card payments. Both rows are booked in the same
+    # instant, both carry status BOOK and each gets its own entry_reference, so
+    # the pending->booked reconciliation never fires and the
+    # content dedup below only catches the pairs whose counterparty name happens
+    # to match on both rows - the rest reach the append-only snapshot and are
+    # never removed again.
+    #
+    # Group by the fields both rows report identically and, wherever CCRD and
+    # MCRD rows coexist, discard MCRD rows down to the number of CCRD rows. The
+    # rule is deliberately an accounting one rather than "one row per group": two
+    # identical purchases on the same day arrive as 2 CCRD + 2 MCRD and must keep
+    # both CCRD rows.
+    #
+    # bank_transaction_code only picks the survivor, it never matches on its own:
+    # unpaired MCRD rows (adjustments, MCRD/OTHR) are legitimate movements and
+    # are kept. Two CCRD rows are never collapsed into each other here, which is
+    # what makes this safe for the over-merge reported in #2720.
+    def discard_merchant_card_twins(transactions, enable_banking_account, stage: :api_response)
+      groups = Hash.new { |hash, key| hash[key] = [] }
+
+      transactions.each_with_index do |tx, index|
+        tx = tx.with_indifferent_access
+        code = tx.dig(:bank_transaction_code, :code)
+        sub_code = tx.dig(:bank_transaction_code, :sub_code)
+        next unless [ CUSTOMER_CARD_PURCHASE, MERCHANT_CARD_PURCHASE ].include?([ code, sub_code ])
+
+        key = build_card_twin_key(tx)
+        next if key.nil?
+
+        groups[key] << [ index, code ]
+      end
+
+      discarded_indexes = Set.new
+
+      groups.each_value do |members|
+        customer_rows = members.count { |(_, code)| code == CUSTOMER_CARD_CODE }
+        next if customer_rows.zero?
+
+        merchant_indexes = members.filter_map { |(index, code)| index if code == MERCHANT_CARD_CODE }
+
+        # Which MCRD rows are discarded when the group holds more of them than
+        # CCRD rows is response order, i.e. arbitrary: the payload carries no
+        # signal that pairs a particular MCRD row with a particular CCRD one.
+        # It only decides which entry_reference and which spelling of the
+        # counterparty the surviving merchant-side row keeps, and both
+        # candidates are equally valid on those counts. The count is what
+        # matters here, not the identity.
+        discarded_indexes.merge(merchant_indexes.first(customer_rows))
+      end
+
+      return transactions if discarded_indexes.empty?
+
+      origin = stage == :stored_snapshot ? "stored transactions snapshot" : "API response"
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Discarded merchant-side (MCRD) card twin(s) from the #{origin}",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          stage: stage,
+          discarded_count: discarded_indexes.size,
+          transactions_before: transactions.count,
+          transactions_after: transactions.count - discarded_indexes.size
+        }
+      )
+
+      transactions.reject.with_index { |_, index| discarded_indexes.include?(index) }
+    end
+
+    # Grouping key that brings the cardholder's row (CCRD) and the merchant's row
+    # (MCRD) of one card purchase together. It uses only fields that both rows
+    # carry identically.
+    #
+    # Whether the row is pending is part of the key, so a booked row is never
+    # discarded in favour of a pending one. The pending->booked reconciliation
+    # above cannot pair a CCRD row with an MCRD row - they carry different
+    # entry_references and different fingerprints - so a pending CCRD row and a
+    # booked MCRD row can otherwise land in the same group, and discarding the
+    # booked row there would leave the purchase represented by a pending row only.
+    #
+    # creditor.name is deliberately excluded: the two rows spell the counterparty
+    # differently (case-only differences, an extra order reference on the
+    # cardholder's row, character substitutions), so including it would leave
+    # genuine pairs unmatched. remittance_information, merchant_category_code and
+    # transaction_id are excluded because an ASPSP that double-books need not
+    # populate them (N26 leaves transaction_id and merchant_category_code empty and
+    # fills remittance_information on roughly 1% of rows), so keying on any of them
+    # would break the pairing.
+    def build_card_twin_key(tx)
+      booking_date = tx[:booking_date]
+      value_date = tx[:value_date]
+      transaction_date = tx[:transaction_date]
+
+      # A booked row always carries booking_date, but pending rows often carry
+      # only transaction_date. With no date at all there is nothing left to tell
+      # two purchases apart, so pairing would be a guess - leave those rows be.
+      return nil if booking_date.blank? && value_date.blank? && transaction_date.blank?
+
+      [
+        booking_date,
+        value_date,
+        transaction_date,
+        tx.dig(:transaction_amount, :amount),
+        tx.dig(:transaction_amount, :currency),
+        tx[:credit_debit_indicator],
+        card_row_pending?(tx)
+      ].map(&:to_s).join("\x1F")
+    end
+
+    # Freshly fetched rows carry the pending flag in :_pending; rows read back
+    # from the stored snapshot carry it under extra.enable_banking.pending (the
+    # shape EnableBankingEntry::Processor writes). Both spellings have to count,
+    # or merging fresh rows with stored ones groups the two halves of one
+    # purchase inconsistently and a booked row gets discarded in favour of a
+    # pending one.
+    def card_row_pending?(tx)
+      (tx[:_pending] || tx.dig(:extra, :enable_banking, :pending)).present?
     end
 
     # Deduplicate transactions from the Enable Banking API response.
