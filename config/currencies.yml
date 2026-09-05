@@ -894,6 +894,20 @@ doge:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 8
+eth:
+  name: Ethereum
+  priority: 100
+  iso_code: ETH
+  iso_numeric: ""
+  html_code: "&#x039E;"
+  symbol: "Ξ"
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
 jep:
   name: Jersey Pound
   priority: 100
