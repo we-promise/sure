@@ -334,6 +334,8 @@ fr:
       potential_duplicate_tooltip: Cette transaction peut être un doublon d'une autre transaction
       review_recommended: Vérifier
       review_recommended_tooltip: Écart de montant important — vérification recommandée pour vérifier s'il s'agit d'un doublon
+      scheduled: Planifiée
+      scheduled_tooltip: Datée dans le futur — n'affectera votre solde qu'à cette date
       split: Fractionner
       split_child_tooltip: Partie d'une transaction fractionnée
       split_tooltip: Cette transaction a été fractionnée en plusieurs entrées

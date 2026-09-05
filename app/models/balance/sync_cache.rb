@@ -34,7 +34,11 @@ class Balance::SyncCache
     end
 
     def converted_entries
-      @converted_entries ||= account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date).to_a.map do |e|
+      # Scheduled (future-dated) entries are excluded from balance calculations
+      # entirely -- they must not affect the account's current balance until
+      # their date arrives. A daily sync naturally picks them up once "today"
+      # reaches their date (see Entry#scheduled?).
+      @converted_entries ||= account.entries.excluding_pending.excluding_split_parents.where(date: ..Date.current).includes(:entryable).order(:date).to_a.map do |e|
         custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
         # Use Money#exchange_to with custom rate if available, standard lookup otherwise.

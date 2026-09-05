@@ -52,8 +52,15 @@ class Transaction::Search
   # because those transactions are retirement savings, not daily income/expenses.
   def totals
     @totals ||= begin
-      Rails.cache.fetch("transaction_search_totals/v2/#{cache_key_base}") do
+      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
         scope = transactions_scope
+
+        # Exclude scheduled (future-dated) entries from totals by default -- they
+        # haven't happened yet, so they shouldn't count toward this period's
+        # income/expenses (see Entry#scheduled?). An explicit end_date filter is
+        # a deliberate request to look ahead (e.g. "next 30 days"), so it's
+        # left untouched in that case.
+        scope = scope.where("entries.date <= ?", Date.current) if end_date.blank?
 
         # Exclude tax-advantaged accounts from totals calculation
         tax_advantaged_ids = family.tax_advantaged_account_ids
@@ -104,7 +111,8 @@ class Transaction::Search
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
       family.entries_cache_version,
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
-      accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all"
+      accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all",
+      Date.current # totals exclude scheduled entries as of "today" -- must roll over daily
     ].join("/")
   end
 

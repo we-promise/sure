@@ -21,6 +21,9 @@ fr:
       type_interest: Intérêts
       type_sell: Vendre
       type_withdrawal: Retrait
+    trade:
+      scheduled: Planifiée
+      scheduled_tooltip: Datée dans le futur — n'affectera votre solde qu'à cette date
     header:
       buy: Acheter
       current_market_price_label: Prix du marché actuel

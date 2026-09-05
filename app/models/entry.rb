@@ -294,6 +294,8 @@ class Entry < ApplicationRecord
   def sync_account_later
     sync_start_date = [ date_previously_was, date ].compact.min unless destroyed?
     account.sync_later(window_start_date: sync_start_date)
+
+    EntryScheduledSyncJob.schedule_for(self) if !destroyed? && scheduled?
   end
 
   def entryable_name_short
@@ -306,6 +308,14 @@ class Entry < ApplicationRecord
 
   def linked?
     external_id.present?
+  end
+
+  # A manually entered entry dated after today (e.g. an upcoming bill or
+  # expected paycheck). Scheduled entries are excluded from balance
+  # calculations until their date arrives -- see Balance::SyncCache and
+  # Balance::ForwardCalculator#calc_end_date.
+  def scheduled?
+    date > Date.current
   end
 
   # Reconciliation state, following the Quicken uncleared / cleared / reconciled

@@ -312,6 +312,28 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(200, "USD"), totals.income_money  # $200
   end
 
+  test "totals excludes scheduled (future-dated) transactions by default" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family)
+    totals = search.totals
+
+    assert_equal 1, totals.count
+    assert_equal Money.new(100, "USD"), totals.expense_money
+  end
+
+  test "totals includes scheduled transactions when an explicit end_date filter is set" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family, filters: { end_date: 10.days.from_now.to_date.to_s })
+    totals = search.totals
+
+    assert_equal 2, totals.count
+    assert_equal Money.new(5100, "USD"), totals.expense_money
+  end
+
   test "totals handles multi-currency transactions with exchange rates" do
     # Create EUR transaction
     eur_entry = create_transaction(

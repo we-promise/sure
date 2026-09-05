@@ -39,6 +39,45 @@ class Account < ApplicationRecord
 
   monetize :balance, :cash_balance
 
+  # Sum of scheduled (future-dated) entries, signed and converted the same way
+  # Balance::BaseCalculator#signed_entry_flows treats real flows -- so the
+  # projection stays consistent with what the balance will actually become
+  # once these entries land. Non-cash valuation-only accounts (Property,
+  # Vehicle, etc.) ignore transactions entirely for balance purposes, same as
+  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?.
+  #
+  # Trades are included only when qty is 0 (Dividend/Interest): those are pure
+  # cash flows with no offsetting holdings change, same shape as a Transaction.
+  # A Buy/Sell/Transfer/etc. moves value between cash and holdings rather than
+  # into or out of the account, so summing its raw amount here would
+  # double-count against Balance::BaseCalculator#market_value_change_on_date
+  # once the trade lands.
+  def scheduled_entries_total_money
+    return Money.new(0, currency) if balance_type == :non_cash && accountable_type != "Loan"
+
+    total = entries.excluding_pending.excluding_split_parents
+      .where(entryable_type: [ "Transaction", "Trade" ])
+      .where("entries.date > ?", Date.current)
+      .includes(:entryable)
+      .sum do |entry|
+        next 0 if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+
+        custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+        converted = begin
+          entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
+        rescue Money::ConversionError
+          entry.amount
+        end
+        asset? ? -converted : converted
+      end
+
+    Money.new(total, currency)
+  end
+
+  def projected_balance_money
+    balance_money + scheduled_entries_total_money
+  end
+
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   VISIBLE_STATUSES = %w[draft active].freeze
