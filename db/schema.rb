@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -575,9 +575,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
 
   create_table "depositories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "intervention_fee_amount", precision: 19, scale: 4
+    t.decimal "intervention_fee_monthly_cap", precision: 19, scale: 4
+    t.integer "intervention_fee_monthly_count_cap"
+    t.decimal "intervention_fee_threshold", precision: 19, scale: 4
     t.jsonb "locked_attributes", default: {}
+    t.decimal "overdraft_interest_rate", precision: 10, scale: 3
+    t.decimal "overdraft_limit", precision: 19, scale: 4
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.check_constraint "intervention_fee_amount IS NULL OR intervention_fee_amount >= 0::numeric", name: "chk_depositories_intervention_fee_non_negative"
+    t.check_constraint "intervention_fee_monthly_cap IS NULL OR intervention_fee_monthly_cap >= 0::numeric", name: "chk_depositories_intervention_monthly_cap_non_negative"
+    t.check_constraint "intervention_fee_monthly_count_cap IS NULL OR intervention_fee_monthly_count_cap >= 0", name: "chk_depositories_intervention_count_cap_non_negative"
+    t.check_constraint "intervention_fee_threshold IS NULL OR intervention_fee_threshold >= 0::numeric", name: "chk_depositories_intervention_threshold_non_negative"
+    t.check_constraint "overdraft_interest_rate IS NULL OR overdraft_interest_rate >= 0::numeric", name: "chk_depositories_overdraft_rate_non_negative"
+    t.check_constraint "overdraft_limit IS NULL OR overdraft_limit >= 0::numeric", name: "chk_depositories_overdraft_limit_non_negative"
   end
 
   create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -808,6 +820,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id"
     t.string "content_type"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
@@ -817,6 +830,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.string "provider_file_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_family_documents_on_account_id"
     t.index ["family_id"], name: "index_family_documents_on_family_id"
     t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
     t.index ["status"], name: "index_family_documents_on_status"
@@ -895,11 +909,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.index ["family_id"], name: "index_goals_on_family_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
     t.check_constraint "consumed_amount >= 0::numeric", name: "chk_goals_consumed_amount_non_negative"
-    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying::text, 'maintained'::character varying::text])", name: "chk_goals_kind_enum"
-    t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying::text, 'contributions'::character varying::text])", name: "chk_goals_progress_basis_enum"
+    t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying, 'maintained'::character varying]::text[])", name: "chk_goals_kind_enum"
+    t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying, 'contributions'::character varying]::text[])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
-    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying::text, 'months_of_expenses'::character varying::text])", name: "chk_goals_target_mode_enum"
+    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying, 'months_of_expenses'::character varying]::text[])", name: "chk_goals_target_mode_enum"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1208,8 +1222,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.index ["family_id", "dedup_key"], name: "index_insights_on_family_id_and_dedup_key", unique: true
     t.index ["family_id", "generated_at"], name: "index_insights_on_family_id_and_generated_at"
     t.index ["family_id", "status"], name: "index_insights_on_family_id_and_status"
-    t.check_constraint "priority::text = ANY (ARRAY['high'::character varying::text, 'medium'::character varying::text, 'low'::character varying::text])", name: "chk_insights_priority"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'read'::character varying::text, 'dismissed'::character varying::text, 'expired'::character varying::text])", name: "chk_insights_status"
+    t.check_constraint "priority::text = ANY (ARRAY['high'::character varying, 'medium'::character varying, 'low'::character varying]::text[])", name: "chk_insights_priority"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'read'::character varying, 'dismissed'::character varying, 'expired'::character varying]::text[])", name: "chk_insights_status"
   end
 
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1308,14 +1322,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "apr", precision: 10, scale: 3
     t.datetime "created_at", null: false
+    t.text "early_repayment_terms"
     t.decimal "initial_balance", precision: 19, scale: 4
+    t.decimal "insurance_monthly_amount", precision: 19, scale: 4
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
+    t.date "maturity_date"
+    t.date "origination_date"
     t.string "rate_type"
+    t.decimal "scheduled_payment", precision: 19, scale: 4
     t.string "subtype"
     t.integer "term_months"
     t.datetime "updated_at", null: false
+    t.check_constraint "apr IS NULL OR apr >= 0::numeric", name: "chk_loans_apr_non_negative"
+    t.check_constraint "insurance_monthly_amount IS NULL OR insurance_monthly_amount >= 0::numeric", name: "chk_loans_insurance_non_negative"
+    t.check_constraint "origination_date IS NULL OR maturity_date IS NULL OR origination_date <= maturity_date", name: "chk_loans_term_dates_order"
+    t.check_constraint "scheduled_payment IS NULL OR scheduled_payment >= 0::numeric", name: "chk_loans_scheduled_payment_non_negative"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1542,7 +1566,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.index ["onchain_wallet_item_id", "chain", "wallet_address"], name: "index_onchain_wallet_accounts_unique_native", unique: true, where: "((asset_kind)::text = 'native'::text)"
     t.index ["onchain_wallet_item_id"], name: "index_onchain_wallet_accounts_on_onchain_wallet_item_id"
     t.check_constraint "asset_kind::text = 'native'::text OR contract_address IS NOT NULL", name: "chk_onchain_wallet_accounts_token_has_contract"
-    t.check_constraint "asset_kind::text = ANY (ARRAY['native'::character varying::text, 'erc20'::character varying::text, 'spl'::character varying::text])", name: "chk_onchain_wallet_accounts_known_asset_kind"
+    t.check_constraint "asset_kind::text = ANY (ARRAY['native'::character varying, 'erc20'::character varying, 'spl'::character varying]::text[])", name: "chk_onchain_wallet_accounts_known_asset_kind"
   end
 
   create_table "onchain_wallet_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1629,7 +1653,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying]::text[]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1652,7 +1676,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.index "lower((token)::text)", name: "index_push_subscriptions_on_lower_token", unique: true
     t.index ["last_registered_at"], name: "index_push_subscriptions_on_last_registered_at"
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
-    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying::text, 'production'::character varying::text])", name: "chk_push_subscriptions_environment"
+    t.check_constraint "environment::text = ANY (ARRAY['sandbox'::character varying, 'production'::character varying]::text[])", name: "chk_push_subscriptions_environment"
     t.check_constraint "platform::text = 'ios'::text", name: "chk_push_subscriptions_platform"
   end
 
@@ -2628,6 +2652,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_documents", "accounts"
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"

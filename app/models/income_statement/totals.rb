@@ -1,10 +1,16 @@
 class IncomeStatement::Totals
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  # `group_by_month` adds a month bucket to the grouping so one call can cover a
+  # whole window instead of one call per month. Off by default: every existing
+  # caller keeps the exact rows and the exact grouping it had, and period_start
+  # is nil for them.
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil,
+                 group_by_month: false)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @group_by_month = group_by_month
 
     validate_date_range!
   end
@@ -20,13 +26,24 @@ class IncomeStatement::Totals
         classification: row["classification"],
         total: row["total"],
         transactions_count: row["transactions_count"],
-        is_uncategorized_investment: row["is_uncategorized_investment"]
+        is_uncategorized_investment: row["is_uncategorized_investment"],
+        period_start: row["period_start"]&.to_date
       )
     end
   end
 
   private
-    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment)
+    TotalsRow = Data.define(:parent_category_id, :category_id, :classification, :total, :transactions_count, :is_uncategorized_investment, :period_start)
+
+    # Emitted in every branch so the UNION ALL columns stay aligned whether or
+    # not the month bucket is asked for.
+    def month_select_sql
+      @group_by_month ? "DATE_TRUNC('month', ae.date)::date as period_start" : "NULL::date as period_start"
+    end
+
+    def month_group_sql
+      @group_by_month ? ", DATE_TRUNC('month', ae.date)" : ""
+    end
 
     def query_sql
       ActiveRecord::Base.sanitize_sql_array([
@@ -43,6 +60,7 @@ class IncomeStatement::Totals
           parent_category_id,
           classification,
           is_uncategorized_investment,
+          period_start,
           SUM(total) as total,
           SUM(entry_count) as transactions_count
         FROM (
@@ -50,7 +68,7 @@ class IncomeStatement::Totals
           UNION ALL
           #{trades_subquery_sql}
         ) combined
-        GROUP BY category_id, parent_category_id, classification, is_uncategorized_investment;
+        GROUP BY category_id, parent_category_id, classification, is_uncategorized_investment, period_start;
       SQL
     end
 
@@ -63,7 +81,8 @@ class IncomeStatement::Totals
           CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as transactions_count,
-          false as is_uncategorized_investment
+          false as is_uncategorized_investment,
+          #{month_select_sql}
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
@@ -80,7 +99,7 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END;
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END#{month_group_sql};
       SQL
     end
 
@@ -92,7 +111,8 @@ class IncomeStatement::Totals
           CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END as classification,
           ABS(SUM(CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END)) as total,
           COUNT(ae.id) as entry_count,
-          false as is_uncategorized_investment
+          false as is_uncategorized_investment,
+          #{month_select_sql}
         FROM (#{@transactions_scope.to_sql}) at
         JOIN entries ae ON ae.entryable_id = at.id AND ae.entryable_type = 'Transaction'
         JOIN accounts a ON a.id = ae.account_id
@@ -113,7 +133,7 @@ class IncomeStatement::Totals
           AND a.exclude_from_reports = false
           #{exclude_tax_advantaged_sql}
           #{include_finance_accounts_sql}
-        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
+        GROUP BY c.id, c.parent_id, CASE WHEN at.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END#{month_group_sql}
       SQL
     end
 
@@ -124,7 +144,8 @@ class IncomeStatement::Totals
       # Contributions/withdrawals are tracked separately as Transactions with activity labels
       <<~SQL
         SELECT NULL as category_id, NULL as parent_category_id, NULL as classification,
-               NULL as total, NULL as entry_count, NULL as is_uncategorized_investment
+               NULL as total, NULL as entry_count, NULL as is_uncategorized_investment,
+               NULL::date as period_start
         WHERE false
       SQL
     end

@@ -4,7 +4,16 @@ en:
     edit:
       edit: Edit %{account}
     form:
+      intervention_fee_amount: Fee per rejected payment
+      intervention_fee_monthly_cap: Monthly fee cap (amount)
+      intervention_fee_monthly_count_cap: Monthly fee cap (count)
+      intervention_fee_threshold: Fee applies above
       none: None
+      overdraft_hint: Enter these only if your bank grants an arranged overdraft. They let projections warn you before you cross the limit instead of at zero.
+      overdraft_interest_rate: Overdraft interest rate (%)
+      overdraft_interest_rate_placeholder: '16.5'
+      overdraft_limit: Arranged overdraft
+      overdraft_summary: Overdraft and bank fees
       subtype_prompt: Select account type
     new:
       title: Enter account balance

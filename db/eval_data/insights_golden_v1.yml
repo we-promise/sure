@@ -1,0 +1,418 @@
+---
+name: insights_golden_v1
+description: >
+  Golden dataset for the financial intelligence tools: cash-flow projection,
+  liabilities and repayment terms, overdraft terms, seasonal obligations,
+  category trends, scenario comparison, uncategorized spending and the
+  document vault. Each sample pins the ROUTING contract stated in the tool
+  descriptions, because the failure these tools exist to fix was an assistant
+  reconstructing a projection by hand from raw transactions and announcing a
+  balance computed on outflows only. The harness is single-shot: it observes
+  the first round's function selection and text, it does not execute tools,
+  so assertions are about which tool is reached for and with what arguments,
+  never about final numbers.
+eval_type: chat
+version: "1.0"
+metadata:
+  created_at: "2026-09-05"
+  source: manual_curation
+
+samples:
+  # ===== Area 4: cash-flow projection, income included =====
+  # The regression that motivated the whole set. Answering any of these from
+  # get_transactions means summing outflows by hand and understating income.
+  - id: insights_cashflow_001
+    difficulty: easy
+    tags: [project_cash_balance, cashflow, anti_regression]
+    input:
+      prompt: "Am I going to be overdrawn on the 1st of October?"
+    expected:
+      functions:
+        - name: "project_cash_balance"
+      response_contains: []
+
+  - id: insights_cashflow_002
+    difficulty: easy
+    tags: [project_cash_balance, cashflow]
+    input:
+      prompt: "Will I make it to the end of the month without going negative?"
+    expected:
+      functions:
+        - name: "project_cash_balance"
+      response_contains: []
+
+  - id: insights_cashflow_003
+    difficulty: medium
+    tags: [project_cash_balance, cashflow]
+    input:
+      prompt: "When does my cash bottom out over the next three months, and how low does it get?"
+    expected:
+      functions:
+        - name: "project_cash_balance"
+      response_contains: []
+
+  - id: insights_cashflow_004
+    difficulty: medium
+    tags: [project_cash_balance, cashflow, params]
+    input:
+      prompt: "Project my cash balance for the next 60 days."
+    expected:
+      functions:
+        - name: "project_cash_balance"
+          params:
+            horizon_days: 60
+      response_contains: []
+
+  - id: insights_cashflow_005
+    difficulty: medium
+    tags: [project_cash_balance, cashflow, anti_regression]
+    input:
+      prompt: "Do I have enough coming in to cover everything due before the end of the month?"
+    expected:
+      functions:
+        - name: "project_cash_balance"
+      response_contains: []
+
+  # ===== Area 1: overdraft terms =====
+  # get_accounts is the only source: terms.overdraft_floor and the fee schedule
+  # live on the depository record.
+  - id: insights_overdraft_001
+    difficulty: easy
+    tags: [get_accounts, overdraft_terms]
+    input:
+      prompt: "What is my arranged overdraft limit on my checking account?"
+    expected:
+      functions:
+        - name: "get_accounts"
+      response_contains: []
+
+  - id: insights_overdraft_002
+    difficulty: medium
+    tags: [get_accounts, overdraft_terms]
+    input:
+      prompt: "How far can my current account go negative before it becomes unauthorized?"
+    expected:
+      functions:
+        - name: "get_accounts"
+      response_contains: []
+
+  - id: insights_overdraft_003
+    difficulty: medium
+    tags: [get_accounts, overdraft_terms]
+    input:
+      prompt: "What does my bank charge me in intervention fees?"
+    expected:
+      functions:
+        - name: "get_accounts"
+      response_contains: []
+
+  # ===== Area 2: borrowing terms and repayment =====
+  # get_liabilities is the documented preference over get_accounts for debt.
+  - id: insights_liabilities_001
+    difficulty: easy
+    tags: [get_liabilities, loan_terms]
+    input:
+      prompt: "When will my car loan be paid off?"
+    expected:
+      functions:
+        - name: "get_liabilities"
+      response_contains: []
+
+  - id: insights_liabilities_002
+    difficulty: easy
+    tags: [get_liabilities, loan_terms]
+    input:
+      prompt: "How many payments do I have left on my mortgage?"
+    expected:
+      functions:
+        - name: "get_liabilities"
+      response_contains: []
+
+  - id: insights_liabilities_003
+    difficulty: medium
+    tags: [get_liabilities, loan_terms]
+    input:
+      prompt: "What do all my debts cost me every month once the loan insurance is included?"
+    expected:
+      functions:
+        - name: "get_liabilities"
+      response_contains: []
+
+  - id: insights_liabilities_004
+    difficulty: hard
+    tags: [get_liabilities, tool_preference]
+    input:
+      prompt: "What interest rate am I paying on my student loan?"
+    expected:
+      functions:
+        - name: "get_liabilities"
+      response_contains: []
+
+  - id: insights_liabilities_005
+    difficulty: medium
+    tags: [get_liabilities, loan_terms]
+    input:
+      prompt: "How much interest do I still have to pay on my loans in total?"
+    expected:
+      functions:
+        - name: "get_liabilities"
+      response_contains: []
+
+  # ===== Area 7: debt history and amortization =====
+  - id: insights_amortization_001
+    difficulty: medium
+    tags: [get_liabilities, amortization, params]
+    input:
+      prompt: "Show me the month-by-month principal breakdown of my mortgage."
+    expected:
+      functions:
+        - name: "get_liabilities"
+          params:
+            include_amortization: true
+      response_contains: []
+
+  - id: insights_amortization_002
+    difficulty: hard
+    tags: [get_liabilities, amortization, params]
+    input:
+      prompt: "For my loan, how much of each payment goes to interest versus principal?"
+    expected:
+      functions:
+        - name: "get_liabilities"
+          params:
+            include_amortization: true
+      response_contains: []
+
+  # ===== Area 5: seasonal and non-monthly obligations =====
+  - id: insights_seasonal_001
+    difficulty: medium
+    tags: [get_recurring_transactions, seasonal]
+    input:
+      prompt: "Do I have any quarterly tax instalments coming up?"
+    expected:
+      functions:
+        - name: "get_recurring_transactions"
+      response_contains: []
+
+  - id: insights_seasonal_002
+    difficulty: medium
+    tags: [get_recurring_transactions, seasonal]
+    input:
+      prompt: "Which annual charges should I be putting money aside for?"
+    expected:
+      functions:
+        - name: "get_recurring_transactions"
+      response_contains: []
+
+  - id: insights_seasonal_003
+    difficulty: medium
+    tags: [get_recurring_transactions, params]
+    input:
+      prompt: "What bills are due in the next 30 days?"
+    expected:
+      functions:
+        - name: "get_recurring_transactions"
+          params:
+            upcoming_within_days: 30
+      response_contains: []
+
+  # ===== Area 3: the document vault =====
+  - id: insights_documents_001
+    difficulty: easy
+    tags: [search_family_files, documents]
+    input:
+      prompt: "What fees were listed on my last bank statement?"
+    expected:
+      functions:
+        - name: "search_family_files"
+      response_contains: []
+
+  - id: insights_documents_002
+    difficulty: medium
+    tags: [search_family_files, documents]
+    input:
+      prompt: "What does my loan agreement say about paying it back early?"
+    expected:
+      functions:
+        - name: "search_family_files"
+      response_contains: []
+
+  - id: insights_documents_003
+    difficulty: medium
+    tags: [search_family_files, documents]
+    input:
+      prompt: "Find the premium amount in my home insurance policy document."
+    expected:
+      functions:
+        - name: "search_family_files"
+      response_contains: []
+
+  # ===== Area 6: transaction context, pending and kind =====
+  - id: insights_txncontext_001
+    difficulty: medium
+    tags: [get_transactions, pending, params]
+    input:
+      prompt: "Which of my transactions are still pending?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params:
+            statuses: ["pending"]
+      response_contains: []
+
+  - id: insights_txncontext_002
+    difficulty: medium
+    tags: [get_transactions, transfers, params]
+    input:
+      prompt: "Show me the transfers between my own accounts last month."
+    expected:
+      functions:
+        - name: "get_transactions"
+          params:
+            types: ["transfer"]
+      response_contains: []
+
+  - id: insights_txncontext_003
+    difficulty: easy
+    tags: [get_transactions]
+    input:
+      prompt: "What did I spend at the supermarket in August?"
+    expected:
+      functions:
+        - name: "get_transactions"
+      response_contains: []
+
+  # ===== Area 8: uncategorized spending and enrichment diagnostics =====
+  - id: insights_uncategorized_001
+    difficulty: easy
+    tags: [get_uncategorized_transactions, data_quality]
+    input:
+      prompt: "What spending have I not categorized yet?"
+    expected:
+      functions:
+        - name: "get_uncategorized_transactions"
+      response_contains: []
+
+  - id: insights_uncategorized_002
+    difficulty: hard
+    tags: [get_uncategorized_transactions, data_quality, diagnostics]
+    input:
+      prompt: "Why do so many of my transactions have no merchant attached?"
+    expected:
+      functions:
+        - name: "get_uncategorized_transactions"
+      response_contains: []
+
+  - id: insights_uncategorized_003
+    difficulty: medium
+    tags: [get_uncategorized_transactions, data_quality]
+    input:
+      prompt: "Help me clean up the expenses that are missing a category."
+    expected:
+      functions:
+        - name: "get_uncategorized_transactions"
+      response_contains: []
+
+  # ===== I2: category trends over a long window =====
+  - id: insights_trends_001
+    difficulty: medium
+    tags: [get_category_trends, trends, params]
+    input:
+      prompt: "Has my restaurant spending gone up over the last 8 months?"
+    expected:
+      functions:
+        - name: "get_category_trends"
+          params:
+            months: 8
+      response_contains: []
+
+  - id: insights_trends_002
+    difficulty: medium
+    tags: [get_category_trends, trends]
+    input:
+      prompt: "Which of my spending categories are trending upward?"
+    expected:
+      functions:
+        - name: "get_category_trends"
+      response_contains: []
+
+  - id: insights_trends_003
+    difficulty: hard
+    tags: [get_category_trends, trends, params]
+    input:
+      prompt: "How has my income evolved month by month over the past year?"
+    expected:
+      functions:
+        - name: "get_category_trends"
+          params:
+            classification: "income"
+      response_contains: []
+
+  # ===== I5: scenario comparison =====
+  - id: insights_scenarios_001
+    difficulty: medium
+    tags: [simulate_scenarios, what_if]
+    input:
+      prompt: "What happens to my cash if I buy a 3000 sofa next month?"
+    expected:
+      functions:
+        - name: "simulate_scenarios"
+      response_contains: []
+
+  - id: insights_scenarios_002
+    difficulty: hard
+    tags: [simulate_scenarios, what_if]
+    input:
+      prompt: "Compare paying an extra 200 a month on my loan against leaving that money in my current account."
+    expected:
+      functions:
+        - name: "simulate_scenarios"
+      response_contains: []
+
+  - id: insights_scenarios_003
+    difficulty: hard
+    tags: [simulate_scenarios, what_if]
+    input:
+      prompt: "If I take on a new 40 a month subscription, when would I first dip into my overdraft?"
+    expected:
+      functions:
+        - name: "simulate_scenarios"
+      response_contains: []
+
+  # ===== Negative controls: six new tools must not over-trigger =====
+  # General knowledge needs no data, and a closing remark needs no tool at all.
+  - id: insights_notools_001
+    difficulty: easy
+    tags: [classification, no_tools]
+    input:
+      prompt: "In general, what is an overdraft facility?"
+    expected:
+      functions: []
+      response_contains: ["overdraft"]
+
+  - id: insights_notools_002
+    difficulty: medium
+    tags: [classification, no_tools]
+    input:
+      prompt: "What is the difference between APR and a nominal interest rate?"
+    expected:
+      functions: []
+      response_contains: ["apr"]
+
+  - id: insights_notools_003
+    difficulty: easy
+    tags: [classification, no_tools]
+    input:
+      prompt: "Great, that answers my question. Thanks!"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: insights_notools_004
+    difficulty: hard
+    tags: [classification, no_tools]
+    input:
+      prompt: "How does loan amortization work as a concept?"
+    expected:
+      functions: []
+      response_contains: ["interest"]

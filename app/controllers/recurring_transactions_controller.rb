@@ -80,7 +80,7 @@ class RecurringTransactionsController < ApplicationController
   def identify
     # User-triggered detection always reconstructs history; the backfiller is
     # idempotent. nil means another run already holds the family lock.
-    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!(backfill: true)
+    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!(backfill: true, seasonal: true)
 
     respond_to do |format|
       format.html do

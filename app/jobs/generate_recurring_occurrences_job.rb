@@ -31,6 +31,13 @@ class GenerateRecurringOccurrencesJob < ApplicationJob
       # Shares the pipeline's per-family lock so the nightly sweep and the
       # sync-triggered pipeline serialize against each other.
       RecurringTransaction::Pipeline.with_family_lock(family_id) do
+        # Nightly is where the seasonal pass belongs: it reads 24 months of
+        # entries, which is too heavy for the debounced post-sync pipeline, and
+        # a quarterly or annual charge cannot appear between two syncs.
+        # Occurrences are generated after it so a series detected tonight is
+        # materialized tonight rather than a day later.
+        RecurringTransaction::SeasonalIdentifier.new(family).identify!
+
         family.recurring_transactions.active.find_each do |series|
           RecurringTransaction::OccurrenceGenerator.new(series).generate!
         end

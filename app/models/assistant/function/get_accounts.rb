@@ -10,6 +10,24 @@ class Assistant::Function::GetAccounts < Assistant::Function
 
         Returns account ids. Use them for account_ids filters in other tools.
 
+        Accounts also carry a `terms` object with whatever financial terms the
+        user recorded: a loan's rate, term and monthly payment, a card's APR and
+        minimum payment, a checking account's arranged overdraft and bank fees.
+        A key is absent when the user never entered it, so treat a missing key
+        as unknown rather than as zero.
+
+        For a checking account, `terms.overdraft_floor` is the balance the
+        account may fall to (negative). Never tell the user to stay above zero
+        when a floor is present, and never assume there is no facility just
+        because the key is missing.
+
+        For debt questions prefer get_liabilities, which adds the repayment
+        schedule and says why any figure could not be computed.
+
+        Note on `terms.available_credit`: providers disagree on its meaning
+        (some report the credit limit, others the remaining credit), so confirm
+        with the user before reasoning about headroom on a linked card.
+
         Pass include_balance_series: true only when the user asks about balance
         history; the series is omitted by default to keep responses small.
       INSTRUCTIONS
@@ -52,11 +70,15 @@ class Assistant::Function::GetAccounts < Assistant::Function
           balance_formatted: account.balance_money.format,
           classification: account.classification,
           type: account.accountable_type,
+          subtype: account.subtype,
           start_date: account.start_date,
           is_linked: account.linked?,
           provider: account.provider_name,
           status: account.status
         }
+
+        terms = account_terms(account)
+        payload[:terms] = terms if terms.present?
 
         if include_series
           series = historical_balances(account, period)
@@ -71,7 +93,70 @@ class Assistant::Function::GetAccounts < Assistant::Function
     # No balances preload: the series goes through Balance::ChartSeriesBuilder,
     # which runs its own query keyed by account ids.
     def accounts_scope(_include_series)
-      user.accessible_accounts.visible.includes(:account_providers)
+      user.accessible_accounts.visible.includes(:account_providers, :accountable)
+    end
+
+    # The accountable record holds the only borrowing terms Sure stores, and
+    # this tool used to drop the delegated record entirely, so an assistant
+    # asked "what is my loan costing me" had nothing to answer with even though
+    # the rate was sitting in the database. Only the types that carry financial
+    # terms are serialized; the rest (Depository, Property, ...) return nil and
+    # the key is omitted.
+    def account_terms(account)
+      case account.accountable
+      when Loan then loan_terms(account.accountable)
+      when CreditCard then credit_card_terms(account.accountable)
+      when Depository then depository_terms(account.accountable)
+      end
+    end
+
+    # The overdraft floor is the number an assistant needs before it tells
+    # someone never to go below zero. `overdraft_limit` is stored positive, so
+    # the floor is emitted alongside it to remove any doubt about the sign.
+    def depository_terms(depository)
+      return {} unless depository.overdraft_terms?
+
+      {
+        overdraft_limit: depository.overdraft_limit,
+        overdraft_floor: depository.overdraft_limit.present? ? depository.overdraft_floor : nil,
+        overdraft_interest_rate: depository.overdraft_interest_rate,
+        intervention_fee_amount: depository.intervention_fee_amount,
+        intervention_fee_threshold: depository.intervention_fee_threshold,
+        intervention_fee_monthly_cap: depository.intervention_fee_monthly_cap,
+        intervention_fee_monthly_count_cap: depository.intervention_fee_monthly_count_cap
+      }.compact
+    end
+
+    # `compact` throughout: a nil rate must read as "the user never entered it",
+    # never as zero. An entirely empty hash is dropped by the caller.
+    def loan_terms(loan)
+      # Loan#monthly_payment returns nil unless rate_type is "fixed": a
+      # variable-rate loan has no single scheduled payment to report.
+      monthly_payment = loan.effective_payment
+      original_balance = loan.original_balance
+
+      {
+        interest_rate: loan.interest_rate,
+        apr: loan.apr,
+        rate_type: loan.rate_type,
+        term_months: loan.term_months,
+        maturity_date: loan.maturity_date,
+        insurance_monthly_amount: loan.insurance_monthly_amount,
+        monthly_payment: monthly_payment&.amount,
+        monthly_payment_formatted: monthly_payment&.format,
+        original_balance: original_balance&.amount,
+        original_balance_formatted: original_balance&.format
+      }.compact
+    end
+
+    def credit_card_terms(credit_card)
+      {
+        apr: credit_card.apr,
+        minimum_payment: credit_card.minimum_payment,
+        annual_fee: credit_card.annual_fee,
+        available_credit: credit_card.available_credit,
+        expiration_date: credit_card.expiration_date
+      }.compact
     end
 
     def historical_balances(account, period)

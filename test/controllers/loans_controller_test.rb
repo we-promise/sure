@@ -92,4 +92,33 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Loan account updated", flash[:notice]
     assert_enqueued_with(job: SyncJob)
   end
+
+  test "persists the contract details added for the repayment projection" do
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        balance: @account.balance,
+        currency: @account.currency,
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          origination_date: "2024-01-15",
+          maturity_date: "2029-01-15",
+          apr: 5.9,
+          insurance_monthly_amount: 12.5,
+          scheduled_payment: 275,
+          early_repayment_terms: "Three months of interest, capped at 3% of the outstanding principal."
+        }
+      }
+    }
+
+    loan = @account.reload.loan
+
+    assert_equal Date.new(2024, 1, 15), loan.origination_date
+    assert_equal Date.new(2029, 1, 15), loan.maturity_date
+    assert_equal 5.9, loan.apr.to_f
+    assert_equal 12.5, loan.insurance_monthly_amount.to_f
+    assert_equal 275, loan.scheduled_payment.to_f
+    assert_match(/Three months of interest/, loan.early_repayment_terms)
+  end
 end

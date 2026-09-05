@@ -4,7 +4,16 @@ fr:
     edit:
       edit: Éditer %{account}
     form:
+      intervention_fee_amount: Commission d'intervention
+      intervention_fee_monthly_cap: Plafond mensuel (montant)
+      intervention_fee_monthly_count_cap: Plafond mensuel (nombre)
+      intervention_fee_threshold: Commission à partir de
       none: Aucun
+      overdraft_hint: À renseigner uniquement si votre banque vous accorde un découvert autorisé. Les projections vous alerteront alors au franchissement du seuil, et non à zéro.
+      overdraft_interest_rate: Taux des agios (%)
+      overdraft_interest_rate_placeholder: '16,5'
+      overdraft_limit: Découvert autorisé
+      overdraft_summary: Découvert et frais bancaires
       subtype_prompt: Sélectionnez le type de compte
     new:
       title: Saisir le solde du compte

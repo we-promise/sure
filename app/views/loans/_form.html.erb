@@ -34,6 +34,45 @@
                   Loan.subtype_options_for_select,
                   { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
       </div>
+
+      <%# Behind a disclosure: these are the contract details, useful for
+          projecting a payoff date but not needed to record the loan at all. %>
+      <details class="group" <%= "open" if account.accountable.is_a?(Loan) && account.accountable.contract_terms? %>>
+        <summary class="cursor-pointer text-sm font-medium text-secondary">
+          <%= t("loans.form.contract_summary") %>
+        </summary>
+
+        <div class="space-y-2 mt-3">
+          <div class="flex items-center gap-2">
+            <%= loan_form.date_field :origination_date, label: t("loans.form.origination_date") %>
+            <%= loan_form.date_field :maturity_date, label: t("loans.form.maturity_date") %>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <%= loan_form.number_field :apr,
+                                       label: t("loans.form.apr"),
+                                       placeholder: t("loans.form.apr_placeholder"),
+                                       min: 0,
+                                       step: 0.001 %>
+            <%= loan_form.money_field :insurance_monthly_amount,
+                                      label: t("loans.form.insurance_monthly_amount"),
+                                      default_currency: account.currency || Current.family.currency %>
+          </div>
+
+          <div>
+            <%= loan_form.money_field :scheduled_payment,
+                                      label: t("loans.form.scheduled_payment"),
+                                      default_currency: account.currency || Current.family.currency %>
+            <p class="text-xs text-secondary mt-1"><%= t("loans.form.scheduled_payment_hint") %></p>
+          </div>
+
+          <div>
+            <%= loan_form.text_area :early_repayment_terms,
+                                    label: t("loans.form.early_repayment_terms"),
+                                    rows: 3 %>
+          </div>
+        </div>
+      </details>
     <% end %>
   </div>
 <% end %>

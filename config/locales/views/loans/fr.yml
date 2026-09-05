@@ -4,11 +4,20 @@ fr:
     edit:
       edit: Modifier %{account}
     form:
+      apr: TAEG
+      apr_placeholder: '5,9'
+      contract_summary: Conditions du contrat
+      early_repayment_terms: Conditions de remboursement anticipé
       initial_balance: Solde initial du prêt
+      insurance_monthly_amount: Prime d'assurance mensuelle
       interest_rate: Taux d'intérêt
       interest_rate_placeholder: '5,25'
+      maturity_date: Date de dernière échéance
       none: Aucun
+      origination_date: Date de début du prêt
       rate_type: Type de taux
+      scheduled_payment: Mensualité réelle
+      scheduled_payment_hint: Utile seulement pour un taux variable ou révisable, où la mensualité ne peut pas être calculée. À laisser vide pour un taux fixe.
       subtype_none: Aucun
       subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)

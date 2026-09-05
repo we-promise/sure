@@ -17,8 +17,15 @@ class RecurringTransaction
       @family = family
     end
 
-    def run!(backfill: false)
+    def run!(backfill: false, seasonal: false)
       patterns_count = Identifier.new(family).identify_recurring_patterns
+
+      # Off by default because this pass reads 24 months of entries against the
+      # monthly pass's 3, and the post-sync job is debounced to 30 seconds: a
+      # busy family would pay for that scan repeatedly. A quarterly or annual
+      # charge cannot appear between two syncs anyway, so the sweep belongs on
+      # the nightly job and the user-triggered button, which both pass true.
+      patterns_count += SeasonalIdentifier.new(family).identify!.size if seasonal
 
       family.recurring_transactions.active.find_each do |series|
         OccurrenceGenerator.new(series).generate!
@@ -38,9 +45,9 @@ class RecurringTransaction
 
     # User-triggered runs refuse to stack on top of an in-flight pipeline
     # (debounced job or nightly sweep) instead of running concurrently.
-    def run_with_lock!(backfill: false)
+    def run_with_lock!(backfill: false, seasonal: false)
       result = nil
-      acquired = self.class.with_family_lock(family.id) { result = run!(backfill: backfill) }
+      acquired = self.class.with_family_lock(family.id) { result = run!(backfill: backfill, seasonal: seasonal) }
       acquired ? result : nil
     end
 

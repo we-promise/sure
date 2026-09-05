@@ -19,6 +19,7 @@ module Assistant
     Function::ListAccountStatements,
     Function::GetAccountStatement,
     Function::GetStatementCoverage,
+    Function::GetDocumentText,
     Function::RecordValuation,
     Function::GetValuations,
     Function::GetInsights,
@@ -59,8 +60,12 @@ module Assistant
         Function::GetRecurringTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
+        Function::GetLiabilities,
+        Function::ProjectCashBalance,
+        Function::SimulateScenarios,
         Function::GetBalanceSheet,
         Function::GetIncomeStatement,
+        Function::GetCategoryTrends,
         Function::GetBudget,
         Function::ImportBankStatement,
         Function::SearchFamilyFiles,
@@ -72,6 +77,7 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory,
         Function::GetMerchants,
+        Function::GetUncategorizedTransactions,
         Function::UpdateTransaction,
         Function::UpdateBudget
       ]

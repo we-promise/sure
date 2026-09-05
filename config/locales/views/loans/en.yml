@@ -4,18 +4,27 @@ en:
     edit:
       edit: Edit %{account}
     form:
+      apr: APR (all-in rate)
+      apr_placeholder: '5.9'
+      contract_summary: Contract details
+      early_repayment_terms: Early repayment terms
+      initial_balance: Original loan balance
+      insurance_monthly_amount: Monthly insurance premium
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
-      initial_balance: Original loan balance
-      rate_type: Rate type
-      term_months: Term (months)
-      term_months_placeholder: '360'
+      maturity_date: Final payment date
       none: None
-      subtype_prompt: Select loan type
-      subtype_none: None
+      origination_date: Loan start date
+      rate_type: Rate type
       rate_type_adjustable: Adjustable
       rate_type_fixed: Fixed
       rate_type_variable: Variable
+      scheduled_payment: Actual monthly payment
+      scheduled_payment_hint: Only needed for a variable or adjustable rate, where the payment cannot be computed. Leave blank on a fixed-rate loan.
+      subtype_none: None
+      subtype_prompt: Select loan type
+      term_months: Term (months)
+      term_months_placeholder: '360'
     new:
       title: Enter loan details
     overview:

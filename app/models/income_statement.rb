@@ -49,6 +49,23 @@ class IncomeStatement
     @income_totals_by_period[key] = build_period_total(classification: "income", period: period)
   end
 
+  # Every month of a window in ONE grouped query, keyed by the month's first
+  # day. get_category_trends asked for 12 to 24 months and paid a separate
+  # aggregation for each; the rows and the rollup are identical, only the
+  # grouping changes, so a series and a single month asked for on its own
+  # cannot disagree.
+  def monthly_category_totals(classification:, periods:)
+    return {} if periods.empty?
+
+    window = Period.custom(start_date: periods.first.start_date, end_date: periods.last.end_date)
+    by_month = monthly_totals_rows(window).select { |row| row.classification == classification }
+                                          .group_by(&:period_start)
+
+    periods.index_with do |period|
+      roll_up(classification: classification, totals: by_month[period.start_date.beginning_of_month] || [])
+    end
+  end
+
   def net_category_totals(period: Period.current_month)
     key = period_cache_key(period)
     @net_category_totals_by_period ||= {}
@@ -177,7 +194,12 @@ class IncomeStatement
 
     def build_period_total(classification:, period:)
       # Exclude pending transactions from budget calculations
-      totals = totals_for_period(period).select { |t| t.classification == classification }
+      roll_up(classification: classification, totals: totals_for_period(period).select { |t| t.classification == classification })
+    end
+
+    # The rollup, extracted so the per-month path and the whole-window path
+    # cannot drift. Whatever changes here changes both.
+    def roll_up(classification:, totals:)
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -218,6 +240,24 @@ class IncomeStatement
         currency: family.currency,
         category_totals: category_totals
       )
+    end
+
+    # Cached on the same terms as totals_query, and not keyed on classification:
+    # one window yields both, so asking for expenses warms income too.
+    def monthly_totals_rows(window)
+      @monthly_totals_rows ||= {}
+      @monthly_totals_rows[period_cache_key(window)] ||= Rails.cache.fetch([
+        "income_statement", "monthly_totals_rows", "v1", family.id, user&.id, included_account_ids_hash,
+        window.start_date, window.end_date, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+      ]) do
+        Totals.new(
+          family,
+          transactions_scope: family.transactions.visible.excluding_pending.in_period(window),
+          date_range: window.date_range,
+          included_account_ids: included_account_ids,
+          group_by_month: true
+        ).call
+      end
     end
 
     def totals_for_period(period)

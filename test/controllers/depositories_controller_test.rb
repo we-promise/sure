@@ -65,4 +65,34 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='account[enable_category_matcher]']", 0
   end
+
+  test "persists the overdraft terms this controller previously dropped" do
+    patch depository_path(@account), params: {
+      account: {
+        name: @account.name,
+        balance: @account.balance,
+        currency: @account.currency,
+        accountable_type: "Depository",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          overdraft_limit: 400,
+          overdraft_interest_rate: 16.5,
+          intervention_fee_amount: 8,
+          intervention_fee_threshold: 20,
+          intervention_fee_monthly_cap: 80,
+          intervention_fee_monthly_count_cap: 10
+        }
+      }
+    }
+
+    depository = @account.reload.depository
+
+    assert_equal 400, depository.overdraft_limit.to_f
+    assert_equal 16.5, depository.overdraft_interest_rate.to_f
+    assert_equal 8, depository.intervention_fee_amount.to_f
+    assert_equal 20, depository.intervention_fee_threshold.to_f
+    assert_equal 80, depository.intervention_fee_monthly_cap.to_f
+    assert_equal 10, depository.intervention_fee_monthly_count_cap
+    assert_equal(-400, depository.overdraft_floor)
+  end
 end

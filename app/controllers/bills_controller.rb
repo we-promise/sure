@@ -116,7 +116,7 @@ class BillsController < ApplicationController
     before_ids = accessible_suggested_series.pluck(:id)
     # backfill: user-triggered detection always reconstructs history (the
     # backfiller is idempotent). nil means another run holds the family lock.
-    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!(backfill: true)
+    result = RecurringTransaction::Pipeline.new(Current.family).run_with_lock!(backfill: true, seasonal: true)
 
     flash[:notice] =
       if result.nil?
