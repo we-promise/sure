@@ -1299,6 +1299,105 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  # --- Convert to Trade / EMI overlap guards ---
+
+  # emi_convertible? now excludes investment accounts, so EmiPlan.build!
+  # can no longer create one there directly. To exercise the
+  # controller-side backstop guard (for legacy data, or a future
+  # regression in emi_convertible? itself), build the plan on a normal
+  # depository entry and then move the resulting entries onto an
+  # investment account afterward, bypassing validations the same way a
+  # raw account_id migration/backfill would.
+  def move_entries_to_investment_account!(*entries)
+    investment_account = accounts(:investment)
+    entries.each { |entry| entry.update_column(:account_id, investment_account.id) }
+  end
+
+  test "convert_to_trade redirects an EMI purchase entry with an EMI-specific alert" do
+    entry = create_transaction(amount: 500, name: "Laptop", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+    move_entries_to_investment_account!(entry, *plan.installment_entries)
+
+    get convert_to_trade_transaction_url(entry.transaction)
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
+  end
+
+  test "convert_to_trade redirects an EMI installment entry with an EMI-specific alert" do
+    entry = create_transaction(amount: 600, name: "Laptop", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+    installment = plan.installment_entries.first
+    move_entries_to_investment_account!(entry, *plan.installment_entries)
+
+    get convert_to_trade_transaction_url(installment.transaction)
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
+  end
+
+  test "create_trade_from_transaction refuses an EMI purchase entry and creates no trade" do
+    entry = create_transaction(amount: 500, name: "Laptop", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+    move_entries_to_investment_account!(entry, *plan.installment_entries)
+
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post create_trade_from_transaction_transaction_url(entry.transaction), params: {
+        security_id: "__custom__", custom_ticker: "AAPL", qty: 1
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
+    refute entry.reload.excluded?
+  end
+
+  test "create_trade_from_transaction refuses an EMI installment entry and creates no trade" do
+    entry = create_transaction(amount: 600, name: "Laptop", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 0)
+    installment = plan.installment_entries.first
+    move_entries_to_investment_account!(entry, *plan.installment_entries)
+
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post create_trade_from_transaction_transaction_url(installment.transaction), params: {
+        security_id: "__custom__", custom_ticker: "AAPL", qty: 1
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
+    refute installment.reload.excluded?
+  end
+
+  test "convert_to_trade redirects an EMI processing-fee entry with an EMI-specific alert" do
+    entry = create_transaction(amount: 500, name: "Laptop", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 25)
+    fee_entry = plan.processing_fee_entry
+    move_entries_to_investment_account!(entry, fee_entry, *plan.installment_entries)
+
+    get convert_to_trade_transaction_url(fee_entry.transaction)
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
+  end
+
+  test "create_trade_from_transaction refuses an EMI processing-fee entry and creates no trade" do
+    entry = create_transaction(amount: 500, name: "Laptop", account: accounts(:depository))
+    plan = EmiPlan.build!(entry: entry, interest_rate: 0, tenure_months: 6, processing_fee: 25)
+    fee_entry = plan.processing_fee_entry
+    move_entries_to_investment_account!(entry, fee_entry, *plan.installment_entries)
+
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post create_trade_from_transaction_transaction_url(fee_entry.transaction), params: {
+        security_id: "__custom__", custom_ticker: "AAPL", qty: 1
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.convert_to_trade.errors.emi_linked"), flash[:alert]
+    refute fee_entry.reload.excluded?
+  end
+
   test "index caches uncategorized_count and projected_recurring across requests" do
     # Test environment uses null_store; swap in a memory store so the cache
     # actually persists between the two requests below.

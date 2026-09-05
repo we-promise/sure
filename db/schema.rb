@@ -580,6 +580,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "emi_plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.uuid "entry_id", null: false
+    t.decimal "interest_rate", precision: 10, scale: 3, default: "0.0", null: false
+    t.string "original_kind", default: "standard", null: false
+    t.decimal "principal_amount", precision: 19, scale: 4, null: false
+    t.decimal "processing_fee", precision: 19, scale: 4, default: "0.0", null: false
+    t.uuid "processing_fee_entry_id"
+    t.date "start_date", null: false
+    t.string "status", default: "active", null: false
+    t.integer "tenure_months", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_emi_plans_on_account_id"
+    t.index ["entry_id"], name: "index_emi_plans_on_entry_id", unique: true
+    t.index ["status"], name: "index_emi_plans_on_status"
+    t.check_constraint "interest_rate >= 0::numeric AND interest_rate <= 100::numeric", name: "chk_emi_plans_interest_rate_range"
+    t.check_constraint "principal_amount > 0::numeric", name: "chk_emi_plans_principal_amount_positive"
+    t.check_constraint "processing_fee >= 0::numeric", name: "chk_emi_plans_processing_fee_non_negative"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'foreclosed'::character varying::text, 'completed'::character varying::text])", name: "chk_emi_plans_status"
+    t.check_constraint "tenure_months > 0 AND tenure_months <= 480", name: "chk_emi_plans_tenure_months_range"
+  end
+
   create_table "enable_banking_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_id"
     t.string "account_status"
@@ -645,6 +668,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.datetime "created_at", null: false
     t.string "currency"
     t.date "date"
+    t.integer "emi_installment_number"
+    t.uuid "emi_plan_id"
     t.uuid "entryable_id"
     t.string "entryable_type"
     t.boolean "excluded", default: false
@@ -659,6 +684,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.string "plaid_id"
     t.datetime "reconciled_at"
     t.uuid "reconciled_by_statement_id"
+    t.string "reconciled_status", default: "unreconciled", null: false
     t.string "source"
     t.datetime "updated_at", null: false
     t.boolean "user_modified", default: false, null: false
@@ -667,17 +693,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "idempotency_key"], name: "index_entries_on_account_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
+    t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
     t.index ["date"], name: "index_entries_on_date"
+    t.index ["emi_plan_id", "emi_installment_number"], name: "index_entries_on_emi_plan_id_and_installment_number", unique: true, where: "(emi_plan_id IS NOT NULL)"
+    t.index ["emi_plan_id"], name: "index_entries_on_emi_plan_id"
     t.index ["entryable_type"], name: "index_entries_on_entryable_type"
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
+    t.check_constraint "emi_installment_number IS NULL OR emi_installment_number > 0", name: "chk_entries_emi_installment_number_positive"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
+    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying::text, 'cleared'::character varying::text, 'reconciled'::character varying::text])", name: "chk_entries_reconciled_status"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -899,7 +930,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.check_constraint "progress_basis::text = ANY (ARRAY['balance'::character varying::text, 'contributions'::character varying::text])", name: "chk_goals_progress_basis_enum"
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
-    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying::text, 'months_of_expenses'::character varying::text])", name: "chk_goals_target_mode_enum"
+    t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying, 'months_of_expenses'::character varying]::text[])", name: "chk_goals_target_mode_enum"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2618,10 +2649,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   add_foreign_key "debug_log_entries", "accounts", on_delete: :nullify
   add_foreign_key "debug_log_entries", "families", on_delete: :nullify
   add_foreign_key "debug_log_entries", "users", on_delete: :nullify
+  add_foreign_key "emi_plans", "accounts", on_delete: :cascade
+  add_foreign_key "emi_plans", "entries", column: "processing_fee_entry_id", on_delete: :nullify
+  add_foreign_key "emi_plans", "entries", on_delete: :cascade
   add_foreign_key "enable_banking_accounts", "enable_banking_items"
   add_foreign_key "enable_banking_items", "families"
   add_foreign_key "entries", "account_statements", column: "reconciled_by_statement_id", on_delete: :nullify
   add_foreign_key "entries", "accounts", on_delete: :cascade
+  add_foreign_key "entries", "emi_plans", on_delete: :nullify
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
   add_foreign_key "eval_results", "eval_runs"

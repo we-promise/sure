@@ -1,0 +1,58 @@
+---
+en:
+  emi_plans:
+    generated_entry_names:
+      processing_fee: "%{name} — Processing fee"
+      installment: "%{name} — Installment %{number}/%{tenure}"
+      foreclosure_settlement: "%{name} — Foreclosure settlement"
+    new:
+      title: Convert to EMI
+      separator: "·"
+      description: Split this purchase into equal monthly installments. Future installments are scheduled automatically.
+      principal_label: Principal
+      tenure_label: Tenure (months)
+      interest_rate_label: Interest rate (annual %)
+      interest_rate_hint: Leave at 0 for a no-cost EMI.
+      processing_fee_label: Processing fee
+      processing_fee_hint: Charged once, today.
+      start_date_label: First installment date
+      monthly_installment: Monthly installment
+      total_interest: Total interest
+      total_payable: Total payable
+      disclaimer: This creates one transaction per installment, dated monthly from the start date. You can foreclose the plan later to cancel any installments that haven't happened yet.
+      submit: Create EMI Plan
+      cancel: Cancel
+      not_convertible: This transaction can't be converted to an EMI plan.
+      start_date_too_far_past: "can't be more than 5 years in the past"
+      start_date_too_far_future: "can't be more than 5 years in the future"
+    create:
+      success: EMI plan created with %{count} installments.
+    show:
+      title: EMI Plan
+      principal: Principal
+      interest_rate: Interest rate
+      tenure: Tenure
+      months:
+        one: "%{count} month"
+        other: "%{count} months"
+      total_payable: Total payable
+      schedule: Installment schedule
+      upcoming: Upcoming
+      posted: Posted
+      foreclose_title: Foreclose plan
+      foreclose_description: Cancels all installments that haven't happened yet. Posted installments are kept as-is.
+      foreclose_button: Foreclose
+      foreclose_confirm: This will remove all upcoming installments for this plan. Installments that have already posted will not be affected. This can't be undone.
+      not_emi: This transaction isn't part of an EMI plan.
+      button_title: Convert to EMI
+      button_description: Turn this purchase into equal monthly installments, with optional interest and a processing fee.
+      button: Convert
+      view_button_title: EMI Plan
+      view_button_description: This purchase is being paid off over %{count} installments.
+      view_button: View Schedule
+    destroy:
+      success: EMI plan foreclosed. Upcoming installments were removed.
+    child:
+      title: Part of an EMI Plan
+      description: "This is installment #%{number} of an EMI plan."
+      view_plan: View Plan

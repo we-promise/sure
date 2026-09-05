@@ -1,0 +1,119 @@
+<%= render DS::Dialog.new(variant: "modal", disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header do %>
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-semibold text-primary"><%= t("emi_plans.new.title") %></h2>
+        <p class="text-sm text-secondary flex items-center gap-1.5">
+          <span><%= @entry.name %></span>
+          <span class="text-secondary"><%= t("emi_plans.new.separator") %></span>
+          <span><%= I18n.l(@entry.date, format: :long) %></span>
+        </p>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="text-xs font-medium text-secondary uppercase tracking-wide"><%= t("emi_plans.new.principal_label") %></p>
+        <p class="text-lg font-semibold text-primary"><%= format_money(@entry.amount_money) %></p>
+      </div>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= styled_form_with(
+          url: transaction_emi_plan_path(@entry),
+          scope: :emi_plan,
+          class: "space-y-3",
+          data: {
+            controller: "emi-plan",
+            emi_plan_principal_value: @entry.amount.to_f,
+            emi_plan_currency_value: @entry.currency,
+            emi_plan_precision_value: Money::Currency.new(@entry.currency).default_precision,
+            turbo_frame: :_top
+          }
+        ) do |form| %>
+
+      <p class="text-sm text-secondary"><%= t("emi_plans.new.description") %></p>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <%= form.number_field :tenure_months,
+                                 label: t("emi_plans.new.tenure_label"),
+                                 placeholder: "12",
+                                 min: 1,
+                                 max: 480,
+                                 step: 1,
+                                 required: true,
+                                 autocomplete: "off",
+                                 value: 12,
+                                 data: { emi_plan_target: "tenureInput", action: "input->emi-plan#recalculate" } %>
+        </div>
+        <div>
+          <%= form.number_field :interest_rate,
+                                 label: t("emi_plans.new.interest_rate_label"),
+                                 placeholder: "0",
+                                 min: 0,
+                                 max: 100,
+                                 step: 0.01,
+                                 autocomplete: "off",
+                                 value: 0,
+                                 data: { emi_plan_target: "interestInput", action: "input->emi-plan#recalculate" } %>
+          <p class="text-xs text-secondary mt-1"><%= t("emi_plans.new.interest_rate_hint") %></p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <%= form.number_field :processing_fee,
+                                 label: t("emi_plans.new.processing_fee_label"),
+                                 placeholder: "0.00",
+                                 min: 0,
+                                 step: Money::Currency.new(@entry.currency).step,
+                                 autocomplete: "off",
+                                 value: 0,
+                                 data: { emi_plan_target: "feeInput", action: "input->emi-plan#recalculate" } %>
+          <p class="text-xs text-secondary mt-1"><%= t("emi_plans.new.processing_fee_hint") %></p>
+        </div>
+        <div>
+          <%= form.date_field :start_date,
+                               label: t("emi_plans.new.start_date_label"),
+                               required: true,
+                               value: @default_start_date.iso8601,
+                               data: { emi_plan_target: "startDateInput", action: "input->emi-plan#recalculate" } %>
+        </div>
+      </div>
+
+      <%# Live preview %>
+      <div class="p-3 rounded-lg border border-secondary bg-surface-inset space-y-2" data-emi-plan-target="preview">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-secondary"><%= t("emi_plans.new.monthly_installment") %></span>
+          <span class="font-semibold text-primary" data-emi-plan-target="monthlyAmount">—</span>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-secondary"><%= t("emi_plans.new.total_interest") %></span>
+          <span class="font-medium text-primary" data-emi-plan-target="totalInterest">—</span>
+        </div>
+        <div class="flex items-center justify-between text-sm border-t border-primary pt-2">
+          <span class="text-secondary font-medium"><%= t("emi_plans.new.total_payable") %></span>
+          <span class="font-semibold text-primary" data-emi-plan-target="totalPayable">—</span>
+        </div>
+      </div>
+
+      <p class="text-xs text-secondary">
+        <%= t("emi_plans.new.disclaimer") %>
+      </p>
+
+      <%# Actions %>
+      <div class="flex justify-end gap-3 pt-4 border-t border-primary">
+        <%= render DS::Button.new(
+          text: t("emi_plans.new.cancel"),
+          variant: "outline",
+          type: "button",
+          data: { action: "click->DS--dialog#close" }
+        ) %>
+        <%= render DS::Button.new(
+          text: t("emi_plans.new.submit"),
+          variant: "primary",
+          type: "submit"
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

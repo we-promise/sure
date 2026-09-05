@@ -4,7 +4,7 @@ class Entry < ApplicationRecord
   TRUTHY_VALUES = [ true, "true", "1", 1 ].freeze
   private_constant :TRUTHY_VALUES
 
-  attr_accessor :unsplitting
+  attr_accessor :unsplitting, :foreclosing
 
   monetize :amount
 
@@ -12,6 +12,7 @@ class Entry < ApplicationRecord
   belongs_to :transfer, optional: true
   belongs_to :import, optional: true
   belongs_to :parent_entry, class_name: "Entry", optional: true
+  belongs_to :emi_plan, optional: true
   belongs_to :reconciled_by_statement, class_name: "AccountStatement", optional: true
 
   # Mirrors chk_entries_reconciled_at_present_when_statement_set so a direct
@@ -19,6 +20,8 @@ class Entry < ApplicationRecord
   validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
+  has_one :originated_emi_plan, class_name: "EmiPlan", foreign_key: :entry_id, dependent: :destroy
+
   # Read side only, so a transaction can say which bills it paid. The foreign key
   # already nullifies on delete, so this adds no lifecycle behaviour.
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
@@ -33,8 +36,12 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :cannot_edit_emi_purchase_amount_or_date
+  validate :cannot_edit_emi_installment_amount_or_date
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_destroy :prevent_emi_purchase_deletion, if: :emi_purchase?
+  before_destroy :prevent_emi_installment_deletion, if: :emi_installment?
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -88,6 +95,37 @@ class Entry < ApplicationRecord
     where(<<~SQL.squish)
       NOT EXISTS (
         SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
+      )
+    SQL
+  }
+
+  # Once a purchase is converted to an EMI plan, its generated installments
+  # carry the real spend/balance impact — the original purchase entry itself
+  # must not also count, or the balance double-counts (principal once via the
+  # purchase, again via the installments summing back to it). This is
+  # deliberately narrower than excluding_split_parents: unlike a split
+  # parent, an emi_purchase entry stays visible/editable/searchable
+  # everywhere else (categorization, search, rules, exports) — it's excluded
+  # from balance reconstruction only.
+  #
+  # Only excludes entries backed by a plan that's still "live" for balance
+  # purposes (active, or foreclosed after at least one installment posted).
+  # A plan that was foreclosed before anything posted has its Transaction#kind
+  # reverted to "standard" by EmiPlan#foreclose! — that purchase must count
+  # again, so it's intentionally not excluded here.
+  scope :excluding_emi_purchases, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM emi_plans ep
+        WHERE ep.entry_id = entries.id
+        AND (
+          ep.status = 'active'
+          OR EXISTS (
+            SELECT 1 FROM entries installment
+            WHERE installment.emi_plan_id = ep.id
+            AND installment.date <= CURRENT_DATE
+          )
+        )
       )
     SQL
   }
@@ -437,6 +475,66 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
+  # True for the original purchase entry once it's been converted into an EMI plan.
+  def emi_purchase?
+    originated_emi_plan.present?
+  end
+
+  # True for a generated installment entry (emi_plan_id present). The
+  # one-time processing-fee entry is linked separately, through
+  # EmiPlan#processing_fee_entry, and is NOT emi_plan_id-tagged — so this
+  # returns false for it. See the note near cannot_edit_emi_installment_amount_or_date.
+  def emi_installment?
+    emi_plan_id.present?
+  end
+
+  # True for the one-time processing-fee entry generated alongside an EMI
+  # plan (Transaction#kind == "emi_fee"). Unlike emi_purchase?/emi_installment?,
+  # this entry isn't linked via emi_plan_id or originated_emi_plan — it's
+  # only reachable through EmiPlan#processing_fee_entry — so kind is the only
+  # way to identify it directly from the entry/transaction side.
+  def emi_fee?
+    transaction? && transaction.kind == "emi_fee"
+  end
+
+  # True for any entry that's part of an EMI plan in some form: the
+  # original purchase, a generated installment, or the one-time processing
+  # fee. Trade conversion (and similar "pick a fresh, unrelated transaction"
+  # flows) needs to exclude all three, not just purchase/installment —
+  # otherwise a fee entry could be converted into a Trade even though it
+  # exists only because of, and is still tracked by, a live EmiPlan.
+  def emi_linked?
+    emi_purchase? || emi_installment? || emi_fee?
+  end
+
+  # True while this entry's amount/date must stay locked because of an EMI
+  # plan. Same bar as the model validations
+  # (cannot_edit_emi_purchase_amount_or_date / ..._installment_...) and
+  # Transaction#cannot_change_kind_of_active_emi_entry.
+  #
+  # - Purchase entry: locked while the plan is active, or once foreclosed
+  #   if any installment ever posted (that history needs to stay
+  #   reconciled with the purchase). A plan foreclosed before anything
+  #   posted has nothing left to desync, so it unlocks.
+  # - Installment entry: locked while its plan is still active (matches
+  #   the schedule it was generated from), OR if it's already posted
+  #   (date <= today) — posted installments represent money that already
+  #   moved and stay locked even after the plan is foreclosed, same as
+  #   prevent_emi_installment_deletion protects them from deletion. A
+  #   never-posted installment on a foreclosed plan wouldn't normally
+  #   exist (foreclose! deletes remaining future installments), but the
+  #   date check covers it defensively either way.
+  def emi_date_locked?
+    if emi_purchase?
+      plan = originated_emi_plan
+      plan.active? || plan.posted_installments.exists?
+    elsif emi_installment?
+      (emi_plan.present? && emi_plan.active?) || date <= Date.current
+    else
+      false
+    end
+  end
+
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
@@ -525,14 +623,29 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      entries = all.preload(:entryable, :originated_emi_plan, :emi_plan).to_a
+
+      # emi_date_locked? calls EmiPlan#posted_installments.exists? for every
+      # emi_purchase entry, which is one query per foreclosed plan when run
+      # inside the loop below. Batch that lookup into a single query up
+      # front instead, and pass the result in so the per-entry check stays
+      # in-memory.
+      originated_plan_ids = entries.filter_map { |entry| entry.originated_emi_plan&.id }
+      plan_ids_with_posted_installments = Entry
+        .where(emi_plan_id: originated_plan_ids)
+        .where("entries.date <= ?", Date.current)
+        .distinct
+        .pluck(:emi_plan_id)
+        .to_set
+
       transaction do
-        all.each do |entry|
+        entries.each do |entry|
           changed = false
 
           # Update standard attributes
           if bulk_attributes.present?
             attrs = bulk_attributes.dup
-            attrs.delete(:date) if entry.split_child?
+            attrs.delete(:date) if entry.split_child? || emi_date_locked_for_bulk_update?(entry, plan_ids_with_posted_installments)
             attrs.delete(:entryable_attributes) unless entry.transaction?
 
             if attrs.present?
@@ -561,6 +674,23 @@ class Entry < ApplicationRecord
 
       all.size
     end
+
+    private
+
+      # Mirrors Entry#emi_date_locked?, but takes a precomputed set of
+      # originated-plan ids that have at least one posted installment
+      # instead of calling EmiPlan#posted_installments.exists? per entry.
+      # Used by bulk_update! to avoid an N+1 query across foreclosed plans.
+      def emi_date_locked_for_bulk_update?(entry, plan_ids_with_posted_installments)
+        if entry.emi_purchase?
+          plan = entry.originated_emi_plan
+          plan.active? || plan_ids_with_posted_installments.include?(plan.id)
+        elsif entry.emi_installment?
+          (entry.emi_plan.present? && entry.emi_plan.active?) || entry.date <= Date.current
+        else
+          false
+        end
+      end
   end
 
   private
@@ -579,9 +709,85 @@ class Entry < ApplicationRecord
       errors.add(:date, "must match the parent transaction date for split children")
     end
 
+    # The parent purchase's amount is what the whole installment schedule was
+    # computed from. Letting it change while the plan is still live would
+    # silently desync the entry from its EmiPlan (the schedule wouldn't
+    # reflect the new amount, and totals would no longer reconcile).
+    # Foreclose the plan first if the purchase needs correcting.
+    #
+    # Scoped to a "live" plan — active, or foreclosed but with posted
+    # installment history — same bar used by Transaction's kind guard and
+    # by #prevent_emi_purchase_deletion. A plan foreclosed before anything
+    # ever posted has nothing left to desync, so editing is allowed again.
+    def cannot_edit_emi_purchase_amount_or_date
+      return unless emi_purchase? && persisted? && (amount_changed? || date_changed?)
+      return unless emi_date_locked?
+
+      errors.add(:base, "Amount and date can't be changed on a purchase that's been converted to an EMI plan. Foreclose the plan first.")
+    end
+
+    # Installment entries are generated from the amortization schedule and
+    # dated by EmiPlan#build!. Editing one directly (manually or via a
+    # provider sync overwrite) would break the "schedule sums to principal"
+    # guarantee and desync it from its siblings while the plan is still
+    # live. Foreclose + re-create instead.
+    #
+    # Once foreclosed, remaining future installments have already been
+    # deleted by EmiPlan#foreclose! — so any installment entry that's still
+    # around at that point is a posted one, kept intentionally as real spend
+    # history, and edits to it behave like an ordinary transaction.
+    def cannot_edit_emi_installment_amount_or_date
+      return unless emi_installment? && persisted? && (amount_changed? || date_changed?)
+      return unless emi_date_locked?
+
+      errors.add(:base, "Amount and date can't be changed on an individual EMI installment. Foreclose the plan to cancel remaining installments.")
+    end
+
+    # Note: the one-time processing-fee entry (Transaction#kind == "emi_fee")
+    # is intentionally NOT guarded here. It doesn't feed the amortization
+    # schedule or any reconciliation total — it's a plain one-time expense
+    # that happens to have been created alongside a plan — so editing its
+    # amount or date is safe and behaves like any other transaction.
+
     def prevent_individual_child_deletion
       return if destroyed_by_association || unsplitting
 
+      throw :abort
+    end
+
+    # Deleting the parent purchase directly would cascade-destroy its
+    # EmiPlan (has_one dependent: :destroy) while the installment entries
+    # only get nullified (dependent: :nullify, deliberately, so posted
+    # history survives — see EmiPlan#foreclose!). That combination orphans
+    # every installment: still real budget-counted transactions, but with no
+    # plan link, so they can no longer be viewed as a schedule or
+    # foreclosed. Foreclose the plan first — that safely tears down future
+    # installments and keeps posted ones intact — then the entry can be
+    # deleted normally.
+    #
+    # Only blocks while the plan still has installments tied to it (active,
+    # or foreclosed with posted history). A plan foreclosed before anything
+    # ever posted has nothing left to orphan — Transaction#kind has already
+    # reverted to "standard" in that case — so deletion is allowed.
+    def prevent_emi_purchase_deletion
+      return if destroyed_by_association
+
+      plan = originated_emi_plan
+      return unless plan.active? || plan.posted_installments.exists?
+
+      errors.add(:base, "Can't delete a purchase that's been converted to an EMI plan. Foreclose the plan first.")
+      throw :abort
+    end
+
+    # Individual installments must never be deleted one at a time — that
+    # would silently break the amortization schedule and the plan's totals.
+    # The only supported way to remove installments is EmiPlan#foreclose!,
+    # which removes future ones as a deliberate, atomic operation and keeps
+    # posted ones untouched.
+    def prevent_emi_installment_deletion
+      return if destroyed_by_association || foreclosing
+
+      errors.add(:base, "Can't delete an individual EMI installment directly. Foreclose the plan to cancel remaining installments.")
       throw :abort
     end
 end
