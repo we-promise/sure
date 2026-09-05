@@ -962,6 +962,35 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
+  # Every request path already rejects a deactivated user, but their session
+  # rows and access tokens outlived the deactivation and were only turned away
+  # lazily, one request at a time.
+  test "deactivate revokes the user's sessions and access tokens" do
+    user = users(:family_member)
+    session = user.sessions.create!
+    application = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}", redirect_uri: "sureapp://oauth/callback", scopes: "read_write"
+    )
+    token = Doorkeeper::AccessToken.create!(
+      application: application, resource_owner_id: user.id, scopes: "read_write", expires_in: 30.days.to_i
+    )
+
+    assert user.deactivate
+
+    assert_not Session.exists?(session.id), "the session must be gone"
+    assert token.reload.revoked?, "the access token must be revoked"
+  end
+
+  test "deactivate leaves other users' credentials alone" do
+    user = users(:family_member)
+    bystander = users(:family_admin)
+    bystander_session = bystander.sessions.create!
+
+    assert user.deactivate
+
+    assert Session.exists?(bystander_session.id)
+  end
+
   test "deactivate refuses the last active super admin" do
     family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
     target = User.create!(
