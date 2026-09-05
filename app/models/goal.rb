@@ -4,6 +4,11 @@ class Goal < ApplicationRecord
   COLORS = Category::COLORS
   ICONS = Category.icon_codes
 
+  # How many confirmed spends the compact card on the goal page shows before
+  # handing off to "Open in Transactions". A goal open for years can carry
+  # dozens; a card embedded mid-page is not the place to render all of them.
+  CONSUMED_DISPLAY_LIMIT = 5
+
   # States in which a goal has let go of its money: `Goal.pooled_allocations_for`
   # leaves it out of the backing math, so its links reserve nothing and the
   # account it pointed at is free again.
@@ -27,6 +32,8 @@ class Goal < ApplicationRecord
   has_many :goal_accounts, dependent: :destroy, autosave: true
   has_many :linked_accounts, through: :goal_accounts, source: :account
   has_many :goal_pledges, dependent: :destroy
+  before_destroy :clear_consumption_stamps
+
   has_many :open_pledges,
            -> { where(status: "open").where("expires_at >= ?", Time.current) },
            class_name: "GoalPledge"
@@ -616,7 +623,21 @@ class Goal < ApplicationRecord
         # Same refusal a fixed earmark gives, for the same reason: the link
         # cannot have supplied money it never backed. `still_needed` cannot go
         # negative — the target check above has already refused that.
-        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+        #
+        # Not when a transaction says so, though. `backed` reads the account's
+        # balance NOW, and a recorded outflow has already been taken out of it:
+        # spend 4,000 of a 5,000 account and `backed` is 1,000, so attributing
+        # the very transaction the app itself surfaced was refused — and refused
+        # by an earmark the user never set. The target check above is the real
+        # ceiling, and it still holds.
+        raise ConsumptionRefused.new(:exceeds_earmark) if transaction.nil? && amount > backed
+
+        # The bypass above only holds if `amount` is what the transaction
+        # actually moved — trusted from callers otherwise, a mismatched pair
+        # would silently over-attribute past what the account backs, with no
+        # defense left once `transaction` is non-nil. Enforced here rather
+        # than trusted, matching this file's fat-model conventions.
+        raise ConsumptionRefused.new(:exceeds_earmark) if transaction && amount != transaction.entry.amount.to_d
 
         still_needed = target_amount.to_d - consumed_amount.to_d - amount
         link.update!(allocated_amount: [ backed, still_needed ].min)
@@ -662,6 +683,93 @@ class Goal < ApplicationRecord
   # noise on every card.
   def any_consumption?
     consumed_amount.to_d.positive?
+  end
+
+  private
+    # Mirrors GoalPledge#clear_matched_transaction_extra, but a goal can stamp
+    # many transactions where a pledge stamps at most one, so this sweeps every
+    # match rather than looking up a single id.
+    #
+    # Not scoped to `linked_accounts`: an account can be unlinked from the goal
+    # after a consumption stamped a transaction on it (`sync_linked_accounts!`
+    # destroys the `GoalAccount` join, not the stamp), so a transaction marked
+    # by this goal is not guaranteed to live on an account still linked to it.
+    # `consumed_goal_id` is a UUID, unique enough that a family-wide sweep
+    # cannot cross into another goal's stamps.
+    def clear_consumption_stamps
+      Transaction.where("extra @> ?", { goal: { consumed_goal_id: id } }.to_json).find_each do |txn|
+        new_extra = txn.extra.deep_dup
+        new_extra["goal"]&.delete("consumed_goal_id")
+        new_extra.delete("goal") if new_extra["goal"]&.empty?
+        txn.update!(extra: new_extra)
+      end
+    end
+  public
+
+  # Undo an attribution. `consume!` is a one-click action on a panel the app
+  # raises unprompted, and until now it had no way back: a misread suggestion
+  # moved a financial figure for good.
+  #
+  # The account's earmark is deliberately NOT restored. Releasing it would sweep
+  # the balance back under the goal on the app's own initiative, which is the
+  # thing #3219 settled against — re-earmarking is the user's decision, the same
+  # one they made the first time. The confirmation says so rather than leaving
+  # it to be discovered.
+  def release_consumption!(transaction)
+    raise ConsumptionRefused.new(:not_active) unless active?
+
+    # Same order `consume!` takes — goal, then transaction. Reversing it would
+    # deadlock the two against each other, and only under load.
+    with_lock do
+      transaction.with_lock do
+        claimed = transaction.extra&.dig("goal", "consumed_goal_id")
+        raise ConsumptionRefused.new(:not_claimed_by_this_goal) unless claimed == id
+
+        amount = transaction.entry.amount.to_d
+        # The column carries a >= 0 check constraint; refusing here turns what
+        # would be a 500 into something the user can read.
+        raise ConsumptionRefused.new(:release_exceeds_consumed) if consumed_amount.to_d - amount < 0
+
+        extra = transaction.extra.deep_dup
+        extra["goal"]&.delete("consumed_goal_id")
+        extra.delete("goal") if extra["goal"]&.empty?
+        transaction.update!(extra: extra)
+
+        update!(consumed_amount: consumed_amount.to_d - amount)
+      end
+    end
+
+    reload
+    reset_state_dependent_caches!
+    self
+  end
+
+  # The spends attributed to this goal, as entries. `consumed_amount` is a bare
+  # number with nothing behind it, so this is the only way a reader can check
+  # it, remember what it was for, or notice an attribution they did not mean.
+  #
+  # `@>` rather than `->>`: the GIN index on `transactions.extra` is jsonb_ops,
+  # which serves containment and not equality on an extracted text field.
+  #
+  # Scoped to the accounts the reader may see, for the reason the consumption
+  # dialog is: a family goal can be backed by an account private to another
+  # member, and its spending is that member's business.
+  def consumed_entries(account_ids)
+    return Entry.none if account_ids.blank?
+
+    Entry.joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+         .where(account_id: account_ids)
+         .where("transactions.extra @> ?", { goal: { consumed_goal_id: id } }.to_json)
+         .includes(:account)
+         .order(date: :desc, id: :desc)
+  end
+
+  # What the listed spends account for, and what they do not. A consumption
+  # entered as a bare amount leaves no trace at all, so the list is incomplete
+  # by construction — saying so is the difference between an honest gap and a
+  # figure that looks wrong.
+  def consumption_unaccounted_for(listed_total)
+    [ consumed_amount.to_d - listed_total.to_d, 0.to_d ].max
   end
 
   def progress_percent
@@ -1189,7 +1297,14 @@ class Goal < ApplicationRecord
       # is picking the same goal back up rather than restarting it — wiping
       # what it had recorded as spent would delete history nothing replaced,
       # and drop its progress for no reason the user can see.
-      attrs[:consumed_amount] = 0 if completed_amount.present?
+      if completed_amount.present?
+        attrs[:consumed_amount] = 0
+        # The counter resets; the stamps on the transactions that built it do
+        # not, on their own. Left alone, those transactions could never be
+        # attributed again anyway — `stamp_consumption!` refuses the SAME goal
+        # reclaiming one it already holds, not only a different one.
+        clear_consumption_stamps
+      end
 
       update_columns(**attrs)
     end

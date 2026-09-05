@@ -650,6 +650,75 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, goal.reload.consumed_amount
   end
 
+  # --- Detaching an attribution ---
+
+  test "detaching a spend takes it back off the goal and returns it to detection" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    assert_equal entry.amount.to_d, goal.reload.consumed_amount
+
+    delete release_consumption_goal_url(goal, transaction_id: entry.entryable_id)
+
+    assert_redirected_to goal_url(goal)
+    assert_equal BigDecimal("0"), goal.reload.consumed_amount
+
+    get goal_url(goal)
+    assert_match I18n.t("goals.unattributed_outflows.heading"), response.body
+  end
+
+  test "detaching does not restore the account's earmark" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    shrunk = goal.reload.goal_accounts.first.allocated_amount.to_d
+
+    delete release_consumption_goal_url(goal, transaction_id: entry.entryable_id)
+
+    assert_equal shrunk, goal.reload.goal_accounts.first.allocated_amount.to_d
+  end
+
+  test "detaching a spend nothing attributed is refused" do
+    goal, entry = goal_with_outflow
+
+    delete release_consumption_goal_url(goal, transaction_id: entry.entryable_id)
+
+    assert_redirected_to goal_url(goal)
+    assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
+  end
+
+  # Regression: `release_consumption` used to fall back to a
+  # `goals.consume.errors.generic` locale key that did not exist anywhere in
+  # the repo, so this reachable-in-production refusal rendered as a raw
+  # "translation missing" string instead of something readable.
+  test "detaching more than consumed_amount can cover shows a readable message" do
+    goal, entry = goal_with_outflow
+    post consume_goal_url(goal), params: { transaction_id: entry.entryable_id }
+    goal.update_columns(consumed_amount: 100) # simulate drift
+
+    delete release_consumption_goal_url(goal, transaction_id: entry.entryable_id)
+
+    assert_redirected_to goal_url(goal)
+    assert_equal I18n.t("goals.consume.errors.release_exceeds_consumed"), flash[:alert]
+    assert_no_match(/translation missing/, flash[:alert])
+  end
+
+  # Scoped through the same accessible-accounts list as attributing: a spend
+  # on a linked account private to another family member is not this reader's
+  # to detach, any more than it was theirs to see.
+  test "detaching a spend on an account the viewer cannot see is refused" do
+    private_account = private_linked_account
+    entry = private_account.entries.create!(
+      name: "Private spend", date: Date.current, amount: 100,
+      currency: @goal.currency, entryable: Transaction.new
+    )
+    @goal.consume!(100, account: private_account, transaction: entry.entryable)
+    assert_equal 100, @goal.reload.consumed_amount
+
+    delete release_consumption_goal_url(@goal, transaction_id: entry.entryable_id)
+
+    assert_equal I18n.t("goals.consume.errors.transaction_not_found"), flash[:alert]
+    assert_equal 100, @goal.reload.consumed_amount
+  end
+
   # --- Lot B5: attributing an outflow the app spotted ---
 
   test "the goal page offers an outflow nothing has claimed" do
