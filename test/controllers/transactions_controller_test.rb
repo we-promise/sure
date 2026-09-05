@@ -488,6 +488,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
   end
 
+  # Row only opened on a precise click on the name text (whitespace between
+  # name/avatar/amount looked clickable via the row's hover styling but did
+  # nothing). A row-level click delegates to the name link now, so the whole
+  # row opens the drawer while interactive descendants (checkbox, category
+  # menu, account link) keep handling their own clicks.
+  test "transaction row delegates whole-row clicks to the drawer link" do
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame_id = ActionView::RecordIdentifier.dom_id(@entry.entryable)
+    row = doc.at_css("turbo-frame##{frame_id} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(@entry), drawer_link["href"]
+  end
+
+  test "split parent row delegates whole-row clicks to the drawer link" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
+
+    entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css(".split-group [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
+  end
+
   test "can paginate" do
   family = families(:empty)
   sign_in users(:empty)

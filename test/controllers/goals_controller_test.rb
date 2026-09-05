@@ -44,6 +44,14 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "the target amount field keeps its own action alongside the paste handler" do
+    get new_goal_url
+
+    assert_response :success
+    assert_select "input[data-money-field-target=?][data-action=?]", "amount",
+                  "input->goal-form#suggestedChanged paste->money-field#pasteAmount"
+  end
+
   test "create persists a goal with linked accounts" do
     # Fresh accounts: the goal fixtures already claim @depository and
     # @connected in full, and GoalAccount refuses a second whole-balance
