@@ -93,6 +93,26 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders the balance chart as drag-selectable for a custom date range" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#lineChart[data-time-series-chart-selectable-value='true']"
+  end
+
+  test "show honors a custom start_date/end_date range" do
+    start_date = 15.days.ago.to_date
+    end_date = Date.current
+
+    get account_url(@account), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+    assert_response :success
+    # If the params were ignored, the user's default preset would render as the
+    # checked option instead of the custom row.
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
   test "sync all requests fresh Plaid transactions before syncing the family" do
     sequence = sequence("manual sync all")
     Family.any_instance
