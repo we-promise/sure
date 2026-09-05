@@ -41,6 +41,7 @@ class WiseItem::Syncer
       mark_import_started(sync)
       process_results = wise_item.process_accounts
       sync_errors.concat(result_failure_errors(process_results, category: :account_processing_error, message_key: :account_processing_failed))
+      capture_transaction_processing_summary(process_results)
 
       wise_item.link_jar_transfers!
 
@@ -110,6 +111,36 @@ class WiseItem::Syncer
       return [] unless failed.positive?
 
       [ sync_error(category, message_key, count: failed) ]
+    end
+
+    def capture_transaction_processing_summary(results)
+      account_results = Array(results)
+      transaction_results = account_results.filter_map { |result| result[:result] if result.is_a?(Hash) }
+      failed_accounts = account_results.count { |result| result.is_a?(Hash) && result[:success] == false }
+      imported = transaction_results.sum { |result| result[:imported].to_i }
+      skipped = transaction_results.sum { |result| result[:skipped].to_i }
+      failed = transaction_results.sum { |result| result[:failed].to_i } + failed_accounts
+      level = failed.positive? ? "warn" : "info"
+      message = "WiseItem::Syncer - Transaction processing completed: #{imported} imported, #{skipped} skipped, #{failed} failed"
+
+      Rails.logger.public_send(level, message)
+      DebugLogEntry.capture(
+        category: failed.positive? ? "provider_sync_error" : "provider_sync",
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: "wise",
+        family: wise_item.family,
+        metadata: {
+          wise_item_id: wise_item.id,
+          processed_account_count: account_results.size,
+          imported_transaction_count: imported,
+          skipped_transaction_count: skipped,
+          failed_transaction_count: failed
+        }
+      )
+    rescue => e
+      Rails.logger.warn "WiseItem::Syncer - Failed to capture transaction processing summary: #{e.message}"
     end
 
     def sync_error(category, message_key, **options)
