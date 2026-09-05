@@ -200,6 +200,8 @@ en:
         additional_currencies_label: Additional currencies
         no_additional_currencies: None selected
         currencies_more: "+%{count} more"
+        reporting_title: "%{moniker} Reporting"
+        reporting_subtitle: "Control how investment contributions appear in your %{moniker} reports and budgets"
         manage_currencies: Manage currencies
         manage_currencies_subtitle: Deselect the currencies you never use, or reduce the list down to just a few.
         select_all_currencies: Select all
@@ -218,6 +220,9 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+        investment_contributions:
+          title: Treat investment contributions as transfers
+          description: Hide contributions from your cash-flow charts and budgets while keeping the linked transfers.
     budget_shares:
       update:
         success: Budget sharing settings updated

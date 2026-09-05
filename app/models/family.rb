@@ -178,6 +178,13 @@ class Family < ApplicationRecord
     nil
   end
 
+  # Investment contributions can be treated as internal transfers in shared
+  # reporting. This is a family setting because dashboards, reports, and
+  # budgets all summarize family data.
+  def treat_investment_contributions_as_transfers?
+    treat_investment_contributions_as_transfers
+  end
+
   # Callers should still enqueue the normal family sync immediately. Plaid's
   # refresh is asynchronous, and its polling chain schedules a distinct item
   # sync after the cursor advances (or after the bounded polling fallback), so
@@ -391,8 +398,21 @@ class Family < ApplicationRecord
   # This is used for auto-categorizing transfers to investment accounts.
   # Always uses the family's locale to ensure consistent category naming across all users.
   def investment_contributions_category
-    # Find ALL legacy categories (created under old request-locale behavior)
-    legacy = categories.where(name: Category.all_investment_contributions_names).order(:created_at).to_a
+    # The key survives display-name changes. Include legacy names while old
+    # categories are being upgraded, then collapse any duplicate variants.
+    legacy = categories
+      .where(default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY)
+      .or(categories.where(name: Category.all_investment_contributions_names))
+      .order(:created_at)
+      .to_a
+
+    # A renamed legacy default category has no key to identify it. The default
+    # color/icon are retained by the category editor, so use them only when
+    # they identify one unambiguous root category in this family.
+    if legacy.empty?
+      candidates = categories.where(color: "#0d9488", lucide_icon: "trending-up", parent_id: nil)
+      legacy = [ candidates.first ] if candidates.one?
+    end
 
     if legacy.any?
       keeper = legacy.first
@@ -410,14 +430,15 @@ class Family < ApplicationRecord
       # Rename keeper to family's locale name if needed
       I18n.with_locale(locale) do
         correct_name = Category.investment_contributions_name
-        keeper.update!(name: correct_name) unless keeper.name == correct_name
+        keeper.update!(name: correct_name, default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY) unless keeper.name == correct_name && keeper.default_key == Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY
       end
       return keeper
     end
 
     # Create new category using family's locale
     I18n.with_locale(locale) do
-      categories.find_or_create_by!(name: Category.investment_contributions_name) do |cat|
+      categories.find_or_create_by!(default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY) do |cat|
+        cat.name = Category.investment_contributions_name
         cat.color = "#0d9488"
         cat.lucide_icon = "trending-up"
       end
@@ -425,7 +446,8 @@ class Family < ApplicationRecord
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     # Handle race condition: another process created the category
     I18n.with_locale(locale) do
-      categories.find_by!(name: Category.investment_contributions_name)
+      categories.find_by!(default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY) ||
+        categories.find_by!(name: Category.investment_contributions_name)
     end
   end
 
@@ -570,6 +592,17 @@ class Family < ApplicationRecord
 
     scope = Merchant.where(id: merchant_ids)
     "#{scope.count}-#{scope.maximum(:updated_at)&.to_f}"
+  end
+
+  # Income-statement aggregates depend on persisted transfer matches as well as
+  # entries. A match can be created or removed without changing either entry,
+  # so expose a separate version for cache keys that apply transfer-aware logic.
+  def transfers_cache_version
+    @transfers_cache_version ||= begin
+      scope = Transfer.joins(outflow_transaction: { entry: :account })
+                      .where(accounts: { family_id: id })
+      "#{scope.maximum(:updated_at)&.to_i || 0}-#{scope.count}"
+    end
   end
 
   def self_hoster?

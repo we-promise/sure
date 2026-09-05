@@ -14,6 +14,23 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "reject restores matched transactions to regular transactions" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:loan), amount: -500)
+    outflow = outflow_entry.transaction
+    inflow = inflow_entry.transaction
+    outflow.update!(kind: "loan_payment")
+    inflow.update!(kind: "funds_movement")
+    transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow)
+
+    transfer.reject!
+
+    assert_not Transfer.exists?(transfer.id)
+    assert_equal "standard", outflow.reload.kind
+    assert_equal "standard", inflow.reload.kind
+    assert RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
+  end
+
   test "destroy! clears the idempotency key so a retried request can create a new transfer" do
     idempotency_key = SecureRandom.uuid
 
@@ -137,24 +154,32 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
-  test "kind_for_account returns investment_contribution for investment accounts" do
-    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:investment))
+  test "kind_for_account returns investment_contribution for cash to investment" do
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:depository), accounts(:investment))
   end
 
-  test "kind_for_account returns investment_contribution for crypto accounts" do
-    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:crypto))
+  test "kind_for_account returns investment_contribution for cash to crypto" do
+    assert_equal "investment_contribution", Transfer.kind_for_account(accounts(:depository), accounts(:crypto))
+  end
+
+  test "kind_for_account returns funds_movement for investment to investment" do
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:investment), accounts(:crypto))
+  end
+
+  test "kind_for_account returns funds_movement for crypto to investment" do
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:crypto), accounts(:investment))
   end
 
   test "kind_for_account returns loan_payment for loan accounts" do
-    assert_equal "loan_payment", Transfer.kind_for_account(accounts(:loan))
+    assert_equal "loan_payment", Transfer.kind_for_account(accounts(:depository), accounts(:loan))
   end
 
   test "kind_for_account returns cc_payment for credit card accounts" do
-    assert_equal "cc_payment", Transfer.kind_for_account(accounts(:credit_card))
+    assert_equal "cc_payment", Transfer.kind_for_account(accounts(:depository), accounts(:credit_card))
   end
 
   test "kind_for_account returns funds_movement for depository accounts" do
-    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
+    assert_equal "funds_movement", Transfer.kind_for_account(accounts(:investment), accounts(:depository))
   end
 
   test "has_source_fee? returns true when source fee present" do

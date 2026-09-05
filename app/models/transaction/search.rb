@@ -6,6 +6,7 @@ class Transaction::Search
   attribute :amount, :string
   attribute :amount_operator, :string
   attribute :types, array: true
+  attribute :kinds, array: true
   attribute :status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
@@ -35,6 +36,7 @@ class Transaction::Search
       query = apply_active_accounts_filter(query, active_accounts_only)
       query = apply_category_filter(query, categories)
       query = apply_type_filter(query, types)
+      query = apply_kind_filter(query, kinds)
       query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
@@ -180,6 +182,15 @@ class Transaction::Search
       else
         query
       end
+    end
+
+    def apply_kind_filter(query, kinds)
+      return query unless kinds.present?
+
+      valid_kinds = kinds & Transaction.kinds.keys
+      return query.none if valid_kinds.empty?
+
+      query.where(kind: valid_kinds)
     end
 
     def apply_merchant_filter(query, merchants)

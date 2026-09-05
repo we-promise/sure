@@ -2,6 +2,7 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include EntriesTestHelper
 
   def setup
     @syncable = families(:dylan_family)
@@ -19,6 +20,25 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal Category.investment_contributions_name, category.name
     assert_equal "#0d9488", category.color
     assert_equal "trending-up", category.lucide_icon
+  end
+
+  test "transfer cache version changes when a non-latest transfer is removed" do
+    source = @syncable.accounts.create!(name: "Transfer source", currency: "USD", balance: 0, accountable: Depository.new)
+    destination = @syncable.accounts.create!(name: "Transfer destination", currency: "USD", balance: 0, accountable: Depository.new)
+    first_outflow = create_transaction(account: source, amount: 100, kind: "funds_movement")
+    first_inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
+    second_outflow = create_transaction(account: source, amount: 200, kind: "funds_movement")
+    second_inflow = create_transaction(account: destination, amount: -200, kind: "funds_movement")
+    first = Transfer.create!(outflow_transaction: first_outflow.entryable, inflow_transaction: first_inflow.entryable)
+    second = Transfer.create!(outflow_transaction: second_outflow.entryable, inflow_transaction: second_inflow.entryable)
+
+    @syncable.remove_instance_variable(:@transfers_cache_version) if @syncable.instance_variable_defined?(:@transfers_cache_version)
+    version_before = @syncable.transfers_cache_version
+    first.destroy!
+    @syncable.remove_instance_variable(:@transfers_cache_version) if @syncable.instance_variable_defined?(:@transfers_cache_version)
+
+    assert_not_equal version_before, @syncable.transfers_cache_version
+    assert second.persisted?
   end
 
   test "investment_contributions_category returns existing category" do
@@ -96,6 +116,21 @@ class FamilyTest < ActiveSupport::TestCase
       assert_equal legacy_category.id, result.id
       assert_equal "Contributions aux investissements", result.name
     end
+  end
+
+  test "investment_contributions_category reuses a renamed legacy category" do
+    family = families(:dylan_family)
+    family.categories.where(name: Category.all_investment_contributions_names).destroy_all
+    renamed_category = family.categories.create!(
+      name: "Long-term investing",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    result = family.investment_contributions_category
+
+    assert_equal renamed_category.id, result.id
+    assert_equal Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY, result.default_key
   end
 
   test "investment_contributions_category merges multiple locale variants" do

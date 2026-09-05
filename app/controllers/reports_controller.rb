@@ -357,7 +357,7 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown
       # Base query: all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude budget-excluded kinds and persisted transfer legs (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -366,6 +366,7 @@ class ReportsController < ApplicationController
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
+      transactions = apply_cash_flow_transfer_filter(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       # Apply filters (includes finance account scoping)
@@ -425,8 +426,12 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
-      process_entry = ->(category, entry, is_trade) do
-        type = entry.amount > 0 ? "expense" : "income"
+      process_entry = ->(category, entry, is_trade, transaction = nil) do
+        type = if transaction
+          transaction.income_statement_classification
+        else
+          entry.amount > 0 ? "expense" : "income"
+        end
         begin
           converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
@@ -466,7 +471,7 @@ class ReportsController < ApplicationController
 
       # Process transactions
       transactions.each do |transaction|
-        process_entry.call(transaction.category, transaction.entry, false)
+        process_entry.call(transaction.category, transaction.entry, false, transaction)
       end
 
       # Process trades
@@ -651,6 +656,12 @@ class ReportsController < ApplicationController
       scope
     end
 
+    def apply_cash_flow_transfer_filter(scope)
+      scope.for_cash_flow_reporting(
+        include_investment_contributions: !Current.family.treat_investment_contributions_as_transfers?
+      )
+    end
+
     def exclude_tax_advantaged_accounts(scope)
       tax_advantaged_account_ids = Current.family.tax_advantaged_account_ids
       return scope if tax_advantaged_account_ids.blank?
@@ -705,7 +716,7 @@ class ReportsController < ApplicationController
 
     def build_transactions_breakdown_for_export
       # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude budget-excluded kinds and persisted transfer legs (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -714,6 +725,7 @@ class ReportsController < ApplicationController
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
+      transactions = apply_cash_flow_transfer_filter(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       transactions = apply_transaction_filters(transactions)
@@ -744,7 +756,7 @@ class ReportsController < ApplicationController
       end
 
       # Get all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      # Exclude budget-excluded kinds and persisted transfer legs (matching income_statement logic)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
@@ -753,6 +765,7 @@ class ReportsController < ApplicationController
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
+      transactions = apply_cash_flow_transfer_filter(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       transactions = apply_transaction_filters(transactions)
@@ -764,8 +777,7 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
-        is_expense = entry.amount > 0
-        type = is_expense ? "expense" : "income"
+        type = transaction.income_statement_classification
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 

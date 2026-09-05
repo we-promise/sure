@@ -220,6 +220,22 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment keeps investment to investment movement ordinary" do
+    source_entry = create_transaction(account: accounts(:crypto), amount: 123)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: accounts(:investment).id
+    )
+
+    action.apply(Transaction.where(id: source_entry.entryable.id))
+
+    transfer = Transfer.find_by!(outflow_transaction_id: source_entry.entryable.id)
+    assert_equal "funds_movement", transfer.outflow_transaction.kind
+    assert_equal "funds_movement", transfer.inflow_transaction.kind
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,

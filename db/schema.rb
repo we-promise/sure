@@ -412,6 +412,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.string "name", null: false
     t.uuid "parent_id"
     t.datetime "updated_at", null: false
+    t.string "default_key"
+    t.index ["family_id", "default_key"], name: "index_categories_on_family_id_and_default_key", unique: true, where: "(default_key IS NOT NULL)"
     t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
     t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
     t.index ["family_id"], name: "index_categories_on_family_id"
@@ -794,6 +796,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_180400) do
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.string "locale", default: "en"
     t.string "moniker", default: "Family", null: false
+    t.boolean "treat_investment_contributions_as_transfers", default: false, null: false
     t.integer "month_start_day", default: 1, null: false
     t.string "name"
     t.boolean "personal_budgets", default: false, null: false

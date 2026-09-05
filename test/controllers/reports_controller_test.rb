@@ -382,6 +382,61 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match /Export Retirement Income/, @response.body
   end
 
+  test "negative unpaired investment contributions are expenses in breakdown and export" do
+    category = @family.categories.create!(name: "Negative contribution report", color: "#123456")
+    investment_account = @family.accounts.create!(
+      owner: @user,
+      name: "Unpaired contribution account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    create_transaction(
+      account: investment_account,
+      name: "Negative unpaired contribution",
+      amount: -125,
+      category: category,
+      kind: "investment_contribution"
+    )
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+    groups = @controller.instance_variable_get(:@transactions)
+    assert_equal 1, groups.count { |group| group[:category_id] == category.id && group[:type] == "expense" }
+    assert_empty groups.select { |group| group[:category_id] == category.id && group[:type] == "income" }
+    expense_totals = @controller.instance_variable_get(:@current_expense_totals)
+    income_totals = @controller.instance_variable_get(:@current_income_totals)
+    assert_equal 125, expense_totals.category_totals.find { |total| total.category.id == category.id }.total
+    assert_equal 0, income_totals.category_totals.find { |total| total.category.id == category.id }.total
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+    rows = CSV.parse(@response.body)
+    expenses_index = rows.index { |row| row.first == "EXPENSES" }
+    category_index = rows.index { |row| row.first == "Negative contribution report" }
+    assert_not_nil expenses_index
+    assert_operator category_index, :>, expenses_index
+
+    @family.update!(treat_investment_contributions_as_transfers: true)
+    get reports_path(period_type: :monthly)
+    groups = @controller.instance_variable_get(:@transactions)
+    assert_empty groups.select { |group| group[:category_id] == category.id }
+    expense_totals = @controller.instance_variable_get(:@current_expense_totals)
+    assert_equal 0, expense_totals.category_totals.find { |total| total.category.id == category.id }.total
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+    assert_not_includes CSV.parse(@response.body).map(&:first), "Negative contribution report"
+  end
+
   test "export transactions swaps dates when end_date is before start_date" do
     start_date = Date.current
     end_date = 1.month.ago.to_date

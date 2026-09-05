@@ -1,8 +1,11 @@
 class IncomeStatement::FamilyStats
-  def initialize(family, interval: "month", account_ids: nil)
+  include IncomeStatement::TransferFiltering
+
+  def initialize(family, interval: "month", account_ids: nil, include_investment_contributions: true)
     @family = family
     @interval = interval
     @account_ids = account_ids
+    @include_investment_contributions = include_investment_contributions
   end
 
   def call
@@ -76,6 +79,7 @@ class IncomeStatement::FamilyStats
           )
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
+            AND (#{transfer_filter_sql("t")})
             AND ae.excluded = false
             AND a.exclude_from_reports = false
             #{pending_providers_sql}

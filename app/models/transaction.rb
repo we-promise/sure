@@ -85,6 +85,67 @@ class Transaction < ApplicationRecord
   # they represent real cash outflow from a budgeting perspective.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
+  # These kinds are cash outflows even when their entry is an inflow (for
+  # example, a provider-imported contribution into an investment account).
+  INCOME_STATEMENT_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
+
+  # A persisted Transfer is the authoritative signal that two transaction
+  # records represent an internal movement. Reporting must exclude both legs
+  # even when their destination-specific kinds are budget-tracked.
+  scope :without_matched_transfer, -> { where(unmatched_transfer_sql) }
+  scope :for_cash_flow_reporting, ->(include_investment_contributions: true) {
+    where(cash_flow_transfer_sql(include_investment_contributions: include_investment_contributions))
+  }
+
+  def income_statement_classification
+    return "expense" if INCOME_STATEMENT_EXPENSE_KINDS.include?(kind)
+
+    entry.amount.negative? ? "income" : "expense"
+  end
+
+  def self.unmatched_transfer_sql(transaction_alias = table_name)
+    <<~SQL.squish
+      NOT EXISTS (
+        SELECT 1 FROM transfers
+        WHERE transfers.inflow_transaction_id = #{transaction_alias}.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM transfers
+        WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+      )
+    SQL
+  end
+
+  # Investment contributions and loan payments are internal transfers for
+  # reconciliation, but represent money leaving the user's spendable cash
+  # flow. Include their outflow legs in cash-flow reporting while excluding
+  # every other matched transfer leg to avoid double counting.
+  def self.cash_flow_transfer_sql(transaction_alias = table_name, include_investment_contributions: true)
+    cash_flow_kinds = [ "loan_payment" ]
+    cash_flow_kinds.unshift("investment_contribution") if include_investment_contributions
+    unmatched_sql = unmatched_transfer_sql(transaction_alias)
+
+    # Investment contributions are excluded by kind when configured as
+    # transfers, even when provider data has not produced a persisted
+    # Transfer row yet. A persisted transfer, including an auto-match that is
+    # still pending, is authoritative for reporting.
+    unless include_investment_contributions
+      unmatched_sql = <<~SQL.squish
+        (#{unmatched_sql}
+        AND #{transaction_alias}.kind <> 'investment_contribution')
+      SQL
+    end
+
+    <<~SQL.squish
+      (EXISTS (
+        SELECT 1 FROM transfers
+        WHERE transfers.outflow_transaction_id = #{transaction_alias}.id
+          AND #{transaction_alias}.kind IN (#{cash_flow_kinds.map { |kind| "'#{kind}'" }.join(", ")})
+        )
+      OR (#{unmatched_sql}))
+    SQL
+  end
+
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
     "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",
