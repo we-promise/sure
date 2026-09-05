@@ -122,6 +122,38 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Sent 1.0 FAKE", entry.name
   end
 
+  test "localizes wallet movement names in German" do
+    date = 3.days.ago.to_date
+    @family.update!(locale: "de")
+    price_asset_at(date, 50)
+    store_movements(
+      fake_movement(external_id: "received", amount: "1.5", timestamp: date),
+      fake_movement(external_id: "sent", amount: "-1", timestamp: date)
+    )
+
+    I18n.with_locale(:en) do
+      OnchainWalletAccount::Processor.new(@onchain_account).process
+    end
+
+    received = @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_received")
+    sent = @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_sent")
+
+    assert_equal "Eingang: 1.5 FAKE", received.name
+    assert_equal "Ausgang: 1.0 FAKE", sent.name
+
+    received.update!(name: "Received 1.5 FAKE")
+    received.entryable.update!(investment_activity_label: "Buy")
+
+    I18n.with_locale(:en) do
+      assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
+
+    assert_equal "Eingang: 1.5 FAKE", received.reload.name
+    assert_equal "Ausgang: 1.0 FAKE", sent.reload.name
+    assert I18n.exists?("onchain_wallet_item.movement.received", :de, fallback: false)
+    assert I18n.exists?("onchain_wallet_item.movement.sent", :de, fallback: false)
+  end
+
   test "materializes a display-only excluded entry when that day's price is unknown" do
     date = 3.days.ago.to_date
     store_movements(fake_movement(external_id: "tx3", amount: "1.5", timestamp: date))
