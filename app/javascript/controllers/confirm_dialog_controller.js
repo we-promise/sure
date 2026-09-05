@@ -4,6 +4,11 @@ import { Controller } from "@hotwired/stimulus";
 // See javascript/controllers/application.js for how this is wired up
 export default class extends Controller {
   static targets = ["title", "subtitle", "confirmButton"];
+  static values = {
+    defaultTitle: String,
+    defaultBody: String,
+    defaultConfirmText: String,
+  };
 
   handleConfirm(rawData) {
     const data = this.#normalizeRawData(rawData);
@@ -26,6 +31,7 @@ export default class extends Controller {
 
   #prepareDialog(data) {
     const variant = data.variant || "primary";
+    const confirmText = data.confirmText || this.defaultConfirmTextValue;
 
     this.confirmButtonTargets.forEach((button) => {
       if (button.dataset.variant === variant) {
@@ -34,12 +40,11 @@ export default class extends Controller {
         button.setAttribute("hidden", true);
       }
 
-      button.textContent = data.confirmText || "Confirm";
+      button.textContent = confirmText;
     });
 
-    this.titleTarget.textContent = data.title || "Are you sure?";
-    this.subtitleTarget.innerHTML =
-      data.body || "This action cannot be undone.";
+    this.titleTarget.textContent = data.title || this.defaultTitleValue;
+    this.subtitleTarget.innerHTML = data.body || this.defaultBodyValue;
   }
 
   // If data is a string, it's the title.  Otherwise, return the parsed object.
@@ -48,7 +53,7 @@ export default class extends Controller {
       const parsed = JSON.parse(rawData);
 
       if (typeof parsed === "boolean") {
-        return { title: "Are you sure?" };
+        return {};
       }
 
       return parsed;
