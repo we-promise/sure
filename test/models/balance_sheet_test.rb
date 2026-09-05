@@ -156,10 +156,10 @@ class BalanceSheetTest < ActiveSupport::TestCase
     user = users(:empty)
     user.update!(default_account_order: "balance_desc")
 
-    create_account(name: "Business Low", balance: 1000, usage_type: "business", accountable: Depository.new)
-    create_account(name: "Personal Low", balance: 2000, usage_type: "personal", accountable: Depository.new)
-    create_account(name: "Business High", balance: 3000, usage_type: "business", accountable: Depository.new)
-    create_account(name: "Unknown High", balance: 4000, usage_type: nil, accountable: Depository.new)
+    create_account(name: "Business Low", owner: user, balance: 1000, usage_type: "business", accountable: Depository.new)
+    create_account(name: "Personal Low", owner: user, balance: 2000, usage_type: "personal", accountable: Depository.new)
+    create_account(name: "Business High", owner: user, balance: 3000, usage_type: "business", accountable: Depository.new)
+    create_account(name: "Unknown High", owner: user, balance: 4000, usage_type: nil, accountable: Depository.new)
 
     account_names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
 
