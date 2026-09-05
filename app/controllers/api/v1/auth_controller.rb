@@ -13,6 +13,15 @@ module Api
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
 
       def signup
+        # RegistrationsController refuses to register a user while the instance
+        # is closed. That gate is declared `if: :self_hosted?`, but
+        # onboarding_state only ever reaches "closed" on a self-hosted
+        # instance, so checking the state alone matches its effect.
+        if Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
@@ -74,6 +83,11 @@ module Api
 
       def login
         user = User.find_by(email: params[:email])
+
+        unless local_login_permitted_for?(user)
+          render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
+          return
+        end
 
         if user&.authenticate(params[:password])
           unless user.active?
@@ -364,6 +378,14 @@ module Api
       end
 
       private
+
+        # Mirrors SessionsController#create: with SSO-only mode on, the only
+        # local sign-in allowed is a super admin using the emergency override.
+        def local_login_permitted_for?(user)
+          return true if AuthConfig.local_login_enabled?
+
+          AuthConfig.local_admin_override_enabled? && user&.super_admin?
+        end
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)
