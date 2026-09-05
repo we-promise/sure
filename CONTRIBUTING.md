@@ -42,6 +42,23 @@ To get setup for local development, you have two options:
 6. If possible, [link your pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword) by adding the appropriate keyword (e.g. `fixes issue #XXX`)
 7. Before requesting a review, please make sure that all [Github Checks](https://docs.github.com/en/rest/checks?apiVersion=2022-11-28) have passed and your branch is up-to-date with the `main` branch. After doing so, request a review and wait for a maintainer's approval.
 
+### Engineering evidence rules
+
+- A gate test counts only after its mutation has been observed to fail and the
+  transcript is attached to the PR.
+- Every contract row must name a test that exists and fails when that behaviour
+  changes. Naming a planned or phantom test is not coverage.
+- Status claims cite the artefact and current evidence, including deferred
+  acceptance criteria and blockers.
+- Closing comments reproduce the issue acceptance criteria with per-item
+  evidence.
+- Each issue gets its own PR. A stacked PR must identify its parent and keep
+  its incremental diff reviewable.
+- Fixtures used as evidence must assert internal consistency before the suite
+  relies on them.
+- De-identification guards use allowlists of permitted token shapes, never
+  denylists of names or identifiers.
+
 All PRs should target the `main` branch.
 
 ### Automated Security Scanning
