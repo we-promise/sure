@@ -254,12 +254,22 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     ]
     provider = FakeWiseProvider.new(transfers: transfers, raise_on: { get_balance_statements: "forbidden" })
 
-    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").count }, 1 do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
 
     assert result[:success]
     assert_includes provider.calls, :get_transfers
     account = @wise_item.wise_accounts.find_by(currency: "EUR")
     assert_equal 1, account.raw_transactions_payload.size
+
+    entry = DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").recent.first
+    assert_equal "WiseItem::Importer", entry.source
+    assert_equal @wise_item.id, entry.metadata["wise_item_id"]
+    assert_equal false, entry.metadata["sca_private_key_configured"]
+    assert_equal "Provider::Wise::WiseError", entry.metadata["error_class"]
+    assert_equal "fetch_failed", entry.metadata["error_type"]
   end
 
   test "surfaces partial statement fetch failures without the transfer fallback" do

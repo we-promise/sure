@@ -79,7 +79,14 @@ class WiseItem::Importer
     # Used in WiseEntry::Processor to distinguish expenses (targetAccount != recipientId)
     # from incomes (targetAccount == recipientId).
     def fetch_borderless_accounts
+      trace_wise_fetch(operation: "borderless_accounts", status: "started", level: "info")
       result = wise_provider.get_borderless_accounts(wise_item.profile_id)
+      trace_wise_fetch(
+        operation: "borderless_accounts",
+        status: "completed",
+        level: "info",
+        received_record_count: Array(result).size
+      )
       Array(result).each_with_object({}) do |ba, map|
         borderless_id = ba["id"]
         recipient_id  = ba["recipientId"]
@@ -88,7 +95,7 @@ class WiseItem::Importer
         end
       end
     rescue => e
-      Rails.logger.warn "WiseItem::Importer - Could not fetch borderless accounts (#{e.message})"
+      trace_wise_fetch(operation: "borderless_accounts", status: "failed", level: "warn", error: e)
       {}
     end
 
@@ -141,8 +148,17 @@ class WiseItem::Importer
       cursor = nil
 
       loop do
+        trace_wise_fetch(operation: "activities", status: "started", level: "info", cursor: cursor, page_size: 100)
         result = with_rate_limit_retry { wise_provider.get_activities(wise_item.profile_id, cursor: cursor, size: 100) }
         batch = Array(result["activities"])
+        trace_wise_fetch(
+          operation: "activities",
+          status: "completed",
+          level: "info",
+          cursor: cursor,
+          received_record_count: batch.size,
+          next_cursor_present: result["cursor"].present?
+        )
         break if batch.empty?
 
         old_ones = batch.select { |a| parse_transfer_date(a["createdOn"]) < cutoff }
@@ -157,10 +173,10 @@ class WiseItem::Importer
 
       activities.uniq { |a| a["id"] }
     rescue Provider::Wise::WiseError => e
-      Rails.logger.warn "WiseItem::Importer - Could not fetch activities (#{e.message})"
+      trace_wise_fetch(operation: "activities", status: "failed", level: "warn", error: e, cursor: cursor)
       []
     rescue => e
-      Rails.logger.warn "WiseItem::Importer - Unexpected error fetching activities: #{e.message}"
+      trace_wise_fetch(operation: "activities", status: "failed", level: "warn", error: e, cursor: cursor)
       []
     end
 
@@ -172,8 +188,16 @@ class WiseItem::Importer
       limit = 100
 
       loop do
+        trace_wise_fetch(operation: "transfers", status: "started", level: "info", offset: offset, page_size: limit)
         page = with_rate_limit_retry { wise_provider.get_transfers(wise_item.profile_id, limit: limit, offset: offset) }
         batch = Array(page.is_a?(Hash) ? page["content"] : page)
+        trace_wise_fetch(
+          operation: "transfers",
+          status: "completed",
+          level: "info",
+          offset: offset,
+          received_record_count: batch.size
+        )
         break if batch.empty?
 
         # Wise returns transfers newest-first; stop once we're past the cutoff.
@@ -188,10 +212,10 @@ class WiseItem::Importer
       Rails.logger.info "WiseItem::Importer - Fetched #{transfers.size} transfers for profile #{wise_item.profile_id}"
       transfers
     rescue Provider::Wise::WiseError => e
-      Rails.logger.warn "WiseItem::Importer - Could not fetch transfers (#{e.message})"
+      trace_wise_fetch(operation: "transfers", status: "failed", level: "warn", error: e, offset: offset)
       []
     rescue => e
-      Rails.logger.warn "WiseItem::Importer - Unexpected error fetching transfers: #{e.message}"
+      trace_wise_fetch(operation: "transfers", status: "failed", level: "warn", error: e, offset: offset)
       []
     end
 
@@ -231,6 +255,14 @@ class WiseItem::Importer
         next if start_date > end_date
 
         @statement_fetch_attempted_accounts << wise_account.id
+        trace_wise_fetch(
+          operation: "balance_statement",
+          status: "started",
+          level: "info",
+          wise_account: wise_account,
+          start_date: start_date,
+          end_date: end_date
+        )
         rows = wise_provider.get_balance_statements(
           wise_item.profile_id,
           wise_account.balance_id,
@@ -238,17 +270,24 @@ class WiseItem::Importer
           start_date: start_date,
           end_date: end_date
         )
+        received_row_count = Array(rows).size
         rows = Array(rows).reject { |row| legacy_overlap_outgoing_row?(row, legacy_cutoff) }
+        trace_wise_fetch(
+          operation: "balance_statement",
+          status: "completed",
+          level: "info",
+          wise_account: wise_account,
+          received_row_count: received_row_count,
+          stored_row_count: rows.size
+        )
         result[wise_account.id] = rows.map { |row| row.merge("wise_statement" => true) }
       rescue Provider::Wise::WiseError => e
         @statement_fetch_failed_accounts << wise_account.id
-        capture_statement_error(wise_account, e, level: "warn")
-        Rails.logger.warn "WiseItem::Importer - Could not fetch statements for wise_account #{wise_account.id} (#{e.message})"
+        trace_wise_fetch(operation: "balance_statement", status: "failed", level: "warn", wise_account: wise_account, error: e)
         result[wise_account.id] = []
       rescue => e
         @statement_fetch_failed_accounts << wise_account.id
-        capture_statement_error(wise_account, e, level: "warn")
-        Rails.logger.warn "WiseItem::Importer - Unexpected error fetching statements for wise_account #{wise_account.id}: #{e.message}"
+        trace_wise_fetch(operation: "balance_statement", status: "failed", level: "warn", wise_account: wise_account, error: e)
         result[wise_account.id] = []
       end
     end
@@ -384,19 +423,33 @@ class WiseItem::Importer
       WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(transaction["type"])
     end
 
-    def capture_statement_error(wise_account, error, level:)
+    def trace_wise_fetch(operation:, status:, level:, wise_account: nil, error: nil, **metadata)
+      message = "WiseItem::Importer - Wise #{operation} fetch #{status}"
+      message = "#{message} for wise_account #{wise_account.id}" if wise_account
+      message = "#{message}: #{error.message}" if error
+
+      Rails.logger.public_send(level, message)
       DebugLogEntry.capture(
-        category: "provider_sync_error",
+        category: error ? "provider_sync_error" : "provider_sync",
         level: level,
-        message: "WiseItem::Importer - Failed to fetch statement for wise_account #{wise_account.id}: #{error.message}",
+        message: message,
         source: self.class.name,
         provider_key: "wise",
         family: wise_item.family,
-        account_provider: wise_account.account_provider,
-        metadata: { wise_account_id: wise_account.id, error_class: error.class.name }
+        account_provider: wise_account&.account_provider,
+        metadata: {
+          wise_item_id: wise_item.id,
+          operation: operation,
+          wise_account_id: wise_account&.id,
+          balance_id: wise_account&.balance_id,
+          currency: wise_account&.currency,
+          sca_private_key_configured: wise_item.sca_private_key.present?,
+          error_class: error&.class&.name,
+          error_type: error&.respond_to?(:error_type) ? error.error_type : nil
+        }.compact.merge(metadata)
       )
-    rescue => capture_error
-      Rails.logger.warn "WiseItem::Importer - Failed to capture statement error: #{capture_error.message}"
+    rescue => trace_error
+      Rails.logger.warn "WiseItem::Importer - Failed to capture statement trace: #{trace_error.message}"
     end
 
     # Routes an activity to the given WiseAccount.
