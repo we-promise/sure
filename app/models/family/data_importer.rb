@@ -1459,12 +1459,12 @@ class Family::DataImporter
       end
 
       names = refs.any? ? refs.map { |ref| ref["name"] } : action_data["value"].to_s.split(",")
+      tags_by_name = @family.tags.where(name: names).index_by(&:name)
 
       tag_ids = names.filter_map do |name|
         next if name.blank?
 
-        tag = @family.tags.find_by(name: name)
-        tag ||= @family.tags.create!(name: name)
+        tag = tags_by_name[name] ||= @family.tags.create!(name: name)
         tag.id
       end
 
