@@ -88,5 +88,24 @@
         ) %>
       </div>
     <% end %>
+
+    <% if @user.admin? %>
+      <%= form_with url: settings_appearance_path, method: :patch,
+            class: "p-3",
+            data: { controller: "auto-submit-form" } do |f| %>
+        <div class="flex cursor-pointer items-center gap-4 justify-between">
+          <div class="text-sm space-y-1">
+            <p class="text-primary font-medium"><%= t(".auto_generate_transaction_names_title") %></p>
+            <p class="text-secondary"><%= t(".auto_generate_transaction_names_description") %></p>
+          </div>
+          <%= render DS::Toggle.new(
+                id: "family_auto_generate_transaction_names",
+                name: "family[auto_generate_transaction_names]",
+                checked: Current.family.auto_generate_transaction_names?,
+                data: { auto_submit_form_target: "auto" }
+          ) %>
+        </div>
+      <% end %>
+    <% end %>
   </div>
 <% end %>
