@@ -40,6 +40,7 @@ class Loan
       @extra_for = extra_for || ->(_from_date, _to_date) { [] }
       @offset_for = offset_for || ->(_from_date, _to_date) { [] }
 
+      validate_boundaries!
       raise ArgumentError, "unsupported payment strategy: #{payment_strategy.inspect}" unless %i[hold reamortize].include?(@payment_strategy)
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
     end
@@ -224,6 +225,13 @@ class Loan
       def callable!(value, name)
         return value if value.respond_to?(:call)
         raise ArgumentError, "#{name} must be callable"
+      end
+
+      def validate_boundaries!
+        return unless starting_balance_as_of && accrual_start_date
+        return if starting_balance_as_of <= accrual_start_date
+
+        raise ArgumentError, "starting balance date must be on or before accrual start date"
       end
 
       def decimal(value)

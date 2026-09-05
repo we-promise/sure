@@ -89,6 +89,18 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.00"), result.payments.first[:interest_payment]
   end
 
+  test "rejects an accrual period before the date of the starting balance" do
+    assert_raises(ArgumentError, "starting balance date must precede accrual start") do
+      build_simulator(
+        starting_balance_as_of: Date.new(2024, 2, 1),
+        accrual_start_date: Date.new(2024, 1, 15),
+        payment_schedule: [ Date.new(2024, 3, 1) ],
+        payment_strategy: :hold,
+        payment_amount_for: ->(**_args) { BigDecimal("100.00") }
+      )
+    end
+  end
+
   test "daily accrual is charged once and receives offset change points" do
     result = build_simulator(
       starting_balance: "1000.00",
