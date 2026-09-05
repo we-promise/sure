@@ -145,7 +145,7 @@ class BudgetTest < ActiveSupport::TestCase
     end
   end
 
-  test "actual_spending nets refunds against expenses in same category" do
+  test "budget actuals preserve gross expenses and income in the same category" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
 
@@ -185,13 +185,16 @@ class BudgetTest < ActiveSupport::TestCase
     budget = Budget.find(budget.id)
     budget.sync_budget_categories
 
-    # Budget category should show net spending: $500 - $200 = $300
-    assert_equal 300, budget.budget_category_actual_spending(
+    # Budget actuals should preserve the gross expense and income amounts.
+    assert_equal 500, budget.budget_category_actual_spending(
       budget.budget_categories.find_by(category: healthcare)
     )
+    assert_equal 500, budget.actual_spending
+    assert_equal 500, budget.expense_category_totals.find { |ct| ct.category == healthcare }.total
+    assert_equal 200, budget.income_category_totals.find { |ct| ct.category == healthcare }.total
   end
 
-  test "budget_category_actual_spending does not go below zero" do
+  test "budget_category_actual_spending does not count income as spending" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
 
