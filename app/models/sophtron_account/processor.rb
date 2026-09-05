@@ -64,18 +64,10 @@ class SophtronAccount::Processor
 
       # Update account balance from latest Sophtron data
       account = sophtron_account.current_account
+      # Sophtron account balances should be preserved as returned by the provider.
+      # From testing credit card accounts, the balance is returned as a negative number for owed amounts. But it might depend on the provider or debt type.
+      # To be safe, we will use the balance as-is and not invert it.
       balance = sophtron_account.balance || sophtron_account.available_balance || 0
-
-      # Sophtron balance convention matches our app convention:
-      # - Positive balance = debt (you owe money)
-      # - Negative balance = credit balance (bank owes you, e.g., overpayment)
-      # No sign conversion needed - pass through as-is (same as Plaid)
-      #
-      # Exception: CreditCard and Loan accounts return inverted signs
-      # Provider returns negative for positive balance, so we negate it
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = -balance
-      end
 
       # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
       currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
