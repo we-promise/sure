@@ -142,7 +142,7 @@ class Setting < RailsSettings::Base
       plural.to_s.split(",").map(&:strip).reject(&:blank?)
     else
       # Backward compat: fall back to singular setting
-      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider ].compact
+      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider.presence ].compact
     end
   end
 

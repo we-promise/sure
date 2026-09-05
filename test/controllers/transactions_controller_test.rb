@@ -98,6 +98,151 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "resubmitting the same idempotency key does not create a duplicate transaction" do
+    idempotency_key = SecureRandom.uuid
+    params = {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: idempotency_key
+      }
+    }
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: params
+    end
+    assert_response :redirect
+    first_entry = Entry.order(:created_at).last
+
+    # Simulates a double-click or a browser retry: same form, same
+    # idempotency key, submitted again after the first request already
+    # completed and committed.
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: params
+    end
+    assert_response :redirect
+    assert_equal "Transaction created", flash[:notice]
+    assert_redirected_to account_url(first_entry.account)
+  end
+
+  test "the idempotency key does not mark the created transaction as provider-linked" do
+    # Regression test: the idempotency key must not be stored in
+    # external_id/source (Entry#linked? = external_id.present?), or a plain
+    # manual entry would incorrectly look provider-synced - disabling its
+    # editable fields in the UI and hiding it from future provider dedup.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_not created_entry.linked?
+    assert_nil created_entry.external_id
+    assert_nil created_entry.source
+  end
+
+  test "handles a genuine concurrent double-submit without raising or duplicating" do
+    idempotency_key = SecureRandom.uuid
+
+    # Simulates the race: another request with the same idempotency key wins
+    # and commits its INSERT in the window between our pre-check (which
+    # therefore still sees nothing, hence the first `nil`) and our own
+    # #save (which then hits the real partial unique index on
+    # entries(account_id, idempotency_key) and raises RecordNotUnique,
+    # exactly like the DB would under real concurrent requests). The rescue
+    # then re-runs the same lookup, this time finding the winner.
+    winning_entry = @entry.account.entries.create!(
+      name: "New transaction", date: Date.current, currency: "USD", amount: 100,
+      idempotency_key: idempotency_key,
+      entryable: Transaction.new
+    )
+    TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil, winning_entry)
+    Entry.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :redirect
+    assert_redirected_to account_url(winning_entry.account)
+    assert_equal "Transaction created", flash[:notice]
+  end
+
+  test "a RecordNotUnique with no matching entry is not silently swallowed" do
+    idempotency_key = SecureRandom.uuid
+
+    # Defensive-branch coverage: if the unique index ever rejects an insert
+    # for a reason other than "another request with this exact idempotency
+    # key already won" (e.g. a different constraint), we must not pretend it
+    # succeeded - the error should propagate instead of being hidden behind
+    # a fake success redirect.
+    TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil)
+    Entry.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+  end
+
+  test "create without an idempotency key still creates a transaction as before" do
+    # A raw POST that doesn't go through the rendered form (e.g. a script)
+    # simply skips the idempotency check rather than being rejected - the
+    # form always supplies a key in normal browser usage.
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      2.times do
+        post transactions_url, params: {
+          entry: {
+            account_id: @entry.account_id,
+            name: "New transaction",
+            date: Date.current,
+            currency: "USD",
+            amount: 100,
+            nature: "inflow",
+            entryable_type: "Transaction",
+            entryable_attributes: { category_id: Category.first.id }
+          }
+        }
+      end
+    end
+  end
+
   test "create without an account re-renders the form instead of raising" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       post transactions_url, params: {
@@ -341,6 +486,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
+  end
+
+  # Row only opened on a precise click on the name text (whitespace between
+  # name/avatar/amount looked clickable via the row's hover styling but did
+  # nothing). A row-level click delegates to the name link now, so the whole
+  # row opens the drawer while interactive descendants (checkbox, category
+  # menu, account link) keep handling their own clicks.
+  test "transaction row delegates whole-row clicks to the drawer link" do
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame_id = ActionView::RecordIdentifier.dom_id(@entry.entryable)
+    row = doc.at_css("turbo-frame##{frame_id} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(@entry), drawer_link["href"]
+  end
+
+  test "split parent row delegates whole-row clicks to the drawer link" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
+
+    entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css(".split-group [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
   end
 
   test "can paginate" do

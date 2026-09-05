@@ -478,6 +478,7 @@ de:
         snaptrade: Verbindet Depots über das Aggregationsnetz von SnapTrade.
         sophtron: Verbindet Banken und Versorger in den USA & Kanada.
         trading212: Synchronisiert dein Trading-212-Depot über einen API-Key mit Lesezugriff.
+        trade_republic: Synchronisiert dein Trade-Republic-Konto über einen sicheren Web-Login mit Lesezugriff.
         wise: Synchronisiert deine Wise-Guthaben in mehreren Währungen und internationale Überweisungen automatisch.
       trading212_panel:
         accounts_tab: Konten
@@ -502,6 +503,59 @@ de:
           step_3: Füg beides unten ein, wähl Umgebung und Kontowährung und speichere.
         sync: Sync
         update_configuration: Konfiguration aktualisieren
+      trade_republic_panel:
+        encryption_warning:
+          title: Verschlüsselung ist nicht konfiguriert
+          message: Trade-Republic-Zugangsdaten und Sitzungsdaten können erst sicher gespeichert werden, wenn Active-Record-Verschlüsselung konfiguriert ist.
+        steps:
+          step_1: Gib die Telefonnummer und PIN deiner Trade-Republic-App ein und speichere sie.
+          step_2: Gib den Code deiner Authenticator-App ein, wenn du dazu aufgefordert wirst.
+          step_3: Bestätige den Login in deiner Trade-Republic-App, wenn du dazu aufgefordert wirst.
+        phone_number_label: Telefonnummer
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Leer lassen, um die aktuelle Telefonnummer zu behalten
+        pin_label: PIN
+        pin_placeholder_new: PIN deiner Trade-Republic-App
+        pin_placeholder_existing: Leer lassen, um die aktuelle PIN zu behalten
+        currency_label: Kontowährung
+        connect: Einloggen
+        confirm_login: Login prüfen
+        complete_login: Fortfahren
+        authenticator_code_label: Authenticator-Code (falls angefordert)
+        authenticator_code_placeholder: 6-stelliger Code
+        push_login_notice: Bestätige jetzt den Login in deiner Trade-Republic-App. Sure prüft automatisch im Hintergrund. Du kannst den Status auch direkt selbst prüfen.
+        check_login_status: Status jetzt prüfen
+        authenticator_code_notice: Gib den Code deiner Authenticator-App ein.
+        approval_pending: Login gestartet. Bestätige ihn in der Trade-Republic-App; Sure prüft automatisch.
+        awaiting_confirmation: Bestätigung in der Trade-Republic-App ausstehend.
+        awaiting_authenticator_code: Authenticator-Code erforderlich.
+        login_expired: Die Bestätigung ist abgelaufen.
+        restart_login: Login erneut starten
+        connection_success:
+          title: Trade Republic erfolgreich verbunden
+          message: Deine Trade-Republic-Verbindung ist eingerichtet.
+          description: Sure synchronisiert deine Trade-Republic-Daten jetzt im Hintergrund.
+          close: Fertig
+        qr_login: Mit QR-Code einloggen
+        qr_cancel: QR-Login abbrechen
+        qr_back_to_credentials: Zurück zu Telefonnummer und PIN
+        qr_loading: QR-Code wird vorbereitet …
+        qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
+        qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
+        qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        save_configuration: Speichern und Login starten
+        update_configuration: Konfiguration aktualisieren
+        sync: Sync
+        disconnect: Trade Republic trennen
+        disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
+        status_configured_prefix: "Verbunden. Im Reiter"
+        accounts_tab: Konten
+        setup_accounts: Konten einrichten
+        accounts_discovered:
+          one: 1 Trade-Republic-Konto gefunden.
+          other: "%{count} Trade-Republic-Konten gefunden."
+        status_configured_suffix: verwaltest du die gefundenen Konten.
+        not_configured: Nicht eingerichtet.
       up_panel:
         step_1_html: Geh zu %{link} und erzeug einen persönlichen Zugriffstoken.
         step_2: Kopier deinen persönlichen Zugriffstoken.
