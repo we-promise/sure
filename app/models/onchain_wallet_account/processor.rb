@@ -357,8 +357,11 @@ class OnchainWalletAccount::Processor
     end
 
     def translated_name(key, quantity)
+      # Entry names persist across request- and scheduler-triggered syncs, so
+      # they must not depend on whichever locale happened to enqueue the job.
       I18n.t(
         key,
+        locale: onchain_wallet_account.onchain_wallet_item.family.locale,
         quantity: quantity.abs.round(8).to_s("F"),
         symbol: onchain_wallet_account.symbol
       )
