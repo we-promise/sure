@@ -11,12 +11,17 @@ class MfaController < ApplicationController
 
   def create
     if Current.user.verify_otp?(params[:code])
-      @backup_codes = Current.user.enable_mfa!
+      ActiveRecord::Base.transaction do
+        @backup_codes = Current.user.enable_mfa!
+        SecurityAuditLog.log_mfa_enabled!(user: Current.user, request: request)
+      end
       render :backup_codes
     else
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")
     end
+  rescue ActiveRecord::RecordInvalid
+    redirect_to new_mfa_path, alert: t(".setup_failed")
   end
 
   def verify
@@ -99,8 +104,13 @@ class MfaController < ApplicationController
   end
 
   def disable
-    Current.user.disable_mfa!
+    ActiveRecord::Base.transaction do
+      Current.user.disable_mfa!
+      SecurityAuditLog.log_mfa_disabled!(user: Current.user, request: request)
+    end
     redirect_to settings_security_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid
+    redirect_to settings_security_path, alert: t(".failure")
   end
 
   private

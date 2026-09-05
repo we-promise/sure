@@ -101,7 +101,7 @@ module Admin
         )
 
         redirect_to admin_users_path, notice: t(".success_family")
-      elsif @user.update(user_update_attributes)
+      elsif update_user_and_log_password_change
         changes = []
         changes << :role if @user.saved_change_to_role?
         changes << :password if @user.saved_change_to_password_digest?
@@ -181,6 +181,21 @@ module Admin
 
       def set_user
         @user = User.find(params[:id])
+      end
+
+      # Wrapped in a transaction so a failure writing the audit entry rolls
+      # back the password/role change too, instead of leaving a sensitive
+      # change committed with no trail of it.
+      def update_user_and_log_password_change
+        ActiveRecord::Base.transaction do
+          next false unless @user.update(user_update_attributes)
+
+          if @user.saved_change_to_password_digest?
+            SecurityAuditLog.log_password_changed!(user: @user, request: request, actor: Current.user)
+          end
+
+          true
+        end
       end
 
       def user_params

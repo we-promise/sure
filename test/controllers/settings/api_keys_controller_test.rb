@@ -56,6 +56,25 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     existing.reload
     refute existing.revoked?
     assert_includes new_key.scopes, "read_write"
+
+    log = SecurityAuditLog.where(user: @user, event_type: "api_key_created").last
+    assert_equal new_key.id, log.metadata["api_key_id"]
+  end
+
+  test "create does not persist the key when the audit log write fails" do
+    SecurityAuditLog.stubs(:log_api_key_created!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    assert_no_difference "ApiKey.count" do
+      post settings_api_keys_path, params: {
+        api_key: {
+          name: "Never Persisted Key",
+          scopes: "read"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil @user.api_keys.find_by(name: "Never Persisted Key")
   end
 
   test "create rejects blank name" do
@@ -166,6 +185,57 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     key2.reload
     assert key1.revoked?
     refute key2.revoked?
+
+    log = SecurityAuditLog.where(user: @user, event_type: "api_key_revoked").last
+    assert_equal key1.id, log.metadata["api_key_id"]
+  end
+
+  test "destroy still revokes and reports success when the audit log write fails" do
+    key = ApiKey.create!(
+      user: @user,
+      name: "Key One",
+      display_key: "key_one_audit_fail_123",
+      scopes: [ "read" ]
+    )
+    SecurityAuditLog.stubs(:log_api_key_revoked!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    delete settings_api_key_path(key)
+
+    assert_redirected_to settings_api_keys_path
+    assert_equal I18n.t("settings.api_keys.destroy.revoked_successfully"), flash[:notice]
+    assert key.reload.revoked?
+  end
+
+  test "destroy still revokes and reports success when the audit log write raises a database error" do
+    key = ApiKey.create!(
+      user: @user,
+      name: "Key One",
+      display_key: "key_one_db_error_123",
+      scopes: [ "read" ]
+    )
+    SecurityAuditLog.stubs(:log_api_key_revoked!).raises(ActiveRecord::StatementInvalid.new("connection lost"))
+
+    delete settings_api_key_path(key)
+
+    assert_redirected_to settings_api_keys_path
+    assert_equal I18n.t("settings.api_keys.destroy.revoked_successfully"), flash[:notice]
+    assert key.reload.revoked?
+  end
+
+  test "destroy of a nonexistent key does not write an audit log" do
+    other_user = users(:family_member)
+    other_user.api_keys.destroy_all
+    other_key = ApiKey.create!(
+      user: other_user,
+      name: "Other User Key",
+      display_key: "other_user_key_#{SecureRandom.hex(8)}",
+      scopes: [ "read" ]
+    )
+
+    assert_no_difference "SecurityAuditLog.count" do
+      delete settings_api_key_path(other_key)
+    end
+    assert_response :not_found
   end
 
   test "destroy cannot revoke demo monitoring key" do

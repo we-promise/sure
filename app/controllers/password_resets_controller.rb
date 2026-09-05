@@ -37,7 +37,7 @@ class PasswordResetsController < ApplicationController
       return
     end
 
-    if @user.update(password_params)
+    if update_password_and_log_change
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
@@ -45,6 +45,16 @@ class PasswordResetsController < ApplicationController
   end
 
   private
+
+    def update_password_and_log_change
+      ActiveRecord::Base.transaction do
+        next false unless @user.update(password_params)
+
+        SecurityAuditLog.log_password_changed!(user: @user, request: request)
+
+        true
+      end
+    end
 
     def ensure_password_resets_enabled
       return if AuthConfig.password_features_enabled?

@@ -283,6 +283,35 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert target.authenticate(new_password), "User should authenticate with the new password"
   end
 
+  test "update logs an audit entry with the admin as actor when setting a new password" do
+    target = users(:family_member)
+
+    assert_difference "SecurityAuditLog.count", 1 do
+      patch admin_user_url(target), params: {
+        user: {
+          role: target.role,
+          password: "Secure1!pass"
+        }
+      }
+    end
+
+    log = SecurityAuditLog.last
+    assert_equal "password_changed", log.event_type
+    assert_equal target.id, log.user_id
+    assert_equal users(:sure_support_staff).id, log.metadata["actor_user_id"]
+    assert_equal target.email, log.user_email
+  end
+
+  test "update does not log an audit entry when the password is unchanged" do
+    target = users(:family_member)
+
+    assert_no_difference "SecurityAuditLog.count" do
+      patch admin_user_url(target), params: {
+        user: { role: "admin", password: "" }
+      }
+    end
+  end
+
   test "update shows descriptive notification for role change only" do
     target = users(:family_member)
 
