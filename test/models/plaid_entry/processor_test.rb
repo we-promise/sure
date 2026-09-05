@@ -120,4 +120,50 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     entry = Entry.order(created_at: :desc).first
     assert_nil entry.transaction.category_id
   end
+
+  test "stores provider payment metadata on the transaction" do
+    plaid_transaction = {
+      "transaction_id" => "with-metadata",
+      "merchant_name" => "Amazon",
+      "original_description" => "AMZN Mktp US*AB12CD SEATTLE WA",
+      "amount" => 100,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "payment_channel" => "online",
+      "transaction_code" => nil,
+      "payment_meta" => {
+        "payee" => "Amazon",
+        "ppd_id" => nil,
+        "reference_number" => "REF-1"
+      },
+      "counterparties" => [
+        { "name" => "Amazon", "type" => "merchant", "confidence_level" => "VERY_HIGH", "entity_id" => "ent_1" }
+      ],
+      "personal_finance_category" => {
+        "detailed" => "Food"
+      },
+      "merchant_entity_id" => "with-metadata-merchant"
+    }
+
+    @category_matcher.expects(:match).with("Food").returns(categories(:food_and_drink))
+
+    processor = PlaidEntry::Processor.new(
+      plaid_transaction,
+      plaid_account: @plaid_account,
+      category_matcher: @category_matcher
+    )
+
+    processor.process
+
+    entry = Entry.find_by!(external_id: "with-metadata", source: "plaid")
+    plaid_extra = entry.transaction.extra.fetch("plaid")
+
+    assert_equal "AMZN Mktp US*AB12CD SEATTLE WA", plaid_extra["original_description"]
+    assert_equal "online", plaid_extra["payment_channel"]
+    # Blank sub-values are dropped rather than stored as nulls
+    assert_equal({ "payee" => "Amazon", "reference_number" => "REF-1" }, plaid_extra["payment_meta"])
+    assert_equal 1, plaid_extra["counterparties"].size
+    assert_equal "Amazon", plaid_extra["counterparties"].first["name"]
+    assert_nil plaid_extra["transaction_code"]
+  end
 end
