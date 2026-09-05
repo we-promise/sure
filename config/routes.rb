@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       post :sync
       get :setup_accounts
       post :complete_account_setup
+      post :generate_sca_keypair
     end
   end
 
