@@ -328,7 +328,7 @@ class MonobankItem::Importer
       capture_sync_error("Rate limited while fetching statement", e, monobank_account: monobank_account, level: "warn")
       { success: false, skipped: true, transactions_count: 0 }
     rescue Provider::Monobank::Error => e
-      mark_requires_update! if e.failure_code.in?([ :unauthorized, :access_forbidden ])
+      mark_requires_update!(monobank_account: monobank_account) if e.failure_code.in?([ :unauthorized, :access_forbidden ])
       Rails.logger.error "MonobankItem::Importer - Monobank API error for account #{monobank_account.id}: #{e.failure_code}"
       capture_sync_error("Failed to fetch statement", e, monobank_account: monobank_account, error_type: e.failure_code)
       { success: false, error: I18n.t("monobank_item.errors.transactions_failed"), transactions_count: 0 }
@@ -512,11 +512,15 @@ class MonobankItem::Importer
     # Flag the item as requiring re-authorization, swallowing update errors. A failure
     # here means the connection keeps showing as healthy after its token was rejected,
     # so it is recorded where support can find it rather than only in the app log.
-    def mark_requires_update!
+    def mark_requires_update!(monobank_account: nil)
       monobank_item.update!(status: :requires_update)
     rescue => e
       Rails.logger.error "MonobankItem::Importer - Failed to update item status: #{e.class}"
-      capture_sync_error("Failed to flag connection as requiring re-authorization", e)
+      capture_sync_error(
+        "Failed to flag connection as requiring re-authorization",
+        e,
+        monobank_account: monobank_account
+      )
     end
 
     # Build a skip result mirroring +import+'s shape. Monobank throttles client-info to
