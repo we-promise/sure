@@ -18,6 +18,14 @@
       <span class="font-medium text-primary uppercase text-xs">to</span>
       <% if action.executor.type == "select" %>
         <%= form.select :value, action.options || [], {} %>
+      <% elsif action.executor.type == "multi_select" %>
+        <%= render DS::TagSelect.new(
+              form: form,
+              tags: rule.family.tags.alphabetically,
+              selected_ids: action.value.to_s.split(","),
+              attribute: :value,
+              show_label: false
+            ) %>
       <% elsif action.executor.type == "text" %>
         <%= form.text_field :value, placeholder: t("rules.actions.value_placeholder") %>
       <% end %>
@@ -34,6 +42,17 @@
   <template data-rule--actions-target="selectTemplate">
     <span class="font-medium text-primary uppercase text-xs">to</span>
     <%= form.select :value, [], {} %>
+  </template>
+
+  <template data-rule--actions-target="multiSelectTemplate">
+    <span class="font-medium text-primary uppercase text-xs">to</span>
+    <%= render DS::TagSelect.new(
+          form: form,
+          tags: rule.family.tags.alphabetically,
+          selected_ids: [],
+          attribute: :value,
+          show_label: false
+        ) %>
   </template>
 
   <template data-rule--actions-target="textTemplate">
