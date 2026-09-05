@@ -53,6 +53,8 @@ en:
       exclude_from_reports: Exclude from all reports
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
+      business_usage_label: Business account
+      business_usage_hint: Mark accounts used for business, freelance, or sole proprietor activity.
     index:
       accounts: Accounts
       cancel_sync: Cancel sync
@@ -166,6 +168,9 @@ en:
       tax_deferred: Tax-Deferred
       tax_exempt: Tax-Exempt
       tax_advantaged: Tax-Advantaged
+    usage_types:
+      personal: Personal
+      business: Business
     tax_treatment_descriptions:
       taxable: Gains taxed when realized
       tax_deferred: Contributions deductible, taxed on withdrawal
