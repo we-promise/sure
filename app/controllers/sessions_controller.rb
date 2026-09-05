@@ -312,8 +312,13 @@ class SessionsController < ApplicationController
         return
       end
 
-      # Store id_token and provider for RP-initiated logout
-      session[:id_token_hint] = auth.credentials&.id_token if auth.credentials&.id_token
+      # Store id_token and provider for RP-initiated logout. The two move
+      # together: a callback that returns no id_token has to clear the
+      # previous one. Updating the provider while keeping a stale hint makes
+      # #destroy send the token minted by an earlier provider to this
+      # provider's end-session endpoint (CWE-200).
+      id_token = auth.credentials&.id_token
+      session[:id_token_hint] = id_token.presence
       session[:sso_login_provider] = auth.provider
 
       # MFA check: If user has MFA enabled, require verification

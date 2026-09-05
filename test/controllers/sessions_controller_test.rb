@@ -1086,6 +1086,35 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
   # reach the app. The OIDC callback is the only thing that really sets it, so
   # this drives the real abandoned-OIDC flow: the user starts an SSO sign-in,
   # is parked at the MFA prompt, gives up and signs in with their password.
+  test "signing in with a second provider does not keep the first provider's logout token" do
+    @user.sessions.destroy_all
+    first = oidc_identities(:bob_google)
+    second = @user.oidc_identities.create!(provider: "other_idp", uid: "other-idp-uid-1")
+
+    setup_omniauth_mock(
+      provider: first.provider,
+      uid: first.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-minted-by-the-first-provider"
+    )
+    get "/auth/openid_connect/callback"
+    assert_equal "id-token-minted-by-the-first-provider", session[:id_token_hint]
+
+    # The second provider issues no id_token. Carrying the first one over would
+    # hand its token to the second provider's end-session endpoint at logout.
+    setup_omniauth_mock(
+      provider: second.provider,
+      uid: second.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+    get "/auth/openid_connect/callback"
+
+    assert_equal second.provider, session[:sso_login_provider]
+    assert_nil session[:id_token_hint], "a stale hint must not be paired with a new provider"
+  end
+
   test "a local sign-in does not inherit OIDC logout hints left by an abandoned SSO attempt" do
     @user.setup_mfa!
     @user.enable_mfa!
