@@ -214,4 +214,19 @@ class ImportTest < ActiveSupport::TestCase
 
     assert_equal Date.new(2024, 5, 15), Date.strptime("15/05/24", import.date_format)
   end
+
+  # The CSV exports escape formula-triggering values, and the exports are meant
+  # to be importable again, so the parser has to undo it.
+  test "parse_csv_str undoes the CSV formula escape" do
+    csv = Import.parse_csv_str("name,notes\n'=SUM(A1),'-1.5x leverage\n")
+
+    assert_equal "=SUM(A1)", csv.first["name"]
+    assert_equal "-1.5x leverage", csv.first["notes"]
+  end
+
+  test "parse_csv_str keeps a quote that is part of the value" do
+    csv = Import.parse_csv_str("name\nO'Brien\n")
+
+    assert_equal "O'Brien", csv.first["name"]
+  end
 end
