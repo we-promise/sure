@@ -447,6 +447,19 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     ]
   end
 
+  # --- #36: which accrual the production read path runs -------------------
+  #
+  # The version bump to 3 shipped while `generate_schedule` still accrued
+  # monthly, which would have invalidated every persisted row on deploy to
+  # regenerate identical numbers. Pin the pairing so it cannot happen silently.
+  test "the persisted schedule accrues monthly, and the algorithm version says so" do
+    assert_equal false, Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL
+    assert_equal 2, Loan::AmortizationSchedule::ALGORITHM_VERSION,
+      "ALGORITHM_VERSION must not advance past 2 while SCHEDULE_DAILY_ACCRUAL is false -- " \
+      "the version is baked into the schedule signature, so bumping it rebuilds every " \
+      "persisted row for every loan while producing identical numbers (#36)"
+  end
+
   test "characterization assertion fails on a deliberate one-cent mutation" do
     expected = characterized_row(1, "2024-02-01", "0.0", "33.33", "33.33", "0.00", "100.00", "66.67")
     mutated = expected.merge(payment_amount: BigDecimal("33.34"))

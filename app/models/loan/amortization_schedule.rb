@@ -1,7 +1,20 @@
 class Loan
   # Calculates amortization schedules for loans using the constant-payment method
   class AmortizationSchedule
-    ALGORITHM_VERSION = 3
+    # Whether the PERSISTED schedule accrues interest daily.
+    #
+    # Deliberately false. Daily accrual exists (`Loan::InterestAccrual`, the
+    # change-point segmentation, the offset and extra-repayment resolvers) but
+    # is gated on the lender-statement reconciliation in #11 (gate G2), which
+    # has not been performed. Until it is, the production read path accrues
+    # monthly and the persisted rows say so.
+    #
+    # ALGORITHM_VERSION must not advance past 2 while this is false: the
+    # version is baked into `Loan#amortization_schedule_signature`, so bumping
+    # it invalidates and rebuilds every persisted row for every loan while
+    # producing byte-identical numbers. See #36.
+    SCHEDULE_DAILY_ACCRUAL = false
+    ALGORITHM_VERSION = 2
 
     attr_reader :loan
 
@@ -137,7 +150,8 @@ class Loan
           payment_amount_for: ->(rate:, balance:, remaining_payments:, **_kwargs) {
             calculate_segment_payment(rate, balance, remaining_payments)
           },
-          currency_precision: currency_precision
+          currency_precision: currency_precision,
+          daily_accrual: SCHEDULE_DAILY_ACCRUAL
         ).run.payments
       end
 
