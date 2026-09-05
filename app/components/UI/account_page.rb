@@ -46,8 +46,10 @@ class UI::AccountPage < ApplicationComponent
     base_tabs = case account.accountable_type
     when "Investment", "Crypto"
       [ :activity, :holdings ]
-    when "Property", "Vehicle", "Loan"
+    when "Property", "Vehicle"
       [ :activity, :overview ]
+    when "Loan"
+      loan_tabs
     else
       [ :activity ]
     end
@@ -79,6 +81,8 @@ class UI::AccountPage < ApplicationComponent
     when :holdings, :overview
       # Accountable is responsible for implementing the partial in the correct folder
       render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+    when :schedule
+      render_schedule_tab
     when :statements
       render_statement_tab
     end
@@ -107,4 +111,25 @@ class UI::AccountPage < ApplicationComponent
       can_manage_statements: can_manage_statements
     }
   end
+
+  def render_schedule_tab
+    return render "loans/tabs/schedule", account: account if active_tab == :schedule
+
+    turbo_frame_tag schedule_tab_frame_id,
+                    src: helpers.account_path(account, tab: "schedule"),
+                    loading: :lazy
+  end
+
+  def schedule_tab_frame_id
+    dom_id(account, :schedule_tab)
+  end
+
+  private
+    # Only show the Schedule tab when the loan actually has a schedule to
+    # show -- e.g. not for a loan missing a rate or term.
+    def loan_tabs
+      base = [ :activity, :overview ]
+      base << :schedule if account.loan&.amortizable?
+      base
+    end
 end

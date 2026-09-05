@@ -1,0 +1,5 @@
+<%# locals: (account:) %>
+
+<%= turbo_frame_tag dom_id(account, :schedule_tab) do %>
+  <%= render "loans/tabs/schedule", account: account %>
+<% end %>

@@ -38,3 +38,15 @@ en:
         type: Type
         unknown: Unknown
         edit_loan_details: "Edit loan details"
+      schedule:
+        monthly_payment: Monthly Payment
+        total_interest: Total Interest
+        total_cost: Total Cost
+        payoff_date: Payoff Date
+        variable_rate_notice: "This loan has a variable interest rate. The schedule below reflects the current rate and any recorded rate changes; future rate changes will shift it."
+        number: "#"
+        date: Date
+        payment: Payment
+        principal: Principal
+        interest: Interest
+        remaining_balance: Remaining Balance

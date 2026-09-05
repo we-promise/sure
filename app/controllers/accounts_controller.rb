@@ -82,6 +82,13 @@ class AccountsController < ApplicationController
       return render_statement_tab_frame if statement_tab_frame_request?
     end
 
+    if schedule_tab_frame_request?
+      build_schedule_tab_data
+      return render_schedule_tab_frame
+    end
+
+    build_schedule_tab_data if schedule_tab_active?
+
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?
 
@@ -407,6 +414,14 @@ class AccountsController < ApplicationController
       render partial: "accounts/show/statements_frame", locals: statement_tab_locals, layout: false
     end
 
+    def schedule_tab_frame_request?
+      turbo_frame_request? && request.headers["Turbo-Frame"] == helpers.dom_id(@account, :schedule_tab)
+    end
+
+    def render_schedule_tab_frame
+      render partial: "accounts/show/schedule_frame", locals: { account: @account }, layout: false
+    end
+
     def statement_tab_locals
       {
         account: @account,
@@ -419,6 +434,16 @@ class AccountsController < ApplicationController
 
     def statement_tab_active?
       @tab == "statements"
+    end
+
+    def schedule_tab_active?
+      @tab == "schedule"
+    end
+
+    def build_schedule_tab_data
+      return unless @account.loan
+
+      @account.loan.ensure_amortization_schedule_current!
     end
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views

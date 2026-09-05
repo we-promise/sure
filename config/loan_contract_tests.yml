@@ -1,0 +1,82 @@
+C1:
+  file: test/models/loan/interest_accrual_test.rb
+  class: Loan::InterestAccrualTest
+  tests:
+    - a non-leap full year equals balance times annual rate
+C2:
+  file: test/models/loan/interest_accrual_test.rb
+  class: Loan::InterestAccrualTest
+  tests:
+    - leap-year accrual uses 366 elapsed days over the 365 denominator
+C3:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - daily accrual is charged once and receives offset change points
+C4:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - passes the accrual stub boundaries to the interest resolver
+C5:
+  file: test/models/loan/amortization_schedule_test.rb
+  class: Loan::AmortizationScheduleTest
+  tests:
+    - payment schedule has correct number of payments
+C6:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - an extra repayment on a payment date is applied before payment
+C7:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - daily accrual applies a mid-period rate change only from its effective date
+C8:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - a rate change on a payment date affects the next period only
+C9:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - event order is a fixed contract
+    - extra repayment and offset movement on one date affect the next period
+C10:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - a rate change on a payment date affects the next period only
+C11:
+  file: test/models/loan/simulator_test.rb
+  class: Loan::SimulatorTest
+  tests:
+    - hold strategy keeps the payment and settles the final period
+    - reamortize strategy resolves a new payment for each rate segment
+C12:
+  file: test/models/loan/interest_accrual_test.rb
+  class: Loan::InterestAccrualTest
+  tests:
+    - charge rounds once after unrounded accumulation
+C13:
+  file: test/models/loan/interest_accrual_test.rb
+  class: Loan::InterestAccrualTest
+  tests:
+    - piecewise segments equal the equivalent daily loop
+C14:
+  file: test/models/loan/amortization_schedule_test.rb
+  class: Loan::AmortizationScheduleTest
+  tests:
+    - final payment clears balance
+C15:
+  file: test/models/loan/interest_accrual_test.rb
+  class: Loan::InterestAccrualTest
+  tests:
+    - offset at or above the balance produces no interest for that segment
+C16:
+  file: test/models/loan/interest_accrual_test.rb
+  class: Loan::InterestAccrualTest
+  tests:
+    - an offset change at the range start applies to the full range

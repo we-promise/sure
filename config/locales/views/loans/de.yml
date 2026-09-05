@@ -38,3 +38,15 @@ de:
         term: Laufzeit
         type: Art
         unknown: Unbekannt
+      schedule:
+        monthly_payment: Monatsrate
+        total_interest: Zinsen gesamt
+        total_cost: Gesamtkosten
+        payoff_date: Tilgungsdatum
+        variable_rate_notice: "Dieser Kredit hat einen variablen Zinssatz. Der unten stehende Plan basiert auf dem aktuellen Zinssatz und erfassten Zinsänderungen -- künftige Zinsänderungen verschieben ihn."
+        number: "Nr."
+        date: Datum
+        payment: Zahlung
+        principal: Tilgung
+        interest: Zinsen
+        remaining_balance: Restschuld

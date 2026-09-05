@@ -697,6 +697,58 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
   end
+
+  test "schedule tab renders the full amortization schedule for an amortizable loan" do
+    loan_account = accounts(:loan)
+
+    get account_url(loan_account, tab: "schedule")
+    assert_response :success
+    assert_select "button[data-id='schedule']"
+    assert_select "table tbody tr", count: loan_account.loan.term_months
+  end
+
+  # The schedule should remain unloaded until its tab is selected. Regression
+  # for moving schedule synchronization out of the view partial and behind a
+  # dedicated turbo-frame request.
+  test "schedule is lazy-loaded when a different tab is active" do
+    loan_account = accounts(:loan)
+    assert_equal 0, loan_account.loan.amortizations.count
+
+    get account_url(loan_account) # no tab param -- defaults to activity
+
+    assert_response :success
+    assert_equal 0, loan_account.loan.amortizations.count
+    assert_select "turbo-frame[src='#{account_path(loan_account, tab: 'schedule')}']"
+  end
+
+  test "schedule frame builds the schedule when requested" do
+    loan_account = accounts(:loan)
+
+    get account_url(loan_account, tab: "schedule"),
+        headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(loan_account, :schedule_tab) }
+
+    assert_response :success
+    assert_equal loan_account.loan.term_months, loan_account.loan.amortizations.count
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(loan_account, :schedule_tab)}"
+  end
+
+  test "schedule tab is absent for a loan without an interest rate" do
+    loan_account = Account.create! \
+      family: @user.family,
+      name: "No Rate Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "other",
+        interest_rate: nil,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    get account_url(loan_account)
+    assert_response :success
+    assert_select "button[data-id='schedule']", count: 0
+  end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
