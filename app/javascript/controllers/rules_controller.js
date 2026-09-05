@@ -50,7 +50,11 @@ export default class extends Controller {
   }
 
   #uniqueKey() {
-    return Date.now();
+    // A monotonic counter, not Date.now(): two actions/conditions added in
+    // the same millisecond would otherwise get the same nested-form index,
+    // colliding on field names and DS::TagSelect menu ids.
+    this.keySequence = (this.keySequence ?? 0) + 1;
+    return this.keySequence;
   }
 
   // Updates the prefix visibility of all conditions and condition groups

@@ -2075,6 +2075,78 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.categories.exists?(name: stale_category_id)
   end
 
+  test "imports a multi-tag rule action by resolving each tag id ref independently" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Tag As Weekly And Recurring",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "subscription" }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_tags",
+              value: "Weekly,Recurring",
+              value_ref: [
+                { "type" => "Tag", "id" => "source-tag-1", "name" => "Weekly" },
+                { "type" => "Tag", "id" => "source-tag-2", "name" => "Recurring" }
+              ]
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Tag As Weekly And Recurring")
+    weekly_tag = @family.tags.find_by!(name: "Weekly")
+    recurring_tag = @family.tags.find_by!(name: "Recurring")
+
+    imported_tag_ids = rule.actions.first.value.split(",")
+    assert_equal [ weekly_tag.id, recurring_tag.id ].sort, imported_tag_ids.sort
+    # Regression guard: must not create one bogus tag literally named "Weekly,Recurring"
+    assert_not @family.tags.exists?(name: "Weekly,Recurring")
+    assert_equal 2, @family.tags.count
+  end
+
+  test "imports a multi-tag rule action from a legacy single-tag value_ref hash" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Legacy Single Tag Action",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "subscription" }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_tags",
+              value: "Weekly",
+              value_ref: { "type" => "Tag", "id" => "source-tag-1", "name" => "Weekly" }
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Legacy Single Tag Action")
+    weekly_tag = @family.tags.find_by!(name: "Weekly")
+
+    assert_equal weekly_tag.id, rule.actions.first.value
+  end
+
   test "preserves explicit false rule operand values" do
     importer = Family::DataImporter.new(@family, "")
 

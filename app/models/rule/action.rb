@@ -38,9 +38,13 @@ class Rule::Action < ApplicationRecord
   end
 
   def value_display
-    return "" if value.blank? || options.blank?
+    return "" if value.blank?
 
-    Array(execution_value).filter_map { |v| options.find { |option| option.last == v }&.first }.join(", ")
+    cached_options = options
+    return "" if cached_options.blank?
+
+    labels_by_id = cached_options.to_h { |label, id| [ id.to_s, label ] }
+    Array(execution_value).filter_map { |v| labels_by_id[v] }.join(", ")
   end
 
   def executor

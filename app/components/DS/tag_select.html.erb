@@ -22,6 +22,7 @@
               aria-haspopup="listbox"
               aria-expanded="false"
               aria-controls="<%= menu_id %>"
+              <% unless show_label %> aria-label="<%= label || helpers.t("transactions.form.tags_label") %>" <% end %>
               <%= "disabled" if disabled %>>
         <span class="flex flex-wrap gap-1"
               data-tag-select-target="selectionContainer"

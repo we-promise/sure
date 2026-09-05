@@ -582,6 +582,54 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports rule actions with multiple tags and maps each tag UUID independently" do
+    second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Multi Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, second_tag.id ]
+    )
+    tag_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Multi Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      # Should export both tag names, comma-separated, not a single opaque id string
+      assert_equal "Test Tag,Second Tag", actions[0]["value"]
+      assert_equal(
+        [
+          { "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" },
+          { "type" => "Tag", "id" => second_tag.id, "name" => "Second Tag" }
+        ],
+        actions[0]["value_ref"]
+      )
+    end
+  end
+
   test "exports compound conditions with sub-conditions" do
     # Create a rule with compound conditions
     compound_rule = @family.rules.build(
