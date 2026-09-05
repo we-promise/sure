@@ -1,6 +1,13 @@
 require "test_helper"
 
 class AccountShareTest < ActiveSupport::TestCase
+  test "serializes permission changes through the parent account row" do
+    share = account_shares(:depository_shared_with_member)
+    Account.any_instance.expects(:lock!).once
+
+    share.update!(permission: "read_only")
+  end
+
   setup do
     @admin = users(:family_admin)
     @member = users(:family_member)

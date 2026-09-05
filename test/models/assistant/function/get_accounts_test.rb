@@ -30,6 +30,34 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     end
   end
 
+  test "returns the current account subtype" do
+    result = @fn.call
+
+    account = result[:accounts].find { |item| item[:id] == accounts(:depository).id }
+    assert_equal accounts(:depository).subtype, account[:subtype]
+  end
+
+  test "returns goal funding status and available allocation for fundable accounts" do
+    account = @family.accounts.create!(owner: @user, name: "Goal funding account", accountable: Depository.new, balance: 5_000, currency: "USD")
+    @family.goals.create!(name: "Whole claim", target_amount: 5_000, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: account)
+    end
+
+    payload = @fn.call[:accounts].find { |item| item[:id] == account.id }
+
+    assert_equal "whole_account_claimed", payload.dig(:goal_funding, :status)
+    assert_equal 5_000, payload.dig(:goal_funding, :free_to_earmark)
+  end
+
+  test "marks non-fundable account types explicitly" do
+    account = @family.accounts.create!(owner: @user, name: "Not goal fundable", accountable: OtherAsset.new, balance: 100, currency: "USD")
+
+    payload = @fn.call[:accounts].find { |item| item[:id] == account.id }
+
+    assert_equal "unsupported_account_type", payload.dig(:goal_funding, :status)
+    assert_nil payload.dig(:goal_funding, :free_to_earmark)
+  end
+
   test "excludes hidden accounts" do
     hidden = @family.accounts.visible.first
     hidden.update!(status: "disabled")
@@ -83,5 +111,36 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_not_nil future_payload
     assert_not future_payload.key?(:historical_balances)
     assert(result[:accounts].any? { |a| a.key?(:historical_balances) })
+  end
+
+  test "returns stable ids and write capability for transaction actions" do
+    user = users(:family_member)
+    result = Assistant::Function::GetAccounts.new(user).call
+
+    checking = result[:accounts].find { |account| account[:name] == accounts(:depository).name }
+    credit_card = result[:accounts].find { |account| account[:name] == accounts(:credit_card).name }
+
+    assert_equal accounts(:depository).id, checking[:id]
+    assert_equal true, checking[:writable]
+    assert_equal "full_control", checking[:permission]
+    assert_equal({ financial: true, annotations: true }, checking[:transaction_editing])
+
+    assert_equal accounts(:credit_card).id, credit_card[:id]
+    assert_equal false, credit_card[:writable]
+    assert_equal "read_only", credit_card[:permission]
+    assert_equal({ financial: false, annotations: false }, credit_card[:transaction_editing])
+  end
+
+  test "reports annotation-only transaction editing for read-write shared accounts" do
+    user = users(:family_member)
+    account = accounts(:depository)
+    account.account_shares.find_by!(user: user).update!(permission: "read_write")
+
+    result = Assistant::Function::GetAccounts.new(user).call
+
+    checking = result[:accounts].find { |item| item[:id] == account.id }
+    assert_equal false, checking[:writable]
+    assert_equal "read_write", checking[:permission]
+    assert_equal({ financial: false, annotations: true }, checking[:transaction_editing])
   end
 end

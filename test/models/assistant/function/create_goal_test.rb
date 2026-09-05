@@ -4,145 +4,111 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
   setup do
     @user = users(:family_admin)
     @family = @user.family
-    @depository = accounts(:depository)
     @fn = Assistant::Function::CreateGoal.new(@user)
   end
 
-  test "to_definition returns valid JSON shape" do
-    definition = @fn.to_definition
-    assert_equal "create_goal", definition[:name]
-    assert_kind_of String, definition[:description]
-    assert_equal "object", definition[:params_schema][:type]
-    assert_includes definition[:params_schema][:required], "name"
-    assert_includes definition[:params_schema][:required], "target_amount"
-    assert_includes definition[:params_schema][:required], "linked_account_names"
+  test "publishes one stable-id funding contract without legacy selectors" do
+    schema = @fn.params_schema
+
+    assert_equal %w[name target_amount funding_accounts], schema[:required]
+    assert schema[:properties].key?(:funding_accounts)
+    refute schema[:properties].key?(:linked_account_names)
+    refute schema[:properties].key?(:linked_account_ids)
+    refute schema[:properties].key?(:earmarks)
+
+    item = schema.dig(:properties, :funding_accounts, :items)
+    assert_equal %w[account_id allocation], item[:required]
+    assert_equal %w[whole_account fixed_amount], item.dig(:properties, :allocation, :properties, :mode, :enum)
   end
 
-  test "creates a goal with linked accounts" do
-    # A fresh account, not one the goal fixtures already claim in full:
-    # GoalAccount refuses a second whole-balance link on a contested account,
-    # and this function has no way to pass an earmark.
-    unclaimed = Account.create!(
-      family: @family, accountable: Depository.new,
-      name: "Vacation Savings", currency: "USD", balance: 2_000
-    )
+  test "creates a whole-account goal from a stable account id" do
+    account = create_account(name: "Vacation Savings", type: Depository)
 
-    assert_difference -> { Goal.count } => 1,
-                      -> { GoalAccount.count } => 1 do
-      result = @fn.call(
-        "name" => "Vacation",
-        "target_amount" => 1500,
-        "target_date" => 3.months.from_now.to_date.iso8601,
-        "linked_account_names" => [ unclaimed.name ]
-      )
+    result = @fn.call(goal_params(account, mode: "whole_account"))
 
-      assert result[:success]
-      assert_match(/Vacation/, result[:message])
-      assert result[:url].present?
-      assert_equal "USD", result[:currency]
-    end
+    assert result[:success]
+    link = Goal.find(result[:goal_id]).goal_accounts.first
+    assert_equal account.id, link.account_id
+    assert_nil link.allocated_amount
   end
 
-  test "soft error when name is missing" do
-    result = @fn.call("target_amount" => 100, "linked_account_names" => [ @depository.name ])
-    assert_equal false, result[:success]
-    assert_equal "name_required", result[:error]
-  end
-
-  test "soft error when target_amount is zero" do
-    result = @fn.call("name" => "X", "target_amount" => 0, "linked_account_names" => [ @depository.name ])
-    assert_equal false, result[:success]
-    assert_equal "target_amount_invalid", result[:error]
-  end
-
-  test "soft error when no linked accounts" do
-    result = @fn.call("name" => "X", "target_amount" => 100, "linked_account_names" => [])
-    assert_equal false, result[:success]
-    assert_equal "no_linked_accounts", result[:error]
-    assert_kind_of Array, result[:available_accounts]
-    assert(result[:available_accounts].all? { |a| a.is_a?(Hash) && a.key?(:name) })
-  end
-
-  test "soft error when account name doesn't match" do
-    result = @fn.call("name" => "X", "target_amount" => 100, "linked_account_names" => [ "Nonexistent Account" ])
-    assert_equal false, result[:success]
-    assert_equal "unknown_accounts", result[:error]
-    assert_includes result[:unknown_names], "Nonexistent Account"
-  end
-
-  test "soft error when currencies differ across linked accounts" do
-    eur = Account.create!(family: @family, accountable: Depository.new, name: "EUR Account", currency: "EUR", balance: 100)
-    result = @fn.call(
-      "name" => "Mixed",
-      "target_amount" => 100,
-      "linked_account_names" => [ @depository.name, eur.name ]
-    )
-    assert_equal false, result[:success]
-    assert_equal "currency_mismatch", result[:error]
-  end
-
-  test "scopes to the user's family" do
-    other_family = Family.create!(name: "Other", currency: "USD", locale: "en", country: "US", timezone: "UTC")
-    Account.create!(family: other_family, accountable: Depository.new, name: "Foreign Checking", currency: "USD", balance: 100)
-
-    result = @fn.call(
-      "name" => "X",
-      "target_amount" => 100,
-      "linked_account_names" => [ "Foreign Checking" ]
-    )
-    assert_equal false, result[:success]
-    assert_equal "unknown_accounts", result[:error]
-  end
-
-  # --- Review follow-up (#3166) ---
-
-  # The function always built whole-account links, so once exclusivity landed a
-  # second goal on the same account failed with a generic validation error —
-  # while the account list still advertised it as available. A common request
-  # ("save for a holiday too") became an unexplained refusal.
-  test "an account another goal claims in full is refused with a reason, not a validation failure" do
-    account = Account.create!(family: @family, accountable: Depository.new,
-                              name: "Claimed Pot", currency: "USD", balance: 5_000)
-    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |g|
-      g.goal_accounts.build(account: account)
+  test "creates a fixed allocation on an account already claimed in full" do
+    account = create_account(name: "Claimed Pot", type: Depository, balance: 5_000)
+    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: account)
     end
 
-    result = @fn.call("name" => "Holiday", "target_amount" => 1_000,
-                      "linked_account_names" => [ account.name ])
+    result = @fn.call(goal_params(account, mode: "fixed_amount", amount: 1_000))
 
-    assert_equal false, result[:success]
-    assert_equal "account_claimed_in_full", result[:error]
-    assert_includes result[:claimed_account_names], account.name
-  end
-
-  test "the same account is accepted once an earmark says how much to take" do
-    account = Account.create!(family: @family, accountable: Depository.new,
-                              name: "Claimed Pot", currency: "USD", balance: 5_000)
-    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |g|
-      g.goal_accounts.build(account: account)
-    end
-
-    result = @fn.call("name" => "Holiday", "target_amount" => 1_000,
-                      "linked_account_names" => [ account.name ],
-                      "earmarks" => { account.name => 1_000 })
-
-    assert_equal true, result[:success]
+    assert result[:success]
     assert_equal 1_000, Goal.find(result[:goal_id]).goal_accounts.first.allocated_amount.to_d
   end
 
-  # The list is what the assistant reasons from; without this it had no way to
-  # know an account could not be taken whole.
-  test "the account list says what is left and what is already claimed" do
-    account = Account.create!(family: @family, accountable: Depository.new,
-                              name: "Claimed Pot", currency: "USD", balance: 5_000)
-    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |g|
-      g.goal_accounts.build(account: account)
+  test "rejects a second whole-account claim with actionable account metadata" do
+    account = create_account(name: "Claimed Pot", type: Depository, balance: 5_000)
+    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |goal|
+      goal.goal_accounts.build(account: account)
     end
 
-    result = @fn.call("name" => "X", "target_amount" => 100, "linked_account_names" => [])
-    listed = result[:available_accounts].find { |a| a[:name] == account.name }
+    result = @fn.call(goal_params(account, mode: "whole_account"))
 
-    assert listed[:claimed_in_full]
-    assert listed.key?(:free_to_earmark)
+    assert_equal false, result[:success]
+    assert_equal "account_claimed_in_full", result[:error]
+    listed = result[:available_accounts].find { |item| item[:id] == account.id }
+    assert_equal "whole_account_claimed", listed.dig(:goal_funding, :status)
+    assert listed.dig(:goal_funding, :free_to_earmark).present?
   end
+
+  test "accepts investment funding accounts" do
+    account = create_account(name: "Brokerage", type: Investment)
+
+    result = @fn.call(goal_params(account, mode: "whole_account"))
+
+    assert result[:success]
+    assert_equal account.id, Goal.find(result[:goal_id]).goal_accounts.first.account_id
+  end
+
+  test "rejects missing inaccessible and cross-currency funding accounts" do
+    assert_equal "no_funding_accounts", @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [])[:error]
+
+    unknown = @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [ funding_item(SecureRandom.uuid) ])
+    assert_equal "unknown_accounts", unknown[:error]
+
+    usd = create_account(name: "USD", type: Depository, currency: "USD")
+    eur = create_account(name: "EUR", type: Depository, currency: "EUR")
+    mixed = @fn.call("name" => "X", "target_amount" => 100, "funding_accounts" => [ funding_item(usd.id), funding_item(eur.id) ])
+    assert_equal "currency_mismatch", mixed[:error]
+  end
+
+  test "rejects malformed allocation strategies" do
+    account = create_account(name: "Savings", type: Depository)
+
+    missing_amount = @fn.call(goal_params(account, mode: "fixed_amount"))
+    invalid_mode = @fn.call(goal_params(account, mode: "percentage", amount: 50))
+    amount_on_whole = @fn.call(goal_params(account, mode: "whole_account", amount: 50))
+
+    assert_equal "invalid_allocation", missing_amount[:error]
+    assert_equal "invalid_allocation", invalid_mode[:error]
+    assert_equal "invalid_allocation", amount_on_whole[:error]
+  end
+
+  private
+    def create_account(name:, type:, balance: 2_000, currency: "USD")
+      @family.accounts.create!(owner: @user, accountable: type.new, name: name, currency: currency, balance: balance)
+    end
+
+    def funding_item(account_id, mode: "whole_account", amount: nil)
+      allocation = { "mode" => mode }
+      allocation["amount"] = amount unless amount.nil?
+      { "account_id" => account_id, "allocation" => allocation }
+    end
+
+    def goal_params(account, mode:, amount: nil)
+      {
+        "name" => "Vacation",
+        "target_amount" => 1_500,
+        "target_date" => 3.months.from_now.to_date.iso8601,
+        "funding_accounts" => [ funding_item(account.id, mode: mode, amount: amount) ]
+      }
+    end
 end

@@ -6,6 +6,7 @@ class AccountProvider < ApplicationRecord
 
   validates :account_id, uniqueness: { scope: :provider_type }
   validates :provider_id, uniqueness: { scope: :provider_type }
+  validate :account_accepts_provider_link, on: :create
 
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
@@ -32,6 +33,13 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+    def account_accepts_provider_link
+      return if account.nil?
+
+      account.with_lock do
+        errors.add(:account, :pending_deletion) if account.pending_deletion?
+      end
+    end
 
     def coinstats_provider?
       provider_type == "CoinstatsAccount"
