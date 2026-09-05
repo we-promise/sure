@@ -25,6 +25,23 @@ de-identification guard: the file may contain only ISO dates, the four known
 category tokens, and two-decimal numerics. The guard is an allowlist because a
 denylist of names would have to write those names into the test.
 
+**The fixture is also reconciled against the engine.** Every `interest` row is
+charged through `Loan::InterestAccrual` over the window since the previous
+charge, with the fixture's own movements walked into a change-point list. The
+windows, segments and expected values all come from the fixture, so the test
+fails if the engine's segmentation, day count, effective-date inclusivity or
+charge-point rounding changes. Observed failing against two deliberate
+mutations:
+
+| mutation | expected | produced |
+| --- | --- | --- |
+| `DAY_COUNT` 365 → 360 | 1695.34 | 1718.89 |
+| rate change applied from the window start rather than its effective date | 1694.87 | 1826.40 |
+
+The second is the C7 defect this programme was already carrying, and the fixture
+catches it. This is repository evidence, not lender evidence — it does not
+discharge G2.
+
 ## Running the real reconciliation
 
 The real statement work happens **outside the repository**, and only its
@@ -59,13 +76,24 @@ so the comparison — not the formula — is the evidence.
 
 - **The statement reconciliation itself.** Nothing in this repository currently
   compares the engine to a real lender charge.
-- **Mid-cycle rate changes.** The engine applies one rate per payment period,
-  so a rate effective mid-cycle is applied retroactively across the whole
-  window. A statement covering such a period cannot reconcile until the accrual
-  and re-amortisation clocks are separated (contract C7/C8).
+- **Mid-cycle rate changes.** `Loan::InterestAccrual` segments correctly at a
+  rate's effective date, and the fixture above proves it. Two caveats before a
+  real statement can be cited:
+  - The **persisted** schedule does not use that path at all.
+    `Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL` is `false`, so
+    production accrues monthly (#36). A statement reconciliation therefore
+    exercises code users' numbers do not currently come from.
+  - Within the daily path, `accrual_rate_for` and `re_amortisation_events` are
+    still not independent inputs — accrual segments only on re-amortisation
+    events (#25). A rate that changes accrual without changing the contracted
+    repayment is not yet representable.
 - **Offset movement.** Daily offset reconciliation needs the linked account's
   balance history. Until that is available, offset cases are out of scope for
   sign-off rather than tolerated within it.
 - **Finance review.** No reviewer has signed off any figure in this document.
+- **The oracle currently proves the engine against itself-plus-arithmetic**, not
+  against a lender. The fixture is arithmetically exact by construction, so it
+  can confirm the engine implements actual/365 as specified; it cannot confirm
+  that actual/365 is what the lender does.
 
 No production release approval is granted by this document.
