@@ -530,11 +530,16 @@ class Family::DataExporter
     end
 
     def exportable_transactions
-      @family.transactions.merge(Entry.excluding_split_parents)
+      @family.transactions
+             .merge(Entry.excluding_split_parents)
+             .merge(Entry.excluding_system_generated)
     end
 
     def ndjson_exportable_transactions
-      @family.transactions.joins(:entry).where(entries: { parent_entry_id: nil })
+      @family.transactions
+             .joins(:entry)
+             .where(entries: { parent_entry_id: nil })
+             .merge(Entry.excluding_system_generated)
     end
 
     def serialize_split_lines_for_export(parent_entry)

@@ -27,7 +27,9 @@ class Transaction::Search
   def transactions_scope
     @transactions_scope ||= begin
       # This already joins entries + accounts. To avoid expensive double-joins, don't join them again (causes full table scan)
-      query = family.transactions.merge(Entry.excluding_split_parents)
+      query = family.transactions
+                    .merge(Entry.excluding_split_parents)
+                    .merge(Entry.excluding_system_generated)
 
       # Scope to accessible accounts when provided (including an empty array, which should yield no results)
       query = query.where(entries: { account_id: accessible_account_ids }) unless accessible_account_ids.nil?
