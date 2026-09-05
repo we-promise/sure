@@ -31,6 +31,211 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports loan-specific accountable attributes" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan-1",
+          name: "Car Loan",
+          balance: "15000",
+          currency: "USD",
+          accountable_type: "Loan",
+          accountable: {
+            subtype: "auto",
+            rate_type: "fixed",
+            interest_rate: "5.25",
+            term_months: 60,
+            initial_balance: "18000"
+          }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    loan = @family.accounts.find_by!(name: "Car Loan").loan
+    assert_equal "auto", loan.subtype
+    assert_equal "fixed", loan.rate_type
+    assert_equal 5.25, loan.interest_rate.to_f
+    assert_equal 60, loan.term_months
+    assert_equal 18000.0, loan.initial_balance.to_f
+  end
+
+  test "updates accountable attributes on an existing account, not just on creation" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    account = @family.accounts.create!(
+      name: "Car Loan",
+      accountable: Loan.new(subtype: "auto", rate_type: "fixed", interest_rate: 5.25, term_months: 60, initial_balance: 18000),
+      balance: 15000,
+      currency: "USD"
+    )
+    session.source_mappings.create!(family: @family, source_type: "Account", source_id: "old-loan-1", target: account)
+
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan-1",
+          name: "Car Loan",
+          balance: "12000",
+          currency: "USD",
+          accountable_type: "Loan",
+          accountable: {
+            subtype: "auto",
+            rate_type: "variable",
+            interest_rate: "7.5",
+            term_months: 48,
+            initial_balance: "18000"
+          }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    loan = account.reload.loan
+    assert_equal "variable", loan.rate_type
+    assert_equal 7.5, loan.interest_rate.to_f
+    assert_equal 48, loan.term_months
+  end
+
+  test "clears an accountable attribute when re-import supplies it as blank" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    account = @family.accounts.create!(
+      name: "Sedan",
+      accountable: Vehicle.new(make: "Toyota", model: "Corolla"),
+      balance: 20000,
+      currency: "USD"
+    )
+    session.source_mappings.create!(family: @family, source_type: "Account", source_id: "old-vehicle-1", target: account)
+
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-vehicle-1",
+          name: "Sedan",
+          balance: "20000",
+          currency: "USD",
+          accountable_type: "Vehicle",
+          accountable: { make: "", model: "Corolla" }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    vehicle = account.reload.vehicle
+    assert_equal "", vehicle.make
+    assert_equal "Corolla", vehicle.model
+  end
+
+  test "prefers nested accountable subtype over top-level subtype, matching preflight" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-precedence",
+          name: "Precedence Checking",
+          balance: "100",
+          currency: "USD",
+          accountable_type: "Depository",
+          subtype: "savings",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    depository = @family.accounts.find_by!(name: "Precedence Checking").depository
+    assert_equal "checking", depository.subtype
+  end
+
+  test "imports credit card, vehicle, crypto, and property accountable attributes" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "cc-1", name: "Card", balance: "500", currency: "USD",
+          accountable_type: "CreditCard",
+          accountable: { available_credit: "5000", minimum_payment: "25", apr: "19.99", annual_fee: "95", expiration_date: "2030-01-01" }
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "vehicle-1", name: "Car", balance: "20000", currency: "USD",
+          accountable_type: "Vehicle",
+          accountable: { make: "Toyota", model: "Corolla", year: 2022, mileage_value: 12000, mileage_unit: "mi" }
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "crypto-1", name: "Wallet", balance: "1000", currency: "USD",
+          accountable_type: "Crypto",
+          accountable: { subtype: "wallet", tax_treatment: "tax_exempt" }
+        }
+      },
+      {
+        type: "Account",
+        data: {
+          id: "property-1", name: "House", balance: "300000", currency: "USD",
+          accountable_type: "Property",
+          accountable: { year_built: 1998, area_value: 1800, area_unit: "sqft" }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    credit_card = @family.accounts.find_by!(name: "Card").credit_card
+    assert_equal 5000.0, credit_card.available_credit.to_f
+    assert_equal 25.0, credit_card.minimum_payment.to_f
+    assert_equal 19.99, credit_card.apr.to_f
+    assert_equal 95.0, credit_card.annual_fee.to_f
+    assert_equal Date.parse("2030-01-01"), credit_card.expiration_date
+
+    vehicle = @family.accounts.find_by!(name: "Car").vehicle
+    assert_equal "Toyota", vehicle.make
+    assert_equal "Corolla", vehicle.model
+    assert_equal 2022, vehicle.year
+    assert_equal 12000, vehicle.mileage_value
+
+    crypto = @family.accounts.find_by!(name: "Wallet").crypto
+    assert_equal "tax_exempt", crypto.tax_treatment
+
+    property = @family.accounts.find_by!(name: "House").property
+    assert_equal 1998, property.year_built
+    assert_equal 1800, property.area_value
+    assert_equal "sqft", property.area_unit
+  end
+
+  test "does not mass-assign accountable attributes outside the type's import allow-list" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-2",
+          name: "Test Savings",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "savings", interest_rate: "99", term_months: 60 }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    depository = @family.accounts.find_by!(name: "Test Savings").depository
+    assert_equal "savings", depository.subtype
+    assert_not_respond_to depository, :interest_rate
+    assert_not_respond_to depository, :term_months
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -495,6 +700,98 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     merchant = @family.merchants.find_by(name: "Amazon")
     assert_not_nil merchant
+  end
+
+  test "imports merchant website_url" do
+    ndjson = build_ndjson([
+      {
+        type: "Merchant",
+        data: {
+          id: "merchant-1",
+          name: "Amazon",
+          website_url: "https://amazon.com"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    merchant = @family.merchants.find_by!(name: "Amazon")
+    assert_equal "https://amazon.com", merchant.website_url
+  end
+
+  test "re-importing a merchant without website_url blanks it (and, via FamilyMerchant's callback, logo_url too)" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+
+    Family::DataImporter.new(@family, build_ndjson([
+      {
+        type: "Merchant",
+        data: { id: "merchant-1", name: "Amazon", website_url: "https://amazon.com" }
+      }
+    ]), import_session: session).import!
+
+    # website_url is assigned unconditionally, same as color/logo_url in this
+    # method, so a later re-import that omits it blanks it out. That in turn
+    # feeds FamilyMerchant#generate_logo_url_from_website's before_save
+    # callback, which nils logo_url whenever website_url goes blank -- so the
+    # logo_url given in *this same* payload gets wiped right back to nil.
+    Family::DataImporter.new(@family, build_ndjson([
+      {
+        type: "Merchant",
+        data: { id: "merchant-1", name: "Amazon", logo_url: "https://cdn.example.com/amazon.png" }
+      }
+    ]), import_session: session).import!
+
+    merchant = @family.merchants.find_by!(name: "Amazon")
+    assert_nil merchant.website_url
+    assert_nil merchant.logo_url
+  end
+
+  test "keeps the imported logo_url when no logo provider is configured" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    ndjson = build_ndjson([
+      {
+        type: "Merchant",
+        data: {
+          id: "merchant-1",
+          name: "Amazon",
+          website_url: "https://amazon.com",
+          logo_url: "https://cdn.example.com/amazon.png"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    merchant = @family.merchants.find_by!(name: "Amazon")
+    assert_equal "https://cdn.example.com/amazon.png", merchant.logo_url
+  end
+
+  test "a configured logo provider overwrites the imported logo_url" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+
+    ndjson = build_ndjson([
+      {
+        type: "Merchant",
+        data: {
+          id: "merchant-1",
+          name: "Amazon",
+          website_url: "https://amazon.com",
+          logo_url: "https://cdn.example.com/amazon.png"
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    # FamilyMerchant#generate_logo_url_from_website's before_save fires
+    # whenever website_url changes, and when a logo provider is configured it
+    # regenerates logo_url from that provider -- overwriting whatever this
+    # importer just assigned, imported value included.
+    merchant = @family.merchants.find_by!(name: "Amazon")
+    assert_includes merchant.logo_url, "cdn.brandfetch.io"
+    assert_not_equal "https://cdn.example.com/amazon.png", merchant.logo_url
   end
 
   test "imports recurring transactions with remapped account and merchant references" do

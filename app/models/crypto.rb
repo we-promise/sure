@@ -1,6 +1,8 @@
 class Crypto < ApplicationRecord
   include Accountable
 
+  IMPORTABLE_ATTRIBUTES = %w[tax_treatment].freeze
+
   # Subtypes differentiate how crypto is held:
   # - wallet: Self-custody or provider-synced wallets (CoinStats, etc.)
   # - exchange: Centralized exchanges with trade history (Coinbase, Kraken, etc.)

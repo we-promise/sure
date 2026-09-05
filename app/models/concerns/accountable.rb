@@ -6,6 +6,13 @@ module Accountable
   # Define empty hash to ensure all accountables have this defined
   SUBTYPES = {}.freeze
 
+  # Accountable-specific columns (beyond `subtype`/`locked_attributes`, which
+  # every accountable already supports) that are safe to mass-assign from an
+  # imported NDJSON file. Mirrors each type's controller
+  # `permitted_accountable_attributes` allow-list so import and the web UI
+  # can never persist different sets of fields.
+  IMPORTABLE_ATTRIBUTES = [].freeze
+
   def self.from_type(type)
     return nil unless TYPES.include?(type)
     type.constantize

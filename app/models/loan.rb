@@ -1,6 +1,8 @@
 class Loan < ApplicationRecord
   include Accountable
 
+  IMPORTABLE_ATTRIBUTES = %w[rate_type interest_rate term_months initial_balance].freeze
+
   SUBTYPES = {
     "mortgage" => { short: "Mortgage", long: "Mortgage" },
     "student" => { short: "Student Loan", long: "Student Loan" },

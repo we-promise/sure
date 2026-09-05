@@ -1,6 +1,8 @@
 class Vehicle < ApplicationRecord
   include Accountable
 
+  IMPORTABLE_ATTRIBUTES = %w[make model year mileage_value mileage_unit].freeze
+
   attribute :mileage_unit, :string, default: "mi"
 
   def mileage

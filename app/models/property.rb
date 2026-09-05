@@ -1,6 +1,8 @@
 class Property < ApplicationRecord
   include Accountable
 
+  IMPORTABLE_ATTRIBUTES = %w[year_built area_value area_unit].freeze
+
   SUBTYPES = {
     "single_family_home" => { short: "Single Family Home", long: "Single Family Home" },
     "multi_family_home" => { short: "Multi-Family Home", long: "Multi-Family Home" },

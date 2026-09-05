@@ -1,6 +1,8 @@
 class CreditCard < ApplicationRecord
   include Accountable
 
+  IMPORTABLE_ATTRIBUTES = %w[available_credit minimum_payment apr annual_fee expiration_date].freeze
+
   DEFAULT_SUBTYPE = "credit_card"
 
   SUBTYPES = {

@@ -302,32 +302,46 @@ class Family::DataImporter
         if account
           accountable = account.accountable
         else
-          # Build accountable
           accountable = accountable_class.new
-          accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
-
-          # Copy any other accountable attributes
-          safe_accountable_attrs = %w[subtype locked_attributes]
-          safe_accountable_attrs.each do |attr|
-            if accountable.respond_to?("#{attr}=") && accountable_data[attr].present?
-              accountable.send("#{attr}=", accountable_data[attr])
-            end
-          end
-
           account = @family.accounts.build(accountable: accountable)
         end
 
-        account.assign_attributes(
+        # Copy any other accountable attributes. Allow-listed per accountable
+        # type (see `Accountable::IMPORTABLE_ATTRIBUTES`) so an imported file
+        # can only set the same fields the web UI already permits editing —
+        # never arbitrary columns. Applied on both create and update so a
+        # re-import can correct previously-set accountable fields.
+        safe_accountable_attrs = %w[locked_attributes] + accountable_class::IMPORTABLE_ATTRIBUTES
+        safe_accountable_attrs.each do |attr|
+          if accountable.respond_to?("#{attr}=") && accountable_data.key?(attr) && !accountable_data[attr].nil?
+            accountable.send("#{attr}=", accountable_data[attr])
+          end
+        end
+
+        account_attrs = {
           name: data["name"],
           balance: data["balance"].to_d,
           cash_balance: data["cash_balance"]&.to_d || data["balance"].to_d,
           currency: data["currency"] || @family.currency,
-          subtype: data["subtype"],
           institution_name: data["institution_name"],
           institution_domain: data["institution_domain"],
           notes: data["notes"],
           status: importable_account_status(data["status"])
-        )
+        }
+
+        # `subtype` can be given nested under `accountable` (the shape
+        # `Family::DataExporter#generate_ndjson` emits) or at the top level of
+        # `data`. Nested takes precedence, matching `SureImport::Preflight#validate_accountables`
+        # (`data.dig("accountable", "subtype").presence || data["subtype"].presence`)
+        # so what gets validated pre-import is what actually gets applied.
+        # Only assign it when present: `Account#subtype=` writes straight through
+        # to the accountable, so an unconditional `subtype: data["subtype"]` here
+        # would silently null out a subtype already set from `accountable_data`
+        # (the common case) whenever the top-level field is absent.
+        imported_subtype = accountable_data["subtype"].presence || data["subtype"].presence
+        account_attrs[:subtype] = imported_subtype if imported_subtype.present?
+
+        account.assign_attributes(account_attrs)
 
         account.save!
 
@@ -482,6 +496,9 @@ class Family::DataImporter
         merchant.assign_attributes(
           name: data["name"],
           color: data["color"],
+          website_url: data["website_url"],
+          # If a logo provider (i.e. Brandfetch) is configured, the logo_url may be automatically reset. Otherwise,
+          # keep the imported one.
           logo_url: data["logo_url"]
         )
         merchant.save!
