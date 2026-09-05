@@ -298,7 +298,9 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     end
 
     def apply_search(query)
-      search_term = "%#{params[:search]}%"
+      # Escape the caller's term so "%" and "_" match literally instead of
+      # acting as ILIKE wildcards, where a bare "%" returns everything.
+      search_term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search].to_s)}%"
 
       query
         .left_joins(:merchant)

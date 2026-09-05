@@ -214,6 +214,30 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil found_transaction, "Should find the coffee transaction"
   end
 
+  # The search term is interpolated into an ILIKE pattern, so "%" and "_" from
+  # the caller act as wildcards instead of literals. Unescaped, a search for
+  # "%" matches every transaction in the family rather than the ones that
+  # actually contain a percent sign.
+  test "search treats LIKE wildcards in the term as literal characters" do
+    literal = @account.entries.create!(
+      name: "100% cotton",
+      amount: 5.50, currency: "USD", date: Date.current, entryable: Transaction.new
+    )
+    other = @account.entries.create!(
+      name: "Plain coffee",
+      amount: 5.50, currency: "USD", date: Date.current, entryable: Transaction.new
+    )
+
+    get api_v1_transactions_url,
+        params: { search: "%" },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    ids = JSON.parse(response.body)["transactions"].map { |t| t["id"] }
+    assert_includes ids, literal.transaction.id, "the transaction containing a literal % must match"
+    assert_not_includes ids, other.transaction.id, "a bare % must not match every transaction"
+  end
+
   test "should search disabled account transactions" do
     disabled_transaction = create_disabled_account_transaction(name: "Closed Account Coffee")
 
