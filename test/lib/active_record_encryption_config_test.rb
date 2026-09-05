@@ -45,6 +45,20 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.runtime_configured?(config)
   end
 
+  test "detects complete credentials configuration" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+  end
+
+  test "does not treat partial credentials as configured" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+  end
+
   test "explicit configuration excludes runtime generated config" do
     ActiveRecordEncryptionConfig.stubs(:complete_env?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:credentials_configured?).returns(false)
@@ -52,5 +66,75 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
 
     refute ActiveRecordEncryptionConfig.explicitly_configured?
     assert ActiveRecordEncryptionConfig.ready?
+  end
+
+  test "detects a secret key base that was previously shipped as a compose default" do
+    known_default = ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first
+
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?("a-real-generated-secret")
+  end
+
+  test "using_known_compromised_secret_key_base? defaults to the app's own secret_key_base" do
+    Rails.application.stubs(:secret_key_base).returns(ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first)
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
+
+    Rails.application.stubs(:secret_key_base).returns("a-real-generated-secret")
+    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
+  end
+
+  test "using_known_compromised_secret_key_base? is true regardless of explicit AR encryption keys" do
+    # SECRET_KEY_BASE also signs/encrypts Rails session cookies and is the
+    # sole key source for Setting's own encryptor (app/models/setting.rb),
+    # independently of ActiveRecord Encryption. An install with its own
+    # explicit AR keys is unaffected on the AR-encryption front, but its
+    # sessions and Setting-stored values (AI/market-data provider API keys)
+    # remain just as crackable, so this must not be suppressed by
+    # explicitly_configured? - see config/initializers/encryption_warning.rb
+    # for how the two concerns are reported separately.
+    known_default = ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+  end
+
+  test "detects partially configured encryption credentials" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+  end
+
+  test "does not treat absent encryption credentials as partial" do
+    credentials = OpenStruct.new(active_record_encryption: nil)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "does not treat complete encryption credentials as partial" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  # Regression test for a gap CodeRabbit flagged: a present credentials block
+  # with every individual key blank had present_count == 0, so the old
+  # `present_count.positive? && ...` shape treated it the same as an absent
+  # block (not partial) - silently skipping both the raise and self-hosted
+  # auto-generation, since config/application.rb's `.present?` check on the
+  # block itself already treats it as configured either way.
+  test "treats a present credentials block with every key blank as partial" do
+    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
   end
 end
