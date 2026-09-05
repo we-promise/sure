@@ -754,6 +754,63 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
+  test "sso_create_account rejects account creation for an email that already has an account" do
+    existing_user = users(:family_admin)
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-duplicate",
+      email: existing_user.email,
+      first_name: "Bob",
+      last_name: "Dylan",
+      name: "Bob Dylan",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference([ "User.count", "OidcIdentity.count" ]) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Bob",
+        last_name: "Dylan"
+      }
+    end
+
+    assert_response :conflict
+    assert_equal true, JSON.parse(response.body)["account_exists"]
+    # Linking code survives so the client can retry via sso_link instead.
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?
+  end
+
+  test "sso_create_account rejects account creation for a not-yet-backfilled legacy plaintext email" do
+    existing_user = users(:family_admin)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", existing_user.id ])
+    )
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-duplicate-legacy",
+      email: "legacy-plaintext@example.com",
+      first_name: "Bob",
+      last_name: "Dylan",
+      name: "Bob Dylan",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference([ "User.count", "OidcIdentity.count" ]) do
+      post "/api/v1/auth/sso_create_account", params: {
+        linking_code: linking_code,
+        first_name: "Bob",
+        last_name: "Dylan"
+      }
+    end
+
+    assert_response :conflict
+  end
+
   test "sso_create_account makes new family creator admin even when provider default role is member" do
     Rails.configuration.x.auth.stubs(:sso_providers).returns([
       { name: "google_oauth2", settings: { default_role: "member" } }
@@ -865,17 +922,21 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Linking code is required", response_data["error"]
   end
 
-  test "should return 422 when SSO create account fails user validation" do
-    existing_user = users(:family_admin)
-
+  # Duplicate-email creation is now caught earlier by the server-side
+  # duplicate guard (see "sso_create_account rejects account creation for
+  # an email that already has an account" above), which returns 409 before
+  # the user is ever built/validated. This test covers a *different* user
+  # validation failure - one the duplicate guard doesn't and shouldn't catch
+  # - to keep the general 422-on-invalid-user path covered.
+  test "should return 422 when SSO create account fails user validation for a reason other than a duplicate email" do
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
       provider: "google_oauth2",
-      uid: "google-uid-dup-email",
-      email: existing_user.email,
-      first_name: "Duplicate",
+      uid: "google-uid-invalid-email",
+      email: "not-a-valid-email",
+      first_name: "Invalid",
       last_name: "Email",
-      name: "Duplicate Email",
+      name: "Invalid Email",
       device_info: @device_info.stringify_keys,
       allow_account_creation: true
     }, expires_in: 10.minutes)
@@ -883,7 +944,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference([ "User.count", "OidcIdentity.count" ]) do
       post "/api/v1/auth/sso_create_account", params: {
         linking_code: linking_code,
-        first_name: "Duplicate",
+        first_name: "Invalid",
         last_name: "Email"
       }
     end

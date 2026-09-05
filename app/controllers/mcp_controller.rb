@@ -150,7 +150,7 @@ class McpController < ApplicationController
         OpenSSL::Digest::SHA256.hexdigest(expected)
       )
 
-      user = User.find_by(email: ENV["MCP_USER_EMAIL"])
+      user = User.find_by_email(ENV["MCP_USER_EMAIL"])
 
       unless user
         Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match any user — check environment configuration"

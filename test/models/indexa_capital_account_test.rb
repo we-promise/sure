@@ -123,4 +123,13 @@ class IndexaCapitalAccountTest < ActiveSupport::TestCase
       @account.ensure_account_provider!(linked_account)
     end
   end
+
+  test "declares raw payloads as encrypted" do
+    skip "Encryption not configured" unless IndexaCapitalAccount.encryption_ready?
+
+    encrypted = Array(IndexaCapitalAccount.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_holdings_payload"
+    assert_includes encrypted, "raw_activities_payload"
+  end
 end

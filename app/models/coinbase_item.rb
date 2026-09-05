@@ -9,6 +9,8 @@ class CoinbaseItem < ApplicationRecord
   if encryption_ready?
     encrypts :api_key, deterministic: true
     encrypts :api_secret
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true

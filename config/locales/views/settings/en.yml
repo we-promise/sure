@@ -285,6 +285,10 @@ en:
             - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
             - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           generate: "Generate a set with: bin/rails db:encryption:init"
+        compromised_secret_warning:
+          title: Encryption keys are not actually secret
+          intro: "This install's encryption keys were auto-derived from a SECRET_KEY_BASE value that was previously shipped as a working default in this project's example Docker Compose files. Anyone who knows that value can compute the same encryption keys, so this data is not actually protected."
+          generate: "Do NOT simply set a new SECRET_KEY_BASE and run the backfill task: if any data was already encrypted under the compromised key, the backfill cannot tell that ciphertext apart from real plaintext and will re-encrypt it on top, making it unrecoverable. Rotate safely instead: (1) set ACTIVE_RECORD_ENCRYPTION_*_PREVIOUS to the OLD keys derived from this SECRET_KEY_BASE so existing data still decrypts, (2) generate new ACTIVE_RECORD_ENCRYPTION_* keys with bin/rails db:encryption:init, (3) run bin/rails security:backfill_encryption to re-encrypt existing rows. Note this only covers ActiveRecord-encrypted columns - Settings (provider/API credentials) are encrypted separately using a key derived directly from SECRET_KEY_BASE and will need re-entering after rotating it. See the Rails encryption guide's key rotation section and docs/hosting/docker.md for the full procedure."
         mfa_title: Two-Factor Authentication
         mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
         enable_mfa: Enable 2FA
