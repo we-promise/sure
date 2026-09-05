@@ -136,10 +136,12 @@ class Provider::Monobank < Provider
     # Issues a throttled GET against the personal API. `bucket` names the rate-limit
     # bucket (see #throttle_request).
     def get(path, bucket:, query: nil)
-      with_retries("GET #{path}") do
+      operation = "GET #{path}"
+
+      with_retries(operation) do
         throttle_request(bucket)
         response = self.class.get(resolve_url(path), headers: auth_headers, query: query)
-        handle_response(response)
+        handle_response(response, operation: operation)
       end
     end
 
@@ -227,15 +229,27 @@ class Provider::Monobank < Provider
         retries += 1
         if retries <= max_retries
           delay = calculate_retry_delay(retries)
-          Rails.logger.warn(
-            "Monobank API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
-            "#{e.class}: #{e.message}. Retrying in #{delay}s..."
+          capture_request_error(
+            level: "warn",
+            message: "Monobank API request will be retried",
+            operation: operation_name,
+            metadata: {
+              error_class: e.class.name,
+              retry_attempt: retries,
+              retry_limit: max_retries,
+              retry_delay: delay
+            }
           )
           sleep(delay)
           retry
         end
 
-        Rails.logger.error("Monobank API: #{operation_name} failed after #{max_retries} retries: #{e.class}")
+        capture_request_error(
+          level: "error",
+          message: "Monobank API request failed after retries",
+          operation: operation_name,
+          metadata: { error_class: e.class.name, retry_limit: max_retries }
+        )
         raise Error.new("Network error after #{max_retries} retries: #{e.message}", failure_code: :network_error)
       end
     end
@@ -248,10 +262,10 @@ class Provider::Monobank < Provider
     end
 
     # Maps an HTTP response to parsed data or a typed error by status code.
-    def handle_response(response)
+    def handle_response(response, operation: nil)
       case response.code
       when 200, 201
-        parse_response_body(response)
+        parse_response_body(response, operation: operation)
       when 204
         {}
       when 400
@@ -270,18 +284,45 @@ class Provider::Monobank < Provider
       when 500..599
         raise Error.new("Monobank server error (#{response.code}). Please try again later.", failure_code: :server_error)
       else
-        Rails.logger.error "Monobank API: Unexpected response status=#{response.code}"
+        capture_request_error(
+          level: "error",
+          message: "Monobank API returned an unexpected response status",
+          operation: operation,
+          metadata: { status: response.code }
+        )
         raise Error.new("Failed to fetch Monobank data", failure_code: :fetch_failed)
       end
     end
 
     # Parses a JSON response body, raising a typed error on malformed JSON.
-    def parse_response_body(response)
+    def parse_response_body(response, operation: nil)
       return {} if response.body.blank?
 
       JSON.parse(response.body)
     rescue JSON::ParserError
-      Rails.logger.error "Monobank API: Failed to parse response"
+      capture_request_error(
+        level: "error",
+        message: "Monobank API response could not be parsed",
+        operation: operation,
+        metadata: { status: response.code, body_bytes: response.body.bytesize }
+      )
       raise Error.new("Failed to parse Monobank API response", failure_code: :parse_error)
+    end
+
+    # Transport-level diagnostics for /settings/debug. The client is built from a token
+    # alone, so it has no family or account_provider to attach — MonobankItem::Importer
+    # catches the typed error these paths raise and records the same failure against the
+    # connection. What only exists here is the transport detail (status, retry attempt),
+    # which never reaches that layer, so it is captured here rather than left in the
+    # application log. The body is never included: it carries statement PII.
+    def capture_request_error(level:, message:, operation:, metadata: {})
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: "monobank",
+        metadata: metadata.merge(operation: operation).compact
+      )
     end
 end
