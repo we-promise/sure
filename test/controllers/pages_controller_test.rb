@@ -348,8 +348,75 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-breadcrumbs]", text: /Feedback/
   end
 
+  test "dashboard renders spending trend widget" do
+    get root_path
+
+    assert_response :ok
+    assert_select "#spending-trend-section"
+  end
+
+  test "dashboard spending trend widget accumulates the selected month against the previous one" do
+    account = @family.accounts.create!(name: "Spending Trend Test Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    # A fully past month: fixture transactions are dated relative to today and
+    # would otherwise leak into the expected totals.
+    selected_month = 2.months.ago.beginning_of_month.to_date
+    previous_month = 3.months.ago.beginning_of_month.to_date
+
+    create_transaction(account: account, name: "Selected month", amount: 50, date: selected_month)
+    create_transaction(account: account, name: "Selected month again", amount: 25, date: selected_month + 1.day)
+    create_transaction(account: account, name: "Previous month", amount: 200, date: previous_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    chart = spending_trend_chart_data
+
+    current = chart.fetch("current")
+    previous = chart.fetch("previous")
+
+    # Both months are past, so both curves run their full length.
+    assert_equal selected_month.end_of_month.day, current.size
+    assert_equal previous_month.end_of_month.day, previous.size
+
+    # Cumulative: each month's final point carries the month's total.
+    assert_equal 75.0, current.last.fetch("value")
+    assert_equal 200.0, previous.last.fetch("value")
+    assert_equal [ selected_month.end_of_month.day, previous_month.end_of_month.day ].max, chart.fetch("days")
+  end
+
+  test "dashboard spending trend widget caps an in-progress month at today" do
+    account = @family.accounts.create!(name: "Spending Trend Current Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: account, name: "Today", amount: 10, date: Date.current)
+
+    get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601 }
+
+    assert_response :ok
+    chart = spending_trend_chart_data
+
+    assert_equal Date.current.day, chart.fetch("current").size
+    assert chart.fetch("days") >= Date.current.day
+  end
+
+  test "dashboard spending trend widget clamps invalid and future month params" do
+    account = @family.accounts.create!(name: "Spending Trend Clamp Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: account, name: "Today", amount: 10, date: Date.current)
+
+    get root_path, params: { spending_month: "not-a-date" }
+    assert_response :ok
+
+    get root_path, params: { spending_month: 2.months.from_now.to_date.iso8601 }
+    assert_response :ok
+
+    chart = spending_trend_chart_data
+    assert_equal Date.current.beginning_of_month.iso8601, chart.fetch("start_date")
+  end
+
   private
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
+    end
+
+    def spending_trend_chart_data
+      JSON.parse(css_select("[data-controller='spending-chart']").first["data-spending-chart-data-value"])
     end
 end
