@@ -655,6 +655,7 @@ Rails.application.routes.draw do
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
+    resource :card_twin_cleanup, only: %i[show create], controller: "accounts/card_twin_cleanups"
   end
 
   resources :account_statements, only: %i[index show create update destroy] do
