@@ -152,8 +152,11 @@ class LoansTaskTest < ActiveSupport::TestCase
       end
     end
 
-    assert_operator elapsed, :>=, pause * 2,
-      "two rebuilt loans at SLEEP=#{pause} must take at least #{pause * 2}s -- " \
+    # One interval, not two: with two loans there is a single gap between them.
+    # Requiring 2 x pause would also fail if the task were improved to skip a
+    # pointless final sleep after the last loan, which is a correct change.
+    assert_operator elapsed, :>=, pause,
+      "two rebuilt loans at SLEEP=#{pause} must take at least #{pause}s -- " \
       "deleting sleep(pause) from the task must fail this (#38)"
   end
 

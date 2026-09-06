@@ -738,10 +738,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(loan_account)
 
     assert_response :success
-    # Scoped to the payoff-date card. `assert_select "*"` matches any element,
-    # and this loan renders "Unknown" in the Type card too -- so the unscoped
-    # version passed without proving the payoff-date fallback at all.
-    assert_select "div", text: /#{Regexp.escape(I18n.t("loans.tabs.overview.original_payoff_date"))}.*#{Regexp.escape(I18n.t("loans.tabs.overview.unknown"))}/m
+    # Scoped to the one card. `assert_select "*"` matched any element, and this
+    # loan renders "Unknown" in the Type card too, so the unscoped version
+    # proved nothing. Scoping to `div` was not enough either: the overview grid
+    # is a div containing both cards, so the regex could span them.
+    #
+    # summary_card renders div.rounded-xl > h4 (title) + p (value), so select
+    # the card by its title and assert the value inside that same card.
+    payoff_card = css_select("div.rounded-xl").find do |card|
+      card.at_css("h4")&.text&.strip == I18n.t("loans.tabs.overview.original_payoff_date")
+    end
+    assert_not_nil payoff_card, "the Overview must render an Original payoff date card"
+    assert_equal I18n.t("loans.tabs.overview.unknown"), payoff_card.at_css("p").text.strip
   end
 
   test "the Overview payoff date does not depend on persisted amortization rows" do
