@@ -25,8 +25,11 @@ class Account::ProviderImportAdapter
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
+  # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
+  #   outright. Those branches are replaced rather than deep-merged, so a nested value the
+  #   provider stops sending is actually removed instead of lingering.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, replace_extra_namespaces: [])
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -198,7 +201,16 @@ class Account::ProviderImportAdapter
       if extra.present? && entry.entryable.is_a?(Transaction)
         existing = entry.transaction.extra || {}
         incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
+
+        # A namespace listed here is a snapshot, not an accumulation: the whole
+        # branch is dropped before merging so a nested key the provider stopped
+        # sending disappears with it. deep_merge alone recurses into nested
+        # hashes, so a removed payment_meta.payee would otherwise survive
+        # forever and the drawer would keep showing it. Only namespaces the
+        # incoming payload actually carries are replaced.
+        replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
+
+        entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
         entry.transaction.save!
       end
 
