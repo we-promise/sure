@@ -1,0 +1,106 @@
+---
+tr:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Güvenli web girişiyle bir Trade Republic yatırım hesabı bağlayın"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Aracı kurum hesabı"
+      private_markets: "Özel piyasalar"
+      interest_products: "Faiz ürünleri"
+      crypto_wallet: "Kripto cüzdanı"
+    trade_republic_item:
+      syncing: "Senkronize ediliyor"
+      requires_update: "Yeniden kimlik doğrulama gerekli"
+      error: "Hata"
+      synced: "%{time} önce senkronize edildi. %{summary}."
+      setup_accounts: "Hesapları ayarla"
+      delete: "Sil"
+      accounts_need_setup: "Hesap kurulumu gerekli"
+      accounts_need_setup_description: "Trade Republic hesabınız bir Sure hesabına bağlanmalıdır."
+      no_accounts_discovered: "Henüz Trade Republic hesabı keşfedilmedi."
+      no_accounts_discovered_description: "Hesabınızı keşfetmek için girişi tamamlayıp senkronizasyon çalıştırın."
+      data_quality:
+        title: "Veri kalitesi ve senkronizasyon ayrıntıları"
+        repair: "İçe aktarılan verileri onar"
+        positions:
+          one: "%{count} pozisyon"
+          other: "%{count} pozisyon"
+        unpriced:
+          one: "%{count} güncel fiyatı olmayan pozisyon"
+          other: "%{count} güncel fiyatı olmayan pozisyon"
+        events:
+          one: "%{count} işlem"
+          other: "%{count} işlem"
+        unknown:
+          one: "%{count} bilinmeyen işlem"
+          other: "%{count} bilinmeyen işlem"
+        expenses:
+          one: "Son 30 günde %{count} gider (%{amount})"
+          other: "Son 30 günde %{count} gider (%{amount})"
+        reconciliation: "%{matched}/%{total} hesap bakiyesi mutabık"
+        sync_history: Son senkronizasyonlar
+        sync_status:
+          completed: Tamamlandı
+          failed: Başarısız
+          pending: Beklemede
+          syncing: Senkronize ediliyor
+          stale: Güncel değil
+    setup_accounts:
+      page_title: "Trade Republic hesabını ayarla"
+      subtitle: "Trade Republic yatırım hesabınızı bağlayın."
+      available_accounts:
+        account_type_investment: "Yatırım portföyü"
+        account_type_cash: "Nakit hesabı"
+      buttons:
+        refresh: "Yenile"
+        cancel: "İptal"
+        link: "Bağla"
+        done: "Bitti"
+    sync:
+      errors:
+        phone_number_missing: "Trade Republic telefon numarası eksik."
+        reauthentication_required: "Trade Republic oturumu eksik veya süresi dolmuş. Ayarlar > Sağlayıcılar bölümünden yeniden bağlanın."
+      status:
+        checking_credentials: "Trade Republic kimlik bilgileri kontrol ediliyor..."
+        importing_account: "Trade Republic hesabı içe aktarılıyor..."
+        processing_activity: "Pozisyonlar ve işlemler işleniyor..."
+        calculating_balances: "Bakiyeler hesaplanıyor..."
+    repair:
+      scheduled: "Trade Republic veri onarımı planlandı."
+    select_existing_account:
+      title: "Trade Republic hesabını bağla"
+      link: "Bağla"
+      cancel: "İptal"
+    initiate_login:
+      verification_required: "Giriş başlatıldı. %{method} ile onaylayın, ardından Girişi onayla düğmesine basın."
+    complete_login:
+      approval_pending: "Henüz onaylanmadı. Trade Republic uygulamasında girişi onaylayıp tekrar deneyin."
+      success: "Trade Republic başarıyla bağlandı."
+      login_expired: "Giriş isteğinin süresi doldu. Yeniden başlatın."
+    link_existing_account:
+      not_found: "Hesap veya Trade Republic yapılandırması bulunamadı."
+      success: "Hesap Trade Republic'e başarıyla bağlandı."
+    complete_account_setup:
+      success:
+        one: "%{count} Trade Republic hesabı başarıyla oluşturuldu."
+        other: "%{count} Trade Republic hesabı başarıyla oluşturuldu."
+      none_created: "Hiçbir hesap oluşturulmadı."
+      partial_failure:
+        one: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
+        other: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
+    activities:
+      labels:
+        contribution: Para yatırma
+        withdrawal: Para çekme
+        interest: Faiz
+        dividend: Temettü
+        card_payment: Kart ödemesi
+        cash_withdrawal: Nakit çekme
+        card_fee: Kart ücreti
+        card_refund: Kart iadesi
+        tax_refund: Vergi iadesi
+        buy: Alış
+        sell: Satış

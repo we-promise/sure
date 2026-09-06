@@ -36,6 +36,57 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "bills page shell is localized in German" do
+    @user.update!(locale: "de")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+
+    get bills_url
+
+    assert_response :success
+
+    translations = {
+      "bills.views.aria_label" => "Rechnungsansichten",
+      "bills.views.overview" => "Übersicht",
+      "bills.views.calendar" => "Kalender",
+      "bills.views.paycheck" => "Einkommensplan",
+      "bills.views.all" => "Alle Rechnungen",
+      "bills.index.title" => "Rechnungen",
+      "bills.index.add_bill" => "Rechnung hinzufügen",
+      "bills.index.add_income" => "Einkommen hinzufügen",
+      "bills.index.review_with_ai" => "Mit KI prüfen"
+    }
+
+    translations.each do |key, text|
+      assert_equal text, I18n.t(key, locale: :de, fallback: false)
+    end
+
+    assert_select "main h1", text: translations.fetch("bills.index.title")
+    assert_select "div.segmented-control[aria-label=?]", translations.fetch("bills.views.aria_label") do
+      translations.slice(
+        "bills.views.overview",
+        "bills.views.calendar",
+        "bills.views.paycheck",
+        "bills.views.all"
+      ).each_value do |text|
+        assert_select "a.segmented-control__segment", text: text
+      end
+    end
+    assert_select "header" do
+      assert_select "a:not([role=menuitem])", text: translations.fetch("bills.index.add_bill")
+      assert_select "a[role=menuitem]", text: translations.fetch("bills.index.add_income")
+      assert_select "button", text: translations.fetch("bills.index.review_with_ai")
+    end
+
+    get bills_url(view: "paycheck")
+
+    assert_response :success
+    assert_select "header" do
+      assert_select "a:not([role=menuitem])", text: translations.fetch("bills.index.add_income")
+      assert_select "a[role=menuitem]", text: translations.fetch("bills.index.add_bill")
+      assert_select "button", text: translations.fetch("bills.index.review_with_ai")
+    end
+  end
+
   test "index lists a bill" do
     bill = create_bill(name: "Rent", amount: 1200)
 

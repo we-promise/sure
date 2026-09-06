@@ -1,0 +1,40 @@
+---
+pt-PT:
+  loans:
+    edit:
+      edit: Editar %{account}
+    form:
+      interest_rate: Taxa de juro
+      interest_rate_placeholder: '5.25'
+      initial_balance: Saldo inicial do empréstimo
+      rate_type: Tipo de taxa
+      term_months: Prazo (meses)
+      term_months_placeholder: '360'
+      none: Nenhum
+      subtype_prompt: Selecionar tipo de empréstimo
+      subtype_none: Nenhum
+      rate_type_adjustable: Ajustável
+      rate_type_fixed: Fixa
+      rate_type_variable: Variável
+    new:
+      title: Introduzir dados do empréstimo
+    overview:
+      interest_rate: Taxa de juro
+      monthly_payment: Pagamento mensal
+      not_applicable: n/d
+      original_principal: Capital inicial
+      remaining_principal: Capital remanescente
+      term: Prazo
+      type: Tipo
+      unknown: Desconhecido
+    tabs:
+      overview:
+        interest_rate: Taxa de juro
+        monthly_payment: Pagamento mensal
+        not_applicable: n/d
+        original_principal: Capital inicial
+        remaining_principal: Capital remanescente
+        term: Prazo
+        type: Tipo
+        unknown: Desconhecido
+        edit_loan_details: "Editar dados do empréstimo"

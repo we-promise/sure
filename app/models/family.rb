@@ -5,6 +5,7 @@ class Family < ApplicationRecord
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
   include Trading212Connectable
+  include TradeRepublicConnectable
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable

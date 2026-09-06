@@ -318,27 +318,19 @@ class SimplefinItem < ApplicationRecord
       total = stats["total_accounts"] || 0
       linked = stats["linked_accounts"] || 0
       unlinked = stats["unlinked_accounts"] || 0
-
-      if total == 0
-        "No accounts found"
-      elsif unlinked == 0
-        "#{linked} #{'account'.pluralize(linked)} synced"
-      else
-        "#{linked} synced, #{unlinked} need setup"
-      end
     else
       # Fallback to current account counts
-      total_accounts = simplefin_accounts.count
-      linked_count = accounts.count
-      unlinked_count = total_accounts - linked_count
+      total = simplefin_accounts.count
+      linked = accounts.count
+      unlinked = total - linked
+    end
 
-      if total_accounts == 0
-        "No accounts found"
-      elsif unlinked_count == 0
-        "#{linked_count} #{'account'.pluralize(linked_count)} synced"
-      else
-        "#{linked_count} synced, #{unlinked_count} need setup"
-      end
+    if total == 0
+      I18n.t("simplefin_items.sync_status.no_accounts")
+    elsif unlinked == 0
+      I18n.t("simplefin_items.sync_status.synced", count: linked)
+    else
+      I18n.t("simplefin_items.sync_status.partial_setup", count: unlinked, linked: linked, unlinked: unlinked)
     end
   end
 
@@ -359,11 +351,11 @@ class SimplefinItem < ApplicationRecord
     institutions = connected_institutions
     case institutions.count
     when 0
-      "No institutions connected"
+      I18n.t("simplefin_items.institution_summary.none")
     when 1
-      institutions.first["name"] || institutions.first["domain"] || "1 institution"
+      institutions.first["name"] || institutions.first["domain"] || I18n.t("simplefin_items.institution_summary.count", count: 1)
     else
-      "#{institutions.count} institutions"
+      I18n.t("simplefin_items.institution_summary.count", count: institutions.count)
     end
   end
 
@@ -383,7 +375,7 @@ class SimplefinItem < ApplicationRecord
 
     down = msg.downcase
     if down.include?("make fewer requests") || down.include?("only refreshed once every 24 hours") || down.include?("rate limit")
-      "You've hit SimpleFin's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+      I18n.t("simplefin_items.rate_limited.daily_refresh")
     else
       nil
     end
@@ -400,7 +392,7 @@ class SimplefinItem < ApplicationRecord
       return {
         stale: true,
         days_since_sync: days_since_sync,
-        message: "Last successful sync was #{days_since_sync} days ago. Your SimpleFin connection may need attention."
+        message: I18n.t("simplefin_items.stale_sync.last_successful", count: days_since_sync)
       }
     end
 
@@ -419,7 +411,7 @@ class SimplefinItem < ApplicationRecord
         return {
           stale: true,
           days_since_transaction: days_since_transaction,
-          message: "No new transactions in #{days_since_transaction} days. Check your SimpleFin dashboard to ensure your bank connections are active."
+          message: I18n.t("simplefin_items.stale_sync.no_transactions", count: days_since_transaction)
         }
       end
     end

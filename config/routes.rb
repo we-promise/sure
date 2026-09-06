@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       post :sync
       get :setup_accounts
       post :complete_account_setup
+      post :generate_sca_keypair
     end
   end
 
@@ -195,6 +196,29 @@ Rails.application.routes.draw do
       post :sync
       get :setup_accounts
       post :complete_account_setup
+    end
+  end
+
+  # Trade Republic routes (login steps are TR-specific: web login needs a
+  # two-phase initiate/confirm handshake with the Trade Republic app)
+  resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :repair
+      get :setup_accounts
+      post :complete_account_setup
+      post :initiate_login
+      post :complete_login
+      post :poll_login
+      post :initiate_qr_login
+      post :poll_qr_login
+      post :cancel_qr_login
     end
   end
 
@@ -922,7 +946,9 @@ Rails.application.routes.draw do
     # name even for singular resources, unlike its plural siblings above
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
-    resource :system_health, only: :show, controller: "system_health"
+    resource :system_health, only: :show, controller: "system_health" do
+      post :verify_worker_ai
+    end
   end
 
   # Defines the root path route ("/")

@@ -33,10 +33,10 @@ class Settings::HostingsController < ApplicationController
     @show_tiingo_settings = enabled_securities.include?("tiingo")
     @show_eodhd_settings = enabled_securities.include?("eodhd")
     @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
-    # T-Invest doubles as a brand-logo source consulted regardless of the price
-    # provider, so its token is useful even when it's not enabled for prices.
-    # Always surface the token field, decoupled from the securities checklist.
-    @show_tinkoff_invest_settings = true
+    tinkoff_invest_checked = enabled_securities.include?("tinkoff_invest")
+    tinkoff_invest_configured = ENV["TINKOFF_INVEST_API_KEY"].present? || Setting.tinkoff_invest_api_key.present?
+    @show_tinkoff_invest_settings = tinkoff_invest_checked || enabled_securities.include?("moex_public") || tinkoff_invest_configured
+    @tinkoff_invest_moex_only = @show_tinkoff_invest_settings && !tinkoff_invest_checked
 
     # Only fetch provider data if we're showing the section
     if @show_twelve_data_settings
@@ -95,10 +95,7 @@ class Settings::HostingsController < ApplicationController
 
       Setting.securities_providers = new_providers.join(",")
 
-      # Clear the legacy singular setting so the fallback in
-      # enabled_securities_providers doesn't re-enable a provider
-      # the user just unchecked.
-      Setting.securities_provider = nil if new_providers.empty?
+      Setting.securities_provider = "" if new_providers.empty?
 
       # Mark securities linked to removed providers as offline so they aren't
       # silently queried against an incompatible fallback provider (e.g. MFAPI

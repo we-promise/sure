@@ -43,6 +43,9 @@ it:
       unknown: "--"
       no_cost_basis: Nessun costo base
     index:
+      positions:
+        one: "%{count} posizione"
+        other: "%{count} posizioni"
       average_cost: Costo medio
       holdings: Portafoglio
       name: Nome
