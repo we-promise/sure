@@ -247,8 +247,7 @@ class Period
       I18n.t(
         "period.custom.comparison_label",
         start_date: I18n.l(start_date, format: :short_with_year),
-        end_date: I18n.l(end_date, format: :short_with_year),
-        default: "%{start_date} to %{end_date}"
+        end_date: I18n.l(end_date, format: :short_with_year)
       )
     end
 
