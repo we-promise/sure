@@ -151,6 +151,30 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert projection.payoff_date
   end
 
+  test "extra-payment projection applies recorded variable rates while holding the repayment" do
+    loan = build_loan(balance: 500000, rate_type: "variable")
+    payment_dates = loan.amortizations.where("payment_date > ?", Date.current).ordered.pluck(:payment_date)
+    loan.update!(variable_rate_schedule: {
+      payment_dates[1].iso8601 => 4.5,
+      payment_dates[3].iso8601 => 5.5
+    })
+    loan.account.update!(balance: 450000)
+    extra_payment = Loan::PayoffProjection.monthly_equivalent(
+      amount: 200,
+      frequency: "monthly",
+      currency: "USD"
+    )
+
+    projection = Loan::PayoffProjection.new(loan, extra_payment: extra_payment)
+
+    assert projection.applicable?
+    assert_equal [ BigDecimal("3.5"), BigDecimal("4.5"), BigDecimal("4.5"), BigDecimal("5.5"), BigDecimal("5.5") ],
+      projection.payments.first(5).map { |payment| payment[:interest_rate] }
+    expected_payment = loan.amortization_schedule.monthly_payment.amount + extra_payment.amount
+    assert projection.payments.first(5).all? { |payment| payment[:payment_amount] == expected_payment },
+      "recorded rate changes must not replace the held repayment in the what-if projection"
+  end
+
   test "not applicable when the fixed payment no longer covers interest at the current balance" do
     loan = build_loan(balance: 500000)
     # Monthly payment (~$2245.22) no longer covers interest once the balance

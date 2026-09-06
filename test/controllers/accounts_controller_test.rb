@@ -990,6 +990,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: I18n.t("loans.tabs.schedule.extra_payment.variable_rate_notice"), count: 0
   end
 
+  test "a German variable-rate schedule has a translated extra-payment disclosure" do
+    loan_account = variable_rate_loan_account
+    @user.update!(locale: "de")
+
+    get account_url(loan_account, tab: "schedule")
+
+    assert_response :success
+    translated_notice = I18n.t("loans.tabs.schedule.extra_payment.variable_rate_notice", locale: :de, fallback: false)
+    assert translated_notice.present?
+    assert_select "p", text: translated_notice, count: 1
+    assert_no_match I18n.t("loans.tabs.schedule.extra_payment.variable_rate_notice", locale: :en), response.body
+  end
+
   private
 
     def variable_rate_loan_account

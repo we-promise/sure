@@ -35,6 +35,8 @@ de:
         total_cost: Gesamtkosten
         payoff_date: Tilgungsdatum
         variable_rate_notice: "Dieser Kredit hat einen variablen Zinssatz. Der unten stehende Plan basiert auf dem aktuellen Zinssatz und erfassten Zinsänderungen -- künftige Zinsänderungen verschieben ihn."
+        extra_payment:
+          variable_rate_notice: "Der Zinssatz dieses Kredits kann sich ändern. Die Projektion berücksichtigt bereits erfasste Zinsänderungen und behält die aktuelle Rate bei; noch nicht erfasste Zinsänderungen können die Ergebnisse verändern."
         number: "Nr."
         date: Datum
         payment: Zahlung
