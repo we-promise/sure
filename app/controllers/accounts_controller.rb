@@ -76,6 +76,7 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
+    @extra_payment_params = extra_payment_params
     entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
@@ -460,6 +461,39 @@ class AccountsController < ApplicationController
       return if loan.schedule_current?
 
       LoanAmortizationRebuildJob.perform_later(loan.id)
+    end
+
+    # Upper bound for a modeled extra payment. Purely defensive -- rejects
+    # absurd/non-finite input (e.g. "1e400", which BigDecimal parses as
+    # Infinity without raising) rather than feeding it into the simulation.
+    # Generous on purpose: this only needs to reject nonsense, not model a
+    # realistic maximum.
+    MAX_EXTRA_PAYMENT_AMOUNT = BigDecimal("10000000")
+
+    # Hypothetical extra-payment "what if" params for the Schedule tab's
+    # chart/cards (see Loan#payoff_chart_payload). Malformed input --
+    # missing half the pair, an unrecognized frequency, a non-finite,
+    # non-positive, unbounded, or non-numeric amount, or a param that isn't
+    # even hash-shaped -- degrades to {} (baseline projection, no
+    # hypothesis) rather than raising, same posture as
+    # Api::V1::LoansController#safe_page_param.
+    def extra_payment_params
+      extra_payment_value = params[:extra_payment]
+      return {} unless extra_payment_value.is_a?(ActionController::Parameters) || extra_payment_value.is_a?(Hash)
+
+      raw = params.fetch(:extra_payment, {}).permit(:amount, :frequency).to_h.compact_blank
+      return {} unless raw["amount"].present? && raw["frequency"].present?
+      return {} unless Loan::PayoffProjection::EXTRA_PAYMENT_FREQUENCIES.include?(raw["frequency"])
+      return {} unless valid_extra_payment_amount?(raw["amount"])
+
+      raw
+    end
+
+    def valid_extra_payment_amount?(value)
+      amount = BigDecimal(value.to_s)
+      amount.finite? && amount.positive? && amount <= MAX_EXTRA_PAYMENT_AMOUNT
+    rescue ArgumentError, TypeError
+      false
     end
 
     # Builds sync stats maps for all provider types to avoid N+1 queries in views

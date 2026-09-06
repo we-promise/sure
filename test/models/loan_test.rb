@@ -420,6 +420,68 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal next_scheduled_date.iso8601, payload[:original_projection].first[:date]
   end
 
+  test "payoff_projection_with_extra returns a fresh projection boosted by the given amount" do
+    loan = build_chart_loan(balance: 500000)
+
+    with_extra = loan.payoff_projection_with_extra(amount: "100", frequency: "monthly")
+
+    assert_not_same loan.payoff_projection, with_extra
+    assert_equal loan.payoff_projection.monthly_payment + Money.new(100, "USD"), with_extra.monthly_payment
+  end
+
+  test "payoff_chart_payload accepts a caller-supplied projection and labels it from the raw what-if input" do
+    loan = build_chart_loan(balance: 500000)
+    with_extra = loan.payoff_projection_with_extra(amount: "200", frequency: "monthly")
+
+    payload = loan.payoff_chart_payload(
+      projection: with_extra,
+      extra_payment_amount: "200",
+      extra_payment_frequency: "monthly"
+    )
+
+    assert payload.present?
+    assert_equal true, payload[:ahead]
+    assert_equal "Modeling an extra $200.00 per month", payload[:extra_payment_label]
+
+    baseline_payload = loan.payoff_chart_payload
+    assert_nil baseline_payload # baseline (no extra) still doesn't diverge for an untouched balance
+  end
+
+  # Regression: aria_description used to read straight from
+  # `payoff_projection`/`amortization_schedule` instead of the passed-in
+  # `projection`, so a what-if request's screen-reader description silently
+  # kept describing the baseline (no-extra) figures while the visible chart
+  # and summary cards showed the boosted ones -- sighted and screen-reader
+  # users would see contradictory numbers for the same chart.
+  test "payoff_chart_payload's aria_description reflects the caller-supplied projection, not the baseline" do
+    loan = build_chart_loan(balance: 500000)
+    baseline_payoff_date = loan.payoff_projection.payoff_date
+    with_extra = loan.payoff_projection_with_extra(amount: "200", frequency: "monthly")
+    assert_not_equal baseline_payoff_date, with_extra.payoff_date, "test setup should exercise a real divergence"
+
+    payload = loan.payoff_chart_payload(projection: with_extra, extra_payment_amount: "200", extra_payment_frequency: "monthly")
+
+    assert_includes payload[:aria_description], I18n.l(with_extra.payoff_date, format: :long)
+    assert_not_includes payload[:aria_description], I18n.l(baseline_payoff_date, format: :long)
+  end
+
+  test "payoff_chart_payload defaults to the memoized baseline projection when none is given" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 450000)
+
+    assert_equal loan.payoff_projection.payoff_date, loan.payoff_chart_payload[:accelerated_payoff_date]&.then { Date.iso8601(_1) }
+  end
+
+  test "payoff_chart_payload is unaffected by what-if params when the extra payment doesn't cover interest" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 800000) # payment (even boosted a little) still can't cover interest
+    with_extra = loan.payoff_projection_with_extra(amount: "10", frequency: "monthly")
+
+    payload = loan.payoff_chart_payload(projection: with_extra)
+
+    assert_nil payload
+  end
+
   private
     def build_chart_loan(balance:, interest_rate: 3.5, term_months: 360, start_date: Date.current, rate_type: "fixed")
       account = Account.create! \

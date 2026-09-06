@@ -54,6 +54,21 @@ en:
           accelerated_payoff: Projected payoff
           aria_label: "Loan payoff comparison chart"
           aria_description: "Chart comparing the loan's original scheduled payoff against a projection based on the current balance. Current balance: %{current_balance}. Original scheduled payoff date: %{original_payoff_date}. Projected payoff date based on current balance: %{accelerated_payoff_date}."
+          extra_payment_applied: "Modeling an extra %{amount} %{frequency}"
+          frequency:
+            weekly: per week
+            monthly: per month
+            yearly: per year
+        extra_payment:
+          amount_label: Extra payment
+          amount_placeholder: "0.00"
+          frequency_label: Frequency
+          weekly: per week
+          monthly: per month
+          yearly: per year
+          apply: Apply
+          clear: Clear
+          approximation_notice: "Weekly and yearly amounts are converted to a monthly-equivalent figure for modeling -- this is an approximation, not a true weekly/annual payment schedule."
         number: "#"
         date: Date
         payment: Payment
