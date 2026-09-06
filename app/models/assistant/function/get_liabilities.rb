@@ -235,9 +235,21 @@ class Assistant::Function::GetLiabilities < Assistant::Function
             "Needs interest_rate, term_months and rate_type \"fixed\", or an explicit scheduled payment."
           end
       elsif loan.remaining_payments.nil?
+        # Two different failures land here, and telling them apart is the whole
+        # value of this hash. A loan with a recorded payment but no rate cannot
+        # be amortized because the RATE is missing, not because the payment is
+        # too small: reporting "never amortizes" sends the user to check a
+        # payment that is fine. Same wording as
+        # Loan::AmortizationSchedule#unavailable_reason for the same situation.
         reasons[:remaining_payments] =
-          "The monthly payment does not cover the monthly interest at this rate and balance, " \
-          "so the loan never amortizes. Check the rate and the payment with the user."
+          if loan.interest_rate.blank?
+            "No interest rate is recorded, so the payoff count and the remaining interest cannot " \
+            "be computed. An unknown rate is not a zero rate. Ask the user for the loan's nominal " \
+            "interest rate (0 is a valid answer)."
+          else
+            "The monthly payment does not cover the monthly interest at this rate and balance, " \
+            "so the loan never amortizes. Check the rate and the payment with the user."
+          end
       end
 
       reasons[:apr] = "The all-in rate (TAEG) was never recorded." if loan.apr.blank?

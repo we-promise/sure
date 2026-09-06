@@ -78,6 +78,18 @@ class Assistant::Function::GetLiabilitiesTest < ActiveSupport::TestCase
     assert_equal 0, payload[:schedule][:remaining_interest].to_f
   end
 
+  # Both failures used to be reported as "the loan never amortizes", which sent
+  # the user to check a payment that was fine while the rate stayed blank.
+  test "names the missing interest rate rather than blaming the payment" do
+    @account.update!(balance: 10_000)
+    @loan.update!(rate_type: "variable", interest_rate: nil, scheduled_payment: 500)
+
+    reason = loan_payload[:unavailable][:remaining_payments]
+
+    assert_match(/interest rate/, reason)
+    assert_no_match(/never amortizes/, reason)
+  end
+
   test "says so when the payment can never amortize the balance" do
     @account.update!(balance: 100_000)
     @loan.update!(rate_type: "variable", interest_rate: 12, scheduled_payment: 100)

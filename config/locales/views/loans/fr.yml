@@ -16,6 +16,9 @@ fr:
       none: Aucun
       origination_date: Date de début du prêt
       rate_type: Type de taux
+      rate_type_adjustable: Révisable
+      rate_type_fixed: Fixe
+      rate_type_variable: Variable
       scheduled_payment: Mensualité réelle
       scheduled_payment_hint: Utile seulement pour un taux variable ou révisable, où la mensualité ne peut pas être calculée. À laisser vide pour un taux fixe.
       subtype_none: Aucun
