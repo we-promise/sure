@@ -121,4 +121,26 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ offset.id ], created_loan.offset_accounts.pluck(:id)
     assert_redirected_to created_loan.account
   end
+
+  test "removes submitted offset accounts when changing to a non-variable rate" do
+    offset = @account.family.accounts.create!(
+      name: "Existing offset", balance: 12_500, currency: @account.currency, accountable: Depository.new
+    )
+    loan = @account.accountable
+    loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
+    assert_equal [ offset.id ], loan.reload.offset_accounts.pluck(:id)
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: loan.id,
+          rate_type: "fixed",
+          offset_account_ids: [ offset.id ]
+        }
+      }
+    }
+
+    assert_empty loan.reload.offset_accounts
+  end
 end

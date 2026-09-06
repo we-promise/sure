@@ -30,6 +30,26 @@ class Loan::OffsetResolverTest < ActiveSupport::TestCase
     end
   end
 
+  test "uses one balance per account when the range starts after existing history" do
+    @offset.balances.create!(date: Date.new(2024, 1, 1), balance: 0, cash_inflows: 100, currency: "USD")
+    @offset.balances.create!(date: Date.new(2024, 1, 2), balance: 0, cash_inflows: 250, currency: "USD")
+
+    points = Loan::OffsetResolver.new(@loan).change_points(Date.new(2024, 1, 2), Date.new(2024, 1, 3))
+
+    assert_equal [ { date: Date.new(2024, 1, 2), amount: BigDecimal("250") } ], points
+  end
+
+  test "uses the current total instead of today's stored balance" do
+    travel_to Date.new(2024, 1, 10) do
+      @offset.update!(balance: 375)
+      @offset.balances.create!(date: Date.current, balance: 0, cash_inflows: 100, currency: "USD")
+
+      points = Loan::OffsetResolver.new(@loan).change_points(Date.current.prev_day, Date.current.next_month)
+
+      assert_equal({ date: Date.current, amount: BigDecimal("375") }, points.last)
+    end
+  end
+
   test "no linked offsets produce no change points" do
     @loan.loan_offset_accounts.delete_all
 

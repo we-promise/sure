@@ -1,7 +1,7 @@
 class LoansController < ApplicationController
   include AccountableResource
 
-  before_action :set_offset_accounts, only: %i[new edit]
+  before_action :set_offset_accounts, only: %i[new edit update]
 
   permitted_accountable_attributes(
     :id, :subtype, :rate_type, :interest_rate, :term_months, :initial_balance,

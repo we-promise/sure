@@ -25,6 +25,7 @@ class Loan < ApplicationRecord
 
   attr_accessor :offset_account_ids
 
+  before_save :validate_offset_accounts, if: :offset_account_ids_supplied?
   after_save :sync_offset_accounts, if: :offset_account_ids_supplied?
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
@@ -387,11 +388,29 @@ class Loan < ApplicationRecord
     end
 
     def sync_offset_accounts
-      ids = Array(offset_account_ids).reject(&:blank?).map(&:to_s).uniq
+      ids = offset_account_ids_for_sync.map(&:id)
       loan_offset_accounts.where.not(account_id: ids).delete_all
       ids.each do |account_id|
-        loan_offset_accounts.find_or_create_by!(account_id: account_id)
+        loan_offset_accounts.find_or_create_by!(account_id:)
       end
+    end
+
+    def validate_offset_accounts
+      return if rate_type != "variable"
+
+      offset_account_ids_for_sync.each do |account|
+        link = LoanOffsetAccount.new(loan: self, account:)
+        next if link.valid?
+
+        errors.add(:offset_account_ids, link.errors.full_messages.to_sentence)
+      end
+    end
+
+    def offset_account_ids_for_sync
+      return [] unless rate_type == "variable"
+
+      ids = Array(offset_account_ids).reject(&:blank?).map(&:to_s).uniq
+      Account.where(id: ids).to_a
     end
 
     def normalized_rate(rate)

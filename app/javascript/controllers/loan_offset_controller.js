@@ -11,5 +11,11 @@ export default class extends Controller {
     const visible = this.rateTypeTarget.value === "variable"
     this.offsetAccountsTarget.classList.toggle("hidden", !visible)
     this.offsetAccountsTarget.toggleAttribute("aria-hidden", !visible)
+
+    if (!visible) {
+      this.offsetAccountsTarget.querySelector("select")?.selectedOptions.forEach((option) => {
+        option.selected = false
+      })
+    }
   }
 }

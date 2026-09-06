@@ -14,7 +14,7 @@ class Loan
       today = Date.current
       return [ { date: from_date, amount: current_total } ] if from_date >= today
 
-      historical_end = [ to_date - 1, today ].min
+      historical_end = [ to_date - 1, today - 1 ].min
       points = historical_points(from_date, historical_end)
       if to_date > today
         points << { date: today, amount: current_total }
@@ -33,8 +33,8 @@ class Loan
       end
 
       def historical_points(from_date, to_date)
-        balances = offset_accounts.index_with do |account|
-          account.balances.where("date < ?", from_date).order(date: :desc).first
+        balances = offset_accounts.to_h do |account|
+          [ account.id, account.balances.where("date < ?", from_date).order(date: :desc).first ]
         end
         points = [ { date: from_date, amount: balances.values.sum(BigDecimal("0")) { |balance| balance_value(balance) } } ]
 
