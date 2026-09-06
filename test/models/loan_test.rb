@@ -333,6 +333,38 @@ class LoanTest < ActiveSupport::TestCase
   # loans got no projection and therefore no chart. #35 removed that gate --
   # giving variable loans a projection is the entire point of #12 -- so the
   # chart must now render for them too.
+  # Regression for the fourth occurrence of the same defect: a display figure
+  # sourced from persisted rows while its neighbours are computed live. The
+  # chart previously read loan.amortizations for both scheduled series while
+  # original_payoff_date and the projection came from the current schedule, so
+  # a loan changed but not yet rebuilt plotted two different loans at once
+  # (risk R21).
+  test "chart series follow the current schedule when persisted rows are stale" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 450000)
+    loan.rebuild_amortization_schedule
+    stale_last = loan.reload.amortizations.ordered.last.ending_balance
+
+    loan.update!(interest_rate: loan.interest_rate + 2)
+
+    payload = loan.reload.payoff_chart_payload
+    assert_not_nil payload
+
+    assert_predicate loan.amortization_schedule, :stale?,
+      "the persisted rows must still be stale -- reading the chart must not rebuild them"
+
+    series = payload[:scheduled_history] + payload[:original_projection]
+    current = loan.amortization_schedule.display_rows.map { |row| row.ending_balance.to_f }
+    persisted = loan.amortizations.ordered.map { |row| row.ending_balance.to_f }
+
+    assert_not_equal persisted, current,
+      "the rate change must actually move the schedule, or this test proves nothing"
+    assert_equal current, series.map { |point| point[:balance] },
+      "the chart must plot the CURRENT schedule, not the stale persisted rows (risk R21)"
+    assert_equal stale_last.to_f, loan.amortizations.ordered.last.ending_balance.to_f,
+      "the persisted rows must be untouched by reading the chart"
+  end
+
   test "payoff_chart_payload is produced for a variable rate loan" do
     loan = build_chart_loan(balance: 500000, rate_type: "variable")
     loan.account.update!(balance: 450000)
