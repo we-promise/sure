@@ -59,6 +59,7 @@ class WiseItemTest < ActiveSupport::TestCase
   end
 
   test "generate_sca_keypair! stores a private key and returns a matching public key" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
     public_pem = @wise_item.generate_sca_keypair!
 
     assert @wise_item.sca_configured?
@@ -69,7 +70,23 @@ class WiseItemTest < ActiveSupport::TestCase
     assert_equal private_key.public_key.to_pem, public_pem
   end
 
+  # An SCA private key signs requests to Wise. Storing it unencrypted is not a
+  # degraded mode worth having, so an install without Active Record encryption
+  # is refused rather than silently writing the PEM in the clear.
+  test "refuses to store an SCA private key when encryption is not configured" do
+    WiseItem.stubs(:encryption_ready?).returns(false)
+
+    assert_raises(WiseItem::SCAEncryptionUnavailable) { @wise_item.generate_sca_keypair! }
+    assert_nil @wise_item.reload.sca_private_key
+
+    @wise_item.sca_private_key = "-----BEGIN RSA PRIVATE KEY-----"
+
+    assert_not @wise_item.valid?
+    assert_includes @wise_item.errors.attribute_names, :sca_private_key
+  end
+
   test "generate_sca_keypair! replaces a previously generated key" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
     first_public_key = @wise_item.generate_sca_keypair!
     second_public_key = @wise_item.generate_sca_keypair!
 
