@@ -22,6 +22,8 @@ class Provider::Openai < Provider
 
   # Effective per-request HTTP timeout for OpenAI-compatible calls.
   # Precedence matches other self-hosting settings: ENV > Setting > default.
+  #
+  # @return [Integer] timeout in seconds, at least MIN_REQUEST_TIMEOUT
   def self.request_timeout
     configured = ENV["OPENAI_REQUEST_TIMEOUT"].to_s.strip.to_i
     configured = Setting.openai_request_timeout.to_i unless configured.positive?
@@ -30,13 +32,47 @@ class Provider::Openai < Provider
     [ configured, MIN_REQUEST_TIMEOUT ].max
   end
 
+  # Extra HTTP headers for OpenAI-compatible requests, parsed from the
+  # OPENAI_EXTRA_HEADERS env var (a JSON object). ENV-only: no Setting
+  # fallback. Keys and values are stringified for Faraday; blank values are
+  # dropped. Nested JSON values are Ruby-inspect-stringified, not
+  # JSON-serialized. Fail-closed: any parse problem yields {} plus an error
+  # log (raw value never logged) so chat never breaks from bad config.
+  #
+  # @return [Hash<String, String>] parsed headers, {} when unset or invalid
+  def self.extra_headers
+    raw = ENV["OPENAI_EXTRA_HEADERS"].presence
+    return {} unless raw
+
+    parsed = JSON.parse(raw)
+    unless parsed.is_a?(Hash)
+      Rails.logger.error("OPENAI_EXTRA_HEADERS must be a JSON object; ignoring")
+      return {}
+    end
+    parsed.transform_keys(&:to_s).transform_values(&:to_s).compact_blank
+  rescue JSON::ParserError, TypeError
+    Rails.logger.error("OPENAI_EXTRA_HEADERS is not valid JSON; ignoring")
+    {}
+  end
+
   # Builds a client that uses the effective request timeout for every OpenAI call.
+  # Static extra headers from OPENAI_EXTRA_HEADERS are attached at construction;
+  # session-valued headers are withheld for per-request resolution.
+  #
+  # @param access_token [String] API token for the OpenAI-compatible endpoint
+  # @param uri_base [String, nil] custom endpoint base URL (OpenAI when nil)
+  # @param model [String, nil] default model; required when uri_base is set
+  # @return [void]
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = self.class.request_timeout
+    parsed_headers = self.class.extra_headers
+    @session_extra_headers = parsed_headers.select { |_, value| value.include?("{session_id}") }
+    static_headers = parsed_headers.except(*@session_extra_headers.keys)
+    client_options[:extra_headers] = static_headers if static_headers.present?
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
@@ -373,6 +409,26 @@ class Provider::Openai < Provider
   private
     attr_reader :client
 
+    # Substitutes {session_id} into session-valued extra headers for this chat
+    # request. Static headers were already set at construction; a session
+    # header without a session_id is simply never applied. Returns a
+    # request-scoped client copy carrying the resolved headers — session
+    # headers must not persist on the shared client, so later batch requests
+    # (which reuse this provider instance's client) never see them.
+    #
+    # @param session_id [String, nil] chat session UUID to substitute
+    # @return [OpenAI::Client] scoped copy when session headers apply, otherwise
+    #   the shared client
+    def with_session_headers(session_id:)
+      return client if @session_extra_headers.blank? || session_id.blank?
+
+      session_client = client.dup
+      session_client.add_headers(
+        @session_extra_headers.transform_values { |value| value.gsub("{session_id}") { session_id } }
+      )
+      session_client
+    end
+
     # Returns the first positive integer among env, setting, default. Treats
     # zero or negative values as "unset" and falls through — a 0-token budget
     # is never what the user meant.
@@ -410,6 +466,8 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
+        session_client = with_session_headers(session_id: session_id)
+
         chat_config = ChatConfig.new(
           functions: functions,
           function_results: function_results
@@ -445,7 +503,7 @@ class Provider::Openai < Provider
           request_params[:tool_choice] = "none" if tool_choice == :none && chat_config.tools.present?
           request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
-          raw_response = client.responses.create(parameters: request_params)
+          raw_response = session_client.responses.create(parameters: request_params)
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
@@ -518,6 +576,8 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
+        session_client = with_session_headers(session_id: session_id)
+
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,
@@ -537,7 +597,7 @@ class Provider::Openai < Provider
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
         begin
-          raw_response = client.chat(parameters: params)
+          raw_response = session_client.chat(parameters: params)
 
           parsed = GenericChatParser.new(raw_response).parsed
 

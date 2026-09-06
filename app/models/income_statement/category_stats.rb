@@ -1,4 +1,6 @@
 class IncomeStatement::CategoryStats
+  include IncomeStatement::ScopedTransactionsQuery
+
   def initialize(family, interval: "month", account_ids: nil)
     @family = family
     @interval = interval
@@ -29,35 +31,7 @@ class IncomeStatement::CategoryStats
     end
 
     def sql_params
-      params = {
-        target_currency: @family.currency,
-        interval: @interval,
-        family_id: @family.id
-      }
-
-      ids = @family.tax_advantaged_account_ids
-      params[:tax_advantaged_account_ids] = ids if ids.present?
-
-      params
-    end
-
-    def budget_excluded_kinds_sql
-      @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
-    end
-
-    def pending_providers_sql
-      Transaction.pending_providers_sql("t")
-    end
-
-    def exclude_tax_advantaged_sql
-      ids = @family.tax_advantaged_account_ids
-      return "" if ids.empty?
-      "AND a.id NOT IN (:tax_advantaged_account_ids)"
-    end
-
-    def scope_to_account_ids_sql
-      return "" if @account_ids.nil?
-      ActiveRecord::Base.sanitize_sql([ "AND a.id IN (?)", @account_ids ])
+      base_sql_params(interval: @interval)
     end
 
     def query_sql
@@ -66,17 +40,13 @@ class IncomeStatement::CategoryStats
           SELECT
             c.id as category_id,
             date_trunc(:interval, ae.date) as period,
-            #{IncomeStatement::ClassificationSql.classification(transactions_alias: "t")} as classification,
-            SUM(#{IncomeStatement::ClassificationSql.signed_amount(transactions_alias: "t")}) as total
+            #{classification_sql("t")} as classification,
+            SUM(#{converted_amount_sql("t")}) as total
           FROM transactions t
-          JOIN entries ae ON ae.entryable_id = t.id AND ae.entryable_type = 'Transaction'
-          JOIN accounts a ON a.id = ae.account_id
+          #{entries_join_sql("t")}
+          #{accounts_join_sql}
           LEFT JOIN categories c ON c.id = t.category_id
-          LEFT JOIN exchange_rates er ON (
-            er.date = ae.date AND
-            er.from_currency = ae.currency AND
-            er.to_currency = :target_currency
-          )
+          #{exchange_rates_join_sql}
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
@@ -84,17 +54,17 @@ class IncomeStatement::CategoryStats
             #{pending_providers_sql}
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
-          GROUP BY c.id, period, #{IncomeStatement::ClassificationSql.classification(transactions_alias: "t")}
+          GROUP BY c.id, period, #{classification_sql("t")}
         ),
-        -- See IncomeStatement::FamilyStats for why this step exists: a
-        -- category+period where refunds exceed expenses sums negative under
-        -- 'expense'; re-label it 'income' (and vice versa) before
-        -- aggregating instead of ABS-ing the final median/avg.
         corrected_totals AS (
           SELECT
             category_id,
             period,
-            #{IncomeStatement::ClassificationSql.reclassify_by_sign} as classification,
+            CASE
+              WHEN classification = 'expense' AND total < 0 THEN 'income'
+              WHEN classification = 'income' AND total > 0 THEN 'expense'
+              ELSE classification
+            END as classification,
             ABS(total) as total
           FROM period_totals
         ),
@@ -106,8 +76,8 @@ class IncomeStatement::CategoryStats
         SELECT
           category_id,
           classification,
-          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
-          AVG(total) as avg
+          ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
+          ABS(AVG(total)) as avg
         FROM reaggregated_totals
         GROUP BY category_id, classification;
       SQL

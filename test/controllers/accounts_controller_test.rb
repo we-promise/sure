@@ -3,6 +3,7 @@ require "test_helper"
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
   include OnchainTestHelper
+  include EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -13,6 +14,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "p.ml-auto.privacy-sensitive"
+  end
+
+  test "index delegates whole-row account clicks to the account link" do
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(@account)} [data-controller='clickable-row']")
+    account_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal account_path(@account), account_link["href"]
   end
 
   test "index localizes the Plaid add accounts action" do
@@ -127,6 +140,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, per_row_transfer, "N+1 per-row transfer queries detected (#{per_row_transfer})"
   end
 
+  test "show delegates whole-row trade clicks to the drawer link" do
+    investment_account = accounts(:investment)
+    entry = entries(:trade)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(entry.entryable)} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
+  end
+
   test "show avoids N+1 split-parent queries across paginated entries" do
     queries = capture_sql_queries { get account_url(@account) }
     assert_response :success
@@ -137,6 +165,59 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       q.match?(/FROM "entries".*WHERE.*"parent_entry_id"/) && !q.include?(" IN (")
     }
     assert_equal 0, per_row_split, "N+1 per-row split-parent queries detected (#{per_row_split})"
+  end
+
+  test "show groups split transactions into a single split-group row when grouping is enabled" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    assert_select ".split-group" do
+      assert_select "p", text: "Food", count: 0
+    end
+  end
+
+  test "show renders split children as flat rows when grouping is disabled" do
+    @user.update!(preferences: { "show_split_grouped" => false })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 0
+  end
+
+  test "show avoids N+1 queries when loading split parents for grouped display" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    3.times do |i|
+      entry = create_transaction(name: "Grocery Store #{i}", amount: 100, account: @account)
+      entry.split!([
+        { name: "Food", amount: 60 },
+        { name: "Household", amount: 40 }
+      ])
+    end
+
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # @split_parents loads all referenced split-parent entries in a single
+    # `WHERE "entries"."id" IN (...)` query — a per-row `"id" = $1` lookup
+    # would indicate the batching regressed into N+1.
+    per_row_split_parent = queries.count { |q|
+      q.match?(/FROM "entries".*WHERE.*"entries"\."id" = \$?\d+/) && !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_split_parent, "N+1 per-row split-parent lookups detected (#{per_row_split_parent})"
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do

@@ -82,6 +82,45 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Failed to create accounts: An unexpected error occurred", flash[:alert]
   end
 
+  test "account selection localizes an unexpected error in German" do
+    @user.update!(locale: "de")
+    Provider::LunchflowAdapter.stubs(:build_provider).raises(StandardError, "Synthetic failure")
+
+    get select_accounts_lunchflow_items_url
+
+    assert_response :success
+    assert_includes response.body, "Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal."
+    refute_includes response.body, "An unexpected error occurred. Please try again later."
+    assert I18n.exists?("lunchflow_items.api_error.unexpected_error", :de, fallback: false)
+    assert_equal "An unexpected error occurred. Please try again later.",
+                 I18n.t("lunchflow_items.api_error.unexpected_error", locale: :en, fallback: false)
+  end
+
+  test "existing-account selection localizes an unexpected error in German" do
+    @user.update!(locale: "de")
+    Provider::LunchflowAdapter.stubs(:build_provider).raises(StandardError, "Synthetic failure")
+
+    get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id)
+
+    assert_response :success
+    assert_includes response.body, "Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal."
+    refute_includes response.body, "An unexpected error occurred. Please try again later."
+  end
+
+  test "account selection preserves provider error details" do
+    @user.update!(locale: "de")
+    Provider::LunchflowAdapter.stubs(:build_provider).raises(
+      Provider::Lunchflow::LunchflowError,
+      "Provider-specific failure"
+    )
+
+    get select_accounts_lunchflow_items_url
+
+    assert_response :success
+    assert_includes response.body, "Provider-specific failure"
+    refute_includes response.body, "Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal."
+  end
+
   test "invalid non-Turbo create redirects instead of rendering a missing template" do
     assert_no_difference "LunchflowItem.count" do
       post lunchflow_items_url, params: {
