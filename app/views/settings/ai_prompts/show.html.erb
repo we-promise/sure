@@ -13,50 +13,83 @@
   </div>
 <% end %>
 
-<%= styled_form_with model: @family,
-                     url: settings_ai_prompts_path,
-                     method: :patch,
-                     class: "space-y-4" do |form| %>
-  <%= render layout: "settings/ai_prompts/prompt_section",
-             locals: { icon_name: "message-circle",
-                       title: t(".main_system_prompt.title"),
-                       subtitle: t(".main_system_prompt.subtitle"),
-                       open: @family.errors[:ai_prompt_chat_system].present? } do %>
-    <%= render "settings/ai_prompts/prompt_field",
-               form: form, family: @family,
-               prompts: [ { key: :chat_system, label: t(".main_system_prompt.label") } ],
-               textarea_id: "family_ai_prompt_chat_system" %>
+<div data-controller="ai-prompt-form"
+     data-ai-prompt-form-storage-key-value="ai_prompts_dismiss_safety_warning"
+     data-ai-prompt-form-max-length-value="<%= Family::AiPromptable::MAX_LENGTH %>">
+  <%= styled_form_with model: @family,
+                       url: settings_ai_prompts_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: { "ai-prompt-form-target": "form", action: "submit->ai-prompt-form#save" } do |form| %>
+    <%= render layout: "settings/ai_prompts/prompt_section",
+               locals: { icon_name: "message-circle",
+                         title: t(".main_system_prompt.title"),
+                         subtitle: t(".main_system_prompt.subtitle"),
+                         open: @family.errors[:ai_prompt_chat_system].present? } do %>
+      <%= render "settings/ai_prompts/prompt_field",
+                 form: form, family: @family,
+                 prompts: [ { key: :chat_system, label: t(".main_system_prompt.label") } ],
+                 textarea_id: "family_ai_prompt_chat_system" %>
+    <% end %>
+
+    <%= render layout: "settings/ai_prompts/prompt_section",
+               locals: { icon_name: "brain",
+                         title: t(".transaction_categorizer.title"),
+                         subtitle: t(".transaction_categorizer.subtitle"),
+                         open: @family.errors[:ai_prompt_categorizer_openai].present? || @family.errors[:ai_prompt_categorizer_anthropic].present? } do %>
+      <%= render "settings/ai_prompts/prompt_field",
+                 form: form, family: @family,
+                 prompts: [
+                   { key: :categorizer_openai },
+                   { key: :categorizer_anthropic }
+                 ],
+                 textarea_id: "family_ai_prompt_categorizer" %>
+    <% end %>
+
+    <%= render layout: "settings/ai_prompts/prompt_section",
+               locals: { icon_name: "store",
+                         title: t(".merchant_detector.title"),
+                         subtitle: t(".merchant_detector.subtitle"),
+                         open: @family.errors[:ai_prompt_merchant_openai].present? || @family.errors[:ai_prompt_merchant_anthropic].present? } do %>
+      <%= render "settings/ai_prompts/prompt_field",
+                 form: form, family: @family,
+                 prompts: [
+                   { key: :merchant_openai },
+                   { key: :merchant_anthropic }
+                 ],
+                 textarea_id: "family_ai_prompt_merchant" %>
+    <% end %>
+
+    <div class="flex justify-end">
+      <%= form.submit t(".save") %>
+    </div>
   <% end %>
 
-  <%= render layout: "settings/ai_prompts/prompt_section",
-             locals: { icon_name: "brain",
-                       title: t(".transaction_categorizer.title"),
-                       subtitle: t(".transaction_categorizer.subtitle"),
-                       open: @family.errors[:ai_prompt_categorizer_openai].present? || @family.errors[:ai_prompt_categorizer_anthropic].present? } do %>
-    <%= render "settings/ai_prompts/prompt_field",
-               form: form, family: @family,
-               prompts: [
-                 { key: :categorizer_openai },
-                 { key: :categorizer_anthropic }
-               ],
-               textarea_id: "family_ai_prompt_categorizer" %>
+  <%= render DS::Dialog.new(
+        id: "ai-prompt-save-confirm-dialog",
+        auto_open: false,
+        disable_frame: true,
+        width: "md",
+        data: { "ai-prompt-form-target": "dialog" }
+      ) do |dialog| %>
+    <% dialog.with_header(title: t(".save_confirm.title")) %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".save_confirm.body") %>
+        </p>
+        <div class="flex items-center gap-2">
+          <input type="checkbox"
+                 id="ai-prompt-dont-show-again"
+                 class="checkbox checkbox--light"
+                 data-ai-prompt-form-target="dontShowAgain">
+          <label for="ai-prompt-dont-show-again" class="text-xs text-secondary cursor-pointer select-none">
+            <%= t(".save_confirm.dont_show_again") %>
+          </label>
+        </div>
+      </div>
+    <% end %>
+    <% dialog.with_action(cancel_action: true, text: t(".save_confirm.cancel"), variant: "outline") %>
+    <% dialog.with_action(text: t(".save_confirm.confirm"), variant: "primary", data: { action: "click->ai-prompt-form#confirmSave" }) %>
   <% end %>
-
-  <%= render layout: "settings/ai_prompts/prompt_section",
-             locals: { icon_name: "store",
-                       title: t(".merchant_detector.title"),
-                       subtitle: t(".merchant_detector.subtitle"),
-                       open: @family.errors[:ai_prompt_merchant_openai].present? || @family.errors[:ai_prompt_merchant_anthropic].present? } do %>
-    <%= render "settings/ai_prompts/prompt_field",
-               form: form, family: @family,
-               prompts: [
-                 { key: :merchant_openai },
-                 { key: :merchant_anthropic }
-               ],
-               textarea_id: "family_ai_prompt_merchant" %>
-  <% end %>
-
-  <div class="flex justify-end">
-    <%= form.submit t(".save") %>
-  </div>
-<% end %>
+</div>

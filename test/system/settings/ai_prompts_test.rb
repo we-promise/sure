@@ -54,11 +54,73 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     end
 
     click_button "Save prompts"
+
+    assert_selector "#ai-prompt-save-confirm-dialog", visible: true
+    within "#ai-prompt-save-confirm-dialog" do
+      click_button "Confirm"
+    end
+    assert_no_selector "#ai-prompt-save-confirm-dialog"
+
     assert_text "AI prompts updated"
 
     @user.family.reload
     assert_equal "OpenAI prompt", @user.family.ai_prompt(:categorizer_openai)
     assert_equal "Anthropic prompt", @user.family.ai_prompt(:categorizer_anthropic)
+  end
+
+  test "saving custom prompt can be cancelled via save confirmation dialog" do
+    visit settings_ai_prompts_path
+
+    all("summary", minimum: 3)[1].click
+    editor = find("[data-controller='ai-prompt-editor']")
+
+    within editor do
+      fill_in "Prompt", with: "Unsaved prompt"
+    end
+
+    click_button "Save prompts"
+
+    assert_selector "#ai-prompt-save-confirm-dialog", visible: true
+    within "#ai-prompt-save-confirm-dialog" do
+      click_button "Cancel"
+    end
+    assert_no_selector "#ai-prompt-save-confirm-dialog"
+    assert_no_text "AI prompts updated"
+
+    assert_nil @user.family.reload.ai_prompt(:categorizer_openai)
+  end
+
+  test "saving custom prompt with dont show again remembers preference in subsequent saves" do
+    visit settings_ai_prompts_path
+
+    all("summary", minimum: 3)[1].click
+    editor = find("[data-controller='ai-prompt-editor']")
+
+    within editor do
+      fill_in "Prompt", with: "First custom prompt"
+    end
+
+    click_button "Save prompts"
+
+    assert_selector "#ai-prompt-save-confirm-dialog", visible: true
+    within "#ai-prompt-save-confirm-dialog" do
+      check "Don't show this warning again"
+      click_button "Confirm"
+    end
+    assert_no_selector "#ai-prompt-save-confirm-dialog"
+    assert_text "AI prompts updated"
+
+    # Subsequent save with another custom prompt should bypass the dialog
+    all("summary", minimum: 3)[1].click
+    editor = find("[data-controller='ai-prompt-editor']")
+    within editor do
+      fill_in "Prompt", with: "Second custom prompt"
+    end
+
+    click_button "Save prompts"
+    assert_no_selector "#ai-prompt-save-confirm-dialog"
+    assert_text "AI prompts updated"
+    assert_equal "Second custom prompt", @user.family.reload.ai_prompt(:categorizer_openai)
   end
 
   test "resetting prompt confirms with custom modal and restores default text" do

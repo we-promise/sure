@@ -126,6 +126,12 @@ en:
         page_title: AI Prompts
         disable_ai: Disable AI Assistant
         save: Save prompts
+        save_confirm:
+          title: "Save custom AI prompts?"
+          body: "Custom prompt overrides replace the built-in system instructions and safety guardrails (such as financial advice restrictions) for your family."
+          dont_show_again: "Don't show this warning again"
+          cancel: "Cancel"
+          confirm: "Confirm"
         main_system_prompt:
           title: Main System Prompt
           subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
