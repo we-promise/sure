@@ -48,7 +48,7 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
 
     assert_equal "BIG", result[:payees].first[:payee]
     assert result[:summary][:transaction_count] >= 2
-    assert result[:summary][:totals_by_currency][@account.currency][:formatted].present?
+    assert result[:summary][:totals_by_currency][@account.currency][:expense][:formatted].present?
   end
 
   test "keeps totals separate per currency instead of blending them" do
@@ -72,6 +72,53 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
 
     assert_equal 2, blended.size, "one payee billed in two currencies is two rows, not one blended total"
     assert_equal [ "GBP", @account.currency ].sort, blended.map { |p| p[:currency] }.sort
+  end
+
+  # Entry.uncategorized_transactions drops every Transaction::TRANSFER_KINDS
+  # member, but the budget model only excludes BUDGET_EXCLUDED_KINDS. A loan
+  # payment IS spending here, so an uncategorized one is part of the gap this
+  # tool reports, and hiding it understates that gap silently.
+  test "lists the transfer kinds the budget counts as spending" do
+    loan = create_uncategorized(name: "PRLV SEPA CREDIT AUTO", amount: 250)
+    loan.entryable.update!(kind: "loan_payment")
+
+    contribution = create_uncategorized(name: "VIR SEPA PEA", amount: 400)
+    contribution.entryable.update!(kind: "investment_contribution")
+
+    payees = @fn.call[:payees].map { |p| p[:payee] }
+
+    assert_includes payees, "CREDIT AUTO"
+    assert_includes payees, "PEA"
+  end
+
+  # A signed sum let one uncategorized salary cancel the purchases it was meant
+  # to be measured against, so the summary could understate the backlog or
+  # report it with the wrong sign entirely.
+  test "reports income and expense separately instead of netting them" do
+    create_uncategorized(name: "PRLV SEPA COURSES", amount: 200)
+    before = @fn.call[:summary][:totals_by_currency][@account.currency]
+
+    create_uncategorized(name: "VIR SEPA SALAIRE", amount: -3000)
+    totals = @fn.call[:summary][:totals_by_currency][@account.currency]
+
+    assert_equal before[:expense][:amount].to_f, totals[:expense][:amount].to_f,
+                 "an uncategorized inflow must not cancel uncategorized spending"
+    assert_equal before[:expense][:transaction_count], totals[:expense][:transaction_count]
+    assert_equal 3000, totals[:income][:amount].to_f - before[:income][:amount].to_f
+    assert_equal 1, totals[:income][:transaction_count] - before[:income][:transaction_count]
+  end
+
+  # The whole window is materialized to normalize and group labels, so an
+  # unbounded start_date would load a family's entire history to return at most
+  # MAX_PAYEES rows.
+  test "clamps a start_date beyond the maximum lookback" do
+    max_days = Assistant::Function::GetUncategorizedTransactions::MAX_LOOKBACK_DAYS
+    create_uncategorized(name: "PRLV SEPA ANCIEN", amount: 42, date: Date.current - max_days - 60)
+
+    result = @fn.call("start_date" => (Date.current - 3000).to_s)
+
+    assert_equal Date.current - max_days, result[:period][:start_date]
+    assert_not_includes result[:payees].map { |p| p[:payee] }, "ANCIEN"
   end
 
   test "never lists transfers or excluded rows" do

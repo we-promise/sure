@@ -67,6 +67,19 @@ class Transaction::LabelNormalizerTest < ActiveSupport::TestCase
     assert_equal "SNCF", normalize("FACTURE CARTE DU 020925 SNCF").name
   end
 
+  # Banks are not consistent about the case of the DU token, and the compact
+  # variant below already matched case-insensitively. Leaving the slashed one
+  # case-sensitive split "CB du 02/09 CARREFOUR" into a payee literally called
+  # "du CARREFOUR", away from the same merchant billed in upper case.
+  test "strips the DU token whatever its case" do
+    %w[du DU Du dU].each do |token|
+      result = normalize("CB #{token} 02/09 CARREFOUR")
+
+      assert_equal "CARREFOUR", result.name, "#{token} was not stripped"
+      assert_equal Date.new(2026, 9, 2), result.operation_date
+    end
+  end
+
   test "returns no operation date when the entry date is unknown" do
     result = normalize("CB 02/09 CARREFOUR", on: nil)
 

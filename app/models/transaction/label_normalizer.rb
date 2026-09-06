@@ -60,7 +60,7 @@ class Transaction::LabelNormalizer
   AGGREGATOR = /\A(?:PAYPAL|SUMUP|SQ|SQC?\*?|STRIPE|IZETTLE|ZETTLE|LYDIA)\s*\*\s*/i
 
   # DD/MM, DD/MM/YY and DD/MM/YYYY, plus the dotted and dashed variants.
-  SLASHED_DATE = %r{\b(?:DU\s+)?(\d{2})[/.\-](\d{2})(?:[/.\-](\d{2,4}))?\b}
+  SLASHED_DATE = %r{\b(?:DU\s+)?(\d{2})[/.\-](\d{2})(?:[/.\-](\d{2,4}))?\b}i
   # Only read after an explicit DU, because a bare 6-digit run is far more often
   # a card or contract number than a date.
   COMPACT_DATE = /\bDU\s+(\d{2})(\d{2})(\d{2})\b/i
