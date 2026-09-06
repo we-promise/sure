@@ -524,15 +524,13 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
   test "rule operand lookup skips name fallback for stale UUID values" do
     stale_uuid = SecureRandom.uuid
-    relation = mock
-    relation.expects(:find_by).with(id: stale_uuid).once.returns(nil)
-    relation.expects(:find_by).with(name: stale_uuid).never
+    @exporter.expects(:operand_records_by_name).never
 
     operand = @exporter.send(
       :rule_operand,
       stale_uuid,
       type: "Category",
-      relation: relation,
+      relation: :categories,
       fallback_to_name: true
     )
 
