@@ -12,20 +12,24 @@ class Settings::BankSyncPreferencesControllerTest < ActionDispatch::IntegrationT
   test "enabling the preference clears plaid cursors and re-syncs the family's items" do
     @plaid_item.update!(next_cursor: "cursor-before-change")
 
-    assert_enqueued_with(job: SyncJob) do
+    assert_enqueued_with(job: PlaidHistoryReplayJob, args: [ @plaid_item ]) do
       patch settings_bank_sync_preferences_url,
             params: { family: { plaid_prefer_original_description: "1" } }
     end
 
     assert_redirected_to settings_providers_url
     assert @family.reload.plaid_prefer_original_description?
+
+    # The reset happens in the job, not inline — an in-flight sync would
+    # otherwise overwrite it.
+    perform_enqueued_jobs
     assert_nil @plaid_item.reload.next_cursor
   end
 
   test "saving the same value does not force a re-sync" do
     @plaid_item.update!(next_cursor: "cursor-unchanged")
 
-    assert_no_enqueued_jobs(only: SyncJob) do
+    assert_no_enqueued_jobs(only: PlaidHistoryReplayJob) do
       patch settings_bank_sync_preferences_url,
             params: { family: { plaid_prefer_original_description: "0" } }
     end
@@ -46,11 +50,14 @@ class Settings::BankSyncPreferencesControllerTest < ActionDispatch::IntegrationT
       next_cursor: "other-family-cursor"
     )
 
-    patch settings_bank_sync_preferences_url,
-          params: { family: { plaid_prefer_original_description: "1" } }
+    perform_enqueued_jobs do
+      patch settings_bank_sync_preferences_url,
+            params: { family: { plaid_prefer_original_description: "1" } }
+    end
 
     assert_redirected_to settings_providers_url
     assert @family.reload.plaid_prefer_original_description?
+    assert_nil @plaid_item.reload.next_cursor
 
     refute other_family.reload.plaid_prefer_original_description?
     assert_equal "other-family-cursor", other_item.reload.next_cursor

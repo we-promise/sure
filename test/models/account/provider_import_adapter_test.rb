@@ -1549,4 +1549,90 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         "pending flag must be cleared even for user-modified entries"
     end
   end
+
+  # A user edit to any single field sets the entry-level user_modified flag,
+  # which is checked before per-attribute locks. locked_attributes already knows
+  # exactly which fields the user touched, so an untouched name can still follow
+  # the provider — otherwise a provider naming change never reaches these entries.
+  test "updates the name of a user-modified entry when the name itself is unlocked" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_unlocked_name",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "AMZN Mktp US*AB12CD",
+      source: "plaid",
+      extra: nil
+    )
+
+    # User edits the category only: locks category_id, leaves name unlocked.
+    entry.transaction.lock_attr!(:category_id)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_unlocked_name",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: nil
+    )
+
+    assert_equal "Amazon", entry.reload.name
+  end
+
+  test "preserves the name of a user-modified entry when the user renamed it" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_locked_name",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "AMZN Mktp US*AB12CD",
+      source: "plaid",
+      extra: nil
+    )
+
+    entry.update!(name: "My groceries")
+    entry.lock_attr!(:name)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_locked_name",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: nil
+    )
+
+    assert_equal "My groceries", entry.reload.name
+  end
+
+  test "does not rename excluded entries" do
+    entry = @adapter.import_transaction(
+      external_id: "excluded_entry_name",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "AMZN Mktp US*AB12CD",
+      source: "plaid",
+      extra: nil
+    )
+
+    entry.update!(excluded: true)
+
+    @adapter.import_transaction(
+      external_id: "excluded_entry_name",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: nil
+    )
+
+    assert_equal "AMZN Mktp US*AB12CD", entry.reload.name
+  end
 end

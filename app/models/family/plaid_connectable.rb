@@ -7,13 +7,13 @@ module Family::PlaidConnectable
 
   # Replays this family's Plaid history so a naming-preference change reaches
   # transactions that already exist. Account::ProviderImportAdapter re-enriches
-  # :name on every upsert, so re-importing is what actually renames them;
-  # clearing next_cursor is what makes Plaid hand us the full history again
-  # instead of a delta.
+  # :name on every upsert, so re-importing is what actually renames them.
+  #
+  # Deferred to a job rather than resetting the cursor here: an in-flight sync
+  # would overwrite the reset and swallow the request. See PlaidHistoryReplayJob.
   def resync_plaid_items!
     plaid_items.syncable.find_each do |item|
-      item.update!(next_cursor: nil)
-      item.sync_later
+      PlaidHistoryReplayJob.perform_later(item)
     end
   end
 

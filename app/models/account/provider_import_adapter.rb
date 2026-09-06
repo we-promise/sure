@@ -74,6 +74,19 @@ class Account::ProviderImportAdapter
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
+          # Editing any single field (a category, a tag) sets the entry-level
+          # user_modified flag, and that flag is checked before any per-attribute
+          # lock is consulted. But locked_attributes already records exactly which
+          # fields the user touched (Enrichable#lock_saved_attributes! locks only
+          # saved_changes), so when the name was never one of them we can still
+          # apply the provider's name. Without this, re-importing history skips
+          # these entries wholesale and leaves a mix of old and new naming.
+          # Excluded and import_locked entries stay untouched.
+          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction) &&
+             name.present? && !entry.locked?("name")
+            entry.enrich_attribute(:name, name, source: source)
+          end
+
           record_skip(entry, skip_reason)
           return entry
         end
