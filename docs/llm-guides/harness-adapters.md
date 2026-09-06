@@ -63,7 +63,7 @@ Stimulus rule preserve manual availability; adding either could change discovery
 | [testing.mdc](../../.cursor/rules/testing.mdc) | [Testing](testing.md) | `test/**` | `false` |
 | [view_conventions.mdc](../../.cursor/rules/view_conventions.mdc) | [UI](ui.md) | `app/views/**,app/javascript/**,app/components/**/*.js` | `false` |
 | [stimulus_conventions.mdc](../../.cursor/rules/stimulus_conventions.mdc) | [UI](ui.md) | empty | `false` |
-| [ui-ux-design-guidelines.mdc](../../.cursor/rules/ui-ux-design-guidelines.mdc) | [UI](ui.md) | `app/views/**,app/helpers/**,app/javascript/controllers/**` | `true` |
+| [ui-ux-design-guidelines.mdc](../../.cursor/rules/ui-ux-design-guidelines.mdc) | [Design system](design-system.md) | `app/views/**,app/helpers/**,app/javascript/controllers/**` | `true` |
 | [api-endpoint-consistency.mdc](../../.cursor/rules/api-endpoint-consistency.mdc) | [API endpoint consistency](api-endpoint-consistency.md) | `app/controllers/api/v1/**/*.rb, spec/requests/api/v1/**/*.rb, test/controllers/api/v1/**/*.rb` | `false` |
 
 The former `project-conventions.mdc` content now lives with architecture guidance;

@@ -8,6 +8,7 @@ being changed. These guides hold the detailed conventions and procedures.
 | Understand the domain and write Rails code | [Architecture and conventions](architecture.md) |
 | Set up an environment, run checks or prepare a PR | [Development and verification](development.md) |
 | Write behavioral tests and fixtures | [Testing](testing.md) |
+| Change design tokens or `DS::*` primitives | [Design system](design-system.md) |
 | Change views, components, CSS, Stimulus or localization | [UI](ui.md) |
 | Add or modify an API v1 endpoint | [API endpoint consistency](api-endpoint-consistency.md) |
 | Change provider imports, pending/FX metadata or diagnostics | [Provider sync guidance](providers.md) |

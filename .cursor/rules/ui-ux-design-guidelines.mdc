@@ -4,4 +4,4 @@ globs: app/views/**,app/helpers/**,app/javascript/controllers/**
 alwaysApply: true
 ---
 
-@docs/llm-guides/ui.md
+@docs/llm-guides/design-system.md

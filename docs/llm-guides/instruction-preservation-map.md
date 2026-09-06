@@ -25,7 +25,7 @@ instructions outside this repository are outside the consolidation.
 | `.cursor/rules/testing.mdc` | Thin scoped adapter | `testing.md`; retain `test/**` scope. |
 | `.cursor/rules/view_conventions.mdc` | Thin scoped adapter | `ui.md`; retain view/JavaScript/component-JavaScript scopes. |
 | `.cursor/rules/stimulus_conventions.mdc` | Thin adapter | `ui.md`; retain manual rule availability. |
-| `.cursor/rules/ui-ux-design-guidelines.mdc` | Thin always-on adapter | `ui.md`; preserve global design restrictions and explicit permission requirement for new global styles. |
+| `.cursor/rules/ui-ux-design-guidelines.mdc` | Thin always-on adapter | `design-system.md` (split from `ui.md` so the always-on adapter stays design-only); preserve global design restrictions and explicit permission requirement for new global styles. |
 | `.cursor/rules/api-endpoint-consistency.mdc` | Thin scoped adapter | Shared API checklist; retain exactly the three API v1 scopes and `alwaysApply: false`. |
 | `.cursor/rules/cursor_rules.mdc` | Retire generic template | Cursor rule format/loading reference belongs in `harness-adapters.md`; Prisma examples do not describe this Rails app. |
 | `.cursor/rules/self_improve.mdc` | Retire automatic trigger | Keep guidance maintenance advice in `harness-adapters.md`; intentionally stop always-on instructions to generate new rules when patterns occur in three files. |
@@ -67,7 +67,7 @@ claims that any contributor's ignored files exist or contain shared policy.
 | Dependency restraint, model-owned business logic, concerns, database vs model validations, performance tradeoffs | `architecture.md` | Preserve, including traits-based concerns and avoiding N+1/global-layout overhead. |
 | Family ownership, account/entry delegated types, amounts, valuations/trades, transfers, syncs, provider concepts/Provided concerns | `architecture.md` | Preserve concepts; update names/paths and qualify claims using current code. |
 | Minitest/fixtures/Mocha/OpenStruct, minimal fixtures, edge cases, VCR, commands vs queries, sparing system tests | `testing.md` | Preserve; RSpec remains an explicit documentation-only exception. |
-| Functional tokens, DS-first, repeated-shape extraction and reviewer severity | `AGENTS.md`, `ui.md` | Preserve every requirement and escalation level. |
+| Functional tokens, DS-first, repeated-shape extraction and reviewer severity | `AGENTS.md`, `design-system.md` | Preserve every requirement and escalation level. |
 | Permission for new global styles, semantic HTML, Turbo/query state, ViewComponent vs partial, declarative Stimulus, <7-target aim, localization/accessibility | `ui.md` | Preserve; replace obsolete examples and hardcoded UI text. |
 | API behavioral coverage, errors/scopes, docs-only rswag, API-key pattern, regeneration after changes and checklist after commits | `api-endpoint-consistency.md` | Preserve; remove already-resolved OAuth TODO only. Runtime OAuth support remains. |
 | Provider diagnostics, namespaced extras, pending/FX, defaults/precedence, raw payload privacy | `providers.md` | Preserve obligations and Up local-only privacy restriction; correct descriptions of current behavior. |

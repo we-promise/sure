@@ -21,7 +21,7 @@
 
 ## UI changes
 
-When touching ERB, view components or CSS, follow the [UI guide](docs/llm-guides/ui.md):
+When touching ERB, view components or CSS, follow the [design system guide](docs/llm-guides/design-system.md):
 
 - Use functional tokens from `app/assets/tailwind/sure-design-system.css`, such as `bg-container`, `text-primary`, `border-primary`, `bg-warning/10` and `text-destructive`. No raw Tailwind palette classes or hex literals.
 - Check `app/components/DS/` first for alerts, badges, buttons, disclosures, dialogs and inputs. Use existing `DS::*` primitives.
