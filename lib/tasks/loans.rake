@@ -18,12 +18,20 @@ namespace :loans do
 
     contract_path = Rails.root.join("docs/loans/calculation-contract.md")
     manifest_path = Rails.root.join("config/loan_contract_tests.yml")
-    rows = File.readlines(contract_path).filter_map do |line|
+    parsed_rows = File.readlines(contract_path).filter_map do |line|
       match = line.match(/^\| C(\d+) \|.*?\| `([^`]+)`/)
       next unless match
 
       [ "C#{match[1]}", match[2] ]
-    end.to_h
+    end
+    # Reject duplicates BEFORE collapsing. `to_h` keeps the last occurrence, so
+    # a contract carrying C7 twice would silently discard one -- and if the
+    # surviving row happened to match the manifest, a wrong duplicate would
+    # pass this gate unseen.
+    duplicate_ids = parsed_rows.map(&:first).tally.select { |_id, count| count > 1 }.keys.sort
+    abort "duplicate contract rows: #{duplicate_ids.join(', ')}" if duplicate_ids.any?
+
+    rows = parsed_rows.to_h
     manifest = YAML.load_file(manifest_path)
     expected_ids = (1..16).map { |id| "C#{id}" }
 
