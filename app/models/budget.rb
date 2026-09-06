@@ -377,7 +377,7 @@ class Budget < ApplicationRecord
     return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
 
     segments = donut_budget_categories.map do |bc|
-      { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
+      { color: bc.category.color, amount: [ budget_category_actual_spending(bc), 0 ].max, id: bc.id }
     end
 
     if available_to_spend.positive?
@@ -413,7 +413,8 @@ class Budget < ApplicationRecord
     key = budget_category.category_id || stable_synthetic_key(budget_category.category)
     expense = expense_totals_by_category[key]&.total || 0
     refund = income_totals_by_category[key]&.total || 0
-    [ expense - refund, 0 ].max
+    marked_refund = refund_totals_by_category[key]&.total || 0
+    [ expense + marked_refund - refund, 0 ].max - marked_refund
   end
 
   def category_median_monthly_expense(category)
@@ -543,6 +544,12 @@ class Budget < ApplicationRecord
 
     def income_totals_by_category
       @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def refund_totals_by_category
+      @refund_totals_by_category ||= income_statement.refund_totals(period: period).category_totals.index_by do |ct|
+        ct.category.id || stable_synthetic_key(ct.category)
+      end
     end
 
     def stable_synthetic_key(category)

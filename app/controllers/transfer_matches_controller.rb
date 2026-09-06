@@ -33,6 +33,8 @@ class TransferMatchesController < ApplicationController
     @transfer.sync_account_later
 
     redirect_back_or_to transactions_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_back_or_to transactions_path, alert: error.record.errors.full_messages.to_sentence
   end
 
   private

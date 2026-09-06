@@ -7,6 +7,17 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "repeated purchase refunds are not recurring income candidates" do
+    3.times do |index|
+      @family.accounts.first.entries.create!(
+        name: "Shop refund", amount: -100, currency: "USD", date: (index + 1).months.ago.to_date,
+        entryable: Transaction.new(kind: "refund")
+      )
+    end
+    names = @identifier.candidate_patterns(sign: :inflow).map { |pattern| pattern[:name] }
+    assert_not_includes names, "Shop refund"
+  end
+
   test "investment account activity is not offered as a bill or an income source" do
     # Brokerage and retirement feeds deliver dividends, reinvestments and
     # payroll contributions as plain Transaction rows, monthly and tightly

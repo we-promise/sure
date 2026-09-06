@@ -4,6 +4,7 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
+  before_action :reject_refund_conversion, only: %i[convert_to_trade create_trade_from_transaction mark_as_recurring]
 
   helper_method :new_transaction_idempotency_key
 
@@ -471,6 +472,13 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def reject_refund_conversion
+      transaction = accessible_transactions.find(params[:id])
+      return unless transaction.refund? || (action_name != "mark_as_recurring" && transaction.refund_linked?)
+
+      redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+    end
+
     # Scoped by user (not just family) because Current.accessible_entries is
     # user-scoped for family sharing (see Current#accessible_entries).
     #

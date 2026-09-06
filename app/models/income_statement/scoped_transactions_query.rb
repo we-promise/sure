@@ -14,7 +14,13 @@ module IncomeStatement::ScopedTransactionsQuery
     # amounts, so they always classify as expense; other negative amounts
     # classify as income.
     def classification_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment', 'refund') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+    end
+
+    # Income is displayed positive; expenses retain their sign so refunds can
+    # reduce spending even when they arrive in a later reporting period.
+    def reported_amount_sql(t)
+      "CASE WHEN #{classification_sql(t)} = 'income' THEN -1 ELSE 1 END * (#{converted_amount_sql(t)})"
     end
 
     # Entry amount converted to the family currency at the day's exchange
