@@ -79,4 +79,11 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_not @family.valid?
     assert_includes @family.errors.attribute_names, :ai_prompt_chat_system
   end
+
+  test "rejects null bytes in ai_prompt_overrides" do
+    @family.ai_prompt_chat_system = "instructions\u0000with null byte"
+
+    assert_not @family.valid?
+    assert_includes @family.errors.attribute_names, :ai_prompt_chat_system
+  end
 end

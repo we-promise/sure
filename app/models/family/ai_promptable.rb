@@ -70,7 +70,11 @@ module Family::AiPromptable
       end
 
       ai_prompt_overrides.each do |key, val|
-        unless val.nil? || val.is_a?(String)
+        if val.nil?
+          next
+        elsif !val.is_a?(String)
+          errors.add(:"ai_prompt_#{key}", :invalid)
+        elsif val.include?("\u0000")
           errors.add(:"ai_prompt_#{key}", :invalid)
         end
       end
