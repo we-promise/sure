@@ -832,6 +832,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "*", text: I18n.t("loans.tabs.schedule.projected_payoff_date")
     assert_select "*", text: I18n.t("loans.tabs.schedule.interest_saved")
+    assert_select "[data-controller='loan-payoff-chart']"
   end
 
   # Regression: the projection used to anchor on Date.current.next_month
@@ -883,6 +884,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(loan_account, tab: "schedule")
     assert_response :success
     assert_select "*", text: I18n.t("loans.tabs.schedule.projected_payoff_date"), count: 0
+    assert_select "[data-controller='loan-payoff-chart']", count: 0
   end
 
   test "schedule tab enqueues nothing once the persisted schedule is current" do

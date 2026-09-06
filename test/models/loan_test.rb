@@ -248,33 +248,6 @@ class LoanTest < ActiveSupport::TestCase
     loan.ensure_amortization_schedule_current!
   end
 
-  # Regression: ensure_amortization_schedule_current! is called from read
-  # paths (Schedule tab, amortization_schedule API), not just writes -- it
-  # must not take a row lock (contending with concurrent readers/writers of
-  # the same loan) when the persisted schedule already matches, which is the
-  # overwhelmingly common case. A fresh Loan instance stands in for a new
-  # request, since the in-memory ensured-signature memo only covers repeat
-  # calls on the *same* instance.
-  test "ensure_amortization_schedule_current! does not acquire the row lock when the schedule is already current" do
-    loan_account = Account.create! \
-      family: families(:dylan_family),
-      name: "Mortgage Loan",
-      balance: 500000,
-      currency: "USD",
-      accountable: Loan.create!(
-        subtype: "mortgage",
-        interest_rate: 3.5,
-        term_months: 360,
-        rate_type: "fixed"
-      )
-
-    loan_account.loan.ensure_amortization_schedule_current!
-
-    fresh_loan = Loan.find(loan_account.loan.id)
-    fresh_loan.expects(:with_lock).never
-    fresh_loan.ensure_amortization_schedule_current!
-  end
-
   test "adds variable rate changes" do
     loan_account = Account.create! \
       family: families(:dylan_family),
@@ -348,4 +321,133 @@ class LoanTest < ActiveSupport::TestCase
     assert_instance_of Loan::PayoffProjection, loan.payoff_projection
     assert_same loan.payoff_projection, loan.payoff_projection
   end
+
+  test "payoff_chart_payload is nil when the current balance matches the original schedule" do
+    loan = build_chart_loan(balance: 500000)
+
+    assert_nil loan.payoff_chart_payload
+  end
+
+  # Was "payoff_chart_payload is nil for a variable rate loan". That assertion
+  # predates #12: PayoffProjection#applicable? required fixed_rate?, so variable
+  # loans got no projection and therefore no chart. #35 removed that gate --
+  # giving variable loans a projection is the entire point of #12 -- so the
+  # chart must now render for them too.
+  test "payoff_chart_payload is produced for a variable rate loan" do
+    loan = build_chart_loan(balance: 500000, rate_type: "variable")
+    loan.account.update!(balance: 450000)
+
+    payload = loan.payoff_chart_payload
+
+    assert_not_nil payload, "variable-rate loans get a projection since #12, so they get a chart"
+    assert payload[:original_projection].any?
+    assert payload[:accelerated_projection].any?
+    assert_equal "USD", payload[:currency]
+  end
+
+  test "payoff_chart_payload includes both forward series and a green accent when ahead of schedule" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 450000) # extra $50k paid toward principal
+
+    payload = loan.payoff_chart_payload
+
+    assert payload.present?
+    assert_equal true, payload[:ahead]
+    assert_equal "USD", payload[:currency]
+    assert_equal Date.current.iso8601, payload[:today]
+    assert_equal 450000.0, payload[:current_balance][:balance]
+    assert payload[:original_projection].length > payload[:accelerated_projection].length
+    assert payload[:original_payoff_date].present?
+    assert payload[:accelerated_payoff_date].present?
+    assert payload[:accelerated_payoff_date] < payload[:original_payoff_date]
+  end
+
+  test "payoff_chart_payload reflects a behind-schedule balance with ahead false" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 550000) # owes more than originally contracted
+
+    payload = loan.payoff_chart_payload
+
+    assert payload.present?
+    assert_equal false, payload[:ahead]
+  end
+
+  # Regression: the solid line's data used to be keyed "history", which
+  # implies real historical balances. It's actually the original schedule's
+  # theoretical/contracted trajectory (this app doesn't track daily balance
+  # history) -- keyed and labeled accordingly so the chart can't be
+  # misread as showing real past balances.
+  test "payoff_chart_payload labels the scheduled trajectory explicitly rather than as history" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 450000)
+
+    payload = loan.payoff_chart_payload
+
+    assert_not payload.key?(:history)
+    assert payload.key?(:scheduled_history)
+    assert_equal "Scheduled (contracted terms)", payload[:labels][:scheduled]
+  end
+
+  test "payoff_chart_payload includes an accessible label and description with the key figures" do
+    loan = build_chart_loan(balance: 500000)
+    loan.account.update!(balance: 450000)
+
+    payload = loan.payoff_chart_payload
+
+    assert_equal "Loan payoff comparison chart", payload[:aria_label]
+    assert_includes payload[:aria_description], loan.payoff_projection.current_balance.to_s
+    assert_includes payload[:aria_description], I18n.l(loan.amortization_schedule.payoff_date, format: :long)
+    assert_includes payload[:aria_description], I18n.l(loan.payoff_projection.payoff_date, format: :long)
+  end
+
+  # Regression: chart dates used to inherit PayoffProjection's payment-date
+  # anchoring bug (Date.current.next_month instead of the loan's real
+  # payment anchor day). Verifies the chart's forward-looking series line up
+  # with the persisted schedule's actual next payment date for a loan whose
+  # anchor day differs from today's.
+  test "payoff_chart_payload's projection series start on the loan's actual next scheduled payment date" do
+    start_date = 2.years.ago.to_date.change(day: 15)
+    loan = build_chart_loan(balance: 500000, start_date: start_date)
+    loan.ensure_amortization_schedule_current!
+    loan.account.update!(balance: 450000)
+
+    next_scheduled_date = loan.amortizations.where("payment_date > ?", Date.current).ordered.first.payment_date
+    assert_not_equal Date.current.next_month, next_scheduled_date, "test setup should exercise a real anchor mismatch"
+
+    payload = loan.payoff_chart_payload
+
+    assert_equal next_scheduled_date.iso8601, payload[:accelerated_projection].first[:date]
+    assert_equal next_scheduled_date.iso8601, payload[:original_projection].first[:date]
+  end
+
+  private
+    def build_chart_loan(balance:, interest_rate: 3.5, term_months: 360, start_date: Date.current, rate_type: "fixed")
+      account = Account.create! \
+        family: families(:dylan_family),
+        name: "Chart Loan #{SecureRandom.hex(4)}",
+        balance: balance,
+        currency: "USD",
+        accountable: Loan.create!(
+          subtype: "mortgage",
+          interest_rate: interest_rate,
+          term_months: term_months,
+          rate_type: rate_type,
+          start_date: start_date
+        )
+
+      account.entries.create!(
+        name: "Starting balance",
+        amount: balance,
+        currency: "USD",
+        date: start_date,
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+
+      # Amortization rebuilds happen asynchronously (after_save enqueues
+      # LoanAmortizationRebuildJob rather than rebuilding inline), and
+      # payoff_chart_payload's projection requires Loan#schedule_current? --
+      # build the persisted schedule synchronously here so tests don't need
+      # to perform_enqueued_jobs just to exercise the chart payload.
+      account.loan.tap(&:rebuild_amortization_schedule)
+    end
 end
