@@ -98,6 +98,7 @@ class Family::DataImporter
     }
     @security_cache = {}
     @pending_replacements = {}
+    @refund_links = {}
     @created_accounts = []
     @created_entries = []
     @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
@@ -118,6 +119,7 @@ class Family::DataImporter
       import_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
+      restore_refund_links
       # Bills: rules and occurrences need their series, allocations and the
       # rest also need transactions, so all of it replays here.
       import_recurrence_rules(records["RecurrenceRule"] || [])
@@ -957,6 +959,7 @@ class Family::DataImporter
         entry.save!
 
         map_source!(:transactions, old_id, transaction)
+        @refund_links[transaction.id] = data["refund_of_id"] if data.key?("refund_of_id")
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
@@ -972,6 +975,19 @@ class Family::DataImporter
         end
 
         increment_summary("Transaction", created ? :created : :updated)
+      end
+    end
+
+    # Purchases can follow refunds in the archive, including nested split lines.
+    # Resolve references only after all transaction IDs have been mapped.
+    def restore_refund_links
+      @refund_links.each do |transaction_id, source_purchase_id|
+        purchase_id = if source_purchase_id.present?
+          mapped_id(:transactions, source_purchase_id, record_type: "Transaction")
+        end
+        transaction = @family.transactions.find(transaction_id)
+        purchase = purchase_id && @family.transactions.find(purchase_id)
+        transaction.update!(refund_of: purchase)
       end
     end
 
@@ -1003,7 +1019,9 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          refund_of_id: row["refund_of_id"],
+          refund_of_id_provided: row.key?("refund_of_id")
         }
       end
     end
@@ -1034,6 +1052,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
+        @refund_links[transaction.id] = row[:refund_of_id] if row[:refund_of_id_provided]
         @created_entries << child_entry
       end
     end
