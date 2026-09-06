@@ -93,13 +93,26 @@ jobs:
       - name: Resolve built commit
         id: built_ref
         shell: bash
+        # The ref reaches the script through env rather than `${{ }}`: a workflow_dispatch
+        # input (or a ref name, which git permits `$` and backticks in) would otherwise be
+        # pasted into the generated bash and execute on the publishing runner. Newlines are
+        # rejected because GITHUB_ENV/GITHUB_OUTPUT are line-oriented — a CR/LF would let
+        # the value declare further variables.
+        env:
+          REQUESTED_REF: ${{ github.event.inputs.ref || github.ref_name }}
         run: |
           BUILT_SHA="$(git rev-parse HEAD)"
-          BUILT_REF_NAME="${{ github.event.inputs.ref || github.ref_name }}"
-          echo "sha=${BUILT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "ref_name=${BUILT_REF_NAME}" >> "$GITHUB_OUTPUT"
-          echo "BUILD_SHA=${BUILT_SHA}" >> "$GITHUB_ENV"
-          echo "BUILD_REF_NAME=${BUILT_REF_NAME}" >> "$GITHUB_ENV"
+          BUILT_REF_NAME="$REQUESTED_REF"
+
+          if [[ -z "$BUILT_REF_NAME" || "$BUILT_REF_NAME" == *$'\r'* || "$BUILT_REF_NAME" == *$'\n'* ]]; then
+            echo "Refusing to build: ref name is empty or contains a line break" >&2
+            exit 1
+          fi
+
+          printf 'sha=%s\n' "$BUILT_SHA" >> "$GITHUB_OUTPUT"
+          printf 'ref_name=%s\n' "$BUILT_REF_NAME" >> "$GITHUB_OUTPUT"
+          printf 'BUILD_SHA=%s\n' "$BUILT_SHA" >> "$GITHUB_ENV"
+          printf 'BUILD_REF_NAME=%s\n' "$BUILT_REF_NAME" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
