@@ -114,6 +114,7 @@ class ReportsController < ApplicationController
       @income_statement = Current.family.income_statement(user: Current.user)
       @current_income_totals = @income_statement.income_totals(period: @period)
       @current_expense_totals = @income_statement.expense_totals(period: @period)
+      @current_refund_totals = @income_statement.refund_totals(period: @period)
 
       @previous_income_totals = @income_statement.income_totals(period: @previous_period)
       @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
@@ -426,12 +427,14 @@ class ReportsController < ApplicationController
 
       # Helper to process an entry (transaction or trade)
       process_entry = ->(category, entry, is_trade) do
-        type = entry.amount > 0 ? "expense" : "income"
+        type = entry.transaction? && entry.transaction.refund? ? "expense" : (entry.amount > 0 ? "expense" : "income")
         begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
+          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, date: entry.date).amount
         rescue Money::ConversionError
           converted_amount = entry.amount.abs
         end
+
+        converted_amount = -converted_amount if entry.transaction? && entry.transaction.refund?
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -764,17 +767,19 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
-        is_expense = entry.amount > 0
+        is_expense = entry.amount > 0 || transaction.refund?
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
         begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
+          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, date: entry.date).amount
         rescue Money::ConversionError
           converted_amount = entry.amount.abs
         end
+
+        converted_amount = -converted_amount if transaction.refund?
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }

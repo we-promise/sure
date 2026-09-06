@@ -299,6 +299,8 @@ class BudgetCategory < ApplicationRecord
   # zero-budget guards below apply to that effective amount, not to the
   # allocation alone: a category funded only by rollover has money to spend.
   def percent_of_budget_spent
+    return 0 if actual_spending <= 0
+
     if inherits_parent_budget?
       # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category

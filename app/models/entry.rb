@@ -33,6 +33,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :refund_direction_unchanged
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -442,6 +443,11 @@ class Entry < ApplicationRecord
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
   # @return [Array<Entry>] the created child entries
   def split!(splits)
+    if transaction? && transaction.refund_linked?
+      errors.add(:base, :refund_links_present)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
     total = splits.sum { |s| s[:amount].to_d }
     unless total == amount
       raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
@@ -478,6 +484,11 @@ class Entry < ApplicationRecord
 
   # Removes split children and restores parent entry.
   def unsplit!
+    if child_entries.includes(:entryable).any? { |child| child.transaction? && (child.transaction.refund? || child.transaction.refund_linked?) }
+      errors.add(:base, :refund_links_present)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
     self.class.transaction do
       child_entries.each do |child|
         child.unsplitting = true
@@ -564,6 +575,14 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def refund_direction_unchanged
+      return unless transaction? && amount.present?
+
+      if (transaction.refund? && !amount.negative?) || (amount <= 0 && transaction.purchase_refunds.exists?)
+        errors.add(:amount, :invalid_refund)
+      end
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

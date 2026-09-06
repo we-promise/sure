@@ -52,7 +52,7 @@ class Transaction::Search
   # because those transactions are retirement savings, not daily income/expenses.
   def totals
     @totals ||= begin
-      Rails.cache.fetch("transaction_search_totals/v2/#{cache_key_base}") do
+      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
@@ -62,11 +62,11 @@ class Transaction::Search
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                      "COALESCE(SUM(CASE WHEN (entries.amount >= 0 OR transactions.kind = 'refund') AND transactions.kind NOT IN (?) THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END), 0) as expense_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind != 'refund' AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
@@ -77,6 +77,7 @@ class Transaction::Search
                       "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_outflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
+                    "COALESCE(SUM(CASE WHEN transactions.kind = 'refund' THEN -entries.amount * COALESCE(er.rate, 1) ELSE 0 END), 0) as refund_total",
                     "COUNT(entries.id) as transactions_count"
                   )
                   .joins(
@@ -89,6 +90,7 @@ class Transaction::Search
 
         Totals.new(
           count: result&.transactions_count.to_i,
+          refund_money: Money.new((result&.refund_total || 0), family.currency),
           income_money: Money.new((result&.income_total || 0), family.currency),
           expense_money: Money.new((result&.expense_total || 0), family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
@@ -109,7 +111,7 @@ class Transaction::Search
   end
 
   private
-    Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+    Totals = Data.define(:count, :income_money, :expense_money, :refund_money, :transfer_inflow_money, :transfer_outflow_money)
 
     def apply_active_accounts_filter(query, active_accounts_only_filter)
       if active_accounts_only_filter
@@ -162,24 +164,15 @@ class Transaction::Search
 
     def apply_type_filter(query, types)
       return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer" ]
-
-      case types.sort
-      when [ "transfer" ]
-        query.where(kind: Transaction::TRANSFER_KINDS)
-      when [ "expense" ]
-        query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS)
-      when [ "income" ]
-        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS)
-      when [ "expense", "transfer" ]
-        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
-      when [ "income", "transfer" ]
-        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
-      when [ "expense", "income" ]
-        query.where.not(kind: Transaction::TRANSFER_KINDS)
-      else
-        query
+      scopes = types.uniq.filter_map do |type|
+        case type
+        when "transfer" then query.where(kind: Transaction::TRANSFER_KINDS)
+        when "refund" then query.where(kind: "refund")
+        when "expense" then query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS + [ "refund" ])
+        when "income" then query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS + [ "refund" ])
+        end
       end
+      scopes.reduce { |combined, scope| combined.or(scope) } || query
     end
 
     def apply_merchant_filter(query, merchants)

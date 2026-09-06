@@ -1,37 +1,12 @@
 <%# locals: (form:) %>
 
 <div class="p-2 space-y-3">
-  <div class="flex items-center gap-3" data-filter-name="income">
-    <%= form.check_box :types,
-                           {
-                             multiple: true,
-                             checked: @q[:types]&.include?("income"),
-                             class: "checkbox checkbox--light"
-                           },
-                           "income",
-                           nil %>
-    <%= form.label :types, t(".income"), value: "income", class: "text-sm text-primary" %>
-  </div>
-  <div class="flex items-center gap-3" data-filter-name="expense">
-    <%= form.check_box :types,
-                           {
-                             multiple: true,
-                             checked: @q[:types]&.include?("expense"),
-                             class: "checkbox checkbox--light"
-                           },
-                           "expense",
-                           nil %>
-    <%= form.label :types, t(".expense"), value: "expense", class: "text-sm text-primary" %>
-  </div>
-  <div class="flex items-center gap-3" data-filter-name="transfer">
-    <%= form.check_box :types,
-                           {
-                             multiple: true,
-                             checked: @q[:types]&.include?("transfer"),
-                             class: "checkbox checkbox--light"
-                           },
-                           "transfer",
-                           nil %>
-    <%= form.label :types, t(".transfer"), value: "transfer", class: "text-sm text-primary" %>
-  </div>
+  <% %w[income expense refund transfer].each do |type| %>
+    <div class="flex items-center gap-3" data-filter-name="<%= type %>">
+      <%= form.check_box :types,
+            { multiple: true, checked: @q[:types]&.include?(type), class: "checkbox checkbox--light" },
+            type, nil %>
+      <%= form.label :types, t(".#{type}"), value: type, class: "text-sm text-primary" %>
+    </div>
+  <% end %>
 </div>

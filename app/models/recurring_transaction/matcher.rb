@@ -261,7 +261,7 @@ class RecurringTransaction
               .where(entryable_type: "Transaction")
               .where(excluded: false)
               .where(date: window_min..window_max)
-              .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+              .where.not(transactions: { kind: Transaction::TRANSFER_KINDS + [ "refund" ] })
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
               .includes(:entryable)
               .to_a

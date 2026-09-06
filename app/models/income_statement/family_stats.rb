@@ -39,7 +39,7 @@ class IncomeStatement::FamilyStats
           SELECT
             date_trunc(:interval, ae.date) as period,
             #{classification_sql("t")} as classification,
-            SUM(#{converted_amount_sql("t")}) as total
+            SUM(#{reported_amount_sql("t")}) as total
           FROM transactions t
           #{entries_join_sql("t")}
           #{accounts_join_sql}
@@ -55,8 +55,8 @@ class IncomeStatement::FamilyStats
         )
         SELECT
           classification,
-          ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
-          ABS(AVG(total)) as avg
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) as median,
+          AVG(total) as avg
         FROM period_totals
         GROUP BY classification;
       SQL

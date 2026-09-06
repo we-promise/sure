@@ -1,0 +1,20 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("refunds.title")) %>
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <%= render DS::Pill.new(label: t("refunds.preview")) %>
+      <p class="text-sm text-secondary"><%= t("refunds.description") %></p>
+      <%= styled_form_with url: new_transaction_refund_path(@entry), method: :get, class: "space-y-2" do |f| %>
+        <%= f.text_field :search, label: t("refunds.search"), value: params[:search] %>
+        <%= f.submit t("refunds.search") %>
+      <% end %>
+      <%= styled_form_with scope: :refund, url: transaction_refund_path(@entry), data: { turbo_frame: "_top" }, class: "space-y-4" do |f| %>
+        <%= f.select :purchase_entry_id,
+              @purchases.map { |purchase| [entry_name_detailed(purchase), purchase.id] },
+              { label: t("refunds.purchase"), include_blank: t("refunds.unlinked"), selected: @selected_purchase_id } %>
+        <p class="text-sm text-secondary"><%= t("refunds.split_hint") %></p>
+        <%= f.submit t("refunds.save") %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
