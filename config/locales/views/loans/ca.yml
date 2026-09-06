@@ -15,15 +15,6 @@ ca:
       term_months_placeholder: '360'
     new:
       title: Introdueix les dades del préstec
-    overview:
-      interest_rate: Tipus d'interès
-      monthly_payment: Quota mensual
-      not_applicable: N/A
-      original_principal: Principal original
-      remaining_principal: Principal pendent
-      term: Termini
-      type: Tipus
-      unknown: Desconegut
     tabs:
       overview:
         edit_loan_details: Edita els detalls del préstec

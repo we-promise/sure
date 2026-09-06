@@ -112,8 +112,14 @@ class UI::AccountPage < ApplicationComponent
     }
   end
 
+  # Mirrors render_statement_tab: the eager branch renders through the frame
+  # partial rather than the bare template, so a <turbo-frame> element is always
+  # present. Without it a form inside the schedule tab auto-scopes to nothing
+  # when that tab is active on initial load, and Turbo falls back to a full
+  # page navigation on submit. Cherry-picked from #4 per #7's scope -- it is an
+  # independent bug fix and should not wait for that PR's fate.
   def render_schedule_tab
-    return render "loans/tabs/schedule", account: account if active_tab == :schedule
+    return render "accounts/show/schedule_frame", account: account if active_tab == :schedule
 
     turbo_frame_tag schedule_tab_frame_id,
                     src: helpers.account_path(account, tab: "schedule"),
@@ -128,7 +134,7 @@ class UI::AccountPage < ApplicationComponent
     # Only show the Schedule tab when the loan actually has a schedule to
     # show -- e.g. not for a loan missing a rate or term.
     def loan_tabs
-      base = [ :activity, :overview ]
+      base = [ :overview, :activity ]
       base << :schedule if account.loan&.amortizable?
       base
     end

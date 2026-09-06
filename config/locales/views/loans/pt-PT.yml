@@ -18,15 +18,6 @@ pt-PT:
       rate_type_variable: Variável
     new:
       title: Introduzir dados do empréstimo
-    overview:
-      interest_rate: Taxa de juro
-      monthly_payment: Pagamento mensal
-      not_applicable: n/d
-      original_principal: Capital inicial
-      remaining_principal: Capital remanescente
-      term: Prazo
-      type: Tipo
-      unknown: Desconhecido
     tabs:
       overview:
         interest_rate: Taxa de juro

@@ -18,15 +18,6 @@ de:
       subtype_prompt: Kreditart wählen
     new:
       title: Kreditdetails eingeben
-    overview:
-      interest_rate: Zinssatz
-      monthly_payment: Monatliche Zahlung
-      not_applicable: Nicht zutreffend
-      original_principal: Ursprünglicher Kreditbetrag
-      remaining_principal: Verbleibender Kreditbetrag
-      term: Laufzeit
-      type: Typ
-      unknown: Unbekannt
     tabs:
       overview:
         edit_loan_details: Kreditdaten bearbeiten

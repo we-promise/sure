@@ -68,7 +68,7 @@ en:
           estimated_property_value: Estimated property value
           estimated_vehicle_value: Estimated vehicle value
           holdings_value: Holdings value
-          remaining_principal_balance: Remaining principal balance
+          remaining_principal_balance: Remaining loan balance
           total_account_value: Total account value
           total_gains: Total gains
         views:

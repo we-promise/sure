@@ -12,12 +12,3 @@ pt-BR:
       term_months_placeholder: '360'
     new:
       title: Inserir detalhes do empréstimo
-    overview:
-      interest_rate: Taxa de Juros
-      monthly_payment: Pagamento Mensal
-      not_applicable: N/A
-      original_principal: Principal Original
-      remaining_principal: Principal Restante
-      term: Prazo
-      type: Tipo
-      unknown: Desconhecido

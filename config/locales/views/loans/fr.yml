@@ -15,15 +15,6 @@ fr:
       term_months_placeholder: '360'
     new:
       title: Saisir les détails du prêt
-    overview:
-      interest_rate: Taux d'intérêt
-      monthly_payment: Paiement mensuel
-      not_applicable: N/D
-      original_principal: Principal initial
-      remaining_principal: Principal restant
-      term: Durée
-      type: Type
-      unknown: Inconnu
     tabs:
       overview:
         edit_loan_details: Modifier les détails du prêt

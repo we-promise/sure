@@ -12,12 +12,3 @@ nb:
       term_months_placeholder: '360'
     new:
       title: Angi lånedetaljer
-    overview:
-      interest_rate: Rente
-      monthly_payment: Månedlig betaling
-      not_applicable: Ikke Aktuelt
-      original_principal: Opprinnelig hovedstol
-      remaining_principal: Gjenværende hovedstol
-      term: Løpetid
-      type: Type
-      unknown: Ukjent

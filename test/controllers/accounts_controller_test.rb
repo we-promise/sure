@@ -698,6 +698,71 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     Rails.logger = original_rails_logger
   end
 
+  # --- #7 (L1): loan page information architecture and labelling ---------
+
+  test "a loan account lands on Overview, with Overview rendered before Activity" do
+    loan_account = accounts(:loan)
+
+    get account_url(loan_account) # no tab param
+
+    assert_response :success
+    assert_select "button[data-id='overview'][aria-selected='true']"
+    assert_operator response.body.index("data-id=\"overview\""),
+      :<, response.body.index("data-id=\"activity\""),
+      "Overview must render before Activity in the tab strip (FR-511)"
+  end
+
+  test "the Overview tab shows the original payoff date" do
+    loan_account = accounts(:loan)
+    payoff_date = loan_account.loan.amortization_schedule.payoff_date
+    assert payoff_date.present?, "test setup must produce an amortizable loan"
+
+    get account_url(loan_account)
+
+    assert_response :success
+    assert_select "h4", text: I18n.t("loans.tabs.overview.original_payoff_date")
+    assert_select "*", text: I18n.l(payoff_date, format: :long)
+  end
+
+  # FR-404's fallback, and a regression guard: the card must read from the
+  # schedule, not from loan.amortizations. Persisted rows may legitimately be
+  # absent on a read now that the Schedule tab does not build them (#39).
+  test "the Overview payoff date degrades to Unknown for a loan with no term" do
+    loan_account = Account.create! \
+      family: @user.family,
+      name: "Termless Loan",
+      balance: 1000,
+      currency: "USD",
+      accountable: Loan.new(subtype: "other", interest_rate: 5, rate_type: "fixed")
+
+    get account_url(loan_account)
+
+    assert_response :success
+    assert_select "*", text: I18n.t("loans.tabs.overview.unknown")
+  end
+
+  test "the Overview payoff date does not depend on persisted amortization rows" do
+    loan_account = accounts(:loan)
+    loan_account.loan.rebuild_amortization_schedule
+    loan_account.loan.amortizations.delete_all
+    payoff_date = loan_account.loan.reload.amortization_schedule.payoff_date
+
+    assert_no_difference -> { LoanAmortization.count } do
+      get account_url(loan_account)
+    end
+
+    assert_response :success
+    assert_select "*", text: I18n.l(payoff_date, format: :long)
+  end
+
+  test "the dead loans.overview locale scope is gone and the live one is used" do
+    assert_raises(I18n::MissingTranslationData) do
+      I18n.t("loans.overview.remaining_principal", raise: true)
+    end
+    assert_equal "Remaining loan balance", I18n.t("loans.tabs.overview.remaining_principal")
+    assert_equal "Remaining loan balance", I18n.t("UI.account.chart.title.remaining_principal_balance")
+  end
+
   test "schedule tab renders the full amortization schedule for an amortizable loan" do
     loan_account = accounts(:loan)
 

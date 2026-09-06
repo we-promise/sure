@@ -15,15 +15,6 @@ tr:
       term_months_placeholder: '360'
     new:
       title: Kredi detaylarını girin
-    overview:
-      interest_rate: Faiz Oranı
-      monthly_payment: Aylık Ödeme
-      not_applicable: Uygulanamaz
-      original_principal: Orijinal Anapara
-      remaining_principal: Kalan Anapara
-      term: Vade
-      type: Tür
-      unknown: Bilinmiyor
     tabs:
       overview:
         edit_loan_details: Kredi detaylarını düzenle

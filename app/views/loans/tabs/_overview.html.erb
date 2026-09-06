@@ -1,6 +1,13 @@
 <%# locals: (account:) %>
 
-<div class="grid grid-cols-3 gap-2">
+<%# FR-404. Read from the schedule, not from loan.amortizations: the persisted
+    rows may legitimately be absent or stale on a read, because the Schedule tab
+    no longer rebuilds them inside the request (#39). Sourcing a display figure
+    from persisted rows is the same defect that silently removed the payoff
+    projection card -- see Loan::PayoffProjection#original_schedule_rows. %>
+<% payoff_date = account.loan.amortization_schedule.payoff_date %>
+
+<div class="grid grid-cols-2 gap-2 md:grid-cols-4">
   <%= summary_card title: t(".original_principal") do %>
     <%= format_money account.loan.original_balance %>
   <% end %>
@@ -34,6 +41,14 @@
       <% else %>
         <%= pluralize(account.loan.term_months / 12, "year") %>
       <% end %>
+    <% else %>
+      <%= t(".unknown") %>
+    <% end %>
+  <% end %>
+
+  <%= summary_card title: t(".original_payoff_date") do %>
+    <% if payoff_date.present? %>
+      <%= l payoff_date, format: :long %>
     <% else %>
       <%= t(".unknown") %>
     <% end %>

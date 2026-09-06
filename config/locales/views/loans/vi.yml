@@ -15,15 +15,6 @@ vi:
       subtype_none: Không có
     new:
       title: Nhập thông tin khoản vay
-    overview:
-      interest_rate: Lãi suất
-      monthly_payment: Thanh toán hàng tháng
-      not_applicable: N/A
-      original_principal: Vốn gốc ban đầu
-      remaining_principal: Vốn gốc còn lại
-      term: Kỳ hạn
-      type: Loại
-      unknown: Không xác định
     tabs:
       overview:
         interest_rate: Lãi suất

@@ -12,12 +12,3 @@ nl:
       term_months_placeholder: '360'
     new:
       title: Voer leninggegevens in
-    overview:
-      interest_rate: Rentepercentage
-      monthly_payment: Maandelijkse betaling
-      not_applicable: N.v.t.
-      original_principal: Oorspronkelijke hoofdsom
-      remaining_principal: Resterende hoofdsom
-      term: Looptijd
-      type: Type
-      unknown: Onbekend

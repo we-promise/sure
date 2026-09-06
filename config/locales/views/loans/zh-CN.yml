@@ -15,15 +15,6 @@ zh-CN:
       subtype_none: 无
     new:
       title: 请输入贷款详情
-    overview:
-      interest_rate: 利率
-      monthly_payment: 月还款额
-      not_applicable: 不适用
-      original_principal: 原始本金
-      remaining_principal: 剩余本金
-      term: 期限
-      type: 类型
-      unknown: 未知
     tabs:
       overview:
         interest_rate: 利率
