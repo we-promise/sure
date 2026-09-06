@@ -15,6 +15,7 @@ class PagesController < ApplicationController
     "insights_feed"      => { col_span: "full",   grow: false, min_height: 0, width_toggle: true },
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
     "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
+    "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
@@ -63,6 +64,9 @@ class PagesController < ApplicationController
     @money_flow_month = money_flow_month_param
     @money_flow_account_ids = money_flow_account_ids_param
     @money_flow_data = build_money_flow_data(income_statement, @money_flow_month, @money_flow_account_ids)
+
+    @spending_trend_month = spending_trend_month_param
+    @spending_trend_data = build_spending_trend_data(income_statement, @spending_trend_month)
 
     @dashboard_sections = build_dashboard_sections
 
@@ -162,6 +166,15 @@ class PagesController < ApplicationController
           partial: "pages/dashboard/money_flow",
           layout: section_layout("money_flow"),
           locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, accessible_account_ids: @money_flow_accessible_account_ids, col_span: section_layout("money_flow")[:col_span] },
+          visible: @accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "spending_trend",
+          title: "pages.dashboard.spending_trend.title",
+          partial: "pages/dashboard/spending_trend",
+          layout: section_layout("spending_trend"),
+          locals: { spending_trend_data: @spending_trend_data },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -454,6 +467,82 @@ class PagesController < ApplicationController
       eligible_ids = @money_flow_accounts.map { |a| a.id.to_s }
       ids &= eligible_ids
       ids.presence
+    end
+
+    def spending_trend_month_param
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[:spending_month], "%Y-%m-%d").beginning_of_month
+      # Same clamp as money_flow: a future month's period would end before it
+      # starts once capped at Date.current, which Period.custom rejects.
+      month > current_month ? current_month : month
+    rescue ArgumentError, TypeError
+      current_month
+    end
+
+    # Cumulative daily spending for the selected month (capped at today while
+    # the month is in progress) against the previous month's full curve, so
+    # the two lines share one day-of-month axis.
+    def build_spending_trend_data(income_statement, selected_month)
+      month_start = selected_month.beginning_of_month
+      month_end = month_start.end_of_month
+      current_period = Period.custom(start_date: month_start, end_date: [ month_end, Date.current ].min)
+
+      previous_month_start = (month_start - 1.month).beginning_of_month
+      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+
+      current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
+      previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
+
+      current_series = cumulative_spending_series(current_period, current_daily)
+      previous_series = cumulative_spending_series(previous_period, previous_daily)
+
+      current_total = current_series.last&.fetch(:value) || 0
+      previous_total = previous_series.last&.fetch(:value) || 0
+      currency = income_statement.family.currency
+
+      # The axis spans the longer of the two months so both curves share it.
+      axis_days = [ month_end.day, previous_period.end_date.day ].max
+
+      {
+        month: month_start,
+        current_period: current_period,
+        previous_period: previous_period,
+        days: axis_days,
+        axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
+        current: current_series,
+        previous: previous_series,
+        current_total: Money.new(current_total, currency),
+        previous_total: Money.new(previous_total, currency),
+        delta: Money.new(current_total - previous_total, currency)
+      }
+    end
+
+    # Localized tick labels, one per axis day. The selected month owns the
+    # axis up to its length; when the previous month is longer, its dates
+    # label the tail so a tick never rolls past month-end into the next month
+    # (e.g. day 31 of a February view is "Jan 31", not "Mar 3").
+    def spending_trend_axis_labels(month_start, previous_month_start, days)
+      month_length = month_start.end_of_month.day
+
+      (1..days).map do |day|
+        date = day <= month_length ? month_start + (day - 1) : previous_month_start + (day - 1)
+        I18n.l(date, format: :short)
+      end
+    end
+
+    # One point per day (spend-free days included) so flat stretches render
+    # flat instead of being interpolated away.
+    def cumulative_spending_series(period, daily_totals)
+      cumulative = 0.to_d
+      period.date_range.map do |date|
+        cumulative += daily_totals[date] ? daily_totals[date].total.to_d : 0
+        {
+          day: (date - period.start_date).to_i + 1,
+          value: cumulative.to_f.round(2),
+          date: date.iso8601,
+          date_formatted: I18n.l(date, format: :short)
+        }
+      end
     end
 
     def build_money_flow_data(income_statement, selected_month, account_ids)
