@@ -17,7 +17,11 @@ class PlaidEntry::Processor
       category_id: matched_category&.id,
       merchant: merchant,
       pending_transaction_id: pending_transaction_id, # Plaid's linking ID for pending→posted
-      extra: plaid_extra
+      extra: plaid_extra,
+      # plaid_extra is a full snapshot of what Plaid currently reports, so the
+      # branch is replaced rather than merged — otherwise a nested value Plaid
+      # stopped sending (say payment_meta.payee) would linger indefinitely.
+      replace_extra_namespaces: [ "plaid" ]
     )
   end
 
