@@ -84,4 +84,55 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_not future_payload.key?(:historical_balances)
     assert(result[:accounts].any? { |a| a.key?(:historical_balances) })
   end
+
+  test "exposes a loan's borrowing terms" do
+    result = @fn.call
+
+    loan = result[:accounts].find { |a| a[:id] == accounts(:loan).id }
+    terms = loan[:terms]
+
+    assert_equal "Loan", loan[:type]
+    assert_equal 3.5, terms[:interest_rate].to_f
+    assert_equal 360, terms[:term_months]
+    assert_equal "fixed", terms[:rate_type]
+    assert terms[:monthly_payment].present?, "a fixed-rate loan has a computable payment"
+    assert terms[:monthly_payment_formatted].present?
+  end
+
+  test "omits monthly_payment for a variable-rate loan rather than reporting zero" do
+    accounts(:loan).loan.update!(rate_type: "variable")
+
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
+    assert_equal "variable", terms[:rate_type]
+    assert_not terms.key?(:monthly_payment)
+    assert_equal 3.5, terms[:interest_rate].to_f
+  end
+
+  test "exposes a credit card's terms" do
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:credit_card).id }[:terms]
+
+    assert_equal 18.99, terms[:apr].to_f
+    assert_equal 100.0, terms[:minimum_payment].to_f
+    assert_equal 95.0, terms[:annual_fee].to_f
+    assert_equal 5000.0, terms[:available_credit].to_f
+  end
+
+  test "omits terms entirely for an account type that carries none" do
+    depository = @family.accounts.visible.find_by(accountable_type: "Depository")
+
+    payload = @fn.call[:accounts].find { |a| a[:id] == depository.id }
+
+    assert_not payload.key?(:terms)
+  end
+
+  test "omits a term the user never entered" do
+    accounts(:loan).loan.update!(interest_rate: nil, rate_type: nil, term_months: nil)
+
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
+    assert_not terms.key?(:interest_rate)
+    assert_not terms.key?(:term_months)
+    assert_not terms.key?(:monthly_payment)
+  end
 end
