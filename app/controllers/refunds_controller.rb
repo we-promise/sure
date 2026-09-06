@@ -11,7 +11,7 @@ class RefundsController < ApplicationController
       .where("entries.amount > 0")
       .excluding_split_parents.excluding_pending
     @purchases = @purchases.where("entries.name ILIKE ?", "%#{Entry.sanitize_sql_like(params[:search])}%") if params[:search].present?
-    @purchases = @purchases.reverse_chronological.includes(:account, :entryable).limit(100).to_a
+    @purchases = @purchases.reorder(date: :desc, created_at: :desc, id: :desc).preload(:account, :entryable).limit(100).to_a
     linked_purchase = @entry.transaction.refund_of&.entry
     if linked_purchase && Current.accessible_entries.exists?(id: linked_purchase.id)
       @selected_purchase_id = linked_purchase.id
