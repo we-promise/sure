@@ -63,6 +63,16 @@ de:
         create_token: Leg einen neuen persönlichen API-Token mit reinem Lesezugriff an
         open_tokens: Gehe zu Settings → Connect and manage apps → Developer tools → API tokens
         sign_in_html: Öffne %{link} und melde dich in deinem Konto an
+      sca:
+        title: Starke Kundenauthentifizierung (SCA)
+        description: Wise benötigt eine signierte Einmal-Token-Challenge, um vollständige Kontoauszüge einschließlich eingehender Zahlungen abzurufen. Erzeuge hier ein Schlüsselpaar und registriere den öffentlichen Schlüssel bei Wise, um den vollständigen Abruf zu ermöglichen.
+        public_key_label: Öffentlicher Schlüssel (PEM)
+        registered_help_html: "Registriere diesen Schlüssel bei Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key."
+        copy: Kopieren
+        copied: Kopiert!
+        generate: Schlüsselpaar erzeugen
+        regenerate: Neues Schlüsselpaar erzeugen
+        regenerate_confirm: "Dadurch wird ein neues Schlüsselpaar erzeugt. Wise akzeptiert den bisherigen öffentlichen Schlüssel weiterhin, bis du ihn selbst in deinem Wise-Konto entfernst – Sure kann ihn nicht aus der Ferne widerrufen. Du musst den neuen öffentlichen Schlüssel bei Wise registrieren, bevor Kontoauszüge wieder synchronisiert werden können. Fortfahren?"
       import_all_history_help: Holt alle historischen Wise-Kontoauszüge statt nur das letzte Jahr.
       import_all_history_label: Vollständige Transaktionshistorie importieren
       keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
