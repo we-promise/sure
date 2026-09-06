@@ -34,7 +34,9 @@ module Family::AiPromptable
 
     # Assigned rather than mutated in place so the jsonb attribute is
     # unambiguously dirty when only blanks were submitted (a reset).
-    before_save { self.ai_prompt_overrides = ai_prompt_overrides.compact_blank }
+    before_save { self.ai_prompt_overrides = ai_prompt_overrides.to_h.compact_blank }
+
+    validate :validate_ai_prompt_overrides_schema
 
     validates *FIELDS,
       length: {
@@ -54,4 +56,23 @@ module Family::AiPromptable
   def ai_prompt_default(key)
     DEFAULTS.fetch(key.to_sym).call
   end
+
+  private
+    def validate_ai_prompt_overrides_schema
+      unless ai_prompt_overrides.is_a?(Hash)
+        errors.add(:ai_prompt_overrides, :invalid)
+        return
+      end
+
+      unknown_keys = ai_prompt_overrides.keys.map(&:to_s) - KEYS.map(&:to_s)
+      if unknown_keys.any?
+        errors.add(:ai_prompt_overrides, :invalid)
+      end
+
+      ai_prompt_overrides.each do |key, val|
+        unless val.nil? || val.is_a?(String)
+          errors.add(:"ai_prompt_#{key}", :invalid)
+        end
+      end
+    end
 end

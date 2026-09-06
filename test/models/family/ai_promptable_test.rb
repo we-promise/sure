@@ -58,4 +58,25 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_equal "Chat system prompt is too long (maximum is 20,000 characters)",
       @family.errors.full_messages_for(:ai_prompt_chat_system).first
   end
+
+  test "rejects non-hash ai_prompt_overrides" do
+    @family.ai_prompt_overrides = "not a hash"
+
+    assert_not @family.valid?
+    assert_includes @family.errors.attribute_names, :ai_prompt_overrides
+  end
+
+  test "rejects unknown keys in ai_prompt_overrides" do
+    @family.ai_prompt_overrides = { "unsupported_prompt" => "Custom text" }
+
+    assert_not @family.valid?
+    assert_includes @family.errors.attribute_names, :ai_prompt_overrides
+  end
+
+  test "rejects non-string values in ai_prompt_overrides" do
+    @family.ai_prompt_overrides = { "chat_system" => 123 }
+
+    assert_not @family.valid?
+    assert_includes @family.errors.attribute_names, :ai_prompt_chat_system
+  end
 end
