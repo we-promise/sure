@@ -108,10 +108,12 @@ class Loan
               rate: segment[:rate]
             )
           elsif @daily_accrual
-            # Seeded from the first segment only. No re-amortisation event can
-            # precede the accrual start of a well-formed run, so the first
-            # period's payment rate and accrual rate agree by construction.
-            accrual_rate ||= decimal(segment[:rate])
+            # Seeded from the ACCRUAL clock at accrual_start_date, not from
+            # segment[:rate]. A rate change effective on the FIRST payment date
+            # is already in that segment, so seeding from it would accrue the
+            # opening period at the new rate -- the same defect this fixes,
+            # surviving at the first boundary.
+            accrual_rate ||= decimal(@accrual_rate_for.call(accrual_start_date))
             period_rate_changes = accrual_rate_changes_between(previous_date, payment_date)
 
             interest, balance = accrue_daily_period(

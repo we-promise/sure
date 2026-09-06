@@ -309,6 +309,32 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
       "the period STARTING on the change date takes the new rate"
   end
 
+  # The first-payment boundary, from the review on #59. A change effective on
+  # the FIRST payment date is already in segment 1, so seeding the carried
+  # accrual rate from segment[:rate] would accrue the opening period at the new
+  # rate -- the #48 defect surviving at the one boundary the carry cannot reach.
+  test "a rate change on the first payment date leaves the opening period at the old rate" do
+    change = ->(_from_date, _to_date) { [ { date: Date.new(2024, 2, 1), rate: BigDecimal("12") } ] }
+
+    result = build_simulator(
+      starting_balance: "1000.00",
+      accrual_start_date: Date.new(2024, 1, 1),
+      payment_schedule: [ Date.new(2024, 2, 1), Date.new(2024, 3, 1) ],
+      # rates[0] is the OLD rate, in force through the opening period.
+      rates: [ BigDecimal("0"), BigDecimal("12") ],
+      payment_strategy: :hold,
+      payment_amount_for: ->(**_args) { BigDecimal("0.00") },
+      daily_accrual: true,
+      re_amortisation_events: change,
+      accrual_rate_changes: change
+    ).run
+
+    assert_equal BigDecimal("0.00"), result.payments[0][:interest_payment],
+      "2024-01-01..02-01 ran at the old 0% -- a change effective ON 02-01 must not re-rate it"
+    assert_equal BigDecimal("9.53"), result.payments[1][:interest_payment],
+      "2024-02-01..03-01 is 29 days at 12% on 1000"
+  end
+
   test "an extra repayment on a payment date is applied before payment" do
     result = build_simulator(
       starting_balance: "1000.00",
@@ -477,17 +503,20 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
       accrual_rate_changes: nil
     )
       rates ||= Array.new(payment_schedule.length, BigDecimal("0"))
-      rate_index = 0
 
       Loan::Simulator.new(
         starting_balance: starting_balance,
         starting_balance_as_of: starting_balance_as_of,
         accrual_start_date: accrual_start_date,
         payment_schedule: payment_schedule,
-        accrual_rate_for: ->(_date) {
-          rate = rates[rate_index]
-          rate_index += 1
-          rate
+        # A genuine function of date: rates[i] is the rate for the period
+        # ending at payment_schedule[i], and any date at or before the first
+        # payment resolves to rates[0]. The previous version counted calls,
+        # which silently mis-answered as soon as the simulator asked about a
+        # date other than a payment date -- e.g. accrual_start_date.
+        accrual_rate_for: ->(date) {
+          index = payment_schedule.index { |scheduled| scheduled >= date }
+          rates[index || payment_schedule.length - 1]
         },
         re_amortisation_events: re_amortisation_events || ->(_from_date, _to_date) { [] },
         accrual_rate_changes: accrual_rate_changes,
