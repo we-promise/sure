@@ -90,6 +90,63 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal categories(:food_and_drink).id, entry.transaction.category_id
   end
 
+  # extra is deep-merged on import, so omitting a key would leave a stale value
+  # behind forever once Plaid stops sending it.
+  test "clears provider metadata that Plaid no longer sends" do
+    base = {
+      "transaction_id" => "clears-metadata",
+      "merchant_name" => "Amazon",
+      "amount" => 10,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "payment_channel" => "online",
+      "payment_meta" => { "reference_number" => "REF-1" },
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "clears-metadata-merchant"
+    }
+
+    @category_matcher.stubs(:match).returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(base, plaid_account: @plaid_account, category_matcher: @category_matcher).process
+
+    entry = Entry.find_by!(external_id: "clears-metadata", source: "plaid")
+    assert_equal "online", entry.transaction.extra.dig("plaid", "payment_channel")
+
+    # Plaid drops both fields on a later sync
+    PlaidEntry::Processor.new(
+      base.except("payment_channel", "payment_meta"),
+      plaid_account: @plaid_account,
+      category_matcher: @category_matcher
+    ).process
+
+    plaid_extra = entry.reload.transaction.extra.fetch("plaid")
+    assert_nil plaid_extra["payment_channel"]
+    assert_nil plaid_extra["payment_meta"]
+  end
+
+  test "treats whitespace-only provider values as blank" do
+    plaid_transaction = {
+      "transaction_id" => "blank-values",
+      "merchant_name" => "Amazon",
+      "amount" => 10,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "payment_meta" => { "payee" => "   ", "reference_number" => "REF-1" },
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "blank-values-merchant"
+    }
+
+    @category_matcher.stubs(:match).returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    entry = Entry.find_by!(external_id: "blank-values", source: "plaid")
+
+    assert_equal({ "reference_number" => "REF-1" }, entry.transaction.extra.dig("plaid", "payment_meta"))
+  end
+
   test "skips category matcher when account.enable_category_matcher is false" do
     @plaid_account.current_account.update!(enable_category_matcher: false)
 
