@@ -91,6 +91,15 @@ class LoanOffsetAccountTest < ActiveSupport::TestCase
     assert_includes @loan.errors[:offset_account_ids].join, "must be visible to every loan viewer"
   end
 
+  test "clears offset links when the loan becomes non-variable without submitted IDs" do
+    @loan.update!(rate_type: "variable", offset_account_ids: [ @offset.id ])
+    assert_equal [ @offset.id ], @loan.reload.offset_accounts.pluck(:id)
+
+    @loan.update!(rate_type: "fixed")
+
+    assert_empty @loan.reload.offset_accounts
+  end
+
   test "removing the last link returns the loan to no offset accounts" do
     @loan.loan_offset_accounts.create!(account: @offset)
     assert_equal [ @offset.id ], @loan.reload.offset_accounts.pluck(:id)

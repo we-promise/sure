@@ -26,7 +26,7 @@ class Loan < ApplicationRecord
   attr_accessor :offset_account_ids
 
   before_save :validate_offset_accounts, if: :offset_account_ids_supplied?
-  after_save :sync_offset_accounts, if: :offset_account_ids_supplied?
+  after_save :sync_offset_accounts, if: :offset_accounts_need_sync?
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   validates :term_months, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_TERM_MONTHS }, allow_nil: true
@@ -385,6 +385,10 @@ class Loan < ApplicationRecord
 
     def offset_account_ids_supplied?
       !offset_account_ids.nil?
+    end
+
+    def offset_accounts_need_sync?
+      offset_account_ids_supplied? || saved_change_to_rate_type?
     end
 
     def sync_offset_accounts
