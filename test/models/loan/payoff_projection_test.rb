@@ -245,4 +245,98 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_not_same first, second
     assert_equal Money.new(450000, "USD"), second.current_balance
   end
+
+  test "an extra payment shortens the payoff and increases interest saved beyond the baseline" do
+    loan = build_loan(balance: 500000)
+    baseline = loan.payoff_projection
+
+    boosted = Loan::PayoffProjection.new(
+      loan,
+      extra_payment: Loan::PayoffProjection.monthly_equivalent(amount: 200, frequency: "monthly", currency: "USD")
+    )
+
+    assert boosted.applicable?
+    assert boosted.months_saved > baseline.months_saved
+    assert boosted.interest_saved > baseline.interest_saved
+    assert_equal baseline.monthly_payment + Money.new(200, "USD"), boosted.monthly_payment
+  end
+
+  test "a blank or zero extra payment behaves identically to no extra payment" do
+    loan = build_loan(balance: 500000)
+    baseline = loan.payoff_projection
+
+    blank = Loan::PayoffProjection.new(loan, extra_payment: nil)
+    zero = Loan::PayoffProjection.new(loan, extra_payment: Money.new(0, "USD"))
+
+    assert_equal baseline.monthly_payment, blank.monthly_payment
+    assert_equal baseline.monthly_payment, zero.monthly_payment
+    assert_equal baseline.payoff_date, blank.payoff_date
+    assert_equal baseline.payoff_date, zero.payoff_date
+  end
+
+  test "monthly_equivalent normalizes weekly and yearly amounts to a monthly figure" do
+    assert_equal Money.new(BigDecimal("50") * 52 / 12, "USD"),
+      Loan::PayoffProjection.monthly_equivalent(amount: 50, frequency: "weekly", currency: "USD")
+    assert_equal Money.new(100, "USD"),
+      Loan::PayoffProjection.monthly_equivalent(amount: 100, frequency: "monthly", currency: "USD")
+    assert_equal Money.new(BigDecimal("1200") / 12, "USD"),
+      Loan::PayoffProjection.monthly_equivalent(amount: 1200, frequency: "yearly", currency: "USD")
+  end
+
+  test "monthly_equivalent returns nil for a blank, zero, or non-numeric amount" do
+    assert_nil Loan::PayoffProjection.monthly_equivalent(amount: nil, frequency: "monthly", currency: "USD")
+    assert_nil Loan::PayoffProjection.monthly_equivalent(amount: "", frequency: "monthly", currency: "USD")
+    assert_nil Loan::PayoffProjection.monthly_equivalent(amount: 0, frequency: "monthly", currency: "USD")
+    assert_nil Loan::PayoffProjection.monthly_equivalent(amount: "not-a-number", frequency: "monthly", currency: "USD")
+  end
+
+  test "monthly_equivalent raises on an unsupported frequency" do
+    assert_raises(ArgumentError) do
+      Loan::PayoffProjection.monthly_equivalent(amount: 50, frequency: "fortnightly", currency: "USD")
+    end
+  end
+
+  # Regression: eligible_for_extra_payment? is the coarser check used to
+  # decide whether to show the what-if form -- it must stay true even when
+  # the baseline (no-extra) #applicable? is false, since "the current
+  # payment doesn't cover interest" is exactly when a user wants to model
+  # paying more.
+  test "eligible_for_extra_payment? is true even when the baseline payment doesn't cover interest" do
+    loan = build_loan(balance: 500000)
+    loan.account.update!(balance: 800000)
+
+    assert_not loan.payoff_projection.applicable?
+    assert Loan::PayoffProjection.eligible_for_extra_payment?(loan)
+  end
+
+  test "eligible_for_extra_payment? is false for a variable rate loan" do
+    loan = build_loan(balance: 500000, rate_type: "variable")
+
+    assert_not Loan::PayoffProjection.eligible_for_extra_payment?(loan)
+  end
+
+  test "eligible_for_extra_payment? is false when the balance is already zero" do
+    loan = build_loan(balance: 500000)
+    loan.account.update!(balance: 0)
+
+    assert_not Loan::PayoffProjection.eligible_for_extra_payment?(loan)
+  end
+
+  # BigDecimal parses these without raising, and both slip past a `<= 0` guard:
+  # every comparison with NaN is false, and Infinity is genuinely positive.
+  # Money.new accepts either, so the value would reach Loan::Simulator.
+  test "monthly_equivalent rejects non-finite amounts" do
+    %w[NaN Infinity -Infinity].each do |raw|
+      assert_nil Loan::PayoffProjection.monthly_equivalent(amount: raw, frequency: "monthly", currency: "USD"),
+        "#{raw} must not become a Money amount that can reach the simulator"
+    end
+  end
+
+  test "monthly_equivalent still accepts ordinary amounts" do
+    money = Loan::PayoffProjection.monthly_equivalent(amount: "50", frequency: "weekly", currency: "USD")
+
+    assert_not_nil money
+    assert_predicate money.amount, :finite?
+    assert_in_delta 216.67, money.amount.to_f, 0.01, "50/week is 50 * 52 / 12 monthly-equivalent"
+  end
 end

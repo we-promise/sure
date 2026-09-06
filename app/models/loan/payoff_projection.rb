@@ -19,11 +19,79 @@ class Loan
   # balance that includes escrow will understate interest/time saved.
   class PayoffProjection
     MAX_ITERATIONS_MULTIPLIER = 2
+    EXTRA_PAYMENT_FREQUENCIES = %w[weekly monthly yearly].freeze
 
-    attr_reader :loan
+    attr_reader :loan, :extra_payment
 
-    def initialize(loan)
+    # extra_payment: an optional hypothetical monthly-equivalent Money
+    # amount added on top of the original schedule's payment -- used to
+    # model "what if I also paid an extra $X/week|month|year" without
+    # touching the account's real balance or the persisted schedule. See
+    # .monthly_equivalent for how a user-entered amount + cadence becomes
+    # this value.
+    def initialize(loan, extra_payment: nil)
       @loan = loan
+      @extra_payment = extra_payment
+      # No rebuild is enqueued here. The version of this on #4 did so from the
+      # constructor, which makes merely instantiating a projection a
+      # side-effecting act. Since #39 the read paths own that: the Schedule tab
+      # and Api::V1::LoansController both enqueue LoanAmortizationRebuildJob
+      # when the persisted rows are not current.
+    end
+
+    # Converts a user-entered amount + cadence into the monthly-equivalent
+    # Money this class models payments in. This is an approximation --
+    # weekly extra payments really do compound faster than a monthly lump
+    # sum, because they reduce principal between the monthly accrual points
+    # this simulation (and the rest of the amortization feature) uses -- but
+    # no part of this codebase models daily/weekly accrual, so a monthly
+    # equivalent is consistent with the existing granularity rather than a
+    # new gap. Returns nil for a blank/zero/invalid amount; raises on an
+    # unrecognized frequency (callers are expected to validate frequency at
+    # the request boundary, not rely on this method to sanitize it).
+    def self.monthly_equivalent(amount:, frequency:, currency:)
+      unless EXTRA_PAYMENT_FREQUENCIES.include?(frequency.to_s)
+        raise ArgumentError, "unsupported frequency: #{frequency.inspect}"
+      end
+
+      return nil if amount.blank?
+
+      parsed = begin
+        BigDecimal(amount.to_s)
+      rescue ArgumentError, TypeError
+        nil
+      end
+      # finite? first: BigDecimal("NaN") and BigDecimal("Infinity") both survive
+      # `parsed <= 0` -- NaN because every comparison against it is false, and
+      # Infinity because it is genuinely positive. Money.new accepts either, so
+      # a non-finite extra payment would reach Loan::Simulator and poison the
+      # projection. The controller already rejects these at the request
+      # boundary; this is the same check where the value is actually converted,
+      # for callers that do not come through it.
+      return nil if parsed.nil? || !parsed.finite? || parsed <= 0
+
+      monthly_amount = case frequency.to_s
+      when "weekly" then parsed * 52 / 12
+      when "yearly" then parsed / 12
+      else parsed
+      end
+
+      Money.new(monthly_amount, currency)
+    end
+
+    # Coarser eligibility than #applicable? -- true whenever a hypothetical
+    # extra payment *could* make this loan's projection applicable, even if
+    # the baseline (no-extra) payment currently doesn't cover interest or
+    # converge. Used to decide whether to show the what-if input at all: a
+    # loan whose current payment barely covers interest is exactly the case
+    # where a user most wants to model paying more, so the input shouldn't
+    # be hidden based on the unboosted result.
+    def self.eligible_for_extra_payment?(loan)
+      loan.amortization_schedule.amortizable? &&
+        loan.amortization_schedule.fixed_rate? &&
+        loan.account.present? &&
+        loan.account.balance.present? &&
+        loan.account.balance.positive?
     end
 
     def currency
@@ -50,8 +118,12 @@ class Loan
       Money.new(loan.account.balance, currency)
     end
 
+    # The payment this projection actually models -- the original
+    # schedule's payment, plus the hypothetical extra when one is present.
     def monthly_payment
-      loan.amortization_schedule.monthly_payment
+      base = loan.amortization_schedule.monthly_payment
+      return base if extra_payment.blank? || extra_payment.amount.zero?
+      base + extra_payment
     end
 
     # The simulated forward schedule from today until the balance is paid off.

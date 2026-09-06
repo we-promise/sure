@@ -5,6 +5,13 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     sign_in @user = users(:family_admin)
   end
 
+  test "loan account opens on the overview tab" do
+    visit account_path(accounts(:loan))
+
+    assert_selector "button[data-id='overview'][aria-selected='true']"
+    assert_selector "h4", text: I18n.t("loans.tabs.overview.original_payoff_date")
+  end
+
   # Browser-level regression: mounts the chart for a real loan whose payment
   # anchor doesn't fall on today's day-of-month and whose current balance is
   # *behind* the original schedule (balance grew, not shrank) -- the two

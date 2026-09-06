@@ -74,15 +74,35 @@ class Loan < ApplicationRecord
     @payoff_projection
   end
 
+  # A fresh (unmemoized) projection modeling a hypothetical extra payment on
+  # top of the actual-balance projection above -- "what if I also paid an
+  # extra $X/week|month|year". Purely a simulation: never touches
+  # account.balance or the persisted schedule. amount/frequency are expected
+  # to already be validated at the request boundary (see
+  # AccountsController#extra_payment_params); an unsupported frequency
+  # raises, matching PayoffProjection.monthly_equivalent's contract.
+  def payoff_projection_with_extra(amount:, frequency:)
+    extra = PayoffProjection.monthly_equivalent(amount: amount, frequency: frequency, currency: account.currency)
+    PayoffProjection.new(self, extra_payment: extra)
+  end
+
   # Chart payload contrasting the original schedule's remaining trajectory
-  # against the actual-balance projection -- nil unless there's a real,
-  # meaningful divergence to show (mirrors the Schedule tab's summary-card
-  # gate, so the chart and cards appear/disappear together).
-  def payoff_chart_payload
-    # `payoff_projection`/`amortization_schedule` recompute their memoization
-    # signature on every call, so read each once here rather than repeating
-    # calls throughout this method.
-    projection = payoff_projection
+  # against the given projection -- the actual-balance projection
+  # (Loan#payoff_projection) by default, or a caller-supplied one (e.g. from
+  # #payoff_projection_with_extra) when a what-if is active. Takes the
+  # projection itself rather than raw amount/frequency so a caller that also
+  # needs the projection for cards/labels computes it once and passes the
+  # same instance through, instead of this method silently recomputing it.
+  # extra_payment_amount/extra_payment_frequency are only used to build the
+  # human-readable label below -- pass them whenever `projection` was built
+  # with an extra payment. nil unless there's a real, meaningful divergence
+  # to show (mirrors the Schedule tab's summary-card gate, so the chart and
+  # cards appear/disappear together).
+  def payoff_chart_payload(projection: payoff_projection, extra_payment_amount: nil, extra_payment_frequency: nil)
+    # `amortization_schedule` recomputes its memoization signature on every
+    # call -- read it once here rather than repeating calls throughout this
+    # method (`projection` is already the one instance the caller resolved,
+    # per the note above).
     schedule = amortization_schedule
 
     return nil unless projection.applicable?
@@ -118,6 +138,7 @@ class Loan < ApplicationRecord
       original_payoff_date: schedule.payoff_date&.iso8601,
       accelerated_payoff_date: projection.payoff_date&.iso8601,
       ahead: projection.months_saved.positive?,
+      extra_payment_label: extra_payment_label(projection, extra_payment_amount, extra_payment_frequency),
       labels: {
         today: I18n.t("loans.tabs.schedule.chart.today"),
         scheduled: I18n.t("loans.tabs.schedule.chart.scheduled_history"),
@@ -277,6 +298,23 @@ class Loan < ApplicationRecord
       matching_rows = amortizations.where(schedule_signature: signature).count
       matching_rows == schedule.payment_count && amortizations.count == schedule.payment_count
     end
+
+    # Human-readable "+ $50/week" label for the chart/cards, built from the
+    # raw amount/frequency the user entered -- not the monthly-equivalent
+    # projection.extra_payment, which would misleadingly show "$216.67/month"
+    # for a $50/week input. nil when no extra payment is active or it turned
+    # out to be a no-op (blank/zero amount).
+    def extra_payment_label(projection, raw_amount, raw_frequency)
+      return nil unless projection.extra_payment.present?
+      return nil if raw_amount.blank? || raw_frequency.blank?
+
+      I18n.t(
+        "loans.tabs.schedule.chart.extra_payment_applied",
+        amount: Money.new(BigDecimal(raw_amount.to_s), account.currency).to_s,
+        frequency: I18n.t("loans.tabs.schedule.chart.frequency.#{raw_frequency}")
+      )
+    rescue ArgumentError, TypeError
+      nil    end
 
     def rebuild_amortization_schedule_locked!
       clear_amortization_schedule_cache!
