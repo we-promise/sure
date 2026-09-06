@@ -86,9 +86,19 @@ class Loan
     # loan whose current payment barely covers interest is exactly the case
     # where a user most wants to model paying more, so the input shouldn't
     # be hidden based on the unboosted result.
+    # Deliberately does NOT require fixed_rate?.
+    #
+    # It used to, which made this disagree with #applicable? after #12 removed
+    # the same gate there: a variable-rate loan would show a projection and a
+    # payoff chart but no way to model paying extra -- and a variable-rate
+    # borrower is arguably the one who most wants to, because their contracted
+    # payment moves under them (#54).
+    #
+    # The what-if holds the payment flat while simulating forward. For a
+    # variable loan that compounds two hypotheticals, so the UI discloses the
+    # assumption rather than the control being withheld.
     def self.eligible_for_extra_payment?(loan)
       loan.amortization_schedule.amortizable? &&
-        loan.amortization_schedule.fixed_rate? &&
         loan.account.present? &&
         loan.account.balance.present? &&
         loan.account.balance.positive?

@@ -69,6 +69,13 @@
         <% end %>
       </div>
       <p class="text-xs text-subdued mt-1"><%= t(".extra_payment.approximation_notice") %></p>
+      <%# The what-if holds the payment flat while simulating forward. For a
+          variable-rate loan the contracted payment is itself expected to move,
+          so the model compounds two hypotheticals -- say so rather than
+          withholding the control (#54). %>
+      <% if loan.rate_type == "variable" %>
+        <p class="text-xs text-subdued mt-1"><%= t(".extra_payment.variable_rate_notice") %></p>
+      <% end %>
     <% end %>
   <% end %>
 

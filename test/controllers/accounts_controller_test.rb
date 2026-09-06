@@ -965,6 +965,57 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "button[data-id='schedule']", count: 0
   end
+
+  # --- #54: the what-if control is not gated on rate type ----------------
+
+  test "a variable-rate loan gets the extra-payment control, with the rate assumption disclosed" do
+    loan_account = variable_rate_loan_account
+
+    get account_url(loan_account, tab: "schedule")
+
+    assert_response :success
+    assert_select "input[name='extra_payment[amount]']", { count: 1 },
+      "a variable-rate borrower is the one who most wants to model paying extra (#54)"
+    assert_select "p", text: I18n.t("loans.tabs.schedule.extra_payment.variable_rate_notice"), count: 1
+  end
+
+  test "a fixed-rate loan gets the control without the variable-rate disclosure" do
+    loan_account = accounts(:loan)
+    assert_equal "fixed", loan_account.loan.rate_type
+
+    get account_url(loan_account, tab: "schedule")
+
+    assert_response :success
+    assert_select "input[name='extra_payment[amount]']", count: 1
+    assert_select "p", text: I18n.t("loans.tabs.schedule.extra_payment.variable_rate_notice"), count: 0
+  end
+
+  private
+
+    def variable_rate_loan_account
+      account = Account.create!(
+        family: @user.family,
+        name: "Variable What-If Loan",
+        balance: 500000,
+        currency: "USD",
+        accountable: Loan.create!(
+          subtype: "mortgage",
+          interest_rate: 3.5,
+          term_months: 360,
+          rate_type: "variable",
+          start_date: 2.years.ago.to_date
+        )
+      )
+      account.entries.create!(
+        name: "Starting balance",
+        amount: 500000,
+        currency: "USD",
+        date: 2.years.ago.to_date,
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      account.update!(balance: 450000)
+      account
+    end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
