@@ -50,11 +50,12 @@ export default class extends Controller {
   }
 
   #uniqueKey() {
-    // A monotonic counter, not Date.now(): two actions/conditions added in
-    // the same millisecond would otherwise get the same nested-form index,
-    // colliding on field names and DS::TagSelect menu ids.
+    // Prefixed so it can never collide with the numeric indexes Rails
+    // assigns to already-persisted conditions/actions when rendering an
+    // edit form (0, 1, 2, ...). A plain monotonic counter starting at 1
+    // would otherwise reuse index 1 and clobber an existing nested record.
     this.keySequence = (this.keySequence ?? 0) + 1;
-    return this.keySequence;
+    return `new_${this.keySequence}`;
   }
 
   // Updates the prefix visibility of all conditions and condition groups

@@ -157,6 +157,29 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal existing_tag.id, action.value
   end
 
+  test "imports multi-tag actions, reusing existing tags and creating missing ones" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Multi tag rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"test\"}]","[{\"action_type\":\"set_transaction_tags\",\"value\":\"Existing Tag,New Tag\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    new_tag = Tag.find_by!(family: @family, name: "New Tag")
+
+    rule = Rule.find_by!(family: @family, name: "Multi tag rule")
+    action = rule.actions.first
+    assert_equal "set_transaction_tags", action.action_type
+    assert_equal [ existing_tag.id, new_tag.id ], action.value.split(",")
+  end
+
   test "updates existing rule when re-importing with same name" do
     # First import
     import1 = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")

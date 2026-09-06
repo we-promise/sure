@@ -630,6 +630,56 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports a partially-orphaned multi-tag action's value_ref as an array" do
+    second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Orphaned Multi Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, second_tag.id ]
+    )
+    tag_rule.save!
+
+    second_tag.destroy!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Orphaned Multi Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      # value_ref should stay an array (not collapse to a scalar Hash) even
+      # though only one of the two original tag ids still resolves, so the
+      # importer's array-handling branch keeps running instead of the
+      # legacy single-tag scalar branch.
+      assert_kind_of Array, actions[0]["value_ref"]
+      assert_equal(
+        [ { "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" } ],
+        actions[0]["value_ref"]
+      )
+    end
+  end
+
   test "exports compound conditions with sub-conditions" do
     # Create a rule with compound conditions
     compound_rule = @family.rules.build(

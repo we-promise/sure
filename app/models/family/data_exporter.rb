@@ -810,8 +810,11 @@ class Family::DataExporter
         value: names.join(","),
         # A single tag keeps the pre-existing scalar value_ref shape for
         # backward compatibility with older exports; only genuinely
-        # multi-tag actions use an array.
-        value_ref: refs.size <= 1 ? refs.first : refs
+        # multi-tag actions use an array. Keyed off `ids.size` (not
+        # `refs.size`) so a partially-orphaned multi-tag action (one tag
+        # since deleted) still round-trips as an array instead of silently
+        # dropping the surviving tag's name on import.
+        value_ref: ids.size <= 1 ? refs.first : refs
       }
     end
 

@@ -268,17 +268,29 @@ class RuleImport < Import
         return merchant.id
       end
 
-      # Map tag names to UUIDs
+      # Map tag names to UUIDs. `value` may be a comma-separated list of tag
+      # names for multi-tag actions (see Rule::Action#value=), so each name
+      # is resolved independently rather than treating the whole string as
+      # a single tag name.
       if action_type == "set_transaction_tags"
-        tag = family.tags.find_by(name: value)
-        # Create tag if it doesn't exist
-        unless tag
-          tag = family.tags.create!(name: value)
-        end
-        return tag.id
+        return resolve_import_multi_tag_value(value)
       end
 
       value
+    end
+
+    def resolve_import_multi_tag_value(value)
+      names = value.to_s.split(",").map(&:strip).reject(&:blank?)
+      return value if names.empty?
+
+      tags_by_name = family.tags.where(name: names).index_by(&:name)
+
+      tag_ids = names.map do |name|
+        tag = tags_by_name[name] ||= family.tags.create!(name: name)
+        tag.id
+      end
+
+      tag_ids.join(",")
     end
 
     def parse_boolean(value)
