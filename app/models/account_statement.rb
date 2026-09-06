@@ -496,8 +496,19 @@ class AccountStatement < ApplicationRecord
     def remove_vector_store_document
       document = vector_store_document
       return if document.nil?
+      return if family.remove_document(document)
 
-      family.remove_document(document)
+      # It reports failure by returning false, not by raising, and on false the
+      # row is left in place: the deleted statement's text stays searchable,
+      # which is the outcome this callback exists to prevent.
+      DebugLogEntry.capture(
+        category: "documents",
+        level: "warn",
+        message: "Indexed copy of a deleted statement could not be removed and is still searchable",
+        source: "AccountStatement#remove_vector_store_document",
+        family: family,
+        metadata: { account_statement_id: id, family_document_id: document.id }
+      )
     rescue StandardError => e
       DebugLogEntry.capture(
         category: "documents",
