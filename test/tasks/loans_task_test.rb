@@ -1,4 +1,5 @@
 require "test_helper"
+require "benchmark"
 
 load Rails.root.join("lib/tasks/loans.rake")
 
@@ -93,16 +94,30 @@ class LoansTaskTest < ActiveSupport::TestCase
     FileUtils.rm_f(output)
   end
 
-  test "rebuild task rebuilds a bounded batch and is idempotent" do
+  # Rebuilds the whole population rather than a bounded slice, so the loan
+  # under test is definitely reached: `limit` selects by id order, which need
+  # not include any particular fixture.
+  #
+  # Also deletes the rows first, so the run has something stale to rebuild.
+  # The earlier version pre-built the schedule and then asserted it was
+  # unchanged, which passes whether or not the task selects stale loans at all.
+  test "rebuild task rebuilds a stale schedule and is idempotent" do
     loan = loans(:characterization_fixed)
     loan.rebuild_amortization_schedule
-    first = loan.amortizations.ordered.map { |row| row.slice(:payment_number, :payment_amount, :ending_balance) }
+    expected = loan.amortizations.ordered.map { |row| row.slice(:payment_number, :payment_amount, :ending_balance) }
+    assert_predicate expected.length, :positive?
 
-    capture_io { Rake::Task["loans:rebuild_schedules"].invoke("1", "1") }
+    loan.amortizations.delete_all
+    assert_empty loan.reload.amortizations, "the run must have something stale to rebuild"
 
-    second = loan.reload.amortizations.ordered.map { |row| row.slice(:payment_number, :payment_amount, :ending_balance) }
-    assert_equal first, second, "a rebuild must be idempotent"
-    assert_predicate loan.amortizations.count, :positive?
+    capture_io { Rake::Task["loans:rebuild_schedules"].invoke }
+    rebuilt = loan.reload.amortizations.ordered.map { |row| row.slice(:payment_number, :payment_amount, :ending_balance) }
+    assert_equal expected, rebuilt, "the task must rebuild a missing schedule"
+
+    Rake::Task["loans:rebuild_schedules"].reenable
+    capture_io { Rake::Task["loans:rebuild_schedules"].invoke }
+    again = loan.reload.amortizations.ordered.map { |row| row.slice(:payment_number, :payment_amount, :ending_balance) }
+    assert_equal expected, again, "a second run must be idempotent"
   end
 
   # --- #38: every documented parameter must actually be read ---------------
@@ -115,6 +130,34 @@ class LoansTaskTest < ActiveSupport::TestCase
     assert_match(/sleep=0\.25s/, output,
       "SLEEP was ignored -- the documented rollout command would run unthrottled (#38)")
     assert_no_match(/WARNING: no rate limit/, output)
+  end
+
+  # The test above proves SLEEP is RESOLVED. It cannot prove it is APPLIED:
+  # with one loan it only reads the logged value, so deleting `sleep(pause)`
+  # from the task would leave it green. Rate limiting is the behaviour #38
+  # exists to protect.
+  #
+  # Timed rather than stubbed: a rake task block's `self` is `main`, so `sleep`
+  # is Kernel#sleep on the top-level object and cannot be intercepted without
+  # stubbing it for every test in the process. Timing asserts the real
+  # behaviour with no such blast radius.
+  test "rebuild task actually pauses between the loans it rebuilds" do
+    assert_operator Loan.where.not(term_months: nil).count, :>=, 2,
+      "this test needs at least two loans for a pause to occur between any"
+
+    pause = 0.2
+    elapsed = Benchmark.realtime do
+      capture_io_with_env("SLEEP" => pause.to_s, "LIMIT" => "2") do
+        Rake::Task["loans:rebuild_schedules"].invoke
+      end
+    end
+
+    # One interval, not two: with two loans there is a single gap between them.
+    # Requiring 2 x pause would also fail if the task were improved to skip a
+    # pointless final sleep after the last loan, which is a correct change.
+    assert_operator elapsed, :>=, pause,
+      "two rebuilt loans at SLEEP=#{pause} must take at least #{pause}s -- " \
+      "deleting sleep(pause) from the task must fail this (#38)"
   end
 
   test "rebuild task warns when it is running with no rate limit" do

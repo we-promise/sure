@@ -109,6 +109,7 @@ class Loan < ApplicationRecord
     return nil unless projection.months_saved.abs > 1 || projection.interest_saved.abs >= 1
 
     today = Date.current
+    scheduled_rows = schedule.display_rows
 
     {
       today: today.iso8601,
@@ -118,12 +119,18 @@ class Loan < ApplicationRecord
       # each past date -- not actual historical account-balance snapshots
       # (this app doesn't track those). Named/labeled "scheduled", not
       # "history", so the chart can't be read as showing real past balances.
-      scheduled_history: amortizations.ordered.where("payment_date <= ?", today).map { |p|
-        { date: p.payment_date.iso8601, balance: p.ending_balance.to_f }
+      # Both scheduled series come from AmortizationSchedule#display_rows, the
+      # same source as the table, the summary cards and the payoff projection.
+      # Reading loan.amortizations directly here mixed possibly-stale persisted
+      # balances with a current payoff date and a current projection, so a loan
+      # changed but not yet rebuilt would plot two different loans on one chart
+      # (risk R21).
+      scheduled_history: scheduled_rows.select { |row| row.payment_date <= today }.map { |row|
+        { date: row.payment_date.iso8601, balance: row.ending_balance.to_f }
       },
       current_balance: { date: today.iso8601, balance: projection.current_balance.amount.to_f },
-      original_projection: amortizations.ordered.where("payment_date > ?", today).map { |p|
-        { date: p.payment_date.iso8601, balance: p.ending_balance.to_f }
+      original_projection: scheduled_rows.select { |row| row.payment_date > today }.map { |row|
+        { date: row.payment_date.iso8601, balance: row.ending_balance.to_f }
       },
       accelerated_projection: projection.payments.map { |p|
         { date: p[:payment_date].iso8601, balance: p[:ending_balance].to_f }
