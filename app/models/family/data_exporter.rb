@@ -761,17 +761,17 @@ class Family::DataExporter
 
       # Map category UUIDs to names for portability
       if condition.condition_type == "transaction_category"
-        return rule_operand(condition.value, type: "Category", relation: @family.categories)
+        return rule_operand(condition.value, type: "Category", relation: :categories)
       end
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: @family.merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :merchants)
       end
 
       # Map tag UUIDs to names for portability
       if condition.condition_type == "transaction_tag"
-        return rule_operand(condition.value, type: "Tag", relation: @family.tags)
+        return rule_operand(condition.value, type: "Tag", relation: :tags)
       end
 
       rule_operand(condition.value)
@@ -782,12 +782,12 @@ class Family::DataExporter
 
       # Map category UUIDs to names for portability
       if action.action_type == "set_transaction_category"
-        return rule_operand(action.value, type: "Category", relation: @family.categories, fallback_to_name: true)
+        return rule_operand(action.value, type: "Category", relation: :categories, fallback_to_name: true)
       end
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: @family.merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability. Stored as a comma-separated
@@ -802,7 +802,7 @@ class Family::DataExporter
 
     def resolve_multi_tag_operand(value)
       ids = value.to_s.split(",")
-      records = ids.map { |id| resolve_rule_operand_record(@family.tags, id, fallback_to_name: true) }
+      records = ids.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
       names = records.each_with_index.map { |record, i| record&.name || ids[i] }
       refs = records.compact.map { |record| rule_value_ref("Tag", record) }
 
@@ -827,10 +827,20 @@ class Family::DataExporter
       }
     end
 
-    def resolve_rule_operand_record(relation, value, fallback_to_name:)
-      return relation.find_by(id: value) if uuid_like?(value)
+    def resolve_rule_operand_record(relation_key, value, fallback_to_name:)
+      return operand_records_by_id(relation_key)[value] if uuid_like?(value)
 
-      relation.find_by(name: value) if fallback_to_name
+      operand_records_by_name(relation_key)[value] if fallback_to_name
+    end
+
+    def operand_records_by_id(relation_key)
+      @operand_records_by_id ||= {}
+      @operand_records_by_id[relation_key] ||= @family.public_send(relation_key).index_by(&:id)
+    end
+
+    def operand_records_by_name(relation_key)
+      @operand_records_by_name ||= {}
+      @operand_records_by_name[relation_key] ||= @family.public_send(relation_key).index_by(&:name)
     end
 
     def rule_value_ref(type, record)
