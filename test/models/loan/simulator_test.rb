@@ -142,6 +142,21 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("4.60"), result.payments.first[:interest_payment]
   end
 
+  test "daily accrual passes the selected day-count convention to the engine" do
+    result = build_simulator(
+      starting_balance: "1000.00",
+      accrual_start_date: Date.new(2024, 1, 1),
+      payment_schedule: [ Date.new(2025, 1, 1) ],
+      rates: [ BigDecimal("12") ],
+      payment_strategy: :hold,
+      payment_amount_for: ->(**_args) { BigDecimal("2000.00") },
+      daily_accrual: true,
+      day_count_convention: :actual_actual
+    ).run
+
+    assert_equal BigDecimal("120.00"), result.payments.first[:interest_payment]
+  end
+
   # #25's worked example. 100,000 at 3%, changing to 12% effective 2024-02-15,
   # over 2024-02-01..2024-03-01 (29 days, leap February):
   #   14 days @ 3%  = 100000 * 14 * 3  / 100 / 365 = 115.0685
@@ -496,6 +511,7 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
       payment_amount_for:,
       interest_for: nil,
       daily_accrual: false,
+      day_count_convention: Loan::InterestAccrual::DEFAULT_DAY_COUNT_CONVENTION,
       max_iterations: nil,
       extra_for: nil,
       offset_for: nil,
@@ -524,6 +540,7 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
         payment_amount_for: payment_amount_for,
         interest_for: interest_for,
         daily_accrual: daily_accrual,
+        day_count_convention: day_count_convention,
         max_iterations: max_iterations,
         extra_for: extra_for,
         offset_for: offset_for,

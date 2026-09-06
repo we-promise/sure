@@ -33,6 +33,44 @@ class Loan::InterestAccrualTest < ActiveSupport::TestCase
     assert_equal expected, interest.round(20)
   end
 
+  test "actual/actual uses the leap-year denominator for a full leap year" do
+    interest = accrue(
+      from_date: Date.new(2024, 1, 1),
+      to_date: Date.new(2025, 1, 1),
+      balance: "1000",
+      annual_rate: "12",
+      day_count_convention: :actual_actual
+    )
+
+    assert_equal BigDecimal("120").round(20), interest.round(20)
+  end
+
+  test "actual/actual splits a range at the calendar-year boundary" do
+    interest = accrue(
+      from_date: Date.new(2023, 12, 15),
+      to_date: Date.new(2024, 1, 15),
+      balance: "1000",
+      annual_rate: "12",
+      day_count_convention: :actual_actual
+    )
+
+    expected = BigDecimal("1000") * BigDecimal("12") / 100 * (
+      BigDecimal("17") / 365 + BigDecimal("14") / 366
+    )
+    assert_equal expected.round(20), interest.round(20)
+  end
+
+  test "rejects an unsupported day-count convention" do
+    error = assert_raises(ArgumentError) do
+      accrue(
+        from_date: Date.new(2024, 1, 1), to_date: Date.new(2024, 2, 1),
+        balance: "1000", annual_rate: "12", day_count_convention: :thirty_360
+      )
+    end
+
+    assert_match "unsupported day-count convention", error.message
+  end
+
   test "piecewise segments equal the equivalent daily loop" do
     changes = [ { date: Date.new(2024, 1, 11), amount: "200" }, { date: Date.new(2024, 1, 21), amount: "700" } ]
     segmented = accrue(

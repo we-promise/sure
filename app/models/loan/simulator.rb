@@ -22,6 +22,7 @@ class Loan
       currency_precision:,
       interest_for: nil,
       daily_accrual: false,
+      day_count_convention: InterestAccrual::DEFAULT_DAY_COUNT_CONVENTION,
       max_iterations: nil,
       extra_for: nil,
       offset_for: nil,
@@ -52,6 +53,7 @@ class Loan
       @payment_amount_for = callable!(payment_amount_for, :payment_amount_for)
       @currency_precision = currency_precision
       @daily_accrual = daily_accrual
+      @day_count_convention = day_count_convention
       @interest_for = interest_for
       @payment_strategy = payment_strategy.to_sym
       @max_iterations = [ max_iterations || @payment_schedule.length, MAX_TERM_MONTHS ].min
@@ -257,7 +259,8 @@ class Loan
           to_date: to_date,
           balance: balance,
           annual_rate: annual_rate,
-          change_points: change_points
+          change_points: change_points,
+          day_count_convention: @day_count_convention
         )
 
         [ interest, current_balance ]
