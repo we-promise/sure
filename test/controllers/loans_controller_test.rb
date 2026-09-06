@@ -130,17 +130,21 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
     assert_equal [ offset.id ], loan.reload.offset_accounts.pluck(:id)
 
-    patch loan_path(@account), params: {
-      account: {
-        accountable_type: "Loan",
-        accountable_attributes: {
-          id: loan.id,
-          rate_type: "fixed",
-          offset_account_ids: [ offset.id ]
+    %w[fixed adjustable].each do |rate_type|
+      loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
+
+      patch loan_path(@account), params: {
+        account: {
+          accountable_type: "Loan",
+          accountable_attributes: {
+            id: loan.id,
+            rate_type:,
+            offset_account_ids: [ offset.id ]
+          }
         }
       }
-    }
 
-    assert_empty loan.reload.offset_accounts
+      assert_empty loan.reload.offset_accounts
+    end
   end
 end

@@ -388,7 +388,7 @@ class Loan < ApplicationRecord
     end
 
     def sync_offset_accounts
-      ids = offset_account_ids_for_sync.map(&:id)
+      ids = rate_type == "variable" ? offset_account_ids_for_sync.map(&:id) : []
       loan_offset_accounts.where.not(account_id: ids).delete_all
       ids.each do |account_id|
         loan_offset_accounts.find_or_create_by!(account_id:)
@@ -398,7 +398,12 @@ class Loan < ApplicationRecord
     def validate_offset_accounts
       return if rate_type != "variable"
 
-      offset_account_ids_for_sync.each do |account|
+      ids = normalized_offset_account_ids
+      accounts = offset_account_ids_for_sync
+      missing_ids = ids - accounts.map { |account| account.id.to_s }
+      errors.add(:offset_account_ids, "contains an unknown account") if missing_ids.any?
+
+      accounts.each do |account|
         link = LoanOffsetAccount.new(loan: self, account:)
         next if link.valid?
 
@@ -407,10 +412,11 @@ class Loan < ApplicationRecord
     end
 
     def offset_account_ids_for_sync
-      return [] unless rate_type == "variable"
+      Account.where(id: normalized_offset_account_ids).to_a
+    end
 
-      ids = Array(offset_account_ids).reject(&:blank?).map(&:to_s).uniq
-      Account.where(id: ids).to_a
+    def normalized_offset_account_ids
+      Array(offset_account_ids).reject(&:blank?).map(&:to_s).uniq
     end
 
     def normalized_rate(rate)
