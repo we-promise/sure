@@ -2630,7 +2630,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
-  add_foreign_key "family_documents", "accounts"
+  add_foreign_key "family_documents", "accounts", on_delete: :nullify
   add_foreign_key "family_documents", "families"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"

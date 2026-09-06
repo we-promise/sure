@@ -45,6 +45,15 @@ class AccountStatement < ApplicationRecord
   #
   # This closes the gap at the one point all three producers share.
   after_create_commit :index_in_vector_store_later
+  # Keyed on the attribute, not on the two methods that happen to change it.
+  # AccountStatementsController#update links a statement too, out of band of
+  # strong params, and it left the indexed copy at its old account. Any future
+  # writer is covered by construction.
+  after_save :note_account_link_change
+  after_commit :sync_vector_store_document_account!, if: :account_link_changed?
+  # The indexed copy is a separate row AND a provider-side file. Destroying the
+  # statement without it left the text searchable after the user deleted it.
+  after_destroy_commit :remove_vector_store_document
 
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"
   enum :upload_status, { stored: "stored", failed: "failed" }, validate: true, default: "stored"
@@ -254,16 +263,13 @@ class AccountStatement < ApplicationRecord
   end
 
   def link_to_account!(target_account, confidence: 1.0)
-    transaction do
-      update!(
-        account: target_account,
-        suggested_account: nil,
-        match_confidence: confidence,
-        review_status: :linked,
-        currency: currency.presence || target_account.currency
-      )
-      sync_vector_store_document_account!
-    end
+    update!(
+      account: target_account,
+      suggested_account: nil,
+      match_confidence: confidence,
+      review_status: :linked,
+      currency: currency.presence || target_account.currency
+    )
   end
 
   def unlink!
@@ -275,7 +281,6 @@ class AccountStatement < ApplicationRecord
       )
       assign_account_match
       save!
-      sync_vector_store_document_account!
     end
   end
 
@@ -466,8 +471,42 @@ class AccountStatement < ApplicationRecord
       self.review_status = "unmatched" if account.blank? && linked?
     end
 
+    # `saved_change_to_account_id?` reads the LAST save, and unlink! saves twice
+    # inside one transaction, so testing it at commit time missed the change and
+    # left the document owned by the account the statement just left. The flag
+    # survives every save in the transaction and is consumed once.
+    def note_account_link_change
+      @account_link_changed ||= saved_change_to_account_id?
+    end
+
+    def account_link_changed?
+      changed = @account_link_changed
+      @account_link_changed = false
+      changed.present?
+    end
+
     def index_in_vector_store_later
       IndexAccountStatementJob.perform_later(id)
+    end
+
+    # Best effort, and never allowed to raise: the statement is already gone
+    # and re-raising here would only surface as a failed request for a delete
+    # that succeeded. An orphaned provider file is a support problem, not a
+    # user-facing one, so it is recorded where support can see it.
+    def remove_vector_store_document
+      document = vector_store_document
+      return if document.nil?
+
+      family.remove_document(document)
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "documents",
+        level: "warn",
+        message: "Could not remove the indexed copy of a deleted statement: #{e.class}: #{e.message}",
+        source: "AccountStatement#remove_vector_store_document",
+        family: family,
+        metadata: { account_statement_id: id }
+      )
     end
 
     def account_belongs_to_family

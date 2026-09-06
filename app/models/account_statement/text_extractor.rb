@@ -14,7 +14,10 @@ class AccountStatement
   # codebase and pretending otherwise would send an assistant hunting for
   # figures that were never extracted.
   class TextExtractor
-    TEXT_CONTENT_TYPES = %w[text/plain text/csv application/json text/markdown].freeze
+    # CSV membership is AccountStatement's to decide: it accepts four content
+    # types for .csv and a second partial list here reported a statement stored
+    # as application/csv or application/vnd.ms-excel as unreadable.
+    TEXT_CONTENT_TYPES = %w[text/plain application/json text/markdown].freeze
 
     # A text file has no pages, so it is cut into fixed-size chunks. Returning
     # the whole file as a single page defeated get_document_text's per-call
@@ -35,7 +38,7 @@ class AccountStatement
 
       if @statement.pdf?
         extract_pdf(content)
-      elsif TEXT_CONTENT_TYPES.include?(@statement.content_type)
+      elsif @statement.csv? || TEXT_CONTENT_TYPES.include?(@statement.content_type)
         pages = paginate_text(encode(content))
         Result.new(pages: pages, page_count: pages.size, extractable: true, note: nil)
       else

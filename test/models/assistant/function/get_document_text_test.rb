@@ -74,6 +74,22 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     assert_equal false, result[:has_more_pages]
   end
 
+  # AccountStatement accepts four content types for .csv, and this extractor
+  # recognized two of them, so a statement stored as application/csv or as
+  # application/vnd.ms-excel was reported unreadable. CSV membership is the
+  # model's to decide, not a second list here.
+  test "reads a CSV whatever content type the upload carried" do
+    %w[application/csv application/vnd.ms-excel].each do |content_type|
+      statement = create_statement(filename: "releve.csv", content: "date,amount\n2026-01-01,42.00",
+                                   content_type: content_type)
+
+      result = @fn.call("account_statement_id" => statement.id)
+
+      assert_equal true, result[:extractable], "#{content_type} was reported unreadable"
+      assert_match(/42.00/, result[:pages].first[:text])
+    end
+  end
+
   # The window's size guard only fires once a page has already been selected, so
   # a text file returned as one giant page went out whole and blew the per-call
   # budget the tool documents.

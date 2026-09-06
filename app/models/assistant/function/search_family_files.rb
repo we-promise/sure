@@ -159,16 +159,21 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       # in particular require statement_manager? per AccountStatement#viewable_by?.
       return not_a_manager_result(query, reason) unless AccountStatement.statement_manager?(user)
 
-      statements = matching_statements(query, max_results)
+      statements, matched = matching_statements(query, max_results)
 
       {
         success: true,
         search_mode: "metadata_only",
         reason: reason,
         query: query,
+        # Whether these rows answer the query or are simply what is on file.
+        # Returning a recency listing under the same shape as a real match let
+        # an assistant present unrelated statements as search hits, which is the
+        # same class of mistake as the message this fallback was built to undo.
+        listing: matched ? "matched" : "most_recent",
         result_count: statements.size,
         results: statements.map { |statement| statement_result(statement) },
-        message: fallback_message(reason, statements.size)
+        message: fallback_message(reason, statements.size, matched)
       }
     end
 
@@ -202,13 +207,15 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
             "filename ILIKE :term OR institution_name_hint ILIKE :term OR account_name_hint ILIKE :term",
             term: "%#{ActiveRecord::Base.sanitize_sql_like(term)}%"
           )
-        end
+        end.limit(max_results).to_a
+
         # An over-specific query must not read as "nothing was ever uploaded",
-        # so an empty match falls back to the most recent statements.
-        scope = matched if matched.exists?
+        # so an empty match falls back to the most recent statements. The caller
+        # is told which of the two it got.
+        return [ matched, true ] if matched.any?
       end
 
-      scope.limit(max_results).to_a
+      [ scope.limit(max_results).to_a, false ]
     end
 
     def statement_result(statement)
@@ -222,7 +229,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }.compact
     end
 
-    def fallback_message(reason, count)
+    def fallback_message(reason, count, matched = true)
       base = if reason == "provider_not_configured"
         "No vector store is configured, so documents cannot be searched by their contents. " \
         "Set VECTOR_STORE_PROVIDER (openai | pgvector | qdrant), or for an Anthropic-only install " \
@@ -231,12 +238,18 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
         "No document has been indexed for full-text search yet, so only stored statements are listed."
       end
 
-      if count.zero?
-        "#{base} No statement is stored either, so there is genuinely nothing on file."
+      return "#{base} No statement is stored either, so there is genuinely nothing on file." if count.zero?
+
+      listing = if matched
+        "#{count} stored statement(s) match the query by filename or institution"
       else
-        "#{base} #{count} stored statement(s) are listed by metadata only. " \
-        "Call get_document_text with an account_statement_id to read one of them."
+        "Nothing matched the query, so the #{count} MOST RECENT statement(s) are listed instead. " \
+        "Do not present them as answers to the question: say the vault holds these and ask the " \
+        "user which one to read"
       end
+
+      "#{base} #{listing}, by metadata only. " \
+      "Call get_document_text with an account_statement_id to read one of them."
     end
 
     def langfuse_client

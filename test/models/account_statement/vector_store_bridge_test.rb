@@ -129,6 +129,60 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     assert_not_includes @family.family_documents.readable_by(users(:family_member)), document
   end
 
+  # The Link button is not the only writer. AccountStatementsController#update
+  # re-adds :account_id outside strong params and links a statement too, and it
+  # left the indexed copy at its old account, readable by every statement
+  # manager. Keyed on the attribute now, so any writer is covered.
+  test "linking through a plain update narrows the document too" do
+    statement = build_statement
+    statement.save!
+
+    stub_upload("file_plain_update")
+    statement.index_in_vector_store!
+    document = @family.family_documents.find_by(provider_file_id: "file_plain_update")
+
+    assert_nil document.account_id
+
+    statement.update!(account: accounts(:connected))
+
+    assert_equal accounts(:connected).id, document.reload.account_id
+    assert_not_includes @family.family_documents.readable_by(users(:family_member)), document
+  end
+
+  # The indexed copy is a separate row and a provider-side file, so deleting the
+  # statement left its text searchable by everyone the document was readable by.
+  test "deleting a statement removes its indexed copy" do
+    statement = build_statement
+    statement.save!
+
+    stub_upload("file_destroy")
+    statement.index_in_vector_store!
+    document = @family.family_documents.find_by(provider_file_id: "file_destroy")
+
+    assert_not_nil document
+
+    Family.any_instance.expects(:remove_document).with(document).once
+
+    statement.destroy!
+  end
+
+  # add_reference ... foreign_key: true defaults to NO ACTION, so destroying an
+  # account that had an indexed statement raised InvalidForeignKey and rolled the
+  # whole destroy back. The link is nullable: losing the account makes the
+  # document family-wide again, which is what the column already means.
+  test "destroying an account releases its documents instead of blocking" do
+    account = @family.accounts.create!(
+      accountable: Depository.new, name: "Compte a supprimer", balance: 10, currency: "USD"
+    )
+    document = @family.family_documents.create!(
+      filename: "releve.pdf", content_type: "application/pdf", file_size: 42,
+      provider_file_id: "file_fk", status: "ready", account: account
+    )
+
+    assert_nothing_raised { account.destroy! }
+    assert_nil document.reload.account_id
+  end
+
   test "unlinking a statement releases its indexed document from the account" do
     statement = build_statement(account: accounts(:connected))
     statement.review_status = :linked

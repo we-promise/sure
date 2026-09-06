@@ -240,6 +240,27 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_match(/genuinely nothing on file/, result[:message])
   end
 
+  # The fallback returns the most recent statements when nothing matches, which
+  # is right, but it returned them under the same shape as a real match. An
+  # assistant then presented unrelated statements as answers to the question,
+  # which is the same class of mistake as the "nothing uploaded" message this
+  # fallback exists to undo.
+  test "says whether the listing answers the query or is merely what is on file" do
+    family = @user.family
+    family.update!(vector_store_id: nil)
+
+    build_statement(family, "releve-banque-populaire.pdf")
+
+    matched = Assistant::Function::SearchFamilyFiles.new(@user).call("query" => "banque")
+    assert_equal "matched", matched[:listing]
+
+    fallback = Assistant::Function::SearchFamilyFiles.new(@user).call("query" => "zzzznotamatchzzzz")
+    assert_equal "most_recent", fallback[:listing]
+    assert_equal 1, fallback[:result_count]
+    assert_match(/MOST RECENT/, fallback[:message])
+    assert_match(/Do not present them as answers/, fallback[:message])
+  end
+
   test "an over-specific query still lists what exists rather than reading as empty" do
     family = @user.family
     family.update!(vector_store_id: nil)

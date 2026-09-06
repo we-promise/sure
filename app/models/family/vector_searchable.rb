@@ -58,6 +58,22 @@ module Family::VectorSearchable
                                .pluck(:provider_file_id)
                                .to_set
 
+    # A hit we have no row for stays visible by design, but it also means the
+    # provider holds a file this app has lost track of and can no longer make
+    # an access decision about. Recorded so support sees it, rather than
+    # discovered the day it matters.
+    untracked = file_ids - family_documents.where(provider_file_id: file_ids).pluck(:provider_file_id)
+    if untracked.any?
+      DebugLogEntry.capture(
+        category: "documents",
+        level: "warn",
+        message: "Vector store returned #{untracked.size} file(s) with no family_documents row",
+        source: "Family#readable_documents",
+        family: self,
+        metadata: { provider_file_ids: untracked.first(20) }
+      )
+    end
+
     return results if withheld.empty?
 
     results.reject { |result| withheld.include?(result[:file_id]) }

@@ -11,7 +11,22 @@ class IndexAccountStatementJob < ApplicationJob
     statement = AccountStatement.find_by(id: statement_id)
     return unless statement
 
-    statement.index_in_vector_store!
+    return if statement.index_in_vector_store!
+    return if statement.indexed_in_vector_store?
+
+    # false is the ordinary answer on an install with no vector store provider,
+    # and it was also the answer when a configured provider refused the upload.
+    # Only the second is a problem, and it left no trace anywhere.
+    return if VectorStore.adapter.nil?
+
+    DebugLogEntry.capture(
+      category: "documents",
+      level: "warn",
+      message: "Vector store provider refused the account statement upload",
+      source: "IndexAccountStatementJob",
+      family: statement.family,
+      metadata: { account_statement_id: statement_id }
+    )
   rescue StandardError => e
     DebugLogEntry.capture(
       category: "documents",
