@@ -21,7 +21,10 @@ module Transaction::Refundable
   end
 
   def mark_as_refund!(purchase: nil)
-    with_lock do
+    self.class.transaction do
+      # Splitting takes the same transaction lock. Reload both records under
+      # deterministic locks so validation never uses pre-lock associations.
+      [ self, purchase ].compact.uniq.sort_by { |record| record.id.to_s }.each(&:lock!)
       unless refundable?
         errors.add(:base, :invalid_refund)
         raise ActiveRecord::RecordInvalid, self

@@ -406,6 +406,7 @@ class RecurringTransaction
         entries = family.entries
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
           .where(entries: { entryable_type: "Transaction", currency: currencies })
+          .where.not(transactions: { kind: "refund" })
           .where("entries.date >= ?", lookback_date)
           .select("entries.*, transactions.merchant_id AS transaction_merchant_id")
           .order(date: :desc)

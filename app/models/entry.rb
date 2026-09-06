@@ -443,17 +443,21 @@ class Entry < ApplicationRecord
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
   # @return [Array<Entry>] the created child entries
   def split!(splits)
-    if transaction? && transaction.refund_linked?
-      errors.add(:base, :refund_links_present)
-      raise ActiveRecord::RecordInvalid, self
-    end
-
-    total = splits.sum { |s| s[:amount].to_d }
-    unless total == amount
-      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
-    end
-
     self.class.transaction do
+      # Refund linking and splitting must serialize on the same row. Reload
+      # the entry after waiting so its amount and associations are current.
+      transaction.lock! if transaction?
+      reload
+      if transaction? && transaction.refund_linked?
+        errors.add(:base, :refund_links_present)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      total = splits.sum { |s| s[:amount].to_d }
+      unless total == amount
+        raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+      end
+
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],

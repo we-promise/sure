@@ -144,7 +144,7 @@
       <% end %>
     <% end %>
     <% if preview_features_enabled? && can_edit_entry? && @entry.transaction.refundable? %>
-      <% dialog.with_section(title: t("refunds.title")) do %>
+      <% dialog.with_section(title: t(@entry.transaction.refund? ? "refunds.manage" : "refunds.title")) do %>
         <div class="space-y-3">
           <%= render DS::Pill.new(label: t("refunds.preview")) %>
           <p class="text-sm text-secondary"><%= t("refunds.description") %></p>
