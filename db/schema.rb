@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -649,6 +649,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.string "entryable_type"
     t.boolean "excluded", default: false
     t.string "external_id"
+    t.string "idempotency_key"
     t.uuid "import_id"
     t.boolean "import_locked", default: false, null: false
     t.jsonb "locked_attributes", default: {}
@@ -664,6 +665,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"
     t.index ["account_id", "date", "entryable_id"], name: "index_entries_on_investment_totals_lookup", where: "(((entryable_type)::text = 'Trade'::text) AND (excluded = false))"
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
+    t.index ["account_id", "idempotency_key"], name: "index_entries_on_account_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
@@ -2568,6 +2570,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_090000) do
     t.string "profile_id", null: false
     t.string "profile_type", null: false
     t.jsonb "raw_payload"
+    t.text "sca_private_key"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.string "status", default: "good", null: false
     t.datetime "sync_start_date"

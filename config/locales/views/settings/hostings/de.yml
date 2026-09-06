@@ -81,6 +81,8 @@ de:
         uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
         model_label: Modell (optional)
         model_placeholder: "gpt-4.1 (Standard)"
+        model_function_calling_help: Der KI-Assistent liest deine Daten mithilfe von Funktionsaufrufen. Wähl daher ein Modell, das laut Dokumentation deines Anbieters Tools beziehungsweise Function Calling unterstützt. Ohne diese Unterstützung schlägt der Chat mit einer wenig aussagekräftigen Fehlermeldung des Anbieters fehl.
+        model_function_calling_link: Konfiguriertes Modell prüfen
         json_mode_label: JSON-Modus
         json_mode_auto: Auto (empfohlen)
         json_mode_strict: Streng (am besten für Denk-Modelle)
@@ -96,6 +98,12 @@ de:
         max_items_per_call_label: Maximale Einträge pro Stapel (optional)
         max_response_tokens_help: 'Tokens, die für die Antwort des Modells reserviert sind. Standard: 512. Niedriger ansetzen, um Platz für längere Verläufe zu schaffen.'
         max_response_tokens_label: Maximale Antwort-Tokens (optional)
+        timeout_heading: Zeitlimits
+        timeout_description: Legt fest, wie lange Aufrufe OpenAI-kompatibler Modelle laufen dürfen, bevor Sure sie abbricht. Erhöhe diese Werte, wenn du ein lokales Modell auf langsamer Hardware betreibst.
+        openai_request_timeout_label: Anfragezeitlimit in Sekunden (optional)
+        openai_request_timeout_help: 'Standard: 60. Gilt für jede OpenAI-kompatible HTTP-Anfrage, einschließlich automatischer Kategorisierung, Händlererkennung, Chat, PDF-Verarbeitung und Vektorspeicher-Aufrufen. OPENAI_REQUEST_TIMEOUT überschreibt dieses Feld.'
+        ai_response_timeout_label: Antwortzeitlimit in Sekunden (optional)
+        ai_response_timeout_help: 'Standard: 90. Gilt nur für das Zeitlimit der gesamten Chat-Runde. Setz den Wert daher als Summe an: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit, plus Ausführungszeit der Tools und Wartezeit in der Warteschlange. AI_RESPONSE_TIMEOUT überschreibt dieses Feld.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse und Finanzdaten – ganz ohne API-Schlüssel.
