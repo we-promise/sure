@@ -522,6 +522,19 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "rule operand lookup matches uppercase UUID values" do
+    operand = @exporter.send(
+      :rule_operand,
+      @category.id.upcase,
+      type: "Category",
+      relation: :categories,
+      fallback_to_name: true
+    )
+
+    assert_equal "Test Category", operand[:value]
+    assert_equal({ type: "Category", id: @category.id, name: "Test Category" }, operand[:value_ref])
+  end
+
   test "rule operand lookup skips name fallback for stale UUID values" do
     stale_uuid = SecureRandom.uuid
     @exporter.expects(:operand_records_by_name).never

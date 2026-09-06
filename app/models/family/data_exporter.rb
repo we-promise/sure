@@ -828,7 +828,7 @@ class Family::DataExporter
     end
 
     def resolve_rule_operand_record(relation_key, value, fallback_to_name:)
-      return operand_records_by_id(relation_key)[value] if uuid_like?(value)
+      return operand_records_by_id(relation_key)[value.to_s.downcase] if uuid_like?(value)
 
       operand_records_by_name(relation_key)[value] if fallback_to_name
     end
