@@ -69,6 +69,15 @@
         <% end %>
       </div>
       <p class="text-xs text-subdued mt-1"><%= t(".extra_payment.approximation_notice") %></p>
+      <%# What the projection actually does for a variable-rate loan:
+          PayoffProjection#generate_schedule passes RateResolver's accrual_rate_for
+          and re_amortisation_events to the simulator, so rate changes ALREADY
+          RECORDED on the loan are applied. payment_strategy is :hold, so the
+          repayment itself stays put. What it cannot know is a change nobody has
+          recorded yet -- which is what this notice discloses (#54). %>
+      <% if loan.rate_type == "variable" %>
+        <p class="text-xs text-subdued mt-1"><%= t(".extra_payment.variable_rate_notice") %></p>
+      <% end %>
     <% end %>
   <% end %>
 

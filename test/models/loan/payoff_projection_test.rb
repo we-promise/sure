@@ -309,10 +309,26 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert Loan::PayoffProjection.eligible_for_extra_payment?(loan)
   end
 
-  test "eligible_for_extra_payment? is false for a variable rate loan" do
+  # INVERTED for #54. This asserted the fixed_rate? gate, which made
+  # eligible_for_extra_payment? disagree with #applicable? after #12 removed the
+  # same gate there -- a variable-rate loan got a projection and a chart but no
+  # way to model paying extra, which is the loan where it matters most.
+  test "eligible_for_extra_payment? is true for a variable rate loan" do
     loan = build_loan(balance: 500000, rate_type: "variable")
 
-    assert_not Loan::PayoffProjection.eligible_for_extra_payment?(loan)
+    assert Loan::PayoffProjection.eligible_for_extra_payment?(loan)
+  end
+
+  # The two must agree about rate type. They disagreed for two tranches.
+  test "eligibility and applicability agree about rate type" do
+    %w[fixed variable].each do |rate_type|
+      loan = build_loan(balance: 500000, rate_type: rate_type)
+      loan.account.update!(balance: 450000)
+
+      assert_equal loan.payoff_projection.applicable?,
+        Loan::PayoffProjection.eligible_for_extra_payment?(loan),
+        "#{rate_type}: neither may gate on rate type without the other (#54)"
+    end
   end
 
   test "eligible_for_extra_payment? is false when the balance is already zero" do
