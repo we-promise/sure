@@ -34,7 +34,7 @@ guide_path = File.join(root, "docs", "llm-guides", "api-endpoint-consistency.md"
 agents_path = File.join(root, "AGENTS.md")
 
 assert File.exist?(rule_path), "Rule file should exist at #{rule_path}"
-rule_content = File.read(rule_path)
+rule_content = File.read(rule_path, encoding: "UTF-8")
 
 frontmatter = rule_content.match(/\A---\r?\n(?<yaml>.*?)\r?\n---\r?\n(?<body>.*)\z/m)
 assert frontmatter, "Rule must start with YAML frontmatter"
@@ -50,7 +50,7 @@ assert metadata.fetch("globs").split(",").map(&:strip) == expected_globs, "Rule 
 assert metadata.fetch("alwaysApply") == false, "Rule must remain scoped, not always applied"
 assert frontmatter[:body].strip == "@docs/llm-guides/api-endpoint-consistency.md", "Rule must import shared checklist"
 assert File.exist?(guide_path), "Shared checklist should exist at #{guide_path}"
-guide_content = File.read(guide_path)
+guide_content = File.read(guide_path, encoding: "UTF-8")
 
 assert_includes guide_content, "Minitest behavioral coverage", "Shared checklist must include Minitest section"
 assert_includes guide_content, "test/controllers/api/v1/{resource}_controller_test.rb", "Shared checklist must specify Minitest location"
@@ -65,7 +65,7 @@ assert_includes guide_content, "plain_key", "Shared checklist must mention plain
 assert_includes guide_content, "Doorkeeper", "Shared checklist must mention Doorkeeper (to avoid OAuth in specs)"
 
 assert File.exist?(agents_path), "AGENTS.md should exist"
-agents_content = File.read(agents_path)
+agents_content = File.read(agents_path, encoding: "UTF-8")
 assert_includes agents_content, "Post-commit API consistency", "AGENTS.md must reference post-commit checklist"
 assert_includes agents_content, "docs/llm-guides/api-endpoint-consistency.md", "AGENTS.md must link to shared checklist"
 assert_includes agents_content, "Minitest", "AGENTS.md must mention Minitest"
@@ -88,7 +88,7 @@ if ARGV.include?("--compliance")
     Dir.glob(File.join(spec_dir, "*_spec.rb")).each do |path|
       basename = File.basename(path, "_spec.rb")
       next if basename == "auth"
-      content = File.read(path)
+      content = File.read(path, encoding: "UTF-8")
       if content.include?("Doorkeeper") || content.include?("Bearer") || content.include?("access_token")
         rswag_oauth << "#{basename}_spec.rb"
       end

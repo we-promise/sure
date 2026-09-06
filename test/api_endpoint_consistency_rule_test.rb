@@ -21,7 +21,7 @@ class ApiEndpointConsistencyRuleTest < ActiveSupport::TestCase
   end
 
   test "rule preserves exact API v1 applicability and imports shared guide" do
-    content = File.read(root.join(RULE_PATH))
+    content = File.read(root.join(RULE_PATH), encoding: "UTF-8")
     frontmatter = content.match(/\A---\r?\n(?<yaml>.*?)\r?\n---\r?\n(?<body>.*)\z/m)
     assert frontmatter, "Expected frontmatter at the start of the rule"
     keys = YAML.parse(frontmatter[:yaml]).root.children.each_slice(2).map { |key, _value| key.value }
@@ -38,7 +38,7 @@ class ApiEndpointConsistencyRuleTest < ActiveSupport::TestCase
   end
 
   test "shared guide includes Minitest behavioral coverage section" do
-    content = File.read(root.join(GUIDE_PATH))
+    content = File.read(root.join(GUIDE_PATH), encoding: "UTF-8")
     assert_includes content, "Minitest behavioral coverage"
     assert_includes content, "test/controllers/api/v1/{resource}_controller_test.rb"
     assert_includes content, "api_headers"
@@ -46,7 +46,7 @@ class ApiEndpointConsistencyRuleTest < ActiveSupport::TestCase
   end
 
   test "shared guide includes rswag docs-only section" do
-    content = File.read(root.join(GUIDE_PATH))
+    content = File.read(root.join(GUIDE_PATH), encoding: "UTF-8")
     assert_includes content, "rswag is docs-only"
     assert_includes content, "expect"
     assert_includes content, "assert_"
@@ -55,7 +55,7 @@ class ApiEndpointConsistencyRuleTest < ActiveSupport::TestCase
   end
 
   test "shared guide includes same API key auth section" do
-    content = File.read(root.join(GUIDE_PATH))
+    content = File.read(root.join(GUIDE_PATH), encoding: "UTF-8")
     assert_includes content, "Same API key auth"
     assert_includes content, "ApiKey.generate_secure_key"
     assert_includes content, "plain_key"
@@ -64,7 +64,7 @@ class ApiEndpointConsistencyRuleTest < ActiveSupport::TestCase
 
   test "AGENTS.md references post-commit API consistency" do
     assert File.exist?(root.join(AGENTS_PATH)), "Expected #{AGENTS_PATH} to exist"
-    content = File.read(root.join(AGENTS_PATH))
+    content = File.read(root.join(AGENTS_PATH), encoding: "UTF-8")
     assert_includes content, "Post-commit API consistency"
     assert_includes content, GUIDE_PATH
     assert_includes content, "Minitest"
