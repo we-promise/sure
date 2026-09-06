@@ -124,6 +124,68 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     assert_nil plaid_extra["payment_meta"]
   end
 
+  # deep_merge recurses into nested hashes, so dropping only the whole branch is
+  # not enough: a single key removed from payment_meta has to disappear too.
+  test "clears a nested metadata key while keeping its siblings" do
+    base = {
+      "transaction_id" => "clears-nested-key",
+      "merchant_name" => "Amazon",
+      "amount" => 10,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "payment_meta" => { "payee" => "Amazon", "reference_number" => "REF-1" },
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "clears-nested-merchant"
+    }
+
+    @category_matcher.stubs(:match).returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(base, plaid_account: @plaid_account, category_matcher: @category_matcher).process
+
+    entry = Entry.find_by!(external_id: "clears-nested-key", source: "plaid")
+    assert_equal "Amazon", entry.transaction.extra.dig("plaid", "payment_meta", "payee")
+
+    # Plaid keeps reference_number but stops sending payee
+    PlaidEntry::Processor.new(
+      base.merge("payment_meta" => { "reference_number" => "REF-2" }),
+      plaid_account: @plaid_account,
+      category_matcher: @category_matcher
+    ).process
+
+    assert_equal({ "reference_number" => "REF-2" }, entry.reload.transaction.extra.dig("plaid", "payment_meta"))
+  end
+
+  # Replacing the plaid branch must not disturb another provider's namespace on
+  # the same transaction.
+  test "replacing the plaid namespace leaves other providers alone" do
+    plaid_transaction = {
+      "transaction_id" => "other-provider-kept",
+      "merchant_name" => "Amazon",
+      "amount" => 10,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "payment_channel" => "online",
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "other-provider-merchant"
+    }
+
+    @category_matcher.stubs(:match).returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    entry = Entry.find_by!(external_id: "other-provider-kept", source: "plaid")
+    entry.transaction.update!(extra: entry.transaction.extra.merge("simplefin" => { "memo" => "keep me" }))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    assert_equal "keep me", entry.reload.transaction.extra.dig("simplefin", "memo")
+    assert_equal "online", entry.transaction.extra.dig("plaid", "payment_channel")
+  end
+
   test "treats whitespace-only provider values as blank" do
     plaid_transaction = {
       "transaction_id" => "blank-values",
