@@ -114,6 +114,11 @@ module TransactionsHelper
   end
 
   # Flatten hashes into labeled rows; pretty-print remaining nested structures.
+  #
+  # @param key [String] the label accumulated so far
+  # @param value [Object] the provider value to render
+  # @param depth [Integer] nesting level, which decides the label separator
+  # @return [Array<Hash>] rows shaped for the drawer
   def provider_extra_rows(key, value, depth: 0)
     label = key.to_s
 
@@ -138,6 +143,13 @@ module TransactionsHelper
     end
   end
 
+  # Builds a single row. Hashes and arrays are encoded here and only here —
+  # encoding before calling this would escape the result a second time.
+  #
+  # @param key [String] the row label, humanized for display
+  # @param value [Object] the value to show
+  # @param multiline [Boolean] force block rendering for a structured value
+  # @return [Hash] a row with :key, :value and :multiline
   def provider_extra_row(key, value, multiline: false)
     display = if multiline || value.is_a?(Hash) || value.is_a?(Array)
       pretty_json(value)
@@ -152,6 +164,11 @@ module TransactionsHelper
     }
   end
 
+  # Provider payloads are arbitrary JSON, so an unrenderable value falls back to
+  # its string form rather than breaking the drawer.
+  #
+  # @param value [Object] any provider value
+  # @return [String] formatted JSON, or the value's string form
   def pretty_json(value)
     JSON.pretty_generate(value)
   rescue StandardError

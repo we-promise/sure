@@ -4,6 +4,9 @@ require "ostruct"
 class TransactionsHelperTest < ActionView::TestCase
   # build_transaction_extra_details reads `extra` off a Transaction (or anything
   # that responds to :transaction), so a struct is enough to drive it.
+  # @param extra [Hash] the provider payload to place on Transaction#extra
+  # @return [OpenStruct] a stand-in that responds to :extra but not :transaction,
+  #   which is all build_transaction_extra_details needs
   def transaction_with(extra)
     OpenStruct.new(extra: extra)
   end

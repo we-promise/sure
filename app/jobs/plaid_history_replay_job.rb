@@ -13,6 +13,13 @@ class PlaidHistoryReplayJob < ApplicationJob
   RETRY_DELAY = 10.seconds
   MAX_ATTEMPTS = 30
 
+  # Clears the item's cursor and queues a sync, retrying while another sync
+  # holds the item. Gives up after MAX_ATTEMPTS and records the abandonment for
+  # support rather than leaving the caller believing history was replayed.
+  #
+  # @param plaid_item [PlaidItem] the connection whose history should be replayed
+  # @param attempts_remaining [Integer] retries left before giving up
+  # @return [void]
   def perform(plaid_item, attempts_remaining: MAX_ATTEMPTS)
     if plaid_item.syncs.incomplete.exists?
       if attempts_remaining.positive?

@@ -11,6 +11,8 @@ module Family::PlaidConnectable
   #
   # Deferred to a job rather than resetting the cursor here: an in-flight sync
   # would overwrite the reset and swallow the request. See PlaidHistoryReplayJob.
+  #
+  # @return [void] queues one replay job per syncable Plaid item
   def resync_plaid_items!
     plaid_items.syncable.find_each do |item|
       PlaidHistoryReplayJob.perform_later(item)

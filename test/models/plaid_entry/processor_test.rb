@@ -6,6 +6,10 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     @category_matcher = mock("PlaidAccount::Transactions::CategoryMatcher")
   end
 
+  # Opts this account's family into bank-fidelity naming. The preference is
+  # family-scoped, so it is set on the item's family rather than globally.
+  #
+  # @return [void]
   def prefer_original_description!
     @plaid_account.plaid_item.family.update!(plaid_prefer_original_description: true)
   end

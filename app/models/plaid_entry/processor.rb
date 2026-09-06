@@ -50,16 +50,20 @@ class PlaidEntry::Processor
     end
 
     # Memoized: this is read once per transaction in a sync batch.
+    #
+    # @return [Boolean] whether this family opted into bank-fidelity naming
     def prefer_original_description?
       return @prefer_original_description if defined?(@prefer_original_description)
 
       @prefer_original_description = plaid_account.plaid_item.family.plaid_prefer_original_description?
     end
 
+    # @return [String, nil] Plaid's cleaned-up merchant name, when it resolved one
     def merchant_name
       plaid_transaction["merchant_name"]
     end
 
+    # @return [String, nil] the raw description as the bank wrote it
     def original_description
       plaid_transaction["original_description"]
     end
@@ -70,6 +74,8 @@ class PlaidEntry::Processor
     # value in place forever once Plaid stops sending it — the drawer would go
     # on showing metadata the provider has since cleared. Writing an explicit
     # nil is what clears it.
+    #
+    # @return [Hash] the "plaid" namespace to merge into Transaction#extra
     def plaid_extra
       plaid = {
         "pending" => plaid_transaction["pending"],
@@ -84,6 +90,11 @@ class PlaidEntry::Processor
       { "plaid" => plaid }
     end
 
+    # Drops blank entries recursively so stored metadata carries only values the
+    # drawer can actually show, rather than a wall of nulls.
+    #
+    # @param value [Object] a nested provider hash, or anything else
+    # @return [Hash, nil] the compacted hash, or nil when nothing survived
     def compact_provider_hash(value)
       return nil unless value.is_a?(Hash)
 
@@ -103,6 +114,9 @@ class PlaidEntry::Processor
 
     # Only strings get the whitespace treatment. `blank?` would also discard
     # `false`, which is a meaningful value for a provider flag.
+    #
+    # @param raw [Object] a single provider value
+    # @return [Boolean] whether the value is worth storing
     def blank_provider_value?(raw)
       return true if raw.nil?
       return raw.strip.empty? if raw.is_a?(String)
@@ -110,6 +124,8 @@ class PlaidEntry::Processor
       false
     end
 
+    # @param value [Object] Plaid's counterparties array, or anything else
+    # @return [Array<Hash>, nil] compacted counterparties, or nil when none remain
     def compact_counterparties(value)
       return nil unless value.is_a?(Array)
 
