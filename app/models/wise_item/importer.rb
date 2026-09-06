@@ -79,7 +79,14 @@ class WiseItem::Importer
     # Used in WiseEntry::Processor to distinguish expenses (targetAccount != recipientId)
     # from incomes (targetAccount == recipientId).
     def fetch_borderless_accounts
+      trace_wise_fetch(operation: "borderless_accounts", status: "started", level: "info")
       result = wise_provider.get_borderless_accounts(wise_item.profile_id)
+      trace_wise_fetch(
+        operation: "borderless_accounts",
+        status: "completed",
+        level: "info",
+        received_record_count: Array(result).size
+      )
       Array(result).each_with_object({}) do |ba, map|
         borderless_id = ba["id"]
         recipient_id  = ba["recipientId"]
@@ -88,7 +95,7 @@ class WiseItem::Importer
         end
       end
     rescue => e
-      Rails.logger.warn "WiseItem::Importer - Could not fetch borderless accounts (#{e.message})"
+      trace_wise_fetch(operation: "borderless_accounts", status: "failed", level: "warn", error: e)
       {}
     end
 
@@ -141,8 +148,17 @@ class WiseItem::Importer
       cursor = nil
 
       loop do
+        trace_wise_fetch(operation: "activities", status: "started", level: "info", cursor: cursor, page_size: 100)
         result = with_rate_limit_retry { wise_provider.get_activities(wise_item.profile_id, cursor: cursor, size: 100) }
         batch = Array(result["activities"])
+        trace_wise_fetch(
+          operation: "activities",
+          status: "completed",
+          level: "info",
+          cursor: cursor,
+          received_record_count: batch.size,
+          next_cursor_present: result["cursor"].present?
+        )
         break if batch.empty?
 
         old_ones = batch.select { |a| parse_transfer_date(a["createdOn"]) < cutoff }
@@ -157,10 +173,10 @@ class WiseItem::Importer
 
       activities.uniq { |a| a["id"] }
     rescue Provider::Wise::WiseError => e
-      Rails.logger.warn "WiseItem::Importer - Could not fetch activities (#{e.message})"
+      trace_wise_fetch(operation: "activities", status: "failed", level: "warn", error: e, cursor: cursor)
       []
     rescue => e
-      Rails.logger.warn "WiseItem::Importer - Unexpected error fetching activities: #{e.message}"
+      trace_wise_fetch(operation: "activities", status: "failed", level: "warn", error: e, cursor: cursor)
       []
     end
 
@@ -172,8 +188,16 @@ class WiseItem::Importer
       limit = 100
 
       loop do
+        trace_wise_fetch(operation: "transfers", status: "started", level: "info", offset: offset, page_size: limit)
         page = with_rate_limit_retry { wise_provider.get_transfers(wise_item.profile_id, limit: limit, offset: offset) }
         batch = Array(page.is_a?(Hash) ? page["content"] : page)
+        trace_wise_fetch(
+          operation: "transfers",
+          status: "completed",
+          level: "info",
+          offset: offset,
+          received_record_count: batch.size
+        )
         break if batch.empty?
 
         # Wise returns transfers newest-first; stop once we're past the cutoff.
@@ -188,16 +212,21 @@ class WiseItem::Importer
       Rails.logger.info "WiseItem::Importer - Fetched #{transfers.size} transfers for profile #{wise_item.profile_id}"
       transfers
     rescue Provider::Wise::WiseError => e
-      Rails.logger.warn "WiseItem::Importer - Could not fetch transfers (#{e.message})"
+      trace_wise_fetch(operation: "transfers", status: "failed", level: "warn", error: e, offset: offset)
       []
     rescue => e
-      Rails.logger.warn "WiseItem::Importer - Unexpected error fetching transfers: #{e.message}"
+      trace_wise_fetch(operation: "transfers", status: "failed", level: "warn", error: e, offset: offset)
       []
     end
 
     # Fetches statement rows for STANDARD balances. Legacy transfer snapshots
-    # are retained and only backfilled with statements older than their oldest
-    # transfer, avoiding duplicate imports during the migration.
+    # are retained; outgoing statement rows dated on/after the oldest legacy
+    # transfer are dropped since transfers already captured that side (see
+    # #legacy_overlap_outgoing_row?), while incoming rows there are kept so
+    # money the legacy fallback could never capture (external payments) gets
+    # backfilled -- at the cost of occasionally re-importing the credit leg of
+    # a historical internal conversion transfers also already captured (see
+    # #legacy_overlap_outgoing_row? for why that trade-off is intentional).
     def fetch_statements
       @statement_fetch_attempted_accounts = []
       @statement_fetch_failed_accounts = []
@@ -209,6 +238,8 @@ class WiseItem::Importer
         legacy = existing.select do |transaction|
           transaction["wise_statement"].blank? && !jar_activity?(transaction)
         end
+        legacy_cutoff = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
+
         start_date =
           if existing.any? { |transaction| transaction["wise_statement"].present? } &&
              sync_start_date.blank? && wise_item.sync_start_date.blank? && wise_item.last_synced_at.present?
@@ -221,14 +252,17 @@ class WiseItem::Importer
           end
         end_date = Date.current
 
-        if legacy.any?
-          oldest = legacy.filter_map { |transaction| parse_transaction_date(transaction) }.min
-          end_date = oldest - 1.day if oldest
-        end
-
         next if start_date > end_date
 
         @statement_fetch_attempted_accounts << wise_account.id
+        trace_wise_fetch(
+          operation: "balance_statement",
+          status: "started",
+          level: "info",
+          wise_account: wise_account,
+          start_date: start_date,
+          end_date: end_date
+        )
         rows = wise_provider.get_balance_statements(
           wise_item.profile_id,
           wise_account.balance_id,
@@ -236,18 +270,52 @@ class WiseItem::Importer
           start_date: start_date,
           end_date: end_date
         )
-        result[wise_account.id] = Array(rows).map { |row| row.merge("wise_statement" => true) }
+        received_row_count = Array(rows).size
+        rows = Array(rows).reject { |row| legacy_overlap_outgoing_row?(row, legacy_cutoff) }
+        trace_wise_fetch(
+          operation: "balance_statement",
+          status: "completed",
+          level: "info",
+          wise_account: wise_account,
+          received_row_count: received_row_count,
+          stored_row_count: rows.size
+        )
+        result[wise_account.id] = rows.map { |row| row.merge("wise_statement" => true) }
       rescue Provider::Wise::WiseError => e
         @statement_fetch_failed_accounts << wise_account.id
-        capture_statement_error(wise_account, e, level: "warn")
-        Rails.logger.warn "WiseItem::Importer - Could not fetch statements for wise_account #{wise_account.id} (#{e.message})"
+        trace_wise_fetch(operation: "balance_statement", status: "failed", level: "warn", wise_account: wise_account, error: e)
         result[wise_account.id] = []
       rescue => e
         @statement_fetch_failed_accounts << wise_account.id
-        capture_statement_error(wise_account, e, level: "warn")
-        Rails.logger.warn "WiseItem::Importer - Unexpected error fetching statements for wise_account #{wise_account.id}: #{e.message}"
+        trace_wise_fetch(operation: "balance_statement", status: "failed", level: "warn", wise_account: wise_account, error: e)
         result[wise_account.id] = []
       end
+    end
+
+    # The legacy /v1/transfers fallback captured outgoing money unconditionally,
+    # plus the incoming leg of any internal cross-currency conversion between
+    # the profile's own balances (transfers where this balance is the target).
+    # So an outgoing statement row (Wise reports debits as non-positive) dated
+    # on/after the oldest legacy transfer already has a legacy counterpart and
+    # would double-book it.
+    #
+    # An incoming row in that same window *could* be the credit leg of one of
+    # those internal conversions (also already covered) rather than a genuine
+    # external payment -- but nothing short of an endpoint-proven correlation
+    # id can tell the two apart without risk of a false match, and silently
+    # dropping a real external payment is a worse failure than an occasional
+    # visible, user-correctable duplicate for a historical conversion. So
+    # incoming rows are always kept here; #legacy_transfer_import_needed?
+    # instead bounds the exposure by stopping the transfer fallback (and with
+    # it, any *new* double-booking) as soon as an account's statements prove
+    # to work.
+    def legacy_overlap_outgoing_row?(row, legacy_cutoff)
+      return false unless legacy_cutoff
+
+      date = parse_transaction_date(row)
+      return false unless date && date >= legacy_cutoff
+
+      row.dig("amount", "value").to_d <= 0
     end
 
     # Statements are only "unavailable" when every attempted standard balance
@@ -261,14 +329,21 @@ class WiseItem::Importer
       attempted.any? && (attempted - failed).empty?
     end
 
-    # The transfer endpoint remains a compatibility fallback for tokens that
-    # cannot access statements and for accounts imported before statement rows
-    # were supported.
+    # The transfer endpoint remains a compatibility fallback only until an
+    # account's statements are proven to work: once a statement row has
+    # landed for an account, statements alone cover both directions of money
+    # movement going forward, so re-fetching transfers would only re-invite
+    # double-booking new internal conversions (see #legacy_overlap_outgoing_row?)
+    # for no benefit.
     def legacy_transfer_import_needed?
       wise_item.wise_accounts.any? do |wise_account|
-        !wise_account.jar? && Array(wise_account.raw_transactions_payload).any? do |transaction|
-          transaction["wise_statement"].blank? && !jar_activity?(transaction)
-        end
+        next false if wise_account.jar?
+
+        payload = Array(wise_account.raw_transactions_payload)
+        has_legacy = payload.any? { |transaction| transaction["wise_statement"].blank? && !jar_activity?(transaction) }
+        has_statement = payload.any? { |transaction| transaction["wise_statement"].present? }
+
+        has_legacy && !has_statement
       end
     end
 
@@ -294,13 +369,24 @@ class WiseItem::Importer
           wise_account.upsert_wise_transactions_snapshot!(jar_activities)
           transactions_imported += jar_activities.size
         else
-          account_transfers = transfers.select do |t|
-            t["sourceCurrency"] == wise_account.currency ||
-              t["targetCurrency"] == wise_account.currency
-          end
           account_statements = statements[wise_account.id] || []
           existing_legacy = Array(wise_account.raw_transactions_payload).reject { |transaction| transaction["wise_statement"].present? }
           existing_statements = Array(wise_account.raw_transactions_payload).select { |transaction| transaction["wise_statement"].present? }
+          # `transfers` is fetched profile-wide as soon as ANY account still
+          # needs the legacy fallback (see #legacy_transfer_import_needed?),
+          # so it can contain movements for a currency this specific account
+          # already covers via its own statements. Only apply it here if this
+          # account hasn't migrated yet -- otherwise the same movement would
+          # be merged twice under different keys (see #merge_transaction_payloads).
+          account_transfers =
+            if existing_statements.any?
+              []
+            else
+              transfers.select do |t|
+                t["sourceCurrency"] == wise_account.currency ||
+                  t["targetCurrency"] == wise_account.currency
+              end
+            end
           # Also include INTERBALANCE activities so the standard account shows outflows to the JAR.
           interbalance = activities.select { |a| activity_for_account?(a, wise_account) }
           payload = merge_transaction_payloads(
@@ -337,19 +423,33 @@ class WiseItem::Importer
       WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(transaction["type"])
     end
 
-    def capture_statement_error(wise_account, error, level:)
+    def trace_wise_fetch(operation:, status:, level:, wise_account: nil, error: nil, **metadata)
+      message = "WiseItem::Importer - Wise #{operation} fetch #{status}"
+      message = "#{message} for wise_account #{wise_account.id}" if wise_account
+      message = "#{message}: #{error.message}" if error
+
+      Rails.logger.public_send(level, message)
       DebugLogEntry.capture(
-        category: "provider_sync_error",
+        category: error ? "provider_sync_error" : "provider_sync",
         level: level,
-        message: "WiseItem::Importer - Failed to fetch statement for wise_account #{wise_account.id}: #{error.message}",
+        message: message,
         source: self.class.name,
         provider_key: "wise",
         family: wise_item.family,
-        account_provider: wise_account.account_provider,
-        metadata: { wise_account_id: wise_account.id, error_class: error.class.name }
+        account_provider: wise_account&.account_provider,
+        metadata: {
+          wise_item_id: wise_item.id,
+          operation: operation,
+          wise_account_id: wise_account&.id,
+          balance_id: wise_account&.balance_id,
+          currency: wise_account&.currency,
+          sca_private_key_configured: wise_item.sca_private_key.present?,
+          error_class: error&.class&.name,
+          error_type: error&.respond_to?(:error_type) ? error.error_type : nil
+        }.compact.merge(metadata)
       )
-    rescue => capture_error
-      Rails.logger.warn "WiseItem::Importer - Failed to capture statement error: #{capture_error.message}"
+    rescue => trace_error
+      Rails.logger.warn "WiseItem::Importer - Failed to capture statement trace: #{trace_error.message}"
     end
 
     # Routes an activity to the given WiseAccount.
