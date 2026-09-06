@@ -31,7 +31,7 @@
     <%= render DS::Menu.new(variant: "button") do |menu| %>
       <% menu.with_button(
           class: "p-1.5 group/reconcile hover:bg-inverse flex items-center justify-center rounded-md",
-          title: t("transactions.selection_bar.reconcile")
+          aria: { label: t("transactions.selection_bar.reconcile") }
         ) do %>
         <%= icon "check-circle", class: "group-hover/reconcile:text-inverse" %>
       <% end %>
