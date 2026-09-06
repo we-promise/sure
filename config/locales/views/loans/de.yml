@@ -13,6 +13,8 @@ de:
       rate_type_adjustable: Anpassbar
       rate_type_fixed: Fest
       rate_type_variable: Variabel
+      offset_accounts: Verrechnungskonten
+      offset_accounts_hint: Es können nur Konten verknüpft werden, die für alle Personen sichtbar sind, die Zugriff auf dieses Darlehen haben.
       none: Keine
       subtype_none: Keine
       subtype_prompt: Kreditart wählen
@@ -21,6 +23,7 @@ de:
     tabs:
       overview:
         edit_loan_details: Kreditdaten bearbeiten
+        variable_with_offset: Variabel + Verrechnungskonto
         interest_rate: Zinssatz
         monthly_payment: Monatsrate
         not_applicable: "–"
@@ -35,6 +38,7 @@ de:
         total_cost: Gesamtkosten
         payoff_date: Tilgungsdatum
         variable_rate_notice: "Dieser Kredit hat einen variablen Zinssatz. Der unten stehende Plan basiert auf dem aktuellen Zinssatz und erfassten Zinsänderungen -- künftige Zinsänderungen verschieben ihn."
+        offset_notice: "Für die prognostizierten Zinsen wird angenommen, dass Ihr verknüpftes Verrechnungsguthaben auf dem heutigen Gesamtbetrag bleibt. Die Kreditsumme selbst bleibt unverändert."
         extra_payment:
           variable_rate_notice: "Der Zinssatz dieses Kredits kann sich ändern. Die Projektion berücksichtigt bereits erfasste Zinsänderungen und behält die aktuelle Rate bei; noch nicht erfasste Zinsänderungen können die Ergebnisse verändern."
         number: "Nr."

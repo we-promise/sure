@@ -3,7 +3,7 @@
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= render "shared/ruler", classes: "my-4" %>
 
-  <div class="space-y-2">
+  <div class="space-y-2" data-controller="loan-offset">
     <%= form.fields_for :accountable do |loan_form| %>
       <div class="flex items-center gap-2">
         <%= loan_form.money_field :initial_balance,
@@ -20,7 +20,8 @@
                                  step: 0.005 %>
         <%= loan_form.select :rate_type,
                            [[t("loans.form.rate_type_fixed"), "fixed"], [t("loans.form.rate_type_variable"), "variable"], [t("loans.form.rate_type_adjustable"), "adjustable"]],
-                           { label: t("loans.form.rate_type") } %>
+                           { label: t("loans.form.rate_type") },
+                           { data: { loan_offset_target: "rateType", action: "change->loan-offset#update" } } %>
       </div>
 
       <div class="flex items-center gap-2">
@@ -33,6 +34,14 @@
         <%= loan_form.select :subtype,
                   Loan.subtype_options_for_select,
                   { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
+      </div>
+
+      <div class="space-y-2 hidden" data-loan-offset-target="offsetAccounts">
+        <%= loan_form.select :offset_account_ids,
+                  @offset_accounts.map { |account| [ account.name, account.id ] },
+                  { label: t("loans.form.offset_accounts"), include_hidden: false },
+                  { multiple: true, size: [ @offset_accounts.size, 4 ].min.clamp(1, 4) } %>
+        <p class="text-sm text-secondary"><%= t("loans.form.offset_accounts_hint") %></p>
       </div>
     <% end %>
   </div>

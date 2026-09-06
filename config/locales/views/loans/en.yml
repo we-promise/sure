@@ -16,6 +16,8 @@ en:
       rate_type_adjustable: Adjustable
       rate_type_fixed: Fixed
       rate_type_variable: Variable
+      offset_accounts: Offset accounts
+      offset_accounts_hint: Only accounts visible to everyone who can access this loan can be linked.
     new:
       title: Enter loan details
     tabs:
@@ -30,6 +32,7 @@ en:
         type: Type
         unknown: Unknown
         edit_loan_details: "Edit loan details"
+        variable_with_offset: Variable + offset
       schedule:
         monthly_payment: Monthly Payment
         total_interest: Total Interest
@@ -47,6 +50,7 @@ en:
         projection_not_converged: The projected payoff does not converge within the supported term.
         recalculating: "These figures were recalculated for this page. The saved schedule is being refreshed in the background and will match shortly."
         variable_rate_notice: "This loan has a variable interest rate. The schedule below reflects the current rate and any recorded rate changes; future rate changes will shift it."
+        offset_notice: "Projected interest assumes your linked offset balance stays at today's total. The loan balance itself is unchanged."
         chart:
           today: Today
           scheduled_history: "Scheduled (contracted terms)"

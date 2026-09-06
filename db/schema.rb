@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1334,6 +1334,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_090000) do
     t.check_constraint "payment_amount >= 0::numeric", name: "chk_loan_amortizations_payment_amount_non_negative"
     t.check_constraint "payment_number > 0", name: "chk_loan_amortizations_payment_number_positive"
     t.check_constraint "principal_payment >= 0::numeric", name: "chk_loan_amortizations_principal_payment_non_negative"
+  end
+
+  create_table "loan_offset_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.uuid "loan_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_loan_offset_accounts_on_account_id"
+    t.index ["loan_id", "account_id"], name: "index_loan_offset_accounts_on_loan_id_and_account_id", unique: true
+    t.index ["loan_id"], name: "index_loan_offset_accounts_on_loan_id"
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2695,6 +2705,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_090000) do
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
   add_foreign_key "loan_amortizations", "loans"
+  add_foreign_key "loan_offset_accounts", "accounts", on_delete: :cascade
+  add_foreign_key "loan_offset_accounts", "loans", on_delete: :cascade
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"

@@ -20,6 +20,12 @@ class Loan < ApplicationRecord
   MAX_TERM_MONTHS = 1200
 
   has_many :amortizations, class_name: "LoanAmortization", dependent: :destroy
+  has_many :loan_offset_accounts, dependent: :destroy
+  has_many :offset_accounts, through: :loan_offset_accounts, source: :account
+
+  attr_accessor :offset_account_ids
+
+  after_save :sync_offset_accounts, if: :offset_account_ids_supplied?
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   validates :term_months, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_TERM_MONTHS }, allow_nil: true
@@ -32,6 +38,12 @@ class Loan < ApplicationRecord
 
   def monthly_payment
     amortization_schedule.monthly_payment
+  end
+
+  def invalidate_offset_cache!
+    clear_amortization_schedule_cache!
+    @payoff_projection = nil
+    @payoff_projection_signature = nil
   end
 
   # Memoized per instance (and cleared alongside the calculator cache) so a
@@ -370,6 +382,18 @@ class Loan < ApplicationRecord
       LoanAmortizationRebuildJob.perform_later(id)
     end
 
+    def offset_account_ids_supplied?
+      !offset_account_ids.nil?
+    end
+
+    def sync_offset_accounts
+      ids = Array(offset_account_ids).reject(&:blank?).map(&:to_s).uniq
+      loan_offset_accounts.where.not(account_id: ids).delete_all
+      ids.each do |account_id|
+        loan_offset_accounts.find_or_create_by!(account_id: account_id)
+      end
+    end
+
     def normalized_rate(rate)
       BigDecimal(rate.to_s)
     rescue ArgumentError, TypeError
@@ -404,7 +428,14 @@ class Loan < ApplicationRecord
     # current balance -- combine them so the projection is recreated
     # whenever either changes.
     def payoff_projection_signature
-      "#{amortization_schedule_signature}:#{account&.balance}"
+      "#{amortization_schedule_signature}:#{account&.balance}:#{offset_account_signature}"
+    end
+
+    def offset_account_signature
+      LoanOffsetAccount.joins(:account)
+        .where(loan_id: id)
+        .order(:account_id)
+        .pluck(:account_id, "accounts.balance")
     end
 
     def variable_rate_schedule_entries_are_valid

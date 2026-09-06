@@ -155,6 +155,12 @@
     </p>
   <% end %>
 
+  <% if loan.offset_accounts.any? %>
+    <p class="text-sm text-secondary">
+      <%= t(".offset_notice") %>
+    </p>
+  <% end %>
+
   <div class="rounded-lg bg-container shadow-xs border border-alpha-black-25 overflow-hidden">
     <div class="max-h-128 overflow-y-auto overflow-x-auto">
       <table class="w-full text-sm">

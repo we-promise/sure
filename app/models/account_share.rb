@@ -9,6 +9,8 @@ class AccountShare < ApplicationRecord
   validate :cannot_share_with_owner
   validate :user_in_same_family
 
+  after_commit :invalidate_loan_offset_links, on: %i[create destroy]
+
   scope :with_permission, ->(permission) { where(permission: permission) }
 
   def full_control?
@@ -32,6 +34,10 @@ class AccountShare < ApplicationRecord
   end
 
   private
+
+    def invalidate_loan_offset_links
+      LoanOffsetAccount.invalidate_for_sharing_change!(account)
+    end
 
     def cannot_share_with_owner
       if account && user && account.owner_id == user_id
