@@ -21,28 +21,40 @@ class PlaidHistoryReplayJob < ApplicationJob
   # @param attempts_remaining [Integer] retries left before giving up
   # @return [void]
   def perform(plaid_item, attempts_remaining: MAX_ATTEMPTS)
-    if plaid_item.syncs.incomplete.exists?
-      if attempts_remaining.positive?
-        self.class.set(wait: RETRY_DELAY).perform_later(
-          plaid_item,
-          attempts_remaining: attempts_remaining - 1
-        )
+    # Checking, resetting and queueing under one row lock. Done separately, a
+    # sync could be created after the check, read the old cursor, absorb this
+    # request through sync_later's coalescing, and then write its cursor back
+    # over the reset — leaving history unreplayed with nothing queued to retry.
+    # Holding the lock across all three means a competing sync_later either
+    # lands before the check (so we defer) or after the reset (so it coalesces
+    # into the replay sync, which already starts from a nil cursor).
+    replayed = plaid_item.with_lock do
+      if plaid_item.syncs.incomplete.exists?
+        false
       else
-        DebugLogEntry.capture(
-          category: "background_jobs",
-          level: "warn",
-          message: "Gave up waiting to replay PlaidItem #{plaid_item.id} history; transactions keep their previous naming",
-          source: self.class.name,
-          family: plaid_item.family,
-          provider_key: "plaid",
-          metadata: { plaid_item_id: plaid_item.id }
-        )
+        plaid_item.update!(next_cursor: nil)
+        plaid_item.sync_later
+        true
       end
-
-      return
     end
 
-    plaid_item.update!(next_cursor: nil)
-    plaid_item.sync_later
+    return if replayed
+
+    if attempts_remaining.positive?
+      self.class.set(wait: RETRY_DELAY).perform_later(
+        plaid_item,
+        attempts_remaining: attempts_remaining - 1
+      )
+    else
+      DebugLogEntry.capture(
+        category: "background_jobs",
+        level: "warn",
+        message: "Gave up waiting to replay PlaidItem #{plaid_item.id} history; transactions keep their previous naming",
+        source: self.class.name,
+        family: plaid_item.family,
+        provider_key: "plaid",
+        metadata: { plaid_item_id: plaid_item.id }
+      )
+    end
   end
 end

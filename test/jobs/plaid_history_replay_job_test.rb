@@ -39,6 +39,36 @@ class PlaidHistoryReplayJobTest < ActiveJob::TestCase
     assert_equal "cursor-before-replay", @plaid_item.reload.next_cursor
   end
 
+  # The check, the reset and the enqueue have to be one atomic step. Split up, a
+  # sync created after the check reads the old cursor, absorbs this request via
+  # sync_later's coalescing, and then writes its cursor back over the reset —
+  # leaving history unreplayed with nothing queued to retry.
+  test "checks, resets and queues under a single row lock" do
+    locked_during_reset = false
+
+    @plaid_item.define_singleton_method(:with_lock) do |&block|
+      locked_during_reset = true
+      block.call
+    end
+
+    PlaidHistoryReplayJob.perform_now(@plaid_item)
+
+    assert locked_during_reset, "the cursor reset must happen while holding the item lock"
+    assert_nil @plaid_item.reload.next_cursor
+  end
+
+  # A sync that appears between the caller's decision and this job running is the
+  # ordinary case, not the race: the job simply defers and the cursor survives to
+  # be reset on a later attempt.
+  test "a sync appearing before the reset defers the replay intact" do
+    @plaid_item.syncs.create!.start!
+
+    PlaidHistoryReplayJob.perform_now(@plaid_item, attempts_remaining: 1)
+
+    assert_equal "cursor-before-replay", @plaid_item.reload.next_cursor
+    assert_enqueued_jobs 1, only: PlaidHistoryReplayJob
+  end
+
   test "captures exhausted retries for support" do
     active_sync = @plaid_item.syncs.create!
     active_sync.start!
