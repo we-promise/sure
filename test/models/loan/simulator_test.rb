@@ -243,7 +243,23 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("900.00"), result.payments.first[:payment_amount]
   end
 
+  # REWRITTEN for #48. This test's NAME always described the correct behaviour;
+  # its assertions described the defect. It asserted 9.53 on payments[1] -- the
+  # period 2024-02-01..2024-03-01, which ran entirely at 0% -- because the
+  # accrual base was re-read from the payment-sizing rate each period, so a
+  # change effective ON 2024-03-01 retroactively re-rated the month that ENDED
+  # on it.
+  #
+  # C10: the accrual clock includes the effective date. Accrual windows are
+  # half-open, so 12% from 2024-03-01 belongs to [Mar 1, Apr 1) -- 31 days at
+  # 12% on 1000 = 10.19 -- and February keeps the old rate.
+  #
+  # Both clocks are driven here, as RateResolver does in production: the payment
+  # clock resizes the 2024-03-01 payment (C8/C10), the accrual clock moves
+  # accrual from the same date.
   test "a rate change on a payment date affects the next period only" do
+    change = ->(_from_date, _to_date) { [ { date: Date.new(2024, 3, 1), rate: BigDecimal("12") } ] }
+
     result = build_simulator(
       starting_balance: "1000.00",
       payment_schedule: [ Date.new(2024, 2, 1), Date.new(2024, 3, 1), Date.new(2024, 4, 1) ],
@@ -251,13 +267,46 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
       payment_strategy: :hold,
       payment_amount_for: ->(**_args) { BigDecimal("0.00") },
       daily_accrual: true,
-      re_amortisation_events: ->(_from_date, _to_date) {
-        [ { date: Date.new(2024, 3, 1), rate: BigDecimal("12") } ]
-      }
+      re_amortisation_events: change,
+      accrual_rate_changes: change
     ).run
 
-    assert_equal BigDecimal("0.00"), result.payments[0][:interest_payment]
-    assert_equal BigDecimal("9.53"), result.payments[1][:interest_payment]
+    assert_equal BigDecimal("0.00"), result.payments[0][:interest_payment],
+      "2024-01-01..02-01 ran at 0%"
+    assert_equal BigDecimal("0.00"), result.payments[1][:interest_payment],
+      "2024-02-01..03-01 ran entirely at 0% -- a rate effective ON 03-01 must not re-rate it (C10, #48)"
+    assert_equal BigDecimal("10.19"), result.payments[2][:interest_payment],
+      "2024-03-01..04-01 is 31 days at 12% on 1000"
+  end
+
+  # #48's acceptance criterion: both halves of the boundary in one assertion.
+  # A rate change effective ON a payment date resizes THAT payment (C8/C10) and
+  # leaves the PRECEDING period's interest at the old rate (C10 accrual side).
+  # Before the fix these were the same rate, so one of the two had to be wrong.
+  test "a rate change on a payment date resizes that payment and leaves the previous period alone" do
+    change = ->(_from_date, _to_date) { [ { date: Date.new(2024, 3, 1), rate: BigDecimal("12") } ] }
+    sizing_rates = []
+
+    result = build_simulator(
+      starting_balance: "1000.00",
+      payment_schedule: [ Date.new(2024, 2, 1), Date.new(2024, 3, 1), Date.new(2024, 4, 1) ],
+      rates: [ BigDecimal("0"), BigDecimal("0"), BigDecimal("0") ],
+      payment_strategy: :reamortize,
+      payment_amount_for: ->(rate:, **_args) {
+        sizing_rates << rate
+        BigDecimal("0.00")
+      },
+      daily_accrual: true,
+      re_amortisation_events: change,
+      accrual_rate_changes: change
+    ).run
+
+    assert_includes sizing_rates, BigDecimal("12"),
+      "the payment clock must resize from the first payment date on or after the change (C8, C10)"
+    assert_equal BigDecimal("0.00"), result.payments[1][:interest_payment],
+      "the period ENDING on the change date must keep the old rate (C10, #48)"
+    assert_equal BigDecimal("10.19"), result.payments[2][:interest_payment],
+      "the period STARTING on the change date takes the new rate"
   end
 
   test "an extra repayment on a payment date is applied before payment" do
@@ -293,11 +342,17 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
         next [] unless from_date <= Date.new(2024, 3, 1) && Date.new(2024, 3, 1) < to_date
 
         [ { date: Date.new(2024, 3, 1), amount: BigDecimal("200.00") } ]
+      },
+      # The accrual clock has to be driven explicitly since #25 separated it
+      # from the payment clock; `rates:` only sizes payments.
+      accrual_rate_changes: ->(_from_date, _to_date) {
+        [ { date: Date.new(2024, 3, 1), rate: BigDecimal("12") } ]
       }
     ).run
 
     assert_equal BigDecimal("900.00"), result.payments[2][:beginning_balance]
-    assert_equal BigDecimal("7.13"), result.payments[2][:interest_payment]
+    assert_equal BigDecimal("7.13"), result.payments[2][:interest_payment],
+      "31 days at 12% on 900 less a 200 offset"
   end
 
   test "reports a non-converged run with its remaining balloon" do
