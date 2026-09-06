@@ -20,6 +20,13 @@ class Loan < ApplicationRecord
   MAX_TERM_MONTHS = 1200
 
   has_many :amortizations, class_name: "LoanAmortization", dependent: :destroy
+  has_many :loan_offset_accounts, dependent: :destroy
+  has_many :offset_accounts, through: :loan_offset_accounts, source: :account
+
+  attr_accessor :offset_account_ids
+
+  before_save :validate_offset_accounts, if: :offset_account_ids_supplied?
+  after_save :sync_offset_accounts, if: :offset_accounts_need_sync?
 
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   validates :term_months, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_TERM_MONTHS }, allow_nil: true
@@ -32,6 +39,12 @@ class Loan < ApplicationRecord
 
   def monthly_payment
     amortization_schedule.monthly_payment
+  end
+
+  def invalidate_offset_cache!
+    clear_amortization_schedule_cache!
+    @payoff_projection = nil
+    @payoff_projection_signature = nil
   end
 
   # Memoized per instance (and cleared alongside the calculator cache) so a
@@ -370,6 +383,46 @@ class Loan < ApplicationRecord
       LoanAmortizationRebuildJob.perform_later(id)
     end
 
+    def offset_account_ids_supplied?
+      !offset_account_ids.nil?
+    end
+
+    def offset_accounts_need_sync?
+      offset_account_ids_supplied? || saved_change_to_rate_type?
+    end
+
+    def sync_offset_accounts
+      ids = rate_type == "variable" ? offset_account_ids_for_sync.map(&:id) : []
+      loan_offset_accounts.where.not(account_id: ids).delete_all
+      ids.each do |account_id|
+        loan_offset_accounts.find_or_create_by!(account_id:)
+      end
+    end
+
+    def validate_offset_accounts
+      return if rate_type != "variable"
+
+      ids = normalized_offset_account_ids
+      accounts = offset_account_ids_for_sync
+      missing_ids = ids - accounts.map { |account| account.id.to_s }
+      errors.add(:offset_account_ids, "contains an unknown account") if missing_ids.any?
+
+      accounts.each do |account|
+        link = LoanOffsetAccount.new(loan: self, account:)
+        next if link.valid?
+
+        errors.add(:offset_account_ids, link.errors.full_messages.to_sentence)
+      end
+    end
+
+    def offset_account_ids_for_sync
+      Account.where(id: normalized_offset_account_ids).to_a
+    end
+
+    def normalized_offset_account_ids
+      Array(offset_account_ids).reject(&:blank?).map(&:to_s).uniq
+    end
+
     def normalized_rate(rate)
       BigDecimal(rate.to_s)
     rescue ArgumentError, TypeError
@@ -404,7 +457,14 @@ class Loan < ApplicationRecord
     # current balance -- combine them so the projection is recreated
     # whenever either changes.
     def payoff_projection_signature
-      "#{amortization_schedule_signature}:#{account&.balance}"
+      "#{amortization_schedule_signature}:#{account&.balance}:#{offset_account_signature}"
+    end
+
+    def offset_account_signature
+      LoanOffsetAccount.joins(:account)
+        .where(loan_id: id)
+        .order(:account_id)
+        .pluck(:account_id, "accounts.balance")
     end
 
     def variable_rate_schedule_entries_are_valid

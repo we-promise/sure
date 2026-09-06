@@ -77,6 +77,39 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     end
   end
 
+  test "a linked offset reduces projected interest without reducing the loan balance" do
+    offset = @family.accounts.create!(
+      name: "Projection offset", balance: 50_000, currency: "USD", accountable: Depository.new
+    )
+    loan = build_loan(balance: 500_000, interest_rate: 3.5)
+    loan.loan_offset_accounts.create!(account: offset)
+    loan.account.update!(balance: 450_000)
+
+    with_offset = loan.payoff_projection
+    with_offset_interest = with_offset.total_interest.amount
+    offset.update!(balance: 0)
+    without_offset = loan.reload.payoff_projection
+
+    assert_operator with_offset_interest, :<, without_offset.total_interest.amount
+    assert_operator with_offset.payoff_date, :<, without_offset.payoff_date
+    assert_equal BigDecimal("450000"), with_offset.current_balance.amount
+    assert_equal BigDecimal("450000"), without_offset.current_balance.amount
+  end
+
+  test "an empty linked offset preserves the no-offset projection" do
+    loan = build_loan(balance: 500_000, interest_rate: 3.5)
+    baseline = loan.payoff_projection
+    offset = @family.accounts.create!(
+      name: "Empty offset", balance: 0, currency: "USD", accountable: Depository.new
+    )
+    loan.loan_offset_accounts.create!(account: offset)
+
+    with_empty_offset = loan.reload.payoff_projection
+
+    assert_equal baseline.payoff_date, with_empty_offset.payoff_date
+    assert_equal baseline.total_interest.amount, with_empty_offset.total_interest.amount
+  end
+
   test "matches the original schedule (within a rounding-driven cleanup payment) when the current balance equals the original balance" do
     loan = build_loan(balance: 500000)
 

@@ -249,7 +249,12 @@ class Loan
           payment_amount_for: ->(**_kwargs) { monthly_payment.amount },
           currency_precision: currency_precision,
           max_iterations: payment_dates.length,
-          settle_at_schedule_end: false
+          settle_at_schedule_end: false,
+          # A zero-balance link is mathematically the no-offset case. Keep it
+          # on the existing monthly projection path so linking an empty asset
+          # does not change figures merely by changing the calculation mode.
+          daily_accrual: loan.offset_accounts.any? && loan.offset_accounts.sum(:balance).positive?,
+          offset_for: Loan::OffsetResolver.new(loan).method(:change_points)
         ).run.payments
       end
 

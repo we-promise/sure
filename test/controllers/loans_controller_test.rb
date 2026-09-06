@@ -92,4 +92,59 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Loan account updated", flash[:notice]
     assert_enqueued_with(job: SyncJob)
   end
+
+  test "creates a variable loan with visible offset accounts" do
+    offset = @account.family.accounts.create!(
+      name: "New offset", balance: 12_500, currency: @account.currency, accountable: Depository.new
+    )
+
+    post loans_path, params: {
+      account: {
+        name: "Variable Loan",
+        balance: 50_000,
+        currency: @account.currency,
+        accountable_type: "Loan",
+        accountable_attributes: {
+          subtype: "mortgage",
+          interest_rate: 5.5,
+          term_months: 60,
+          rate_type: "variable",
+          initial_balance: 50_000,
+          offset_account_ids: [ offset.id ]
+        }
+      }
+    }
+
+    created_loan = Account.order(:created_at).last.accountable
+
+    assert_equal "variable", created_loan.rate_type
+    assert_equal [ offset.id ], created_loan.offset_accounts.pluck(:id)
+    assert_redirected_to created_loan.account
+  end
+
+  test "removes submitted offset accounts when changing to a non-variable rate" do
+    offset = @account.family.accounts.create!(
+      name: "Existing offset", balance: 12_500, currency: @account.currency, accountable: Depository.new
+    )
+    loan = @account.accountable
+    loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
+    assert_equal [ offset.id ], loan.reload.offset_accounts.pluck(:id)
+
+    %w[fixed adjustable].each do |rate_type|
+      loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
+
+      patch loan_path(@account), params: {
+        account: {
+          accountable_type: "Loan",
+          accountable_attributes: {
+            id: loan.id,
+            rate_type:,
+            offset_account_ids: [ offset.id ]
+          }
+        }
+      }
+
+      assert_empty loan.reload.offset_accounts
+    end
+  end
 end
