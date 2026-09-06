@@ -22,6 +22,7 @@ class RecurringAllocation < ApplicationRecord
   validates :allocated_amount, presence: true, numericality: { greater_than: 0 }
   validates :currency, presence: true
   validate :currency_matches_occurrence
+  validate :entry_is_not_refund
 
   scope :confirmed, -> { where(state: :confirmed) }
   scope :suggested, -> { where(state: :suggested) }
@@ -29,6 +30,13 @@ class RecurringAllocation < ApplicationRecord
   before_validation :default_paid_on
 
   private
+    def entry_is_not_refund
+      return unless entry&.transaction?
+      return unless Transaction.where(id: entry.entryable_id, kind: "refund").exists?
+
+      errors.add(:entry, :refund_not_allowed)
+    end
+
     def currency_matches_occurrence
       return if recurring_occurrence.nil? || currency == recurring_occurrence.currency
 

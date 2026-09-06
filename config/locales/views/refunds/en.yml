@@ -21,6 +21,7 @@ en:
   activerecord:
     errors:
       messages:
+        refund_not_allowed: "cannot be a purchase refund"
         invalid_refund: Only posted incoming purchase credits can be marked as refunds
         refund_links_present: Remove refund links or refund classification before changing this transaction
   transactions:
