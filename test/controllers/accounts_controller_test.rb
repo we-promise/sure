@@ -16,6 +16,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index delegates whole-row account clicks to the account link" do
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(@account)} [data-controller='clickable-row']")
+    account_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal account_path(@account), account_link["href"]
+  end
+
   test "index localizes the Plaid add accounts action" do
     ensure_tailwind_build
     @user.update!(locale: "de")
@@ -126,6 +138,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         !q.include?(" IN (")
     }
     assert_equal 0, per_row_transfer, "N+1 per-row transfer queries detected (#{per_row_transfer})"
+  end
+
+  test "show delegates whole-row trade clicks to the drawer link" do
+    investment_account = accounts(:investment)
+    entry = entries(:trade)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(entry.entryable)} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
   end
 
   test "show avoids N+1 split-parent queries across paginated entries" do

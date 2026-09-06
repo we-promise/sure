@@ -254,12 +254,22 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     ]
     provider = FakeWiseProvider.new(transfers: transfers, raise_on: { get_balance_statements: "forbidden" })
 
-    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").count }, 1 do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
 
     assert result[:success]
     assert_includes provider.calls, :get_transfers
     account = @wise_item.wise_accounts.find_by(currency: "EUR")
     assert_equal 1, account.raw_transactions_payload.size
+
+    entry = DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").recent.first
+    assert_equal "WiseItem::Importer", entry.source
+    assert_equal @wise_item.id, entry.metadata["wise_item_id"]
+    assert_equal false, entry.metadata["sca_private_key_configured"]
+    assert_equal "Provider::Wise::WiseError", entry.metadata["error_class"]
+    assert_equal "fetch_failed", entry.metadata["error_type"]
   end
 
   test "surfaces partial statement fetch failures without the transfer fallback" do
@@ -282,6 +292,158 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_not result[:success]
     assert_equal 1, result[:transactions_failed]
     refute_includes provider.calls, :get_transfers
+  end
+
+  test "backfills incoming statement rows into the window already covered by legacy transfers" do
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 1,
+          "sourceCurrency" => "EUR",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 100.0,
+          "targetValue" => 100.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-10"
+        }
+      ]
+    )
+    statements = [
+      { "date" => "2024-01-15T10:00:00Z", "amount" => { "value" => "-50.00", "currency" => "EUR" }, "referenceNumber" => "st-outgoing-in-window" },
+      { "date" => "2024-01-20T10:00:00Z", "amount" => { "value" => "6780.00", "currency" => "EUR" }, "referenceNumber" => "st-incoming-in-window" },
+      { "date" => "2024-01-05T10:00:00Z", "amount" => { "value" => "20.00", "currency" => "EUR" }, "referenceNumber" => "st-before-window" }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+
+    assert_includes refs, "st-incoming-in-window"
+    assert_includes refs, "st-before-window"
+    refute_includes refs, "st-outgoing-in-window"
+  end
+
+  test "keeps an incoming statement row that coincidentally shares its date and amount with a legacy transfer" do
+    # A same-day, same-amount external payment must never be dropped just
+    # because it looks like it could be the credit leg of a prior internal
+    # conversion -- silently losing a real transaction is worse than an
+    # occasional visible duplicate (see legacy_overlap_outgoing_row?).
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+      raw_transactions_payload: [
+        {
+          "id" => 10,
+          "targetAccount" => 99999001,
+          "sourceCurrency" => "USD",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 500.0,
+          "targetValue" => 450.0,
+          "status" => "incoming_payment_received",
+          "created" => "2024-02-01"
+        }
+      ]
+    )
+    statements = [
+      { "date" => "2024-02-01T09:00:00Z", "amount" => { "value" => "450.00", "currency" => "EUR" }, "referenceNumber" => "st-same-date-and-amount" }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+
+    assert_includes refs, "st-same-date-and-amount"
+  end
+
+  test "stops fetching legacy transfers once an account has a successful statement row" do
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 1,
+          "sourceCurrency" => "EUR",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 100.0,
+          "targetValue" => 100.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-10"
+        },
+        {
+          "wise_statement" => true,
+          "date" => "2024-01-20",
+          "amount" => { "value" => "10.0", "currency" => "EUR" },
+          "referenceNumber" => "already-migrated"
+        }
+      ]
+    )
+    provider = FakeWiseProvider.new(statements: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    refute_includes provider.calls, :get_transfers
+  end
+
+  test "does not merge the profile-wide transfer fallback into an account that already migrated to statements" do
+    balances = [
+      { "id" => "10000001", "amount" => { "value" => 1000.0, "currency" => "EUR" }, "type" => "STANDARD" },
+      { "id" => "10000002", "amount" => { "value" => 500.0, "currency" => "USD" }, "type" => "STANDARD" }
+    ]
+    eur_account = @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "wise_statement" => true,
+          "date" => "2024-01-20",
+          "amount" => { "value" => "10.0", "currency" => "EUR" },
+          "referenceNumber" => "already-migrated-eur"
+        }
+      ]
+    )
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000002",
+      name: "Wise USD",
+      currency: "USD",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 5,
+          "sourceCurrency" => "USD",
+          "targetCurrency" => "USD",
+          "sourceValue" => 20.0,
+          "targetValue" => 20.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-05"
+        }
+      ]
+    )
+    # USD still needs the legacy fallback, so transfers get fetched profile-wide --
+    # including this EUR-currency row, which must not land on the already-migrated
+    # EUR account.
+    transfers = [ build_transfer(id: 99, source_currency: "EUR", target_currency: "EUR", target_account: 9999) ]
+    provider = FakeWiseProvider.new(balances: balances, transfers: transfers, statement_fail_balance_ids: [ "10000002" ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    eur_account.reload
+    assert_includes provider.calls, :get_transfers
+    refute_includes eur_account.raw_transactions_payload.filter_map { |t| t["id"] }, 99
+    assert_includes eur_account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }, "already-migrated-eur"
   end
 
   test "keeps transfer cutoff incremental after the first sync when full history is enabled" do

@@ -88,4 +88,21 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, @occurrence.reload.allocations.count,
       "a nil-cast date would have silently defaulted the payment to today"
   end
+
+  test "allocation feedback is available in German" do
+    expected_translations = {
+      "recurring_allocations.over_allocation" => "Damit würdest du mehr als den Transaktionsbetrag zuordnen.",
+      "recurring_allocations.missing_rate" => "Kein Wechselkurs verfügbar. Gib den Betrag manuell ein.",
+      "recurring_allocations.already_allocated" => "Diese Transaktion ist dieser Rechnung bereits zugeordnet",
+      "recurring_allocations.invalid" => "Die Zahlung konnte nicht erfasst werden",
+      "recurring_allocations.create.success" => "Zahlung zugeordnet",
+      "recurring_allocations.destroy.success" => "Zahlungszuordnung entfernt",
+      "recurring_allocations.confirm.success" => "Zahlung der Rechnung zugeordnet",
+      "recurring_allocations.reject.success" => "Vorschlag abgelehnt. Diese Transaktion wird für diese Rechnung nicht mehr vorgeschlagen."
+    }
+
+    expected_translations.each do |key, translation|
+      assert_equal translation, I18n.t(key, locale: :de, fallback: false)
+    end
+  end
 end

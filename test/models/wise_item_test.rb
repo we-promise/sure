@@ -44,6 +44,38 @@ class WiseItemTest < ActiveSupport::TestCase
     AccountProvider.create!(account: @jar_sure_account, provider: @jar_account)
   end
 
+  # SCA keypair
+
+  test "sca_configured? is false without a private key" do
+    assert_not @wise_item.sca_configured?
+    assert_nil @wise_item.sca_public_key
+  end
+
+  test "sca_configured? is false when the stored private key is corrupted" do
+    @wise_item.update_column(:sca_private_key, "not a real PEM")
+
+    assert_nil @wise_item.sca_public_key
+    assert_not @wise_item.sca_configured?
+  end
+
+  test "generate_sca_keypair! stores a private key and returns a matching public key" do
+    public_pem = @wise_item.generate_sca_keypair!
+
+    assert @wise_item.sca_configured?
+    assert_includes public_pem, "PUBLIC KEY"
+    assert_equal public_pem, @wise_item.sca_public_key
+
+    private_key = OpenSSL::PKey::RSA.new(@wise_item.sca_private_key)
+    assert_equal private_key.public_key.to_pem, public_pem
+  end
+
+  test "generate_sca_keypair! replaces a previously generated key" do
+    first_public_key = @wise_item.generate_sca_keypair!
+    second_public_key = @wise_item.generate_sca_keypair!
+
+    assert_not_equal first_public_key, second_public_key
+  end
+
   # link_jar_transfers!
 
   test "links matching interbalance inflow and outflow entries as a Transfer" do
