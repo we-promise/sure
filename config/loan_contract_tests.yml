@@ -18,6 +18,8 @@ C4:
   class: Loan::SimulatorTest
   tests:
     - passes the accrual stub boundaries to the interest resolver
+    - rejects an accrual period before the date of the starting balance
+    - accepts a starting balance dated on the accrual start date
 C5:
   file: test/models/loan/amortization_schedule_test.rb
   class: Loan::AmortizationScheduleTest

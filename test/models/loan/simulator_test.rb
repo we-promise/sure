@@ -89,10 +89,33 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.00"), result.payments.first[:interest_payment]
   end
 
+  # C4's guard: a run may not accrue on a balance it does not yet have.
+  #
+  # This test used to omit starting_balance:, so it raised
+  # "missing keyword: :starting_balance" and never reached validate_boundaries!
+  # at all -- and assert_raises' second argument is the FAILURE message, not a
+  # matcher, so nothing noticed. It passed for the wrong reason.
   test "rejects an accrual period before the date of the starting balance" do
-    assert_raises(ArgumentError, "starting balance date must precede accrual start") do
+    error = assert_raises(ArgumentError) do
       build_simulator(
+        starting_balance: "100.00",
         starting_balance_as_of: Date.new(2024, 2, 1),
+        accrual_start_date: Date.new(2024, 1, 15),
+        payment_schedule: [ Date.new(2024, 3, 1) ],
+        payment_strategy: :hold,
+        payment_amount_for: ->(**_args) { BigDecimal("100.00") }
+      )
+    end
+
+    assert_equal "starting balance date must be on or before accrual start date", error.message,
+      "the guard must be what raised -- not a missing keyword or a non-numeric value"
+  end
+
+  test "accepts a starting balance dated on the accrual start date" do
+    assert_nothing_raised do
+      build_simulator(
+        starting_balance: "100.00",
+        starting_balance_as_of: Date.new(2024, 1, 15),
         accrual_start_date: Date.new(2024, 1, 15),
         payment_schedule: [ Date.new(2024, 3, 1) ],
         payment_strategy: :hold,
