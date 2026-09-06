@@ -1501,7 +1501,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       date: Date.today,
       name: "DIRECT DEBIT",
       source: "simplefin",
-      extra: { "simplefin" => { "pending" => false } },
+      extra: nil,
       extra_keys_to_remove: [ %w[simplefin amount_normalization] ]
     )
 
