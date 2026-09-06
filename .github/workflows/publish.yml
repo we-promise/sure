@@ -69,6 +69,8 @@ jobs:
 
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
+      build_sha: ${{ steps.built_ref.outputs.sha }}
+      build_ref_name: ${{ steps.built_ref.outputs.ref_name }}
 
     permissions:
       contents: read
@@ -84,6 +86,21 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.inputs.ref || github.ref }}
 
+      # workflow_dispatch builds an arbitrary `ref`, but github.sha/github.ref_name
+      # still describe the branch the workflow was dispatched FROM. Resolve what
+      # was actually checked out so the tag, build arg and OCI labels describe the
+      # code inside the image rather than the workflow's own branch.
+      - name: Resolve built commit
+        id: built_ref
+        shell: bash
+        run: |
+          BUILT_SHA="$(git rev-parse HEAD)"
+          BUILT_REF_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          echo "sha=${BUILT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ref_name=${BUILT_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "BUILD_SHA=${BUILT_SHA}" >> "$GITHUB_ENV"
+          echo "BUILD_REF_NAME=${BUILT_REF_NAME}" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
@@ -98,7 +115,9 @@ jobs:
         id: tag_config
         shell: bash
         run: |
-          BASE_CONFIG="type=sha,format=long"
+          # Equivalent to `type=sha,format=long`, but pinned to the commit we
+          # checked out rather than to github.sha.
+          BASE_CONFIG="type=raw,value=sha-${BUILD_SHA}"
           if [[ $GITHUB_EVENT_NAME == "schedule" ]]; then
             BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly"
             BASE_CONFIG+=$'\n'"type=schedule,pattern=nightly-{{date 'ddd'}}"
@@ -133,7 +152,8 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
-            org.opencontainers.image.ref.name=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ env.BUILD_SHA }}
+            org.opencontainers.image.ref.name=${{ env.BUILD_REF_NAME }}
             org.opencontainers.image.vendor=we-promise
             org.opencontainers.image.title=Sure
             org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
@@ -143,7 +163,7 @@ jobs:
         id: build
         with:
           context: .
-          build-args: BUILD_COMMIT_SHA=${{ github.sha }}
+          build-args: BUILD_COMMIT_SHA=${{ env.BUILD_SHA }}
           platforms: 'linux/${{ matrix.platform }}'
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
@@ -208,7 +228,8 @@ jobs:
         env:
           TAGS: ${{ needs.build.outputs.tags }}
           DIGESTS_DIR: ${{ runner.temp }}/digests
-          REF_NAME: ${{ github.ref_name }}
+          REF_NAME: ${{ needs.build.outputs.build_ref_name }}
+          REVISION: ${{ needs.build.outputs.build_sha }}
         shell: bash -xeuo pipefail {0}
         run: |
           tag_args=()
@@ -225,7 +246,7 @@ jobs:
           annotations=(
             "index:org.opencontainers.image.created=$(date -Iseconds)"
             'index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}'
-            'index:org.opencontainers.image.revision=${{ github.sha }}'
+            "index:org.opencontainers.image.revision=${REVISION}"
             "index:org.opencontainers.image.ref.name=${REF_NAME}"
             'index:org.opencontainers.image.vendor=we-promise'
             'index:org.opencontainers.image.licenses=AGPL-3.0'
