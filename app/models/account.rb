@@ -715,10 +715,15 @@ class Account < ApplicationRecord
       if Current.user.present? && Current.user.family_id == family_id
         self.owner = Current.user
       else
+        # `id` breaks ties on `created_at`. Two users of the same role can share
+        # a timestamp (they are created in one transaction, or the column is
+        # backfilled), and ordering on `created_at` alone leaves the winner to
+        # the query plan — so the same family can get a different default owner
+        # from one call to the next.
         self.owner =
-          family&.users&.where(role: "admin")&.order(:created_at)&.first ||
-          family&.users&.where(role: "super_admin")&.order(:created_at)&.first ||
-          family&.users&.order(:created_at)&.first
+          family&.users&.where(role: "admin")&.order(:created_at, :id)&.first ||
+          family&.users&.where(role: "super_admin")&.order(:created_at, :id)&.first ||
+          family&.users&.order(:created_at, :id)&.first
       end
     end
 

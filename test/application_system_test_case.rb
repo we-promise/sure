@@ -59,6 +59,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
           chrome_options.add_argument("--headless=new") if headless
           chrome_options.add_argument("--no-sandbox")
           chrome_options.add_argument("--disable-dev-shm-usage")
+          chrome_options.binary = ENV["CHROME_BIN"] if ENV["CHROME_BIN"].present?
         end
       end
 
@@ -70,6 +71,21 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     end
 
     driven_by :selenium_local_chrome, screen_size: [ 1400, 1400 ]
+  end
+
+  # Capybara sees the *outgoing* body while a Turbo visit is still in flight,
+  # so assertions pass — and clicks land — on a page that is about to be
+  # replaced. That is invisible when the destination differs from the current
+  # page, and silent when it does not: work done on the outgoing body (an
+  # opened `#modal` dialog, say) is discarded by the render with no error.
+  #
+  # Stamp the current body, click, then wait for the stamp to go. Turbo
+  # replaces the whole body when it renders the response, so the stamp's
+  # disappearance *is* the render — not a guess at how long it takes.
+  def click_link_and_wait_for_render(locator, **options)
+    page.execute_script("document.body.dataset.preVisitBody = 'true'")
+    click_link(locator, **options)
+    assert_no_selector "body[data-pre-visit-body]", visible: :all
   end
 
   def teardown
