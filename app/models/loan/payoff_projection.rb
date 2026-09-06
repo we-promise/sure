@@ -61,7 +61,14 @@ class Loan
       rescue ArgumentError, TypeError
         nil
       end
-      return nil if parsed.nil? || parsed <= 0
+      # finite? first: BigDecimal("NaN") and BigDecimal("Infinity") both survive
+      # `parsed <= 0` -- NaN because every comparison against it is false, and
+      # Infinity because it is genuinely positive. Money.new accepts either, so
+      # a non-finite extra payment would reach Loan::Simulator and poison the
+      # projection. The controller already rejects these at the request
+      # boundary; this is the same check where the value is actually converted,
+      # for callers that do not come through it.
+      return nil if parsed.nil? || !parsed.finite? || parsed <= 0
 
       monthly_amount = case frequency.to_s
       when "weekly" then parsed * 52 / 12

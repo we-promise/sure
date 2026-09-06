@@ -321,4 +321,22 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
 
     assert_not Loan::PayoffProjection.eligible_for_extra_payment?(loan)
   end
+
+  # BigDecimal parses these without raising, and both slip past a `<= 0` guard:
+  # every comparison with NaN is false, and Infinity is genuinely positive.
+  # Money.new accepts either, so the value would reach Loan::Simulator.
+  test "monthly_equivalent rejects non-finite amounts" do
+    %w[NaN Infinity -Infinity].each do |raw|
+      assert_nil Loan::PayoffProjection.monthly_equivalent(amount: raw, frequency: "monthly", currency: "USD"),
+        "#{raw} must not become a Money amount that can reach the simulator"
+    end
+  end
+
+  test "monthly_equivalent still accepts ordinary amounts" do
+    money = Loan::PayoffProjection.monthly_equivalent(amount: "50", frequency: "weekly", currency: "USD")
+
+    assert_not_nil money
+    assert_predicate money.amount, :finite?
+    assert_in_delta 216.67, money.amount.to_f, 0.01, "50/week is 50 * 52 / 12 monthly-equivalent"
+  end
 end
