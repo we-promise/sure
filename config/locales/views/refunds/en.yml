@@ -1,6 +1,7 @@
 en:
   refunds:
     title: Purchase refund
+    manage: Manage refund
     preview: Preview
     description: Refunds reduce spending in their category and do not count as income. Optionally link the original purchase to track its final cost.
     search: Search purchases

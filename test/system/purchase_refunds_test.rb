@@ -18,5 +18,9 @@ class PurchaseRefundsTest < ApplicationSystemTestCase
     visit transaction_path(purchase)
     assert_selector "[data-testid='purchase-net-cost']", text: /200/
     assert_text "Eight shirts returned"
+
+    visit transaction_path(refund)
+    assert_selector "summary", text: /Purchase refund/i, count: 1
+    assert_selector "details:not([open]) > summary", text: /Manage refund/i
   end
 end

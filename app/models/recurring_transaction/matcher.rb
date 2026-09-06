@@ -78,7 +78,7 @@ class RecurringTransaction
           .where.not(id: RecurringAllocation.where.not(entry_id: nil).select(:entry_id))
           .then { |scope| series.account_id.present? ? scope.where(account_id: series.account_id) : scope }
           .includes(:entryable)
-          .find { |entry| repair_identity?(series, entry) }
+          .find { |entry| !entry.transaction.refund? && repair_identity?(series, entry) }
 
         allocation.update!(entry: replacement) if replacement
       end
