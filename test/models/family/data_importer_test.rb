@@ -2115,6 +2115,40 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 2, @family.tags.count
   end
 
+  test "imports a multi-tag rule action with a comma-containing tag name from CSV-quoted value" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Comma Tag Name Rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "subscription" }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_tags",
+              value: "Weekly,\"Food, Dining\""
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Comma Tag Name Rule")
+    weekly_tag = @family.tags.find_by!(name: "Weekly")
+    comma_tag = @family.tags.find_by!(name: "Food, Dining")
+
+    imported_tag_ids = rule.actions.first.value.split(",")
+    assert_equal [ weekly_tag.id, comma_tag.id ].sort, imported_tag_ids.sort
+    assert_equal 2, @family.tags.count
+  end
+
   test "imports a multi-tag rule action from a legacy single-tag value_ref hash" do
     ndjson = build_ndjson([
       {

@@ -29,6 +29,21 @@ class Rule::Action < ApplicationRecord
     super(val)
   end
 
+  # Encodes a list of tag (or other) names as a single comma-separated string
+  # for the portable `value`/CSV-import representation, CSV-quoting any name
+  # that itself contains a comma (e.g. "Food, Dining") so it round-trips as
+  # one name instead of being split into two on import.
+  def self.encode_multi_value_names(names)
+    CSV.generate_line(names, row_sep: "")
+  end
+
+  # Inverse of .encode_multi_value_names. Also accepts a plain unquoted
+  # comma-separated string (the format used before quoting was introduced),
+  # which CSV parses the same way as long as no name contains a comma.
+  def self.decode_multi_value_names(str)
+    CSV.parse_line(str.to_s) || []
+  end
+
   def apply(resource_scope, ignore_attribute_locks: false, rule_run: nil)
     executor.execute(resource_scope, value: execution_value, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run) || 0
   end

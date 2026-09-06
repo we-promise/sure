@@ -180,6 +180,39 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal [ existing_tag.id, new_tag.id ], action.value.split(",")
   end
 
+  test "imports a multi-tag action preserving a tag name that contains a comma" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    actions_json = [
+      {
+        action_type: "set_transaction_tags",
+        value: CSV.generate_line([ "Existing Tag", "Food, Dining" ], row_sep: "")
+      }
+    ].to_json
+    conditions_json = [
+      { condition_type: "transaction_name", operator: "like", value: "test" }
+    ].to_json
+
+    csv = CSV.generate do |csv_out|
+      csv_out << %w[name resource_type active effective_date conditions actions]
+      csv_out << [ "Comma tag rule", "transaction", true, nil, conditions_json, actions_json ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    comma_tag = Tag.find_by!(family: @family, name: "Food, Dining")
+
+    rule = Rule.find_by!(family: @family, name: "Comma tag rule")
+    action = rule.actions.first
+    assert_equal "set_transaction_tags", action.action_type
+    assert_equal [ existing_tag.id, comma_tag.id ], action.value.split(",")
+  end
+
   test "updates existing rule when re-importing with same name" do
     # First import
     import1 = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")

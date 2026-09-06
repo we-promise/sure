@@ -1458,7 +1458,7 @@ class Family::DataImporter
       else []
       end
 
-      names = refs.any? ? refs.map { |ref| ref["name"] } : action_data["value"].to_s.split(",")
+      names = refs.any? ? refs.map { |ref| ref["name"] } : Rule::Action.decode_multi_value_names(action_data["value"])
       tags_by_name = @family.tags.where(name: names).index_by(&:name)
 
       tag_ids = names.filter_map do |name|

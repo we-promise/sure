@@ -280,7 +280,7 @@ class RuleImport < Import
     end
 
     def resolve_import_multi_tag_value(value)
-      names = value.to_s.split(",").map(&:strip).reject(&:blank?)
+      names = Rule::Action.decode_multi_value_names(value).map(&:strip).reject(&:blank?)
       return value if names.empty?
 
       tags_by_name = family.tags.where(name: names).index_by(&:name)

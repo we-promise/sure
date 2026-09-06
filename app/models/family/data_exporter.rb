@@ -807,7 +807,7 @@ class Family::DataExporter
       refs = records.compact.map { |record| rule_value_ref("Tag", record) }
 
       {
-        value: names.join(","),
+        value: Rule::Action.encode_multi_value_names(names),
         # A single tag keeps the pre-existing scalar value_ref shape for
         # backward compatibility with older exports; only genuinely
         # multi-tag actions use an array. Keyed off `ids.size` (not
