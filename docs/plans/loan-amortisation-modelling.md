@@ -2502,6 +2502,16 @@ available in the issue or pull request:
    PR** that changes it.
 6. A stacked branch is not "merged". State the target branch, and do not report a tranche as
    validated until the **integrated tip** has a green run.
+7. **`loan.amortizations` is a cache, not a data source.** It is valid only while
+   `schedule_current?`, and since #39 no read path rebuilds it. Every surface that shows a figure
+   reads `Loan::AmortizationSchedule#display_rows` — persisted rows when current, recomputed in
+   memory when not. A surface that genuinely must read persisted rows has to **declare their
+   freshness** the way `Api::V1::LoansController#amortization_schedule` does with its `status` field.
+
+   Four surfaces broke this before it was written down, each producing the same silent failure —
+   two different loans' numbers on one screen, no exception, no failing test (risk R21): the
+   schedule table (#39), the payoff projection (#35 × #39), the Overview payoff-date card (#7) and
+   the payoff chart (#52). `test/models/loan/amortizations_read_guard_test.rb` enforces it (#56).
 
 ## 17.6 Engineering effort estimate
 
