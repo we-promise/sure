@@ -144,45 +144,80 @@
     <% if (details = build_transaction_extra_details(@entry)) %>
       <% dialog.with_section(title: t(".additional_details"), open: false) do %>
         <div class="px-3 py-2 space-y-3">
-          <% if details[:kind] == :simplefin %>
-            <% sf = details[:simplefin] %>
-            <% if sf.present? %>
-              <dl class="space-y-2">
-                <% if sf[:payee].present? %>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm"><%= t(".payee") %></dt>
-                    <dd class="text-sm text-primary"><%= sf[:payee] %></dd>
-                  </div>
-                <% end %>
-                <% if sf[:description].present? %>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm"><%= t(".description") %></dt>
-                    <dd class="text-sm text-primary"><%= sf[:description] %></dd>
-                  </div>
-                <% end %>
-                <% if sf[:memo].present? %>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm"><%= t(".memo") %></dt>
-                    <dd class="text-sm text-primary"><%= sf[:memo] %></dd>
-                  </div>
-                <% end %>
-              </dl>
+          <% if details[:kind] == :simplefin || details[:kind] == :plaid %>
+            <% if details[:kind] == :simplefin %>
+              <% sf = details[:simplefin] %>
+              <% if sf.present? %>
+                <dl class="space-y-2">
+                  <% if sf[:payee].present? %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-secondary text-sm shrink-0"><%= t(".payee") %></dt>
+                      <dd class="text-sm text-primary text-right break-words"><%= sf[:payee] %></dd>
+                    </div>
+                  <% end %>
+                  <% if sf[:description].present? %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-secondary text-sm shrink-0"><%= t(".description") %></dt>
+                      <dd class="text-sm text-primary text-right break-words"><%= sf[:description] %></dd>
+                    </div>
+                  <% end %>
+                  <% if sf[:memo].present? %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-secondary text-sm shrink-0"><%= t(".memo") %></dt>
+                      <dd class="text-sm text-primary text-right break-words"><%= sf[:memo] %></dd>
+                    </div>
+                  <% end %>
+                </dl>
+              <% end %>
+            <% else %>
+              <% plaid = details[:plaid] %>
+              <% if plaid.present? %>
+                <dl class="space-y-2">
+                  <% if plaid[:original_description].present? %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-secondary text-sm shrink-0"><%= t(".original_description") %></dt>
+                      <dd class="text-sm text-primary text-right break-words"><%= plaid[:original_description] %></dd>
+                    </div>
+                  <% end %>
+                  <% if plaid[:payment_channel].present? %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-secondary text-sm shrink-0"><%= t(".payment_channel") %></dt>
+                      <dd class="text-sm text-primary text-right break-words"><%= plaid[:payment_channel] %></dd>
+                    </div>
+                  <% end %>
+                  <% if plaid[:transaction_code].present? %>
+                    <div class="flex items-start justify-between gap-2">
+                      <dt class="text-secondary text-sm shrink-0"><%= t(".transaction_code") %></dt>
+                      <dd class="text-sm text-primary text-right break-words"><%= plaid[:transaction_code] %></dd>
+                    </div>
+                  <% end %>
+                </dl>
+              <% end %>
             <% end %>
             <% if details[:provider_extras].present? %>
               <div class="pt-2">
                 <h4 class="text-sm text-secondary mb-1"><%= t(".provider_extras") %></h4>
                 <dl class="space-y-2">
                   <% details[:provider_extras].each do |ex| %>
-                    <div class="flex items-center justify-between gap-2">
-                      <dt class="text-secondary text-sm"><%= ex[:key] %></dt>
-                      <dd class="text-sm text-primary truncate max-w-[60%]" title="<%= ex[:title] %>"><%= ex[:value] %></dd>
-                    </div>
+                    <% if ex[:multiline] %>
+                      <div class="space-y-1">
+                        <dt class="text-secondary text-sm"><%= ex[:key] %></dt>
+                        <dd>
+                          <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto whitespace-pre-wrap break-words"><%= ex[:value] %></pre>
+                        </dd>
+                      </div>
+                    <% else %>
+                      <div class="flex items-start justify-between gap-2">
+                        <dt class="text-secondary text-sm shrink-0"><%= ex[:key] %></dt>
+                        <dd class="text-sm text-primary text-right break-words"><%= ex[:value] %></dd>
+                      </div>
+                    <% end %>
                   <% end %>
                 </dl>
               </div>
             <% end %>
           <% else %>
-            <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto"><%= details[:raw] %></pre>
+            <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto whitespace-pre-wrap break-words"><%= details[:raw] %></pre>
           <% end %>
         </div>
       <% end %>
