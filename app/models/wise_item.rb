@@ -209,7 +209,15 @@ class WiseItem < ApplicationRecord
       self.token = token&.strip
     end
 
+    # Scoped to writes of the key itself. An install that generated a key
+    # before this validation existed still has that value in the column, so
+    # validating on every save would reject every later write to the record:
+    # renaming the connection, and worse, WiseItemsController#destroy, which
+    # unlinks the accounts BEFORE destroy_later's update! and would leave the
+    # provider half unlinked and still active. Refusing a NEW key is the point;
+    # refusing to let go of an old one is not.
     def sca_private_key_requires_encryption
+      return unless will_save_change_to_sca_private_key?
       return if sca_private_key.blank? || sca_encryption_available?
 
       errors.add(:sca_private_key, :encryption_unavailable)
