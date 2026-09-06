@@ -186,9 +186,13 @@ L14 (+1d), and FR-504/505 confirmed in scope as L15/L16 (5d).
 to the loan chart path, which puts it behind L6. The generalised account-wide version is proposed
 separately, upstream.
 
-**L10 has no blockers and is only 2 days.** It is deliberately independent — a standalone
-improvement affecting every account type, useful as filler when someone is blocked, and it wants its
-own review with before/after screenshots for a *non-loan* account (design doc R10).
+~~**L10 has no blockers and is only 2 days.** It is deliberately independent — a standalone
+improvement affecting every account type, useful as filler when someone is blocked.~~
+
+**Superseded by the paragraph above.** F11 rescoped L10 from an account-wide platform change to the
+loan chart path, which puts it behind L6 — as the dependency table (§2) and the graph (§3) both
+already show. The generalised account-wide version is proposed separately, upstream, and it is that
+version which would have wanted before/after screenshots for a non-loan account (design doc R10).
 
 ---
 
@@ -1457,10 +1461,10 @@ only when you are actually opening the PR; do not mirror the whole backlog upstr
 
 ## 8. Bootstrap script
 
-Run after enabling Issues (§0). Creates labels, milestones, the epic and all 14 issues, then wires
-the epic's task list to the real issue numbers.
+Run after enabling Issues (§0). Creates labels, milestones, the epic and all **18 work issues**,
+then wires the epic's task list to the real issue numbers.
 
-Review it before running — it creates 19 issues.
+Review it before running — it creates 19 issues in total, the epic included.
 
 ```bash
 #!/usr/bin/env bash

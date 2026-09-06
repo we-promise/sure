@@ -738,7 +738,10 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(loan_account)
 
     assert_response :success
-    assert_select "*", text: I18n.t("loans.tabs.overview.unknown")
+    # Scoped to the payoff-date card. `assert_select "*"` matches any element,
+    # and this loan renders "Unknown" in the Type card too -- so the unscoped
+    # version passed without proving the payoff-date fallback at all.
+    assert_select "div", text: /#{Regexp.escape(I18n.t("loans.tabs.overview.original_payoff_date"))}.*#{Regexp.escape(I18n.t("loans.tabs.overview.unknown"))}/m
   end
 
   test "the Overview payoff date does not depend on persisted amortization rows" do

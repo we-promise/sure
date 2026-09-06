@@ -295,7 +295,12 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 2, loan.variable_rates.length
     assert_equal 4.0, loan.variable_rates[0][1]
     assert_equal 4.5, loan.variable_rates[1][1]
-    assert_equal Date.new(2027, 1, 1), loan.next_rate_change_date
+    # Inside travel_to: next_rate_change_date compares against Date.current, so
+    # asserting a hard-coded 2027 date against the real clock is a test that
+    # starts failing on 2027-01-01 for no reason connected to the code.
+    travel_to Date.new(2026, 1, 1) do
+      assert_equal Date.new(2027, 1, 1), loan.next_rate_change_date
+    end
 
     travel_to Date.new(2027, 1, 2) do
       assert_equal Date.new(2028, 1, 1), loan.next_rate_change_date

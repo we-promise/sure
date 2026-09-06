@@ -576,7 +576,14 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
 
     # And the gate must go green again once the mutation is removed, so a
     # permanently-red harness cannot masquerade as a working one.
-    assert_characterized_schedule loan, rows
+    #
+    # This MUST bypass the caches. Loan#amortization_schedule memoises by
+    # signature and AmortizationSchedule#payments memoises its rows, so
+    # assert_characterized_schedule here would re-read what the first call
+    # cached and pass without ever invoking the restored method -- proven by
+    # disabling the restore, after which the test still passed. That is the
+    # same inert-assertion defect this test replaced.
+    assert_equal rows, uncached_schedule_rows(loan)
   end
 
   private
