@@ -69,6 +69,15 @@ class Loan
       payments = []
       payment_number = 1
       held_payment = nil
+      # The ACCRUAL rate is a step function carried across periods, seeded once
+      # and moved only by the accrual clock (C10). It is deliberately NOT
+      # re-read from segment[:rate] each period: that is the PAYMENT-sizing
+      # rate, and a re-amortisation event effective on a payment date belongs
+      # to that date's payment but to the FOLLOWING accrual window -- accrual
+      # windows are half-open, so a rate effective 1 March belongs to
+      # [Mar 1, Apr 1), not to the February that ran entirely at the old rate.
+      # Reading segment[:rate] re-rated the period ENDING on the boundary (#48).
+      accrual_rate = nil
 
       rate_segments.each do |segment|
         remaining_payments = payment_schedule.length - payment_number + 1
@@ -99,19 +108,26 @@ class Loan
               rate: segment[:rate]
             )
           elsif @daily_accrual
+            # Seeded from the ACCRUAL clock at accrual_start_date, not from
+            # segment[:rate]. A rate change effective on the FIRST payment date
+            # is already in that segment, so seeding from it would accrue the
+            # opening period at the new rate -- the same defect this fixes,
+            # surviving at the first boundary.
+            accrual_rate ||= decimal(@accrual_rate_for.call(accrual_start_date))
+            period_rate_changes = accrual_rate_changes_between(previous_date, payment_date)
+
             interest, balance = accrue_daily_period(
               from_date: previous_date,
               to_date: payment_date,
               balance: balance,
-              # The period's contracted rate is the accrual base; C7 movement
-              # WITHIN the period comes from the accrual clock below. Where
-              # there is no intra-period change the two clocks agree by
-              # definition, so there is nothing to separate.
-              annual_rate: segment[:rate],
-              annual_rate_changes: accrual_rate_changes_between(previous_date, payment_date),
+              annual_rate: accrual_rate,
+              annual_rate_changes: period_rate_changes,
               extra_changes: extra_changes,
               offset_changes: offset_changes
             )
+            # Carry the clock forward: whatever rate the window ended on is the
+            # rate the next window opens on.
+            accrual_rate = period_rate_changes.last.fetch(:amount) if period_rate_changes.any?
             interest.round(@currency_precision)
           else
             # Monthly accrual still honours extra repayments: they reduce the
