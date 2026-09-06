@@ -346,6 +346,7 @@ samples:
         - name: "get_category_trends"
           params:
             classification: "income"
+            months: 12
       response_contains: []
 
   # ===== I5: scenario comparison =====

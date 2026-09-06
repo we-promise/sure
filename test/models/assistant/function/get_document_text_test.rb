@@ -122,6 +122,25 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     assert_nil second[:next_from_char]
   end
 
+  # The cursor used to be clamped, which stranded the tail of any page longer
+  # than the bound, which is the exact failure it exists to fix.
+  test "a cursor beyond twelve million characters still reaches the page tail" do
+    max = Assistant::Function::GetDocumentText::MAX_CHARS
+    offset = max * 1_000
+    statement = create_statement
+
+    AccountStatement::TextExtractor.any_instance.stubs(:extract).returns(
+      AccountStatement::TextExtractor::Result.new(
+        pages: [ ("A" * offset) + "TAIL" ], page_count: 1, extractable: true, note: nil
+      )
+    )
+
+    result = @fn.call("account_statement_id" => statement.id, "from_page" => 1, "from_char" => offset)
+
+    assert_equal "TAIL", result[:pages].first[:text]
+    assert_equal false, result[:has_more_pages]
+  end
+
   test "an oversized page hands the following pages back once it is exhausted" do
     max = Assistant::Function::GetDocumentText::MAX_CHARS
     statement = create_statement

@@ -39,6 +39,23 @@ class RecurringTransaction::SeasonalIdentifierTest < ActiveSupport::TestCase
     assert_equal "quarterly", RecurringTransaction::FrequencyPreset.detect(series).key
   end
 
+  # An annual premium carries the date it was charged in its own label, so the
+  # raw names never repeat and every occurrence used to become its own group.
+  test "groups date-stamped card labels that differ only by the embedded date" do
+    charge(name: "CB 02/09 AXA ASSURANCE", amount: 420, date: Date.current - 730)
+    charge(name: "CB 04/09 AXA ASSURANCE", amount: 430, date: Date.current - 365)
+    charge(name: "CB 03/09 AXA ASSURANCE", amount: 435, date: Date.current)
+
+    created = identify
+
+    series = created.find { |candidate| candidate.name.to_s.include?("AXA") }
+
+    assert_not_nil series, "three annual charges of the same premium must form one series"
+    assert_equal "AXA ASSURANCE", series.name, "the series is named by the cleaned label"
+    assert_equal 3, series.occurrence_count
+    assert_equal "annual", RecurringTransaction::FrequencyPreset.detect(series).key
+  end
+
   test "the created series projects forward on its real cadence" do
     [ 0, 91, 182 ].each do |offset|
       charge(name: "IMPOTS ACOMPTE", amount: 110, date: Date.current - 182 + offset)

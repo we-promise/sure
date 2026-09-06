@@ -148,6 +148,62 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     assert_includes @family.family_documents.readable_by(users(:family_member)), document
   end
 
+  # An unlinked statement is gated on statement_manager? by
+  # AccountStatement#viewable_by?, so "no account" must not read as "everyone":
+  # a guest reaching the vault through search would otherwise get its text.
+  test "an unmatched statement's document stays out of a guest's reach" do
+    statement = build_statement
+    statement.save!
+
+    stub_upload("file_guest")
+    statement.index_in_vector_store!
+    document = @family.family_documents.find_by(provider_file_id: "file_guest")
+
+    guest = users(:family_member)
+    guest.update!(role: :guest)
+
+    assert_nil document.account_id
+    assert_not_includes @family.family_documents.readable_by(guest), document
+    assert_includes @family.family_documents.readable_by(users(:family_admin)), document
+  end
+
+  test "a document that is not a statement stays family-wide for a guest" do
+    guest = users(:family_member)
+    guest.update!(role: :guest)
+
+    document = @family.family_documents.create!(
+      filename: "contrat.pdf",
+      content_type: "application/pdf",
+      status: "ready",
+      metadata: { "type" => "contract" }
+    )
+
+    assert_includes @family.family_documents.readable_by(guest), document
+  end
+
+  # readable_by evaluates the account's own sharing, so a document pointed at
+  # another family's account would be judged against the wrong owner entirely.
+  test "a document cannot name an account from another family" do
+    foreign_account = Account.create!(
+      family: families(:empty),
+      owner: users(:empty),
+      name: "Another family's account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    document = @family.family_documents.new(
+      filename: "etranger.pdf",
+      content_type: "application/pdf",
+      status: "ready",
+      account: foreign_account
+    )
+
+    assert_not document.valid?
+    assert_includes document.errors.attribute_names, :account
+  end
+
   test "an install with no vector store still accepts the upload" do
     statement = build_statement
 

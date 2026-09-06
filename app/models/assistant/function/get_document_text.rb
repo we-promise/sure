@@ -82,7 +82,10 @@ class Assistant::Function::GetDocumentText < Assistant::Function
     payload[:note] = result.note if result.note
     return payload unless result.extractable
 
-    from_char = (Integer(params["from_char"].to_s, exception: false) || 0).clamp(0, MAX_CHARS * 1_000)
+    # Floored at zero only: an upper bound here would strand the tail of any
+    # page longer than it, which is the exact failure the cursor exists to fix.
+    # An offset past the end of the page simply yields no text.
+    from_char = [ Integer(params["from_char"].to_s, exception: false) || 0, 0 ].max
 
     payload.merge(page_window(result, from_page, from_char))
   end

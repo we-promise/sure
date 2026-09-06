@@ -32,6 +32,11 @@ class Assistant::Function::GetCategoryTrends < Assistant::Function
         two half averages when you claim a trend; they are what a person would
         compute by eye and can check.
 
+        The window ends on the last COMPLETE month: the current one is still
+        being lived and would read as a collapse in spending. `months` lists the
+        months actually covered, so quote those rather than assuming the series
+        runs up to today.
+
         Figures exclude transfers between the user's own accounts, pending
         transactions and tax-advantaged accounts, the same as the income
         statement.

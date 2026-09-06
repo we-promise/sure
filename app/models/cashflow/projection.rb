@@ -397,27 +397,47 @@ class Cashflow::Projection
       @accessible_series ||= family.recurring_transactions.accessible_by(user)
     end
 
+    # Restricted to the requested accounts for the same reason #accounts is:
+    # a projection over one account must not have another account's bills and
+    # salary applied to its balance, which moved the low point by the whole
+    # amount of a series the caller deliberately selected out. Series with no
+    # account (legacy rows, and ones the user never attached) still count: they
+    # belong to the family rather than to any one account.
     def active_series
-      @active_series ||= accessible_series
-                           .where(status: :active, destination_account_id: nil)
-                           .where(currency: family.currency)
-                           .includes(:merchant, :recurrence_rules)
-                           .to_a
+      @active_series ||= begin
+        scope = accessible_series
+                  .where(status: :active, destination_account_id: nil)
+                  .where(currency: family.currency)
+                  .includes(:merchant, :recurrence_rules)
+        scope = scope.where(account_id: [ nil, *@account_ids ]) if @account_ids.present?
+        scope.to_a
+      end
     end
 
     def declared_income_series
       @declared_income_series ||= active_series.select { |series| series.bill_type == "income" && series.manual? }
     end
 
+    # Selected by EFFECTIVE due date, which is what open_occurrence_events
+    # places the event on. Filtering on due_on alone dropped an overdue row
+    # snoozed forward into the window, and because series_frontier still saw
+    # that materialized row the schedule fallback did not replace it: the bill
+    # vanished from the projection entirely.
     def occurrences_in_window
-      @occurrences_in_window ||= family.recurring_occurrences
-                                       .joins(:recurring_transaction)
-                                       .where(recurring_transaction_id: accessible_series.select(:id))
-                                       .where(recurring_transactions: { status: :active, destination_account_id: nil })
-                                       .where(currency: family.currency)
-                                       .where(due_on: start_date..end_date)
-                                       .includes(recurring_transaction: :merchant)
-                                       .to_a
+      @occurrences_in_window ||= begin
+        scope = family.recurring_occurrences
+                      .joins(:recurring_transaction)
+                      .where(recurring_transaction_id: accessible_series.select(:id))
+                      .where(recurring_transactions: { status: :active, destination_account_id: nil })
+                      .where(currency: family.currency)
+                      .where(
+                        "GREATEST(recurring_occurrences.due_on, recurring_occurrences.snoozed_until) BETWEEN ? AND ?",
+                        start_date, end_date
+                      )
+                      .includes(recurring_transaction: :merchant)
+        scope = scope.where(recurring_transactions: { account_id: [ nil, *@account_ids ] }) if @account_ids.present?
+        scope.to_a
+      end
     end
 
     # Latest materialized occurrence per series, closed rows included: the

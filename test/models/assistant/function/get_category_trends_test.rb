@@ -24,6 +24,12 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
     entry
   end
 
+  # The trend window ends on the last COMPLETE month, so `months_back: 0` is
+  # last month and anything placed in the current month sits outside it.
+  def spend_in_window(amount, months_back:, category: @category)
+    spend(amount, months_ago: months_back + 1, category: category)
+  end
+
   # The fixture family has more categories than the default limit, so the
   # series under test has to be asked for explicitly.
   def trends(**params)
@@ -40,18 +46,20 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
   end
 
   test "returns one value per month aligned with the month labels" do
-    spend(100, months_ago: 2)
+    spend_in_window(100, months_back: 2)
 
     result = trends
 
     assert_equal 6, result[:months].size
-    assert_equal Date.current.strftime("%Y-%m"), result[:months].last
+    assert_equal Date.current.prev_month.strftime("%Y-%m"), result[:months].last
+    assert_not_includes result[:months], Date.current.strftime("%Y-%m"),
+                        "the current month is still being lived and would read as a collapse"
     assert_equal 6, dining(result)[:values].size
   end
 
   test "detects a category drifting upwards" do
     [ 150, 160, 170, 200, 260, 300 ].each_with_index do |amount, index|
-      spend(amount, months_ago: 5 - index)
+      spend_in_window(amount, months_back: 5 - index)
     end
 
     row = dining(trends)
@@ -64,7 +72,7 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
 
   test "detects a category falling" do
     [ 300, 280, 250, 180, 150, 120 ].each_with_index do |amount, index|
-      spend(amount, months_ago: 5 - index)
+      spend_in_window(amount, months_back: 5 - index)
     end
 
     assert_equal "falling", dining(trends)[:direction]
@@ -72,7 +80,7 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
 
   test "does not call one exceptional month a trend" do
     [ 100, 100, 100, 100, 100, 600 ].each_with_index do |amount, index|
-      spend(amount, months_ago: 5 - index)
+      spend_in_window(amount, months_back: 5 - index)
     end
 
     row = dining(trends)
@@ -83,14 +91,14 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
   end
 
   test "reports a steady category as flat" do
-    6.times { |i| spend(100, months_ago: i) }
+    6.times { |i| spend_in_window(100, months_back: i) }
 
     assert_equal "flat", dining(trends)[:direction]
   end
 
   test "omits change_pct rather than reporting growth from nothing" do
-    spend(200, months_ago: 0)
-    spend(200, months_ago: 1)
+    spend_in_window(200, months_back: 0)
+    spend_in_window(200, months_back: 1)
 
     row = dining(trends)
 
@@ -99,8 +107,8 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
 
   test "restricts to named categories" do
     other = @family.categories.create!(name: "Groceries QA")
-    spend(100, months_ago: 1)
-    spend(500, months_ago: 1, category: other)
+    spend_in_window(100, months_back: 1)
+    spend_in_window(500, months_back: 1, category: other)
 
     result = trends("categories" => [ "dining qa" ])
 
@@ -109,8 +117,8 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
 
   test "orders by total and flags truncation" do
     other = @family.categories.create!(name: "Groceries QA")
-    spend(100, months_ago: 1)
-    spend(900, months_ago: 1, category: other)
+    spend_in_window(100, months_back: 1)
+    spend_in_window(900, months_back: 1, category: other)
 
     result = @fn.call("months" => 6, "limit" => 1)
 
@@ -134,7 +142,7 @@ class Assistant::Function::GetCategoryTrendsTest < ActiveSupport::TestCase
   # to fire one aggregation per month of the window, so asking for two years cost
   # 24 scans. One grouped query returns the same numbers.
   test "aggregates the whole window in a single query" do
-    spend(100, months_ago: 1)
+    spend_in_window(100, months_back: 1)
 
     aggregations = 0
     counter = ->(_name, _start, _finish, _id, payload) do

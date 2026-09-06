@@ -94,10 +94,20 @@ class RecurringTransaction
               .to_a
               .select { |entry| entry.entryable.is_a?(Transaction) }
               .group_by do |entry|
-                transaction = entry.entryable
-                identifier = transaction.merchant_id.present? ? [ :merchant, transaction.merchant_id ] : [ :name, entry.name ]
-                [ identifier, entry.currency, entry.account_id ]
+                [ identity_for(entry), entry.currency, entry.account_id ]
               end
+      end
+
+      # A merchant when one was detected, otherwise the CLEANED label. Grouping
+      # on the raw name is what made this pass blind to exactly the charges it
+      # exists to find: an annual premium arrives as "CB 02/09 AXA" one year and
+      # "CB 04/09 AXA" the next, so every occurrence became its own one-row
+      # group and none ever reached MIN_OCCURRENCES.
+      def identity_for(entry)
+        merchant_id = entry.entryable.merchant_id
+        return [ :merchant, merchant_id ] if merchant_id.present?
+
+        [ :name, Transaction::LabelNormalizer.normalize(entry.name, on: entry.date).name ]
       end
 
       # Same amount clustering as the monthly pass, then the biggest cluster

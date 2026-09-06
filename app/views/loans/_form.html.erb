@@ -37,12 +37,11 @@
 
       <%# Behind a disclosure: these are the contract details, useful for
           projecting a payoff date but not needed to record the loan at all. %>
-      <details class="group" <%= "open" if account.accountable.is_a?(Loan) && account.accountable.contract_terms? %>>
-        <summary class="cursor-pointer text-sm font-medium text-secondary">
-          <%= t("loans.form.contract_summary") %>
-        </summary>
-
-        <div class="space-y-2 mt-3">
+      <%= render DS::Disclosure.new(
+            title: t("loans.form.contract_summary"),
+            open: account.accountable.is_a?(Loan) && account.accountable.contract_terms?
+          ) do %>
+        <div class="space-y-2">
           <div class="flex items-center gap-2">
             <%= loan_form.date_field :origination_date, label: t("loans.form.origination_date") %>
             <%= loan_form.date_field :maturity_date, label: t("loans.form.maturity_date") %>
@@ -72,7 +71,7 @@
                                     rows: 3 %>
           </div>
         </div>
-      </details>
+      <% end %>
     <% end %>
   </div>
 <% end %>

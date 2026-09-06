@@ -33,6 +33,18 @@ class Cashflow::ProjectionTest < ActiveSupport::TestCase
     )
   end
 
+  def declare_occurrence(series:, due_on:, amount:, snoozed_until: nil)
+    @family.recurring_occurrences.create!(
+      recurring_transaction: series,
+      due_on: due_on,
+      original_due_on: due_on,
+      snoozed_until: snoozed_until,
+      expected_amount: amount,
+      currency: "USD",
+      status: "scheduled"
+    )
+  end
+
   test "produces one day per horizon day plus today" do
     projection = project(horizon_days: 30)
 
@@ -325,5 +337,77 @@ class Cashflow::ProjectionTest < ActiveSupport::TestCase
     monthly = projection.send(:monthly_recurring_outflow)
 
     assert_in_delta 100, monthly, 0.01
+  end
+
+  # ---- account scoping ------------------------------------------------------
+
+  # A projection over ONE account must not have another account's bills applied
+  # to its balance: the low point moved by the whole amount of a series the
+  # caller had deliberately selected out.
+  test "ignores series attached to an account that was not selected" do
+    other = accounts(:connected)
+    other.update!(balance: 5_000, currency: "USD")
+
+    @family.recurring_transactions.create!(
+      name: "Other account rent",
+      amount: 900,
+      currency: "USD",
+      account: other,
+      bill_type: "bill",
+      manual: true,
+      status: "active",
+      expected_day_of_month: 5,
+      anchor_date: Date.current.beginning_of_month + 4,
+      last_occurrence_date: Date.current - 1.month,
+      next_expected_date: Date.current.beginning_of_month.next_month + 4
+    )
+
+    # Past 90 days the materialized occurrences run out and the schedule takes
+    # over, so this covers both the occurrence window and the series scope.
+    labels = project(horizon_days: 200).events.map(&:label)
+
+    assert_not_includes labels, "Other account rent"
+  end
+
+  test "still counts a series with no account at all" do
+    @family.recurring_transactions.create!(
+      name: "Family-wide bill",
+      amount: 50,
+      currency: "USD",
+      account: nil,
+      bill_type: "bill",
+      manual: true,
+      status: "active",
+      expected_day_of_month: 5,
+      anchor_date: Date.current.beginning_of_month + 4,
+      last_occurrence_date: Date.current - 1.month,
+      next_expected_date: Date.current.beginning_of_month.next_month + 4
+    )
+
+    assert_includes project(horizon_days: 200).events.map(&:label), "Family-wide bill"
+  end
+
+  # ---- snoozed occurrences --------------------------------------------------
+
+  # An overdue row snoozed into the window was filtered out by due_on, and
+  # because series_frontier still saw it the schedule fallback did not replace
+  # it either, so the bill disappeared from the projection entirely.
+  test "counts an overdue occurrence snoozed forward into the window" do
+    series = declare_series(name: "Insurance", amount: 300, day: 1)
+    declare_occurrence(series: series, due_on: Date.current - 10, snoozed_until: Date.current + 5, amount: 300)
+
+    events = project(horizon_days: 60).events.select { |event| event.label == "Insurance" }
+
+    assert events.any?, "a snoozed bill still has to be paid inside the horizon"
+    assert_includes events.map(&:date), Date.current + 5
+  end
+
+  test "leaves an occurrence snoozed past the horizon out" do
+    series = declare_series(name: "Insurance", amount: 300, day: 1)
+    declare_occurrence(series: series, due_on: Date.current + 2, snoozed_until: Date.current + 400, amount: 300)
+
+    dates = project(horizon_days: 30).events.select { |event| event.label == "Insurance" }.map(&:date)
+
+    assert_not_includes dates, Date.current + 2
   end
 end

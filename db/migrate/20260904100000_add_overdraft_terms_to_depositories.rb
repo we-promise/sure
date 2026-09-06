@@ -1,4 +1,4 @@
-class AddOverdraftTermsToDepositories < ActiveRecord::Migration[8.1]
+class AddOverdraftTermsToDepositories < ActiveRecord::Migration[7.2]
   def change
     # `depositories` carried nothing but subtype and locked_attributes, so a
     # checking account's most consequential numbers, the point at which it goes

@@ -9,12 +9,11 @@
 
   <%# Behind a disclosure: most accounts have no arranged overdraft, and six
       extra inputs would bury the two fields that matter when opening one. %>
-  <details class="group" <%= "open" if account.accountable.is_a?(Depository) && account.accountable.overdraft_terms? %>>
-    <summary class="cursor-pointer text-sm font-medium text-secondary">
-      <%= t("depositories.form.overdraft_summary") %>
-    </summary>
-
-    <p class="text-xs text-secondary mt-2"><%= t("depositories.form.overdraft_hint") %></p>
+  <%= render DS::Disclosure.new(
+        title: t("depositories.form.overdraft_summary"),
+        open: account.accountable.is_a?(Depository) && account.accountable.overdraft_terms?
+      ) do %>
+    <p class="text-xs text-secondary"><%= t("depositories.form.overdraft_hint") %></p>
 
     <div class="space-y-2 mt-3">
       <%= form.fields_for :accountable do |depository_form| %>
@@ -49,5 +48,5 @@
         </div>
       <% end %>
     </div>
-  </details>
+  <% end %>
 <% end %>

@@ -1,4 +1,4 @@
-class AddTermsToLoans < ActiveRecord::Migration[8.1]
+class AddTermsToLoans < ActiveRecord::Migration[7.2]
   def change
     # `loans` already held interest_rate, rate_type and term_months, but nothing
     # anchored them in time, so neither an end date nor a remaining instalment

@@ -1,4 +1,4 @@
-class AddAccountToFamilyDocuments < ActiveRecord::Migration[8.1]
+class AddAccountToFamilyDocuments < ActiveRecord::Migration[7.2]
   # The document store had no account dimension: every search was family-wide by
   # construction, which was tolerable while only /imports fed it and stopped
   # being so once every Statement Vault upload was indexed. The link already

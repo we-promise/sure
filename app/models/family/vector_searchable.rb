@@ -47,11 +47,13 @@ module Family::VectorSearchable
     file_ids = results.filter_map { |result| result[:file_id] }.uniq
     return results if file_ids.empty?
 
-    # Only documents that NAME an account can be withheld, so anything the
-    # index returns that we have no row for stays visible: this filter exists to
-    # stop a known leak, not to become a second, silent access rule.
+    # Anything the index returns that we have no row for stays visible: this
+    # filter exists to stop a known leak, not to become a second, silent access
+    # rule. What it withholds is decided in one place, FamilyDocument#readable_by,
+    # which covers both a document naming an account the user cannot reach and an
+    # account statement not yet matched to one (those follow
+    # AccountStatement#viewable_by? and need a statement manager).
     withheld = family_documents.where(provider_file_id: file_ids)
-                               .where.not(account_id: nil)
                                .where.not(id: family_documents.readable_by(user).select(:id))
                                .pluck(:provider_file_id)
                                .to_set

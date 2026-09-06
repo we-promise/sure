@@ -50,10 +50,18 @@ class IncomeStatement
 
     attr_reader :months, :classification
 
+    # The window ends on the last COMPLETE month. Including the current one
+    # would weigh a handful of elapsed days against full months: on the 3rd of
+    # a month that reads as spending collapsing, which both halves of the
+    # direction test agree on, so a manufactured "falling" is reported with the
+    # same confidence as a real one (and a genuine rise is masked the same way).
     def periods
-      @periods ||= (0...months).map do |offset|
-        month = Date.current.beginning_of_month.advance(months: -(months - 1 - offset))
-        Period.custom(start_date: month, end_date: month.end_of_month)
+      @periods ||= begin
+        last_complete = Date.current.beginning_of_month.prev_month
+        (0...months).map do |offset|
+          month = last_complete.advance(months: -(months - 1 - offset))
+          Period.custom(start_date: month, end_date: month.end_of_month)
+        end
       end
     end
 
