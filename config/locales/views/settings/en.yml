@@ -218,6 +218,10 @@ en:
         preview:
           title: Enable preview features
           description: Opt in to in-progress features tagged preview or canary.
+    bank_sync_preferences:
+      update:
+        updated: Bank sync preferences updated
+        updated_and_resyncing: Bank sync preferences updated. Re-syncing your Plaid history to apply the change.
     budget_shares:
       update:
         success: Budget sharing settings updated
@@ -452,6 +456,9 @@ en:
         message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
       provider_form:
         save_and_connect: "Save and connect"
+      plaid_naming_preference:
+        label: "Prefer the bank's original description"
+        description: "Name transactions with the raw description from your bank instead of Plaid's cleaned-up merchant name. Changing this re-syncs your Plaid transaction history so existing transactions are renamed too."
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>

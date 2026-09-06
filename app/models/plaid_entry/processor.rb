@@ -36,8 +36,24 @@ class PlaidEntry::Processor
       plaid_transaction["transaction_id"]
     end
 
+    # Default is Plaid's cleaned merchant name. When the connection opts into
+    # bank fidelity, the raw original description wins instead.
     def name
-      merchant_name || original_description
+      merchant = merchant_name.presence
+      original = original_description.presence
+
+      if prefer_original_description?
+        original || merchant
+      else
+        merchant || original
+      end
+    end
+
+    # Memoized: this is read once per transaction in a sync batch.
+    def prefer_original_description?
+      return @prefer_original_description if defined?(@prefer_original_description)
+
+      @prefer_original_description = plaid_account.plaid_item.family.plaid_prefer_original_description?
     end
 
     def merchant_name

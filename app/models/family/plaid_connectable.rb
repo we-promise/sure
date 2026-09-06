@@ -5,6 +5,18 @@ module Family::PlaidConnectable
     has_many :plaid_items, dependent: :destroy
   end
 
+  # Replays this family's Plaid history so a naming-preference change reaches
+  # transactions that already exist. Account::ProviderImportAdapter re-enriches
+  # :name on every upsert, so re-importing is what actually renames them;
+  # clearing next_cursor is what makes Plaid hand us the full history again
+  # instead of a delta.
+  def resync_plaid_items!
+    plaid_items.syncable.find_each do |item|
+      item.update!(next_cursor: nil)
+      item.sync_later
+    end
+  end
+
   def can_connect_plaid_us?
     plaid(:us).present?
   end

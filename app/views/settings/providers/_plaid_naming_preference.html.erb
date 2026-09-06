@@ -1,0 +1,24 @@
+<%# The naming preference is family-scoped, so it lives on Family rather than in
+    the provider configuration registry (which holds instance-wide credentials).
+    One flag covers both Plaid regions — how a transaction is named is a
+    presentation choice, not a per-region credential. %>
+<div class="pt-4 border-t border-tertiary">
+  <%= form_with url: settings_bank_sync_preferences_path,
+                method: :patch,
+                data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do %>
+    <%# Rendered as DS::Toggle rather than form.toggle so the row label and
+        description are part of the click target. %>
+    <label for="family_plaid_prefer_original_description" class="flex cursor-pointer items-center justify-between gap-4">
+      <div class="text-sm space-y-1">
+        <p class="text-primary"><%= t(".label") %></p>
+        <p class="text-secondary text-xs"><%= t(".description") %></p>
+      </div>
+      <%= render DS::Toggle.new(
+            id: "family_plaid_prefer_original_description",
+            name: "family[plaid_prefer_original_description]",
+            checked: Current.family.plaid_prefer_original_description?,
+            data: { auto_submit_form_target: "auto" }
+          ) %>
+    </label>
+  <% end %>
+</div>

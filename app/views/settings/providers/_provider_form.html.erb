@@ -77,6 +77,10 @@
     </div>
   <% end %>
 
+  <% if %w[plaid plaid_eu].include?(provider_key) %>
+    <%= render "settings/providers/plaid_naming_preference" %>
+  <% end %>
+
   <% if local_assigns[:provider_setup_encryption_warning] %>
     <p class="text-xs text-secondary pt-3 border-t border-tertiary">
       <%= t("settings.providers.drawer_trust_statement_encryption_unconfigured") %>
