@@ -36,6 +36,37 @@ Run:
 Override workload or thresholds with `LOAN_COUNT`, `HISTORY_MONTHS`,
 `OFFSET_FREQUENCY_DAYS`, `MAX_P95_MS`, and `MAX_P99_MS`.
 
+### Two different numbers, on purpose
+
+The CI gate and the deployment SLO are not the same measurement and must not be
+conflated. Both are recorded here so nobody has to guess which one a given
+figure is.
+
+| | p95 | p99 | What it is |
+| --- | --- | --- | --- |
+| **Production-shaped SLO** | 100 ms | 150 ms | the deployment target, on hardware an SLO is written for. **Not enforced by CI.** |
+| **CI regression gate** | 200 ms | 400 ms | a ceiling calibrated to the shared GitHub runner, enforced by the `Loan daily-accrual performance gate` step |
+
+Calibration measurements, same workload, this runner:
+
+| Run | p95 | p99 |
+| --- | --- | --- |
+| 1 | 116.128 ms | 230.508 ms |
+| 2 | 112.643 ms | 221.674 ms |
+
+The runner does not meet the production SLO and is not expected to. Setting the
+production number as the CI threshold would produce a permanently red build that
+says nothing about the code, and the first fix anyone reaches for is raising the
+threshold — which is how a gate stops meaning anything. The ~3% spread between
+runs shows the runner is stable for this workload, so the ceilings sit ~1.7x
+above the worse of each: enough to absorb a noisy neighbour, not enough to hide
+a regression, which in a calculation like this shows up as a multiple.
+
+An earlier local measurement of 74.984 ms recorded elsewhere is **not portable**
+and must not be quoted as evidence for either number: re-measuring the same
+commit on this sandbox produced p95 214.886 ms against current `main`'s 200.960
+ms, i.e. the variation is hardware, not code.
+
 ## Variance and rebuild
 
 Run the non-mutating sample report before release:

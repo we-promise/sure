@@ -173,12 +173,23 @@ jobs:
       - name: Loan daily-accrual performance gate
         run: bin/rails loans:amortization_benchmark
         env:
-          # CALIBRATION RUN -- these are not the gate. The first run on the
-          # shared runner prints its own p95/p99; the values below are replaced
-          # with runner-measured thresholds in the following commit, and both
-          # they and the production-shaped SLO are recorded in the runbook.
-          MAX_P95_MS: "100000"
-          MAX_P99_MS: "100000"
+          # Calibrated from two runs of this step on this runner, at the
+          # workload above (100 loans x 360 months x 30-day offset points):
+          #
+          #   run 1  p95 116.128 ms  p99 230.508 ms
+          #   run 2  p95 112.643 ms  p99 221.674 ms
+          #
+          # ~3% spread between runs, so the runner is stable for this workload
+          # and the ceilings below sit ~1.7x above the worse of each. That is
+          # enough headroom to absorb a noisy-neighbour runner without letting
+          # a real regression through: a calculation regression here shows up
+          # as a multiple, not as 20%.
+          #
+          # These are NOT the production SLO (p95 <= 100 ms, p99 <= 150 ms),
+          # which this runner does not meet and is not expected to -- see the
+          # note above and docs/loans/release-evidence.md, which records both.
+          MAX_P95_MS: "200"
+          MAX_P99_MS: "400"
 
       - name: Unit and integration tests
         run: bin/rails test
