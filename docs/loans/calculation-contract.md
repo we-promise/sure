@@ -17,7 +17,7 @@ never become negative, and a converged schedule ends at exactly zero.
 | ID | Decision | Demonstrating test | External verification |
 | --- | --- | --- | --- |
 | C1 | Interest accrues daily on the end-of-day interest-bearing balance. | `Loan::InterestAccrualTest` constant-balance daily accrual | Required against a lender statement |
-| C2 | The selected production convention is actual/365: actual elapsed calendar days divided by 365, so leap-year days use 366 elapsed days over a 365 denominator. A lender observation alone does not authorize changing this contract; #65 records the evidence and decision required before selecting another convention. | `Loan::InterestAccrualTest` 28/31/366-day cases | Required against a lender statement before changing the production convention |
+| C2 | The day-count basis is a property of the loan (`loans.day_count_convention`), not one global constant. The default is actual/365 — actual elapsed calendar days divided by 365, so leap-year days use 366 elapsed days over a 365 denominator — and every existing loan keeps it, so no figure changes without a deliberate per-loan change. `actual_actual` divides each year's elapsed days by that year's own length. The set of permitted values is `Loan::InterestAccrual::DAY_COUNT_CONVENTIONS`; adding one requires evidence on #65. Selecting a basis is the borrower's assertion about their lender, not a verified fact: the schedule discloses which basis is in force and that a mismatch makes the figures an approximation (#11). | `Loan::InterestAccrualTest` 28/31/366-day cases | Required against a lender statement before the app asserts any basis is correct for a given lender |
 | C3 | Accrued interest is charged at the contractual monthly payment point. | `Loan::SimulatorTest` charge-point event test | Required against a lender statement |
 | C4 | A run has **three** boundaries — `starting_balance`, `accrual_start_date` and `payment_schedule` — plus `starting_balance_as_of`, which is a **guard rather than a boundary**: it asserts the starting balance is dated on or before the accrual window opens, so a run can never accrue on a balance it does not yet have. It contributes to no figure. A mid-cycle run accrues a stub period from `accrual_start_date` to the next contractual payment date. | `Loan::SimulatorTest` stub-period, guard-rejection and guard-boundary tests | Required for a lender mid-cycle case |
 | C5 | Payment dates are generated one calendar month after the origination/anchor date and then from the prior scheduled date; shorter months clamp the date (Jan 31 -> Feb 28/29 -> Mar 28/29). | `Loan::AmortizationScheduleTest` payment-calendar and month-end tests | Confirm against statement payment dates |
@@ -109,7 +109,10 @@ reconciliation gate has been reviewed line by line.
 ## Gate G1 and remaining approval
 
 G1 is not complete until engineering and product approve this document and its
-tests are represented in #8. The actual/365 assumption and C7/C8 timing remain
-explicit verify-against-statement items. A de-identified lender statement has
+tests are represented in #8. C7/C8 timing remains an explicit
+verify-against-statement item. The day-count basis is no longer a single
+assumption to verify — it is per-loan (C2) — but no basis is *verified* for any
+lender by the app selecting it; #65's reconciliation covers one lender and one
+loan only. A de-identified lender statement has
 not yet been supplied in this checkout; its owner, privacy approval, and source
 must be recorded on #6 before #10/#11 deployment.

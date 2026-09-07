@@ -19,6 +19,16 @@ class Loan < ApplicationRecord
   # db/migrate/20260903150000_add_amortization_bounds_to_loans.rb.
   MAX_TERM_MONTHS = 1200
 
+  # Which day-count basis this loan's interest accrues on. Held per loan
+  # rather than as one global constant because lenders differ: reconciliation
+  # against a real statement (#65) showed 43/43 monthly charges resolving under
+  # actual/actual where a fixed 365 resolved only 30/43, and that is evidence
+  # that a single constant cannot be assumed -- not evidence that actual/actual
+  # is right for every lender. `actual_365` stays the default, so an existing
+  # loan keeps the figures it already had until someone changes it deliberately.
+  DAY_COUNT_CONVENTIONS = InterestAccrual::DAY_COUNT_CONVENTIONS.map(&:to_s).freeze
+  DEFAULT_DAY_COUNT_CONVENTION = InterestAccrual::DEFAULT_DAY_COUNT_CONVENTION.to_s
+
   has_many :amortizations, class_name: "LoanAmortization", dependent: :destroy
   has_many :loan_offset_accounts, dependent: :destroy
   has_many :offset_accounts, through: :loan_offset_accounts, source: :account
@@ -31,6 +41,7 @@ class Loan < ApplicationRecord
   validates :subtype, inclusion: { in: SUBTYPES.keys }, allow_blank: true
   validates :term_months, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_TERM_MONTHS }, allow_nil: true
   validates :interest_rate, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }, allow_nil: true
+  validates :day_count_convention, inclusion: { in: DAY_COUNT_CONVENTIONS }
   validate :variable_rate_schedule_entries_are_valid
 
   before_validation :quantize_variable_rate_schedule
@@ -223,7 +234,7 @@ class Loan < ApplicationRecord
 
     account.reload
 
-    Digest::SHA256.hexdigest([
+    components = [
       AmortizationSchedule::ALGORITHM_VERSION,
       account.id,
       original_balance.amount.to_s,
@@ -234,7 +245,18 @@ class Loan < ApplicationRecord
       rate_type.to_s,
       start_date&.iso8601,
       variable_rates.map { |date, rate| [ date.to_s, normalized_rate(rate).to_s ] }
-    ].to_json)
+    ]
+
+    # Only a NON-default convention extends the signature, and it is appended
+    # rather than inserted. `ensure_amortization_schedule_current!` runs on read
+    # paths, so a signature that changed for every loan would rebuild every
+    # persisted schedule -- up to MAX_TERM_MONTHS rows under a row lock, on
+    # first view -- to produce byte-identical figures, since actual/365 is what
+    # they were already calculated on. Loans that opt into another basis do get
+    # a new signature, which is the rebuild that has to happen.
+    components << day_count_convention unless day_count_convention == DEFAULT_DAY_COUNT_CONVENTION
+
+    Digest::SHA256.hexdigest(components.to_json)
   end
 
   # Rebuild the persisted amortization schedule under a loan lock so readers
@@ -372,6 +394,7 @@ class Loan < ApplicationRecord
         saved_change_to_term_months? ||
         saved_change_to_rate_type? ||
         saved_change_to_start_date? ||
+        saved_change_to_day_count_convention? ||
         saved_change_to_variable_rate_schedule?
     end
 

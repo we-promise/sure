@@ -18,6 +18,16 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     @schedule = @loan.amortization_schedule
   end
 
+  test "hands the loan's day-count convention to the simulator" do
+    @loan.update!(day_count_convention: "actual_actual")
+
+    Loan::Simulator.expects(:new).with do |kwargs|
+      kwargs[:day_count_convention] == "actual_actual"
+    end.returns(stub(run: nil))
+
+    @loan.amortization_schedule.send(:generate_simulation, daily_accrual: false)
+  end
+
   test "schedule is amortizable for fixed rate loan with positive principal and term" do
     assert @schedule.amortizable?
   end

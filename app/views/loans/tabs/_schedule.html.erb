@@ -161,6 +161,13 @@
     </p>
   <% end %>
 
+  <%# #11 requires the basis to be stated rather than the constant quietly tuned
+      to fit one lender: reconciliation showed a fixed 365 is an approximation
+      for at least one real lender (#65). %>
+  <p class="text-sm text-secondary">
+    <%= t(".day_count_notice", basis: t("loans.form.day_count_convention_#{loan.day_count_convention}")) %>
+  </p>
+
   <div class="rounded-lg bg-container shadow-xs border border-alpha-black-25 overflow-hidden">
     <div class="max-h-128 overflow-y-auto overflow-x-auto">
       <table class="w-full text-sm">

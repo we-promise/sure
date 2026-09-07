@@ -30,6 +30,13 @@
                                  placeholder: t("loans.form.term_months_placeholder") %>
       </div>
 
+      <div class="space-y-2">
+        <%= loan_form.select :day_count_convention,
+                  Loan::DAY_COUNT_CONVENTIONS.map { |convention| [ t("loans.form.day_count_convention_#{convention}"), convention ] },
+                  { label: t("loans.form.day_count_convention") } %>
+        <p class="text-sm text-secondary"><%= t("loans.form.day_count_convention_hint") %></p>
+      </div>
+
       <div>
         <%= loan_form.select :subtype,
                   Loan.subtype_options_for_select,

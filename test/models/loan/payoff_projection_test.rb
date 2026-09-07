@@ -45,6 +45,17 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
   #
   # The projection now reads AmortizationSchedule#display_rows, the same source
   # as the table and the summary cards.
+  test "hands the loan's day-count convention to the simulator" do
+    loan = build_loan(balance: 400_000)
+    loan.update!(day_count_convention: "actual_actual")
+
+    Loan::Simulator.expects(:new).with do |kwargs|
+      kwargs[:day_count_convention] == "actual_actual"
+    end.at_least_once.returns(stub(run: stub(payments: [])))
+
+    Loan::PayoffProjection.new(loan).send(:raw_schedule)
+  end
+
   test "projects without persisted rows, and agrees with the persisted result once they exist" do
     loan = build_loan(balance: 500_000)
     loan.account.update!(balance: 450_000)
