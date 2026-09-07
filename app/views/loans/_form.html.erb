@@ -31,6 +31,11 @@
       </div>
 
       <div class="space-y-2">
+        <%= loan_form.date_field :start_date, label: t("loans.form.start_date") %>
+        <p class="text-sm text-secondary"><%= t("loans.form.start_date_hint") %></p>
+      </div>
+
+      <div class="space-y-2">
         <%= loan_form.select :day_count_convention,
                   Loan::DAY_COUNT_CONVENTIONS.map { |convention| [ t("loans.form.day_count_convention_#{convention}"), convention ] },
                   { label: t("loans.form.day_count_convention") } %>
@@ -41,6 +46,64 @@
         <%= loan_form.select :subtype,
                   Loan.subtype_options_for_select,
                   { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
+      </div>
+
+      <%# Repeatable {effective date, rate} rows. The names are written out
+          rather than built with fields_for because rate_changes is an
+          attr_accessor carrying plain rows, not an association -- the jsonb
+          column it feeds is deliberately not mass-assignable (#14, R13). %>
+      <div class="space-y-2 hidden" data-loan-offset-target="rateChanges"
+           data-controller="loan-rate-changes">
+        <h3 class="text-sm font-medium text-primary"><%= t("loans.form.rate_changes") %></h3>
+        <p class="text-sm text-secondary"><%= t("loans.form.rate_changes_hint") %></p>
+
+        <% if loan_form.object.errors[:variable_rate_schedule].any? %>
+          <p class="text-sm text-destructive" role="alert">
+            <%= loan_form.object.errors[:variable_rate_schedule].to_sentence %>
+          </p>
+        <% end %>
+
+        <div class="space-y-2" data-loan-rate-changes-target="rows">
+          <% loan_form.object.rate_change_rows.each_with_index do |(effective_date, rate), index| %>
+            <div class="flex items-end gap-2" data-loan-rate-changes-target="row">
+              <label class="sr-only" for="loan_rate_change_date_<%= index %>"><%= t("loans.form.rate_change_effective_date") %></label>
+              <input type="date" id="loan_rate_change_date_<%= index %>"
+                     name="<%= loan_form.object_name %>[rate_changes][][effective_date]"
+                     value="<%= effective_date %>" class="form-field__input">
+              <label class="sr-only" for="loan_rate_change_rate_<%= index %>"><%= t("loans.form.rate_change_rate") %></label>
+              <input type="number" step="0.005" min="0" max="100" id="loan_rate_change_rate_<%= index %>"
+                     name="<%= loan_form.object_name %>[rate_changes][][rate]"
+                     value="<%= rate %>" class="form-field__input">
+              <input type="hidden" name="<%= loan_form.object_name %>[rate_changes][][_destroy]" value="0">
+              <button type="button" class="text-sm text-secondary underline"
+                      data-action="loan-rate-changes#remove">
+                <%= t("loans.form.rate_change_remove") %>
+              </button>
+            </div>
+          <% end %>
+        </div>
+
+        <template data-loan-rate-changes-target="template">
+          <div class="flex items-end gap-2" data-loan-rate-changes-target="row">
+            <label class="sr-only" for="loan_rate_change_date_NEW_RECORD"><%= t("loans.form.rate_change_effective_date") %></label>
+            <input type="date" id="loan_rate_change_date_NEW_RECORD"
+                   name="<%= loan_form.object_name %>[rate_changes][][effective_date]"
+                   class="form-field__input">
+            <label class="sr-only" for="loan_rate_change_rate_NEW_RECORD"><%= t("loans.form.rate_change_rate") %></label>
+            <input type="number" step="0.005" min="0" max="100" id="loan_rate_change_rate_NEW_RECORD"
+                   name="<%= loan_form.object_name %>[rate_changes][][rate]"
+                   class="form-field__input">
+            <input type="hidden" name="<%= loan_form.object_name %>[rate_changes][][_destroy]" value="0">
+            <button type="button" class="text-sm text-secondary underline"
+                    data-action="loan-rate-changes#remove">
+              <%= t("loans.form.rate_change_remove") %>
+            </button>
+          </div>
+        </template>
+
+        <%= render DS::Button.new(text: t("loans.form.rate_change_add"), variant: "outline", size: "sm",
+                                  type: "button",
+                                  data: { action: "loan-rate-changes#add" }) %>
       </div>
 
       <div class="space-y-2 hidden" data-loan-offset-target="offsetAccounts">

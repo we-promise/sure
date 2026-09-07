@@ -1,21 +1,31 @@
-import { Controller } from "@hotwired/stimulus"
+import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["rateType", "offsetAccounts"]
+  // `rateChanges` shares this controller because it is revealed by the same
+  // condition -- rate_type being "variable" -- and a second controller toggling
+  // on the same input would duplicate the listener rather than the intent.
+  static targets = ["rateType", "offsetAccounts", "rateChanges"];
 
   connect() {
-    this.update()
+    this.update();
   }
 
   update() {
-    const visible = this.rateTypeTarget.value === "variable"
-    this.offsetAccountsTarget.classList.toggle("hidden", !visible)
-    this.offsetAccountsTarget.toggleAttribute("aria-hidden", !visible)
+    const visible = this.rateTypeTarget.value === "variable";
+    this.offsetAccountsTarget.classList.toggle("hidden", !visible);
+    this.offsetAccountsTarget.toggleAttribute("aria-hidden", !visible);
+
+    if (this.hasRateChangesTarget) {
+      this.rateChangesTarget.classList.toggle("hidden", !visible);
+      this.rateChangesTarget.toggleAttribute("aria-hidden", !visible);
+    }
 
     if (!visible) {
-      this.offsetAccountsTarget.querySelector("select")?.selectedOptions.forEach((option) => {
-        option.selected = false
-      })
+      this.offsetAccountsTarget
+        .querySelector("select")
+        ?.selectedOptions.forEach((option) => {
+          option.selected = false;
+        });
     }
   }
 }

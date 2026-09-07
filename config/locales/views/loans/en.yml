@@ -18,6 +18,14 @@ en:
       rate_type_variable: Variable
       offset_accounts: Offset accounts
       offset_accounts_hint: Only accounts visible to everyone who can access this loan can be linked.
+      start_date: Origination date
+      start_date_hint: When the loan was drawn down. Leave blank to use the account's opening date.
+      rate_changes: Rate changes
+      rate_changes_hint: Each row sets the rate that applies from its effective date until the next one. Re-entering a date replaces that row rather than adding a second.
+      rate_change_effective_date: Effective date
+      rate_change_rate: Rate
+      rate_change_add: Add rate change
+      rate_change_remove: Remove
       day_count_convention: Interest day-count basis
       day_count_convention_actual_365: Actual/365
       day_count_convention_actual_actual: Actual/actual (366 in a leap year)
@@ -55,6 +63,8 @@ en:
         recalculating: "These figures were recalculated for this page. The saved schedule is being refreshed in the background and will match shortly."
         variable_rate_notice: "This loan has a variable interest rate. The schedule below reflects the current rate and any recorded rate changes; future rate changes will shift it."
         offset_notice: "Projected interest assumes your linked offset balance stays at today's total. The loan balance itself is unchanged."
+        rate_change_marker: "rate change"
+        rate_change_marker_title: "The interest rate changes to %{rate}% from this payment."
         day_count_notice: "Interest accrues on an %{basis} basis. If your lender uses a different day-count basis, the interest figures here are an approximation."
         chart:
           today: Today

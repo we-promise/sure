@@ -21,6 +21,74 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "actual_actual", @account.accountable.reload.day_count_convention
   end
 
+  # --- #14 ------------------------------------------------------------------
+
+  test "updates the origination date and enqueues a rebuild" do
+    assert_enqueued_with job: LoanAmortizationRebuildJob do
+      patch loan_path(@account), params: {
+        account: { accountable_attributes: { id: @account.accountable_id, start_date: "2023-04-01" } }
+      }
+    end
+
+    assert_equal Date.new(2023, 4, 1), @account.accountable.reload.start_date
+  end
+
+  test "assembles submitted rate-change rows into the schedule and enqueues a rebuild" do
+    @account.accountable.update!(rate_type: "variable")
+
+    assert_enqueued_with job: LoanAmortizationRebuildJob do
+      patch loan_path(@account), params: {
+        account: {
+          accountable_attributes: {
+            id: @account.accountable_id,
+            rate_changes: [
+              { effective_date: "2024-03-01", rate: "4.5" },
+              { effective_date: "2024-06-01", rate: "6.0" }
+            ]
+          }
+        }
+      }
+    end
+
+    assert_equal({ "2024-03-01" => 4.5, "2024-06-01" => 6.0 },
+      @account.accountable.reload.variable_rate_schedule)
+  end
+
+  # The jsonb column must not be reachable by mass assignment: permitting it
+  # would let a request write arbitrary JSON into a column the calculation
+  # reads (R13). Submitting it directly must be ignored, not honoured.
+  test "a directly submitted variable_rate_schedule is not mass-assignable" do
+    @account.accountable.update!(rate_type: "variable")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          variable_rate_schedule: { "2024-03-01" => "99.9" }
+        }
+      }
+    }
+
+    assert_empty @account.accountable.reload.variable_rate_schedule.to_h,
+      "the jsonb column must only be writable through assembled rate_changes rows"
+  end
+
+  test "an invalid rate-change row re-renders with an inline error rather than raising" do
+    @account.accountable.update!(rate_type: "variable")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          rate_changes: [ { effective_date: "not-a-date", rate: "4.5" } ]
+        }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_empty @account.accountable.reload.variable_rate_schedule.to_h
+  end
+
   test "creates with loan details" do
     assert_difference -> { Account.count } => 1,
       -> { Loan.count } => 1,

@@ -182,9 +182,24 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-alpha-black-25">
-          <% payments.each do |payment| %>
+          <% payments.each_with_index do |payment, index| %>
+            <%# FR-205: mark the first payment whose period carries a new
+                accrual rate. Compared against the previous row rather than
+                against the rate-change dates, so it marks where the rate the
+                borrower is charged actually changes -- which under the
+                two-clock contract (C7/C8) is not always the payment on the
+                effective date itself. %>
+            <% rate_changed = index.positive? && payment.interest_rate != payments[index - 1].interest_rate %>
             <tr class="<%= "text-secondary bg-surface-hover" if payment.payment_date <= today %>">
-              <td class="px-4 py-2"><%= payment.payment_number %></td>
+              <td class="px-4 py-2">
+                <%= payment.payment_number %>
+                <% if rate_changed %>
+                  <span class="ml-1 text-xs text-secondary" data-rate-change-marker
+                        title="<%= t(".rate_change_marker_title", rate: payment.interest_rate) %>">
+                    <%= t(".rate_change_marker") %>
+                  </span>
+                <% end %>
+              </td>
               <td class="px-4 py-2"><%= l payment.payment_date, format: :long %></td>
               <td class="px-4 py-2 text-right"><%= format_money Money.new(payment.payment_amount, account.currency) %></td>
               <td class="px-4 py-2 text-right"><%= format_money Money.new(payment.principal_payment, account.currency) %></td>

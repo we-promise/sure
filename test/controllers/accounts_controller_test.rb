@@ -993,6 +993,39 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ), count: 1
   end
 
+  # FR-205 (#14): the row where the charged rate changes must be findable in
+  # the table, not merely implied by the numbers moving.
+  test "the schedule table marks the payment where the interest rate changes" do
+    loan_account = accounts(:loan)
+    loan = loan_account.loan
+    loan.update!(rate_type: "variable", interest_rate: 5, term_months: 12)
+    payment_dates = loan.amortization_schedule.payments.map { |p| p[:payment_date] }
+    loan.update!(rate_changes: [ { effective_date: payment_dates[3].iso8601, rate: "9.5" } ])
+    loan.rebuild_amortization_schedule
+
+    get account_path(loan_account, tab: "schedule")
+
+    assert_response :success
+    # Asserted on the marker's own attribute, not its text: the copy "rate
+    # change" also occurs in the variable-rate notice on this page, so matching
+    # the text passes whether or not the marker renders -- verified by removing
+    # the marker and watching the text assertion stay green.
+    assert_select "[data-rate-change-marker]", { minimum: 1 },
+      "a variable loan with a recorded rate change must mark the row where the rate changes"
+  end
+
+  test "the schedule table has no rate-change marker for a fixed-rate loan" do
+    loan_account = accounts(:loan)
+    loan_account.loan.update!(rate_type: "fixed", interest_rate: 5, term_months: 12)
+    loan_account.loan.rebuild_amortization_schedule
+
+    get account_path(loan_account, tab: "schedule")
+
+    assert_response :success
+    assert_select "[data-rate-change-marker]", false,
+      "a loan whose rate never changes must carry no marker"
+  end
+
   test "the disclosed basis follows the loan rather than a global constant" do
     loan_account = accounts(:loan)
     loan_account.loan.update!(day_count_convention: "actual_actual")
