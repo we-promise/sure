@@ -67,11 +67,16 @@ jobs:
       ref_name: ${{ steps.built_ref.outputs.ref_name }}
 
     steps:
+      # github.sha, not github.ref, for the fallback. Supplying `ref:` at all
+      # discards checkout's own pinning: given an explicit non-SHA ref it leaves
+      # `commit` unset and resolves the ref remotely at fetch time, so a branch
+      # that moves between the triggering push and this job would be built
+      # instead of the commit that triggered the run.
       - name: Check out the requested ref
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.event.inputs.ref || github.sha }}
 
       - name: Resolve it to an immutable commit
         id: built_ref
