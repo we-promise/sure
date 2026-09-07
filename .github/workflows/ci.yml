@@ -173,21 +173,24 @@ jobs:
       - name: Loan daily-accrual performance gate
         run: bin/rails loans:amortization_benchmark
         env:
-          # Calibrated from three runs of this step on this runner, at the
-          # workload above (100 loans x 360 months x 30-day offset points):
+          # Calibrated on this runner at the workload above (100 loans x 360
+          # months x 30-day offset points). Four runs of IDENTICAL code spanned
+          # roughly p95 93-127 ms and p99 184-231 ms -- and each new run has so
+          # far widened that span rather than settling inside it, on both ends.
+          # Treat those figures as indicative of the runner's noise, not as a
+          # bound: this is a shared machine, so the spread is a property of the
+          # environment, not of the calculation.
           #
-          #   run 1  p95 116.128 ms  p99 230.508 ms
-          #   run 2  p95 112.643 ms  p99 221.674 ms
-          #   run 3  p95  93.454 ms  p99 203.411 ms
+          # The ceilings are therefore sized against that noise, not against any
+          # one measurement -- comfortably above the worst yet seen, while still
+          # far tighter than a real regression, which in this calculation shows
+          # up as a multiple rather than as a fifth. Do NOT retune them from a
+          # single run in either direction: a number near a ceiling is evidence
+          # of the runner until a second run agrees.
           #
-          # p95 varies about 24% across runs (93-116 ms) and p99 about 13%
-          # (203-231 ms) for identical code, which is the shared runner, not
-          # the calculation. The ceilings below sit ~1.7x above the worst p95
-          # and p99 observed. Read that multiple against the run-to-run spread
-          # rather than against a single measurement: it has to absorb a noisy
-          # neighbour on top of the variance already visible here, and it still
-          # catches a real regression, which in this calculation shows up as a
-          # multiple rather than as a fifth.
+          # The measurements themselves live in docs/loans/release-evidence.md,
+          # which is the place to add a new one; this comment deliberately does
+          # not enumerate them, so it does not go stale every build.
           #
           # These are NOT the production SLO (p95 <= 100 ms, p99 <= 150 ms),
           # which this runner does not meet and is not expected to -- see the

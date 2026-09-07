@@ -54,21 +54,32 @@ Calibration measurements, same workload, this runner:
 | 1 | 116.128 ms | 230.508 ms | calibration (effectively unbounded) |
 | 2 | 112.643 ms | 221.674 ms | calibration (effectively unbounded) |
 | 3 | 93.454 ms | 203.411 ms | **200 / 400 — passed** |
+| 4 | 127.445 ms | 184.012 ms | **200 / 400 — passed** |
 
 The runner does not meet the production SLO and is not expected to. Setting the
 production number as the CI threshold would produce a permanently red build that
 says nothing about the code, and the first fix anyone reaches for is raising the
 threshold — which is how a gate stops meaning anything.
 
-Note the spread: for *identical code*, p95 ranges 93–116 ms (about 24%) and p99
-203–231 ms (about 13%). That variance is the shared runner, and it is the reason
-the ceilings sit ~1.7x above the worst observed rather than snugly above the
-mean — the margin has to absorb a noisy neighbour on top of the variance already
-visible here. It is still far tighter than a real regression, which in this
-calculation shows up as a multiple rather than as a fifth.
+Note the spread, and note how it behaved as samples accumulated. For *identical
+code* these four runs span roughly p95 93–127 ms and p99 184–231 ms — and every
+run so far has widened that span rather than settling inside it, at one end or
+the other. Run 3 set a new p95 low and run 4 immediately set a new p95 high
+while setting a new p99 low.
 
-It also means a *single* CI measurement is not evidence of a performance change.
-Before treating a movement here as real, compare it against this table's spread.
+Two things follow, and they are the reason this section exists:
+
+- **The span is a property of the shared runner, not of the calculation.** The
+  ceilings are sized against that noise rather than against any one measurement,
+  which is why they sit well clear of the worst figure yet seen instead of
+  snugly above the mean.
+- **A single CI measurement is not evidence of a performance change**, in either
+  direction. A figure near a ceiling is evidence about the runner until a second
+  run agrees; a fast run is not evidence of an optimisation. Do not retune the
+  thresholds from one build.
+
+Add new measurements to the table above rather than restating the range in prose
+or in the workflow comment — quoted ranges here have already gone stale twice.
 
 An earlier local measurement of 74.984 ms recorded elsewhere is **not portable**
 and must not be quoted as evidence for either number: re-measuring the same
