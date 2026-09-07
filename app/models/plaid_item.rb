@@ -29,18 +29,18 @@ class PlaidItem < ApplicationRecord
 
   TRANSACTIONS_REFRESH_COOLDOWN = 5.minutes
 
-  # Marks this connection so the next sync fetches full history instead of a
-  # delta, letting a changed naming preference reach transactions that already
-  # exist. The marker is durable on purpose: it is consumed only once a sync has
-  # actually replayed the history, so a worker restart, a long-running sync or a
-  # dropped job all leave it standing and the replay simply happens later.
+  # Requests that the next sync fetch full history instead of a delta, letting a
+  # changed naming preference reach transactions that already exist. The request
+  # is durable on purpose: it is consumed only once a sync has actually replayed
+  # the history, so a worker restart, a long-running sync or a dropped job all
+  # leave it pending and the replay simply happens later.
   #
   # @return [void]
   def request_history_replay!
     update!(replay_requested_at: Time.current)
   end
 
-  # @return [Boolean] whether a full-history fetch is still owed
+  # @return [Boolean] whether a replay request is still waiting to be consumed
   def replay_pending?
     replay_requested_at.present?
   end

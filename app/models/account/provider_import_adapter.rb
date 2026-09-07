@@ -26,8 +26,8 @@ class Account::ProviderImportAdapter
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
-  #   outright. Those branches are replaced rather than deep-merged, so a nested value the
-  #   provider stops sending is actually removed instead of lingering.
+  #   outright. Those namespaces are replaced rather than deep-merged, so a nested value
+  #   the provider stops sending is removed instead of lingering.
   # @return [Entry] The created or updated entry
   def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, replace_extra_namespaces: [])
     raise ArgumentError, "external_id is required" if external_id.blank?
@@ -1077,15 +1077,15 @@ class Account::ProviderImportAdapter
     # Writes provider-owned metadata onto the transaction.
     #
     # Namespaces named in replace_extra_namespaces are snapshots, not
-    # accumulations: the whole branch is dropped before merging, so a nested key
-    # the provider stopped sending disappears with it. deep_merge alone recurses
-    # into nested hashes, so a removed payment_meta.payee would otherwise survive
-    # forever and the drawer would keep showing it. Only namespaces the incoming
-    # payload actually carries are replaced.
+    # accumulations: the existing namespace is replaced rather than merged into,
+    # so a nested key the provider stopped sending is removed. deep_merge alone
+    # recurses into nested hashes, so a removed payment_meta.payee would otherwise
+    # survive forever and the drawer would keep showing it. Only namespaces the
+    # incoming payload actually carries are replaced.
     #
     # @param entry [Entry] the entry being imported
     # @param extra [Hash, nil] provider metadata to apply
-    # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @param replace_extra_namespaces [Array<String>] namespaces to replace wholesale
     # @return [void]
     def apply_provider_extra(entry, extra, replace_extra_namespaces)
       return unless extra.present? && entry.entryable.is_a?(Transaction)

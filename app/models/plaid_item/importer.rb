@@ -40,7 +40,7 @@ class PlaidItem::Importer
     end
 
     # Imports every account on the item, then records where the fetch left off:
-    # the cursor for the next sync, and the replay request this one satisfied.
+    # the cursor for the next sync, and the replay request this one consumed.
     #
     # @return [void]
     def fetch_and_import_accounts_data
@@ -61,11 +61,11 @@ class PlaidItem::Importer
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
         plaid_item.update!(next_cursor: snapshot.transactions_cursor)
 
-        # Clear the replay marker only if the database still holds the exact
-        # request this fetch served, which has to be decided in the WHERE clause.
+        # Consume the replay request only if the database still holds the exact
+        # request this fetch acted on, which has to be decided in the WHERE clause.
         # Comparing plaid_item.replay_requested_at would compare stale memory:
         # the record was loaded before the sync started, so a replay requested
-        # since then is invisible here and would be cleared without ever running.
+        # since then is invisible here and would be consumed without ever running.
         consumed_at = plaid_item.replay_pending? ? snapshot.replay_consumed_at : nil
         if consumed_at.present?
           PlaidItem

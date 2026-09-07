@@ -24,9 +24,9 @@ so operators can inspect it in the super-admin `/settings/debug` UI.
 Store provider metadata on `Transaction#extra` under the provider namespace.
 [`import_transaction`](../../app/models/account/provider_import_adapter.rb) deep-merges
 that hash, so a key the provider stops sending keeps its previous value. A provider
-that owns its namespace outright passes `replace_extra_namespaces: ["<key>"]` to have
-the branch replaced instead; emit every key on every sync (nil when absent) when doing
-so, or a removed field lingers in the UI.
+that owns its namespace outright passes `replace_extra_namespaces: ["<key>"]`. When the
+incoming payload includes that namespace, the existing namespace is replaced, so omitted
+nested fields are removed. Send the provider's current namespace snapshot on every sync.
 [`Transaction#pending?` and pending scopes](../../app/models/transaction.rb) share
 `PENDING_PROVIDERS`; that constant is the current list of supported namespaces,
 including providers beyond the three described below. The UI shows a Pending
@@ -81,12 +81,12 @@ with the bank's `original_description` instead of Plaid's `merchant_name`. It is
 family-scoped rather than an instance setting: `/settings/providers` is gated on family
 admin, while the provider configuration registry holds instance-wide credentials.
 
-Enabling it sets `plaid_items.replay_requested_at`.
+Changing it sets `plaid_items.replay_requested_at`.
 [`AccountsSnapshot`](../../app/models/plaid_item/accounts_snapshot.rb) discards
-`next_cursor` while that marker is set so Plaid returns full history, and
-[`Importer`](../../app/models/plaid_item/importer.rb) clears it with a conditional
-`UPDATE ... WHERE replay_requested_at = ?` once a fetch has served that exact request,
-leaving a replay requested mid-sync outstanding.
+`next_cursor` while that request is pending so Plaid returns full history, and
+[`Importer`](../../app/models/plaid_item/importer.rb) consumes it with a conditional
+`UPDATE ... WHERE replay_requested_at = ?` once a fetch has acted on that exact
+request, leaving a replay requested mid-sync pending.
 
 Do not clear `next_cursor` inline to force a replay:
 [`sync_later`](../../app/models/concerns/syncable.rb) coalesces into an in-flight sync,

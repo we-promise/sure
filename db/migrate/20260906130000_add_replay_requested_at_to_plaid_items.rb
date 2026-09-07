@@ -1,7 +1,7 @@
 class AddReplayRequestedAtToPlaidItems < ActiveRecord::Migration[7.2]
-  # Records that a connection owes a full-history fetch, so a naming-preference
+  # Records a pending request for a full-history fetch, so a naming-preference
   # change reaches transactions that already exist. Durable on purpose: it
-  # outlives worker restarts and long syncs, and is cleared only once a sync has
+  # outlives worker restarts and long syncs, and is consumed only once a sync has
   # actually replayed the history it asks for.
   #
   # @return [void]

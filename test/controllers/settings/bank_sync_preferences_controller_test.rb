@@ -19,7 +19,7 @@ class Settings::BankSyncPreferencesControllerTest < ActionDispatch::IntegrationT
     assert @family.reload.plaid_prefer_original_description?
 
     # The cursor is left alone — an in-flight sync would write its own back over
-    # a reset. The marker is what the next sync consumes.
+    # a reset. The request is what the next sync consumes.
     assert @plaid_item.reload.replay_pending?
     assert_equal "cursor-before-change", @plaid_item.next_cursor
     assert @plaid_item.syncs.any?, "a sync should have been queued"

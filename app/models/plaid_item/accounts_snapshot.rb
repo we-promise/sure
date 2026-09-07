@@ -29,11 +29,11 @@ class PlaidItem::AccountsSnapshot
     transactions_data.cursor
   end
 
-  # The replay marker as it stood when the cursor was read. The importer uses it
-  # to clear only the request this fetch actually served — a replay requested
-  # mid-sync has a later timestamp and must survive to be honoured by the next one.
+  # The replay request as it stood when the cursor was read. The importer uses it
+  # to consume only the request this fetch acted on — a replay requested mid-sync
+  # carries a later timestamp and must stay pending for the next sync to consume.
   #
-  # @return [Time, nil]
+  # @return [Time, nil] the request this fetch acted on, or nil if none was pending
   def replay_consumed_at
     transactions_data
     @replay_consumed_at
@@ -87,7 +87,7 @@ class PlaidItem::AccountsSnapshot
       plaid_item.supports_product?("transactions") && accounts.any?
     end
 
-    # Fetches the transaction delta, or the full history when a replay is owed.
+    # Fetches the transaction delta, or the full history when a replay is pending.
     # Memoized: the cursor decision is made once per sync, and the timestamp it
     # acted on is captured for the importer to consume.
     #

@@ -5,18 +5,19 @@ module Family::PlaidConnectable
     has_many :plaid_items, dependent: :destroy
   end
 
-  # Replays this family's Plaid history so a naming-preference change reaches
-  # transactions that already exist. Account::ProviderImportAdapter re-enriches
-  # :name on every upsert, so re-importing is what actually renames them.
+  # Requests a history replay on each of this family's Plaid connections, so a
+  # naming-preference change reaches transactions that already exist.
+  # Account::ProviderImportAdapter re-enriches :name on every upsert, so
+  # replaying the history is what actually renames them.
   #
-  # Records the request on each item rather than clearing next_cursor here. The
-  # marker is what makes this durable: an in-flight sync writes its own cursor
-  # back on completion and would erase a reset, but it cannot erase a request it
-  # never served. Whatever sync runs next — the follow-up below, or failing that
-  # the nightly one — honours it, so the replay is deferred but never dropped.
+  # Records the request rather than clearing next_cursor here. The request is
+  # what makes this durable: an in-flight sync writes its own cursor back on
+  # completion and would erase a reset, but it cannot erase a request it never
+  # consumed. Whatever sync runs next — the follow-up below, or failing that the
+  # nightly one — consumes it, so the replay is deferred but never dropped.
   #
   # @return [void]
-  def resync_plaid_items!
+  def request_plaid_history_replay!
     plaid_items.syncable.find_each do |item|
       item.request_history_replay!
       item.sync_later_with_follow_up

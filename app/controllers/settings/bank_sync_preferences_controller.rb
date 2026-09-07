@@ -20,9 +20,9 @@ class Settings::BankSyncPreferencesController < ApplicationController
 
     family.update!(plaid_prefer_original_description: prefer_original)
 
-    # Only replay history when the preference actually flipped — re-saving the
-    # same value shouldn't cost a full re-pull.
-    family.resync_plaid_items! if changed
+    # Only request a replay when the preference actually flipped — re-saving the
+    # same value shouldn't cost a full history fetch.
+    family.request_plaid_history_replay! if changed
 
     redirect_to settings_providers_path, notice: t(changed ? ".updated_and_resyncing" : ".updated")
   end

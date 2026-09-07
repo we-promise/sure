@@ -50,9 +50,9 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     @importer.import
   end
 
-  # The marker is the durable half of the replay: it is cleared only once a sync
+  # The request is the durable half of the replay: it is consumed only once a sync
   # has actually fetched full history for it.
-  test "consumes the replay marker once the replay has been imported" do
+  test "consumes the replay request once the replay has been imported" do
     @plaid_item.request_history_replay!
     # Read it back so the value matches the database exactly, since the clear is
     # decided by a WHERE on this column.
@@ -67,20 +67,20 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     @importer.import
 
     assert_equal "test_cursor_1", @plaid_item.reload.next_cursor
-    refute @plaid_item.replay_pending?, "the served replay request should be cleared"
+    refute @plaid_item.replay_pending?, "the consumed replay request should be cleared"
   end
 
-  # A replay asked for while the sync was already running was not served by it,
+  # A replay asked for while the sync was already running was not consumed by it,
   # so it has to survive to be honoured by the next sync.
   test "keeps a replay requested after the cursor was read" do
     @plaid_item.request_history_replay!
-    served_at = 1.hour.ago.change(usec: 0)
+    consumed_at = 1.hour.ago.change(usec: 0)
 
     @importer.stubs(:fetch_and_import_item_data)
 
     PlaidItem::AccountsSnapshot.any_instance.stubs(:accounts).returns([])
     PlaidItem::AccountsSnapshot.any_instance.stubs(:transactions_cursor).returns("test_cursor_1")
-    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(served_at)
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(consumed_at)
 
     @importer.import
 
@@ -92,13 +92,13 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
   # be decided in the database, against the value actually stored there.
   test "keeps a replay written to the database after this sync loaded the item" do
     @plaid_item.request_history_replay!
-    served_at = @plaid_item.replay_requested_at
+    consumed_at = @plaid_item.replay_requested_at
 
     @importer.stubs(:fetch_and_import_item_data)
 
     PlaidItem::AccountsSnapshot.any_instance.stubs(:accounts).returns([])
     PlaidItem::AccountsSnapshot.any_instance.stubs(:transactions_cursor).returns("test_cursor_1")
-    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(served_at)
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(consumed_at)
 
     # A preference change lands mid-sync. Our in-memory copy still holds the
     # older timestamp, so only the database knows this request is outstanding.
