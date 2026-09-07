@@ -50,6 +50,41 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     @importer.import
   end
 
+  # The marker is the durable half of the replay: it is cleared only once a sync
+  # has actually fetched full history for it.
+  test "consumes the replay marker once the replay has been imported" do
+    @plaid_item.request_history_replay!
+    requested_at = @plaid_item.replay_requested_at
+
+    @importer.stubs(:fetch_and_import_item_data)
+
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:accounts).returns([])
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:transactions_cursor).returns("test_cursor_1")
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(requested_at)
+
+    @importer.import
+
+    assert_equal "test_cursor_1", @plaid_item.reload.next_cursor
+    refute @plaid_item.replay_pending?, "the served replay request should be cleared"
+  end
+
+  # A replay asked for while the sync was already running was not served by it,
+  # so it has to survive to be honoured by the next sync.
+  test "keeps a replay requested after the cursor was read" do
+    @plaid_item.request_history_replay!
+    served_at = 1.hour.ago.change(usec: 0)
+
+    @importer.stubs(:fetch_and_import_item_data)
+
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:accounts).returns([])
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:transactions_cursor).returns("test_cursor_1")
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(served_at)
+
+    @importer.import
+
+    assert @plaid_item.reload.replay_pending?, "a replay requested mid-sync must not be dropped"
+  end
+
   test "clears requires update status after a successful import" do
     @plaid_item.update!(status: :requires_update)
     @importer.stubs(:fetch_and_import_item_data)

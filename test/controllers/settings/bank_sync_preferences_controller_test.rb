@@ -9,33 +9,31 @@ class Settings::BankSyncPreferencesControllerTest < ActionDispatch::IntegrationT
     @plaid_item = plaid_items(:one)
   end
 
-  test "enabling the preference clears plaid cursors and re-syncs the family's items" do
+  test "enabling the preference marks the family's items for a history replay" do
     @plaid_item.update!(next_cursor: "cursor-before-change")
 
-    assert_enqueued_with(job: PlaidHistoryReplayJob, args: [ @plaid_item ]) do
-      patch settings_bank_sync_preferences_url,
-            params: { family: { plaid_prefer_original_description: "1" } }
-    end
+    patch settings_bank_sync_preferences_url,
+          params: { family: { plaid_prefer_original_description: "1" } }
 
     assert_redirected_to settings_providers_url
     assert @family.reload.plaid_prefer_original_description?
 
-    # The reset happens in the job, not inline — an in-flight sync would
-    # otherwise overwrite it.
-    perform_enqueued_jobs
-    assert_nil @plaid_item.reload.next_cursor
+    # The cursor is left alone — an in-flight sync would write its own back over
+    # a reset. The marker is what the next sync consumes.
+    assert @plaid_item.reload.replay_pending?
+    assert_equal "cursor-before-change", @plaid_item.next_cursor
+    assert @plaid_item.syncs.any?, "a sync should have been queued"
   end
 
-  test "saving the same value does not force a re-sync" do
+  test "saving the same value does not request a replay" do
     @plaid_item.update!(next_cursor: "cursor-unchanged")
 
-    assert_no_enqueued_jobs(only: PlaidHistoryReplayJob) do
-      patch settings_bank_sync_preferences_url,
-            params: { family: { plaid_prefer_original_description: "0" } }
-    end
+    patch settings_bank_sync_preferences_url,
+          params: { family: { plaid_prefer_original_description: "0" } }
 
     refute @family.reload.plaid_prefer_original_description?
-    assert_equal "cursor-unchanged", @plaid_item.reload.next_cursor
+    refute @plaid_item.reload.replay_pending?
+    assert_equal "cursor-unchanged", @plaid_item.next_cursor
   end
 
   # The whole reason this preference lives on Family rather than in the
@@ -50,17 +48,16 @@ class Settings::BankSyncPreferencesControllerTest < ActionDispatch::IntegrationT
       next_cursor: "other-family-cursor"
     )
 
-    perform_enqueued_jobs do
-      patch settings_bank_sync_preferences_url,
-            params: { family: { plaid_prefer_original_description: "1" } }
-    end
+    patch settings_bank_sync_preferences_url,
+          params: { family: { plaid_prefer_original_description: "1" } }
 
     assert_redirected_to settings_providers_url
     assert @family.reload.plaid_prefer_original_description?
-    assert_nil @plaid_item.reload.next_cursor
+    assert @plaid_item.reload.replay_pending?
 
     refute other_family.reload.plaid_prefer_original_description?
-    assert_equal "other-family-cursor", other_item.reload.next_cursor
+    refute other_item.reload.replay_pending?
+    assert_equal "other-family-cursor", other_item.next_cursor
     assert_empty other_item.syncs
   end
 

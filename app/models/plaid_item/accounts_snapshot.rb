@@ -25,6 +25,16 @@ class PlaidItem::AccountsSnapshot
     transactions_data.cursor
   end
 
+  # The replay marker as it stood when the cursor was read. The importer uses it
+  # to clear only the request this fetch actually served — a replay requested
+  # mid-sync has a later timestamp and must survive to be honoured by the next one.
+  #
+  # @return [Time, nil]
+  def replay_consumed_at
+    transactions_data
+    @replay_consumed_at
+  end
+
   private
     attr_reader :plaid_item, :plaid_provider
 
@@ -74,10 +84,16 @@ class PlaidItem::AccountsSnapshot
     def transactions_data
       return nil unless can_fetch_transactions?
 
-      @transactions_data ||= plaid_provider.get_transactions(
-        plaid_item.access_token,
-        next_cursor: plaid_item.next_cursor
-      )
+      @transactions_data ||= begin
+        # A pending replay means we deliberately discard the cursor and ask Plaid
+        # for everything again, so a naming-preference change reaches existing
+        # transactions. Captured here, at the moment of the read, so the importer
+        # can tell this request apart from one raised while the sync was running.
+        @replay_consumed_at = plaid_item.replay_requested_at
+        cursor = @replay_consumed_at.present? ? nil : plaid_item.next_cursor
+
+        plaid_provider.get_transactions(plaid_item.access_token, next_cursor: cursor)
+      end
     end
 
     def can_fetch_investments?

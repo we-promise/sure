@@ -9,13 +9,17 @@ module Family::PlaidConnectable
   # transactions that already exist. Account::ProviderImportAdapter re-enriches
   # :name on every upsert, so re-importing is what actually renames them.
   #
-  # Deferred to a job rather than resetting the cursor here: an in-flight sync
-  # would overwrite the reset and swallow the request. See PlaidHistoryReplayJob.
+  # Records the request on each item rather than clearing next_cursor here. The
+  # marker is what makes this durable: an in-flight sync writes its own cursor
+  # back on completion and would erase a reset, but it cannot erase a request it
+  # never served. Whatever sync runs next — the follow-up below, or failing that
+  # the nightly one — honours it, so the replay is deferred but never dropped.
   #
-  # @return [void] queues one replay job per syncable Plaid item
+  # @return [void]
   def resync_plaid_items!
     plaid_items.syncable.find_each do |item|
-      PlaidHistoryReplayJob.perform_later(item)
+      item.request_history_replay!
+      item.sync_later_with_follow_up
     end
   end
 

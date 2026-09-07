@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_06_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1612,6 +1612,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_120000) do
     t.string "plaid_region", default: "us", null: false
     t.jsonb "raw_institution_payload", default: {}
     t.jsonb "raw_payload", default: {}
+    t.datetime "replay_requested_at"
     t.boolean "scheduled_for_deletion", default: false
     t.string "status", default: "good", null: false
     t.datetime "updated_at", null: false

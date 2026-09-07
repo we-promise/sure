@@ -52,7 +52,17 @@ class PlaidItem::Importer
         end
 
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
-        plaid_item.update!(next_cursor: snapshot.transactions_cursor)
+        attrs = { next_cursor: snapshot.transactions_cursor }
+
+        # Clear the replay marker only when this fetch served that exact request.
+        # A replay asked for after the cursor was read carries a later timestamp
+        # and has to survive, or it would be dropped without ever replaying.
+        consumed_at = plaid_item.replay_pending? ? snapshot.replay_consumed_at : nil
+        if consumed_at.present? && plaid_item.replay_requested_at == consumed_at
+          attrs[:replay_requested_at] = nil
+        end
+
+        plaid_item.update!(**attrs)
       end
     end
 end
