@@ -36,6 +36,80 @@ Run:
 Override workload or thresholds with `LOAN_COUNT`, `HISTORY_MONTHS`,
 `OFFSET_FREQUENCY_DAYS`, `MAX_P95_MS`, and `MAX_P99_MS`.
 
+### Two different numbers, on purpose
+
+The CI gate and the deployment SLO are not the same measurement and must not be
+conflated. Both are recorded here so nobody has to guess which one a given
+figure is.
+
+| | p95 | p99 | What it is |
+| --- | --- | --- | --- |
+| **Production-shaped SLO** | 100 ms | 150 ms | the deployment target, on hardware an SLO is written for. **Not enforced by CI.** |
+| **CI regression gate** | 200 ms | 400 ms | a ceiling calibrated to the shared GitHub runner, enforced by the `Loan daily-accrual performance gate` step |
+
+Calibration measurements, same workload, this runner:
+
+| Run | p95 | p99 | Thresholds in force |
+| --- | --- | --- | --- |
+| 1 | 116.128 ms | 230.508 ms | calibration (effectively unbounded) |
+| 2 | 112.643 ms | 221.674 ms | calibration (effectively unbounded) |
+| 3 | 93.454 ms | 203.411 ms | **200 / 400 — passed** |
+| 4 | 127.445 ms | 184.012 ms | **200 / 400 — passed** |
+
+The runner does not meet the production SLO and is not expected to. Setting the
+production number as the CI threshold would produce a permanently red build that
+says nothing about the code, and the first fix anyone reaches for is raising the
+threshold — which is how a gate stops meaning anything.
+
+Note the spread, and note how it behaved as samples accumulated. For *identical
+code* these four runs span roughly p95 93–127 ms and p99 184–231 ms — and every
+run so far has widened that span rather than settling inside it, at one end or
+the other. Run 3 set a new p95 low and run 4 immediately set a new p95 high
+while setting a new p99 low.
+
+Two things follow, and they are the reason this section exists:
+
+- **The span is a property of the shared runner, not of the calculation.** The
+  ceilings are sized against that noise rather than against any one measurement,
+  which is why they sit well clear of the worst figure yet seen instead of
+  snugly above the mean.
+- **A single CI measurement is not evidence of a performance change**, in either
+  direction. A figure near a ceiling is evidence about the runner until a second
+  run agrees; a fast run is not evidence of an optimisation. Do not retune the
+  thresholds from one build.
+
+Add new measurements to the table above rather than restating the range in prose
+or in the workflow comment — quoted ranges here have already gone stale twice.
+
+### The 74.984 ms figure recorded elsewhere
+
+An earlier local measurement of 74.984 ms appears in this repository's history
+with no commit id and no environment recorded. **Do not quote it as evidence for
+either threshold**, and note carefully what the measurements here do and do not
+establish about it.
+
+Two runs on this sandbox:
+
+| What was measured | p95 |
+| --- | --- |
+| commit `afcb0de` | 214.886 ms |
+| `main` at the time (`1fb3f4e`) | 200.960 ms |
+
+- **What this does establish:** nothing measured here comes anywhere near
+  74.984 ms, on either commit. Whatever conditions produced that figure are not
+  reproducible from what is written down, so it is not a number this code can be
+  held to.
+- **What this does NOT establish:** that the gap is caused by hardware. These are
+  two *different commits*, so code differences are not excluded — and the 74.984
+  figure has no recorded commit to compare against in the first place. An earlier
+  version of this section asserted "the variation is hardware, not code"; that
+  claim outran its evidence and has been removed.
+
+Isolating environment from code would need the *same* commit measured in both
+places. That has not been run, and is not worth running: the CI thresholds above
+are calibrated from repeated runs in the environment that enforces them, which is
+the comparison that actually matters.
+
 ## Variance and rebuild
 
 Run the non-mutating sample report before release:
