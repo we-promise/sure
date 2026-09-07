@@ -26,6 +26,9 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
     get recurring_occurrence_url(@occurrence), params: { q: "Returned shirts" }
     assert_response :success
     assert_select "form[action=?]", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id), count: 0
+    # The search input and empty-state copy legitimately repeat the query.
+    # Candidate names render as standalone paragraphs or spans in either list.
+    assert_select "p, span", text: entry.name, count: 0
   end
 
   test "show renders the occurrence dialog in a single drawer frame" do
