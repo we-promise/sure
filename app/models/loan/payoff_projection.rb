@@ -171,12 +171,46 @@ class Loan
       original_remaining_payment_count - payment_count
     end
 
+    # Whether this projection differs from the contracted schedule by enough
+    # to be worth showing the user.
+    #
+    # The two simulations terminate independently. The contracted schedule
+    # knows its final period in advance and resizes that payment to clear the
+    # balance exactly (C14); this projection keeps paying the level payment
+    # and only adjusts once a payment would overshoot. So a loan sitting
+    # exactly on its contract can still trail by one small "cleanup" payment
+    # -- a real artefact of two independently-terminated runs, not a real
+    # divergence, and one this class has always tolerated.
+    #
+    # That artefact used to be bounded by a hardcoded $1, which fitted the
+    # monthly-accrual residue and nothing else: under daily accrual the same
+    # untouched loan trails by $1.10 and every chart would have claimed the
+    # borrower was behind schedule. The bound here is the artefact itself --
+    # the trailing payment's own interest -- so it holds for any accrual
+    # model rather than for the one it was measured against.
+    def diverges_from_schedule?
+      return false unless applicable?
+      return true if months_saved.abs > 1
+      return false if cleanup_payment_artefact?
+
+      interest_saved.abs >= 1
+    end
+
+    # True when the whole interest difference is accounted for by a single
+    # trailing cleanup payment, i.e. the projection ran exactly one payment
+    # longer and paid no more interest than that payment itself charged.
+    def cleanup_payment_artefact?
+      return false unless months_saved == -1
+
+      interest_saved.abs <= payments.last[:interest_payment]
+    end
+
     # How much less interest this projection pays versus the original
     # schedule's remaining interest as of today. Positive means savings;
     # negative means more interest will be paid (behind schedule).
-    # This compares against the *next scheduled payment date* boundary, not
-    # a true daily accrual -- consistent with the rest of the amortization
-    # feature, which has no daily-accrual concept anywhere.
+    # Both sides of the comparison come from the same accrual model as the
+    # persisted schedule (see `generate_schedule`), so this figure is a
+    # like-for-like difference rather than an artefact of two calculations.
     def interest_saved
       return nil unless applicable?
       (original_remaining_interest - total_interest.amount)
@@ -244,16 +278,33 @@ class Loan
           accrual_start_date: Date.current,
           payment_schedule: payment_dates,
           accrual_rate_for: rate_resolver.method(:accrual_rate_for),
+          # The ACCRUAL clock's change points, which segment a daily accrual
+          # window (C7/C10). Omitting this defaulted the simulator to "no rate
+          # changes", so a rate effective between two payment dates moved the
+          # persisted schedule's interest but not this projection's -- the same
+          # phantom divergence as running two accrual models, arriving instead
+          # through one model missing half its inputs. It only bites on the
+          # daily branch, which is why it was invisible while the projection
+          # ran daily solely for offset loans.
+          accrual_rate_changes: rate_resolver.method(:accrual_rate_changes),
           re_amortisation_events: rate_resolver.method(:re_amortisation_events),
           payment_strategy: :hold,
           payment_amount_for: ->(**_kwargs) { monthly_payment.amount },
           currency_precision: currency_precision,
           max_iterations: payment_dates.length,
           settle_at_schedule_end: false,
-          # A zero-balance link is mathematically the no-offset case. Keep it
-          # on the existing monthly projection path so linking an empty asset
-          # does not change figures merely by changing the calculation mode.
-          daily_accrual: loan.offset_accounts.any? && loan.offset_accounts.sum(:balance).positive?,
+          # Follow the persisted schedule's accrual mode. The projection is
+          # compared against that schedule row-for-row (see
+          # `original_remaining_interest` and `months_saved`), so if the two
+          # run different accrual models an untouched loan reads as diverging
+          # from its own contract -- a phantom "ahead of schedule" on every
+          # chart. Offset loans stay on daily regardless, since a daily
+          # offset balance has no monthly equivalent; a zero-balance link is
+          # mathematically the no-offset case and is kept off the offset
+          # branch so linking an empty asset does not change figures merely
+          # by changing the calculation mode.
+          daily_accrual: Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL ||
+            (loan.offset_accounts.any? && loan.offset_accounts.sum(:balance).positive?),
           day_count_convention: loan.day_count_convention,
           offset_for: Loan::OffsetResolver.new(loan).method(:change_points)
         ).run.payments

@@ -131,12 +131,79 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     # projection doesn't know its final period in advance -- it keeps paying
     # the constant level payment and only adjusts once a period's payment
     # would otherwise overshoot -- so an unchanged balance can still trail by
-    # one small "cleanup" payment after 360 periods of accumulated monthly
-    # rounding. That's a real, tiny artifact of two independently-terminated
+    # one small "cleanup" payment after 360 periods of accumulated rounding.
+    # That's a real, tiny artifact of two independently-terminated
     # simulations, not a meaningful difference.
+    #
+    # The bound asserted is the artefact itself -- the trailing payment's own
+    # interest -- rather than the flat $1 this used to assert. That $1 was the
+    # monthly-accrual residue measured and then hardcoded; under daily accrual
+    # the same untouched loan trails by $1.10, so the flat bound would have
+    # reported a loan sitting exactly on its contract as behind schedule.
     assert projection.applicable?
     assert projection.months_saved.between?(-1, 0)
-    assert projection.interest_saved.abs < 1
+    assert projection.cleanup_payment_artefact?
+    assert_not projection.diverges_from_schedule?
+  end
+
+  # Regression: the projection built its simulator without
+  # `accrual_rate_changes`, so the simulator fell back to "this period has no
+  # rate changes". On the daily branch that is what segments an accrual window
+  # (C7/C10), so a rate effective BETWEEN two payment dates moved the persisted
+  # schedule's interest and not the projection's -- reporting an untouched loan
+  # as diverging from its own contract.
+  #
+  # Invisible before #10: the projection ran daily only for offset loans, so the
+  # missing input only mattered for a variable-rate loan that also had an offset.
+  # Enabling daily accrual for every loan made it reachable for all of them.
+  test "a rate change between payment dates moves the projection's interest, not just the schedule's" do
+    loan = build_loan(balance: 500_000, rate_type: "variable")
+    payment_dates = loan.amortizations.where("payment_date > ?", Date.current).ordered.pluck(:payment_date)
+    mid_period = payment_dates.first + ((payment_dates.second - payment_dates.first) / 2)
+    assert mid_period > payment_dates.first && mid_period < payment_dates.second,
+      "test setup must place the rate change strictly inside a payment period"
+
+    baseline_interest = loan.payoff_projection.total_interest.amount
+
+    # 3.5% -> 4.5%, deliberately modest. A large jump (9%) pushes the monthly
+    # interest above the contracted payment, so the projection stops being
+    # `applicable?` and reports zero interest -- which would make the assertions
+    # below pass for a reason that has nothing to do with rate segmentation.
+    loan.update!(variable_rate_schedule: { mid_period.iso8601 => 4.5 })
+    loan.ensure_amortization_schedule_current!
+
+    changed = loan.reload.payoff_projection
+    assert changed.applicable?,
+      "test setup must keep the loan amortizable, or the comparison below is vacuous"
+
+    changed_interest = changed.total_interest.amount
+
+    assert_not_equal baseline_interest, changed_interest,
+      "a mid-period accrual-rate change must reach the projection; equal totals mean " \
+      "accrual_rate_changes never got to the simulator and the window was not segmented"
+    assert changed_interest > baseline_interest,
+      "raising the accrual rate must raise projected interest"
+  end
+
+  # The cleanup artefact is tolerated because it is bounded by the trailing
+  # payment. A divergence larger than that trailing payment is real and must
+  # still be reported, even when it is only one payment long.
+  test "a divergence larger than the trailing cleanup payment is still reported" do
+    loan = build_loan(balance: 500000)
+    projection = loan.payoff_projection
+
+    # Assert the precondition rather than assume it: `cleanup_payment_artefact?`
+    # short-circuits to false unless months_saved is exactly -1, so without this
+    # both assertions below could pass without the interest bound being reached
+    # at all.
+    assert_equal(-1, projection.months_saved,
+      "this test only exercises the interest bound when the projection trails by exactly one payment")
+
+    trailing_interest = projection.payments.last[:interest_payment]
+    projection.stubs(:interest_saved).returns(-(trailing_interest + 1))
+
+    assert_not projection.cleanup_payment_artefact?
+    assert projection.diverges_from_schedule?
   end
 
   test "projects a sooner payoff and positive interest saved when ahead of schedule" do

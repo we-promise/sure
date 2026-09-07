@@ -77,7 +77,17 @@ class LoansTaskTest < ActiveSupport::TestCase
     FileUtils.rm_f(output)
   end
 
-  test "variance task reports the monthly column that production actually persists" do
+  # The report exists to evidence a monthly-to-daily transition, so its two
+  # columns are the two accrual modes and neither can be pinned to "whatever
+  # production ships" -- that would make the report compare a mode against
+  # itself once the transition landed, reporting every delta as zero exactly
+  # when the release it evidences was being prepared.
+  #
+  # What must stay true is that the report is not describing a calculation
+  # nobody runs: the column matching SCHEDULE_DAILY_ACCRUAL has to equal what
+  # the persisted schedule actually produces. Asserted against the constant so
+  # this holds whichever way it is set.
+  test "the variance column matching the shipped accrual mode equals what production persists" do
     output = Rails.root.join("tmp", "loan-variance-parity.csv")
     FileUtils.rm_f(output)
 
@@ -85,11 +95,52 @@ class LoansTaskTest < ActiveSupport::TestCase
     row = CSV.read(output, headers: true).first
     loan = Loan.find(row["loan_id"])
 
+    shipped_column =
+      Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL ? "daily_interest" : "monthly_interest"
+
+    # Compare against the PERSISTED rows, not a fresh
+    # `amortization_schedule.payments`. Recomputing here would run the same code
+    # the report runs, so the assertion would hold even if persistence or row
+    # mapping dropped the figure on the way to the table users actually read.
+    loan.rebuild_amortization_schedule
+    assert_predicate loan.amortizations.count, :positive?,
+      "test setup must persist schedule rows, or the comparison below is vacuous"
+
     assert_equal(
-      loan.amortization_schedule.payments.sum { |payment| payment[:interest_payment] },
-      BigDecimal(row["monthly_interest"]),
-      "the report's monthly column must equal what Loan::AmortizationSchedule#payments produces"
+      loan.amortizations.sum(:interest_payment),
+      BigDecimal(row[shipped_column]),
+      "the report's #{shipped_column} column must equal the persisted LoanAmortization rows"
     )
+  ensure
+    FileUtils.rm_f(output)
+  end
+
+  # The other column is the comparison side. It must be the OTHER mode, not a
+  # second copy of the shipped one -- the defect that made this report useless
+  # the moment SCHEDULE_DAILY_ACCRUAL flipped.
+  test "the variance report's two columns are genuinely different accrual modes" do
+    output = Rails.root.join("tmp", "loan-variance-modes.csv")
+    FileUtils.rm_f(output)
+
+    Rake::Task["loans:amortization_variance"].invoke("1", output.to_s)
+    row = CSV.read(output, headers: true).first
+    loan = Loan.find(row["loan_id"])
+
+    monthly = loan.amortization_schedule.simulation(daily_accrual: false).total_interest
+    daily = loan.amortization_schedule.simulation(daily_accrual: true).total_interest
+
+    # Without this, a loan whose two modes happen to coincide (any 0% loan, for
+    # one) would let a report that wrote a single mode into both columns pass
+    # the assertions below -- the exact defect this test exists to catch.
+    assert_not_equal monthly, daily,
+      "test setup must select a loan whose accrual modes genuinely differ"
+
+    assert_equal monthly, BigDecimal(row["monthly_interest"]),
+      "the monthly column must be an explicitly monthly run"
+    assert_equal daily, BigDecimal(row["daily_interest"]),
+      "the daily column must be an explicitly daily run"
+    assert_not_equal row["monthly_interest"], row["daily_interest"],
+      "the two columns must not carry the same figure"
   ensure
     FileUtils.rm_f(output)
   end

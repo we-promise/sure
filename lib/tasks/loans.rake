@@ -216,7 +216,11 @@ namespace :loans do
     output = loan_task_option.call(args, :output)
     rows = []
     Loan.where.not(term_months: nil).order(:id).limit(limit).find_each do |loan|
-      monthly = loan.amortization_schedule.simulation
+      # Both modes are passed explicitly. Defaulting the monthly side to
+      # SCHEDULE_DAILY_ACCRUAL made this report compare daily against daily
+      # -- every delta zero -- the moment that constant flipped, i.e. exactly
+      # when the release it exists to evidence was being prepared.
+      monthly = loan.amortization_schedule.simulation(daily_accrual: false)
       daily = loan.amortization_schedule.simulation(daily_accrual: true)
       rows << {
         loan_id: loan.id,

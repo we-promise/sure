@@ -470,9 +470,9 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     loan = accounts(:characterization_fixed).loan
 
     assert_characterized_schedule loan, [
-      characterized_row(1, "2024-02-15", "12.0", "340.02", "330.02", "10.00", "1000.00", "669.98"),
-      characterized_row(2, "2024-03-15", "12.0", "340.02", "333.32", "6.70", "669.98", "336.66"),
-      characterized_row(3, "2024-04-15", "12.0", "340.03", "336.66", "3.37", "336.66", "0.00")
+      characterized_row(1, "2024-02-15", "12.0", "340.02", "329.83", "10.19", "1000.00", "670.17"),
+      characterized_row(2, "2024-03-15", "12.0", "340.02", "333.63", "6.39", "670.17", "336.54"),
+      characterized_row(3, "2024-04-15", "12.0", "339.97", "336.54", "3.43", "336.54", "0.00")
     ]
   end
 
@@ -481,8 +481,14 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
 
     assert_characterized_schedule loan, [
       characterized_row(1, "2024-02-01", "0.0", "333.33", "333.33", "0.00", "1000.00", "666.67"),
-      characterized_row(2, "2024-03-01", "12.0", "338.34", "331.67", "6.67", "666.67", "335.00"),
-      characterized_row(3, "2024-04-01", "0.0", "335.00", "335.00", "0.00", "335.00", "0.00")
+      # Row 2 carries the SIZING rate 12% and charges 0.00 interest, and row 3
+      # carries sizing rate 0% and charges 3.35. That is the two-clock contract
+      # (C7/C8/C10, #48), not a defect: the rate effective 2024-03-01 applies to
+      # the half-open accrual window [03-01, 04-01) -- row 3 -- while row 2's
+      # window ran entirely at the old 0%. Payment sizing moves on the first
+      # payment on or after the effective date, which is row 2.
+      characterized_row(2, "2024-03-01", "12.0", "338.34", "338.34", "0.00", "666.67", "328.33"),
+      characterized_row(3, "2024-04-01", "0.0", "331.68", "328.33", "3.35", "328.33", "0.00")
     ]
   end
 
@@ -500,7 +506,7 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     loan = accounts(:characterization_short).loan
 
     assert_characterized_schedule loan, [
-      characterized_row(1, "2024-02-15", "12.0", "1010.00", "1000.00", "10.00", "1000.00", "0.00")
+      characterized_row(1, "2024-02-15", "12.0", "1010.19", "1000.00", "10.19", "1000.00", "0.00")
     ]
   end
 
@@ -516,15 +522,17 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
 
   # --- #36: which accrual the production read path runs -------------------
   #
-  # The version bump to 3 shipped while `generate_schedule` still accrued
-  # monthly, which would have invalidated every persisted row on deploy to
-  # regenerate identical numbers. Pin the pairing so it cannot happen silently.
-  test "the persisted schedule accrues monthly, and the algorithm version says so" do
-    assert_equal false, Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL
-    assert_equal 2, Loan::AmortizationSchedule::ALGORITHM_VERSION,
-      "ALGORITHM_VERSION must not advance past 2 while SCHEDULE_DAILY_ACCRUAL is false -- " \
-      "the version is baked into the schedule signature, so bumping it rebuilds every " \
-      "persisted row for every loan while producing identical numbers (#36)"
+  # #36's defect was the version advancing while the calculation did not, so
+  # every persisted row was invalidated to regenerate identical numbers. The
+  # pairing is pinned in both directions: version 3 means daily accrual, and
+  # daily accrual means version 3.
+  test "the persisted schedule accrues daily, and the algorithm version says so" do
+    assert_equal true, Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL
+    assert_equal 3, Loan::AmortizationSchedule::ALGORITHM_VERSION,
+      "SCHEDULE_DAILY_ACCRUAL and ALGORITHM_VERSION move together -- the version is baked " \
+      "into the schedule signature, so a version that disagrees with the calculation either " \
+      "restages every row to produce identical numbers or serves rows the code did not " \
+      "produce (#36)"
   end
 
   test "payments and an unqualified simulation are the same calculation" do
@@ -533,7 +541,7 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal schedule.payments, schedule.simulation.payments
   end
 
-  test "daily accrual is a different calculation, and is not the one production runs" do
+  test "daily accrual is a different calculation, and is the one production runs" do
     schedule = accounts(:characterization_fixed).loan.amortization_schedule
 
     monthly = schedule.simulation(daily_accrual: false)
@@ -541,8 +549,8 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
 
     assert_not_equal daily.total_interest, monthly.total_interest,
       "if these agree the daily path is not doing anything and this test proves nothing"
-    assert_equal monthly.payments, schedule.payments,
-      "production must run the monthly path while SCHEDULE_DAILY_ACCRUAL is false (#36)"
+    assert_equal daily.payments, schedule.payments,
+      "production must run the daily path while SCHEDULE_DAILY_ACCRUAL is true (#36)"
   end
 
   test "simulation returns an empty converged result for a non-amortizable loan" do
@@ -569,9 +577,9 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
   test "the golden masters fail when the engine's per-period math moves by one cent" do
     loan = accounts(:characterization_fixed).loan
     rows = [
-      characterized_row(1, "2024-02-15", "12.0", "340.02", "330.02", "10.00", "1000.00", "669.98"),
-      characterized_row(2, "2024-03-15", "12.0", "340.02", "333.32", "6.70", "669.98", "336.66"),
-      characterized_row(3, "2024-04-15", "12.0", "340.03", "336.66", "3.37", "336.66", "0.00")
+      characterized_row(1, "2024-02-15", "12.0", "340.02", "329.83", "10.19", "1000.00", "670.17"),
+      characterized_row(2, "2024-03-15", "12.0", "340.02", "333.63", "6.39", "670.17", "336.54"),
+      characterized_row(3, "2024-04-15", "12.0", "339.97", "336.54", "3.43", "336.54", "0.00")
     ]
 
     assert_characterized_schedule loan, rows

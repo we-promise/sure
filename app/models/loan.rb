@@ -130,7 +130,10 @@ class Loan < ApplicationRecord
     schedule = amortization_schedule
 
     return nil unless projection.applicable?
-    return nil unless projection.months_saved.abs > 1 || projection.interest_saved.abs >= 1
+    # Materiality (including the one-payment cleanup artefact two
+    # independently-terminated simulations produce) is the projection's own
+    # business -- see Loan::PayoffProjection#diverges_from_schedule?.
+    return nil unless projection.diverges_from_schedule?
 
     today = Date.current
     scheduled_rows = schedule.display_rows
