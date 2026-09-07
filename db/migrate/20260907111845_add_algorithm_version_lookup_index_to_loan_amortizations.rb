@@ -45,6 +45,12 @@ class AddAlgorithmVersionLookupIndexToLoanAmortizations < ActiveRecord::Migratio
 
   private
 
+    # True when a same-name index exists but Postgres has marked it INVALID,
+    # which is what a failed or interrupted CREATE INDEX CONCURRENTLY leaves
+    # behind. Such an index occupies the name and is ignored by the planner, so
+    # it must be dropped rather than skipped over. Scoped to the current search
+    # path so an identically named index in another schema is not mistaken for
+    # this one.
     def invalid_index?
       select_value(<<~SQL.squish).present?
         SELECT 1

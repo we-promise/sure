@@ -365,6 +365,9 @@ class LoansTaskTest < ActiveSupport::TestCase
       $stdout = original
     end
 
+    # Asserts a task both exited and exited unsuccessfully. `exit(0)` raises
+    # SystemExit too, so asserting only that the task exited would pass for a
+    # task that had stopped reporting failure at all.
     def assert_failed_exit(exit_error, message)
       assert exit_error, message
       assert_not exit_error.success?,
