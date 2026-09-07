@@ -1,6 +1,11 @@
 require "test_helper"
 
 class WiseScaLocalizationTest < ActiveSupport::TestCase
+  KEYPAIR_RESULTS = {
+    "success" => "Neues SCA-Schlüsselpaar erzeugt. Registriere den öffentlichen Schlüssel bei Wise, um die Einrichtung abzuschließen.",
+    "failed" => "Das neue SCA-Schlüsselpaar ließ sich nicht erzeugen. Versuch es noch einmal."
+  }.freeze
+
   TRANSLATIONS = {
     "title" => "Starke Kundenauthentifizierung (SCA)",
     "description" => "Wise benötigt eine signierte Einmal-Token-Challenge, um vollständige Kontoauszüge einschließlich eingehender Zahlungen abzurufen. Erzeuge hier ein Schlüsselpaar und registriere den öffentlichen Schlüssel bei Wise, um den vollständigen Abruf zu ermöglichen.",
@@ -16,6 +21,15 @@ class WiseScaLocalizationTest < ActiveSupport::TestCase
   test "German Wise SCA copy matches the expected translations" do
     TRANSLATIONS.each do |key, expected|
       full_key = "wise_items.provider_panel.sca.#{key}"
+
+      assert I18n.exists?(full_key, :de, fallback: false), "de is missing #{full_key}"
+      assert_equal expected, I18n.t(full_key, locale: :de, resolve: false)
+    end
+  end
+
+  test "German Wise SCA keypair results match the expected translations" do
+    KEYPAIR_RESULTS.each do |key, expected|
+      full_key = "wise_items.generate_sca_keypair.#{key}"
 
       assert I18n.exists?(full_key, :de, fallback: false), "de is missing #{full_key}"
       assert_equal expected, I18n.t(full_key, locale: :de, resolve: false)
@@ -52,6 +66,27 @@ class WiseScaPanelLocalizationTest < ActionDispatch::IntegrationTest
     assert_sca_copy "copied"
     assert_sca_copy "regenerate"
     assert_sca_copy "regenerate_confirm"
+  end
+
+  # The key is only ever stored encrypted, and the test environment configures
+  # no encryption keys, so the flow has to be exercised as an install that does.
+  test "German Wise SCA keypair generation returns the localized success message" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
+    WiseItem.any_instance.expects(:generate_sca_keypair!).once.returns("SYNTHETIC PUBLIC KEY")
+
+    post generate_sca_keypair_wise_item_url(wise_items(:one))
+
+    assert_redirected_to accounts_path
+    assert_equal WiseScaLocalizationTest::KEYPAIR_RESULTS.fetch("success"), flash[:notice]
+  end
+
+  test "German Wise SCA keypair generation returns the localized failure message" do
+    WiseItem.any_instance.stubs(:generate_sca_keypair!).raises(StandardError, "synthetic failure")
+
+    post generate_sca_keypair_wise_item_url(wise_items(:one))
+
+    assert_redirected_to settings_providers_path
+    assert_equal WiseScaLocalizationTest::KEYPAIR_RESULTS.fetch("failed"), flash[:alert]
   end
 
   private
