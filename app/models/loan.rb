@@ -281,12 +281,24 @@ class Loan < ApplicationRecord
   #
   # Display only. The contracted schedule never tracks the live balance
   # (invariant A7), so nothing here is persisted or fed back into it.
+  # The maturity checks come FIRST, before the fixed-rate branch. Past maturity
+  # there are no payments left to spread a balance over, so there is no
+  # repayment to quote -- and that is true of a fixed loan as much as a variable
+  # one. Answering the question for one rate type and not the other left a
+  # matured fixed loan quoting its contracted repayment while a matured variable
+  # loan next to it said "Unknown" (CodeRabbit, #79).
+  #
+  # This does change what a matured FIXED loan displays. #15's "fixed-rate loans
+  # are unaffected" is about the figure quoted while the loan is live, which is
+  # untouched: a fixed loan still quotes `amortization_schedule.monthly_payment`
+  # for every day of its term.
   def current_minimum_payment(as_of: Date.current)
-    return amortization_schedule.monthly_payment unless variable_rate_type?
     return nil unless amortizable?
 
     remaining = amortization_schedule.remaining_payment_count(as_of: as_of)
     return nil unless remaining.positive?
+
+    return amortization_schedule.monthly_payment unless variable_rate_type?
 
     payment = AmortizationMath.level_payment(
       balance: interest_bearing_balance.amount,

@@ -81,6 +81,33 @@ class Loan::CurrentMinimumPaymentTest < ActiveSupport::TestCase
     assert_nil loan.current_minimum_payment
   end
 
+  # A fixed loan quotes its contracted repayment for every day of its term --
+  # #15 changes nothing about that, and this asserts it.
+  test "a live fixed loan still quotes the contracted payment" do
+    loan = variable_loan(balance: 400_762.12, rate: 6.18, term_months: 360, months_elapsed: 83)
+    loan.update!(rate_type: "fixed")
+
+    assert_equal loan.reload.amortization_schedule.monthly_payment,
+      loan.current_minimum_payment
+  end
+
+  # CodeRabbit, #79. Past maturity there are no payments left to spread a
+  # balance over, so there is no repayment to quote -- and that is as true of a
+  # fixed loan as a variable one. The fixed branch used to return before the
+  # maturity check, so a matured fixed loan quoted its contracted repayment
+  # while a matured variable loan beside it said "Unknown".
+  test "a matured fixed loan has no figure either" do
+    loan = variable_loan(balance: 400_762.12, rate: 6.18, term_months: 12, months_elapsed: 24)
+    loan.update!(rate_type: "fixed")
+    loan.reload
+
+    assert_equal 0, loan.amortization_schedule.remaining_payment_count
+    assert loan.amortization_schedule.monthly_payment.amount.positive?,
+      "the contracted payment must still be a positive figure, or this proves nothing"
+    assert_nil loan.current_minimum_payment,
+      "a matured loan has no repayment to quote, whatever its rate type"
+  end
+
   private
 
     def variable_loan(balance:, rate:, term_months:, months_elapsed:)
