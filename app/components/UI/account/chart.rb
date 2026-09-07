@@ -7,8 +7,11 @@ class UI::Account::Chart < ApplicationComponent
     @view = view
   end
 
+  # Substituted through the account so a loan's "All" means the loan's own
+  # history rather than the family's oldest entry (D5/FR-501). Every other
+  # account type and every other period comes back untouched.
   def period
-    @period ||= Period.last_30_days
+    @resolved_period ||= account.chart_period(@period)
   end
 
   def holdings_value_money
