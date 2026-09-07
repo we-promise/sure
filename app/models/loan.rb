@@ -140,7 +140,7 @@ class Loan < ApplicationRecord
   # view, because a scenario pinned to a stale balance cannot answer the only
   # question it is asked: given where I am now, what if?
   def payoff_projection_for_scenario(scenario)
-    PayoffProjection.new(self, repayment_plan: Loan::RepaymentPlan.for(scenario))
+    PayoffProjection.new(self, scenario: scenario)
   end
 
   # A fresh (unmemoized) projection modeling a hypothetical extra payment on

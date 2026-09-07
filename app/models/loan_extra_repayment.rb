@@ -48,6 +48,11 @@ class LoanExtraRepayment < ApplicationRecord
       elsif recurring?
         errors.add(:frequency, :blank) if frequency.blank?
         errors.add(:occurs_on, :present) if occurs_on.present?
+        # A recurring repayment MUST carry its own start date. Without one the
+        # plan had to anchor the recurrence on whatever window it was asked
+        # about, and PayoffProjection asks once per payment period -- so a
+        # quarterly repayment re-anchored monthly and fired every month.
+        errors.add(:starts_on, :blank) if starts_on.blank?
       end
     end
 

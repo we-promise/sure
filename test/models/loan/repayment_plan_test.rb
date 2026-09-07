@@ -82,7 +82,49 @@ class Loan::RepaymentPlanTest < ActiveSupport::TestCase
     assert_empty Loan::RepaymentPlan.new(nil).change_points(Date.new(2026, 1, 1), Date.new(2027, 1, 1))
   end
 
+  # cubic, #83. Half-open windows put every date in exactly one period -- except
+  # the final payment date, which has no period opening on it and fell through
+  # all of them. Walked the way Simulator walks, because the defect only appears
+  # across the whole schedule, never in a single call.
+  test "a repayment on the final payment date lands in exactly one window" do
+    dates = (1..12).map { |month| Date.new(2026, 1, 5) >> month }
+    plan = Loan::RepaymentPlan.new([ build_one_off(amount: 5_000, on: dates.last) ], closes_on: dates.last)
+
+    assert_equal 1, occurrences_across(plan, Date.new(2026, 1, 5), dates),
+      "a repayment on the last payment date must still be applied, not silently dropped"
+  end
+
+  test "a repayment on an interior payment date lands in exactly one window" do
+    dates = (1..12).map { |month| Date.new(2026, 1, 5) >> month }
+    plan = Loan::RepaymentPlan.new([ build_one_off(amount: 5_000, on: dates[3]) ], closes_on: dates.last)
+
+    assert_equal 1, occurrences_across(plan, Date.new(2026, 1, 5), dates),
+      "counted twice would double-apply the repayment; counted zero times would lose it"
+  end
+
+  # The resolver is called once per payment period. A recurrence anchored on the
+  # window rather than on the row fires once per window -- so a quarterly
+  # repayment became a monthly one.
+  test "a quarterly repayment stays quarterly when resolved period by period" do
+    dates = (1..12).map { |month| Date.new(2026, 1, 5) >> month }
+    repayment = build_recurring(amount: 250, frequency: "quarterly", starts_on: Date.new(2026, 2, 5))
+    plan = Loan::RepaymentPlan.new([ repayment ], closes_on: dates.last)
+
+    assert_equal 4, occurrences_across(plan, Date.new(2026, 1, 5), dates),
+      "resolving per period must not multiply a quarterly cadence into a monthly one"
+  end
+
   private
+
+    # Every change point the simulator would see, walking contiguous windows.
+    def occurrences_across(plan, start_date, payment_dates)
+      previous = start_date
+      payment_dates.sum do |payment_date|
+        count = plan.change_points(previous, payment_date).size
+        previous = payment_date
+        count
+      end
+    end
 
     def build_one_off(amount:, on:)
       LoanExtraRepayment.new(kind: "one_off", amount: amount, occurs_on: on)

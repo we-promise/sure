@@ -30,5 +30,24 @@ class CreateLoanExtraRepayments < ActiveRecord::Migration[7.2]
     add_check_constraint :loan_extra_repayments,
       "frequency IS NULL OR frequency IN ('weekly','fortnightly','monthly','quarterly','yearly')",
       name: "chk_loan_extra_repayments_frequency"
+
+    # A non-positive interval reaches RecurringTransaction::Schedule and either
+    # fails date generation (zero) or steps backwards forever (negative). The
+    # model validates it; this is what holds when a write bypasses the model.
+    add_check_constraint :loan_extra_repayments,
+      "interval IS NULL OR interval > 0",
+      name: "chk_loan_extra_repayments_interval_positive"
+
+    # Reversed bounds are not an error the plan can report -- it silently
+    # produces no occurrences, so the repayment looks saved and does nothing.
+    add_check_constraint :loan_extra_repayments,
+      "starts_on IS NULL OR ends_on IS NULL OR ends_on >= starts_on",
+      name: "chk_loan_extra_repayments_date_order"
+
+    # A recurring repayment has no stable anchor without a start date, and the
+    # plan cannot invent one: see Loan::RepaymentPlan#recurring_dates.
+    add_check_constraint :loan_extra_repayments,
+      "kind <> 'recurring' OR starts_on IS NOT NULL",
+      name: "chk_loan_extra_repayments_recurring_has_start"
   end
 end

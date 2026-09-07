@@ -1349,9 +1349,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_170100) do
     t.date "starts_on"
     t.datetime "updated_at", null: false
     t.index ["loan_scenario_id"], name: "index_loan_extra_repayments_on_loan_scenario_id"
+    t.check_constraint "\"interval\" IS NULL OR \"interval\" > 0", name: "chk_loan_extra_repayments_interval_positive"
     t.check_constraint "amount > 0::numeric", name: "chk_loan_extra_repayments_amount_positive"
     t.check_constraint "frequency IS NULL OR (frequency::text = ANY (ARRAY['weekly'::character varying, 'fortnightly'::character varying, 'monthly'::character varying, 'quarterly'::character varying, 'yearly'::character varying]::text[]))", name: "chk_loan_extra_repayments_frequency"
+    t.check_constraint "kind::text <> 'recurring'::text OR starts_on IS NOT NULL", name: "chk_loan_extra_repayments_recurring_has_start"
     t.check_constraint "kind::text = 'one_off'::text AND occurs_on IS NOT NULL AND frequency IS NULL OR kind::text = 'recurring'::text AND frequency IS NOT NULL AND occurs_on IS NULL", name: "chk_loan_extra_repayments_kind_coherent"
+    t.check_constraint "starts_on IS NULL OR ends_on IS NULL OR ends_on >= starts_on", name: "chk_loan_extra_repayments_date_order"
   end
 
   create_table "loan_offset_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1396,7 +1399,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_170100) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
-    t.check_constraint "day_count_convention::text = ANY (ARRAY['actual_365'::character varying::text, 'actual_actual'::character varying::text])", name: "chk_loans_day_count_convention"
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
     t.check_constraint "interest_rate IS NULL OR interest_rate >= 0::numeric AND interest_rate <= 100::numeric", name: "chk_loans_interest_rate_bounds"
     t.check_constraint "term_months IS NULL OR term_months > 0 AND term_months <= 1200", name: "chk_loans_term_months_bounds"
   end

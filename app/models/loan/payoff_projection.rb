@@ -42,10 +42,10 @@ class Loan
     # Collapsing the second into a monthly equivalent of the first is exactly
     # what C6 forbids: it would charge interest the borrower did not owe
     # between the real repayment date and the notional month end.
-    def initialize(loan, extra_payment: nil, repayment_plan: nil)
+    def initialize(loan, extra_payment: nil, scenario: nil)
       @loan = loan
       @extra_payment = extra_payment
-      @repayment_plan = repayment_plan
+      @scenario = scenario
       # No rebuild is enqueued here. The version of this on #4 did so from the
       # constructor, which makes merely instantiating a projection a
       # side-effecting act. Since #39 the read paths own that: the Schedule tab
@@ -257,13 +257,19 @@ class Loan
         @original_schedule_rows ||= loan.amortization_schedule.display_rows
       end
 
-      # Nil rather than an empty lambda when there is no plan, so the simulator
-      # keeps its own default and a baseline projection is byte-identical to
-      # what it was before scenarios existed.
+      # Nil rather than an empty lambda when there is no scenario, so the
+      # simulator keeps its own default and a baseline projection is
+      # byte-identical to what it was before scenarios existed.
+      #
+      # `closes_on` is the projection's own last payment date: the plan's
+      # windows are half-open to avoid double-applying a repayment that lands on
+      # a payment date, which leaves the final date in no window at all unless
+      # the last one is told to close inclusively.
       def extra_repayment_resolver
-        return nil if @repayment_plan.nil?
+        return nil if @scenario.nil?
 
-        @repayment_plan.method(:change_points)
+        Loan::RepaymentPlan.for(@scenario, closes_on: projected_payment_dates.last)
+          .method(:change_points)
       end
 
       def original_remaining_payments

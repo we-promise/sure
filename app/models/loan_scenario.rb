@@ -22,7 +22,12 @@ class LoanScenario < ApplicationRecord
   has_many :extra_repayments, class_name: "LoanExtraRepayment", dependent: :destroy
 
   validates :name, presence: true, length: { maximum: 100 }
-  validates :currency, presence: true
+  # Must match the loan. A scenario in a different currency formats money it
+  # cannot compare and produces metadata that silently disagrees with the loan
+  # it belongs to.
+  validates :currency, presence: true,
+    inclusion: { in: ->(scenario) { [ scenario.loan&.account&.currency ].compact } },
+    if: -> { loan&.account&.currency.present? }
   validates :slot, inclusion: { in: SLOTS }
   validates :calculator_version, presence: true
   validates :rate_override, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }, allow_nil: true
@@ -43,22 +48,49 @@ class LoanScenario < ApplicationRecord
   # translated into a clean rejection (gate G5).
   def self.create_in_free_slot(loan:, attributes: {})
     scenario = new(attributes.merge(loan: loan))
-    scenario.slot = loan.loan_scenarios.pluck(:slot).then { |taken| (SLOTS - taken).min }
 
-    if scenario.slot.nil?
-      scenario.errors.add(:base, :slot_cap_reached)
-      return scenario
+    # Retried, because losing a slot race is not the same as the cap being
+    # reached. With three scenarios and two concurrent creates, both pick the
+    # same lowest free slot; one loses the unique index while slots 4 and 5 are
+    # still free, and rejecting it would report "five already" over an
+    # almost-empty loan (cubic, #83). At most SLOTS attempts, so a genuinely
+    # full loan still terminates on the cap rather than spinning.
+    SLOTS.length.times do
+      taken = loan.loan_scenarios.pluck(:slot)
+      scenario.slot = (SLOTS - taken).min
+
+      if scenario.slot.nil?
+        scenario.errors.add(:base, :slot_cap_reached)
+        return scenario
+      end
+
+      begin
+        return scenario if scenario.save
+        return scenario # a validation failure is the caller's to fix, not a race
+      rescue ActiveRecord::RecordNotUnique
+        scenario.errors.clear
+        # Someone took this slot between our read and our write. Look again.
+      end
     end
 
-    begin
-      scenario.save
-    rescue ActiveRecord::RecordNotUnique
-      # Another request took this slot between our read and our write. That is
-      # the cap doing its job, not an error to retry blindly.
-      scenario.errors.add(:base, :slot_cap_reached)
-    end
-
+    scenario.errors.add(:base, :slot_cap_reached)
     scenario
+  end
+
+  # Records that a live estimate was produced, and by which engine.
+  #
+  # Deliberately NOT called from the projection reader. #39 established that a
+  # read path in this codebase does not write -- the Schedule tab enqueues a
+  # rebuild rather than performing one -- and a GET that touches a row on every
+  # render is the same mistake in miniature. PR 7b's controller calls this after
+  # rendering, which is the point at which a figure has actually been shown to
+  # someone.
+  def record_calculation!
+    update_columns(
+      last_calculated_at: Time.current,
+      calculator_version: Loan::AmortizationSchedule::ALGORITHM_VERSION,
+      updated_at: Time.current
+    )
   end
 
   def creator_name
