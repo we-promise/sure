@@ -59,6 +59,7 @@ class WiseItemTest < ActiveSupport::TestCase
   end
 
   test "generate_sca_keypair! stores a private key and returns a matching public key" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
     public_pem = @wise_item.generate_sca_keypair!
 
     assert @wise_item.sca_configured?
@@ -69,7 +70,47 @@ class WiseItemTest < ActiveSupport::TestCase
     assert_equal private_key.public_key.to_pem, public_pem
   end
 
+  # An SCA private key signs requests to Wise. Storing it unencrypted is not a
+  # degraded mode worth having, so an install without Active Record encryption
+  # is refused rather than silently writing the PEM in the clear.
+  test "refuses to store an SCA private key when encryption is not configured" do
+    WiseItem.stubs(:encryption_ready?).returns(false)
+
+    assert_raises(WiseItem::SCAEncryptionUnavailable) { @wise_item.generate_sca_keypair! }
+    assert_nil @wise_item.reload.sca_private_key
+
+    @wise_item.sca_private_key = "not a real PEM"
+
+    assert_not @wise_item.valid?
+    assert_includes @wise_item.errors.attribute_names, :sca_private_key
+  end
+
+  # The validation guards writes of the key, not the record. A value stored
+  # before it existed must not make the record permanently unsaveable: the
+  # destroy path unlinks the accounts first and only then calls update!, so a
+  # refusal there strands the provider half unlinked and still active.
+  test "a key stored before encryption was required does not block later saves" do
+    WiseItem.stubs(:encryption_ready?).returns(false)
+    @wise_item.update_column(:sca_private_key, "legacy plaintext value")
+
+    assert @wise_item.reload.valid?
+    assert @wise_item.update(name: "Renamed connection")
+
+    assert_nothing_raised { @wise_item.destroy_later }
+    assert @wise_item.reload.scheduled_for_deletion
+  end
+
+  # Same shape as the other Encryptable models' tests: the suite deliberately
+  # runs without encryption keys (see EncryptionVerificationTest), so this
+  # skips rather than asserting a state the default environment cannot reach.
+  test "declares the SCA private key as encrypted" do
+    skip "Encryption not configured" unless WiseItem.encryption_ready?
+
+    assert_includes WiseItem.encrypted_attributes.map(&:to_s), "sca_private_key"
+  end
+
   test "generate_sca_keypair! replaces a previously generated key" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
     first_public_key = @wise_item.generate_sca_keypair!
     second_public_key = @wise_item.generate_sca_keypair!
 
