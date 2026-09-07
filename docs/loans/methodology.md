@@ -1,7 +1,14 @@
 # Loan reconciliation methodology
 
-Status: **not reconciled.** The committed fixture is synthetic. Gate G2 (#11)
-is open.
+Status: **partially reconciled; G2 not signed.** A real lender statement has
+since been reconciled against the engine (#65, summarised below), so the earlier
+"nothing here has met a real charge" framing no longer holds. What is still
+missing is an offset case, a re-run against the per-loan basis, and a named
+finance reviewer — see *Outstanding before G2 can be signed off*.
+
+Note on #11's state: the issue is **closed**, but no sign-off is recorded on it
+or here, and its final comment says closure was not intended as sign-off. Treat
+G2 as unsigned until a reviewer is named in this document.
 
 ## Why the fixture is synthetic
 
@@ -42,6 +49,36 @@ The second is the C7 defect this programme was already carrying, and the fixture
 catches it. This is repository evidence, not lender evidence — it does not
 discharge G2.
 
+## Real statement reconciliation (#65)
+
+A real lender statement has been reconciled against `Loan::InterestAccrual`,
+following the procedure below. Per the de-identification rule, no amounts,
+dates, balances or rates from the source appear here.
+
+| basis | charges reconciling within one cent |
+| --- | --- |
+| fixed `DAY_COUNT = 365` | 30 / 43 |
+| actual/actual | **43 / 43** |
+
+43 consecutive monthly interest charges were compared. Every window falling
+wholly within a leap year was overstated by the same relative amount, 2740 ppm,
+which is exactly `366/365 - 1`; the two windows straddling a year boundary were
+overstated by intermediate amounts and also resolved exactly under
+actual/actual. That pattern is what excludes coincidence. Under actual/actual
+the median residual is zero and the maximum is one cent, consistent with a
+single rounding at the charge point.
+
+**What this establishes:** a single hardcoded day-count basis cannot be assumed.
+That finding is why the basis is now a per-loan property rather than a constant
+(contract row C2, landed in #70) instead of the constant being quietly retuned
+to fit one statement, which #11 explicitly forbids.
+
+**What it does not establish:** that actual/actual is correct for any other
+lender. This is one lender and one loan. It also verified **gross** interest
+only — reconstructed as the charge plus the lender's own disclosed offset
+saving, which is the lender's figure and not an independent check — so offset
+accrual remains unproven.
+
 ## Running the real reconciliation
 
 The real statement work happens **outside the repository**, and only its
@@ -74,34 +111,37 @@ so the comparison — not the formula — is the evidence.
 
 ## Outstanding before G2 can be signed off
 
-- **The statement reconciliation itself.** Nothing in this repository currently
-  compares the engine to a real lender charge.
-- **Mid-cycle rate changes.** `Loan::InterestAccrual` segments correctly at a
-  rate's effective date, and the fixture above proves it. Two caveats before a
-  real statement can be cited:
-  - The **persisted** schedule does not use that path at all.
-    `Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL` is `false`, so
-    production accrues monthly (#36). A statement reconciliation therefore
-    exercises code users' numbers do not currently come from.
-  - Within the daily path, `accrual_rate_for` and `re_amortisation_events` are
-    still not independent inputs — accrual segments only on re-amortisation
-    events (#25). A rate that changes accrual without changing the contracted
-    repayment is not yet representable.
+- **Re-run the reconciliation against the per-loan basis.** The #65 run predates
+  `loans.day_count_convention` (#70). It reconciled the engine against a fixed
+  basis chosen by hand; it has not been re-run against the representation the
+  code now actually uses. This is the last unchecked box on #65.
+- **Disclose the basis in the UI.** #11 requires that where reconciliation shows
+  a basis is only an approximation for a lender, "the UI copy must say so". No
+  view, component or locale string currently mentions the day-count basis at
+  all — it exists only in the model layer. C2 leans on this disclosure when it
+  says selecting a basis is the borrower's assertion rather than a verified
+  fact, so the contract currently promises something the interface does not
+  deliver.
 - **Offset movement.** Daily offset reconciliation needs the linked account's
-  balance history. Until that is available, offset cases are out of scope for
-  sign-off rather than tolerated within it.
+  balance history, which the statements do not carry — they report the lender's
+  own offset saving, not daily balances. Until that history is available, offset
+  cases are out of scope for sign-off rather than tolerated within it. A
+  sign-off that covers gross interest only must say so in those words.
+- **Mid-cycle rate changes on the path users read.** The **persisted** schedule
+  still does not use the daily path: `SCHEDULE_DAILY_ACCRUAL` is `false` on
+  `main`, so production accrues monthly (#36) and a statement reconciliation
+  exercises code users' numbers do not currently come from. Enabling it is #10,
+  prepared and evidenced but deliberately unmerged pending this gate.
 - **Finance review.** No reviewer has signed off any figure in this document.
-- **The oracle currently proves the engine against itself-plus-arithmetic**, not
-  against a lender. The fixture is arithmetically exact by construction, so it
-  can confirm the engine implements actual/365 as specified; it cannot confirm
-  that actual/365 is what the lender does.
+  This is the item that cannot be discharged from the repository at all.
 - **Which basis a loan uses is now the borrower's assertion** (#65). The
   reconciliation that motivated it covers one lender and one loan: 43/43 charges
   resolve under actual/actual against 30/43 under a fixed 365, with every
   wholly-within-a-leap-year window wrong by exactly 366/365 − 1. That is
   evidence a single fixed constant cannot be assumed, not evidence that
-  actual/actual is correct for any other lender. The default stays actual/365
-  and the schedule states the basis in force rather than implying it is
-  verified.
+  actual/actual is correct for any other lender. The default stays actual/365.
+  The contract (C2) says the schedule discloses the basis in force rather than
+  implying it is verified; that disclosure is **specified but not yet built** --
+  see the UI bullet above -- so this row is not currently satisfied end to end.
 
 No production release approval is granted by this document.
