@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_07_111845) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1322,6 +1322,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
     t.decimal "principal_payment", precision: 19, scale: 4, null: false
     t.string "schedule_signature", null: false
     t.datetime "updated_at", null: false
+    t.index ["algorithm_version", "loan_id"], name: "index_loan_amortizations_on_algorithm_version_and_loan_id"
     t.index ["loan_id", "algorithm_version"], name: "index_loan_amortizations_on_loan_id_and_algorithm_version"
     t.index ["loan_id", "payment_date"], name: "index_loan_amortizations_on_loan_id_and_payment_date"
     t.index ["loan_id", "payment_number"], name: "index_loan_amortizations_on_loan_id_and_payment_number", unique: true
@@ -1358,7 +1359,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
-    t.check_constraint "day_count_convention::text = ANY (ARRAY['actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['actual_365'::character varying::text, 'actual_actual'::character varying::text])", name: "chk_loans_day_count_convention"
     t.check_constraint "interest_rate IS NULL OR interest_rate >= 0::numeric AND interest_rate <= 100::numeric", name: "chk_loans_interest_rate_bounds"
     t.check_constraint "term_months IS NULL OR term_months > 0 AND term_months <= 1200", name: "chk_loans_term_months_bounds"
   end

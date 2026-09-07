@@ -242,6 +242,11 @@ requires.
 
     RAILS_ENV=production bin/rails loans:rebuild_schedules BATCH_SIZE=100 LIMIT=500 SLEEP=0.25
 
+Check progress after each slice. This exits 0 only when every loan is at the
+current algorithm version, so it is also the answer to "is the prebuild done?":
+
+    RAILS_ENV=production bin/rails loans:schedule_version_status
+
 `LIMIT` selects by id order, so repeating the command re-selects the same head of
 the estate. That is safe rather than wasteful — the rebuild is idempotent, and
 already-current schedules are cheap — but it means a slice is not a cursor:
@@ -271,15 +276,23 @@ aggregate results and identifiers that are safe for repository publication.
 ## Monitoring thresholds
 
 To be watched during and after the prebuild. These are derived from the
-executed evidence above, not guessed:
+executed evidence above, not guessed.
 
-| Signal | Threshold | Rationale |
-| --- | --- | --- |
-| Stale schedules | trending to 0; alert if not falling | the prebuild owns completion, not page views |
-| Failed rebuilds | any failure investigated | 32/32 succeeded in rehearsal |
-| Convergence regressions | zero tolerance | 32/32 converged in both modes |
-| Per-loan interest delta | alert above 1% | observed range -0.77% to +0.57% |
-| Rebuild queue depth | alert on sustained growth | rebuild is throttled and idempotent |
+Each row names the command that measures it. A threshold with no way to read it
+is not a monitoring signal -- the stale-schedule row was exactly that until
+`loans:schedule_version_status` existed, and `algorithm_version`, the column
+added to make it queryable, was written and validated but read by nothing.
+
+`loans:schedule_version_status` exits non-zero while any loan is behind, so a
+deploy step can block on it rather than an operator eyeballing a number:
+
+| Signal | Threshold | How to measure | Rationale |
+| --- | --- | --- | --- |
+| Stale schedules | trending to 0; alert if not falling | `bin/rails loans:schedule_version_status` | the prebuild owns completion, not page views |
+| Failed rebuilds | any failure investigated | job backend (rebuilds run as `LoanAmortizationRebuildJob`) | 32/32 succeeded in rehearsal |
+| Convergence regressions | zero tolerance | `loans:amortization_variance` (`*_converged` columns) | 32/32 converged in both modes |
+| Per-loan interest delta | alert above 1% | `loans:amortization_variance` (`interest_delta`) | observed range -0.77% to +0.57% |
+| Rebuild queue depth | alert on sustained growth | Sidekiq queue depth | rebuild is throttled and idempotent |
 
 ## Outstanding approvals
 

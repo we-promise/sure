@@ -16,6 +16,7 @@ class LoansTaskTest < ActiveSupport::TestCase
       loans:amortization_benchmark
       loans:amortization_variance
       loans:rebuild_schedules
+      loans:schedule_version_status
     ].each do |name|
       Rake::Task[name].clear_prerequisites
       Rake::Task[name].reenable
@@ -171,6 +172,45 @@ class LoansTaskTest < ActiveSupport::TestCase
     assert_equal expected, again, "a second run must be idempotent"
   end
 
+  # --- deploy monitoring: the runbook's "stale schedules" signal -----------
+  #
+  # docs/loans/release-evidence.md tells an operator to watch stale schedules
+  # trending to zero during a prebuild. Until this task existed the signal had
+  # no implementation, and `algorithm_version` -- the column added to make it
+  # queryable -- was written and validated but never read by anything.
+
+  test "schedule version status reports loans left on an older algorithm version" do
+    current = Loan::AmortizationSchedule::ALGORITHM_VERSION
+    loan = loans(:characterization_fixed)
+    loan.rebuild_amortization_schedule
+    assert_predicate loan.amortizations.count, :positive?
+
+    # A loan stranded on the previous version is exactly what a version bump
+    # creates and what the prebuild has to clear.
+    loan.amortizations.update_all(algorithm_version: current - 1)
+
+    output, exited = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+
+    assert exited, "staleness must exit non-zero so this can gate a deploy step"
+    assert_match(/version #{current - 1}: \d+ loans \(STALE\)/, output,
+      "the older version must be reported as stale, and named")
+    assert_match(/stale=[1-9]/, output)
+  end
+
+  test "schedule version status counts a loan with no rows as stale, not as clean" do
+    loan = loans(:characterization_fixed)
+    loan.rebuild_amortization_schedule
+    loan.amortizations.delete_all
+
+    output, exited = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+
+    # A loan the rebuild task would still have to visit must not read as clean
+    # merely because it has no rows to be the wrong version -- counting only
+    # rows that exist would report an empty estate as fully rebuilt.
+    assert exited, "a loan with no schedule must not report as clean"
+    assert_match(/missing_rows=[1-9]/, output)
+  end
+
   # --- #38: every documented parameter must actually be read ---------------
 
   test "rebuild task honours SLEEP from the environment" do
@@ -268,6 +308,24 @@ class LoansTaskTest < ActiveSupport::TestCase
   end
 
   private
+
+    # `abort` raises SystemExit, which makes minitest's capture_io discard what
+    # was printed before it. This keeps both, so assertions can be made on the
+    # output of a task that exits non-zero rather than only on the fact it did.
+    def capture_output_and_exit
+      buffer = StringIO.new
+      original = $stdout
+      $stdout = buffer
+      exited = false
+      begin
+        yield
+      rescue SystemExit
+        exited = true
+      end
+      [ buffer.string, exited ]
+    ensure
+      $stdout = original
+    end
 
     def capture_io_with_env(env)
       original = env.keys.index_with { |key| ENV[key] }

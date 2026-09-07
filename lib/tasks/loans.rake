@@ -236,6 +236,59 @@ namespace :loans do
     output ? File.write(output, csv) : puts(csv)
   end
 
+  # The runbook (docs/loans/release-evidence.md) tells an operator to watch
+  # "stale schedules, trending to 0" during a version prebuild. Nothing measured
+  # it. `Loan#schedule_current?` compares a SHA256 computed in Ruby per loan, so
+  # counting stale loans that way is one query and one digest per loan -- fine
+  # for a request serving one loan, useless as an estate-wide signal mid-deploy.
+  #
+  # `loan_amortizations.algorithm_version` was added to make exactly this
+  # queryable and, until now, was written and validated but never read.
+  #
+  # Scope, stated because the difference matters when reading the output: this
+  # reports VERSION staleness -- rows produced by an older calculation -- which
+  # is what a version bump creates and what the prebuild clears. It does not
+  # report INPUT staleness, a loan whose own rate or balance moved since its
+  # rows were built at the current version. That is per-loan by nature and stays
+  # with `schedule_current?`.
+  desc "Report loan schedule staleness by algorithm version (deploy monitoring)"
+  task schedule_version_status: :environment do
+    current = Loan::AmortizationSchedule::ALGORITHM_VERSION
+
+    # Amortizable enough to be expected to have rows. Deliberately the same
+    # scope `rebuild_schedules` walks, so "stale" here is a count of what that
+    # task would still have to do rather than a different population.
+    scope = Loan.where.not(term_months: nil)
+    total = scope.count
+
+    versions = LoanAmortization
+      .where(loan_id: scope.select(:id))
+      .group(:algorithm_version)
+      .distinct
+      .count(:loan_id)
+
+    with_rows = versions.values.sum
+    behind = versions.reject { |version, _| version == current }.values.sum
+    missing = total - with_rows
+
+    puts "algorithm_version=#{current}"
+    puts "loans=#{total} with_rows=#{with_rows} missing_rows=#{missing}"
+    versions.sort.each do |version, count|
+      marker = version == current ? "current" : "STALE"
+      puts "  version #{version}: #{count} loans (#{marker})"
+    end
+    puts "stale=#{behind + missing} (#{behind} at an older version, #{missing} with no rows)"
+
+    # Non-zero exit on any staleness, so this can gate a deploy step or drive an
+    # alert without the caller parsing stdout. A prebuild is finished when this
+    # exits 0.
+    if behind + missing > 0
+      abort "Schedules are not fully rebuilt at version #{current}. Run loans:rebuild_schedules."
+    end
+
+    puts "All schedules are at the current algorithm version."
+  end
+
   desc "Rebuild loan amortization schedules in bounded, rate-limited batches"
   task :rebuild_schedules, [ :batch_size, :limit, :sleep ] => :environment do |_, args|
     batch_size = [ loan_task_option.call(args, :batch_size, "100").to_i, 1 ].max
