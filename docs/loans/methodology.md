@@ -1,6 +1,28 @@
 # Loan reconciliation methodology
 
-Status: **Gate G2 signed.**
+Status: **Gate G2 signed for the non-offset scope. Offset reconciliation is an
+open residual.**
+
+The delivery breakdown defines G2 as reconciliation "including rate-change and
+**offset** cases". The signature below covers gross monthly interest with no
+independent offset check. Those are not the same thing, and daily offset-aware
+accrual is now live on `main`.
+
+This section states the split rather than reporting a fully satisfied gate,
+because "G2 signed" on its own would let release reporting claim evidence for
+offset-enabled loans that does not exist.
+
+| | G2a — non-offset reconciliation | G2b — offset reconciliation |
+| --- | --- | --- |
+| State | **Signed** | **Open** |
+| Scope | gross monthly interest, one lender, one loan, 43/43 under actual/actual | daily offset-aware accrual against a real statement |
+| Evidence | #65, summarised below | none |
+| Blocked on | — | linked-account daily balance history, which loan statements do not carry |
+| Owner | repository owner | unassigned |
+
+**For release reporting:** contract rows **C15 and C16 are specified and
+unit-tested but not lender-reconciled.** Any statement that G2 is met must name
+G2a, not G2 unqualified.
 
 | | |
 | --- | --- |
@@ -159,12 +181,23 @@ G2 is signed (above), so none of these block the gate.
   own offset saving, not daily balances. The sign-off above therefore excluded
   offset cases rather than tolerating them within its scope, and says so in
   those words. Reconciling them needs that balance history.
-- **Mid-cycle rate changes on the path users read.** The **persisted** schedule
-  still does not use the daily path: `SCHEDULE_DAILY_ACCRUAL` is `false` on
-  `main`, so production accrues monthly (#36) and a statement reconciliation
-  exercises code users' numbers do not currently come from. Enabling it is #10,
-  prepared and evidenced, and now gate-clear — it awaits a merge decision, not
-  this gate.
+- ~~**Mid-cycle rate changes on the path users read.**~~ **Resolved 2026-09-07.**
+  An earlier revision of this bullet said `SCHEDULE_DAILY_ACCRUAL` is `false` on
+  `main` and that enabling it awaited a merge decision. Both statements were
+  true when written and are now false: #73 set it to `true` with
+  `ALGORITHM_VERSION = 3`, so the persisted schedule uses the daily path and
+  production accrues daily.
+
+  **What this changes about the reconciliation above:** it no longer exercises
+  code users' numbers do not come from — the reverse of the previous caveat.
+  What it does *not* change is the scope of the signature: the #65 run was
+  performed against gross monthly interest for one lender, and enabling daily
+  accrual does not extend that evidence to offset cases.
+
+  **Operationally outstanding:** the production prebuild has not been run. Until
+  it is, reads enqueue rebuilds rather than performing them, so the estate
+  restages through the job queue on first view. See the deployment ordering in
+  `release-evidence.md`.
 - **Independent finance review.** The sign-off above is the repository owner's,
   who is also the borrower whose statement was reconciled. That is a legitimate
   decision for a self-hosted project and it is what was given; it is not the
@@ -177,7 +210,14 @@ G2 is signed (above), so none of these block the gate.
   evidence a single fixed constant cannot be assumed, not evidence that
   actual/actual is correct for any other lender. The default stays actual/365.
   The contract (C2) says the schedule discloses the basis in force rather than
-  implying it is verified; that disclosure is **specified but not yet built** --
-  see the UI bullet above -- so this row is not currently satisfied end to end.
+  implying it is verified. That disclosure **shipped in #70** and this row is
+  satisfied end to end.
+
+  > **Correction, 2026-09-07.** This sentence previously read "specified but not
+  > yet built", contradicting the bullet above it in this same document, which
+  > was corrected earlier the same day. One correction was applied and its
+  > duplicate three paragraphs below was missed. Recorded rather than quietly
+  > edited, because a gate document disagreeing with itself is the failure this
+  > file exists to prevent.
 
 No production release approval is granted by this document.
