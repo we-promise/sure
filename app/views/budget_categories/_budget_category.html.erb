@@ -64,12 +64,29 @@
             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-tint-5 text-secondary"><%= t("reports.budget_performance.shared") %></span>
           <% end %>
         </div>
+        <% if budget_category.rolled_over? %>
+          <div class="whitespace-nowrap w-full sm:w-auto text-xs text-secondary privacy-sensitive">
+            <%= t("budget_categories.budget_category.rolled_over", amount: format_money(budget_category.rolled_over_amount_money)) %>
+          </div>
+        <% end %>
         <% if budget_category.suggested_daily_spending.present? %>
           <% daily_info = budget_category.suggested_daily_spending %>
           <div class="w-full sm:w-auto text-xs text-subdued">
             <%= t("reports.budget_performance.suggested_daily",
               amount: daily_info[:amount].format,
               days: daily_info[:days_remaining]) %>
+          </div>
+        <% end %>
+        <%# Bills reservations are metadata like the budgeted figure above, so
+            compact callers that opt out of the meta row stay compact. %>
+        <% if (reserved = budget_category.bills_reserved).amount.positive? %>
+          <div class="whitespace-nowrap text-xs text-secondary">
+            <%= t("budget_categories.bills_reserved", amount: format_money(reserved)) %>
+          </div>
+        <% end %>
+        <% if (unconvertible = budget_category.bills_reserved_unconvertible_count).positive? %>
+          <div class="whitespace-nowrap text-xs text-warning">
+            <%= t("budget_categories.bills_reserved_unconvertible", count: unconvertible) %>
           </div>
         <% end %>
         <% end %>

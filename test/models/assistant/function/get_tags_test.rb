@@ -64,4 +64,20 @@ class Assistant::Function::GetTagsTest < ActiveSupport::TestCase
     assert_equal 2, page2[:page]
     assert_not_equal page1[:tags].map { |t| t[:name] }, page2[:tags].map { |t| t[:name] }
   end
+  test "is not in strict mode" do
+    refute @fn.to_definition[:strict]
+  end
+
+  test "honors and clamps page_size" do
+    10.times { |i| @family.tags.create!(name: "SizedTag#{format('%02d', i)}") }
+
+    result = @fn.call({ "page_size" => 5 })
+
+    assert_equal 5, result[:page_size]
+    assert_equal 5, result[:tags].size
+
+    clamped = @fn.call({ "page_size" => 0 })
+
+    assert_equal 1, clamped[:page_size]
+  end
 end

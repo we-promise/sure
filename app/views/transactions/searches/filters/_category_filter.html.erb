@@ -1,5 +1,5 @@
 <%# locals: (form:) %>
-<div data-controller="list-filter">
+<div data-controller="list-filter category-filter">
   <%= render DS::SearchInput.new(
         variant: :embedded,
         placeholder: t(".filter_category"),
@@ -11,16 +11,26 @@
       ) %>
   <div class="my-2" id="list" data-list-filter-target="list">
     <% family_categories.each do |category| %>
+      <% is_child = category.parent_id.present? %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= category.display_name %>">
         <%= form.check_box :categories,
                            {
                              multiple: true,
                              checked: @q[:categories]&.include?(category.name),
-                             class: "checkbox checkbox--light"
+                             class: "checkbox checkbox--light",
+                             data: {
+                               category_filter_target: "checkbox",
+                               action: "change->category-filter#toggle",
+                               category_id: category.id,
+                               parent_id: category.parent_id
+                             }
                            },
                            category.name,
                            nil %>
-        <%= form.label :categories, category.display_name, value: category.name, class: "text-sm text-primary cursor-pointer" do %>
+        <%= form.label :categories, category.display_name, value: category.name, class: "text-sm text-primary cursor-pointer flex items-center gap-1" do %>
+          <% if is_child %>
+            <%= icon("corner-down-right", size: "sm") %>
+          <% end %>
           <%= render partial: "categories/badge", locals: { category: category } %>
         <% end %>
       </div>

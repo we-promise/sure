@@ -113,6 +113,19 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
   end
 
+  test "summary renders the import outcome for a pdf import" do
+    get summary_import_url(imports(:pdf_with_rows))
+
+    assert_response :success
+    assert_select "dialog"
+  end
+
+  test "summary is not available for non-pdf imports" do
+    get summary_import_url(imports(:transaction))
+
+    assert_response :not_found
+  end
+
   test "uploads pdf document as PdfImport when using DocumentImport option" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
@@ -396,6 +409,29 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
+  end
+
+  test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when creating Sure import (#3010)" do
+    configured_limit = 2.megabytes
+    SureImport.stubs(:max_ndjson_size).returns(configured_limit)
+
+    oversized_file = Rack::Test::UploadedFile.new(
+      StringIO.new("x" * (configured_limit + 1)),
+      "application/x-ndjson",
+      original_filename: "all.ndjson"
+    )
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: {
+        import: {
+          type: "SureImport",
+          import_file: oversized_file
+        }
+      }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
   end
 
   test "PDF import account select does not leak unshared family accounts (#1803)" do

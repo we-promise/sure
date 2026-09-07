@@ -90,6 +90,17 @@ class Assistant::FunctionTest < ActiveSupport::TestCase
     end
   end
 
+  test "to_ai_time_series rounds to the currency's own precision" do
+    value = Struct.new(:trend).new(Struct.new(:current).new(Money.new(0.00000001, "BTC")))
+    series = Struct.new(:start_date, :end_date, :interval, :values)
+      .new(Date.current - 1, Date.current, "1 day", [ value ])
+
+    result = EmptyEnumFunction.new(nil).send(:to_ai_time_series, series)
+
+    assert_equal "BTC", result[:currency]
+    assert_equal 0.00000001, result[:values].first
+  end
+
   private
     def assert_no_empty_enums(node, function_name, path = "params_schema")
       case node

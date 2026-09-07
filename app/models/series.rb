@@ -56,11 +56,14 @@ class Series
     @favorable_direction = favorable_direction
   end
 
+  # Rounded like the serialized values: this trend is only ever rendered next to
+  # them, so a change between two amounts that print identically has to read as
+  # no change here too.
   def trend
     return nil if values.blank?
     @trend ||= Trend.new(
-      current: values.last&.value,
-      previous: values.first&.value,
+      current: display_amount(values.last&.value),
+      previous: display_amount(values.first&.value),
       favorable_direction: favorable_direction
     )
   end
@@ -71,7 +74,27 @@ class Series
       end_date: end_date,
       interval: interval,
       trend: trend,
-      values: values.map { |v| { date: v.date, date_formatted: v.date_formatted, value: v.value, trend: v.trend } }
+      values: values.map do |v|
+        { date: v.date, date_formatted: v.date_formatted, value: display_amount(v.value), trend: display_trend(v.trend) }
+      end
     }
   end
+
+  private
+    # A chart is drawn from these amounts, not from the formatted strings, so a
+    # sub-unit residue would plot as a visible move between two points that both
+    # print as the same value, and a change between them would read as non-zero.
+    def display_trend(trend)
+      return trend unless trend.is_a?(Trend)
+
+      Trend.new(
+        current: display_amount(trend.current),
+        previous: display_amount(trend.previous),
+        favorable_direction: trend.favorable_direction
+      )
+    end
+
+    def display_amount(amount)
+      amount.is_a?(Money) ? amount.for_display : amount
+    end
 end

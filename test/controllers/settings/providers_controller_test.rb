@@ -414,12 +414,116 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Flex Query/i, response.body)
   end
 
+  test "GET show warns on configured provider forms when self-hosted encryption keys are not explicitly configured" do
+    Setting["plaid_client_id"] = "test-client-id"
+    Setting["plaid_secret"] = "test-secret"
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get settings_providers_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  ensure
+    Setting["plaid_client_id"] = nil
+    Setting["plaid_secret"] = nil
+  end
+
+  test "GET show hides provider form encryption warning in managed mode" do
+    Setting["plaid_client_id"] = "test-client-id"
+    Setting["plaid_secret"] = "test-secret"
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  ensure
+    Setting["plaid_client_id"] = nil
+    Setting["plaid_secret"] = nil
+  end
+
   test "GET connect_form renders Interactive Brokers panel" do
     get connect_form_settings_providers_path(provider_key: "ibkr")
 
     assert_response :success
     assert_match(/Interactive Brokers/i, response.body)
     assert_match(/Query ID/i, response.body)
+  end
+
+  test "GET connect_form warns when self-hosted encryption keys are not explicitly configured" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+  end
+
+  test "GET connect_form hides encryption warning when self-hosted encryption keys are configured" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  end
+
+  test "GET connect_form hides encryption warning in managed mode" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    refute_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+  end
+
+  test "GET connect_form uses shared encryption warning for provider panels" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "wise")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.message")
+    refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.title")
+    refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.message")
+    assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
+    refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+  end
+
+  test "GET show includes Trade Republic in bank sync providers" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_match(/Trade Republic/i, response.body)
+    assert_match(/Approve the login in your Trade Republic app/i, response.body)
+  end
+
+  test "GET connect_form renders Trade Republic panel" do
+    get connect_form_settings_providers_path(provider_key: "trade_republic")
+
+    assert_response :success
+    assert_match(/Trade Republic/i, response.body)
+    assert_match(I18n.t("settings.providers.trade_republic_panel.phone_number_label"), response.body)
   end
 
   test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do
@@ -436,20 +540,38 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   test "GET connect_form for snaptrade shows connect CTA when configured but item is not authorized" do
     sign_in users(:empty)
     Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(true)
 
     get connect_form_settings_providers_path(provider_key: "snaptrade")
 
     assert_response :success
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
     assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready")
+    # Both grants are available here, so the device code is offered alongside.
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_device_button")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_status_authorized")
     refute_includes response.body, I18n.t("providers.snaptrade.oauth_reauthorize_button")
+  end
+
+  test "GET connect_form for snaptrade offers only the device code without a confidential client" do
+    sign_in users(:empty)
+    Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(false)
+
+    get connect_form_settings_providers_path(provider_key: "snaptrade")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_device_button")
+    assert_includes response.body, I18n.t("providers.snaptrade.oauth_status_ready_device")
+    # The browser redirect needs a client secret this deployment does not have.
+    refute_includes response.body, I18n.t("providers.snaptrade.oauth_connect_button")
   end
 
   test "GET connect_form for snaptrade shows authorized status and reauthorize CTA when item is connected" do
     # Default signed-in user (family_admin) belongs to dylan_family, which owns
     # the oauth-authorized `configured_item` fixture.
     Provider::Snaptrade.stubs(:oauth_configured?).returns(true)
+    Provider::Snaptrade.stubs(:authorization_code_configured?).returns(true)
 
     get connect_form_settings_providers_path(provider_key: "snaptrade")
 

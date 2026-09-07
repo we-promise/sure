@@ -28,10 +28,25 @@ class AccountsController < ApplicationController
     @ibkr_items = visible_provider_items(family.ibkr_items.ordered.with_attached_logo.includes(:ibkr_accounts))
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
+    @onchain_wallet_items = visible_provider_items(
+      family.onchain_wallet_items.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account })
+    )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
+    @trade_republic_items = visible_provider_items(
+      family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
+    )
+
+    # An on-chain item is admitted as soon as ONE of its accounts is accessible,
+    # so the card is told which of them this viewer may actually see. nil is the
+    # admin case, which visible_provider_items already lets through whole.
+    allowed_ids = Current.user&.admin? ? nil : @accessible_account_ids
+    @onchain_wallet_cards = @onchain_wallet_items.to_h do |item|
+      visible = item.accounts_visible_to(allowed_ids)
+      [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
+    end
 
     preload_latest_sync_metadata_for_index!
 
@@ -51,6 +66,7 @@ class AccountsController < ApplicationController
   end
 
   def sync_all
+    family.request_plaid_transactions_refreshes_later(source: "AccountsController#sync_all")
     family.sync_later
     redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
@@ -60,8 +76,7 @@ class AccountsController < ApplicationController
     @tab = params[:tab]
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
-    entries = @account.entries.where(excluded: false).search(@q).reverse_chronological.includes(:entryable)
-
+    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -114,7 +129,21 @@ class AccountsController < ApplicationController
       Set.new
     end
 
-    @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
+    # Load split parent entries for grouped display (only when grouping is enabled)
+    @split_parents = if Current.user.show_split_grouped?
+      split_parent_ids = @entries.filter_map(&:parent_entry_id).uniq
+      if split_parent_ids.any?
+        Entry.where(id: split_parent_ids)
+             .includes(:account, entryable: [ :category, :merchant ])
+             .index_by(&:id)
+      else
+        {}
+      end
+    else
+      {}
+    end
+
+    @activity_feed_data = Account::ActivityFeedData.new(@account, @entries, split_parents: @split_parents)
   end
 
   def sync
@@ -124,7 +153,13 @@ class AccountsController < ApplicationController
         # Each provider item will trigger an account sync when complete
         @account.account_providers.each do |account_provider|
           item = account_provider.adapter&.item
-          item&.sync_later if item && !item.syncing?
+          next unless item && !item.syncing?
+
+          if item.is_a?(PlaidItem)
+            item.sync_later_with_provider_refresh
+          else
+            item.sync_later
+          end
         end
       else
         # Manual accounts just need balance materialization
@@ -334,7 +369,9 @@ class AccountsController < ApplicationController
         @binance_items,
         @kraken_items,
         @questrade_items,
-        @wise_items
+        @wise_items,
+        @trade_republic_items,
+        @onchain_wallet_items
       ].flatten.compact
 
       accounts = @manual_accounts.to_a

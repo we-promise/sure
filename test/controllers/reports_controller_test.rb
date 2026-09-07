@@ -442,8 +442,11 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{income_category.id}'] a[href=?]", income_href, text: income_category.name
     assert_select "tr[data-category='category-uncategorized'] a[href=?]", uncategorized_href, text: Category.uncategorized.name
 
-    # Full-row hit target via stretched ::before (mirrors dashboard outflows)
-    assert_select "tr.relative.group\\/category-row[data-category='category-#{expense_category.id}'] a[class*='before:absolute'][class*='before:inset-0']"
+    # Hit target via stretched ::before, anchored to the category cell's flex
+    # wrapper. Deliberately NOT the <tr>: CSS 2.1 9.3.1 leaves position:relative
+    # undefined on table rows and WebKit does not implement it, so anchoring
+    # there let the overlay escape and swallow every click on the page in Safari.
+    assert_select "tr.group\\/category-row[data-category='category-#{expense_category.id}'] td div.relative a[class*='before:absolute'][class*='before:inset-0']"
   end
 
   test "index uncategorized category link uses localized name that Search accepts" do
@@ -597,5 +600,32 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     assert_select "button[disabled][aria-label=?]", I18n.t("reports.index.next_period")
+  end
+
+  test "a transfer out is not listed among the period's sales" do
+    account = @family.accounts.create!(name: "Wallet", balance: 100, currency: "USD",
+                                       accountable: Investment.new)
+    security = Security.find_or_create_by!(ticker: "MOVE") { |sec| sec.name = "Movable" }
+    Holding.create!(account: account, security: security, date: 10.days.ago.to_date,
+                    qty: 100, price: 2, amount: 200, currency: "USD", cost_basis: 1)
+
+    %w[Transfer Sell].each do |label|
+      account.entries.create!(
+        date: 3.days.ago.to_date, name: "out #{label}", amount: 0, currency: "USD",
+        entryable: Trade.new(security: security, qty: -40, price: 3, currency: "USD",
+                             investment_activity_label: label)
+      )
+    end
+
+    # `period_type`, not `period` — the controller reads the former, so the
+    # latter silently fell back to the current month and the trades dated
+    # three days ago dropped out of range on the 1st to the 3rd.
+    get reports_path(period_type: :custom, start_date: 30.days.ago.to_date, end_date: Date.current)
+    assert_response :success
+
+    # A transfer out carries the same negative quantity as a sale. Counting it
+    # as one both inflates the number of sales and books a gain nobody made.
+    assert_match I18n.t("reports.investment_performance.sells_count", count: 1), response.body
+    assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
 end

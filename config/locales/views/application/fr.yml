@@ -28,11 +28,11 @@ fr:
     providers:
       binance_panel:
         no_withdraw_body: N'activez pas les autorisations de retrait lors de la création
-          de votre clé API Binance. Bien sûr, il suffit d'un accès en lecture.
+          de votre clé API Binance. Sure n'a besoin que d'un accès en lecture.
         no_withdraw_title: Clé en lecture seule uniquement
       clear_filter: Effacer les filtres
       connect: Se connecter
-      drawer_trust_statement: Accès en lecture seule. Bien sûr, vous ne pourrez jamais
+      drawer_trust_statement: Accès en lecture seule. Sure ne pourra jamais
         transférer d’argent et vos informations d’identification sont stockées cryptées.
       empty_filter: Aucun fournisseur ne correspond à votre filtre.
       enable_banking_panel:
@@ -101,8 +101,8 @@ fr:
           actuel
         query_id_placeholder_new: Entrez votre ID de requête IBKR Flex
         report_window_note: Les rapports IBKR Flex sont limités à la fenêtre de requête
-          que vous avez configurée dans IBKR. Bien sûr, l'intégralité des fonds actuels
-          ainsi que les 365 derniers jours d'activité de ce rapport seront importés.
+          que vous avez configurée dans IBKR. Sure importera l'intégralité des fonds actuels
+          ainsi que les 365 derniers jours d'activité de ce rapport.
         save_configuration: Enregistrer la configuration
         sections:
           account_information: 'Informations sur le compte : identifiant de compte,
@@ -124,7 +124,7 @@ fr:
             Devise, Taux de change par rapport à la base, Prix de référence, Quantité,
             Date du rapport, ID de titre, Type d''ID de titre, Côté, Symbole'
           open_positions_options: Options : Résumé
-          trades: 'Métiers :'
+          trades: 'Transactions boursières :'
           trades_fields: 'Champs : Classe d''actifs, Achat/Vente, Conid, Devise, Taux
             de change à la base, Commission IB, Devise de la Commission IB, Quantité,
             Symbole, Date de transaction, ID de transaction, TradePrice, ID de transaction'
@@ -164,7 +164,7 @@ fr:
         keep_api_secret_placeholder: Laisser vide pour conserver la clé privée existante
         read_only_body: N’accordez pas d’autorisations de négociation, d’annulation,
           de retrait, d’exportation, de grand livre, de gain, de jalonnement ou de
-          transfert. Bien sûr, n'importe que les soldes, les holdings et les transactions
+          transfert. Sure importe uniquement les soldes, les holdings et les transactions
           au comptant.
         read_only_title: Synchronisation d'échange en lecture seule uniquement
         setup_accounts: Configurer le compte

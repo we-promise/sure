@@ -83,6 +83,42 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create as json returns rendered category option" do
+    color = Category::COLORS.sample
+
+    assert_difference "Category.count", +1 do
+      post categories_url(format: :json), params: {
+        category: {
+          name: "JSON Category",
+          color: color } }
+    end
+
+    assert_response :created
+
+    response_json = JSON.parse(response.body)
+    new_category = Category.find(response_json.fetch("id"))
+
+    assert_equal "JSON Category", response_json.fetch("name")
+    assert_equal color, response_json.fetch("color")
+    assert_equal "JSON Category", new_category.name
+    assert_includes response_json.fetch("html"), "JSON Category"
+    assert_includes response_json.fetch("html"), new_category.id
+  end
+
+  test "create as json returns errors for invalid category" do
+    assert_no_difference "Category.count" do
+      post categories_url(format: :json), params: {
+        category: {
+          name: categories(:food_and_drink).name,
+          color: Category::COLORS.sample } }
+    end
+
+    assert_response :unprocessable_entity
+
+    response_json = JSON.parse(response.body)
+    assert response_json.fetch("errors").any?
+  end
+
   test "create and assign to transaction" do
     color = Category::COLORS.sample
 
@@ -136,6 +172,7 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#mobile-settings-nav"
+    assert_select "form[action='#{perform_merge_categories_path}'] button[type='submit']"
   end
 
   test "merge renders without the settings layout for modal frame requests" do

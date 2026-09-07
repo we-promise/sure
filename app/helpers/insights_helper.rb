@@ -7,7 +7,10 @@ module InsightsHelper
     "savings_rate_change" => "piggy-bank",
     "idle_cash" => "wallet",
     "budget_at_risk" => "alert-triangle",
-    "budget_on_track" => "circle-check"
+    "budget_on_track" => "circle-check",
+    # Same shield the reserve panel uses on the goal page, so the two read as
+    # the same object seen from two places.
+    "maintained_goal_depleted" => "shield-alert"
   }.freeze
 
   def insight_icon_key(insight)
@@ -111,6 +114,9 @@ module InsightsHelper
     when "budget_at_risk", "budget_on_track"
       return nil unless insight.period_start
       { text: t("insights.actions.budget"), href: budget_path(Budget.date_to_param(insight.period_start)) }
+    when "maintained_goal_depleted"
+      goal = insight.family.goals.find_by(id: metadata["goal_id"])
+      goal && { text: t("insights.actions.maintained_goal_depleted"), href: goal_path(goal) }
     end
   end
 
@@ -152,7 +158,9 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
-    when "budget_at_risk"
+    when "budget_at_risk", "maintained_goal_depleted"
+      # Warning, not negative: the reserve is short, not overdrawn, and red is
+      # reserved here for money actually going the wrong side of zero.
       :warning
     else
       :neutral

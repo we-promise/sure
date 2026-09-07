@@ -11,6 +11,8 @@ json.currency budget_category.currency
 json.subcategory budget_category.subcategory?
 json.inherits_parent_budget budget_category.inherits_parent_budget?
 
+json.rollover_enabled budget_category.rollover_enabled?
+
 json.budgeted_spending budget_category.budgeted_spending_money.format
 json.budgeted_spending_cents money_to_minor_units.call(budget_category.budgeted_spending_money)
 json.display_budgeted_spending Money.new(budget_category.display_budgeted_spending, budget_category.currency).format
@@ -18,6 +20,11 @@ json.display_budgeted_spending_cents money_to_minor_units.call(Money.new(budget_
 if include_derived_amounts
   json.actual_spending budget_category.actual_spending_money.format
   json.actual_spending_cents money_to_minor_units.call(budget_category.actual_spending_money)
+  # Sits with the derived amounts because it is what makes available_to_spend
+  # exceed budgeted_spending: without it a client sees the larger number with
+  # nothing to account for the difference.
+  json.rolled_over_amount budget_category.rolled_over_amount_money.format
+  json.rolled_over_amount_cents money_to_minor_units.call(budget_category.rolled_over_amount_money)
   json.available_to_spend budget_category.available_to_spend_money.format
   json.available_to_spend_cents money_to_minor_units.call(budget_category.available_to_spend_money)
 end

@@ -33,9 +33,14 @@ class UpEntry::Processor
   end
 
   # Build a processor for a single raw Up transaction tied to +up_account+.
-  def initialize(up_transaction, up_account:)
+  #
+  # category_matcher (optional) maps Up's category slug onto one of the family's
+  # existing Sure categories. It is injected by UpAccount::Transactions::Processor so a
+  # single matcher (built once per account) is reused across the account's transactions.
+  def initialize(up_transaction, up_account:, category_matcher: nil)
     @up_transaction = up_transaction
     @up_account = up_account
+    @category_matcher = category_matcher
   end
 
   # Import the transaction into the linked Sure account via the import adapter.
@@ -53,6 +58,7 @@ class UpEntry::Processor
       date: date,
       name: name,
       source: "up",
+      category_id: matched_category_id,
       kind: kind,
       merchant: merchant,
       notes: notes,
@@ -97,6 +103,17 @@ class UpEntry::Processor
     # Display name: the Up description, or a generic fallback.
     def name
       data[:description].presence || I18n.t("transactions.unknown_name")
+    end
+
+    # The id of the Sure category that Up's category slug maps to, or nil when no
+    # matcher was injected, the transaction has no Up category (transfers/income), or
+    # the slug has no confident equivalent among the family's categories. The import
+    # adapter applies this via enrich_attribute, so it never overwrites a category the
+    # user has set or locked.
+    def matched_category_id
+      return nil unless @category_matcher
+
+      @category_matcher.match(data[:category_id])&.id
     end
 
     # The id of the other account in an internal money movement, if any (see

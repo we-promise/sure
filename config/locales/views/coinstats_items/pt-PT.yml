@@ -1,0 +1,75 @@
+---
+pt-PT:
+  coinstats_items:
+    create:
+      success: Ligação ao serviço CoinStats configurada com sucesso.
+      default_name: Ligação CoinStats
+      errors:
+        validation_failed: "Falha na validação: %{message}."
+    update:
+      success: Ligação ao serviço CoinStats atualizada com sucesso.
+      errors:
+        validation_failed: "Falha na validação: %{message}."
+    destroy:
+      success: Eliminação da ligação ao serviço CoinStats agendada.
+    link_wallet:
+      success: "%{count} carteira(s) de criptomoedas associada(s) com sucesso."
+      missing_params: "Parâmetros obrigatórios em falta: endereço e blockchain."
+      failed: Falha na associação da carteira de criptomoedas.
+      error: "Falha na associação da carteira de criptomoedas: %{message}."
+    link_exchange:
+      success: "Bolsa %{name} associada."
+      missing_params: A bolsa e as credenciais são obrigatórias.
+      invalid_exchange: A bolsa selecionada já não é suportada.
+      failed: Falha na associação da bolsa.
+      error: "Falha na associação da bolsa: %{message}."
+    new:
+      title: Associar criptomoedas com CoinStats
+      blockchain_fetch_error: Falha ao carregar blockchains. Tente novamente mais tarde.
+      link_wallet_title: Associar endereço de carteira
+      link_wallet_description: Acompanhe uma carteira de autocustódia ou um endereço on-chain individual através da CoinStats.
+      address_label: Endereço
+      address_placeholder: Obrigatório
+      blockchain_label: Blockchain
+      blockchain_placeholder: Obrigatório
+      blockchain_select_blank: Selecione uma blockchain
+      link_wallet_submit: Associar carteira de criptomoedas
+      link_exchange_title: Associar API da bolsa
+      link_exchange_description: Utilize uma chave de API de bolsa só de leitura para que a CoinStats possa sincronizar saldos e transações da Bitvavo, Binance e outras bolsas suportadas.
+      link_exchange_note: Se a sua bolsa exigir ativação da chave de API ou confirmação por email, conclua esse passo antes de associar aqui.
+      exchange_select_blank: Selecione uma bolsa
+      exchange_label: Bolsa
+      link_exchange_submit: Associar bolsa
+      not_configured_title: Ligação ao serviço CoinStats não configurada
+      not_configured_message: Para associar uma carteira ou bolsa de criptomoedas, tem primeiro de configurar a ligação ao serviço CoinStats.
+      not_configured_step1_html: Aceda a <strong>Definições → Serviços</strong>
+      not_configured_step2_html: Localize o serviço <strong>CoinStats</strong>
+      not_configured_step3_html: Siga as <strong>instruções de configuração</strong> fornecidas para concluir a configuração do serviço
+      go_to_settings: Aceder às definições do serviço
+      setup_instructions: "Instruções de configuração:"
+      step1_html: Aceda ao <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Painel da API pública CoinStats</a> para obter uma chave de API.
+      step2: Introduza a sua chave de API abaixo e clique em Configurar.
+      step3_html: Após uma ligação bem-sucedida, aceda ao separador <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Contas</a> para configurar as suas contas de criptomoedas.
+      api_key_label: Chave de API
+      api_key_placeholder: Obrigatório
+      configure: Configurar
+      update_configuration: Reconfigurar
+      default_name: Ligação CoinStats
+    coinstats_item:
+      deletion_in_progress: Os dados da carteira de criptomoedas estão a ser eliminados…
+      provider_name: CoinStats
+      syncing: A sincronizar…
+      sync_status:
+        no_accounts: Não foram encontradas carteiras de criptomoedas
+        all_synced:
+          one: "%{count} carteira de criptomoedas sincronizada"
+          other: "%{count} carteiras de criptomoedas sincronizadas"
+        partial_sync: "%{linked_count} carteiras de criptomoedas sincronizadas, %{unlinked_count} precisam de configuração"
+      reconnect: Voltar a ligar
+      status: Última sincronização há %{timestamp}
+      status_never: Nunca sincronizada
+      status_with_summary: "Última sincronização há %{timestamp} • %{summary}"
+      update_api_key: Atualizar chave de API
+      delete: Eliminar
+      no_wallets_title: Não existem carteiras de criptomoedas associadas
+      no_wallets_message: Atualmente não existem carteiras de criptomoedas associadas à CoinStats.

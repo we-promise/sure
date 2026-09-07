@@ -29,4 +29,4 @@ fr:
       title: Créez votre compte
       welcome_body: Pour commencer, vous devez créer un nouveau compte. Vous pourrez
         ensuite configurer des paramètres supplémentaires à l'intérieur de l'application.
-      welcome_title: Bienvenue sur %{product_name} !
+      welcome_title: Bienvenue sur %{product_name} en auto-hébergement !

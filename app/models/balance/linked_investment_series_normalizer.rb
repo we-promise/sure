@@ -43,6 +43,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
         return if account_ids.empty?
 
         activity_dates = Entry.where(account_id: account_ids)
+          .excluding_pending
           .where.not(source: nil)
           .where.not(entryable_type: "Valuation")
           .group(:account_id)
@@ -107,6 +108,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
     def first_provider_activity_date
       @first_provider_activity_date ||= account.entries
+        .excluding_pending
         .where.not(source: nil)
         .where.not(entryable_type: "Valuation")
         .minimum(:date)

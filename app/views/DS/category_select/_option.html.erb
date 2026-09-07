@@ -1,0 +1,32 @@
+<%# locals: (category:, selected:, view_helpers:) %>
+
+<button type="button"
+        role="option"
+        aria-selected="<%= selected %>"
+        data-category-select-target="option"
+        data-value="<%= category.id %>"
+        data-category-id="<%= category.id %>"
+        data-category-name="<%= category.name %>"
+        data-category-display-label="<%= category.name %>"
+        data-action="click->category-select#selectCategory"
+        class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if selected %>">
+
+  <span class="check-icon w-4 <%= "invisible" unless selected %>">
+    <%= view_helpers.icon("check") %>
+  </span>
+
+  <% if category.parent_id.present? %>
+    <span class="ml-2 shrink-0"
+          data-testid="category-select-subcategory-indicator"
+          style="color: <%= category.color %>">
+      <%= view_helpers.icon("corner-down-right", size: "sm", color: "current") %>
+    </span>
+  <% end %>
+
+  <span data-category-select-badge>
+    <%= view_helpers.render partial: "categories/badge",
+                       	    formats: [ :html ],
+                            locals: { category: category } %>
+
+  </span>
+</button>

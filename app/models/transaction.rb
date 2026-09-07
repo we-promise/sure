@@ -188,6 +188,20 @@ class Transaction < ApplicationRecord
     potential_posted_match_data.present? && !potential_duplicate_dismissed?
   end
 
+  # Manual recurring transactions are unique per (family, account, merchant/name, amount, currency)
+  # — see the partial unique indexes on recurring_transactions. Used to guard "mark as recurring"
+  # so the UI can disable the action ahead of time instead of failing after a POST.
+  def existing_manual_recurring_transaction
+    entry.account.family.recurring_transactions.find_by(
+      account_id: entry.account_id,
+      merchant_id: merchant_id,
+      name: merchant_id.present? ? nil : entry.name,
+      amount: entry.amount,
+      currency: entry.currency,
+      manual: true
+    )
+  end
+
   def potential_duplicate_entry
     return nil unless has_potential_duplicate?
     Entry.find_by(id: potential_posted_match_data["entry_id"])

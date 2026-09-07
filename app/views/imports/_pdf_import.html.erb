@@ -36,14 +36,26 @@
         <div class="space-y-2">
           <h2 class="font-medium text-primary"><%= t("imports.pdf_import.transactions_extracted") %></h2>
           <p class="text-sm text-secondary px-3 py-2 bg-container-inset rounded-lg">
-            <%= t("imports.pdf_import.transactions_extracted_count", count: import.rows_count) %>
+            <%# rows_count is what is left to import, not what the statement held:
+                anything the account already had was matched and withheld. Calling
+                that number "extracted" under-reports the statement. %>
+            <%= t("imports.pdf_import.transactions_extracted_count", count: import.extracted_count) %>
+            <% if import.reconciled_anything? %>
+              <span class="block mt-1 text-xs text-subdued">
+                <%= t("imports.pdf_import.already_recorded_note", count: import.already_recorded_count) %>
+              </span>
+            <% end %>
           </p>
         </div>
 
         <div class="space-y-2">
           <h2 id="pdf-import-select-account" class="font-medium text-primary"><%= t("imports.pdf_import.select_account") %></h2>
           <%= styled_form_with model: import, scope: :import, url: import_path(import), method: :patch, class: "space-y-2" do |f| %>
-            <% accounts = Current.user.accessible_accounts.manual.alphabetically.pluck(:name, :id) %>
+            <%# Provider-backed accounts are offered too: rows are matched against
+                existing transactions before they are ever shown, so importing a
+                statement for a synced account can no longer duplicate what sync
+                already brought in. %>
+            <% accounts = Current.user.accessible_accounts.alphabetically.pluck(:name, :id) %>
             <% if accounts.any? %>
               <%= f.select :account_id, accounts,
                            { include_blank: t("imports.pdf_import.select_account_placeholder"), selected: import.account_id, label: false },
@@ -79,6 +91,7 @@
         <% else %>
           <p class="text-center text-sm text-secondary"><%= t("imports.pdf_import.select_account_to_continue") %></p>
         <% end %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.view_summary"), href: summary_import_path(import), variant: "secondary", full_width: true, frame: :modal) %>
         <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "secondary", full_width: true) %>
       </div>
 
@@ -128,7 +141,13 @@
 
       <div class="text-center space-y-2">
         <h1 class="font-medium text-primary text-center text-3xl"><%= t("imports.pdf_import.complete_title") %></h1>
-        <p class="text-sm text-secondary"><%= t("imports.pdf_import.complete_description") %></p>
+        <%# A statement whose every line was already on file creates nothing, and
+            the generic description reads as though the import did nothing at all. %>
+        <% if import.imported_count.zero? && import.reconciled_anything? %>
+          <p class="text-sm text-secondary"><%= t("imports.pdf_import.complete_fully_reconciled", count: import.already_recorded_count) %></p>
+        <% else %>
+          <p class="text-sm text-secondary"><%= t("imports.pdf_import.complete_description") %></p>
+        <% end %>
       </div>
 
       <div class="bg-container border border-primary rounded-xl p-4 space-y-4">
@@ -161,7 +180,8 @@
       </div>
 
       <div class="space-y-2 flex flex-col">
-        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "primary", full_width: true) %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.view_summary"), href: summary_import_path(import), variant: "primary", full_width: true, frame: :modal) %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.back_to_imports"), href: imports_path, variant: "secondary", full_width: true) %>
         <%= render DS::Button.new(
               text: t("imports.pdf_import.delete_import"),
               href: import_path(import),

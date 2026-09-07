@@ -31,7 +31,10 @@ class MfaController < ApplicationController
     @user = User.find_by(id: session[:mfa_user_id])
 
     if @user&.verify_otp?(params[:code])
-      complete_mfa_sign_in(@user)
+      unless complete_mfa_sign_in(@user)
+        redirect_to new_session_path
+        return
+      end
       redirect_to root_path
     else
       flash.now[:alert] = t(".invalid_code")
@@ -86,7 +89,9 @@ class MfaController < ApplicationController
         last_used_at: Time.current
       )
     end
-    complete_mfa_sign_in(@user)
+    unless complete_mfa_sign_in(@user)
+      return render json: { error: t(".invalid_credential") }, status: :unprocessable_entity
+    end
 
     render json: { redirect_url: root_path }
   rescue WebAuthn::Error, ActionController::BadRequest, ActionController::ParameterMissing
@@ -113,6 +118,9 @@ class MfaController < ApplicationController
     def complete_mfa_sign_in(user)
       session.delete(:mfa_user_id)
       @session = create_session_for(user)
+      return false unless @session
+
       flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+      true
     end
 end

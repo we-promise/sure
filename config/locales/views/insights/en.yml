@@ -1,6 +1,9 @@
 ---
 en:
   insights:
+    notification:
+      title: New financial insight
+      body: Open Sure to review your latest AI insight.
     index:
       title: Insights
       subtitle: What's happening across your finances, refreshed nightly.
@@ -30,6 +33,7 @@ en:
       idle_cash: Idle cash
       budget_at_risk: Budget
       budget_on_track: Budget
+      maintained_goal_depleted: Reserve
     meta:
       next_n_days:
         one: Next day
@@ -58,6 +62,7 @@ en:
       savings_rate_change: View that month's transactions
       idle_cash: Go to account
       budget: View budget
+      maintained_goal_depleted: View reserve
     titles:
       spending_anomaly:
         above: "%{category} spending is trending up"
@@ -66,6 +71,7 @@ en:
         low: Your cash balance may run low
         negative: Your cash balance may go negative
       net_worth_milestone: "Net worth milestone: %{milestone}"
+      maintained_goal_depleted: "%{goal} has dropped below its level"
       subscription_audit: "Is %{name} still active?"
       savings_rate_change:
         up: Your savings rate improved in %{month}
@@ -83,6 +89,7 @@ en:
         low: Based on your upcoming recurring transactions and typical spending, your cash balance could drop to %{projected_low} around %{projected_low_date}.
         negative: Based on your upcoming recurring transactions and typical spending, your cash balance could fall to %{projected_low} around %{projected_low_date}.
       net_worth_milestone: Your net worth crossed %{milestone} and now stands at %{net_worth}.
+      maintained_goal_depleted: "%{goal} holds %{saved} of the %{target} it is meant to keep. It is %{missing} short."
       subscription_audit: "%{name} (%{amount}) hasn't appeared since it was expected on %{expected_on}. It may have been cancelled, or the charge may have moved."
       savings_rate_change:
         up: You saved %{current_rate}% of your income in %{month}, up %{change_pp} percentage points from %{previous_rate}% the month before.

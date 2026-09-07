@@ -1,10 +1,17 @@
-<%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: []) %>
+<%# locals: (goal:, linkable_accounts:, currently_linked_account_ids: [], pooled_allocations: {}) %>
 
-<div data-controller="goal-form"
+<%# goal-kind lives on this wrapper, not on the kind selector: its
+     dateField target is a sibling of the radios, and a controller only sees
+     targets inside its own element. Scoped to the selector, dateFieldTargets
+     came back empty and picking "Reserve to maintain" never hid the date. %>
+<div data-controller="goal-form goal-kind"
      data-goal-form-currency-value="<%= Current.family.primary_currency_code %>"
      data-goal-form-require-account-value="<%= !goal.persisted? %>"
      data-goal-form-suggested-with-date-value="<%= t("goals.form.suggested_with_date") %>"
-     data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>">
+     data-goal-form-suggested-no-date-value="<%= t("goals.form.suggested_no_date") %>"
+     data-goal-kind-amount-label-value="<%= t("goals.form.fields.target_amount") %>"
+     data-goal-kind-balance-label-value="<%= t("goals.form.fields.target_balance") %>"
+     data-goal-kind-derivable-value="<%= goal.months_target_derivable? %>">
   <%= styled_form_with model: goal,
                        url: goal.persisted? ? goal_path(goal) : goals_path,
                        method: goal.persisted? ? :patch : :post,
@@ -12,6 +19,24 @@
                        data: { action: "submit->goal-form#validateOnSubmit" } do |f| %>
     <div class="flex justify-center">
       <%= render "color_picker", form: f, colors: Goal::COLORS, icons: Goal::ICONS %>
+    </div>
+
+    <%# Kind first: it changes what the rest of the form means. A reserve has
+        no deadline — target_date is hidden rather than disabled so it cannot
+        be submitted with a value that would then drive a pace the goal does
+        not have. %>
+    <div class="grid grid-cols-2 gap-2">
+      <% Goal::KINDS.each do |kind| %>
+        <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
+          <%= f.radio_button :kind, kind,
+                             class: "radio mt-0.5 shrink-0",
+                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
+          <span class="min-w-0">
+            <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
+            <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
+          </span>
+        </label>
+      <% end %>
     </div>
 
     <div>
@@ -24,8 +49,29 @@
       <p class="<%= "hidden" unless goal.errors[:name].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="nameError"><%= t("goals.form.errors.name_required") %></p>
     </div>
 
+    <%# Only meaningful for a reserve, and only in months mode — the Stimulus
+        controller shows it accordingly. The amount field stays visible either
+        way: in months mode it shows what the job last computed, which is the
+        figure the user is actually saving against — read-only there, because
+        in that mode it is derived rather than chosen. %>
+    <div data-goal-kind-target="modeField" class="hidden">
+      <%= f.select :target_mode,
+                   Goal::TARGET_MODES.map { |mode| [ t("goals.form.target_modes.#{mode}"), mode ] },
+                   { label: t("goals.form.fields.target_mode") },
+                   data: { goal_kind_target: "modeSelect", action: "change->goal-kind#refresh" } %>
+    </div>
+
+    <div data-goal-kind-target="monthsField" class="hidden">
+      <%= f.number_field :target_months,
+                         label: t("goals.form.fields.target_months"),
+                         min: 1,
+                         step: 1,
+                         placeholder: "6" %>
+      <p class="mt-1 text-xs text-secondary"><%= t("goals.form.fields.target_months_hint") %></p>
+    </div>
+
     <div class="grid grid-cols-2 gap-3 items-start">
-      <div>
+      <div data-goal-kind-target="amountField">
         <%= f.money_field :target_amount,
                           label: t("goals.form.fields.target_amount"),
                           hide_currency: true,
@@ -33,9 +79,28 @@
                           amount_data: { goal_form_target: "amountInput", action: "input->goal-form#suggestedChanged" } %>
         <p class="<%= "hidden" unless goal.errors[:target_amount].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="amountError"><%= t("goals.form.errors.amount_required") %></p>
       </div>
-      <%= f.date_field :target_date,
-                       label: t("goals.form.fields.target_date"),
-                       data: { goal_form_target: "dateInput", action: "input->goal-form#suggestedChanged" } %>
+
+      <%# In months mode the balance is worked out, not typed. A read-only
+          input still reads as something to fill in, sitting beside the months
+          that are the actual question — so it is shown as what it is. Only
+          when there is spending to work it out from, though: with none, the
+          controller leaves the field above in place and this stays hidden. %>
+      <div data-goal-kind-target="amountDerived" class="hidden">
+        <p class="form-field__label"><%= t("goals.form.fields.target_balance") %></p>
+        <p class="mt-1 text-lg font-medium text-primary tabular-nums privacy-sensitive">
+          <% if goal.target_amount.to_d.positive? %>
+            <%= goal.target_amount_money.format(precision: 0) %>
+          <% else %>
+            <span class="text-subdued text-sm font-normal"><%= t("goals.form.fields.target_balance_pending") %></span>
+          <% end %>
+        </p>
+        <p class="mt-1 text-xs text-subdued"><%= t("goals.form.fields.target_balance_hint") %></p>
+      </div>
+      <div data-goal-kind-target="dateField">
+        <%= f.date_field :target_date,
+                         label: t("goals.form.fields.target_date"),
+                         data: { goal_form_target: "dateInput", action: "input->goal-form#suggestedChanged" } %>
+      </div>
     </div>
 
     <p class="text-xs text-secondary italic tabular-nums privacy-sensitive hidden" data-goal-form-target="suggested"></p>
@@ -46,7 +111,23 @@
         <p class="text-xs text-secondary mt-0.5"><%= t("goals.form.fields.funding_accounts_hint") %></p>
         <p class="text-xs text-subdued mt-0.5"><%= t("goals.form.fields.earmark_hint") %></p>
       </div>
-      <div class="bg-container-inset rounded-lg p-1">
+      <%# Its own controller, not goal-form: that one is already at 10 targets
+          against the 7 the project guidelines suggest, and this needs none of
+          its state. Three targets here. %>
+      <div class="bg-container-inset rounded-lg p-1"
+           data-controller="goal-earmark"
+           data-goal-earmark-currency-value="<%= goal.currency.presence || Current.family.primary_currency_code %>"
+           <%# The APPLICATION locale, not the browser's. `Intl.NumberFormat`
+               with `undefined` lets the browser pick, so a French user on an
+               English-locale browser read separators and symbol placement that
+               matched nothing else on the page. The amounts themselves cannot
+               be formatted server-side — they change with every keystroke — so
+               the server decides the locale and the client applies it. %>
+           data-goal-earmark-locale-value="<%= I18n.locale %>"
+           data-goal-earmark-whole-balance-value="<%= t("goals.form.earmark.whole_balance") %>"
+           data-goal-earmark-whole-balance-alone-value="<%= t("goals.form.earmark.whole_balance_alone") %>"
+           data-goal-earmark-prorata-value="<%= t("goals.form.earmark.prorata") %>"
+           data-goal-earmark-headroom-value="<%= t("goals.form.earmark.headroom") %>">
         <% linked_allocation_by_account = goal.goal_accounts.index_by(&:account_id) %>
         <% grouped = linkable_accounts.group_by { |a| a.subtype.to_s.presence || "other" } %>
         <% grouped.each_with_index do |(subtype, accts), group_idx| %>
@@ -54,7 +135,11 @@
           <div class="bg-container rounded-md <%= "mb-1" if group_idx < grouped.size - 1 %>">
             <% accts.each_with_index do |account, idx| %>
               <% linked_ga = linked_allocation_by_account[account.id] %>
-              <div class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>">
+              <div class="px-3 py-2.5 hover:bg-surface-hover <%= "border-t border-subdued" if idx > 0 %>"
+                   data-balance="<%= account.balance.to_d %>"
+                   data-earmarked-by-others="<%= earmarked_by_other_goals(account, pooled: pooled_allocations, current_goal: goal) %>"
+                   data-whole-account-claimed="<%= whole_account_claimed_by_other_goals?(account, pooled: pooled_allocations, current_goal: goal) %>">
+              <div class="flex items-center gap-3">
                 <label class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
                   <%= check_box_tag "goal[account_ids][]",
                                     account.id,
@@ -63,7 +148,8 @@
                                     class: "checkbox checkbox--light shrink-0",
                                     data: {
                                       goal_form_target: "linkedAccountCheckbox",
-                                      action: "change->goal-form#linkedAccountChanged"
+                                      goal_earmark_target: "checkbox",
+                                      action: "change->goal-form#linkedAccountChanged change->goal-earmark#refresh"
                                     } %>
                   <%= render Goals::AvatarComponent.new(name: account.name, color: Goals::AvatarComponent.color_for(account.name), size: "md") %>
                   <div class="min-w-0">
@@ -78,13 +164,26 @@
                                    inputmode: "decimal",
                                    autocomplete: "off",
                                    aria: { label: t("goals.form.fields.earmark_for", account: account.name) },
+                                   data: { goal_earmark_target: "allocationInput", action: "input->goal-earmark#refresh" },
                                    class: "shrink-0 w-36 rounded-md border border-primary bg-container px-2.5 py-1.5 text-sm text-right tabular-nums text-primary placeholder:text-subdued focus-ring privacy-sensitive" %>
+                </div>
+                <%# Never text-destructive: none of this is an error. A goal
+                    in progress legitimately claims more than its account
+                    holds — that is what saving toward something looks like. %>
+                <p class="mt-1 text-xs text-secondary privacy-sensitive hidden" data-goal-earmark-target="warning"></p>
               </div>
             <% end %>
           </div>
         <% end %>
       </div>
       <p class="<%= "hidden" unless goal.errors[:base].any? %> mt-1.5 text-xs text-destructive" data-goal-form-target="accountsError"><%= t("goals.form.errors.accounts_required") %></p>
+      <%# Server-side only: GoalAccount refuses a second whole-balance link on an
+          account another goal already claims in full. There is no client-side
+          equivalent to mirror, so this renders straight from the record rather
+          than through a goal-form target (the controller is already at 10). %>
+      <% goal.errors.where(:"goal_accounts.base").each do |error| %>
+        <p class="mt-1.5 text-xs text-destructive"><%= error.message %></p>
+      <% end %>
     </div>
 
     <%= f.text_area :notes,

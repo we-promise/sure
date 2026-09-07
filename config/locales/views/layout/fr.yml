@@ -21,7 +21,7 @@ fr:
       sign_up: Créer un compte
     shared:
       confirm_dialog:
-        are_you_sure: Êtes-vous sûr?
+        are_you_sure: Êtes-vous sûr ?
         cannot_be_undone: Cette action ne peut pas être annulée.
         confirm: Confirmer
       footer:

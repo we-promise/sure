@@ -268,6 +268,38 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
+  test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
+    account = create_investment_account(balance: 2100, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 210, amount: 2100, currency: "USD"
+    )
+
+    queries = capture_sql_queries do
+      @statement.current_holdings
+      @statement.top_holdings(limit: 5)
+      @statement.allocation
+      @statement.day_change
+    end
+
+    holdings_queries = queries.grep(/DISTINCT ON \(holdings\.account_id, holdings\.security_id\)/)
+    assert_equal 1, holdings_queries.size,
+      "current_holdings should only run its DISTINCT ON query once per instance, not once per caller"
+  end
+
+  test "current_holdings memoizes the empty (no investment accounts) case too" do
+    queries = capture_sql_queries do
+      @statement.current_holdings
+      @statement.current_holdings
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/)
+    assert_equal 1, account_queries.size,
+      "the investment_accounts lookup backing current_holdings should only run once, even for the empty case"
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(

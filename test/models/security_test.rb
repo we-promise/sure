@@ -101,6 +101,29 @@ class SecurityTest < ActiveSupport::TestCase
     )
   end
 
+  # The symbol lands in a URL path segment and comes from provider data — an
+  # on-chain token can be called whatever its deployer chose. These would not
+  # merely break the link: the slash points the path elsewhere on the CDN, and
+  # the hash pushes the client id into a fragment Brandfetch never sees.
+  test "brandfetch_crypto_url refuses a symbol carrying URL delimiters" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    [ "BTC/../ETH", "BTC?c=leak", "BTC#frag", "BTC ETH", "..", ".BTC", "BTC%2F" ].each do |symbol|
+      assert_nil Security.brandfetch_crypto_url(symbol), "#{symbol.inspect} reached the URL"
+    end
+  end
+
+  # Real tickers carry dots and dashes — USDC.e before canonicalisation, and
+  # dashed pairs from some providers. The guard must not swallow them.
+  test "brandfetch_crypto_url still accepts the punctuation real tickers use" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    [ "BTC", "USDC.E", "WSTETH", "1INCH", "BTC-B" ].each do |symbol|
+      assert_not_nil Security.brandfetch_crypto_url(symbol), "#{symbol.inspect} was refused"
+    end
+  end
   test "brandfetch_crypto_url returns nil when Brandfetch is not configured" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     assert_nil Security.brandfetch_crypto_url("BTC")
@@ -186,5 +209,26 @@ class SecurityTest < ActiveSupport::TestCase
       "https://cdn.brandfetch.io/crypto/BTC/icon/fallback/lettermark/w/120/h/120?c=test-client-id",
       sec.logo_url
     )
+  end
+
+  # Every crypto integration stores the prefixed form — the on-chain wallets,
+  # Kraken, CoinStats and Binance all write "CRYPTO:BTC" — and this answered nil
+  # for all of them, so none of their securities carried a logo.
+  test "resolves the base asset from a prefixed crypto ticker" do
+    security = Security.new(ticker: "CRYPTO:BTC", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+
+    assert_equal "BTC", security.crypto_base_asset
+  end
+
+  test "still resolves the pair form the search results produce" do
+    security = Security.new(ticker: "BTCUSD", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+
+    assert_equal "BTC", security.crypto_base_asset
+  end
+
+  test "a non-crypto security has no base asset" do
+    security = Security.new(ticker: "AAPL", exchange_operating_mic: "XNAS")
+
+    assert_nil security.crypto_base_asset
   end
 end

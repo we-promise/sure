@@ -20,7 +20,7 @@ fr:
         page_title: Clé API créée
         permissions: Autorisations
         permissions_label: 'Autorisations :'
-        security_note_body: C'est la seule fois où votre clé API sera affichée. Assurez-vous de le copier maintenant et de le stocker en toute sécurité. Si vous perdez cette clé, vous devrez en générer une nouvelle.
+        security_note_body: C'est la seule fois où votre clé API sera affichée. Assurez-vous de la copier maintenant et de la stocker en toute sécurité. Si vous perdez cette clé, vous devrez en générer une nouvelle.
         security_note_title: Note de sécurité importante
         success_description: Votre nouvelle clé API est prête à être utilisée. Assurez-vous de la copier maintenant, car vous ne pourrez plus l'afficher par la suite.
         success_title: Clé API créée avec succès
@@ -64,7 +64,7 @@ fr:
         scope_read_write: Lire/écrire
         scope_read_write_description: Consultez vos données et créez de nouvelles transactions
         security_warning: Votre clé API sera affichée uniquement une fois après sa création. Gardez-la en sécurité et ne la partagez jamais publiquement. Si vous l'avez perdue, vous devrez en créer une nouvelle.
-        security_warning_body: Votre clé API ne sera affichée qu'une seule fois après sa création. Assurez-vous de le copier et de le stocker en toute sécurité. Toute personne ayant accès à cette clé peut accéder à vos données selon les autorisations que vous sélectionnez.
+        security_warning_body: Votre clé API ne sera affichée qu'une seule fois après sa création. Assurez-vous de la copier et de la stocker en toute sécurité. Toute personne ayant accès à cette clé peut accéder à vos données selon les autorisations que vous sélectionnez.
         security_warning_title: Avertissement important de sécurité
         subtitle: Générez une nouvelle clé API pour accéder à vos données Sure par programmation.
         title: Créer une clé API

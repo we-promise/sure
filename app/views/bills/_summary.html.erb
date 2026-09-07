@@ -1,0 +1,137 @@
+<%# locals: (series:, current_occurrence:, analytics:, recent_allocations:, suggestion: nil) %>
+
+<%# INSPECT. What is going on with this bill?
+
+    Not "everything about this bill" -- that is the bill's own page, and this
+    partial exists because the expansion and the drawer had become two
+    renderings of one enormous detail view. The twelve-month chart, the
+    per-year table, the price history, the upcoming dates and the settled
+    cycles all moved to the page. What is left is the answer to one question,
+    plus the way to act on it. %>
+
+<div class="space-y-4">
+  <%= render "bills/cancelled_notice", series: series %>
+
+  <%# Current state. %>
+  <% if current_occurrence %>
+    <% expected = current_occurrence.resolved_expected_amount_money %>
+    <% paid = current_occurrence.confirmed_allocated_money %>
+    <div class="space-y-0.5">
+      <p class="text-lg font-medium text-primary privacy-sensitive">
+        <% if current_occurrence.paid? %>
+          <%= t("bills.summary.paid_headline", amount: format_money(paid)) %>
+        <% else %>
+          <%= t("bills.summary.remaining", amount: format_money(current_occurrence.remaining_amount_money)) %>
+        <% end %>
+      </p>
+      <p class="text-xs <%= current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
+        <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
+        &middot; <%= occurrence_due_label(current_occurrence) %>
+      </p>
+    </div>
+  <% else %>
+    <div class="space-y-0.5">
+      <p class="text-lg font-medium text-primary privacy-sensitive">
+        <%= "~" if series.has_amount_variance? %><%= format_money(Money.new(series.amount.abs, series.currency)) %>
+      </p>
+      <p class="text-xs text-secondary">
+        <%= series.next_expected_date.present? ? t("bills.detail.around", date: l(series.next_expected_date, format: :short)) : t("bills.detail.next_payment") %>
+      </p>
+    </div>
+  <% end %>
+
+  <%# Schedule, on one line rather than as a stack of labelled fields. %>
+  <p class="text-xs text-secondary">
+    <%= frequency_label(series) %>
+    <% if series.account %>&middot; <%= series.account.name %><% end %>
+    <% if series.autopay? %>&middot; <%= t("recurring_transactions.pay_action.autopay") %><% end %>
+  </p>
+
+  <%# Subscription state is state, not depth, so it stays here. %>
+  <%= render "bills/state_chips", series: series %>
+
+  <%# What has actually paid this lately. %>
+  <% if recent_allocations.any? %>
+    <div class="space-y-1">
+      <p class="text-xs font-medium text-secondary uppercase"><%= t("bills.detail.recent_payments") %></p>
+      <div class="bg-container rounded-lg divide-y divide-subdued">
+        <% recent_allocations.first(3).each do |allocation| %>
+          <div class="flex items-center justify-between gap-3 px-3 py-2">
+            <div class="min-w-0">
+              <p class="text-sm text-primary truncate"><%= allocation.entry&.name.presence || t("bills.detail.manual_payment") %></p>
+              <% if allocation.paid_on %>
+                <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+              <% end %>
+            </div>
+            <p class="text-sm text-primary privacy-sensitive shrink-0"><%= format_money(allocation.allocated_amount_money) %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Two figures, not a dashboard. The rest of the cost story is on the page. %>
+  <% if analytics %>
+    <p class="text-xs text-secondary privacy-sensitive">
+      <%= t("bills.summary.cost_line",
+            average: format_money(analytics[:average]),
+            annualized: format_money(analytics[:annualized])) %>
+    </p>
+  <% end %>
+
+  <%# The next step, spelled out. The row shows this as an icon on a phone;
+      here there is room for the words. It is present on a settled occurrence
+      too, because the drawer is the only route in the app to unlinking a
+      payment or reopening a cycle. %>
+  <div class="flex flex-wrap items-center gap-2 pt-1">
+    <% if current_occurrence %>
+      <%= render "bills/row_action", occurrence: current_occurrence, suggestion: suggestion, labelled: true %>
+    <% end %>
+
+    <%# Pay and Add link keep a home here, so the portal never leaves Bills
+        just because the row got quieter. %>
+    <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
+
+    <div class="ml-auto flex items-center gap-2">
+      <%= render DS::Link.new(
+            text: t("bills.view_full_bill"),
+            variant: "default",
+            href: bill_path(series),
+            data: { turbo_frame: "_top" }
+          ) %>
+
+      <%# Edit, pause and remove stayed two clicks from the Overview rather
+          than moving to the page and becoming four. %>
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(
+             variant: "link",
+             text: t("bills.show.edit"),
+             icon: "pencil",
+             href: edit_recurring_transaction_path(series),
+             data: { turbo_frame: :modal }) %>
+        <% if bills_one_shot_ai_available? %>
+          <% menu.with_item(
+               variant: "link",
+               text: t("bills.smart_configurations.show.trigger"),
+               icon: "sparkles",
+               href: smart_configuration_bill_path(series),
+               data: { turbo_frame: :modal }) %>
+        <% end %>
+        <% menu.with_item(
+             variant: "button",
+             text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+             icon: series.active? ? "pause" : "play",
+             href: toggle_status_recurring_transaction_path(series),
+             method: :post) %>
+        <% menu.with_item(
+             variant: "button",
+             text: t("recurring_transactions.actions.delete"),
+             icon: "trash-2",
+             href: recurring_transaction_path(series),
+             method: :delete,
+             destructive: true,
+             confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
+      <% end %>
+    </div>
+  </div>
+</div>

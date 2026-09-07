@@ -1,0 +1,91 @@
+<%# locals: (onchain_wallet_item:, card:) %>
+
+<%= tag.div id: dom_id(onchain_wallet_item, :accounts_index) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset shrink-0">
+            <%= icon "wallet", size: "sm", class: "text-primary" %>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p onchain_wallet_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if onchain_wallet_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+
+            <p class="text-xs text-secondary">
+              <%= t(".addresses_tracked", count: card[:address_count]) %>
+            </p>
+
+            <% if onchain_wallet_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif onchain_wallet_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".needs_attention") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if onchain_wallet_item.last_synced_at %>
+                  <%= t(".status", timestamp: time_ago_in_words(onchain_wallet_item.last_synced_at)) %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <%# A menu, like every other provider card on this page, holding the
+            same two actions Kraken's does. Management itself is reached from
+            the provider settings, as it is for every other connection — no
+            card here links to it, and a menu of actions is the wrong place for
+            a navigation link. %>
+        <% if Current.user&.admin? %>
+          <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+            <% unless onchain_wallet_item.syncing? %>
+              <% menu.with_item(
+                   variant: "button",
+                   text: t(".sync"),
+                   icon: "refresh-cw",
+                   href: sync_onchain_wallet_item_path(onchain_wallet_item),
+                   method: :post
+                 ) %>
+            <% end %>
+
+            <% menu.with_item(
+                 variant: "button",
+                 text: t(".delete"),
+                 icon: "trash-2",
+                 href: onchain_wallet_item_path(onchain_wallet_item),
+                 method: :delete,
+                 confirm: CustomConfirm.for_resource_deletion(onchain_wallet_item.institution_display_name, high_severity: true)
+               ) %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless onchain_wallet_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if card[:accounts].any? %>
+          <%= render "accounts/index/account_groups", accounts: card[:accounts] %>
+        <% else %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_wallets_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_wallets_message") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

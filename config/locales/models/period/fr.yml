@@ -29,7 +29,7 @@ fr:
       label: 30 derniers jours
       label_short: 30J
     last_365_days:
-      comparison_label: contre il y a 1 an
+      comparison_label: vs il y a 1 an
       label: 365 derniers jours
       label_short: 365J
     last_5_years:

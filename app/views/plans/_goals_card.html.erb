@@ -95,7 +95,10 @@
             </div>
             <% if goal.target_amount.to_d.positive? %>
               <div class="h-1 bg-container-inset rounded-full overflow-hidden">
-                <div class="h-full <%= goal.status == :behind ? "bg-warning" : "bg-inverse" %> rounded-full"
+                <%# A depleted reserve wants attention as much as a goal off its
+                    pace: the pill beside this bar is already amber for it, and
+                    the bar was still neutral. %>
+                <div class="h-full <%= goal.needs_attention? ? "bg-warning" : "bg-inverse" %> rounded-full"
                      style="inline-size: <%= goal.progress_percent.clamp(0, 100) %>%"></div>
               </div>
             <% elsif goal.months_of_runway.present? %>

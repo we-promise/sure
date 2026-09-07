@@ -103,7 +103,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     # that may have been missing (fallback_rate: 1) on a prior sync and later
     # imported — so we must do a full recalculation to pick them up.
     def multi_currency_account?
-      account.entries.where.not(currency: account.currency).exists? ||
+      account.entries.excluding_pending.where.not(currency: account.currency).exists? ||
         account.currency != account.family.currency
     end
 
@@ -135,7 +135,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
 
     def calc_end_date
-      [ account.entries.order(:date).last&.date, account.holdings.order(:date).last&.date ].compact.max || Date.current
+      [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"

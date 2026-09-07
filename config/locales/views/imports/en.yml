@@ -22,7 +22,7 @@ en:
           one: "1 txn"
           other: "%{count} txns"
         split_warning_title: Split transactions detected
-        split_warning_description: "This QIF file contains split transactions. Splits are not yet supported, so each split transaction will be imported as a single transaction with its full amount and no category. The individual split breakdowns will not be preserved."
+        split_warning_description: "This QIF file contains split transactions. Review the detected split categories and tags below before importing."
         split_badge: split
         empty_state_primary: No categories or tags were found in this QIF file.
         empty_state_secondary: All transactions will be imported without categories or tags.
@@ -200,6 +200,7 @@ en:
     uploads:
       handle_qif_upload:
         qif_uploaded: "QIF file uploaded successfully."
+        qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
@@ -215,7 +216,7 @@ en:
         download_sample_csv: Download a sample CSV
         to_see_format: to see the required CSV format
         qif_title: Upload QIF file
-        qif_description: Select the account this QIF file belongs to, then upload your .qif export from Quicken.
+        qif_description: Select an account for single-account files, or leave blank when your QIF export includes account names.
         qif_account_label: Account
         qif_account_placeholder: Select an account…
         qif_file_prompt: to add your QIF file here
@@ -283,8 +284,23 @@ en:
       category_icon: "Lucide icon"
       merchant_color: "Color"
       merchant_website: "Website URL"
+    summary:
+      title: "Import summary"
+      subtitle: "What became of each transaction on this statement in %{account}."
+      subtitle_no_account: "What became of each transaction on this statement."
+      extracted: "Found on the statement"
+      already_recorded: "Already recorded"
+      already_recorded_hint: "Matched to a transaction this account already had, and marked reconciled."
+      imported: "Imported as new"
+      awaiting_review: "Waiting to be imported"
+      fully_reconciled:
+        one: "Nothing needed importing — the statement's only transaction was already on file."
+        other: "Nothing needed importing — all %{count} transactions were already on file."
+      statement_evidence_html: "Reconciled against %{statement}."
+      close: "Close"
     update:
       account_saved: "Account saved."
+      account_locked: "This import has already been published, so its account can't be changed. Revert it first if you need to import it somewhere else."
       invalid_account: "Account not found."
     publish:
       started: "Your import has started in the background."
@@ -353,6 +369,7 @@ en:
       map: Map
       confirm: Confirm
       select: Select
+      label: "Step %{step}"
       progress: "Step %{step} of %{total}"
     empty:
       message: No imports found.
@@ -432,7 +449,6 @@ en:
       document_uploaded: Document uploaded successfully.
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
       invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
-      ndjson_uploaded: NDJSON file uploaded successfully.
       document_provider_not_configured: No vector store is configured for document uploads.
     show:
       finalize_upload: Please finalize your file upload.
@@ -478,8 +494,13 @@ en:
       unknown_state_description: This import is in an unexpected state. Please return to imports.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
+      errors:
+        provider_not_configured: AI provider not configured
+        provider_no_pdf_support: AI provider does not support PDF processing
       ready_for_review_title: Ready for Review
-      ready_for_review_description: "We extracted %{count} transactions from your statement. Review and publish them to add to your account."
+      ready_for_review_description:
+        one: "%{count} transaction from your statement isn't in this account yet. Review and publish it to add it."
+        other: "%{count} transactions from your statement aren't in this account yet. Review and publish them to add them."
       transactions_extracted: Transactions Extracted
       transactions_extracted_count:
         one: "%{count} transaction"
@@ -494,5 +515,12 @@ en:
         one: "Publish %{count} Transaction"
         other: "Publish %{count} Transactions"
       review_transactions: Review Transactions
+      view_summary: View import summary
+      already_recorded_note:
+        one: "%{count} was already in this account and was matched to the statement."
+        other: "%{count} were already in this account and were matched to the statement."
+      complete_fully_reconciled:
+        one: "Every transaction on this statement was already in your account. %{count} was matched and marked reconciled — nothing needed importing."
+        other: "Every transaction on this statement was already in your account. All %{count} were matched and marked reconciled — nothing needed importing."
       select_account_to_continue: Please select an account above to continue.
       unknown_document_type: Unknown

@@ -5,6 +5,13 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
+  helper_method :new_transaction_idempotency_key
+
+  def show
+    super
+    assign_mark_recurring_state
+  end
+
   def new
     prefill_params_from_duplicate!
     super
@@ -68,16 +75,21 @@ class TransactionsController < ApplicationController
       Set.new
     end
 
-    @uncategorized_count = Current.accessible_entries.uncategorized_transactions.count
+    @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
+      Current.accessible_entries.uncategorized_transactions.count
+    end
 
     # Load projected recurring transactions for next 10 days
-    @projected_recurring = Current.family.recurring_transactions
-                                  .accessible_by(Current.user)
-                                  .active
-                                  .where("next_expected_date <= ? AND next_expected_date >= ?",
-                                         10.days.from_now.to_date,
-                                         Date.current)
-                                  .includes(:merchant)
+    @projected_recurring = Rails.cache.fetch(projected_recurring_cache_key, expires_in: 1.day) do
+      Current.family.recurring_transactions
+                    .accessible_by(Current.user)
+                    .active
+                    .where("next_expected_date <= ? AND next_expected_date >= ?",
+                           10.days.from_now.to_date,
+                           Date.current)
+                    .includes(:merchant)
+                    .to_a
+    end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
   end
@@ -112,11 +124,31 @@ class TransactionsController < ApplicationController
   end
 
   def create
-    account = Current.user.accessible_accounts.find(params.dig(:entry, :account_id))
+    account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
+
+    if account.nil?
+      @entry = Current.family.entries.new(entry_params)
+      @entry.valid?
+      set_new_transaction_form_options
+      render :new, status: :unprocessable_entity
+      return
+    end
 
     return unless require_account_permission!(account)
 
-    @entry = account.entries.new(entry_params)
+    idempotency_key = submitted_idempotency_key
+
+    # Sequential double-submit guard: the form was already submitted
+    # successfully once (double-click, browser retry, user reopening the
+    # dialog after a slow response) and the first request already committed
+    # by the time this one runs. Treat it as a success instead of creating a
+    # second, identical entry.
+    if idempotency_key && (existing_entry = find_duplicate_manual_entry(account, idempotency_key))
+      respond_with_created_entry(existing_entry)
+      return
+    end
+
+    @entry = account.entries.new(entry_params_with_idempotency_key(idempotency_key))
 
     if @entry.save
       @entry.sync_account_later
@@ -124,16 +156,22 @@ class TransactionsController < ApplicationController
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
 
-      flash[:notice] = t(".created")
-
-      respond_to do |format|
-        format.html { redirect_back_or_to account_path(@entry.account) }
-        format.turbo_stream { stream_redirect_back_or_to(account_path(@entry.account)) }
-      end
+      respond_with_created_entry(@entry)
     else
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
+  rescue ActiveRecord::RecordNotUnique
+    # Concurrent-request backstop: two near-simultaneous submissions both
+    # passed the pre-check above (neither saw the other's row yet) and both
+    # reached #save. The partial unique index on
+    # entries(account_id, idempotency_key) lets exactly one INSERT win;
+    # this rescues the loser and redirects it to the winning entry instead of
+    # creating a duplicate or surfacing a 500 to the user.
+    existing_entry = idempotency_key && find_duplicate_manual_entry(account, idempotency_key)
+    raise unless existing_entry
+
+    respond_with_created_entry(existing_entry)
   end
 
   def update
@@ -159,6 +197,8 @@ class TransactionsController < ApplicationController
       # Reload to ensure fresh state for turbo stream rendering
       @entry.reload
 
+      assign_mark_recurring_state
+
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
@@ -179,6 +219,11 @@ class TransactionsController < ApplicationController
               partial: "transactions/notes",
               locals: { entry: @entry, can_annotate: can_annotate_entry? }
             ) if params[:entry]&.key?(:notes) && notes_changed),
+            (turbo_stream.replace(
+              dom_id(@entry, :mark_recurring),
+              partial: "transactions/mark_recurring",
+              locals: { entry: @entry }
+            ) if can_edit_entry? && !@entry.split_child?),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",
@@ -189,6 +234,7 @@ class TransactionsController < ApplicationController
         end
       end
     else
+      assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
   end
@@ -354,17 +400,9 @@ class TransactionsController < ApplicationController
     return unless require_account_permission!(transaction.entry.account)
 
     # Check if a recurring transaction already exists for this pattern.
-    # Amount is included so two distinct recurring payments with the same
-    # payee but different amounts aren't treated as duplicates (matches the
-    # DB uniqueness scope and RecurringTransaction::Identifier's grouping key).
-    existing = Current.family.recurring_transactions.find_by(
-      account_id: transaction.entry.account_id,
-      merchant_id: transaction.merchant_id,
-      name: transaction.merchant_id.present? ? nil : transaction.entry.name,
-      amount: transaction.entry.amount,
-      currency: transaction.entry.currency,
-      manual: true
-    )
+    # The UI disables the button ahead of time using the same lookup, but this
+    # guard remains as the authoritative check (e.g. stale page, direct POST).
+    existing = transaction.existing_manual_recurring_transaction
 
     if existing
       flash[:alert] = t("recurring_transactions.already_exists")
@@ -433,6 +471,49 @@ class TransactionsController < ApplicationController
   end
 
   private
+    # Scoped by user (not just family) because Current.accessible_entries is
+    # user-scoped for family sharing (see Current#accessible_entries).
+    #
+    # Includes Family#accounts_status_version because `uncategorized_transactions`
+    # filters on account status (draft/active), and toggling an account's
+    # active status (AccountsController#toggle_active) doesn't touch `entries`
+    # or `AccountShare`, so it wouldn't otherwise bust this cache.
+    def uncategorized_count_cache_key
+      "transactions_uncategorized_count/v3/#{Current.family.id}/#{Current.user.id}/" \
+        "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
+    end
+
+    # Scoped additionally by Date.current since the "next 10 days" window is
+    # date-dependent and would otherwise return a stale window on a cache hit
+    # from an earlier day.
+    #
+    # Includes Family#recurring_transaction_merchants_version because the
+    # cached records are preloaded with :merchant and rendered with its
+    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
+    # doesn't touch `recurring_transactions`.
+    def projected_recurring_cache_key
+      "transactions_projected_recurring/v5/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
+        "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
+        "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
+    end
+
+    # The "Mark as Recurring" block is only ever rendered under these same
+    # conditions (see transactions/show.html.erb), so skip the extra query
+    # entirely when it won't be used — this runs on every show/failed-update
+    # render, including read-only viewers and split-child transactions.
+    def assign_mark_recurring_state
+      return unless can_edit_entry? && !@entry.split_child?
+
+      existing = @entry.transaction.existing_manual_recurring_transaction
+
+      @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
+      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = existing.present?
+      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
+      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+    end
+
     def accessible_transactions
       Current.family.transactions
         .joins(entry: :account)
@@ -504,6 +585,50 @@ class TransactionsController < ApplicationController
       entry_params
     end
 
+    def entry_params_with_idempotency_key(idempotency_key)
+      return entry_params unless idempotency_key
+
+      # A dedicated column, deliberately not external_id/source: those are
+      # provider-linkage fields (Entry#linked? = external_id.present?), and
+      # reusing them here would make a manual entry look provider-synced -
+      # disabling its date/nature/amount/currency fields in the editor, and
+      # hiding it from future provider dedup matching.
+      entry_params.merge(idempotency_key: idempotency_key)
+    end
+
+    def find_duplicate_manual_entry(account, idempotency_key)
+      account.entries.find_by(idempotency_key: idempotency_key)
+    end
+
+    # The hidden "entry[idempotency_key]" field is rendered fresh (a random
+    # UUID) every time the new-transaction form loads, and echoed back
+    # unchanged by the browser on submit. It's never trusted for anything but
+    # de-duplication scoped to the current user's own account (see #create),
+    # so we only require that it looks like a UUID we could have generated -
+    # anything else (missing field, tampered value, non-string type from a
+    # malformed request) just disables the idempotency check for that
+    # request rather than being treated as an error.
+    UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+    private_constant :UUID_FORMAT
+
+    def submitted_idempotency_key
+      key = params.dig(:entry, :idempotency_key)
+      key if key.is_a?(String) && key.match?(UUID_FORMAT)
+    end
+
+    def new_transaction_idempotency_key
+      @new_transaction_idempotency_key ||= submitted_idempotency_key || SecureRandom.uuid
+    end
+
+    def respond_with_created_entry(entry)
+      flash[:notice] = t(".created")
+
+      respond_to do |format|
+        format.html { redirect_back_or_to account_path(entry.account) }
+        format.turbo_stream { stream_redirect_back_or_to(account_path(entry.account)) }
+      end
+    end
+
     def tag_ids_param
       Array(params[:tag_ids]).reject(&:blank?)
     end
@@ -522,7 +647,7 @@ class TransactionsController < ApplicationController
         .alphabetically
         .includes(:account_providers, logo_attachment: :blob)
         .to_a
-      @categories = Current.family.categories.alphabetically.to_a
+      @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
       @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
     end

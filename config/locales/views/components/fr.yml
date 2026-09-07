@@ -10,10 +10,10 @@ fr:
       balance_reconciliation:
         labels:
           adjustments: Ajustements
-          buys: Achète
+          buys: Achats
           change_in_brokerage_cash: Variation des liquidités de courtage
           change_in_holdings_market: Variation des holdings (activité des prix du marché)
-          change_in_holdings_trades: Evolution des holdings (achats/ventes)
+          change_in_holdings_trades: Évolution des holdings (achats/ventes)
           charges: Frais
           end_balance: Fin du solde
           end_principal: Fin du principal
@@ -26,7 +26,7 @@ fr:
           net_principal_change: Variation nette du capital
           net_value_change: Variation de la valeur nette
           payments: Paiements
-          sells: Vend
+          sells: Ventes
           start_balance: Début du solde
           start_principal: Démarrer le principal
           start_value: Valeur de départ

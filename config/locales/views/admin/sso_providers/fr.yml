@@ -93,7 +93,7 @@ fr:
         submit: Enregistrer le fournisseur
         super_admin_groups: Groupes Super Admin
         test_connection: Tester la connexion
-        update_provider: Fournisseur de mise à jour
+        update_provider: Mettre à jour le fournisseur
       index:
         add_provider: Ajouter un fournisseur
         configuration_mode: Mode de configuration

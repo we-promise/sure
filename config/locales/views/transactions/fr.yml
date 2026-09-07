@@ -284,14 +284,14 @@ fr:
       details: Détails
       exclude: Exclure
       exclude_description: Les transactions exclues seront retirées des calculs budgétaires et des rapports.
-      keep_both: Non, garde les deux
+      keep_both: Non, gardez les deux
       loan_payment: Paiement du prêt
-      mark_recurring: Marquer comme récurrent
-      mark_recurring_subtitle: Suivez cela comme une transaction récurrente. L’écart de montant est automatiquement calculé à partir des 6 derniers mois de transactions similaires.
+      mark_recurring: Marquer comme récurrente
+      mark_recurring_subtitle: Suivez cela comme une transaction récurrente. L'écart de montant est automatiquement calculé à partir des 6 derniers mois de transactions similaires.
       mark_recurring_title: Transaction récurrente
       memo: Mémo
       merchant_label: Marchand
-      merge_duplicate: Oui, fusionne-les
+      merge_duplicate: Oui, fusionnez-les
       name_label: Nom
       nature: Type
       none: "(aucun)"
@@ -299,14 +299,14 @@ fr:
       note_placeholder: Entrez une note
       one_time_description: Les transactions ponctuelles seront exclues de certains calculs budgétaires et rapports afin de vous aider à voir ce qui compte vraiment.
       one_time_title: Transaction ponctuelle (%{type})
-      open_matcher: Matcheur ouvert
+      open_matcher: Ouvrir le matcheur
       overview: Aperçu
       payee: Bénéficiaire
       pending_duplicate_merger_button: Ouvrir la fusion
       pending_duplicate_merger_description: Fusionnez manuellement cette transaction en attente avec sa version validée.
       pending_duplicate_merger_title: Doublon d'une transaction validée ?
-      potential_duplicate_description: Cette transaction en attente peut être la même que la transaction publiée ci-dessous. Si tel est le cas, fusionnez-les pour éviter un double comptage.
-      potential_duplicate_title: Double possible détecté
+      potential_duplicate_description: Cette transaction en attente peut être la même que la transaction validée ci-dessous. Si tel est le cas, fusionnez-les pour éviter un double comptage.
+      potential_duplicate_title: Doublon possible détecté
       provider_extras: Suppléments du fournisseur
       settings: Paramètres
       tab_transactions: Transactions

@@ -7,8 +7,9 @@ class AutoCategorizeJob < ApplicationJob
 
     # If this job was part of a rule run, report back the modified count
     rule_run&.complete_job!(modified_count: modified_count)
-  rescue => e
-    rule_run&.fail_job!(error: e, source: self.class.name, transaction_ids: transaction_ids)
+  rescue => error
+    rule_run&.fail_job!(error: error, source: self.class.name, transaction_ids: transaction_ids)
+
     raise
   end
 end

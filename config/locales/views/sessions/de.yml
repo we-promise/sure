@@ -28,6 +28,8 @@ de:
       oidc: Mit OpenID Connect anmelden
       google_auth_connect: Mit Google anmelden
       local_login_admin_only: Lokale Anmeldung ist auf Administratoren beschränkt.
+      passkey_button: Mit Passkey anmelden
+      passkey_unsupported: Dieser Browser unterstützt keine Passkeys.
       no_auth_methods_enabled: Derzeit sind keine Anmeldemethoden aktiviert. Bitte wende dich an einen Administrator.
       demo_banner_title: "Demo-Modus aktiv"
       demo_banner_message: "Dies ist eine Demo-Umgebung. Anmeldedaten wurden zur Vereinfachung vorausgefüllt. Bitte gib keine echten oder sensiblen Daten ein."

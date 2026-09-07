@@ -3,6 +3,14 @@ require "digest/md5"
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
 
+  # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
+  PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
+
+  # Guard against spurious matches from very short known merchant names (e.g. a
+  # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
+  # inside "NAME IT" -- a real chain name observed in this issue's own data).
+  MIN_KNOWN_MERCHANT_MATCH_LENGTH = 3
+
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
   # {
@@ -34,10 +42,16 @@ class EnableBankingEntry::Processor
     "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
   end
 
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil)
+  # known_merchant_names: optional pre-fetched Family#known_merchant_names, so a
+  # caller processing many transactions in one batch (see
+  # EnableBankingAccount::Transactions::Processor) can compute it once instead of
+  # once per row -- same pattern as the shared import_adapter. Falls back to
+  # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
+    @known_merchant_names = known_merchant_names
   end
 
   def process
@@ -219,19 +233,78 @@ class EnableBankingEntry::Processor
     end
 
     def primary_remittance_information
+      lines = remittance_information_lines
+      descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
+      return descriptive if descriptive.blank?
+
+      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(descriptive)
+    end
+
+    def remittance_information_lines
       remittance = data[:remittance_information]
       Array.wrap(remittance)
         .map { |value| value.to_s.strip.presence }
         .compact
-        .first
+    end
+
+    def technical_remittance_line?(value)
+      line = value.to_s.strip
+      # Terminal booking line, e.g. "POS   45,13 AT  D6   31.07. 10:27": require the
+      # keyword+amount prefix AND the trailing date+time stamp TOGETHER, not either
+      # alone. Either signal in isolation false-positives on legitimate descriptors:
+      # a line like "POS 45,13 BILLA DANKT ..." (merchant appended after the amount,
+      # no separate technical-only element) would wrongly match on the prefix alone,
+      # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
+      # suffix alone. Requiring both matches every real technical line observed in
+      # production while leaving both of those legitimate shapes untouched. Day/month
+      # accept 1-2 digits (not just 2) so an un-padded ASPSP date ("1.07." instead of
+      # "01.07.") is still recognized as technical.
+      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
+    end
+
+    def strip_payment_processor_prefix(value)
+      return value if value.blank?
+      value.sub(PAYMENT_PROCESSOR_PREFIX, "").strip.presence || value
+    end
+
+    # Prefer a merchant name the family already knows over any text heuristic: it's
+    # already clean/trusted, and sidesteps guessing which parts of a POS line are
+    # noise (store numbers, city, loyalty markers, ...) vs. part of the name.
+    # Case-insensitive, whole-word match; the *stored* name (and its casing) wins,
+    # so e.g. "BILLA DANKT 0007114" resolves to "Billa", not "BILLA". Longest match
+    # wins when multiple known names match (prefer the more specific one).
+    def matched_known_merchant_name(line)
+      candidates = known_merchant_names.select { |name| name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH }
+      # Lookaround instead of \b at both ends: \b only fires on a word/non-word
+      # transition, so it silently fails to match right after a name that itself
+      # ends in punctuation (e.g. "A+B (Café)" ends in ")" -- a non-word char next
+      # to another non-word char has no \b between them). Asserting "the boundary
+      # character, if any, isn't alphanumeric" works regardless of how the known
+      # name itself starts/ends.
+      matches = candidates.select do |name|
+        line.match?(/(?<![[:alnum:]_])#{Regexp.escape(name)}(?![[:alnum:]_])/i)
+      end
+      matches.max_by(&:length)
+    end
+
+    def known_merchant_names
+      @known_merchant_names ||= account&.family&.known_merchant_names || []
     end
 
     def merchant_name_candidate
       counterparty = counterparty_name.to_s.strip
       return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
-      # For technical CARD-* counterparties, reuse remittance as the best merchant candidate
+
       remittance = primary_remittance_information
-      return remittance.truncate(100, omission: "") if remittance.present? && technical_card_counterparty?(counterparty)
+      return nil if remittance.blank?
+
+      # Trust remittance-derived text as a merchant candidate when either the
+      # counterparty was a technical CARD-* placeholder (existing Wise case), or
+      # the text matched an ALREADY-KNOWN merchant for this family. Inventing a
+      # brand-new merchant from raw noisy POS text (blank counterparty, no CARD-*
+      # signal, no known-merchant match) stays out of scope, unchanged from #2935.
+      return remittance.truncate(100, omission: "") if technical_card_counterparty?(counterparty)
+      return remittance if known_merchant_names.include?(remittance)
 
       nil
     end

@@ -2,6 +2,8 @@ require "test_helper"
 
 class AccountsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include OnchainTestHelper
+  include EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -14,6 +16,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index delegates whole-row account clicks to the account link" do
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(@account)} [data-controller='clickable-row']")
+    account_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal account_path(@account), account_link["href"]
+  end
+
+  test "index localizes the Plaid add accounts action" do
+    ensure_tailwind_build
+    @user.update!(locale: "de")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]",
+                  edit_plaid_item_path(plaid_items(:one), add_accounts: true),
+                  text: "Konten hinzufügen",
+                  count: 1
+  end
+
   test "index renders kraken items" do
     kraken_item = kraken_items(:one)
     get accounts_url
@@ -21,9 +48,83 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(kraken_item)}"
   end
 
+  test "index renders on-chain wallet items" do
+    register_fake_chain!
+    item = create_onchain_wallet_item(family: @user.family)
+    onchain_account = create_onchain_wallet_account(item: item)
+    onchain_account.ensure_account_provider!(accounts(:investment))
+
+    get accounts_url
+
+    assert_response :success
+    # Without this the wallet is invisible here: its accounts carry a provider
+    # link, so Account.manual excludes them, and no provider section claimed them.
+    assert_select "##{dom_id(item, :accounts_index)}"
+    # The card carries the same actions menu every other provider card does.
+    assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
+    assert_select "form[action=?]", onchain_wallet_item_path(item)
+  ensure
+    unregister_fake_chain!
+  end
+
+  test "index does not leak wallet accounts a member was never given" do
+    register_fake_chain!
+    admin = users(:family_admin)
+    member = users(:family_member)
+    item = create_onchain_wallet_item(family: admin.family)
+
+    shared = accounts(:investment)
+    unshared = accounts(:credit_card)
+    [ shared, unshared ].each_with_index do |account, index|
+      account.update!(owner: admin)
+      account.account_shares.destroy_all
+      row = create_onchain_wallet_account(
+        item: item,
+        address: "#{OnchainTestHelper::FAKE_ADDRESS}#{index}"
+      )
+      row.ensure_account_provider!(account)
+    end
+    shared.account_shares.create!(user: member, permission: "read_only")
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(item, :accounts_index)}"
+    # The item is surfaced as soon as ONE of its accounts is accessible, so
+    # rendering them all would hand a partially-authorised member the names and
+    # balances of accounts nobody shared with them.
+    assert_includes response.body, shared.name
+    assert_not_includes response.body, unshared.name
+  ensure
+    unregister_fake_chain!
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
+  end
+
+  test "sync all requests fresh Plaid transactions before syncing the family" do
+    sequence = sequence("manual sync all")
+    Family.any_instance
+      .expects(:request_plaid_transactions_refreshes_later)
+      .with(source: "AccountsController#sync_all")
+      .in_sequence(sequence)
+    Family.any_instance.expects(:sync_later).once.in_sequence(sequence)
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
+  end
+
+  test "sync all continues when Plaid refresh orchestration cannot be enqueued" do
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    Family.any_instance.expects(:sync_later).once
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
   end
 
   test "show avoids N+1 transfer queries across paginated entries" do
@@ -39,6 +140,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, per_row_transfer, "N+1 per-row transfer queries detected (#{per_row_transfer})"
   end
 
+  test "show delegates whole-row trade clicks to the drawer link" do
+    investment_account = accounts(:investment)
+    entry = entries(:trade)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(entry.entryable)} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
+  end
+
   test "show avoids N+1 split-parent queries across paginated entries" do
     queries = capture_sql_queries { get account_url(@account) }
     assert_response :success
@@ -49,6 +165,59 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       q.match?(/FROM "entries".*WHERE.*"parent_entry_id"/) && !q.include?(" IN (")
     }
     assert_equal 0, per_row_split, "N+1 per-row split-parent queries detected (#{per_row_split})"
+  end
+
+  test "show groups split transactions into a single split-group row when grouping is enabled" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    assert_select ".split-group" do
+      assert_select "p", text: "Food", count: 0
+    end
+  end
+
+  test "show renders split children as flat rows when grouping is disabled" do
+    @user.update!(preferences: { "show_split_grouped" => false })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 0
+  end
+
+  test "show avoids N+1 queries when loading split parents for grouped display" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    3.times do |i|
+      entry = create_transaction(name: "Grocery Store #{i}", amount: 100, account: @account)
+      entry.split!([
+        { name: "Food", amount: 60 },
+        { name: "Household", amount: 40 }
+      ])
+    end
+
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # @split_parents loads all referenced split-parent entries in a single
+    # `WHERE "entries"."id" IN (...)` query — a per-row `"id" = $1` lookup
+    # would indicate the batching regressed into N+1.
+    per_row_split_parent = queries.count { |q|
+      q.match?(/FROM "entries".*WHERE.*"entries"\."id" = \$?\d+/) && !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_split_parent, "N+1 per-row split-parent lookups detected (#{per_row_split_parent})"
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do
@@ -171,6 +340,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame##{dom_id(trade_entry)} p.privacy-sensitive", text: expected_amount, count: 1
   end
 
+  test "account activity keeps excluded entries visible so they can be restored" do
+    trade_entry = entries(:trade)
+    trade_entry.update!(excluded: true)
+
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(trade_entry)}"
+  end
+
   test "renders investment account with gains chart view" do
     get account_url(accounts(:investment), chart_view: "gains")
 
@@ -273,6 +452,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sparkline renders an empty series without a trend" do
+    empty_series = Series.new(
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: []
+    )
+    Account.any_instance.expects(:sparkline_series).returns(empty_series)
+
+    get sparkline_account_url(@account)
+
+    assert_response :success
+    assert_select "p.font-mono", count: 0
+  end
+
   test "destroys account" do
     delete account_url(@account)
     assert_redirected_to accounts_path
@@ -290,7 +484,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # Mock at the class level since controller loads account from DB
     Account.any_instance.expects(:syncing?).returns(false)
     PlaidItem.any_instance.expects(:syncing?).returns(false)
-    PlaidItem.any_instance.expects(:sync_later).once
+    PlaidItem.any_instance.expects(:sync_later_with_provider_refresh).once
 
     post sync_account_url(@account)
     assert_redirected_to account_url(@account)

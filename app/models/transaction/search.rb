@@ -187,9 +187,18 @@ class Transaction::Search
       query.joins(:merchant).where(merchants: { name: merchants })
     end
 
+    # Filter transactions by tag name, matching any transaction that carries
+    # at least one of the given tags.
     def apply_tag_filter(query, tags)
       return query unless tags.present?
-      query.joins(:tags).where(tags: { name: tags })
+
+      # Use a subquery instead of an INNER JOIN: `.joins(:tags)` fans out to
+      # one row per matching tag, so a transaction tagged with two of the
+      # filtered tags produces two rows and double-counts in the summary
+      # box (COUNT / SUM) even though the list renders it once.
+      # See https://github.com/we-promise/sure/issues/3174
+      matching_ids = query.joins(:tags).where(tags: { name: tags }).distinct.select(:id)
+      query.where(id: matching_ids)
     end
 
     def apply_status_filter(query, statuses)

@@ -10,6 +10,11 @@ class Goals::StatusPillComponent < ApplicationComponent
     reached:        { tone: :green, icon: "star" },
     completed:      { tone: :green, icon: "circle-check-big" },
     no_target_date: { tone: :gray,  icon: "infinity" },
+    # A reserve at its floor is steady, not celebratory: green, but a shield
+    # rather than the star a one-off gets for finishing. Below its floor it
+    # reads like `behind` — something to top back up.
+    funded:         { tone: :green, icon: "shield-check" },
+    depleted:       { tone: :amber, icon: "shield-alert" },
     paused:         { tone: :gray,  icon: "pause" },
     archived:       { tone: :gray,  icon: "archive" }
   }.freeze

@@ -5,6 +5,7 @@ en:
       success: Transfer created
       exchange_rate_unavailable: Exchange rate unavailable for selected currencies and date
       date_invalid: is invalid
+      stale_form: This form was already submitted with different details. Please refresh the page and try again.
     destroy:
       success: Transfer removed
     form:

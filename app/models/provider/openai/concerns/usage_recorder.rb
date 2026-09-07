@@ -99,4 +99,29 @@ module Provider::Openai::Concerns::UsageRecorder
     rescue => e
       "(message unavailable: #{e.class})"
     end
+
+    # ruby-openai raises Faraday::Error, which carries the parsed response
+    # body via response_body. The body can echo request content (potentially
+    # sensitive, since these calls process user-uploaded financial documents),
+    # so only allowlisted fields are extracted rather than forwarded whole.
+    def safe_error_detail(error)
+      body = error.respond_to?(:response_body) ? error.response_body : nil
+      request_id = error.respond_to?(:response_headers) ? error.response_headers&.[]("x-request-id") : nil
+      extract_error_detail(body, request_id)
+    rescue => e
+      "(detail unavailable: #{e.class})"
+    end
+
+    def extract_error_detail(body, request_id)
+      body = body.with_indifferent_access if body.respond_to?(:with_indifferent_access)
+      nested = body.is_a?(Hash) ? body[:error] : nil
+      nested = nested.with_indifferent_access if nested.respond_to?(:with_indifferent_access)
+
+      detail = {}
+      detail[:type] = nested[:type] if nested.is_a?(Hash) && nested[:type].present?
+      detail[:message] = nested[:message] if nested.is_a?(Hash) && nested[:message].present?
+      detail[:code] = nested[:code] if nested.is_a?(Hash) && nested[:code].present?
+      detail[:request_id] = request_id if request_id.present?
+      detail.presence
+    end
 end

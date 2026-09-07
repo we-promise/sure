@@ -26,6 +26,15 @@ en:
       sell: Sell
       dividend: Dividend
       interest: Interest
+      contribution: Contribution
+      exchange: Exchange
+      fee: Fee
+      other: Other
+      reinvestment: Reinvestment
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Transfer
+      withdrawal: Withdrawal
       current_market_price_label: Current Market Price
       overview: Overview
       purchase_price_label: Purchase Price

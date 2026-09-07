@@ -301,6 +301,72 @@ components:
             "$ref": "#/components/schemas/ChatSummary"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Insight:
+      type: object
+      required:
+      - id
+      - type
+      - title
+      - body
+      - priority
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        priority:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        status:
+          type: string
+          enum:
+          - active
+          - read
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+    InsightCollection:
+      type: object
+      required:
+      - insights
+      properties:
+        insights:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Insight"
+    PushSubscription:
+      type: object
+      required:
+      - id
+      - environment
+      - platform
+      - last_registered_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        platform:
+          type: string
+          enum:
+          - ios
+        last_registered_at:
+          type: string
+          format: date-time
     RetryResponse:
       type: object
       required:
@@ -600,6 +666,7 @@ components:
       - currency
       - subcategory
       - inherits_parent_budget
+      - rollover_enabled
       - category
       - created_at
       - updated_at
@@ -615,6 +682,8 @@ components:
         subcategory:
           type: boolean
         inherits_parent_budget:
+          type: boolean
+        rollover_enabled:
           type: boolean
         budgeted_spending:
           type: string
@@ -659,6 +728,7 @@ components:
       - currency
       - subcategory
       - inherits_parent_budget
+      - rollover_enabled
       - category
       - created_at
       - updated_at
@@ -675,6 +745,8 @@ components:
           type: boolean
         inherits_parent_budget:
           type: boolean
+        rollover_enabled:
+          type: boolean
         budgeted_spending:
           type: string
         budgeted_spending_cents:
@@ -686,6 +758,10 @@ components:
         actual_spending:
           type: string
         actual_spending_cents:
+          type: integer
+        rolled_over_amount:
+          type: string
+        rolled_over_amount_cents:
           type: integer
         available_to_spend:
           type: string
@@ -1005,6 +1081,23 @@ components:
         updated_at:
           type: string
           format: date-time
+    MerchantImportResult:
+      type: object
+      required:
+      - imported
+      - skipped
+      - merchants
+      properties:
+        imported:
+          type: integer
+          description: Number of merchants successfully created
+        skipped:
+          type: integer
+          description: Number of rows skipped (duplicates or invalid)
+        merchants:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MerchantDetail"
     Tag:
       type: object
       required:
@@ -1351,8 +1444,11 @@ components:
         status:
           type: string
           enum:
+          - suggested
           - active
+          - paused
           - inactive
+          - ended
         occurrence_count:
           type: integer
           minimum: 0
@@ -1361,6 +1457,98 @@ components:
           nullable: true
         manual:
           type: boolean
+        payment_url:
+          type: string
+          nullable: true
+          description: Link to the biller portal where this bill is paid. Only http
+            and https are accepted; a bare host is stored as https.
+        autopay:
+          type: boolean
+          description: Whether this bill pays itself automatically.
+        notes:
+          type: string
+          nullable: true
+          description: Free-text notes shown alongside the bill.
+        bill_type:
+          type: string
+          enum:
+          - bill
+          - subscription
+          - installment
+          - income
+          - transfer
+          - other
+          description: What kind of obligation this is.
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        anchor_date:
+          type: string
+          format: date
+          nullable: true
+          description: Reference occurrence that phases every-N cadences.
+        weekend_adjust:
+          type: string
+          enum:
+          - none
+          - skip
+          - before
+          - after
+        end_mode:
+          type: string
+          enum:
+          - never
+          - on_date
+          - after_count
+        end_on:
+          type: string
+          format: date
+          nullable: true
+        end_after_count:
+          type: integer
+          nullable: true
+        renews_on:
+          type: string
+          format: date
+          nullable: true
+        trial_ends_on:
+          type: string
+          format: date
+          nullable: true
+        cancelled_on:
+          type: string
+          format: date
+          nullable: true
+        recurrence_rules:
+          type: array
+          description: Repetition patterns; multiple rows express semimonthly and
+            similar multi-pattern cadences. Empty means legacy monthly on expected_day_of_month.
+          items:
+            type: object
+            properties:
+              frequency:
+                type: string
+                enum:
+                - weekly
+                - monthly
+                - yearly
+              interval:
+                type: integer
+              day_of_month:
+                type: integer
+                nullable: true
+                description: "-1 means the last day of the month."
+              weekday:
+                type: integer
+                nullable: true
+              weekday_ordinal:
+                type: integer
+                nullable: true
+                description: "-1 means the last such weekday."
+              month_of_year:
+                type: integer
+                nullable: true
         expected_amount_min:
           type: string
           nullable: true
@@ -1441,6 +1629,8 @@ components:
         source:
           type: string
           nullable: true
+        user_modified:
+          type: boolean
         classification:
           type: string
         account:
@@ -1564,6 +1754,20 @@ components:
           - liability_payment
           - loan_payment
         notes:
+          type: string
+          nullable: true
+        source_fee_amount:
+          type: string
+          nullable: true
+          description: Fee charged to the source account
+        source_fee_currency:
+          type: string
+          nullable: true
+        destination_fee_amount:
+          type: string
+          nullable: true
+          description: Fee deducted from the destination account
+        destination_fee_currency:
           type: string
           nullable: true
         inflow_transaction:
@@ -3272,6 +3476,9 @@ paths:
       summary: Sign up a new user
       tags:
       - Auth
+      description: Creates a new user and family. The first user on a fresh instance
+        is assigned the super_admin role; later family creators are assigned an admin
+        role.
       parameters: []
       responses:
         '201':
@@ -3644,6 +3851,12 @@ paths:
                 oneOf:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/MfaRequiredResponse"
+        '403':
+          description: SSO identity removed by an administrator
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:
@@ -3673,7 +3886,9 @@ paths:
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
         via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled.
+        allow_account_creation enabled. The first user on a fresh instance is assigned
+        the super_admin role; later family creators are assigned an admin-capable
+        role.
       parameters: []
       responses:
         '200':
@@ -3725,7 +3940,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: account creation disabled
+          description: SSO identity removed or account creation disabled
           content:
             application/json:
               schema:
@@ -5707,6 +5922,26 @@ paths:
                   type: string
                   description: CSV imports only. Column value that marks an amount
                     as an inflow when using custom_column strategy
+  "/api/v1/insights":
+    get:
+      summary: List proactive insights
+      tags:
+      - Insights
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: insights listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/InsightCollection"
+        '403':
+          description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -5723,6 +5958,45 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/MerchantDetail"
+    post:
+      summary: Import merchants from CSV
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: merchants imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantImportResult"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing file or invalid CSV
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+        required: true
+        description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
     parameters:
     - name: id
@@ -5779,6 +6053,65 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/push_subscriptions":
+    post:
+      summary: Register an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: token registered
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/PushSubscription"
+        '422':
+          description: invalid or conflicting subscription
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - token
+              - environment
+              - platform
+              properties:
+                token:
+                  type: string
+                environment:
+                  type: string
+                  enum:
+                  - sandbox
+                  - production
+                platform:
+                  type: string
+                  enum:
+                  - ios
+        required: true
+  "/api/v1/push_subscriptions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Unregister an APNs device token
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '204':
+          description: token unregistered
   "/api/v1/recurring_transactions":
     get:
       summary: List recurring transactions
@@ -5916,6 +6249,18 @@ paths:
                       minimum: 0
                     manual:
                       type: boolean
+                    payment_url:
+                      type: string
+                      nullable: true
+                      description: Link to the biller portal. Only http and https
+                        are accepted; a bare host is stored as https.
+                    autopay:
+                      type: boolean
+                      description: Whether this bill pays itself automatically.
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Free-text notes shown alongside the bill.
                     expected_amount_min:
                       type: number
                       nullable: true
@@ -6031,6 +6376,19 @@ paths:
                     next_expected_date:
                       type: string
                       format: date
+                    payment_url:
+                      type: string
+                      nullable: true
+                      description: Link to the biller portal. Only http and https
+                        are accepted; a bare host is stored as https. Send an empty
+                        string to clear it.
+                    autopay:
+                      type: boolean
+                      description: Whether this bill pays itself automatically.
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Free-text notes shown alongside the bill.
         required: true
     delete:
       summary: Delete recurring transaction
@@ -7374,6 +7732,10 @@ paths:
                       type: string
                       description: Optional source namespace for external_id. Requires
                         external_id and defaults to api when external_id is provided
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
                     tag_ids:
                       type: array
                       items:

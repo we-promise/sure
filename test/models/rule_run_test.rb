@@ -58,6 +58,18 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal 0, rule_run.pending_jobs_count
   end
 
+  test "fail_job deduplicates repeated error messages individually" do
+    rule_run = create_rule_run(pending_jobs_count: 3)
+
+    rule_run.fail_job!(error: RuntimeError.new("first failed batch"), source: "AutoCategorizeJob")
+    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
+    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
+
+    rule_run.reload
+    assert_equal "RuntimeError: first failed batch\nRuntimeError: second failed batch", rule_run.error_message
+    assert_equal 0, rule_run.pending_jobs_count
+  end
+
   test "complete_job does not overwrite failed status" do
     rule_run = create_rule_run(status: "failed", pending_jobs_count: 0)
 
@@ -67,6 +79,20 @@ class RuleRunTest < ActiveSupport::TestCase
     assert_equal "failed", rule_run.status
     assert_equal 0, rule_run.pending_jobs_count
     assert_equal 3, rule_run.transactions_modified
+  end
+
+  test "complete_job preserves failure while remaining jobs finish" do
+    rule_run = create_rule_run(pending_jobs_count: 2)
+    error = RuntimeError.new("LLM provider returned HTTP 503")
+
+    rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
+    rule_run.complete_job!(modified_count: 1)
+
+    rule_run.reload
+    assert_equal "failed", rule_run.status
+    assert_equal "RuntimeError: LLM provider returned HTTP 503", rule_run.error_message
+    assert_equal 0, rule_run.pending_jobs_count
+    assert_equal 1, rule_run.transactions_modified
   end
 
   private

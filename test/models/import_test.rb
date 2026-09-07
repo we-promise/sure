@@ -199,4 +199,19 @@ class ImportTest < ActiveSupport::TestCase
 
     assert_equal "failed", stuck.reload.status
   end
+
+  test "CSV-only date formats are not offered as a global family preference" do
+    # 2-digit years are ambiguous (see we-promise/sure#1530 and the rejected
+    # PR #531), so this format must stay out of Family::DATE_FORMATS and only
+    # be offered on the CSV mapping screen, where the user can preview it
+    # against their own data.
+    assert_empty Import::CSV_ONLY_DATE_FORMATS & Family::DATE_FORMATS
+  end
+
+  test "date_format accepts a CSV-only format like DD/MM/YY" do
+    import = imports(:transaction)
+    import.update!(date_format: "%d/%m/%y")
+
+    assert_equal Date.new(2024, 5, 15), Date.strptime("15/05/24", import.date_format)
+  end
 end

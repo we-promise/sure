@@ -670,4 +670,81 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes confirmed_ids, confirmed.entryable.id
     assert_not_includes pending_ids, confirmed.entryable.id
   end
+
+  # Regression for https://github.com/we-promise/sure/issues/3174
+  # The summary box (COUNT / SUM) on the Transactions page inflated when a
+  # transaction was tagged with multiple of the filtered tags, because the
+  # previous INNER JOIN produced one row per matching tag while the list
+  # deduplicated. These tests pin the invariant: totals.count must equal
+  # the deduplicated transaction count.
+  test "tag filter matches transactions with any of the filtered tags, once each" do
+    tag_a = @family.tags.create!(name: "TagA")
+    tag_b = @family.tags.create!(name: "TagB")
+    tag_c = @family.tags.create!(name: "TagC")
+
+    # One transaction carrying two of the filtered tags.
+    double_tagged = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    double_tagged.entryable.tags << tag_a
+    double_tagged.entryable.tags << tag_b
+
+    # One transaction carrying one of the filtered tags.
+    single_tagged = create_transaction(account: @checking_account, amount: 50, kind: "standard")
+    single_tagged.entryable.tags << tag_a
+
+    # One transaction carrying only a tag NOT in the filter set.
+    unrelated = create_transaction(account: @checking_account, amount: 75, kind: "standard")
+    unrelated.entryable.tags << tag_c
+
+    search = Transaction::Search.new(@family, filters: { tags: [ "TagA", "TagB" ] })
+    result_ids = search.transactions_scope.distinct.pluck(:id)
+
+    assert_includes result_ids, double_tagged.entryable.id
+    assert_includes result_ids, single_tagged.entryable.id
+    assert_not_includes result_ids, unrelated.entryable.id
+  end
+
+  # Pins the exact bug from #3174: the list count and the summary count must
+  # match even when a transaction is tagged with more than one filtered tag.
+  test "totals.count is not inflated when a transaction has multiple matching tags" do
+    tag_a = @family.tags.create!(name: "FanA")
+    tag_b = @family.tags.create!(name: "FanB")
+
+    double_tagged = create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    double_tagged.entryable.tags << tag_a
+    double_tagged.entryable.tags << tag_b
+
+    single_tagged = create_transaction(account: @checking_account, amount: 50, kind: "standard")
+    single_tagged.entryable.tags << tag_a
+
+    # Sanity: the list deduplicates — exactly 2 rows.
+    list_count = Transaction::Search.new(@family, filters: { tags: [ "FanA", "FanB" ] })
+                                    .transactions_scope.count
+
+    # The summary box must return the same number — without the EXISTS-style
+    # subquery fix, `.joins(:tags)` produced 3 rows (2 for double_tagged + 1
+    # for single_tagged), so `tot.count` returned 3.
+    totals = Transaction::Search.new(@family, filters: { tags: [ "FanA", "FanB" ] }).totals
+
+    assert_equal 2, list_count
+    assert_equal 2, totals.count, "summary count must equal the deduplicated list count (see #3174)"
+    assert_equal Money.new(150, "USD"), totals.expense_money, "SUM must not double-count tagged rows"
+  end
+
+  # Extends the invariant to a three-way tag fan-out, so a future INNER JOIN
+  # regression can't hide behind the two-tag case above.
+  test "totals.count is stable when a transaction has three matching tags" do
+    t1 = @family.tags.create!(name: "Triple1")
+    t2 = @family.tags.create!(name: "Triple2")
+    t3 = @family.tags.create!(name: "Triple3")
+
+    triple_tagged = create_transaction(account: @checking_account, amount: 42, kind: "standard")
+    triple_tagged.entryable.tags << t1
+    triple_tagged.entryable.tags << t2
+    triple_tagged.entryable.tags << t3
+
+    totals = Transaction::Search.new(@family, filters: { tags: [ "Triple1", "Triple2", "Triple3" ] }).totals
+
+    assert_equal 1, totals.count, "a single transaction tagged with all three must be counted once"
+    assert_equal Money.new(42, "USD"), totals.expense_money
+  end
 end
