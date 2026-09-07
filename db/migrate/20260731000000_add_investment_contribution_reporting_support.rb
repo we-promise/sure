@@ -120,8 +120,10 @@ class AddInvestmentContributionReportingSupport < ActiveRecord::Migration[7.2]
   end
 
   def down
-    remove_column :families, :treat_investment_contributions_as_transfers
-    remove_index :categories, name: "index_categories_on_family_id_and_default_key"
-    remove_column :categories, :default_key
+    # The category assignments made by backfill_confirmed_matches cannot be
+    # reconstructed safely during rollback. Treat the migration as
+    # irreversible rather than removing the schema columns while leaving the
+    # data change in place.
+    raise ActiveRecord::IrreversibleMigration
   end
 end
