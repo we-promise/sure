@@ -5,11 +5,13 @@ Status: **Gate G2 signed.**
 | | |
 | --- | --- |
 | Signed by | Jonathan Kaiser (`jaysbeekay`), repository owner |
-| Recorded | 2026-09-07, confirming the closure of #11 on 2026-09-05 was the sign-off |
+| Signed | 2026-09-05, by closing #11 |
+| Recorded here | 2026-09-07, on the owner's confirmation that the closure was the sign-off |
 | Basis | the real statement reconciliation in #65, summarised below |
 
-The signature is recorded here because a gate with no durable record is not a
-gate. It was previously inferable only from an issue closure with no closing
+The two dates are separate on purpose: the gate was signed on the first and only
+became legible on the second. A gate with no durable record is not a gate, and
+this one was previously inferable only from an issue closure with no closing
 comment, and #11's last comment said the opposite.
 
 **What the signature covers:** gross monthly interest for one lender and one
@@ -147,14 +149,15 @@ one that should still land before daily accrual is user-visible.
   deliver.
 - **Offset movement.** Daily offset reconciliation needs the linked account's
   balance history, which the statements do not carry — they report the lender's
-  own offset saving, not daily balances. Until that history is available, offset
-  cases are out of scope for sign-off rather than tolerated within it. A
-  sign-off that covers gross interest only must say so in those words.
+  own offset saving, not daily balances. The sign-off above therefore excluded
+  offset cases rather than tolerating them within its scope, and says so in
+  those words. Reconciling them needs that balance history.
 - **Mid-cycle rate changes on the path users read.** The **persisted** schedule
   still does not use the daily path: `SCHEDULE_DAILY_ACCRUAL` is `false` on
   `main`, so production accrues monthly (#36) and a statement reconciliation
   exercises code users' numbers do not currently come from. Enabling it is #10,
-  prepared and evidenced but deliberately unmerged pending this gate.
+  prepared and evidenced, and now gate-clear — it awaits a merge decision, not
+  this gate.
 - **Independent finance review.** The sign-off above is the repository owner's,
   who is also the borrower whose statement was reconciled. That is a legitimate
   decision for a self-hosted project and it is what was given; it is not the
