@@ -531,11 +531,11 @@ class PagesController < ApplicationController
       date_range = period.date_range
 
       if date_range.begin == date_range.end
-        I18n.t("pages.dashboard.spending_trend.date_range_short_single",
+        t("pages.dashboard.spending_trend.date_range_short_single",
           date: I18n.l(date_range.begin, format: :short),
           year: date_range.end.year)
       else
-        I18n.t("pages.dashboard.spending_trend.date_range_short",
+        t("pages.dashboard.spending_trend.date_range_short",
           start_date: I18n.l(date_range.begin, format: :short),
           end_day: date_range.end.day,
           year: date_range.end.year)
