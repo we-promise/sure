@@ -29,9 +29,23 @@ class Loan
     # touching the account's real balance or the persisted schedule. See
     # .monthly_equivalent for how a user-entered amount + cadence becomes
     # this value.
-    def initialize(loan, extra_payment: nil)
+    # `repayment_plan:` carries a scenario's extra repayments (#16). It is a
+    # separate input from `extra_payment:` on purpose, and they answer
+    # different questions:
+    #
+    #   extra_payment   -- "what if I paid $X MORE every month", modelled by
+    #                      raising the recurring repayment amount;
+    #   repayment_plan  -- dated lump sums and cadences that reduce the balance
+    #                      on their own effective dates (C6), leaving the
+    #                      contracted repayment where it is.
+    #
+    # Collapsing the second into a monthly equivalent of the first is exactly
+    # what C6 forbids: it would charge interest the borrower did not owe
+    # between the real repayment date and the notional month end.
+    def initialize(loan, extra_payment: nil, repayment_plan: nil)
       @loan = loan
       @extra_payment = extra_payment
+      @repayment_plan = repayment_plan
       # No rebuild is enqueued here. The version of this on #4 did so from the
       # constructor, which makes merely instantiating a projection a
       # side-effecting act. Since #39 the read paths own that: the Schedule tab
@@ -243,6 +257,15 @@ class Loan
         @original_schedule_rows ||= loan.amortization_schedule.display_rows
       end
 
+      # Nil rather than an empty lambda when there is no plan, so the simulator
+      # keeps its own default and a baseline projection is byte-identical to
+      # what it was before scenarios existed.
+      def extra_repayment_resolver
+        return nil if @repayment_plan.nil?
+
+        @repayment_plan.method(:change_points)
+      end
+
       def original_remaining_payments
         @original_remaining_payments ||= original_schedule_rows.select do |row|
           row.payment_date > Date.current
@@ -306,7 +329,8 @@ class Loan
           daily_accrual: Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL ||
             (loan.offset_accounts.any? && loan.offset_accounts.sum(:balance).positive?),
           day_count_convention: loan.day_count_convention,
-          offset_for: Loan::OffsetResolver.new(loan).method(:change_points)
+          offset_for: Loan::OffsetResolver.new(loan).method(:change_points),
+          extra_for: extra_repayment_resolver
         ).run.payments
       end
 

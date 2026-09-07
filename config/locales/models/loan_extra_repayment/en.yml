@@ -1,0 +1,22 @@
+---
+en:
+  activerecord:
+    attributes:
+      loan_extra_repayment:
+        kind: Kind
+        amount: Amount
+        occurs_on: Date
+        frequency: Frequency
+        interval: Every
+        starts_on: Starts on
+        ends_on: Ends on
+    errors:
+      models:
+        loan_extra_repayment:
+          attributes:
+            occurs_on:
+              present: must be blank for a recurring repayment
+            frequency:
+              present: must be blank for a one-off repayment
+            ends_on:
+              invalid: must be on or after the start date

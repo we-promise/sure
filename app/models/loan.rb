@@ -30,6 +30,7 @@ class Loan < ApplicationRecord
   DEFAULT_DAY_COUNT_CONVENTION = InterestAccrual::DEFAULT_DAY_COUNT_CONVENTION.to_s
 
   has_many :amortizations, class_name: "LoanAmortization", dependent: :destroy
+  has_many :loan_scenarios, dependent: :destroy
   has_many :loan_offset_accounts, dependent: :destroy
   has_many :offset_accounts, through: :loan_offset_accounts, source: :account
 
@@ -129,6 +130,17 @@ class Loan < ApplicationRecord
       @payoff_projection_signature = signature
     end
     @payoff_projection
+  end
+
+  # A scenario's projection: the same actual-balance projection, with the
+  # scenario's extra repayments applied on their own effective dates (C6).
+  #
+  # Unmemoized and never persisted. Scenarios are LIVE ESTIMATES -- they
+  # recompute against the loan's current balance, rate and offset on every
+  # view, because a scenario pinned to a stale balance cannot answer the only
+  # question it is asked: given where I am now, what if?
+  def payoff_projection_for_scenario(scenario)
+    PayoffProjection.new(self, repayment_plan: Loan::RepaymentPlan.for(scenario))
   end
 
   # A fresh (unmemoized) projection modeling a hypothetical extra payment on
