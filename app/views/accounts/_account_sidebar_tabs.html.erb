@@ -4,11 +4,14 @@
     ERB dependency tracker mis-parses as a bogus "Ds/D" template dependency
     and then logs "Couldn't find template for digesting: Ds/D" on every cache
     miss. The cache key is already manually versioned via
-    account_sidebar_tabs_cache_key ("account_sidebar_tabs_v2",
+    account_sidebar_tabs_cache_key ("account_sidebar_tabs_v3",
     invalidate_on_data_updates: true), so we opt out of automatic template
     digesting. Bump that version suffix when changing this template or its
     sidebar dependencies. %>
 <% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours, skip_digest: true do %>
+<% reconciliation_indicators = Account::ReconciliationIndicator.for_accounts(
+     family.balance_sheet.account_groups.flat_map(&:accounts)
+   ) %>
 <div id="account-sidebar-tabs">
   <% if family.missing_data_provider? %>
     <div class="mb-3">
@@ -40,7 +43,7 @@
 
         <div>
           <% family.balance_sheet.assets.account_groups.each do |group| %>
-            <%= render "accounts/accountable_group", account_group: group, mobile: mobile %>
+            <%= render "accounts/accountable_group", account_group: group, mobile: mobile, reconciliation_indicators: reconciliation_indicators %>
           <% end %>
         </div>
       </div>
@@ -60,7 +63,7 @@
 
         <div>
           <% family.balance_sheet.liabilities.account_groups.each do |group| %>
-            <%= render "accounts/accountable_group", account_group: group, mobile: mobile %>
+            <%= render "accounts/accountable_group", account_group: group, mobile: mobile, reconciliation_indicators: reconciliation_indicators %>
           <% end %>
         </div>
       </div>
@@ -80,7 +83,7 @@
 
         <div>
           <% family.balance_sheet.account_groups.each do |group| %>
-            <%= render "accounts/accountable_group", account_group: group, mobile: mobile, all_tab: true %>
+            <%= render "accounts/accountable_group", account_group: group, mobile: mobile, all_tab: true, reconciliation_indicators: reconciliation_indicators %>
           <% end %>
         </div>
       </div>

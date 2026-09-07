@@ -13,6 +13,7 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
+    @reconciliation_indicators = Account::ReconciliationIndicator.for_accounts(@manual_accounts)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
@@ -75,6 +76,7 @@ class AccountsController < ApplicationController
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
+    @reconciliation_indicator = Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
     if statement_tab_active?

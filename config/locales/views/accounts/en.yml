@@ -5,6 +5,9 @@ en:
       destroy:
         success: "Entry deleted successfully."
   accounts:
+    reconciliation_indicator:
+      matched: All transactions reconciled
+      needs_attention: Transactions need reconciliation
     not_authorized: "You don't have permission to manage this account"
     account:
       complete_setup: Complete setup

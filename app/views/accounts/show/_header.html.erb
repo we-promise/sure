@@ -1,9 +1,9 @@
-<%# locals: (account:, title:, subtitle: nil) %>
+<%# locals: (account:, title:, subtitle: nil, reconciliation_indicator: nil) %>
 
 <header class="space-y-4">
   <div class="flex items-center gap-4">
     <div class="flex items-center gap-3 overflow-hidden">
-      <%= render "accounts/logo", account: account %>
+      <%= render "accounts/logo", account: account, reconciliation_indicator: reconciliation_indicator %>
 
       <div class="flex items-center gap-2">
         <div class="truncate">

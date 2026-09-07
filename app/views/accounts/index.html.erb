@@ -106,7 +106,7 @@
 
     <% if @manual_accounts.any? %>
       <div id="manual-accounts">
-        <%= render "accounts/index/manual_accounts", accounts: @manual_accounts %>
+        <%= render "accounts/index/manual_accounts", accounts: @manual_accounts, reconciliation_indicators: @reconciliation_indicators %>
       </div>
     <% else %>
       <div id="manual-accounts"></div>

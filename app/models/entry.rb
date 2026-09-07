@@ -37,6 +37,9 @@ class Entry < ApplicationRecord
   # (unsynced) accounts, i.e. `account.manual?` — synced accounts already have
   # duplicate-matching (Account::ProviderImportAdapter) and statement-level
   # reconciliation (AccountStatement, Account::ReconciliationManager).
+  # Declare the type explicitly so the enum remains bootable while a long-lived
+  # web process refreshes its schema metadata after the column migration.
+  attribute :reconciled_status, :string, default: "unreconciled"
   enum :reconciled_status, {
     unreconciled: "unreconciled", # default — not yet checked against a statement
     cleared: "cleared",           # confirmed to appear on a statement, not yet locked in
