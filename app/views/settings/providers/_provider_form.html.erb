@@ -78,7 +78,7 @@
   <% end %>
 
   <% if %w[plaid plaid_eu].include?(provider_key) %>
-    <%= render "settings/providers/plaid_naming_preference" %>
+    <%= render "settings/providers/plaid_naming_preference", provider_key: provider_key %>
   <% end %>
 
   <% if local_assigns[:provider_setup_encryption_warning] %>

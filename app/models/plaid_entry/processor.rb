@@ -144,6 +144,7 @@ class PlaidEntry::Processor
       end.presence
     end
 
+    # @return [Numeric] the transaction amount, in Plaid's sign convention
     def amount
       plaid_transaction["amount"]
     end

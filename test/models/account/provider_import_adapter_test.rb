@@ -1644,6 +1644,40 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_nil plaid_extra["payment_meta"], "a dropped field must not survive on a user-modified entry"
   end
 
+  # determine_skip_reason reports "user_modified" before it checks
+  # import_locked?, so an entry with both flags reaches the user_modified
+  # branch. Import ownership is the stronger claim and wins.
+  test "leaves an import-locked entry alone even when it is also user-modified" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "AMZN Mktp US*AB12CD",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.update!(import_locked: true)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.reload
+    assert_equal "AMZN Mktp US*AB12CD", entry.name
+    assert_equal "online", entry.transaction.extra.dig("plaid", "payment_channel")
+  end
+
   test "does not rename excluded entries" do
     entry = @adapter.import_transaction(
       external_id: "excluded_entry_name",

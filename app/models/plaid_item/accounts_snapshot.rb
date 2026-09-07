@@ -107,6 +107,8 @@ class PlaidItem::AccountsSnapshot
       end
     end
 
+    # @return [Boolean] whether this item is entitled to investments and holds
+    #   at least one investment account
     def can_fetch_investments?
       plaid_item.supports_product?("investments") &&
       accounts.any? { |a| a.type == "investment" }

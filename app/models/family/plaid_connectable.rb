@@ -23,6 +23,7 @@ module Family::PlaidConnectable
     end
   end
 
+  # @return [Boolean] whether this instance has US Plaid credentials configured
   def can_connect_plaid_us?
     plaid(:us).present?
   end

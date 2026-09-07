@@ -85,7 +85,13 @@ class Account::ProviderImportAdapter
           # apply the provider's name. Without this, re-importing history skips
           # these entries wholesale and leaves a mix of old and new naming.
           # Excluded and import_locked entries stay untouched.
-          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction) &&
+          # determine_skip_reason reports "user_modified" before it checks
+          # import_locked?, so an entry carrying both flags arrives here. Import
+          # ownership is the stronger claim — a CSV import owns that row — so
+          # neither the name nor the metadata is touched in that case.
+          user_modified_only = skip_reason == "user_modified" && !entry.import_locked?
+
+          if user_modified_only && entry.entryable.is_a?(Transaction) &&
              name.present? && !entry.locked?("name")
             entry.enrich_attribute(:name, name, source: source)
           end
@@ -95,9 +101,7 @@ class Account::ProviderImportAdapter
           # out, a user-modified entry would keep whatever payload it was created
           # with — a replay could not backfill it, and a field the provider has
           # since dropped would show in the drawer forever.
-          if skip_reason == "user_modified"
-            apply_provider_extra(entry, extra, replace_extra_namespaces)
-          end
+          apply_provider_extra(entry, extra, replace_extra_namespaces) if user_modified_only
 
           record_skip(entry, skip_reason)
           return entry
@@ -1094,6 +1098,13 @@ class Account::ProviderImportAdapter
       entry.transaction.save!
     end
 
+    # Drops the `pending` flag from every provider namespace, so an entry that
+    # has since posted stops rendering the pending badge. The rest of each
+    # namespace is left in place, and a namespace emptied by the removal is
+    # dropped with it.
+    #
+    # @param extra [Hash, nil] the transaction's current metadata
+    # @return [Hash] a copy with pending flags removed
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
       ex = {} unless ex.is_a?(Hash)
