@@ -4,6 +4,10 @@
 <% schedule = loan.amortization_schedule %>
 <% payments = schedule.display_rows %>
 <% today = Date.current %>
+<%# FR-205: the payments whose ACCRUAL period opens a new rate (C7). Derived on
+    the model, because "which row does the borrower start being charged the new
+    rate on" is a question about the two rate clocks, not about this table. %>
+<% rate_change_markers = schedule.accrual_rate_change_markers(payments) %>
 <% extra_payment_params = @extra_payment_params || {} %>
 <% extra_payment_active = extra_payment_params.present? %>
 <%# Hypothetical "what if I paid extra" params (see
@@ -183,8 +187,22 @@
         </thead>
         <tbody class="divide-y divide-alpha-black-25">
           <% payments.each do |payment| %>
+            <% accrual_rate = rate_change_markers[payment.payment_number] %>
             <tr class="<%= "text-secondary bg-surface-hover" if payment.payment_date <= today %>">
-              <td class="px-4 py-2"><%= payment.payment_number %></td>
+              <td class="px-4 py-2">
+                <%= payment.payment_number %>
+                <% if accrual_rate %>
+                  <%# The rate is repeated as visually hidden text rather than
+                      left only in `title`: a non-focusable span's title is
+                      unreachable by keyboard and unreliably announced, and the
+                      rate is the whole point of the marker (G6). %>
+                  <span class="ml-1 text-xs text-secondary" data-rate-change-marker
+                        title="<%= t(".rate_change_marker_title", rate: accrual_rate) %>">
+                    <%= t(".rate_change_marker") %>
+                    <span class="sr-only">: <%= t(".rate_change_marker_title", rate: accrual_rate) %></span>
+                  </span>
+                <% end %>
+              </td>
               <td class="px-4 py-2"><%= l payment.payment_date, format: :long %></td>
               <td class="px-4 py-2 text-right"><%= format_money Money.new(payment.payment_amount, account.currency) %></td>
               <td class="px-4 py-2 text-right"><%= format_money Money.new(payment.principal_payment, account.currency) %></td>

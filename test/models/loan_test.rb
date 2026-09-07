@@ -10,6 +10,82 @@ class LoanTest < ActiveSupport::TestCase
     assert_includes loan.errors[:subtype], "is not included in the list"
   end
 
+  # --- #14: structured rate-change rows assembled into the jsonb column ------
+  #
+  # The column is not mass-assignable on purpose (R13), so the form submits
+  # rows and the model assembles. These cover what the assembly has to get
+  # right; the values themselves are judged by the existing
+  # variable_rate_schedule validation.
+
+  test "rate_changes rows are assembled into the variable rate schedule" do
+    loan = Loan.new(subtype: "mortgage", rate_type: "variable", interest_rate: 5, term_months: 12)
+    loan.rate_changes = [
+      { effective_date: "2024-03-01", rate: "4.5" },
+      { effective_date: "2024-06-01", rate: "6.0" }
+    ]
+
+    assert loan.valid?
+    # Values arrive as strings from the form and are normalised to numbers by
+    # quantize_variable_rate_schedule, which runs after assembly by design.
+    assert_equal({ "2024-03-01" => 4.5, "2024-06-01" => 6.0 }, loan.variable_rate_schedule)
+  end
+
+  test "a repeated effective date replaces rather than duplicating" do
+    loan = Loan.new(subtype: "mortgage", rate_type: "variable", interest_rate: 5, term_months: 12)
+    loan.rate_changes = [
+      { effective_date: "2024-03-01", rate: "4.5" },
+      { effective_date: "2024-03-01", rate: "7.25" }
+    ]
+
+    assert loan.valid?
+    # One date carries one rate, matching add_variable_rate_change's merge
+    # semantics -- the later row wins rather than the schedule holding two
+    # entries the calculation would have to choose between.
+    assert_equal({ "2024-03-01" => 7.25 }, loan.variable_rate_schedule)
+  end
+
+  test "a row marked for removal is dropped, and a wholly blank row is ignored" do
+    loan = Loan.new(subtype: "mortgage", rate_type: "variable", interest_rate: 5, term_months: 12)
+    loan.rate_changes = [
+      { effective_date: "2024-03-01", rate: "4.5" },
+      { effective_date: "2024-06-01", rate: "6.0", _destroy: "1" },
+      { effective_date: "", rate: "" }
+    ]
+
+    assert loan.valid?
+    assert_equal({ "2024-03-01" => 4.5 }, loan.variable_rate_schedule)
+  end
+
+  # A typo must come back as a correctable field error. Parsing during assembly
+  # would raise instead, turning a wrong date into a 500.
+  test "an invalid row is rejected by validation rather than raising" do
+    loan = Loan.new(subtype: "mortgage", rate_type: "variable", interest_rate: 5, term_months: 12)
+    loan.rate_changes = [ { effective_date: "not-a-date", rate: "4.5" } ]
+
+    assert_nothing_raised { loan.valid? }
+    assert_not loan.valid?
+    assert_includes loan.errors[:variable_rate_schedule].to_sentence, "invalid effective date"
+  end
+
+  test "a rate outside the supported range is rejected" do
+    loan = Loan.new(subtype: "mortgage", rate_type: "variable", interest_rate: 5, term_months: 12)
+    loan.rate_changes = [ { effective_date: "2024-03-01", rate: "150" } ]
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:variable_rate_schedule].to_sentence, "0-100"
+  end
+
+  # Not supplying the rows at all must leave an existing schedule alone --
+  # otherwise saving any other attribute would silently wipe the rate history.
+  test "omitting rate_changes leaves an existing schedule untouched" do
+    loan = Loan.create!(subtype: "mortgage", rate_type: "variable", interest_rate: 5, term_months: 12,
+                        variable_rate_schedule: { "2024-03-01" => "4.5" })
+
+    loan.update!(term_months: 24)
+
+    assert_equal({ "2024-03-01" => 4.5 }, loan.reload.variable_rate_schedule)
+  end
+
   test "rejects an unsupported day-count convention" do
     loan = Loan.new(day_count_convention: "thirty_360")
 

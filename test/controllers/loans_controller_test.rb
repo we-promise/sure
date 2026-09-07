@@ -21,6 +21,105 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "actual_actual", @account.accountable.reload.day_count_convention
   end
 
+  # --- #14 ------------------------------------------------------------------
+
+  test "updates the origination date and enqueues a rebuild" do
+    assert_enqueued_with job: LoanAmortizationRebuildJob do
+      patch loan_path(@account), params: {
+        account: { accountable_attributes: { id: @account.accountable_id, start_date: "2023-04-01" } }
+      }
+    end
+
+    assert_equal Date.new(2023, 4, 1), @account.accountable.reload.start_date
+  end
+
+  test "assembles submitted rate-change rows into the schedule and enqueues a rebuild" do
+    @account.accountable.update!(rate_type: "variable")
+
+    assert_enqueued_with job: LoanAmortizationRebuildJob do
+      patch loan_path(@account), params: {
+        account: {
+          accountable_attributes: {
+            id: @account.accountable_id,
+            rate_changes: [
+              { effective_date: "2024-03-01", rate: "4.5" },
+              { effective_date: "2024-06-01", rate: "6.0" }
+            ]
+          }
+        }
+      }
+    end
+
+    assert_equal({ "2024-03-01" => 4.5, "2024-06-01" => 6.0 },
+      @account.accountable.reload.variable_rate_schedule)
+  end
+
+  # The jsonb column must not be reachable by mass assignment: permitting it
+  # would let a request write arbitrary JSON into a column the calculation
+  # reads (R13). Submitting it directly must be ignored, not honoured.
+  test "a directly submitted variable_rate_schedule is not mass-assignable" do
+    @account.accountable.update!(rate_type: "variable")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          variable_rate_schedule: { "2024-03-01" => "99.9" }
+        }
+      }
+    }
+
+    # The update must SUCCEED with the parameter ignored, not fail because of
+    # it: asserting only the empty schedule would also pass if the request had
+    # been rejected outright, which is a different behaviour.
+    assert_redirected_to @account
+    assert_empty @account.accountable.reload.variable_rate_schedule.to_h,
+      "the jsonb column must only be writable through assembled rate_changes rows"
+  end
+
+  test "an invalid rate-change row re-renders with an inline error rather than raising" do
+    @account.accountable.update!(rate_type: "variable")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          rate_changes: [ { effective_date: "not-a-date", rate: "4.5" } ]
+        }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_empty @account.accountable.reload.variable_rate_schedule.to_h
+
+    # The re-rendered row must show what was typed. A date input blanks a value
+    # it cannot parse, so echoing an invalid date into type="date" leaves the
+    # user an empty box beside an error about a value they can no longer see.
+    assert_select "input[name=?][type=text][value=?]",
+      "account[accountable_attributes][rate_changes][][effective_date]", "not-a-date"
+  end
+
+  # cubic, #77: two ISO-8601 spellings of one day must not become two rows --
+  # the schedule would carry a duplicate the replace-on-repeat rule is supposed
+  # to prevent, and which rate wins would fall out of hash order.
+  test "equivalent spellings of one effective date collapse to a single row" do
+    @account.accountable.update!(rate_type: "variable")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          rate_changes: [
+            { effective_date: "2024-03-01", rate: "4.5" },
+            { effective_date: "20240301", rate: "6.0" }
+          ]
+        }
+      }
+    }
+
+    assert_equal({ "2024-03-01" => 6.0 }, @account.accountable.reload.variable_rate_schedule)
+  end
+
   test "creates with loan details" do
     assert_difference -> { Account.count } => 1,
       -> { Loan.count } => 1,

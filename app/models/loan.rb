@@ -35,6 +35,13 @@ class Loan < ApplicationRecord
 
   attr_accessor :offset_account_ids
 
+  # Structured {effective_date, rate} rows from the form. The jsonb column is
+  # deliberately NOT mass-assignable: permitting a free-form hash would let a
+  # request write arbitrary JSON into a column the calculation reads, and
+  # Brakeman flags it correctly (risk R13, #14). The form submits pairs and the
+  # column is assembled from them.
+  attr_reader :rate_changes
+
   before_save :validate_offset_accounts, if: :offset_account_ids_supplied?
   after_save :sync_offset_accounts, if: :offset_accounts_need_sync?
 
@@ -47,6 +54,32 @@ class Loan < ApplicationRecord
   before_validation :quantize_variable_rate_schedule
 
   after_save :enqueue_amortization_rebuild, if: :amortization_inputs_changed?
+
+  # Whether the form can hand these values to their native controls.
+  #
+  # A date or number input applies the WHATWG value sanitization algorithm and
+  # silently blanks a value it cannot parse. Rendering a rejected submission
+  # back into one would show the user an empty box next to an error about the
+  # value they just typed, leaving them nothing to correct. The form falls back
+  # to a text input for exactly these cases -- which are the same cases
+  # `variable_rate_schedule_entries_are_valid` rejects, so a value that renders
+  # as text is always a value the user has been told about.
+  def self.renderable_effective_date?(value)
+    return true if value.blank?
+
+    Date.iso8601(value.to_s)
+    true
+  rescue ArgumentError, TypeError
+    false
+  end
+
+  def self.renderable_rate?(value)
+    return true if value.blank?
+
+    BigDecimal(value.to_s).finite?
+  rescue ArgumentError, TypeError
+    false
+  end
 
   def monthly_payment
     amortization_schedule.monthly_payment
@@ -189,6 +222,57 @@ class Loan < ApplicationRecord
     amortization_schedule.amortizable?
   end
 
+  # Assembles variable_rate_schedule from the form's rows.
+  #
+  # Deliberately a writer rather than an attr_accessor fed by a callback. The
+  # column is what carries the change, and assigning only an accessor leaves
+  # the record un-dirty -- Rails' autosave then skips saving the loan entirely
+  # when it is updated through `accountable_attributes`, so a callback would
+  # never run and the form would silently save nothing.
+  #
+  # Values are carried across as given rather than parsed here, so a bad date
+  # or a non-numeric rate is rejected by
+  # `variable_rate_schedule_entries_are_valid` with the message validation
+  # already has, instead of raising mid-assembly and turning a correctable typo
+  # into a 500.
+  #
+  # A repeated effective date resolves to the last row submitted, matching
+  # `add_variable_rate_change`'s merge semantics: one date carries one rate,
+  # and re-entering it replaces rather than duplicates.
+  def rate_changes=(rows)
+    @rate_changes = rows
+    return if rows.nil?
+
+    rows = rows.values if rows.is_a?(Hash)
+
+    self.variable_rate_schedule = Array(rows).each_with_object({}) do |row, schedule|
+      # `permit` rather than `to_unsafe_h`: the controller already filters these
+      # rows, but a model that reaches past strong parameters is one refactor
+      # away from accepting whatever a request sends. Naming the three fields
+      # here means this method can only ever read those three.
+      row = row.permit(:effective_date, :rate, :_destroy) if row.respond_to?(:permit)
+      row = row.to_h.symbolize_keys
+
+      next if ActiveModel::Type::Boolean.new.cast(row[:_destroy])
+
+      date = row[:effective_date].to_s.strip
+      rate = row[:rate]
+
+      # A row where the user filled in neither field is not an error, it is an
+      # unused row from the editor.
+      next if date.blank? && rate.to_s.strip.blank?
+
+      # ISO-8601 has more than one spelling for the same day ("2024-03-01" and
+      # "20240301"), and storing both would defeat the replace-on-repeat rule
+      # above: the schedule would carry two rows for one date, and which rate
+      # wins in `current_variable_rate` would fall out of hash order rather
+      # than out of the contract. Canonicalise what parses; keep what does not
+      # exactly as entered, so validation can name it and the form can echo it
+      # back to the user who typed it.
+      schedule[parseable_date(date)&.iso8601 || date] = rate
+    end
+  end
+
   # Add or update a variable interest rate change on a specific date.
   def add_variable_rate_change(date, rate)
     effective_date = Date.iso8601(date.to_s)
@@ -203,6 +287,21 @@ class Loan < ApplicationRecord
 
   def variable_rates
     (variable_rate_schedule || {}).sort_by { |date, _| Date.iso8601(date.to_s) }
+  end
+
+  # Rows for the form, in a shape the form can render without parsing anything.
+  #
+  # Deliberately not `variable_rates`: that sorts by parsing each key, so when
+  # a submission fails validation and the form re-renders to show the error,
+  # the invalid date the user just typed would raise inside the view -- turning
+  # a correctable typo into a 500, which is the failure the assembly path was
+  # written to avoid in the first place.
+  #
+  # Unparseable dates sort last and are echoed back as entered, so the user can
+  # see and fix what they typed.
+  def rate_change_rows
+    (variable_rate_schedule || {}).map { |date, rate| [ date.to_s, rate ] }
+      .sort_by { |date, _| [ parseable_date(date) ? 0 : 1, date ] }
   end
 
   def current_variable_rate(as_of_date = Date.current)
@@ -411,9 +510,16 @@ class Loan < ApplicationRecord
       LoanAmortizationRebuildJob.perform_later(id)
     end
 
+    def parseable_date(value)
+      Date.iso8601(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
     def offset_account_ids_supplied?
       !offset_account_ids.nil?
     end
+
 
     def offset_accounts_need_sync?
       offset_account_ids_supplied? || saved_change_to_rate_type?
