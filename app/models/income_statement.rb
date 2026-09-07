@@ -117,6 +117,27 @@ class IncomeStatement
   # `income_totals`/`expense_totals`, this isn't memoized per-period since
   # callers (e.g. a monthly bar chart) typically query several distinct
   # periods and account combinations in one request.
+  # Per-day expense totals (in family currency) across a period, powering the
+  # dashboard's cumulative spending chart. Same scoping as `expense_totals`.
+  def daily_expense_series(period:)
+    Rails.cache.fetch([
+      "income_statement", "daily_expense_series", family.id, user&.id,
+      included_account_ids_hash, period.start_date, period.end_date,
+      family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
+      # Rates change via ExchangeRate::Importer's upsert_all and the target
+      # currency via settings; neither touches entries/accounts, so both must
+      # be part of the key to keep the chart from going stale.
+      family.currency, ExchangeRate.maximum(:updated_at)&.to_i
+    ]) do
+      DailyExpenseTotals.new(
+        family,
+        transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+        date_range: period.date_range,
+        included_account_ids: included_account_ids
+      ).call
+    end
+  end
+
   def totals_for(period, account_ids: nil)
     scope = family.transactions.visible.excluding_pending.in_period(period)
     scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
