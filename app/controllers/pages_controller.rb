@@ -508,6 +508,10 @@ class PagesController < ApplicationController
         current_period: current_period,
         previous_period: previous_period,
         days: axis_days,
+        # The selected month's own length, so the chart can label only its
+        # days on narrow (mobile) widths instead of showing the previous
+        # month's tail tick.
+        current_days: month_end.day,
         axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
         current: current_series,
         previous: previous_series,

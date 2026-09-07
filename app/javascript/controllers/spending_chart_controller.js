@@ -48,6 +48,7 @@ export default class extends Controller {
     const height = this.element.clientHeight;
     const {
       days = 30,
+      current_days: currentDays = days,
       axis_labels: axisLabels = [],
       current = [],
       previous = [],
@@ -84,7 +85,7 @@ export default class extends Controller {
       .range([innerHeight, 0]);
 
     this._drawGridlines(group, y, innerWidth, innerHeight);
-    this._drawXAxis(group, x, days, innerHeight, axisLabels);
+    this._drawXAxis(group, x, days, innerHeight, axisLabels, currentDays);
 
     const line = d3
       .line()
@@ -171,8 +172,14 @@ export default class extends Controller {
       .style("font-weight", "500");
   }
 
-  _drawXAxis(group, x, days, innerHeight, axisLabels) {
-    const tickDays = [...new Set([1, Math.round((1 + days) / 2), days])];
+  _drawXAxis(group, x, days, innerHeight, axisLabels, currentDays = days) {
+    // On mobile-width viewports, label only the selected month's own days:
+    // when the previous month is longer it owns the axis tail, and a tick
+    // like "Aug 31" on a September view reads like a bug. Wider viewports
+    // keep the full-axis ticks (start / middle / end).
+    const mobile = !window.matchMedia("(min-width: 640px)").matches;
+    const span = mobile ? Math.min(days, currentDays) : days;
+    const tickDays = [...new Set([1, Math.round((1 + span) / 2), span])];
 
     group
       .append("g")
