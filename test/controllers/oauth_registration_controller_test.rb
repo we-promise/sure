@@ -219,6 +219,35 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     json = JSON.parse(response.body)
     assert_equal "invalid_client_metadata", json["error"]
+    assert_equal I18n.t("oauth.registration.invalid_redirect_uris"), json["error_description"]
+  end
+
+  test "rejects redirect uri with an empty trailing fragment" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback#" ]
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :bad_request
+    json = JSON.parse(response.body)
+    assert_equal "invalid_client_metadata", json["error"]
+  end
+
+  test "rejects tel sms and intent redirect uris" do
+    %w[tel:+15551212 sms:+15551212 intent://scan/oauth].each do |redirect_uri|
+      post "/register",
+        params: {
+          client_name: "Claude",
+          redirect_uris: [ redirect_uri ]
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+
+      assert_response :bad_request, "expected #{redirect_uri} to be rejected"
+      json = JSON.parse(response.body)
+      assert_equal "invalid_client_metadata", json["error"]
+    end
   end
 
   test "rejects scheme-only custom redirect uri" do

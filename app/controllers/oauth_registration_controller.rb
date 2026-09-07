@@ -1,7 +1,8 @@
 class OauthRegistrationController < ApplicationController
   LOOPBACK_HOSTS = [ "localhost", "127.0.0.1", "::1" ].freeze
-  # Schemes that can execute script, read local files, or are not OAuth redirects.
-  FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto].freeze
+  # Schemes that can execute script, read local files, invoke device handlers,
+  # or are not OAuth redirects.
+  FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto tel sms intent].freeze
   SCHEME_PATTERN = /\A[a-z][a-z0-9+\-.]*\z/.freeze
 
   skip_authentication
@@ -41,7 +42,7 @@ class OauthRegistrationController < ApplicationController
     unless redirect_uris.all? { |uri| valid_redirect_uri?(uri) }
       render json: {
         error: "invalid_client_metadata",
-        error_description: "redirect_uris must use https, loopback http, or a native app URI scheme"
+        error_description: t("oauth.registration.invalid_redirect_uris")
       }, status: :bad_request
       return
     end
@@ -85,7 +86,7 @@ class OauthRegistrationController < ApplicationController
     # vscode://). Still reject javascript/data/file and non-loopback http.
     def valid_redirect_uri?(raw_uri)
       uri = URI.parse(raw_uri)
-      return false if uri.fragment.present?
+      return false unless uri.fragment.nil?
       return false if uri.userinfo.present?
 
       scheme = uri.scheme.to_s.downcase
