@@ -179,6 +179,55 @@ class LoansTaskTest < ActiveSupport::TestCase
   # no implementation, and `algorithm_version` -- the column added to make it
   # queryable -- was written and validated but never read by anything.
 
+  # A FALSE-CLEAN DEPLOY SIGNAL is worse than a red one, and #78 created the
+  # conditions for exactly one.
+  #
+  # `rebuild_schedules` walks `Loan.where.not(term_months: nil)` -- no rate-type
+  # filter -- so it builds an adjustable loan's schedule as soon as #14 makes
+  # that type amortizable. The status task narrowed its "awaiting a first
+  # build" query with a hardcoded %w[fixed variable], so it did not count that
+  # loan, could report stale=0, and would exit 0 while the loan was still
+  # unbuilt. The runbook treats that exit code as the prebuild completion
+  # decision.
+  #
+  # Both now derive from Loan::AMORTIZABLE_RATE_TYPES. This test fails if they
+  # are ever allowed to drift apart again.
+  test "an unbuilt adjustable loan is counted as awaiting a first build" do
+    # The estate must be clean FIRST. Without this the task exits non-zero
+    # because of unrelated fixture loans, and the assertion below passes
+    # whether or not the adjustable loan was counted -- which is exactly what
+    # the first version of this test did.
+    capture_io { Rake::Task["loans:rebuild_schedules"].invoke }
+    Rake::Task["loans:rebuild_schedules"].reenable
+
+    baseline, baseline_exit, _ = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+    assert_nil baseline_exit, "the estate must start clean, or the signal under test is masked"
+    assert_match(/awaiting_first_build=0/, baseline)
+    Rake::Task["loans:schedule_version_status"].reenable
+
+    loan = loans(:characterization_fixed)
+    loan.update!(rate_type: "adjustable")
+    loan.amortizations.delete_all
+    assert_predicate loan.reload.amortization_schedule, :amortizable?,
+      "the fixture must be amortizable as an adjustable loan, or this proves nothing"
+
+    output, exit_error, _stderr = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+
+    assert_failed_exit exit_error,
+      "an adjustable loan with no rows is unbuilt; exiting 0 here is a false-clean deploy signal"
+    assert_match(/awaiting_first_build=1/, output,
+      "the unbuilt adjustable loan must be counted, not merely make some other loan stale")
+
+    Rake::Task["loans:schedule_version_status"].reenable
+    Rake::Task["loans:rebuild_schedules"].reenable
+    capture_io { Rake::Task["loans:rebuild_schedules"].invoke }
+
+    after, exit_error_after, _ = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+
+    assert_nil exit_error_after, "after the rebuild the same loan must report clean"
+    assert_match(/awaiting_first_build=0/, after)
+  end
+
   test "schedule version status reports loans left on an older algorithm version" do
     current = Loan::AmortizationSchedule::ALGORITHM_VERSION
     loan = loans(:characterization_fixed)

@@ -31,6 +31,19 @@ class Loan < ApplicationRecord
   # still behaves as `adjustable` did -- deliberately left alone here.
   VARIABLE_RATE_TYPES = %w[variable adjustable].freeze
 
+  # Every rate type the calculator can build a schedule for.
+  #
+  # THE single authority for that question, in SQL and in Ruby alike.
+  # `loans:schedule_version_status` has to express it as a WHERE clause and
+  # cannot call `amortizable?`, so before this constant it carried its own copy
+  # of the list -- and adding `adjustable` to VARIABLE_RATE_TYPES silently
+  # broke it: `rebuild_schedules` builds an adjustable loan's schedule, while
+  # the status task's hardcoded %w[fixed variable] did not count it as awaiting
+  # one. The task could then exit 0 with a loan still unbuilt, and the runbook
+  # treats that exit code as "the prebuild is finished". A false-clean deploy
+  # signal is worse than a red one.
+  AMORTIZABLE_RATE_TYPES = ([ "fixed" ] + VARIABLE_RATE_TYPES).freeze
+
   # Loans up to 100 years cover any real mortgage, business, or personal loan
   # term while keeping a rebuild's array allocation, exponentiation, and bulk
   # insert bounded. Matches the DB check constraint in
