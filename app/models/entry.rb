@@ -488,13 +488,20 @@ class Entry < ApplicationRecord
 
   # Removes split children and restores parent entry.
   def unsplit!
-    if child_entries.includes(:entryable).any? { |child| child.transaction? && (child.transaction.refund? || child.transaction.refund_linked?) }
-      errors.add(:base, :refund_links_present)
-      raise ActiveRecord::RecordInvalid, self
-    end
-
     self.class.transaction do
-      child_entries.each do |child|
+      transaction.lock! if transaction?
+      reload
+      children = child_entries.includes(:entryable).to_a
+      transactions = children.select(&:transaction?).map(&:transaction).sort_by { |record| record.id.to_s }
+      # Refund linking takes these same locks. Recheck after waiting so a
+      # concurrently linked child cannot be deleted and lose its refund link.
+      transactions.each(&:lock!)
+      if transactions.any? { |record| record.refund? || record.refund_linked? }
+        errors.add(:base, :refund_links_present)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      children.each do |child|
         child.unsplitting = true
         child.destroy!
       end
