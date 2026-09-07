@@ -218,8 +218,57 @@ class Loan < ApplicationRecord
     }
   end
 
+  # One annual percentage -> monthly decimal rate conversion, so the two
+  # callers of the annuity formula cannot drift apart on it.
+  def self.monthly_rate(annual_percentage)
+    (BigDecimal(annual_percentage.to_s) / BigDecimal("100")) / BigDecimal("12")
+  end
+
   def amortizable?
     amortization_schedule.amortizable?
+  end
+
+  # FR-204: the repayment a lender would quote TODAY.
+  #
+  # `AmortizationSchedule#monthly_payment` sizes the contracted payment from
+  # the ORIGINAL balance at the rate effective on the FIRST payment date. For a
+  # variable loan several years in, that number describes a loan that no longer
+  # exists -- which is why the Overview card printed a hardcoded "N/A" for
+  # every non-fixed loan rather than show it.
+  #
+  # This re-amortises today's interest-bearing balance at today's rate over the
+  # payments still remaining to the ORIGINAL maturity. Re-amortising to the
+  # original maturity rather than to a fresh full term is what makes it the
+  # lender's figure: a rate change resizes the repayment, it does not extend
+  # the loan.
+  #
+  # Display only. The contracted schedule never tracks the live balance
+  # (invariant A7), so nothing here is persisted or fed back into it.
+  def current_minimum_payment(as_of: Date.current)
+    return amortization_schedule.monthly_payment unless variable_rate_type_for_minimum_payment?
+    return nil unless amortizable?
+
+    remaining = amortization_schedule.remaining_payment_count(as_of: as_of)
+    return nil unless remaining.positive?
+
+    payment = AmortizationMath.level_payment(
+      balance: interest_bearing_balance.amount,
+      monthly_rate: Loan.monthly_rate(current_variable_rate(as_of)),
+      remaining_payments: remaining,
+      currency_precision: Money::Currency.new(account.currency).default_precision
+    )
+
+    return nil unless payment.positive?
+
+    Money.new(payment, account.currency)
+  end
+
+  # Today's balance net of any linked offset, floored at zero: the balance
+  # interest is actually charged on, which is what the repayment must clear.
+  def interest_bearing_balance
+    gross = BigDecimal(account.balance.to_s)
+    offset = offset_accounts.sum(:balance)
+    Money.new([ gross - BigDecimal(offset.to_s), BigDecimal("0") ].max, account.currency)
   end
 
   # Assembles variable_rate_schedule from the form's rows.
@@ -508,6 +557,12 @@ class Loan < ApplicationRecord
     # sidekiq-unique-jobs, so a burst of saves collapses to one rebuild.
     def enqueue_amortization_rebuild
       LoanAmortizationRebuildJob.perform_later(id)
+    end
+
+    # #78 replaces this with Loan#variable_rate_type? across the codebase. Kept
+    # local here so #15 does not depend on that PR merging first.
+    def variable_rate_type_for_minimum_payment?
+      rate_type == "variable"
     end
 
     def parseable_date(value)

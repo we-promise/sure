@@ -1029,6 +1029,46 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-rate-change-marker]", { count: 1 }
   end
 
+  # --- #15: the current minimum repayment ---------------------------------
+
+  # The acceptance criterion is that the two tabs cannot disagree. Asserted by
+  # reading the SAME loan's figure off both rendered pages, not by comparing
+  # each to a computed expectation -- two tabs can both be wrong in the same
+  # way and still agree, but they cannot disagree if they share a method.
+  test "overview and schedule quote the same minimum repayment for one loan" do
+    loan_account = accounts(:loan)
+    loan = loan_account.loan
+    loan.update!(rate_type: "variable", interest_rate: 6.18, term_months: 360,
+      start_date: Date.current - 83.months)
+    loan_account.update!(balance: 400_762.12)
+    expected = loan.reload.current_minimum_payment
+
+    assert_not_nil expected, "the fixture must produce a quotable repayment for this test to mean anything"
+
+    get account_path(loan_account, tab: "overview")
+    assert_response :success
+    assert_includes response.body, expected.format,
+      "the Overview card must show the current minimum repayment, not N/A"
+
+    get account_path(loan_account, tab: "schedule")
+    assert_response :success
+    assert_includes response.body, expected.format,
+      "the Schedule tab must show the same figure as Overview"
+  end
+
+  test "a variable loan no longer shows N/A for its monthly payment" do
+    loan_account = accounts(:loan)
+    loan_account.loan.update!(rate_type: "variable", interest_rate: 6.18, term_months: 360,
+      start_date: Date.current - 83.months)
+    loan_account.update!(balance: 400_762.12)
+
+    get account_path(loan_account, tab: "overview")
+
+    assert_response :success
+    assert_not_includes response.body, ">#{I18n.t("loans.tabs.overview.not_applicable")}<",
+      "the hardcoded N/A this issue exists to remove must be gone"
+  end
+
   test "the schedule table has no rate-change marker for a fixed-rate loan" do
     loan_account = accounts(:loan)
     loan_account.loan.update!(rate_type: "fixed", interest_rate: 5, term_months: 12)

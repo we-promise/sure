@@ -24,11 +24,21 @@
     <% end %>
   <% end %>
 
+  <%# FR-204: a variable loan printed "N/A" here, because the contracted
+      monthly_payment is sized from the ORIGINAL balance at the FIRST payment
+      date and describes a loan that no longer exists. current_minimum_payment
+      re-amortises today's balance at today's rate over the payments left to
+      the original maturity -- the figure a lender quotes. The Schedule tab
+      shows the same value from the same method, so the two cannot disagree. %>
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
-      <%= t(".not_applicable") %>
-    <% elsif account.loan.rate_type == 'fixed' && account.loan.monthly_payment.present? %>
-      <%= format_money(account.loan.monthly_payment) %>
+    <% current_payment = account.loan.current_minimum_payment %>
+    <% if current_payment.present? %>
+      <%= format_money(current_payment) %>
+      <% if account.loan.rate_type != 'fixed' %>
+        <p class="text-xs text-subdued mt-1">
+          <%= t(".minimum_payment_rate", rate: number_to_percentage(account.loan.current_variable_rate, precision: 3, strip_insignificant_zeros: true)) %>
+        </p>
+      <% end %>
     <% else %>
       <%= t(".unknown") %>
     <% end %>
