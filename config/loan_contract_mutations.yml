@@ -1,0 +1,100 @@
+# Mutation evidence for the C1-C16 calculation contract (gate G1).
+#
+# `config/loan_contract_tests.yml` records WHICH test demonstrates each row.
+# That is necessary and not sufficient: a row can name a test that exists,
+# runs, and passes without ever exercising the behaviour the row specifies --
+# which is exactly the failure mode #50 found when C16 named a class that did
+# not exist at all while the coverage gate reported "verified".
+#
+# This file closes that gap. Each row names a deliberate defect in PRODUCTION
+# code that breaks the behaviour the row specifies. `loans:verify_contract_mutations`
+# proves, per row, that the named tests pass before the mutation and fail after
+# it. A row whose tests survive its mutation is not evidence of anything.
+#
+# `find` must match the target file exactly once; the task aborts otherwise,
+# so a refactor that moves the anchor fails loudly instead of silently
+# mutating nothing and reporting a survivor.
+C1:
+  file: app/models/loan/interest_accrual.rb
+  defect: the accrual denominator stops being 365, so a full non-leap year no longer equals balance x rate
+  find: 'DAY_COUNT = BigDecimal("365")'
+  replace: 'DAY_COUNT = BigDecimal("360")'
+C2:
+  file: app/models/loan/interest_accrual.rb
+  defect: leap years silently switch to a 366 denominator instead of 366 elapsed days over 365
+  find: 'return DAY_COUNT unless day_count_convention == :actual_actual'
+  replace: 'return DAY_COUNT unless day_count_convention == :actual_actual || Date.leap?(date.year)'
+C3:
+  file: app/models/loan/simulator.rb
+  defect: daily accrual stops receiving offset change points for the period
+  find: 'offset_changes = @offset_for.call(previous_date, payment_date)'
+  replace: 'offset_changes = []'
+C4:
+  file: app/models/loan/simulator.rb
+  defect: the boundary guard stops rejecting a starting balance dated after accrual start
+  find: 'raise ArgumentError, "starting balance date must be on or before accrual start date"'
+  replace: 'nil'
+C5:
+  file: app/models/loan/amortization_schedule.rb
+  defect: the payment calendar is built one payment short of the loan term
+  find: 'Array.new(loan.term_months) do'
+  replace: 'Array.new(loan.term_months - 1) do'
+C6:
+  file: app/models/loan/simulator.rb
+  defect: an extra repayment landing exactly on a payment date is dropped instead of applied before the payment
+  find: 'next unless date >= from_date && date <= to_date'
+  replace: 'next unless date >= from_date && date < to_date'
+C7:
+  file: app/models/loan/simulator.rb
+  defect: a mid-period rate change no longer segments the accrual window, so the whole period runs at the old rate
+  find: 'dates = ([ from_date ] + extras.keys + rates.keys + offsets.keys + [ to_date ]).uniq.sort'
+  replace: 'dates = ([ from_date ] + extras.keys + offsets.keys + [ to_date ]).uniq.sort'
+C8:
+  file: app/models/loan/simulator.rb
+  defect: the accrual clock is seeded from the payment-sizing rate, re-rating the period that ENDS on the boundary (the #48 defect)
+  find: 'accrual_rate ||= decimal(@accrual_rate_for.call(accrual_start_date))'
+  replace: 'accrual_rate = decimal(segment[:rate])'
+C9:
+  file: app/models/loan/simulator.rb
+  defect: same-day event order is reordered so payment precedes accrual
+  find: 'EVENT_ORDER = %i[accrual extra_repayment offset_movement payment re_amortisation].freeze'
+  replace: 'EVENT_ORDER = %i[payment accrual extra_repayment offset_movement re_amortisation].freeze'
+C10:
+  file: app/models/loan/simulator.rb
+  defect: the accrual window stops being half-open, so a rate effective ON the window's first day is ignored instead of applied from it
+  find: 'next unless date >= from_date && date < to_date'
+  replace: 'next unless date > from_date && date < to_date'
+C11:
+  file: app/models/loan/simulator.rb
+  defect: every run holds the first payment, so re-amortisation stops re-sizing per rate segment
+  find: 'payment = if payment_strategy == :hold'
+  replace: 'payment = if true'
+C12:
+  file: app/models/loan/interest_accrual.rb
+  defect: each segment is rounded as it accumulates instead of once at the charge point
+  find: |-
+    interest_bearing_balance * days * current_rate / PERCENT /
+              day_count_denominator(segment_start, day_count_convention)
+  replace: |-
+    (interest_bearing_balance * days * current_rate / PERCENT /
+              day_count_denominator(segment_start, day_count_convention)).round(2)
+C13:
+  file: app/models/loan/interest_accrual.rb
+  defect: change points stop splitting the range, so piecewise accrual no longer equals the daily loop
+  find: 'dates = [ from_date ] + points.map { |point| point.fetch(:date) }'
+  replace: 'dates = [ from_date ]'
+C14:
+  file: app/models/loan/simulator.rb
+  defect: the last scheduled payment no longer settles the remaining balance
+  find: 'final: (@settle_at_schedule_end && payment_number == payment_schedule.length) || payment >= balance + interest,'
+  replace: 'final: payment >= balance + interest,'
+C15:
+  file: app/models/loan/interest_accrual.rb
+  defect: the offset floor is removed, so an offset above the balance produces negative interest
+  find: 'interest_bearing_balance = [ current_balance - current_offset, BigDecimal("0") ].max'
+  replace: 'interest_bearing_balance = current_balance - current_offset'
+C16:
+  file: app/models/loan/interest_accrual.rb
+  defect: a change point effective on the first day of the range is ignored rather than applied to the whole range
+  find: 'next unless point.fetch(:date) >= from_date && point.fetch(:date) < to_date'
+  replace: 'next unless point.fetch(:date) > from_date && point.fetch(:date) < to_date'

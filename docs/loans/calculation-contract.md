@@ -108,6 +108,12 @@ reconciliation gate has been reviewed line by line.
 
 ## Gate G1 and remaining approval
 
+Per-row mutation evidence exists: `loans:verify_contract_mutations` breaks each
+row's behaviour in production code and requires that row's named tests to fail,
+with the transcript and findings in `docs/loans/contract-mutation-evidence.md`.
+It proves the tests are sensitive to a defect in each row — not that the
+specified behaviour is right for any lender, which is G2's job.
+
 G1 is not complete until engineering and product approve this document and its
 tests are represented in #8. The actual/365 assumption and C7/C8 timing remain
 explicit verify-against-statement items. A de-identified lender statement has
