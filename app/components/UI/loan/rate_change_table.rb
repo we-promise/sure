@@ -35,7 +35,7 @@ class UI::Loan::RateChangeTable < ApplicationComponent
     # history when its type changes rather than silently discarding it. Those
     # rows are history, not a forthcoming change, and this table is rendered on
     # every loan's schedule tab.
-    return [] unless loan.rate_type == "variable"
+    return [] unless loan.variable_rate_type?
 
     @rows ||= future_rate_changes.filter_map do |effective_date, new_rate|
       row_index = projected_row_index_at(effective_date)

@@ -299,7 +299,7 @@ namespace :loans do
     candidates = missing
       .where(term_months: 1..)
       .where.not(interest_rate: nil)
-      .where(rate_type: %w[fixed variable])
+      .where(rate_type: Loan::AMORTIZABLE_RATE_TYPES)
       .where(id: Account.where(accountable_type: "Loan").select(:accountable_id))
 
     awaiting = 0

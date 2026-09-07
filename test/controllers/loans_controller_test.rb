@@ -234,7 +234,10 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to created_loan.account
   end
 
-  test "removes submitted offset accounts when changing to a non-variable rate" do
+  # `adjustable` moved from this list to the one below when #14 gave it the
+  # variable meaning. It is a behaviour change, not a test fix: an adjustable
+  # loan's offset links used to be deleted on every save.
+  test "removes submitted offset accounts when changing to a fixed rate" do
     offset = @account.family.accounts.create!(
       name: "Existing offset", balance: 12_500, currency: @account.currency, accountable: Depository.new
     )
@@ -242,8 +245,31 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
     assert_equal [ offset.id ], loan.reload.offset_accounts.pluck(:id)
 
-    %w[fixed adjustable].each do |rate_type|
-      loan.update!(rate_type: "variable", offset_account_ids: [ offset.id ])
+    patch loan_path(@account), params: {
+      account: {
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: loan.id,
+          rate_type: "fixed",
+          offset_account_ids: [ offset.id ]
+        }
+      }
+    }
+
+    assert_empty loan.reload.offset_accounts
+  end
+
+  test "keeps offset accounts across every rate type whose rate can move" do
+    offset = @account.family.accounts.create!(
+      name: "Existing offset", balance: 12_500, currency: @account.currency, accountable: Depository.new
+    )
+    loan = @account.accountable
+
+    # Named explicitly, not iterated from Loan::VARIABLE_RATE_TYPES: a test that
+    # reads the constant it is meant to pin passes whatever the constant says,
+    # and shrinking the constant back was exactly the mutation this must catch.
+    %w[variable adjustable].each do |rate_type|
+      loan.update!(rate_type: "fixed", offset_account_ids: [])
 
       patch loan_path(@account), params: {
         account: {
@@ -256,7 +282,8 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
         }
       }
 
-      assert_empty loan.reload.offset_accounts
+      assert_equal [ offset.id ], loan.reload.offset_accounts.pluck(:id),
+        "a #{rate_type} loan must keep the offset accounts submitted with it"
     end
   end
 end

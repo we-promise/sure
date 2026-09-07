@@ -70,7 +70,7 @@
 
   <%= summary_card title: t(".type") do %>
     <% type = account.loan.rate_type&.titleize || t(".unknown") %>
-    <% type = t(".variable_with_offset") if account.loan.rate_type == "variable" && account.loan.offset_accounts.any? %>
+    <% type = t(".variable_with_offset") if account.loan.variable_rate_type? && account.loan.offset_accounts.any? %>
     <%= type %>
   <% end %>
 </div>
