@@ -47,7 +47,21 @@ fr:
         description: Téléversez un fichier CSV avec vos commerçants. Nous mapperons automatiquement les colonnes pour vous.
         instructions: Sélectionnez continuer pour analyser votre CSV et passer à l'étape de nettoyage.
       mint_import:
+        account_optional: Compte (facultatif)
+        amount: Montant
+        apply_configuration: Appliquer la configuration
+        category_optional: Catégorie (facultatif)
+        currency: Devise
+        date: Date
         date_format_label: Format de date
+        format: Format
+        incomes_negative: Les revenus sont négatifs
+        incomes_positive: Les revenus sont positifs
+        intro: Nous avons préconfiguré votre import Mint. Vous pouvez passer à l'étape suivante.
+        leave_empty: Laisser vide
+        name_optional: Nom (facultatif)
+        select_format: Sélectionnez un format
+        tags_optional: Balises (facultatif)
       rule_import:
         description: Configurez votre importation de règles. Les règles seront créées ou mises à jour en fonction des données CSV.
         process_button: Traiter les règles
@@ -173,6 +187,7 @@ fr:
         success: Catégories et balises enregistrées.
     uploads:
       handle_qif_upload:
+        qif_account_required: Sélectionnez un compte pour l'import QIF
         qif_uploaded: Fichier QIF téléversé avec succès.
       show:
         account_optional_label: Compte (facultatif)
@@ -218,6 +233,9 @@ fr:
     apply_template:
       no_template_found: Aucun modèle trouvé, veuillez configurer manuellement votre importation.
       template_applied: Modèle appliqué.
+    cancel:
+      cancelled: Import marqué en échec. Vous pouvez réessayer depuis la page d'import.
+      not_cancellable: Cet import ne peut pas être marqué en échec pour l'instant, sa tâche est peut-être encore en cours. Réessayez après une heure d'inactivité.
     column_labels:
       account: Compte
       amount: Montant
@@ -288,6 +306,8 @@ fr:
       message: Aucune importation trouvée.
     errors:
       custom_column_requires_inflow: Les importations de colonnes personnalisées nécessitent la sélection d'une colonne d'entrée
+      interrupted: 'Le worker en arrière-plan a été interrompu avant la fin de l''opération. Les données importées ont été annulées : vous pouvez réessayer sans risque.'
+      presumed_lost: 'Marqué en échec après que la tâche en arrière-plan a été présumée perdue. Les données importées ont été annulées : vous pouvez réessayer sans risque.'
     failure:
       description: Veuillez vérifier le format de votre fichier, détecter d'éventuelles erreurs et que tous les champs obligatoires sont remplis, puis revenez et réessayez.
       title: Échec de l'importation
@@ -328,15 +348,24 @@ fr:
       tab_raw_data: Données brutes
       title: Nouvelle importation
     pdf_import:
+      already_recorded_note:
+        one: "%{count} transaction figurait déjà dans ce compte et a été rapprochée du relevé."
+        other: "%{count} transactions figuraient déjà dans ce compte et ont été rapprochées du relevé."
       back_to_dashboard: Retour au tableau de bord
       back_to_imports: Retour aux importations
       check_status: Vérifier le statut
       complete_description: Nous avons analysé votre PDF et voici ce que nous avons trouvé.
+      complete_fully_reconciled:
+        one: 'Toutes les transactions de ce relevé figuraient déjà dans votre compte. %{count} a été rapprochée et marquée comme telle : rien n''était à importer.'
+        other: 'Toutes les transactions de ce relevé figuraient déjà dans votre compte. Les %{count} ont été rapprochées et marquées comme telles : rien n''était à importer.'
       complete_title: Document analysé
       create_account: Créer un compte
       delete_import: Supprimer l'importation
       document_type_label: Type de document
       email_sent_notice: Un e-mail vous a été envoyé avec les prochaines étapes.
+      errors:
+        provider_no_pdf_support: Le fournisseur d'IA ne prend pas en charge le traitement des PDF
+        provider_not_configured: Fournisseur d'IA non configuré
       failed_description: Nous n'avons pas pu traiter votre document PDF. Veuillez réessayer ou contacter le support.
       failed_title: Traitement échoué
       no_accounts: Aucun compte disponible. Veuillez d'abord créer un compte.
@@ -367,6 +396,7 @@ fr:
       unknown_document_type: Inconnu
       unknown_state_description: Cette importation est dans un état inattendu. Veuillez retourner aux importations.
       unknown_state_title: État inconnu
+      view_summary: Voir le récapitulatif de l'import
     publish:
       max_rows_exceeded: Votre importation dépasse le nombre maximal de lignes de %{max}.
       started: Votre importation a démarré en arrière-plan.
@@ -391,6 +421,7 @@ fr:
       clean: Nettoyer
       configure: Configurer
       confirm: Confirmer
+      label: Étape %{step}
       map: Mapper
       progress: Étape %{step} de %{total}
       select: Sélectionner
@@ -409,6 +440,20 @@ fr:
           not_verified: Non vérifié
           reverted: Rétabli
         title: Vérification de la relecture
+    summary:
+      already_recorded: Déjà enregistrée
+      already_recorded_hint: Rapprochée d'une transaction que ce compte contenait déjà, et marquée comme rapprochée.
+      awaiting_review: En attente d'import
+      close: Fermer
+      extracted: Trouvée sur le relevé
+      fully_reconciled:
+        one: 'Rien n''était à importer : l''unique transaction du relevé était déjà enregistrée.'
+        other: 'Rien n''était à importer : les %{count} transactions étaient déjà enregistrées.'
+      imported: Importée comme nouvelle
+      statement_evidence_html: Rapprochée de %{statement}.
+      subtitle: Ce qu'est devenue chaque transaction de ce relevé dans %{account}.
+      subtitle_no_account: Ce qu'est devenue chaque transaction de ce relevé.
+      title: Récapitulatif de l'import
     table:
       empty: Aucune importation pour l'instant.
       header:
@@ -418,8 +463,10 @@ fr:
         status: Statut
       row:
         actions:
+          confirm_mark_failed: Cet import est inactif depuis un moment et sa tâche en arrière-plan a probablement été interrompue. Le marquer en échec pour pouvoir réessayer ? Aucune donnée importée n'est conservée.
           confirm_revert: Cette opération supprimera les transactions importées, mais vous pourrez toujours consulter et réimporter vos données à tout moment.
           delete: Supprimer
+          mark_failed: Marquer en échec
           revert: Revenir
           view: Afficher
         status:
@@ -459,5 +506,6 @@ fr:
       transaction_import: Import de transactions
       ynab_import: Importation YNAB
     update:
+      account_locked: Cet import a déjà été publié, son compte ne peut donc plus être modifié. Annulez-le d'abord si vous devez l'importer ailleurs.
       account_saved: Compte enregistré.
       invalid_account: Compte introuvable.

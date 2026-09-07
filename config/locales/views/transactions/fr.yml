@@ -138,6 +138,11 @@ fr:
       category: Catégorie
       category_label: Catégorie
       category_prompt: Sélectionnez une catégorie
+      category_search_placeholder: Rechercher des catégories
+      create_category: Créer « %{name} »
+      create_category_error: Impossible de créer la catégorie
+      create_merchant: Créer
+      create_merchant_error: Impossible de créer le marchand
       create_tag: Créer
       date: Date
       description: Libellé
@@ -146,6 +151,7 @@ fr:
       expense: Dépense
       income: Revenu
       merchant_label: Marchand
+      merchant_search_placeholder: Rechercher ou créer un marchand
       none: "(aucun)"
       note_label: Notes
       note_placeholder: Entrez une note
@@ -270,12 +276,16 @@ fr:
       activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Détecté automatiquement ou défini manuellement.
       additional_details: Détails supplémentaires
       amount: Montant
+      applied_to_detail: "%{amount} affectés à la facture échue le %{date}"
+      applied_to_title: Factures réglées par cette transaction
+      applied_to_unreviewed: À vérifier
       attachments: Pièces jointes
       category_label: Catégorie
       convert: Convertir
       convert_to_trade_button: Convertir en transaction boursière
       convert_to_trade_description: Convertissez cette transaction en une transaction boursière d'achat ou de vente avec les détails du titre pour le suivi du portefeuille.
       convert_to_trade_title: Convertir en transaction boursière
+      create_bill: Créer une facture
       date_label: Date
       delete: Supprimer
       delete_subtitle: Cette action supprime définitivement la transaction, affecte vos soldes historiques et ne peut pas être annulée.

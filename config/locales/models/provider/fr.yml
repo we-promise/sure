@@ -1,0 +1,17 @@
+---
+fr:
+  providers:
+    property_valuation:
+      missing_fields: Indiquez un nom et une adresse complète (rue, ville, État et code postal).
+      not_configured: Ce fournisseur de données immobilières n'est pas configuré.
+      preview_expired: Cet aperçu de bien a expiré, relancez la recherche sur l'adresse.
+    realie:
+      errors:
+        location_mismatch: Realie a trouvé un bien situé dans une autre ville ou un autre code postal. Vérifiez l'adresse.
+        no_property: Realie n'a renvoyé aucun bien pour cette adresse.
+        no_valuation: Realie n'a renvoyé aucune valorisation pour ce bien.
+        not_found: Realie n'a trouvé aucun bien correspondant à cette adresse.
+    rentcast:
+      errors:
+        no_valuation: RentCast n'a renvoyé aucune estimation de valeur pour cette adresse.
+        not_found: RentCast n'a trouvé aucun bien correspondant à cette adresse.

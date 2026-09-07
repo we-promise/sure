@@ -1,0 +1,111 @@
+---
+fr:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Activité trouvée
+      explanation: Ce format d'adresse est utilisé par plusieurs réseaux, et les soldes diffèrent sur chacun. Choisissez celui que vous voulez suivre.
+      no_activity_found: Aucune activité
+      subtitle: "%{address}"
+      title: Quel réseau ?
+    destroy:
+      success: Suppression de la connexion en autoconservation planifiée.
+    disconnect_asset:
+      success: Suivi de %{symbol} arrêté. Son compte et son historique ont été conservés.
+    disconnect_wallet:
+      success:
+        one: Suivi d'un actif arrêté à cette adresse.
+        other: Suivi de %{count} actifs arrêté à cette adresse.
+    enable_crypto_prices:
+      not_self_hosted: Sur ce déploiement, les fournisseurs de données de marché sont configurés par l'opérateur de l'instance.
+      success: Les cours des cryptomonnaies sont activés. La valeur des portefeuilles apparaîtra après la prochaine synchronisation.
+    errors:
+      address_required: Saisissez une adresse de portefeuille.
+      already_linked: Cette adresse est déjà suivie sur ce réseau. Utilisez « Vérifier les jetons » pour changer les actifs suivis.
+      chain_unreachable: L'explorateur public de ce réseau est injoignable. Réessayez dans un instant.
+      rate_limited: L'explorateur public limite actuellement le débit des requêtes. Réessayez dans quelques minutes.
+      unexpected: Un problème est survenu à la lecture de ce portefeuille. Les détails ont été consignés pour le support.
+      unrecognized_address: Cela ne ressemble à une adresse d'aucun réseau pris en charge.
+      wallet_not_found: Ce portefeuille n'est pas suivi par cette connexion.
+    link_wallet:
+      errors:
+        none_tracked: 'Rien n''a été suivi : %{assets} n''a pas pu être ajouté. Réessayez dans un instant.'
+        nothing_selected: Choisissez au moins un actif à suivre.
+        some_failed: "%{assets} n'a pas pu être suivi et a été laissé de côté."
+      success:
+        one: Suivi d'un actif de ce portefeuille.
+        other: Suivi de %{count} actifs de ce portefeuille.
+    manage:
+      assets_truncated: 'Cette adresse détient plus de jetons qu''une seule lecture n''en remonte : seuls les %{count} plus crédibles sont listés. Tout ce qui est déjà suivi continue de se synchroniser.'
+      disconnect_asset: Arrêter le suivi
+      disconnect_asset_confirm: Arrêter le suivi de %{symbol} ? Son compte et son historique sont conservés et cessent d'être mis à jour.
+      disconnect_wallet: Déconnecter le portefeuille
+      disconnect_wallet_confirm: Arrêter le suivi de tous les actifs de cette adresse ?
+      history_note: La déconnexion conserve les comptes et leur historique ; ils cessent simplement d'être mis à jour.
+      history_truncated: 'Tous les transferts de cette adresse n''ont pas pu être lus : l''historique dépasse ce qu''une synchronisation couvre, ou l''explorateur l''a refusé. Les soldes sont complets, mais certains transferts manquent.'
+      native: Natif
+      no_wallets: Aucun portefeuille n'est suivi pour l'instant.
+      review_tokens: Vérifier les jetons
+      subtitle: Toutes les adresses lues par cette connexion, et ce qui est suivi sur chacune.
+      title: Gérer les portefeuilles en autoconservation
+    new_wallet:
+      address_label: Adresse du portefeuille
+      address_placeholder: bc1..., 0x... ou une adresse Solana
+      bitcoin_single_address_note: 'Bitcoin est suivi une adresse à la fois. Les clés étendues (xpub/ypub/zpub) ne sont pas prises en charge : un portefeuille qui répartit ses fonds sur des adresses dérivées n''affichera que le solde de l''adresse saisie.'
+      chain_auto_detect: Détecter automatiquement
+      chain_label: Réseau
+      continue: Continuer
+      read_only_note: Seules les données publiques de la chaîne sont lues. Ne saisissez jamais de phrase de récupération ni de clé privée.
+      subtitle: Suivez un portefeuille dont vous détenez les clés, à partir de son adresse publique.
+      title: Ajouter un portefeuille en autoconservation
+    onchain_wallet_item:
+      assets_tracked:
+        one: 1 actif suivi
+        other: "%{count} actifs suivis"
+      sync: Synchroniser maintenant
+      syncing: Synchronisation...
+    price_provider_warning:
+      body: 'Aucun fournisseur de données de marché activé ne peut valoriser les cryptomonnaies : ces portefeuilles suivent donc les quantités mais affichent une valeur nulle.'
+      enable: Activer les cours des cryptomonnaies
+      exchange_rate_body: 'Les cryptomonnaies sont valorisées en USD, et aucun fournisseur de taux de change n''est configuré pour convertir en %{currency} : ces portefeuilles suivent donc les quantités mais affichent une valeur nulle. Définissez EXCHANGE_RATE_PROVIDER (Frankfurter ne nécessite aucune clé d''API).'
+      exchange_rate_title: Aucun fournisseur de taux de change n'est configuré
+      link: Ouvrir les paramètres des données de marché
+      title: Les cours des cryptomonnaies ne sont pas configurés
+    provider_connection:
+      description: Suivez un portefeuille dont vous détenez les clés, à partir de son adresse publique.
+      name: Portefeuille en autoconservation
+    review_tokens:
+      save: Enregistrer les actifs suivis
+      subtitle: "%{chain} · %{address}"
+      title: Vérifier les actifs suivis
+    token_review:
+      import_selected: Suivre les actifs sélectionnés
+      subtitle: "%{chain} · %{address}"
+      title: Choisissez ce que vous voulez suivre
+    token_review_form:
+      assets_truncated: 'Cette adresse détient plus de jetons qu''une seule lecture n''en remonte : seuls les %{count} plus crédibles sont listés.'
+      cancel: Annuler
+      explanation: 'Les actifs dont le cours est connu sont cochés. Les autres restent décochés : les portefeuilles accumulent des airdrops indésirables, et en suivre un n''apporte aucune valeur.'
+      native: Natif
+      no_price: Aucun cours disponible ; suivi en quantité uniquement
+      nothing_found: Cette adresse ne détient rien que nous puissions voir sur ce réseau.
+    update:
+      success: Connexion en autoconservation mise à jour.
+    update_tokens:
+      errors:
+        no_changes: Rien n'a changé ; les mêmes actifs restent cochés.
+        none_tracked: 'Rien n''a changé : %{assets} n''a pas pu être ajouté. Réessayez dans un instant.'
+        some_failed: "%{assets} n'a pas pu être suivi et a été laissé de côté."
+      success: Actifs suivis mis à jour (%{created} ajoutés, %{removed} retirés).
+    wallet_card:
+      addresses_tracked:
+        one: 1 adresse suivie
+        other: "%{count} adresses suivies"
+      delete: Supprimer la connexion
+      deletion_in_progress: Suppression...
+      needs_attention: Requiert votre attention
+      no_wallets_message: Liez une adresse depuis les paramètres du fournisseur pour la voir ici.
+      no_wallets_title: Aucun portefeuille lié pour l'instant
+      status: Synchronisé il y a %{timestamp}
+      status_never: Pas encore synchronisé
+      sync: Synchroniser maintenant
+      syncing: Synchronisation...

@@ -1,0 +1,53 @@
+---
+fr:
+  recurring_occurrences:
+    history_status:
+      missed: Manquée
+      paid: Payée
+      scheduled: Ouverte
+      skipped: Passée
+    mark_paid:
+      success: Facture marquée comme payée
+    override_amount:
+      success: Montant prévu mis à jour
+    reopen:
+      success: Facture rouverte
+    show:
+      add_heading: Ajouter un autre paiement
+      cant_find: Vous ne trouvez pas la transaction ?
+      due_on: Échéance le %{date}
+      find_heading: Trouver un paiement
+      link_payment: Lier le paiement
+      manual_amount_label: Montant
+      manual_date_label: Date
+      manual_explainer: Enregistrez un paiement dont vous êtes sûr lorsqu'aucune transaction ne lui correspond ici.
+      manual_payment: Paiement manuel
+      mark_paid: Marquer comme payée
+      mark_paid_hint: Solde le reste sans enregistrer de transaction.
+      missed: Marquée comme manquée
+      no_candidates: Aucune transaction proche à lier.
+      no_ranked_candidates: Rien ici ne ressemble encore à un paiement de cette facture.
+      no_search_results: Aucun résultat pour %{query}.
+      not_this_one: Pas celle-ci
+      other_matches: Autres correspondances probables
+      overpaid: de plus que prévu
+      paid_headline: "%{amount} payés"
+      paid_of: "%{paid} sur %{expected} payés"
+      payments: Paiements
+      record_payment: Enregistrer le paiement
+      remaining: "%{amount} restants"
+      reopen: Rouvrir
+      review_heading: Vérifier le paiement
+      search_all: Rechercher dans toutes les transactions
+      search_placeholder: Rechercher des transactions
+      settled: Payée intégralement
+      skip: Passer
+      skipped: Passée
+      snooze_week: Reporter d'une semaine
+      unlink: Délier
+      view_bill: Voir la facture complète
+    skip:
+      success: Facture passée
+    snooze:
+      invalid_date: Cette date n'a pas pu être interprétée
+      success: Reportée au %{date}

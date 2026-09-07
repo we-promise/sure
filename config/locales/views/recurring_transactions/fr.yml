@@ -1,6 +1,11 @@
 ---
 fr:
   recurring_transactions:
+    actions:
+      delete: Supprimer
+      edit_payment_link: Modifier le lien de paiement
+      pause: Mettre en pause
+      resume: Reprendre
     already_exists: Une transaction récurrente manuelle existe déjà pour ce modèle
     amount_range: 'Plage : %{min} à %{max}'
     badges:
@@ -9,10 +14,25 @@ fr:
     cleanup_stale: Nettoyer les obsolètes
     confirm_delete: Êtes-vous sûr(e) de vouloir supprimer cette transaction récurrente
       ?
+    confirm_delete_income: Supprimer %{name} de vos revenus ? Vos transactions restent exactement telles quelles. Seuls le revenu et son échéancier sont supprimés.
+    confirmed: Facture ajoutée à vos transactions récurrentes
+    create:
+      account_invalid: Choisissez un compte auquel vous pouvez ajouter des factures, ou laissez le champ vide
+      already_exists: Cette facture existe déjà
+      amount_invalid: Saisissez le montant sous forme de nombre simple
+      due_date_required: Saisissez la prochaine date d'échéance de la facture
+      success: Facture ajoutée
+      success_income: Revenu ajouté
     creation_failed: Échec de la création de la transaction récurrente. Veuillez vérifier
       les détails de la transaction et réessayer.
     day_of_month: Jour %{day} du mois
     deleted: Transaction récurrente supprimée
+    deleted_income: Revenu supprimé. Vos transactions n'ont pas été modifiées.
+    dismissed: Ignoré. Ce motif ne sera plus suggéré.
+    edit:
+      income_title: Modifier le revenu · %{name}
+      title: Modifier %{name}
+      trigger_label: Modifier la facture
     empty:
       description: Cliquez sur "Identifier les modèles" pour détecter automatiquement
         les transactions récurrentes à partir de votre historique de transactions.
@@ -21,7 +41,76 @@ fr:
       one: Attendue dans %{count} jour
       other: Attendue dans %{count} jours
     expected_today: Attendue aujourd'hui
+    form:
+      account_blank: N'importe quel compte
+      account_label: Payée depuis
+      amount_edit_hint: S'applique aux factures dues à partir de maintenant. Celles déjà dues conservent leur montant.
+      amount_label: Montant
+      apply_to_siblings:
+        one: Utiliser aussi ce lien pour l'autre facture %{name}
+        other: Utiliser aussi ce lien pour les %{count} autres factures %{name}
+      autopay_hint: La facture reste dans votre liste, mais n'est plus traitée comme une action à effectuer.
+      autopay_label: Paiement automatique
+      bill_type_label: Type
+      cancelled_on_hint: Noter la date ne sert qu'à votre suivi personnel. Mettez la facture en pause pour arrêter l'apparition des suivantes.
+      cancelled_on_label: Annulée le
+      category_blank: Sans catégorie
+      category_label: Catégorie
+      first_due_on_label: Prochaine échéance
+      frequency_day_label: Le jour
+      frequency_hint: À quelle fréquence cette facture arrive à échéance. Choisissez les détails du jour pour correspondre à votre relevé.
+      frequency_label: Fréquence
+      frequency_month_label: En
+      frequency_new_hint: Les détails du jour proviennent de la date d'échéance ci-dessus. Vous pourrez affiner l'échéancier après l'enregistrement.
+      frequency_second_day_label: Et le jour
+      frequency_weekday_label: Le
+      income_account_label: Versé sur
+      income_amount_edit_hint: S'applique aux jours de paie à partir de maintenant. Ceux déjà dus conservent leur montant.
+      income_amount_label: Montant par paie
+      income_due_on_label: Prochaine paie
+      income_frequency_hint: À quelle fréquence vous êtes payé. Choisissez les détails du jour pour correspondre à votre jour de paie.
+      income_frequency_label: Fréquence de versement
+      income_frequency_new_hint: Les détails du jour de paie proviennent de la date ci-dessus. Vous pourrez affiner l'échéancier après l'enregistrement.
+      income_name_label: Source
+      income_name_placeholder: Employeur, client, activité annexe
+      income_notes_hint: Tout ce qu'il vaut la peine de retenir sur ce revenu.
+      income_notes_placeholder: Virement automatique, réparti sur deux comptes
+      installment_count_hint: Le plan se termine après ce nombre de paiements et affiche sa progression jusque-là.
+      installment_count_label: Nombre de paiements
+      more_options: Plus d'options
+      name_label: Nom
+      name_placeholder: Loyer, EDF, Netflix
+      notes_hint: Tout ce que vous voulez avoir sous les yeux au moment de payer. Affiché sur la facture.
+      notes_label: Remarques
+      notes_placeholder: Contrat 4821, débité sur l'Amex
+      payment_url_hint: L'adresse où vous allez pour régler cette facture. S'ouvre dans un nouvel onglet depuis vos listes de récurrences et d'échéances à venir.
+      payment_url_label: Lien de paiement
+      payment_url_placeholder: banque.example.com/payer
+      renews_on_label: Renouvellement le
+      submit: Enregistrer la facture
+      submit_income: Enregistrer le revenu
+      trial_ends_on_label: Fin de l'essai
+    frequency:
+      annual: Chaque année le %{day} %{month}
+      biweekly: Toutes les 2 semaines, le %{weekday}
+      custom: Échéancier personnalisé
+      last_day: dernier jour
+      monthly: Chaque mois, le %{day}
+      quarterly: Chaque trimestre, le %{day}
+      semiannual: Tous les 6 mois, le %{day}
+      semimonthly: Deux fois par mois, le %{first} et le %{second}
+      weekly: Chaque semaine, le %{weekday}
+    frequency_presets:
+      annual: Annuelle
+      biweekly: Toutes les 2 semaines
+      custom: Échéancier personnalisé
+      monthly: Mensuelle
+      quarterly: Trimestrielle
+      semiannual: Tous les 6 mois
+      semimonthly: Deux fois par mois
+      weekly: Hebdomadaire
     identified: "%{count} modèles de transactions récurrentes identifiés"
+    identify_already_running: La détection est déjà en cours. Revenez dans un instant.
     identify_patterns: Identifier les modèles
     info:
       automatic_description: 'L''identification automatique s''exécute également après
@@ -32,9 +121,43 @@ fr:
       triggers:
       - Les importations CSV sont terminées (transactions, trades, comptes, etc.)
       - Toute synchronisation de fournisseur est terminée (Plaid, SimpleFIN, etc.)
+    manage:
+      cta: Ouvrir toutes les factures
+      description: Déclarez, modifiez, mettez en pause et payez tout depuis cette page. Celle-ci pilote la détection.
+      title: Vos factures se trouvent sur la page Factures
     marked_active: Transaction récurrente marquée comme active
     marked_as_recurring: Transaction marquée comme récurrente
     marked_inactive: Transaction récurrente marquée comme inactive
+    new:
+      candidate_meta: "%{count}× · dernière fois le %{date}"
+      income_title: Ajouter un revenu
+      pick_different: Partir d'une autre transaction
+      search_all_cta: Rechercher dans toutes vos transactions
+      search_all_prompt: Vous ne trouvez pas ce que vous cherchez ?
+      smart_fill: Remplissage intelligent par IA
+      smart_fill_applied: L'IA a proposé ces valeurs à partir de l'historique des prélèvements. Vérifiez-les avant d'enregistrer.
+      start_from_hint: Facultatif. En choisir une ne fait que préremplir le formulaire ; vous pouvez tout modifier.
+      start_from_income_title: Partir d'un versement récurrent que nous avons repéré
+      start_from_title: Partir d'un prélèvement récurrent que nous avons repéré
+      title: Ajouter une facture
+    pay_action:
+      add_link: Ajouter un lien
+      add_link_aria: Ajouter un lien de paiement pour %{name}
+      autopay: Paiement automatique
+      autopay_aria: "%{name} est payée automatiquement, ouvrir son portail dans un nouvel onglet"
+      open_site: Ouvrir le site de la facture
+      pay: Payer
+      pay_aria: Payer %{name} (ouvre un nouvel onglet)
+    pick_entry:
+      back: Revenir au formulaire
+      hint: En choisir une ne fait que préremplir le formulaire ; vous pouvez tout modifier.
+      income_title: Trouver un versement pour démarrer
+      no_results: Aucun résultat pour « %{query} ». Essayez avec moins de mots, ou revenez en arrière et remplissez le formulaire vous-même.
+      search_placeholder: Rechercher par nom, remarque ou marchand
+      showing_recent: Vos %{count} transactions les plus récentes sont affichées. Recherchez pour affiner.
+      title: Trouver une transaction pour démarrer
+    picker_row:
+      claimed: Rattachée à %{name}
     projected: Projeté
     recurring: Récurrent
     settings:
@@ -42,13 +165,28 @@ fr:
         et afficher les transactions projetées à venir.
       enable_label: Activer les transactions récurrentes
     settings_updated: Paramètres des transactions récurrentes mis à jour
+    smart_fills:
+      create:
+        failed: Impossible d'analyser l'historique des prélèvements pour le moment. Le formulaire a conservé les valeurs de la transaction elle-même.
     status:
       active: Actif
+      ended: Ignorée
       inactive: Inactif
+      paused: En pause
+      suggested: Facture possible
+    suggested:
+      collapsed_hint: Touchez pour vérifier
+      confirm: Ajouter la facture
+      dismiss: Ce n'est pas une facture
+      seen_count:
+        one: vue une fois
+        other: vue %{count} fois
+      title: Nouvelles factures possibles
     table:
       actions: Actions
       amount: Montant
       expected_day: Jour prévu
+      frequency: Fréquence
       last_occurrence: Dernière occurrence
       merchant: Nom
       next_date: Prochaine date
@@ -64,3 +202,8 @@ fr:
     unexpected_error: Une erreur inattendue s'est produite lors de la création de
       la transaction récurrente
     upcoming: Transactions récurrentes à venir
+    update:
+      success: Facture mise à jour
+      success_with_siblings:
+        one: Facture mise à jour, et le lien de paiement a été copié sur 1 autre facture
+        other: Facture mise à jour, et le lien de paiement a été copié sur %{count} autres factures

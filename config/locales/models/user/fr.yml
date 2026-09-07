@@ -18,6 +18,8 @@ fr:
               cannot_deactivate_admin_with_other_users: Un administrateur ne peut
                 pas désactiver son compte tant que d'autres utilisateurs sont présents.
                 Veuillez d’abord supprimer tous les membres.
+              cannot_remove_last_super_admin: Impossible de supprimer le dernier super administrateur actif. Promouvez d'abord un autre utilisateur au rang de super administrateur.
+              provider_item_has_other_accounts: Cet utilisateur possède des comptes liés à une connexion de fournisseur qui comporte aussi des comptes appartenant à un autre utilisateur. Déplacez ou déliez ces comptes avant de modifier l'appartenance à une famille / un groupe.
             profile_image:
               invalid_file_size: La taille du fichier doit être inférieure à %{max_megabytes}
                 Mo

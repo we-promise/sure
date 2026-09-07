@@ -13,6 +13,8 @@ fr:
       expiration_date: Date d'expiration
       minimum_payment: Paiement minimum
       minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: Activez cette option si votre banque communique le solde de cette carte sous forme de crédit disponible restant plutôt que de montant dû. La dette est alors déduite de la limite de crédit communiquée par votre banque, ou du champ Crédit disponible si votre banque n'en fournit pas.
+      treat_balance_as_available_credit_label: Le solde correspond au crédit disponible
     new:
       title: Saisir les détails de la carte de crédit
     overview:
