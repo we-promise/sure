@@ -278,6 +278,15 @@ class Loan
           accrual_start_date: Date.current,
           payment_schedule: payment_dates,
           accrual_rate_for: rate_resolver.method(:accrual_rate_for),
+          # The ACCRUAL clock's change points, which segment a daily accrual
+          # window (C7/C10). Omitting this defaulted the simulator to "no rate
+          # changes", so a rate effective between two payment dates moved the
+          # persisted schedule's interest but not this projection's -- the same
+          # phantom divergence as running two accrual models, arriving instead
+          # through one model missing half its inputs. It only bites on the
+          # daily branch, which is why it was invisible while the projection
+          # ran daily solely for offset loans.
+          accrual_rate_changes: rate_resolver.method(:accrual_rate_changes),
           re_amortisation_events: rate_resolver.method(:re_amortisation_events),
           payment_strategy: :hold,
           payment_amount_for: ->(**_kwargs) { monthly_payment.amount },

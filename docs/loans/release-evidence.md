@@ -7,11 +7,31 @@ unsigned.** This branch is held unmerged until it is.
 `Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL` is `true` and
 `ALGORITHM_VERSION` is `3` on this branch. The persisted schedule now accrues
 daily and the figures genuinely change -- see the variance distribution below.
-The characterisation suite has been deliberately re-baselined, which the
-contract permits only after G2 review; that review has not happened, which is
-why this is a draft.
+The characterisation suite has been deliberately re-baselined on this branch.
 
-### What re-baselining means here
+## What the G2 gate does and does not forbid
+
+The contract says the characterisation suite "may be deliberately re-baselined
+only after the lender reconciliation gate has been reviewed line by line". That
+governs what reaches `main`, not what may exist on a branch: the gate exists so
+that no *deployed* figure changes without lender review, and an unmerged draft
+deploys nothing.
+
+So preparing the re-baseline here is in scope, and merging it is not. Concretely,
+while G2 is unsigned:
+
+- this branch may hold the flipped constants, the re-baselined masters and the
+  evidence below;
+- it must stay a draft, must not merge, and must not be cherry-picked onto
+  `main`;
+- the numbers below are candidate figures for review, not approved figures.
+
+If that reading of the gate is wrong, the correction is to close this branch —
+not to merge it — and the contract wording in
+`docs/loans/calculation-contract.md` should be tightened to say "must not be
+merged" rather than "may be re-baselined".
+
+## What re-baselining means here
 
 Re-baselining a characterisation suite removes the alarm that says "the numbers
 moved". Every golden master changed in this branch is justified row by row in
@@ -109,7 +129,7 @@ calculation defect rather than a basis change.
 | Observation | Result |
 | --- | --- |
 | Loans rebuilt | 32 |
-| Amortization rows written | 5,232 |
+| Amortisation rows written | 5,232 |
 | Stale schedules after rebuild | 0/32 |
 | Rows after an immediate second rebuild | 5,232 (unchanged) |
 | Schedules current after second rebuild | 32/32 |
@@ -151,12 +171,23 @@ queue on first view. Run `loans:rebuild_schedules` as a bounded, throttled
 operation as part of the deploy, and monitor queue depth, failed rebuilds,
 stale-schedule count, and convergence before opening the feature to reads.
 
-Run rebuilds only as an explicit, bounded operation:
+Run rebuilds only as an explicit, bounded operation. **Pass `LIMIT` on every
+slice**: omitting it makes `loans:rebuild_schedules` process every eligible loan
+in one invocation, which is the opposite of the bounded rollout this section
+requires.
 
-    RAILS_ENV=production bin/rails loans:rebuild_schedules BATCH_SIZE=100 SLEEP=0.25
+    RAILS_ENV=production bin/rails loans:rebuild_schedules BATCH_SIZE=100 LIMIT=500 SLEEP=0.25
 
-Record queue depth, failures, stale schedules, convergence, and variance. A
-rebuild is idempotent and rate-limited; page views do not own completion.
+`LIMIT` selects by id order, so repeating the command re-selects the same head of
+the estate. That is safe rather than wasteful — the rebuild is idempotent, and
+already-current schedules are cheap — but it means a slice is not a cursor:
+raise `LIMIT` between slices (500, 2000, 10000, …) and watch the monitoring
+signals below settle after each, rather than expecting successive equal-sized
+slices to walk the estate.
+
+Record queue depth, failures, stale schedules, convergence, and variance after
+each slice. A rebuild is idempotent and rate-limited; page views do not own
+completion.
 
 The task prints its **effective** options before it starts, and prints an
 explicit `WARNING: no rate limit` when the pause resolves to zero — so a
