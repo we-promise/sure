@@ -59,8 +59,12 @@ class Loan
     # doesn't need a configured variable_rate_schedule to be amortizable --
     # it simply amortizes at the flat interest_rate until a rate change is
     # recorded.
+    #
+    # Covers every rate type that can move (Loan::VARIABLE_RATE_TYPES), which
+    # includes `adjustable`: before #14 it fell through both branches here and
+    # the loan silently had no schedule at all.
     def variable_rate?
-      loan.rate_type == "variable"
+      loan.variable_rate_type?
     end
 
     # Check if the loan has any recorded rate changes to apply mid-schedule
@@ -193,7 +197,7 @@ class Loan
     # The first row is included: its window opens at the accrual start date,
     # which is where Simulator#run opens it too.
     def accrual_rate_change_markers(rows = display_rows)
-      return {} unless loan.rate_type == "variable"
+      return {} unless loan.variable_rate_type?
       return {} if rows.empty?
 
       # One resolver call over the whole span, then bucketed by walking the two

@@ -3,7 +3,11 @@
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= render "shared/ruler", classes: "my-4" %>
 
-  <div class="space-y-2" data-controller="loan-offset">
+  <%# The rate types that reveal the offset and rate-change editors come from
+      Loan::VARIABLE_RATE_TYPES rather than being repeated in JavaScript, so
+      adding or removing one is a single change (#14). %>
+  <div class="space-y-2" data-controller="loan-offset"
+       data-loan-offset-variable-rate-types-value="<%= Loan::VARIABLE_RATE_TYPES.to_json %>">
     <%= form.fields_for :accountable do |loan_form| %>
       <div class="flex items-center gap-2">
         <%= loan_form.money_field :initial_balance,

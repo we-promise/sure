@@ -12,7 +12,7 @@ class Loan
     end
 
     def accrual_rate_for(date)
-      return loan.interest_rate unless loan.rate_type == "variable"
+      return loan.interest_rate unless loan.variable_rate_type?
       loan.current_variable_rate(date)
     end
 
@@ -26,7 +26,7 @@ class Loan
     # repayment is exactly what C7/C8 describe, and it was unrepresentable
     # while accrual segmented on re-amortisation events (#25).
     def accrual_rate_changes(from_date, to_date)
-      return [] unless loan.rate_type == "variable"
+      return [] unless loan.variable_rate_type?
 
       loan.variable_rates.filter_map do |date, rate|
         effective_date = Date.iso8601(date.to_s)
@@ -40,7 +40,7 @@ class Loan
     # repayment from the next contractual payment date, not from its own
     # effective date.
     def re_amortisation_events(from_date, to_date)
-      return [] unless loan.rate_type == "variable"
+      return [] unless loan.variable_rate_type?
 
       loan.variable_rates.filter_map do |date, rate|
         effective_date = Date.iso8601(date.to_s)

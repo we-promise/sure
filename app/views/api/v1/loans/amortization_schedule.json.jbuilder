@@ -25,7 +25,7 @@ json.schedule do
   json.total_cost total_interest ? (loan.original_balance.amount + total_interest).to_s : nil
   json.payoff_date last_payment&.payment_date
   json.payment_count total_count
-  json.has_rate_changes loan.rate_type == "variable" && loan.variable_rate_schedule.present?
+  json.has_rate_changes loan.amortization_schedule.has_rate_changes?
 end
 
 # Actual-balance-based projection: how the payoff shifts if the current
