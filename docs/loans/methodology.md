@@ -26,8 +26,9 @@ loan, reconciled 43/43 under actual/actual.
   other lender.
 - **The reconciliation predates the per-loan basis** (`day_count_convention`,
   #70) and has not been re-run against it.
-- **The C2 disclosure is not built.** See the outstanding list below; this one is
-  a hard requirement of #11 rather than a nice-to-have, and it is unmet.
+- **Other lenders and other loans.** The reconciliation is a single data point.
+  It supports "a fixed basis cannot be assumed"; it cannot support "actual/actual
+  is right for anyone else".
 
 The remaining items below are therefore no longer gate blockers. They are open
 work, and the last one should land before daily accrual reaches users.
@@ -133,20 +134,26 @@ so the comparison — not the formula — is the evidence.
 
 ## Outstanding after sign-off
 
-G2 is signed (above), so none of these block the gate. The UI disclosure is the
-one that should still land before daily accrual is user-visible.
+G2 is signed (above), so none of these block the gate.
+
+> **Correction, 2026-09-07.** An earlier revision of this section claimed the C2
+> day-count disclosure was unbuilt and named it the item to land before daily
+> accrual reaches users. That was wrong: it shipped with #70. The claim came
+> from grepping a branch seven commits behind `main`, which predated #70, and
+> reporting the absence as a fact about the codebase. Recorded here because the
+> claim reached this document, `calculation-contract.md`, issue #11 and PR #73
+> before it was caught.
 
 - **Re-run the reconciliation against the per-loan basis.** The #65 run predates
   `loans.day_count_convention` (#70). It reconciled the engine against a fixed
   basis chosen by hand; it has not been re-run against the representation the
   code now actually uses. This is the last unchecked box on #65.
-- **Disclose the basis in the UI.** #11 requires that where reconciliation shows
-  a basis is only an approximation for a lender, "the UI copy must say so". No
-  view, component or locale string currently mentions the day-count basis at
-  all — it exists only in the model layer. C2 leans on this disclosure when it
-  says selecting a basis is the borrower's assertion rather than a verified
-  fact, so the contract currently promises something the interface does not
-  deliver.
+- ~~Disclose the basis in the UI.~~ **Already done, in #70.** The schedule tab
+  carries a `day_count_notice` naming the basis in force and stating that a
+  lender mismatch makes the figures an approximation; the loan form carries the
+  selector and an explanatory hint. Covered by
+  `test/controllers/accounts_controller_test.rb`, which asserts the notice
+  changes with the loan's basis and that the old basis no longer appears.
 - **Offset movement.** Daily offset reconciliation needs the linked account's
   balance history, which the statements do not carry — they report the lender's
   own offset saving, not daily balances. The sign-off above therefore excluded

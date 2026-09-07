@@ -127,12 +127,11 @@ G1 is approved by the repository owner. **G2 is signed** — see
 
 Two of those carve-outs bear directly on rows in this document:
 
-- **C2's disclosure is specified but not built.** The row says the schedule
-  discloses which basis is in force and that a mismatch makes the figures an
-  approximation. No view, component or locale string currently mentions the
-  day-count basis; it exists only in the model layer. Until that ships, C2 is
-  half-satisfied — the basis is per-loan, but the user is not told which one
-  applies. #11 requires the disclosure in terms.
+- **C2's disclosure is built** (#70) and satisfies #11's requirement that the
+  UI say so rather than the constant being quietly tuned. The schedule tab names
+  the basis in force and states that a lender mismatch makes the figures an
+  approximation; `test/controllers/accounts_controller_test.rb` asserts it
+  tracks the loan's basis.
 - **C15/C16 offset behaviour is unreconciled.** #65 verified gross interest
   only; the offset side came from the lender's own disclosed saving rather than
   an independent check, because the statements carry no daily offset balances.
