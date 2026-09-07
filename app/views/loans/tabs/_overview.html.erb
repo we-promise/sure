@@ -35,9 +35,13 @@
     <% if current_payment.present? %>
       <%= format_money(current_payment) %>
       <% if account.loan.rate_type != 'fixed' %>
-        <p class="text-xs text-subdued mt-1">
+        <%# A block-level span, not a <p>: summary_card already wraps this in a
+            <p class="privacy-sensitive">, and a nested <p> makes the browser
+            close that wrapper early -- which drops the rate out of Privacy
+            Mode's blur as well as being invalid markup. %>
+        <span class="block text-xs text-subdued mt-1">
           <%= t(".minimum_payment_rate", rate: number_to_percentage(account.loan.current_variable_rate, precision: 3, strip_insignificant_zeros: true)) %>
-        </p>
+        </span>
       <% end %>
     <% else %>
       <%= t(".unknown") %>

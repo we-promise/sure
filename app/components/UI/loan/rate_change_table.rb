@@ -31,11 +31,30 @@ class UI::Loan::RateChangeTable < ApplicationComponent
   end
 
   def rows
-    @rows ||= future_rate_changes.filter_map do |effective_date, new_rate|
-      balance = projected_balance_at(effective_date)
-      next if balance.nil? || !balance.positive?
+    # A fixed-rate loan can still carry rate rows: #14 keeps a loan's rate
+    # history when its type changes rather than silently discarding it. Those
+    # rows are history, not a forthcoming change, and this table is rendered on
+    # every loan's schedule tab.
+    return [] unless loan.rate_type == "variable"
 
-      remaining = schedule.remaining_payment_count(as_of: effective_date)
+    @rows ||= future_rate_changes.filter_map do |effective_date, new_rate|
+      row_index = projected_row_index_at(effective_date)
+      next if row_index.nil?
+
+      balance = interest_bearing_projected_balance(row_index)
+      next unless balance.positive?
+
+      # Payments remaining to the ORIGINAL maturity, counted inclusively so the
+      # boundary payment whose opening balance was just used is also one of the
+      # periods it is spread over. Counting payments strictly after the
+      # effective date dropped exactly one whenever a change landed on a
+      # payment date.
+      #
+      # Deliberately NOT `projected_rows.length - row_index`: that is the
+      # projection's own term, which runs until the balance clears at the
+      # current repayment, not to the contracted maturity. Using it re-amortised
+      # over the wrong term and moved this quote by hundreds of dollars.
+      remaining = schedule.remaining_payment_count(as_of: effective_date, including_on_date: true)
       next unless remaining.positive?
 
       {
@@ -80,14 +99,26 @@ class UI::Loan::RateChangeTable < ApplicationComponent
           .map { |date, rate| [ Date.iso8601(date.to_s), rate ] }
     end
 
-    # The balance the projection carries into the first payment on or after the
-    # effective date. Half-open to match the accrual windows (C7): a change
-    # effective on a payment date governs the period that OPENS on it.
-    def projected_balance_at(effective_date)
-      row = projected_rows.find { |payment| payment[:payment_date] >= effective_date }
-      return nil if row.nil?
+    # Index of the first projected payment on or after the effective date.
+    # Half-open to match the accrual windows (C7): a change effective on a
+    # payment date governs the period that OPENS on it.
+    def projected_row_index_at(effective_date)
+      projected_rows.index { |payment| payment[:payment_date] >= effective_date }
+    end
 
-      BigDecimal(row[:beginning_balance].to_s)
+    # Net of any linked offset, so this sits on the same basis as
+    # `current_minimum_payment`. The projection's `beginning_balance` is the
+    # GROSS loan balance -- an offset reduces the interest charged, not the
+    # principal owed -- so quoting a future repayment off it while the current
+    # column is quoted net overstated the future figure for every offset loan.
+    #
+    # The offset is held flat at today's total, which is the assumption the
+    # caption under this table states.
+    def interest_bearing_projected_balance(row_index)
+      gross = BigDecimal(projected_rows[row_index][:beginning_balance].to_s)
+      offset = BigDecimal(loan.offset_accounts.sum(:balance).to_s)
+
+      [ gross - offset, BigDecimal("0") ].max
     end
 
     # From today's actual balance forward -- see the note at the top of this

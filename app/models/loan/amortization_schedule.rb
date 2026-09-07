@@ -229,10 +229,24 @@ class Loan
     # term. Public because #15's current minimum repayment re-amortises over
     # exactly this count, and deriving it separately is how two surfaces end up
     # quoting different figures for one loan.
-    def remaining_payment_count(as_of: Date.current)
+    # `including_on_date` decides which side of the boundary a payment falling
+    # exactly on `as_of` sits. Both callers need a different answer, and the
+    # answer must match the balance each is spreading:
+    #
+    # - today's repayment (default, exclusive): a payment due today has been
+    #   made and is already reflected in the balance, so it is not one of the
+    #   payments left to spread that balance over;
+    # - a future rate change (inclusive): the balance used is that payment's
+    #   OPENING balance, so that payment is still to come and must be counted.
+    #
+    # Getting this wrong is silent -- it moves the quote by one period, which
+    # looks like a plausible number.
+    def remaining_payment_count(as_of: Date.current, including_on_date: false)
       return 0 unless amortizable?
 
-      scheduled_payment_dates.count { |date| date > as_of }
+      scheduled_payment_dates.count do |date|
+        including_on_date ? date >= as_of : date > as_of
+      end
     end
 
     # Get a specific payment by date, or nil if not found

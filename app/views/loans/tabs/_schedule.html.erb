@@ -32,11 +32,15 @@
         #15 is that the two tabs never show different figures for one loan. %>
     <%= summary_card title: t(".monthly_payment") do %>
       <% current_payment = loan.current_minimum_payment %>
-      <%= current_payment ? format_money(current_payment) : format_money(schedule.monthly_payment) %>
+      <%# Falling back to the contracted payment here would break the very
+          agreement this card exists to keep: past maturity there is no
+          repayment to quote, Overview says so, and this tab must say the same
+          thing rather than reaching for a different number. %>
+      <%= current_payment ? format_money(current_payment) : t("loans.tabs.overview.unknown") %>
       <% if loan.rate_type != "fixed" && current_payment %>
-        <p class="text-xs text-subdued mt-1">
+        <span class="block text-xs text-subdued mt-1">
           <%= t(".minimum_payment_rate", rate: number_to_percentage(loan.current_variable_rate, precision: 3, strip_insignificant_zeros: true)) %>
-        </p>
+        </span>
       <% end %>
     <% end %>
 

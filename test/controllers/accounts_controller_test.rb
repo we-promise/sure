@@ -1065,8 +1065,56 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_path(loan_account, tab: "overview")
 
     assert_response :success
-    assert_not_includes response.body, ">#{I18n.t("loans.tabs.overview.not_applicable")}<",
-      "the hardcoded N/A this issue exists to remove must be gone"
+    # Asserted positively, on the figure itself. The first version of this
+    # asserted the ABSENCE of ">N/A<" and could not fail: summary_card renders
+    # its value as "<p ...>\n    value\n  </p>", so that exact substring never
+    # appears, and the view no longer emits `not_applicable` at all. An
+    # assertion that cannot fail is not a regression test (cubic, #79).
+    assert_includes response.body, loan_account.loan.current_minimum_payment.format,
+      "the Overview card must show the current minimum repayment, not a placeholder"
+  end
+
+  # cubic, #79. Past maturity there are no payments left to spread the balance
+  # over, so there is no repayment to quote. Overview says "Unknown"; the
+  # Schedule tab used to reach for the contracted payment instead, which is the
+  # two-tabs-disagree failure the card exists to prevent.
+  test "a matured variable loan says the same thing on both tabs" do
+    loan_account = accounts(:loan)
+    loan_account.loan.update!(rate_type: "variable", interest_rate: 5, term_months: 12,
+      start_date: Date.current - 24.months)
+
+    assert_nil loan_account.loan.reload.current_minimum_payment,
+      "the fixture must be past maturity for this test to prove anything"
+    contracted = loan_account.loan.amortization_schedule.monthly_payment
+    assert_not_nil contracted, "the contracted payment must exist, or the fallback could not have shown it"
+
+    get account_path(loan_account, tab: "schedule")
+    assert_response :success
+
+    # Scoped to the card, not the page: the contracted figure legitimately
+    # appears in the amortisation table's payment column, so a page-wide
+    # assertion would fail for the wrong reason.
+    schedule_cards = monthly_payment_card_texts
+    assert_not_empty schedule_cards, "the monthly-payment card must be on the page at all"
+    assert_equal [ I18n.t("loans.tabs.overview.unknown") ], schedule_cards.uniq,
+      "past maturity every monthly-payment card must say what Overview says, not reach for the contracted payment"
+
+    get account_path(loan_account, tab: "overview")
+    assert_response :success
+    assert_equal schedule_cards.uniq, monthly_payment_card_texts.uniq,
+      "the two tabs must agree when there is no repayment to quote"
+  end
+
+  # Every "Monthly Payment" summary card in the response, as text. Plural on
+  # purpose: a tab response carries more than one tab's markup, so reading only
+  # the first card silently asserted against whichever happened to come first
+  # in document order -- and passed while the card under test was wrong.
+  def monthly_payment_card_texts
+    title = I18n.t("loans.tabs.schedule.monthly_payment")
+
+    css_select("h4").select { |node| node.text.strip == title }.map do |heading|
+      heading.parent.css("p").first&.text.to_s.strip
+    end
   end
 
   test "the schedule table has no rate-change marker for a fixed-rate loan" do
