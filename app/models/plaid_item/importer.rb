@@ -4,6 +4,9 @@ class PlaidItem::Importer
     @plaid_provider = plaid_provider
   end
 
+  # Pulls this connection's latest item and account data from Plaid.
+  #
+  # @return [void]
   def import
     fetch_and_import_item_data
     fetch_and_import_accounts_data
@@ -36,6 +39,10 @@ class PlaidItem::Importer
       plaid_item.upsert_plaid_institution_snapshot!(institution_data)
     end
 
+    # Imports every account on the item, then records where the fetch left off:
+    # the cursor for the next sync, and the replay request this one satisfied.
+    #
+    # @return [void]
     def fetch_and_import_accounts_data
       snapshot = PlaidItem::AccountsSnapshot.new(plaid_item, plaid_provider: plaid_provider)
 

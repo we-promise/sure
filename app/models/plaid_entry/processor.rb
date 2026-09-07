@@ -6,6 +6,10 @@ class PlaidEntry::Processor
     @category_matcher = category_matcher
   end
 
+  # Upserts one Plaid transaction into the account, carrying the provider
+  # metadata and the naming this family asked for.
+  #
+  # @return [Entry] the created or updated entry
   def process
     import_adapter.import_transaction(
       external_id: external_id,

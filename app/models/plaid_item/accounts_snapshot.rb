@@ -20,6 +20,10 @@ class PlaidItem::AccountsSnapshot
     )
   end
 
+  # The cursor Plaid returned for this fetch, which the importer stores so the
+  # next sync picks up where this one stopped.
+  #
+  # @return [String, nil] nil when this item does not fetch transactions
   def transactions_cursor
     return nil unless transactions_data
     transactions_data.cursor
@@ -77,10 +81,17 @@ class PlaidItem::AccountsSnapshot
       )
     end
 
+    # @return [Boolean] whether this item is entitled to transactions and has
+    #   any account to fetch them for
     def can_fetch_transactions?
       plaid_item.supports_product?("transactions") && accounts.any?
     end
 
+    # Fetches the transaction delta, or the full history when a replay is owed.
+    # Memoized: the cursor decision is made once per sync, and the timestamp it
+    # acted on is captured for the importer to consume.
+    #
+    # @return [Object, nil] Plaid's sync response, or nil when not fetching
     def transactions_data
       return nil unless can_fetch_transactions?
 
