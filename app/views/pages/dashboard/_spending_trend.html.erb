@@ -11,21 +11,8 @@
     current: data[:current],
     previous: data[:previous]
   }
-  # Name the compared month outright - "Previous month" truncates on mobile
-  # ("Previous mon…") and says less than the real label.
-  previous_label = I18n.l(data[:previous_period].start_date, format: :month_year).capitalize
-  # Compact range for narrow viewports; the period never spans months, so the
-  # end date only needs its day ("Sep 01 - 6, 2026").
-  date_range = period.date_range
-  date_range_short =
-    if date_range.begin == date_range.end
-      "#{I18n.l(date_range.begin, format: :short)}, #{date_range.end.year}"
-    else
-      t(".date_range_short",
-        start_date: I18n.l(date_range.begin, format: :short),
-        end_day: date_range.end.day,
-        year: date_range.end.year)
-    end
+  previous_label = data[:previous_label]
+  date_range_short = data[:date_range_short]
 %>
 <div id="spending-trend-section" class="px-4 space-y-4">
   <div class="flex items-center justify-between gap-3">
