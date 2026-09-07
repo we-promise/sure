@@ -393,6 +393,18 @@ If your Claude Desktop build expects a raw MCP endpoint instead of an OAuth inte
 
 Use either the client's OAuth support or a bearer token, depending on what that build supports.
 
+### Cursor and other native MCP clients
+
+Desktop MCP clients such as Cursor and VS Code authenticate with OAuth Dynamic Client Registration (`POST /register`) and then open a browser for consent. Native clients register a private-use redirect URI rather than an `https://` callback, for example:
+
+- Cursor desktop: `cursor://anysphere.cursor-mcp/oauth/callback`
+- Newer Cursor IDE/CLI builds: `http://localhost:8787/callback`
+- VS Code extensions: `vscode://...`
+
+Sure accepts those native-app URI schemes, loopback `http://` callbacks, and `https://` callbacks. After you authorize in the browser, the client exchanges the authorization code (PKCE) for a bearer token and calls `/mcp`.
+
+If OAuth is inconvenient (CI, scripts, or a client that cannot complete the browser flow), use the static `MCP_API_TOKEN` bearer token instead.
+
 ### Custom Agents
 
 Any AI agent that supports JSON-RPC 2.0 can connect to the MCP endpoint. The agent should:
