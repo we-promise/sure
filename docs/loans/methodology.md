@@ -1,12 +1,23 @@
 # Loan reconciliation methodology
 
-Status: **Gate G2 signed for the non-offset scope. Offset reconciliation is an
-open residual.**
+Status: **G2a signed (non-offset scope). G2b — offset reconciliation — OPEN.**
+
+Never report this as "G2 signed" unqualified. That is the overstatement the
+split below exists to prevent.
 
 The delivery breakdown defines G2 as reconciliation "including rate-change and
 **offset** cases". The signature below covers gross monthly interest with no
-independent offset check. Those are not the same thing, and daily offset-aware
-accrual is now live on `main`.
+independent offset check. Those are not the same thing.
+
+**Where offset-aware accrual actually runs.** Daily accrual is live on `main`
+for both paths, but only `Loan::PayoffProjection` passes `offset_for` to the
+simulator. `AmortizationSchedule#generate_simulation` -- the persisted,
+contracted schedule users read in the table -- does not, so linked offsets do
+not move those rows. That is consistent with invariant A7 (the contracted
+schedule never tracks the live balance), but it has not been stated anywhere and
+it changes what G2b would have to cover. Recorded here rather than asserted
+either way; whether the contracted schedule *should* be offset-aware is an open
+question, not something this document settles.
 
 This section states the split rather than reporting a fully satisfied gate,
 because "G2 signed" on its own would let release reporting claim evidence for
@@ -156,7 +167,8 @@ so the comparison — not the formula — is the evidence.
 
 ## Outstanding after sign-off
 
-G2 is signed (above), so none of these block the gate.
+G2a is signed (above), so none of these block that gate. G2b remains open and
+the offset item below is part of it.
 
 > **Correction, 2026-09-07.** An earlier revision of this section claimed the C2
 > day-count disclosure was unbuilt and named it the item to land before daily
