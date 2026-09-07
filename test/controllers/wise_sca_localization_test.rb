@@ -69,6 +69,8 @@ class WiseScaPanelLocalizationTest < ActionDispatch::IntegrationTest
   end
 
   test "German Wise SCA keypair generation returns the localized success message" do
+    WiseItem.any_instance.expects(:generate_sca_keypair!).once
+
     post generate_sca_keypair_wise_item_url(wise_items(:one))
 
     assert_redirected_to accounts_path
