@@ -118,3 +118,10 @@ en:
         chart_span: "Last %{count} months"
         income: "Income"
         expenses: "Expenses"
+      spending_trend:
+        title: "Spending"
+        date_range: "%{start_date} to %{end_date}"
+        month_picker_aria_label: "Select month"
+        period_scope_hint: "Shows the month you pick here — independent of the dashboard's time period at the top."
+        previous_month: "Previous month"
+        no_data: "No spending data for this month"

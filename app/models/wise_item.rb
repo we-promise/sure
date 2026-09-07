@@ -3,6 +3,11 @@
 class WiseItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
+  # Raised rather than returned so no caller can mistake "not stored" for
+  # "stored"; the controller turns it into the same panel error as any other
+  # keypair failure.
+  class SCAEncryptionUnavailable < StandardError; end
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
   enum :profile_type, { personal: "personal", business: "business" }
 
@@ -15,6 +20,13 @@ class WiseItem < ApplicationRecord
   validates :name, :profile_id, :profile_type, presence: true
   validates :token, presence: true, on: :create
   validates :profile_id, uniqueness: { scope: :family_id }
+
+  # An SCA private key signs balance-statement requests to Wise, so plaintext
+  # at rest is not an acceptable degraded mode the way an unencrypted display
+  # name would be. Without ActiveRecord encryption configured, `encrypts` above
+  # never runs and the PEM would land in the column as-is, so the key is simply
+  # refused instead.
+  validate :sca_private_key_requires_encryption
 
   before_validation :normalize_token
 
@@ -136,9 +148,15 @@ class WiseItem < ApplicationRecord
   # endpoint. The private key stays here (encrypted at rest); the public key
   # must be registered with Wise by the user (Settings > API tokens > Public keys).
   def generate_sca_keypair!
+    raise SCAEncryptionUnavailable, "Active Record encryption is not configured" unless sca_encryption_available?
+
     key = OpenSSL::PKey::RSA.generate(2048)
     update!(sca_private_key: key.to_pem)
     sca_public_key
+  end
+
+  def sca_encryption_available?
+    self.class.encryption_ready?
   end
 
   def sca_public_key
@@ -189,5 +207,19 @@ class WiseItem < ApplicationRecord
 
     def normalize_token
       self.token = token&.strip
+    end
+
+    # Scoped to writes of the key itself. An install that generated a key
+    # before this validation existed still has that value in the column, so
+    # validating on every save would reject every later write to the record:
+    # renaming the connection, and worse, WiseItemsController#destroy, which
+    # unlinks the accounts BEFORE destroy_later's update! and would leave the
+    # provider half unlinked and still active. Refusing a NEW key is the point;
+    # refusing to let go of an old one is not.
+    def sca_private_key_requires_encryption
+      return unless will_save_change_to_sca_private_key?
+      return if sca_private_key.blank? || sca_encryption_available?
+
+      errors.add(:sca_private_key, :encryption_unavailable)
     end
 end
