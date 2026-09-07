@@ -24,6 +24,10 @@ class Assistant::Function::GetTransactions < Assistant::Function
         types: ["income", "expense"] to exclude transfers between the user's
         own accounts. Use a small page_size when you only need a few rows.
 
+        Refunds reduce spending and are not earnings. Use types: ["refund"]
+        to find returns. Purchase net costs include only refunds you can access;
+        exchange_rate_missing means the final cost could not be calculated.
+
         Note on pagination:
 
         This function can be paginated.  You can expect the following properties in the response:
@@ -91,7 +95,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
         types: {
           type: "array",
           description: "Filter by kind; [\"income\", \"expense\"] excludes transfers between the user's own accounts",
-          items: { enum: [ "income", "expense", "transfer" ] },
+          items: { enum: [ "income", "expense", "refund", "transfer" ] },
           minItems: 1,
           uniqueItems: true
         },
@@ -165,6 +169,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
 
     totals = search.totals
 
+    refund_details = Transaction::RefundDetails.new(transactions: paginated_transactions, user: user)
+
     normalized_transactions = paginated_transactions.map do |txn|
       entry = txn.entry
       {
@@ -174,14 +180,14 @@ class Assistant::Function::GetTransactions < Assistant::Function
         amount: entry.amount.abs,
         currency: entry.currency,
         formatted_amount: entry.amount_money.abs.format,
-        classification: entry.amount < 0 ? "income" : "expense",
+        classification: txn.refund? ? "refund" : entry.classification,
         account: entry.account.name,
         notes: entry.notes,
         category: txn.category&.name,
         merchant: txn.merchant&.name,
         tags: txn.tags.map(&:name),
         is_transfer: txn.transfer?
-      }
+      }.merge(refund_details.for(txn))
     end
 
     {
@@ -191,7 +197,8 @@ class Assistant::Function::GetTransactions < Assistant::Function
       page_size: page_size,
       total_pages: pagy.pages,
       total_income: totals.income_money.format,
-      total_expenses: totals.expense_money.format
+      total_expenses: totals.expense_money.format,
+      total_refunds: totals.refund_money.format
     }
   end
 

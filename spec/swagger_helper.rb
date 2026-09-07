@@ -850,6 +850,24 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          TransactionRefundInput: {
+            type: :object,
+            properties: {
+              refund: { type: :boolean, description: 'True marks a posted incoming credit as a refund; false removes refund classification and its purchase link. Omit to preserve classification.' },
+              refund_of_transaction_id: { type: :string, format: :uuid, nullable: true, description: 'Accessible original purchase transaction ID (not entry ID). Requires refund: true or an existing refund. Omit to preserve the link; null unlinks without removing refund classification.' }
+            }
+          },
+          RefundNetPurchaseCost: {
+            type: :object,
+            nullable: true,
+            description: 'Purchase amount minus linked refunds visible to the caller, converted using each refund posting date. May be negative. Null when not applicable or an exchange rate is missing.',
+            properties: {
+              amount: { type: :string, description: 'Signed decimal amount in major currency units' },
+              amount_cents: { type: :integer, description: 'Signed amount in currency minor units (JPY uses units, not cents)' },
+              currency: { type: :string }
+            },
+            required: %w[amount amount_cents currency]
+          },
           Transaction: {
             type: :object,
             required: %w[id date amount currency name classification account tags created_at updated_at],
@@ -863,7 +881,17 @@ RSpec.configure do |config|
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },
               user_modified: { type: :boolean },
-              classification: { type: :string },
+              classification: { type: :string, description: 'Legacy cash-direction classification: incoming refunds remain income here. Use refund and reporting_classification to identify their expense-reduction meaning.' },
+              kind: { type: :string, description: 'Transaction kind, including refund' },
+              refund: { type: :boolean },
+              reporting_classification: { type: :string, description: 'Legacy classification with refunds classified as expense reductions' },
+              cash_flow_direction: { type: :string, enum: %w[inflow outflow] },
+              refund_of_transaction_id: { type: :string, format: :uuid, nullable: true, description: 'Original purchase ID, or null if unlinked or inaccessible to the caller' },
+              refund_transaction_ids: { type: :array, items: { type: :string, format: :uuid }, description: 'IDs of linked refunds visible to the caller' },
+              net_purchase_cost: { '$ref' => '#/components/schemas/RefundNetPurchaseCost' },
+              net_purchase_cost_status: { type: :string, enum: %w[available not_applicable exchange_rate_missing] },
+              amount_cents: { type: :integer, description: 'Absolute amount in currency minor units' },
+              signed_amount_cents: { type: :integer, description: 'Cash-flow sign: incoming refunds remain positive' },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },

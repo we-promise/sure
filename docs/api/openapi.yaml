@@ -1594,6 +1594,40 @@ components:
             "$ref": "#/components/schemas/RecurringTransaction"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    TransactionRefundInput:
+      type: object
+      properties:
+        refund:
+          type: boolean
+          description: True marks a posted incoming credit as a refund; false removes
+            refund classification and its purchase link. Omit to preserve classification.
+        refund_of_transaction_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Accessible original purchase transaction ID (not entry ID).
+            Requires refund: true or an existing refund. Omit to preserve the link;
+            null unlinks without removing refund classification.'
+    RefundNetPurchaseCost:
+      type: object
+      nullable: true
+      description: Purchase amount minus linked refunds visible to the caller, converted
+        using each refund posting date. May be negative. Null when not applicable
+        or an exchange rate is missing.
+      properties:
+        amount:
+          type: string
+          description: Signed decimal amount in major currency units
+        amount_cents:
+          type: integer
+          description: Signed amount in currency minor units (JPY uses units, not
+            cents)
+        currency:
+          type: string
+      required:
+      - amount
+      - amount_cents
+      - currency
     Transaction:
       type: object
       required:
@@ -1633,6 +1667,48 @@ components:
           type: boolean
         classification:
           type: string
+          description: 'Legacy cash-direction classification: incoming refunds remain
+            income here. Use refund and reporting_classification to identify their
+            expense-reduction meaning.'
+        kind:
+          type: string
+          description: Transaction kind, including refund
+        refund:
+          type: boolean
+        reporting_classification:
+          type: string
+          description: Legacy classification with refunds classified as expense reductions
+        cash_flow_direction:
+          type: string
+          enum:
+          - inflow
+          - outflow
+        refund_of_transaction_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Original purchase ID, or null if unlinked or inaccessible to
+            the caller
+        refund_transaction_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: IDs of linked refunds visible to the caller
+        net_purchase_cost:
+          "$ref": "#/components/schemas/RefundNetPurchaseCost"
+        net_purchase_cost_status:
+          type: string
+          enum:
+          - available
+          - not_applicable
+          - exchange_rate_missing
+        amount_cents:
+          type: integer
+          description: Absolute amount in currency minor units
+        signed_amount_cents:
+          type: integer
+          description: 'Cash-flow sign: incoming refunds remain positive'
         account:
           "$ref": "#/components/schemas/Account"
         category:
@@ -7599,12 +7675,14 @@ paths:
       - name: type
         in: query
         required: false
-        description: Filter by transaction type
+        description: Filter by transaction type; income excludes refunds, expense
+          includes them, refund selects only refunds
         schema:
           type: string
           enum:
           - income
           - expense
+          - refund
       - name: search
         in: query
         required: false
@@ -7684,6 +7762,8 @@ paths:
               properties:
                 transaction:
                   type: object
+                  allOf:
+                  - "$ref": "#/components/schemas/TransactionRefundInput"
                   properties:
                     account_id:
                       type: string
@@ -7787,11 +7867,23 @@ paths:
       parameters: []
       responses:
         '200':
-          description: transaction updated
+          description: transaction updated, including refund classification or linking
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '422':
+          description: invalid refund attributes or purchase relationship
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: API key or account does not allow writes
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:
@@ -7806,6 +7898,8 @@ paths:
               properties:
                 transaction:
                   type: object
+                  allOf:
+                  - "$ref": "#/components/schemas/TransactionRefundInput"
                   properties:
                     date:
                       type: string

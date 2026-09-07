@@ -3,6 +3,7 @@
 class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
+
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
@@ -96,22 +97,26 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
-    @entry = account.entries.new(entry_params_for_create)
+    Entry.transaction do
+      @entry = account.entries.new(entry_params_for_create)
 
-    if @entry.save
-      @entry.lock_saved_attributes!
-      @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.mark_user_modified! if user_modified_requested?
-      @entry.sync_account_later
+      prepare_refund_change!
+      if @entry.save
+        apply_refund_change!
+        @entry.lock_saved_attributes!
+        @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+        @entry.mark_user_modified! if user_modified_requested?
+        @entry.sync_account_later
 
-      @transaction = @entry.transaction
-      render :show, status: :created
-    else
-      render json: {
-        error: "validation_failed",
-        message: "Transaction could not be created",
-        errors: @entry.errors.full_messages
-      }, status: :unprocessable_entity
+        @transaction = @entry.transaction.reload
+        render :show, status: :created
+      else
+        render json: {
+          error: "validation_failed",
+          message: "Transaction could not be created",
+          errors: @entry.errors.full_messages
+        }, status: :unprocessable_entity
+      end
     end
 
   rescue ActiveRecord::RecordNotUnique
@@ -120,6 +125,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     else
       raise
     end
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "not_found", message: "Transaction or account not found" }, status: :not_found
+  rescue ActiveRecord::RecordInvalid, ArgumentError => e
+    render json: { error: "validation_failed", message: e.message }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "TransactionsController#create error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -131,7 +140,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   end
 
   def update
-    if @entry.split_child?
+    if @entry.split_child? && !refund_only_update?
       render json: { error: "validation_failed", message: "Split child transactions cannot be edited directly. Use the split editor." }, status: :unprocessable_entity
       return
     end
@@ -141,7 +150,13 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    if (refund_change_requested? || @entry.transaction.refund?) && !Account.writable_by(current_resource_owner).exists?(id: @entry.account_id)
+      render json: { error: "forbidden", message: "Account is read-only" }, status: :forbidden
+      return
+    end
+
     Entry.transaction do
+      prepare_refund_change!
       if @entry.update(entry_params_for_update)
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
@@ -151,6 +166,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
           @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
         end
 
+        apply_refund_change!
         @entry.sync_account_later
         @entry.lock_saved_attributes!
 
@@ -166,6 +182,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       end
     end
 
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "not_found", message: "Transaction or account not found" }, status: :not_found
+  rescue ActiveRecord::RecordInvalid, ArgumentError => e
+    render json: { error: "validation_failed", message: e.message }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error "TransactionsController#update error: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -200,6 +220,50 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   end
 
   private
+
+    def refund_only_update?
+      refund_change_requested? && (transaction_params.keys - %w[refund refund_of_transaction_id]).empty?
+    end
+
+    def refund_change_requested?
+      transaction_params.key?(:refund) || transaction_params.key?(:refund_of_transaction_id)
+    end
+
+    def prepare_refund_change!
+      return unless refund_change_requested?
+
+      attributes = transaction_params
+      if attributes.key?(:refund) && ![ true, false ].include?(attributes[:refund])
+        raise ArgumentError, "refund must be a boolean"
+      end
+      @refund_enabled = attributes.fetch(:refund, @entry.transaction.refund?)
+      purchase_id = attributes[:refund_of_transaction_id].presence
+      raise ArgumentError, "A purchase link requires refund: true" if !@refund_enabled && purchase_id
+
+      if purchase_id
+        raise ActiveRecord::RecordNotFound unless valid_uuid?(purchase_id)
+        @refund_purchase = current_resource_owner.family.transactions.joins(entry: :account)
+          .merge(Account.accessible_by(current_resource_owner)).find(purchase_id)
+      end
+      # Take the same locks as UI linking before changing the entry itself.
+      [ @entry.transaction, @refund_purchase ].compact.select(&:persisted?).uniq
+        .sort_by(&:id).each(&:lock!)
+      @entry.reload if @entry.persisted?
+    end
+
+    def apply_refund_change!
+      return unless refund_change_requested?
+
+      transaction = @entry.transaction.reload
+      if @refund_enabled
+        # An omitted link preserves the existing link and its category.
+        return if transaction.refund? && !transaction_params.key?(:refund_of_transaction_id)
+
+        transaction.mark_as_refund!(purchase: @refund_purchase)
+      elsif transaction.refund?
+        transaction.clear_refund!
+      end
+    end
 
     def set_transaction
       raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
@@ -288,9 +352,11 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       if params[:type].present?
         case params[:type].downcase
         when "income"
-          query = query.where("entries.amount < 0")
+          query = query.where("entries.amount < 0").where.not(kind: "refund")
         when "expense"
-          query = query.where("entries.amount > 0")
+          query = query.where("entries.amount > 0 OR transactions.kind = ?", "refund")
+        when "refund"
+          query = query.where(kind: "refund")
         end
       end
 
@@ -311,7 +377,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def transaction_params
       params.require(:transaction).permit(
         :date, :amount, :name, :description, :notes, :currency,
-        :category_id, :merchant_id, :nature, :user_modified, tag_ids: []
+        :category_id, :merchant_id, :nature, :user_modified, :refund, :refund_of_transaction_id, tag_ids: []
       )
     end
 
