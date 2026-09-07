@@ -44,6 +44,22 @@ class Family::RefundExportTest < ActiveSupport::TestCase
     end
   end
 
+  test "restores multiple refunds without loading each transaction separately" do
+    5.times do |index|
+      refund = create_transaction(account: @account, name: "Refund #{index}", amount: -100)
+      refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    end
+
+    queries = capture_sql_queries { restore_export }
+    transaction_loads = queries.grep(/SELECT "transactions"\.\* FROM "transactions"/)
+    # Includes the export's transaction loads as well as restoration.
+    assert_operator transaction_loads.size, :<=, 4, transaction_loads.join("\n")
+
+    restored = @target.transactions.joins(:entry).find_by!(entries: { name: "Shirts" })
+    assert_equal 5, restored.purchase_refunds.count
+    assert_equal Money.new(500, "USD"), restored.purchase_net_cost_money
+  end
+
   private
     def restore_export
       Zip::File.open_buffer(Family::DataExporter.new(@family).generate_export) do |zip|
