@@ -1,0 +1,80 @@
+<%# locals: (spending_trend_data:) %>
+<%
+  data = spending_trend_data
+  period = data[:current_period]
+  pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
+  has_data = data[:current].any? { |p| p[:value].positive? } || data[:previous].any? { |p| p[:value].positive? }
+  chart_data = {
+    days: data[:days],
+    axis_labels: data[:axis_labels],
+    current: data[:current],
+    previous: data[:previous]
+  }
+%>
+<div id="spending-trend-section" class="px-4 space-y-4">
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm text-secondary">
+      <%= t(".date_range", start_date: l(period.date_range.begin, format: :long), end_date: l(period.date_range.end, format: :long)) %>
+    </p>
+
+    <div class="flex items-center gap-2">
+      <%= render DS::Tooltip.new(text: t(".period_scope_hint"), placement: "top-start") %>
+
+      <%= render DS::Menu.new(variant: :button, placement: "bottom-end", max_height: "18rem") do |menu| %>
+        <% menu.with_button(type: "button", class: pill_button_class, aria: { label: t(".month_picker_aria_label") }) do %>
+          <span class="capitalize"><%= I18n.l(data[:month], format: :month_year) %></span>
+          <%= icon("chevron-down", size: "sm") %>
+        <% end %>
+
+        <% (0..11).each do |i| %>
+          <% month = Date.current.beginning_of_month - i.months %>
+          <% menu.with_item(
+               variant: :link,
+               text: I18n.l(month, format: :month_year).capitalize,
+               href: root_path({ spending_month: month.iso8601 }),
+               frame: "dashboard_sections",
+               selected: month == data[:month]
+             ) %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="w-1 h-10 rounded-full bg-success shrink-0"></span>
+      <div class="min-w-0">
+        <p class="text-sm text-primary capitalize truncate"><%= I18n.l(data[:month], format: :month_year) %></p>
+        <p class="flex items-baseline gap-2">
+          <span class="font-medium text-lg tabular-nums text-primary privacy-sensitive"><%= format_money data[:current_total] %></span>
+          <span class="text-sm tabular-nums privacy-sensitive <%= data[:delta].negative? ? "text-success" : (data[:delta].zero? ? "text-secondary" : "text-destructive") %>">
+            <%= format_money data[:delta] %>
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="w-1 h-10 rounded-full bg-subdued shrink-0"></span>
+      <div class="min-w-0">
+        <p class="text-sm text-secondary truncate"><%= t(".previous_month") %></p>
+        <p class="font-medium text-lg tabular-nums text-secondary privacy-sensitive"><%= format_money data[:previous_total] %></p>
+      </div>
+    </div>
+  </div>
+
+  <% if has_data %>
+    <div class="w-full min-h-52 privacy-sensitive"
+      style="height: var(--dash-widget-h, 13rem);"
+      data-controller="spending-chart"
+      data-spending-chart-data-value="<%= chart_data.to_json %>"
+      data-spending-chart-currency-value="<%= Current.family.currency %>"
+      data-spending-chart-current-label-value="<%= I18n.l(data[:month], format: :month_year).capitalize %>"
+      data-spending-chart-previous-label-value="<%= t(".previous_month") %>">
+    </div>
+  <% else %>
+    <div class="w-full h-52 flex items-center justify-center">
+      <p class="text-secondary text-sm"><%= t(".no_data") %></p>
+    </div>
+  <% end %>
+</div>
