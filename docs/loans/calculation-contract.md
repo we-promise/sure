@@ -31,7 +31,7 @@ never become negative, and a converged schedule ends at exactly zero.
 | C13 | Daily interest segments are summed unrounded, then rounded once when monthly interest is charged. | `Loan::InterestAccrualTest` segment-equivalence and charge-point-rounding tests | Required against a lender statement |
 | C14 | The final payment uses the remaining balance as principal plus that period's interest and settles the ending balance exactly to zero. | `Loan::AmortizationScheduleTest` zero-interest 33/33/34 and final-row tests | Required against statement final-payment treatment |
 | C15 | Interest-bearing balance is `max(0, loan balance - offset)`. Offset cannot create negative interest or a negative balance. | `Loan::InterestAccrualTest` offset equal-to/greater-than-balance tests | Required against a lender offset case |
-| C16 | Forward offset is today's linked offset total held flat for future days. No averaging or smoothing is used; the assumption is disclosed in UI and methodology copy. | `Loan::InterestAccrualTest` range-start offset test (the interest-bearing-balance half). **The forward-flat half is uncovered until `Loan::OffsetResolver` exists (#13)** — this row previously named `Loan::OffsetResolverTest`, a class that does not exist. | Required against a lender offset case |
+| C16 | Forward offset is today's linked offset total held flat for future days. No averaging or smoothing is used; the assumption is disclosed in UI and methodology copy. | `Loan::InterestAccrualTest` range-start offset tests — the interest-bearing-balance half, and the half this row's mutation exercises. **The forward-flat half is now implemented and tested** (`Loan::OffsetResolverTest`, "holds today's offset total flat for future ranges", landed with #13), but it is not gate-verified from this row: `config/loan_contract_tests.yml` binds one test class per row, so naming both requires a manifest change. Until then the forward-flat half is covered by its own test but not by C16's evidence. | Required against a lender offset case |
 
 ## Offset visibility policy
 
@@ -111,8 +111,13 @@ reconciliation gate has been reviewed line by line.
 Per-row mutation evidence exists: `loans:verify_contract_mutations` breaks each
 row's behaviour in production code and requires that row's named tests to fail,
 with the transcript and findings in `docs/loans/contract-mutation-evidence.md`.
-It proves the tests are sensitive to a defect in each row — not that the
-specified behaviour is right for any lender, which is G2's job.
+
+What that establishes is bounded, and the bound matters as much as the result:
+it proves each row's named tests are sensitive to **one selected production
+mutation**, not that they cover the whole of the row's behaviour, and not that
+the specified behaviour is right for any lender — which is G2's job. Where a
+row spans two behaviours, the mutation exercises one of them; C16 is the
+standing example (see its row above).
 
 G1 is not complete until engineering and product approve this document and its
 tests are represented in #8. The actual/365 assumption and C7/C8 timing remain

@@ -77,7 +77,15 @@ test that never exercises it.
   defect, not that the specified behaviour is the right behaviour for a lender.
   That is G2's job, and #65 shows one lender where a contract default was an
   approximation.
-- **Not exhaustive.** One mutation per row. Surviving mutants outside this set
-  certainly exist; this is a floor on the evidence, not a coverage measure.
+- **Not exhaustive, and not whole-row.** One mutation per row: the transcript
+  shows each row's tests are sensitive to *that* defect, not that they cover
+  everything the row specifies. Where a row spans two behaviours the mutation
+  takes one of them — **C16** is the standing example. Its mutation exercises
+  the interest-bearing-balance half in `Loan::InterestAccrual`; the forward-flat
+  half is implemented and tested (`Loan::OffsetResolverTest`, "holds today's
+  offset total flat for future ranges", landed with #13) but is not verified
+  from C16, because `config/loan_contract_tests.yml` binds one test class per
+  row. Letting a row name tests in more than one class is the follow-up that
+  would close it. Surviving mutants outside this set certainly exist.
 - **Not approval.** G1 also requires engineering and product sign-off on the
   contract document. That remains outstanding on #6 and nothing here grants it.
