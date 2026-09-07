@@ -49,18 +49,26 @@ figure is.
 
 Calibration measurements, same workload, this runner:
 
-| Run | p95 | p99 |
-| --- | --- | --- |
-| 1 | 116.128 ms | 230.508 ms |
-| 2 | 112.643 ms | 221.674 ms |
+| Run | p95 | p99 | Thresholds in force |
+| --- | --- | --- | --- |
+| 1 | 116.128 ms | 230.508 ms | calibration (effectively unbounded) |
+| 2 | 112.643 ms | 221.674 ms | calibration (effectively unbounded) |
+| 3 | 93.454 ms | 203.411 ms | **200 / 400 — passed** |
 
 The runner does not meet the production SLO and is not expected to. Setting the
 production number as the CI threshold would produce a permanently red build that
 says nothing about the code, and the first fix anyone reaches for is raising the
-threshold — which is how a gate stops meaning anything. The ~3% spread between
-runs shows the runner is stable for this workload, so the ceilings sit ~1.7x
-above the worse of each: enough to absorb a noisy neighbour, not enough to hide
-a regression, which in a calculation like this shows up as a multiple.
+threshold — which is how a gate stops meaning anything.
+
+Note the spread: for *identical code*, p95 ranges 93–116 ms (about 24%) and p99
+203–231 ms (about 13%). That variance is the shared runner, and it is the reason
+the ceilings sit ~1.7x above the worst observed rather than snugly above the
+mean — the margin has to absorb a noisy neighbour on top of the variance already
+visible here. It is still far tighter than a real regression, which in this
+calculation shows up as a multiple rather than as a fifth.
+
+It also means a *single* CI measurement is not evidence of a performance change.
+Before treating a movement here as real, compare it against this table's spread.
 
 An earlier local measurement of 74.984 ms recorded elsewhere is **not portable**
 and must not be quoted as evidence for either number: re-measuring the same
