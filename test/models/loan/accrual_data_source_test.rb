@@ -39,10 +39,31 @@ class Loan::AccrualDataSourceTest < ActiveSupport::TestCase
   end
 
   test "the offset resolver reads balances rather than a charted series" do
-    source = Rails.root.join("app/models/loan/offset_resolver.rb").read
+    # Executable code only. Matching the raw file would let this guard pass on
+    # the word "balances" in a comment -- and this file's own header comment
+    # contains it -- so deleting the actual balance read would leave the guard
+    # green. Ripper drops comments and string contents, leaving the tokens that
+    # actually run.
+    source = executable_source("app/models/loan/offset_resolver.rb")
 
-    assert_match(/balances/, source,
-      "the offset resolver is the calculation's balance-history reader; if it stops reading " \
-      "balances directly this guard is pointing at the wrong file")
+    assert_match(/\.balances\b/, source,
+      "the offset resolver must read the account's `balances` association directly; without " \
+      "that read this guard is pointing at the wrong file (#10, risk R17)")
+    assert_match(/\bend_balance\b/, source,
+      "the offset resolver must read `end_balance` -- the end-of-day figure R17 is about, as " \
+      "opposed to a period-dependent charted series")
   end
+
+  private
+
+    # Source with comments and string literals removed, so a guard cannot be
+    # satisfied by prose that merely mentions the thing it is checking for.
+    def executable_source(relative_path)
+      require "ripper"
+
+      Ripper.lex(Rails.root.join(relative_path).read)
+        .reject { |(_pos, type, _tok, _state)| %i[on_comment on_embdoc on_embdoc_beg on_embdoc_end on_tstring_content].include?(type) }
+        .map { |(_pos, _type, tok, _state)| tok }
+        .join
+    end
 end

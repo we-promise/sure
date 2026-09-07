@@ -81,10 +81,34 @@ Two things follow, and they are the reason this section exists:
 Add new measurements to the table above rather than restating the range in prose
 or in the workflow comment — quoted ranges here have already gone stale twice.
 
-An earlier local measurement of 74.984 ms recorded elsewhere is **not portable**
-and must not be quoted as evidence for either number: re-measuring the same
-commit on this sandbox produced p95 214.886 ms against current `main`'s 200.960
-ms, i.e. the variation is hardware, not code.
+### The 74.984 ms figure recorded elsewhere
+
+An earlier local measurement of 74.984 ms appears in this repository's history
+with no commit id and no environment recorded. **Do not quote it as evidence for
+either threshold**, and note carefully what the measurements here do and do not
+establish about it.
+
+Two runs on this sandbox:
+
+| What was measured | p95 |
+| --- | --- |
+| commit `afcb0de` | 214.886 ms |
+| `main` at the time (`1fb3f4e`) | 200.960 ms |
+
+- **What this does establish:** nothing measured here comes anywhere near
+  74.984 ms, on either commit. Whatever conditions produced that figure are not
+  reproducible from what is written down, so it is not a number this code can be
+  held to.
+- **What this does NOT establish:** that the gap is caused by hardware. These are
+  two *different commits*, so code differences are not excluded — and the 74.984
+  figure has no recorded commit to compare against in the first place. An earlier
+  version of this section asserted "the variation is hardware, not code"; that
+  claim outran its evidence and has been removed.
+
+Isolating environment from code would need the *same* commit measured in both
+places. That has not been run, and is not worth running: the CI thresholds above
+are calibrated from repeated runs in the environment that enforces them, which is
+the comparison that actually matters.
 
 ## Variance and rebuild
 
