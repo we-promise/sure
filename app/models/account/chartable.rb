@@ -25,9 +25,21 @@ module Account::Chartable
     return requested_period unless loan_scoped_all_time?(requested_period)
 
     start_date = chart_start_date
-    return requested_period if start_date.blank? || start_date >= Date.current
 
-    Period.custom(start_date: start_date, end_date: Date.current)
+    # Fall back only when the loan's own history is MISSING or not yet begun.
+    # An earlier version also fell back when the start date was exactly today,
+    # conflating "no history" with "originated today" -- and for a loan
+    # originated today that reintroduces the very defect this method exists to
+    # remove, charting years of flat zero before it existed. A single-day range
+    # is a thin chart; the family-scoped one is a wrong chart.
+    return requested_period if start_date.blank? || start_date > Date.current
+
+    # The key is carried across deliberately. `Period.custom` leaves it nil,
+    # and UI::PeriodPicker selects on `period.key` -- so a keyless period left
+    # the picker with nothing selected and the chart labelled "30D" while
+    # showing all-time data. `Period.from_key` builds exactly this shape:
+    # a key alongside explicit dates.
+    Period.new(key: "all_time", start_date: start_date, end_date: Date.current)
   end
 
   # Returns the chart Series for this account over the given period.

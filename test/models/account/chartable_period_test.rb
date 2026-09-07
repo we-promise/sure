@@ -4,7 +4,22 @@ require "test_helper"
 class Account::ChartablePeriodTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
+    # Without a session, `Period.from_key("all_time")` reads `Current.family` as
+    # nil and silently uses its 5-years-ago fallback -- so every assertion below
+    # would compare against that fallback while claiming to compare against the
+    # family-scoped start. The test would still pass, for the wrong reason
+    # (cubic, #81). `Current.family` delegates through the session's user, so it
+    # is established that way rather than assigned.
+    Current.session = Session.create!(user: users(:family_admin))
+    assert_equal @family, Current.family, "the family context must be real, not assumed"
+
     @all_time = Period.from_key("all_time")
+    assert_equal @family.oldest_entry_date, @all_time.start_date,
+      "all_time must be genuinely family-scoped here, not the 5-year fallback"
+  end
+
+  teardown do
+    Current.session = nil
   end
 
   test "a loan's all-time chart starts at the loan's own earliest date" do
@@ -50,22 +65,67 @@ class Account::ChartablePeriodTest < ActiveSupport::TestCase
   # substitution happens per account and must not reach it.
   test "the shared all-time period definition is untouched" do
     loan = seasoned_account(Loan.new(rate_type: "fixed", interest_rate: 5, term_months: 360))
-    loan.chart_period(@all_time)
 
-    assert_equal @all_time.start_date, Period.from_key("all_time").start_date,
+    # Read AFTER the fixture exists. The seasoned account backdates an entry,
+    # which legitimately moves the family's oldest entry date -- comparing
+    # against the value captured in setup would fail for that reason and say
+    # nothing about whether PERIODS was mutated.
+    before = Period.from_key("all_time").start_date
+    loan.chart_period(Period.from_key("all_time"))
+
+    assert_equal before, Period.from_key("all_time").start_date,
       "Period::PERIODS must be unchanged after a loan resolves its own chart period"
   end
 
-  test "a loan with no history falls back rather than charting from today" do
+  # A loan originated TODAY has history -- one day of it. Falling back here
+  # would chart years of flat zero before it existed, which is the defect this
+  # branch removes (cubic, #81).
+  test "a loan originated today still scopes to itself" do
     loan = @family.accounts.create!(
-      name: "Brand New Loan", balance: 1000, currency: "USD",
+      name: "Originated Today", balance: 250_000, currency: "USD",
       accountable: Loan.new(rate_type: "fixed", interest_rate: 5, term_months: 360)
     )
 
-    period = loan.chart_period(@all_time)
+    period = loan.chart_period(Period.from_key("all_time"))
 
-    assert_equal @all_time.start_date, period.start_date,
-      "a zero-width period would render an empty chart; fall back instead"
+    assert_equal Date.current, period.start_date,
+      "an origination today is history, not missing history"
+  end
+
+  # UI::PeriodPicker selects on `period.key`. A keyless custom period left the
+  # picker with nothing selected and the chart labelled "30D" while showing
+  # all-time data (cubic, #81).
+  test "the substituted period keeps the all_time key so the picker still selects it" do
+    loan = seasoned_account(Loan.new(rate_type: "fixed", interest_rate: 5, term_months: 360))
+
+    period = loan.chart_period(Period.from_key("all_time"))
+
+    assert_equal "all_time", period.key
+    assert_equal "all_time", UI::PeriodPicker.new(selected: period, url: "/x").selected_key
+  end
+
+  # The genuine "no history" case is a nil calculation start date. It cannot be
+  # built by creating an account -- a persisted account always carries an
+  # opening anchor dated today, which IS history, and the originated-today test
+  # above covers that. Stubbed so the branch is exercised rather than assumed.
+  test "a loan with no calculable start date falls back" do
+    loan = seasoned_account(Loan.new(rate_type: "fixed", interest_rate: 5, term_months: 360))
+    Balance::BaseCalculator.any_instance.stubs(:calculation_start_date).returns(nil)
+
+    requested = Period.from_key("all_time")
+
+    assert_equal requested.start_date, loan.chart_period(requested).start_date,
+      "with nothing to scope to, the requested period stands"
+  end
+
+  test "a loan whose start date is in the future falls back" do
+    loan = seasoned_account(Loan.new(rate_type: "fixed", interest_rate: 5, term_months: 360))
+    Balance::BaseCalculator.any_instance.stubs(:calculation_start_date).returns(Date.current + 1.year)
+
+    requested = Period.from_key("all_time")
+
+    assert_equal requested.start_date, loan.chart_period(requested).start_date,
+      "a chart cannot start after it ends"
   end
 
   private
