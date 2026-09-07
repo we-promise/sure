@@ -131,12 +131,33 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     # projection doesn't know its final period in advance -- it keeps paying
     # the constant level payment and only adjusts once a period's payment
     # would otherwise overshoot -- so an unchanged balance can still trail by
-    # one small "cleanup" payment after 360 periods of accumulated monthly
-    # rounding. That's a real, tiny artifact of two independently-terminated
+    # one small "cleanup" payment after 360 periods of accumulated rounding.
+    # That's a real, tiny artifact of two independently-terminated
     # simulations, not a meaningful difference.
+    #
+    # The bound asserted is the artefact itself -- the trailing payment's own
+    # interest -- rather than the flat $1 this used to assert. That $1 was the
+    # monthly-accrual residue measured and then hardcoded; under daily accrual
+    # the same untouched loan trails by $1.10, so the flat bound would have
+    # reported a loan sitting exactly on its contract as behind schedule.
     assert projection.applicable?
     assert projection.months_saved.between?(-1, 0)
-    assert projection.interest_saved.abs < 1
+    assert projection.cleanup_payment_artefact?
+    assert_not projection.diverges_from_schedule?
+  end
+
+  # The cleanup artefact is tolerated because it is bounded by the trailing
+  # payment. A divergence larger than that trailing payment is real and must
+  # still be reported, even when it is only one payment long.
+  test "a divergence larger than the trailing cleanup payment is still reported" do
+    loan = build_loan(balance: 500000)
+    projection = loan.payoff_projection
+
+    trailing_interest = projection.payments.last[:interest_payment]
+    projection.stubs(:interest_saved).returns(-(trailing_interest + 1))
+
+    assert_not projection.cleanup_payment_artefact?
+    assert projection.diverges_from_schedule?
   end
 
   test "projects a sooner payoff and positive interest saved when ahead of schedule" do

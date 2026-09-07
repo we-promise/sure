@@ -14,12 +14,12 @@
 <% projection = extra_payment_active ?
      loan.payoff_projection_with_extra(amount: extra_payment_params["amount"], frequency: extra_payment_params["frequency"]) :
      loan.payoff_projection %>
-<%# A one-payment / sub-dollar difference is the expected artifact of two
-    independently-terminated simulations (see Loan::PayoffProjection), not a
-    meaningful "ahead/behind schedule" signal -- only show the projection
-    once it diverges by more than that. %>
-<% show_comparison = projection.applicable? &&
-     (projection.months_saved.abs > 1 || projection.interest_saved.abs >= 1) %>
+<%# A one-payment cleanup difference is the expected artifact of two
+    independently-terminated simulations, not a meaningful "ahead/behind
+    schedule" signal -- only show the projection once it diverges by more
+    than that. The rule lives on the projection so these cards and
+    Loan#payoff_chart_payload's chart appear and disappear together. %>
+<% show_comparison = projection.diverges_from_schedule? %>
 <% show_projection = show_comparison %>
 
 <div class="space-y-4">

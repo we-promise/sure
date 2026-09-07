@@ -3,18 +3,22 @@ class Loan
   class AmortizationSchedule
     # Whether the PERSISTED schedule accrues interest daily.
     #
-    # Deliberately false. Daily accrual exists (`Loan::InterestAccrual`, the
-    # change-point segmentation, the offset and extra-repayment resolvers) but
-    # is gated on the lender-statement reconciliation in #11 (gate G2), which
-    # has not been performed. Until it is, the production read path accrues
-    # monthly and the persisted rows say so.
+    # True as of #10: home loans accrue daily on the end-of-day balance and
+    # charge monthly, and for an offset loan monthly accrual is not a
+    # simplification but a structural inability to express the product -- it
+    # cannot see a balance that moves between payment dates.
     #
-    # ALGORITHM_VERSION must not advance past 2 while this is false: the
-    # version is baked into `Loan#amortization_schedule_signature`, so bumping
-    # it invalidates and rebuilds every persisted row for every loan while
-    # producing byte-identical numbers. See #36.
-    SCHEDULE_DAILY_ACCRUAL = false
-    ALGORITHM_VERSION = 2
+    # This constant and ALGORITHM_VERSION move together, and the pairing is
+    # pinned by a test. The version is baked into
+    # `Loan#amortization_schedule_signature`, so changing it restages every
+    # persisted schedule; that is correct here (the numbers genuinely change)
+    # and was the defect in #36, where the version advanced while the
+    # calculation did not. Deploying this REQUIRES the prebuild in
+    # docs/loans/release-evidence.md: read paths enqueue rebuilds rather than
+    # performing them (#39), so without a controlled prebuild the estate
+    # restages itself through the job queue on first view.
+    SCHEDULE_DAILY_ACCRUAL = true
+    ALGORITHM_VERSION = 3
 
     attr_reader :loan
 
@@ -74,9 +78,10 @@ class Loan
     #
     # `daily_accrual:` defaults to the value the persisted schedule uses, so a
     # caller that passes nothing gets the same numbers `#payments` produces.
-    # Passing `daily_accrual: true` is a comparison tool -- `loans:amortization_variance`
-    # is its only caller -- and its output is NOT what users see while
-    # SCHEDULE_DAILY_ACCRUAL is false.
+    # Passing an explicit value is a comparison tool -- `loans:amortization_variance`
+    # is its only caller, and it passes BOTH modes explicitly rather than
+    # relying on this default, so it keeps measuring monthly-vs-daily whatever
+    # SCHEDULE_DAILY_ACCRUAL happens to be.
     def simulation(daily_accrual: SCHEDULE_DAILY_ACCRUAL)
       return Loan::SimulationResult.new(
         payments: [],
