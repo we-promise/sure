@@ -51,6 +51,24 @@ class Transaction::RefundConcurrencyTest < ActiveSupport::TestCase
     assert_empty @purchase.child_entries
   end
 
+  test "unsplitting waits for an in-flight link and preserves the linked child" do
+    child = @purchase.split!(@splits).last
+
+    child.transaction.with_lock do
+      start_worker do
+        purchase = Entry.find(@purchase.id)
+        -> { purchase.unsplit! }
+      end
+      assert_worker_waits_for_lock
+      @refund.transaction.mark_as_refund!(purchase: child.transaction)
+    end
+
+    assert_equal :rejected, worker_result
+    assert_equal child.entryable_id, @refund.transaction.reload.refund_of_id
+    assert_equal 2, @purchase.child_entries.count
+    assert @purchase.reload.excluded?
+  end
+
   private
     def start_worker
       ready = Queue.new
