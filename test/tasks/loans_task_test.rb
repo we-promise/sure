@@ -77,7 +77,17 @@ class LoansTaskTest < ActiveSupport::TestCase
     FileUtils.rm_f(output)
   end
 
-  test "variance task reports the monthly column that production actually persists" do
+  # The report exists to evidence a monthly-to-daily transition, so its two
+  # columns are the two accrual modes and neither can be pinned to "whatever
+  # production ships" -- that would make the report compare a mode against
+  # itself once the transition landed, reporting every delta as zero exactly
+  # when the release it evidences was being prepared.
+  #
+  # What must stay true is that the report is not describing a calculation
+  # nobody runs: the column matching SCHEDULE_DAILY_ACCRUAL has to equal what
+  # the persisted schedule actually produces. Asserted against the constant so
+  # this holds whichever way it is set.
+  test "the variance column matching the shipped accrual mode equals what production persists" do
     output = Rails.root.join("tmp", "loan-variance-parity.csv")
     FileUtils.rm_f(output)
 
@@ -85,10 +95,38 @@ class LoansTaskTest < ActiveSupport::TestCase
     row = CSV.read(output, headers: true).first
     loan = Loan.find(row["loan_id"])
 
+    shipped_column =
+      Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL ? "daily_interest" : "monthly_interest"
+
     assert_equal(
       loan.amortization_schedule.payments.sum { |payment| payment[:interest_payment] },
+      BigDecimal(row[shipped_column]),
+      "the report's #{shipped_column} column must equal what Loan::AmortizationSchedule#payments produces"
+    )
+  ensure
+    FileUtils.rm_f(output)
+  end
+
+  # The other column is the comparison side. It must be the OTHER mode, not a
+  # second copy of the shipped one -- the defect that made this report useless
+  # the moment SCHEDULE_DAILY_ACCRUAL flipped.
+  test "the variance report's two columns are genuinely different accrual modes" do
+    output = Rails.root.join("tmp", "loan-variance-modes.csv")
+    FileUtils.rm_f(output)
+
+    Rake::Task["loans:amortization_variance"].invoke("1", output.to_s)
+    row = CSV.read(output, headers: true).first
+    loan = Loan.find(row["loan_id"])
+
+    assert_equal(
+      loan.amortization_schedule.simulation(daily_accrual: false).total_interest,
       BigDecimal(row["monthly_interest"]),
-      "the report's monthly column must equal what Loan::AmortizationSchedule#payments produces"
+      "the monthly column must be an explicitly monthly run"
+    )
+    assert_equal(
+      loan.amortization_schedule.simulation(daily_accrual: true).total_interest,
+      BigDecimal(row["daily_interest"]),
+      "the daily column must be an explicitly daily run"
     )
   ensure
     FileUtils.rm_f(output)
