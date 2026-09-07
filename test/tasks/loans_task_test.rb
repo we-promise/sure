@@ -189,9 +189,9 @@ class LoansTaskTest < ActiveSupport::TestCase
     # creates and what the prebuild has to clear.
     loan.amortizations.update_all(algorithm_version: current - 1)
 
-    output, exited = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+    output, exit_error = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
 
-    assert exited, "staleness must exit non-zero so this can gate a deploy step"
+    assert_failed_exit exit_error, "staleness must exit non-zero so this can gate a deploy step"
     assert_match(/version #{current - 1}: \d+ loans \(STALE\)/, output,
       "the older version must be reported as stale, and named")
     assert_match(/stale=[1-9]/, output)
@@ -202,13 +202,47 @@ class LoansTaskTest < ActiveSupport::TestCase
     loan.rebuild_amortization_schedule
     loan.amortizations.delete_all
 
-    output, exited = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+    output, exit_error = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
 
     # A loan the rebuild task would still have to visit must not read as clean
     # merely because it has no rows to be the wrong version -- counting only
     # rows that exist would report an empty estate as fully rebuilt.
-    assert exited, "a loan with no schedule must not report as clean"
-    assert_match(/missing_rows=[1-9]/, output)
+    assert_failed_exit exit_error, "a loan with no schedule must not report as clean"
+    assert_match(/awaiting_first_build=[1-9]/, output)
+  end
+
+  # Regression: a loan with a term but no rate is in the rebuild scope (SQL can
+  # only filter on term_months) but is never amortizable, so
+  # `rebuild_amortization_schedule_locked!` deletes its rows and returns. An
+  # earlier version of this task counted every row-less loan as stale, so such a
+  # loan sat in the count permanently and the task could never exit 0 -- making
+  # the one signal that answers "is the prebuild finished?" permanently red.
+  test "schedule version status does not count a non-amortizable loan as stale forever" do
+    non_amortizable = Account.create!(
+      family: families(:dylan_family), name: "No rate #{SecureRandom.hex(4)}",
+      balance: 1000, currency: "USD",
+      accountable: Loan.new(subtype: "other", term_months: 12, rate_type: "fixed", start_date: Date.current)
+    ).loan
+
+    assert_not non_amortizable.amortization_schedule.amortizable?,
+      "test setup must produce a loan the rebuild will never give rows to"
+    assert Loan.where.not(term_months: nil).exists?(id: non_amortizable.id),
+      "test setup must produce a loan inside the rebuild scope, or it proves nothing"
+
+    capture_io { Rake::Task["loans:rebuild_schedules"].invoke }
+    assert_empty non_amortizable.reload.amortizations,
+      "the rebuild leaves this loan with no rows, which is the condition under test"
+
+    Rake::Task["loans:schedule_version_status"].reenable
+    output, exit_error = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+
+    assert_match(/not_amortizable=[1-9]/, output,
+      "a loan the rebuild will never populate must be reported as such, not as stale")
+    refute_match(/awaiting_first_build=[1-9]/, output,
+      "it must not be counted as awaiting a build the rebuild will never perform")
+    assert_nil exit_error,
+      "with every amortizable schedule current, the task must exit 0 -- otherwise the prebuild " \
+      "can never be declared finished"
   end
 
   # --- #38: every documented parameter must actually be read ---------------
@@ -312,19 +346,29 @@ class LoansTaskTest < ActiveSupport::TestCase
     # `abort` raises SystemExit, which makes minitest's capture_io discard what
     # was printed before it. This keeps both, so assertions can be made on the
     # output of a task that exits non-zero rather than only on the fact it did.
+    #
+    # Returns the exception, not a boolean: `exit(0)` also raises SystemExit, so
+    # a boolean would let a task that stopped reporting failure keep passing
+    # tests that assert it fails.
     def capture_output_and_exit
       buffer = StringIO.new
       original = $stdout
       $stdout = buffer
-      exited = false
+      exit_error = nil
       begin
         yield
-      rescue SystemExit
-        exited = true
+      rescue SystemExit => e
+        exit_error = e
       end
-      [ buffer.string, exited ]
+      [ buffer.string, exit_error ]
     ensure
       $stdout = original
+    end
+
+    def assert_failed_exit(exit_error, message)
+      assert exit_error, message
+      assert_not exit_error.success?,
+        "#{message} -- it exited, but with a success status, which no caller would treat as a failure"
     end
 
     def capture_io_with_env(env)

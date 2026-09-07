@@ -19,10 +19,41 @@ class AddAlgorithmVersionLookupIndexToLoanAmortizations < ActiveRecord::Migratio
   # counts DISTINCT loan_id per version and would otherwise return to the heap.
   disable_ddl_transaction!
 
-  def change
+  INDEX_NAME = "index_loan_amortizations_on_algorithm_version_and_loan_id".freeze
+
+  # Written as up/down rather than change, and deliberately retry-safe.
+  #
+  # Without a DDL transaction, an interrupted CREATE INDEX CONCURRENTLY leaves
+  # the index behind while Rails never records the migration as run. The retry
+  # then fails on the duplicate name (42P07). Worse, Postgres keeps an INVALID
+  # index after a failed concurrent build -- one the planner ignores but which
+  # still occupies the name, so `if_not_exists` alone would silently "succeed"
+  # while leaving the query it exists for on a sequential scan.
+  def up
+    remove_index :loan_amortizations, name: INDEX_NAME, algorithm: :concurrently if invalid_index?
+
     add_index :loan_amortizations,
               [ :algorithm_version, :loan_id ],
-              name: "index_loan_amortizations_on_algorithm_version_and_loan_id",
-              algorithm: :concurrently
+              name: INDEX_NAME,
+              algorithm: :concurrently,
+              if_not_exists: true
   end
+
+  def down
+    remove_index :loan_amortizations, name: INDEX_NAME, algorithm: :concurrently, if_exists: true
+  end
+
+  private
+
+    def invalid_index?
+      select_value(<<~SQL.squish).present?
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_index i ON i.indexrelid = c.oid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relname = '#{INDEX_NAME}'
+          AND n.nspname = ANY (current_schemas(false))
+          AND NOT i.indisvalid
+      SQL
+    end
 end

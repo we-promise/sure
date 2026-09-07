@@ -12,6 +12,16 @@ namespace :loans do
     args[name].presence || ENV[name.to_s.upcase].presence || default
   end
 
+  # The population a rebuild walks. Shared so `schedule_version_status` reports
+  # on exactly the loans `rebuild_schedules` would visit -- if these two drift
+  # apart, the status task reports staleness the rebuild task will never clear,
+  # and the "is the prebuild finished?" signal stops being answerable.
+  #
+  # Note this is a superset of *amortizable* loans: `term_months` is the widest
+  # thing SQL can filter on, and `Loan::AmortizationSchedule#amortizable?` needs
+  # the account and its opening valuation. The status task narrows it in Ruby.
+  loan_rebuild_scope = -> { Loan.where.not(term_months: nil).order(:id) }
+
   desc "Verify every C1-C16 contract row maps to an existing test"
   task verify_contract_coverage: :environment do
     require "yaml"
@@ -255,12 +265,13 @@ namespace :loans do
   task schedule_version_status: :environment do
     current = Loan::AmortizationSchedule::ALGORITHM_VERSION
 
-    # Amortizable enough to be expected to have rows. Deliberately the same
-    # scope `rebuild_schedules` walks, so "stale" here is a count of what that
-    # task would still have to do rather than a different population.
-    scope = Loan.where.not(term_months: nil)
+    # The same population `rebuild_schedules` walks, so "stale" counts what that
+    # task would still have to do rather than a different set of loans.
+    scope = loan_rebuild_scope.call
     total = scope.count
 
+    # Version staleness is answered in one grouped query -- the reason
+    # algorithm_version exists and the reason this is usable mid-deploy.
     versions = LoanAmortization
       .where(loan_id: scope.select(:id))
       .group(:algorithm_version)
@@ -269,20 +280,39 @@ namespace :loans do
 
     with_rows = versions.values.sum
     behind = versions.reject { |version, _| version == current }.values.sum
-    missing = total - with_rows
+
+    # Having no rows is NOT the same as being stale. `rebuild_schedules` deletes
+    # rows and returns for a loan that is not amortizable (Loan
+    # #rebuild_amortization_schedule_locked!), so a loan with a term but no
+    # rate -- in this scope, never amortizable -- would sit in a naive
+    # "missing" count forever and this task could never exit 0. That would make
+    # the one signal answering "is the prebuild finished?" permanently red.
+    #
+    # `amortizable?` needs the account and its opening valuation, so it cannot
+    # be expressed in SQL. It is resolved in Ruby for the loans that have no
+    # rows and only those: in steady state that set is empty, and the one time
+    # it is large is before a prebuild has run, when every loan is being
+    # visited anyway.
+    missing_ids = scope.where.missing(:amortizations).pluck(:id)
+    awaiting, not_amortizable = Loan.where(id: missing_ids)
+      .includes(account: :entries)
+      .partition { |loan| loan.amortization_schedule.amortizable? }
+
+    stale = behind + awaiting.length
 
     puts "algorithm_version=#{current}"
-    puts "loans=#{total} with_rows=#{with_rows} missing_rows=#{missing}"
+    puts "loans=#{total} with_rows=#{with_rows} awaiting_first_build=#{awaiting.length} " \
+         "not_amortizable=#{not_amortizable.length}"
     versions.sort.each do |version, count|
       marker = version == current ? "current" : "STALE"
       puts "  version #{version}: #{count} loans (#{marker})"
     end
-    puts "stale=#{behind + missing} (#{behind} at an older version, #{missing} with no rows)"
+    puts "stale=#{stale} (#{behind} at an older version, #{awaiting.length} awaiting a first build)"
 
     # Non-zero exit on any staleness, so this can gate a deploy step or drive an
     # alert without the caller parsing stdout. A prebuild is finished when this
     # exits 0.
-    if behind + missing > 0
+    if stale > 0
       abort "Schedules are not fully rebuilt at version #{current}. Run loans:rebuild_schedules."
     end
 
@@ -296,7 +326,7 @@ namespace :loans do
     pause = loan_task_option.call(args, :sleep, "0").to_f
     rebuilt = 0
 
-    scope = Loan.where.not(term_months: nil).order(:id)
+    scope = loan_rebuild_scope.call
     scope = scope.limit(limit) if limit&.positive?
 
     # Print the EFFECTIVE options, not the requested ones, so a rehearsal
