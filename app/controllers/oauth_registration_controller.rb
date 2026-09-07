@@ -18,6 +18,7 @@ class OauthRegistrationController < ApplicationController
     }, status: :bad_request
   end
 
+  # Registers a public OAuth client from MCP dynamic client registration.
   def create
     body = JSON.parse(request.raw_post)
 
@@ -82,8 +83,9 @@ class OauthRegistrationController < ApplicationController
 
   private
 
-    # Allow https, loopback http, and RFC 8252 private-use schemes (cursor://,
-    # vscode://). Still reject javascript/data/file and non-loopback http.
+    # Returns true for https, loopback http, and RFC 8252 private-use schemes
+    # (cursor://, vscode://). Rejects fragments, userinfo, handler schemes, and
+    # non-loopback http.
     def valid_redirect_uri?(raw_uri)
       uri = URI.parse(raw_uri)
       return false unless uri.fragment.nil?
@@ -105,6 +107,7 @@ class OauthRegistrationController < ApplicationController
       false
     end
 
+    # Returns true when +uri+ is http to localhost, 127.0.0.1, or ::1.
     def loopback_http?(uri)
       return false if uri.host.blank?
 
@@ -112,6 +115,7 @@ class OauthRegistrationController < ApplicationController
       LOOPBACK_HOSTS.include?(host)
     end
 
+    # Returns true when a private-use URI has a host or path to redirect to.
     def native_app_redirect?(uri)
       uri.host.present? || uri.path.present?
     end
