@@ -920,13 +920,19 @@ class Family::DataImporter
     # Purchases can follow refunds in the archive, including nested split lines.
     # Resolve references only after all transaction IDs have been mapped.
     def restore_refund_links
-      @refund_links.each do |transaction_id, source_purchase_id|
-        purchase_id = if source_purchase_id.present?
-          mapped_id(:transactions, source_purchase_id, record_type: "Transaction")
+      @refund_links.each_slice(500) do |batch|
+        links = batch.map do |transaction_id, source_purchase_id|
+          purchase_id = if source_purchase_id.present?
+            mapped_id(:transactions, source_purchase_id, record_type: "Transaction")
+          end
+          [ transaction_id, purchase_id ]
         end
-        transaction = @family.transactions.find(transaction_id)
-        purchase = purchase_id && @family.transactions.find(purchase_id)
-        transaction.update!(refund_of: purchase)
+        # Keep family scoping and find's missing-record checks while sharing
+        # purchases and their validation associations across links in the batch.
+        records = @family.transactions.includes(entry: :account).find(links.flatten.compact.uniq).index_by(&:id)
+        links.each do |transaction_id, purchase_id|
+          records.fetch(transaction_id).update!(refund_of: purchase_id && records.fetch(purchase_id))
+        end
       end
     end
 
