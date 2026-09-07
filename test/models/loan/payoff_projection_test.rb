@@ -597,11 +597,63 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     end
 
     assert_match(/unsupported payment strategy/, error.message)
+
+    # nil, false and numerics reach `to_sym` before the allowlist. Without
+    # normalising first they raise NoMethodError, bypassing the ArgumentError
+    # contract for precisely the sloppy inputs it exists to catch.
+    [ nil, false, 1 ].each do |bad|
+      assert_raises(ArgumentError, "#{bad.inspect} must raise ArgumentError, not NoMethodError") do
+        Loan::PayoffProjection.new(loan, payment_strategy: bad)
+      end
+    end
+
     assert_nothing_raised { Loan::PayoffProjection.new(loan, payment_strategy: :hold) }
     assert_nothing_raised { Loan::PayoffProjection.new(loan, payment_strategy: :reamortize) }
   end
 
+  # CodeRabbit, #79. The THIRD occurrence of two bases in one row on this PR.
+  #
+  # Simulator tracks the GROSS balance -- an offset reduces the interest
+  # charged, not the principal owed -- but a repayment is quoted on the
+  # interest-bearing balance, which is what `current_minimum_payment` and
+  # `UI::Loan::RateChangeTable` both use. Sizing this projection on gross drove
+  # the trajectory with a repayment $678.54 above the one on screen.
+  #
+  # The earlier "driven by one number" test passes on a loan with NO offset,
+  # which is exactly why this went unnoticed.
+  test "a re-amortising projection sizes its repayment net of offset" do
+    loan = offset_loan
+
+    projection = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert_operator loan.interest_bearing_balance.amount, :<, loan.account.balance,
+      "the fixture must actually carry an offset, or this test proves nothing"
+    assert_equal loan.current_minimum_payment.amount,
+      projection.payments.first[:payment_amount],
+      "an offset loan's projection must be driven by the repayment the table quotes"
+  end
+
   private
+
+    # $400,762.12 owed against a $100,000 offset.
+    def offset_loan
+      family = families(:dylan_family)
+      loan = family.accounts.create!(
+        name: "Offset Projection Loan",
+        balance: 400_762.12,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 6.18, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months
+        )
+      ).loan
+
+      offset = family.accounts.create!(
+        name: "Projection Offset", balance: 100_000, currency: "USD", accountable: Depository.new
+      )
+      loan.update!(offset_account_ids: [ offset.id ])
+      loan.reload
+    end
 
     # Term ended a year ago, and $250,000 is still outstanding.
     def matured_loan_still_carrying_a_balance

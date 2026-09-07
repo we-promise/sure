@@ -48,7 +48,10 @@ class Loan
     def initialize(loan, extra_payment: nil, payment_strategy: :hold)
       @loan = loan
       @extra_payment = extra_payment
-      @payment_strategy = payment_strategy.to_sym
+      # `.to_s` first: `nil.to_sym` and `1.to_sym` raise NoMethodError, which
+      # would bypass the ArgumentError contract documented right below for
+      # exactly the sloppy inputs it exists to catch (CodeRabbit, #79).
+      @payment_strategy = payment_strategy.to_s.to_sym
       # Validated HERE, not left to Simulator. Simulator does reject an unknown
       # strategy, but only when the schedule is first generated -- and until
       # then every branch in this class reads `== :hold` or `== :reamortize`, so
@@ -317,12 +320,31 @@ class Loan
 
         ->(rate:, balance:, remaining_payments:, **_kwargs) {
           Loan::AmortizationMath.level_payment(
-            balance: balance,
+            balance: interest_bearing(balance),
             monthly_rate: Loan.monthly_rate(rate),
             remaining_payments: remaining_payments,
             currency_precision: currency_precision
           )
         }
+      end
+
+      # Simulator tracks and hands out the GROSS balance -- an offset reduces the
+      # interest charged, not the principal owed -- but a repayment is quoted on
+      # the interest-bearing balance. `current_minimum_payment` and
+      # `UI::Loan::RateChangeTable` both size on net, so sizing this projection
+      # on gross put two bases in one row for the third time on this PR: with a
+      # $100,000 offset the trajectory was driven by $2,719.33 while the table
+      # displayed $2,040.79 (CodeRabbit, #79).
+      #
+      # Gross is still what gets amortised; only the SIZING basis is net. The
+      # offset is held flat at today's total, which is the assumption the
+      # caption under the table already states.
+      def interest_bearing(balance)
+        [ BigDecimal(balance.to_s) - offset_total, BigDecimal("0") ].max
+      end
+
+      def offset_total
+        @offset_total ||= BigDecimal(loan.offset_accounts.sum(:balance).to_s)
       end
 
       def generate_schedule
