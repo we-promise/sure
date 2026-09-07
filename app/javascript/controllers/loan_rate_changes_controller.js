@@ -12,13 +12,23 @@ import { Controller } from "@hotwired/stimulus";
 export default class extends Controller {
   static targets = ["rows", "template", "row"];
 
+  // Clones the <template> element's content rather than parsing its innerHTML.
+  // Nothing here is user input, but building DOM from a string is the shape of
+  // an injection bug, and cloneNode is what <template> is for.
   add(event) {
     event.preventDefault();
-    const markup = this.templateTarget.innerHTML.replaceAll(
-      "NEW_RECORD",
-      new Date().getTime().toString(),
-    );
-    this.rowsTarget.insertAdjacentHTML("beforeend", markup);
+
+    const row = this.templateTarget.content.cloneNode(true);
+    const suffix = Date.now().toString();
+
+    row.querySelectorAll("[id], [for]").forEach((element) => {
+      if (element.id) element.id = element.id.replace("NEW_RECORD", suffix);
+      const target = element.getAttribute("for");
+      if (target)
+        element.setAttribute("for", target.replace("NEW_RECORD", suffix));
+    });
+
+    this.rowsTarget.appendChild(row);
   }
 
   remove(event) {

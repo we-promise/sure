@@ -220,8 +220,12 @@ class Loan < ApplicationRecord
     rows = rows.values if rows.is_a?(Hash)
 
     self.variable_rate_schedule = Array(rows).each_with_object({}) do |row, schedule|
-      row = row.respond_to?(:to_unsafe_h) ? row.to_unsafe_h : row
-      row = row.symbolize_keys
+      # `permit` rather than `to_unsafe_h`: the controller already filters these
+      # rows, but a model that reaches past strong parameters is one refactor
+      # away from accepting whatever a request sends. Naming the three fields
+      # here means this method can only ever read those three.
+      row = row.permit(:effective_date, :rate, :_destroy) if row.respond_to?(:permit)
+      row = row.to_h.symbolize_keys
 
       next if ActiveModel::Type::Boolean.new.cast(row[:_destroy])
 
