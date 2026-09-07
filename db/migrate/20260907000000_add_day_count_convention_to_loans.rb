@@ -1,4 +1,4 @@
-class AddDayCountConventionToLoans < ActiveRecord::Migration[8.1]
+class AddDayCountConventionToLoans < ActiveRecord::Migration[7.2]
   def change
     add_column :loans, :day_count_convention, :string, null: false, default: "actual_365"
 

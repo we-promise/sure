@@ -21,6 +21,49 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal "actual_365", Loan.new.day_count_convention
   end
 
+  # The signature gates a rebuild that runs on READ paths, so a loan left on
+  # the default basis must hash exactly as it did before the attribute existed
+  # -- otherwise deploying this rebuilds every persisted schedule on first view
+  # to produce identical figures.
+  test "the default day-count convention leaves the schedule signature untouched" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    legacy_signature = Digest::SHA256.hexdigest([
+      Loan::AmortizationSchedule::ALGORITHM_VERSION,
+      loan.account.id,
+      loan.original_balance.amount.to_s,
+      loan.account.currency,
+      loan.account_opening_anchor_date.to_s,
+      loan.interest_rate.to_s,
+      loan.term_months.to_s,
+      loan.rate_type.to_s,
+      loan.start_date&.iso8601,
+      loan.variable_rates.map { |date, rate| [ date.to_s, loan.send(:normalized_rate, rate).to_s ] }
+    ].to_json)
+
+    assert_equal "actual_365", loan.day_count_convention
+    assert_equal legacy_signature, loan.send(:amortization_schedule_signature),
+      "a loan on the default basis must keep the signature it had before the attribute existed"
+
+    loan.update!(day_count_convention: "actual_actual")
+    assert_not_equal legacy_signature, loan.send(:amortization_schedule_signature)
+
+    loan.update!(day_count_convention: "actual_365")
+    assert_equal legacy_signature, loan.send(:amortization_schedule_signature),
+      "returning to the default must return the loan to its original schedule identity"
+  end
+
   test "changing the day-count convention rebuilds the amortization schedule" do
     loan_account = Account.create! \
       family: families(:dylan_family),

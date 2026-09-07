@@ -234,7 +234,7 @@ class Loan < ApplicationRecord
 
     account.reload
 
-    Digest::SHA256.hexdigest([
+    components = [
       AmortizationSchedule::ALGORITHM_VERSION,
       account.id,
       original_balance.amount.to_s,
@@ -244,9 +244,19 @@ class Loan < ApplicationRecord
       term_months.to_s,
       rate_type.to_s,
       start_date&.iso8601,
-      day_count_convention,
       variable_rates.map { |date, rate| [ date.to_s, normalized_rate(rate).to_s ] }
-    ].to_json)
+    ]
+
+    # Only a NON-default convention extends the signature, and it is appended
+    # rather than inserted. `ensure_amortization_schedule_current!` runs on read
+    # paths, so a signature that changed for every loan would rebuild every
+    # persisted schedule -- up to MAX_TERM_MONTHS rows under a row lock, on
+    # first view -- to produce byte-identical figures, since actual/365 is what
+    # they were already calculated on. Loans that opt into another basis do get
+    # a new signature, which is the rebuild that has to happen.
+    components << day_count_convention unless day_count_convention == DEFAULT_DAY_COUNT_CONVENTION
+
+    Digest::SHA256.hexdigest(components.to_json)
   end
 
   # Rebuild the persisted amortization schedule under a loan lock so readers
