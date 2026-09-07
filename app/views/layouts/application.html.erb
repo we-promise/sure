@@ -207,6 +207,8 @@ end %>
         </div>
       <% end %>
 
+      <%= yield :system_alerts %>
+
       <% if content_for?(:page_header) %>
         <%= yield :page_header %>
       <% end %>
