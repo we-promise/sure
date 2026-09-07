@@ -136,7 +136,14 @@ class Loan
         original_schedule_rows.any? &&
         monthly_payment.present? && monthly_payment.amount.positive? &&
         current_balance.amount.positive? &&
-        !unamortizable_payment? &&
+        # Only :hold can be defeated by an insufficient repayment, because only
+        # :hold is stuck with the contracted one. :reamortize computes a
+        # repayment that covers the interest by construction, so asking whether
+        # the CONTRACTED payment covers it is asking about a number this
+        # projection never uses -- and answering "no" blanked the rate-change
+        # table for a loan whose rate has already risen, which is the loan most
+        # in need of it (CodeRabbit, #79).
+        (@payment_strategy == :reamortize || !unamortizable_payment?) &&
         converged?
     end
 

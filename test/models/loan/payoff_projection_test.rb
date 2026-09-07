@@ -541,7 +541,48 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
       ":hold carries the contracted repayment, not a re-amortised one"
   end
 
+  # CodeRabbit, #79. `unamortizable_payment?` asks whether the CONTRACTED
+  # repayment covers the first period's interest. That is the right question for
+  # :hold, which is stuck with it, and the wrong one for :reamortize, which
+  # computes a repayment that covers the interest by construction.
+  #
+  # Left in place it blanked the rate-change table for a loan whose rate has
+  # ALREADY risen past what its old repayment services -- the loan most in need
+  # of the table.
+  test "a re-amortising projection is not blocked by an insufficient contracted payment" do
+    loan = loan_whose_contracted_payment_no_longer_covers_interest
+
+    held = Loan::PayoffProjection.new(loan)
+    reamortized = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert reamortized.send(:unamortizable_payment?),
+      "the fixture must actually trip the guard, or this test proves nothing"
+    assert_not held.applicable?, ":hold genuinely cannot amortise this loan"
+    assert reamortized.applicable?,
+      ":reamortize sizes its own repayment, so the contracted one cannot disqualify it"
+    assert_equal loan.current_minimum_payment.amount,
+      reamortized.payments.first[:payment_amount]
+  end
+
   private
+
+    # Contracted at 1%, then a rise to 12% that is already in effect: the
+    # contracted repayment no longer covers a single period's interest.
+    def loan_whose_contracted_payment_no_longer_covers_interest
+      loan = families(:dylan_family).accounts.create!(
+        name: "Under-serviced Loan",
+        balance: 400_762.12,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 1.0, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months
+        )
+      ).loan
+
+      loan.add_variable_rate_change(Date.current - 1.month, 12.0)
+      loan.reload.add_variable_rate_change(Date.current + 6.months, 13.0)
+      loan.reload
+    end
 
     def reamortize_loan
       families(:dylan_family).accounts.create!(
