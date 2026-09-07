@@ -254,6 +254,7 @@ class Loan
           # on the existing monthly projection path so linking an empty asset
           # does not change figures merely by changing the calculation mode.
           daily_accrual: loan.offset_accounts.any? && loan.offset_accounts.sum(:balance).positive?,
+          day_count_convention: loan.day_count_convention,
           offset_for: Loan::OffsetResolver.new(loan).method(:change_points)
         ).run.payments
       end

@@ -10,6 +10,41 @@ class LoanTest < ActiveSupport::TestCase
     assert_includes loan.errors[:subtype], "is not included in the list"
   end
 
+  test "rejects an unsupported day-count convention" do
+    loan = Loan.new(day_count_convention: "thirty_360")
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:day_count_convention], "is not included in the list"
+  end
+
+  test "defaults to the actual/365 day-count convention" do
+    assert_equal "actual_365", Loan.new.day_count_convention
+  end
+
+  test "changing the day-count convention rebuilds the amortization schedule" do
+    loan_account = Account.create! \
+      family: families(:dylan_family),
+      name: "Mortgage Loan",
+      balance: 500000,
+      currency: "USD",
+      accountable: Loan.create!(
+        subtype: "mortgage",
+        interest_rate: 3.5,
+        term_months: 360,
+        rate_type: "fixed"
+      )
+
+    loan = loan_account.loan
+    before = loan.send(:amortization_schedule_signature)
+
+    assert_enqueued_with(job: LoanAmortizationRebuildJob, args: [ loan.id ]) do
+      loan.update!(day_count_convention: "actual_actual")
+    end
+
+    assert_not_equal before, loan.send(:amortization_schedule_signature),
+      "the convention must be part of the schedule signature, or a change would serve a stale schedule"
+  end
+
   test "rejects malformed variable rate schedule entries" do
     loan = Loan.new(variable_rate_schedule: { "not-a-date" => "not-a-rate" })
 

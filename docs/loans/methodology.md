@@ -95,5 +95,13 @@ so the comparison — not the formula — is the evidence.
   against a lender. The fixture is arithmetically exact by construction, so it
   can confirm the engine implements actual/365 as specified; it cannot confirm
   that actual/365 is what the lender does.
+- **Which basis a loan uses is now the borrower's assertion** (#65). The
+  reconciliation that motivated it covers one lender and one loan: 43/43 charges
+  resolve under actual/actual against 30/43 under a fixed 365, with every
+  wholly-within-a-leap-year window wrong by exactly 366/365 − 1. That is
+  evidence a single fixed constant cannot be assumed, not evidence that
+  actual/actual is correct for any other lender. The default stays actual/365
+  and the schedule states the basis in force rather than implying it is
+  verified.
 
 No production release approval is granted by this document.

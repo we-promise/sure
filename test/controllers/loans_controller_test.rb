@@ -8,6 +8,19 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:loan)
   end
 
+  test "updates the day-count basis" do
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          day_count_convention: "actual_actual"
+        }
+      }
+    }
+
+    assert_equal "actual_actual", @account.accountable.reload.day_count_convention
+  end
+
   test "creates with loan details" do
     assert_difference -> { Account.count } => 1,
       -> { Loan.count } => 1,

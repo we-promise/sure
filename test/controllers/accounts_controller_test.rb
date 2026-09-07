@@ -979,6 +979,34 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: I18n.t("loans.tabs.schedule.extra_payment.variable_rate_notice"), count: 1
   end
 
+  # --- #65: the day-count basis is disclosed, not silently assumed ---------
+
+  test "the schedule discloses the loan's day-count basis" do
+    loan_account = accounts(:loan)
+
+    get account_url(loan_account, tab: "schedule")
+
+    assert_response :success
+    assert_select "p", text: I18n.t(
+      "loans.tabs.schedule.day_count_notice",
+      basis: I18n.t("loans.form.day_count_convention_actual_365")
+    ), count: 1
+  end
+
+  test "the disclosed basis follows the loan rather than a global constant" do
+    loan_account = accounts(:loan)
+    loan_account.loan.update!(day_count_convention: "actual_actual")
+
+    get account_url(loan_account, tab: "schedule")
+
+    assert_response :success
+    assert_select "p", text: I18n.t(
+      "loans.tabs.schedule.day_count_notice",
+      basis: I18n.t("loans.form.day_count_convention_actual_actual")
+    ), count: 1
+    assert_no_match I18n.t("loans.form.day_count_convention_actual_365"), response.body
+  end
+
   test "a fixed-rate loan gets the control without the variable-rate disclosure" do
     loan_account = accounts(:loan)
     assert_equal "fixed", loan_account.loan.rate_type

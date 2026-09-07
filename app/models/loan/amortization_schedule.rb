@@ -210,7 +210,8 @@ class Loan
             calculate_segment_payment(rate, balance, remaining_payments)
           },
           currency_precision: currency_precision,
-          daily_accrual: daily_accrual
+          daily_accrual: daily_accrual,
+          day_count_convention: loan.day_count_convention
         ).run
       end
 

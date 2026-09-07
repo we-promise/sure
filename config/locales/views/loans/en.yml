@@ -18,6 +18,10 @@ en:
       rate_type_variable: Variable
       offset_accounts: Offset accounts
       offset_accounts_hint: Only accounts visible to everyone who can access this loan can be linked.
+      day_count_convention: Interest day-count basis
+      day_count_convention_actual_365: Actual/365
+      day_count_convention_actual_actual: Actual/actual (366 in a leap year)
+      day_count_convention_hint: Lenders differ. Actual/365 divides the annual rate by 365 every year; actual/actual uses 366 in a leap year. Check a statement -- if this does not match your lender, the interest shown is an approximation.
     new:
       title: Enter loan details
     tabs:
@@ -51,6 +55,7 @@ en:
         recalculating: "These figures were recalculated for this page. The saved schedule is being refreshed in the background and will match shortly."
         variable_rate_notice: "This loan has a variable interest rate. The schedule below reflects the current rate and any recorded rate changes; future rate changes will shift it."
         offset_notice: "Projected interest assumes your linked offset balance stays at today's total. The loan balance itself is unchanged."
+        day_count_notice: "Interest accrues on an %{basis} basis. If your lender uses a different day-count basis, the interest figures here are an approximation."
         chart:
           today: Today
           scheduled_history: "Scheduled (contracted terms)"

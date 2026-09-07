@@ -5,6 +5,7 @@ class LoansController < ApplicationController
 
   permitted_accountable_attributes(
     :id, :subtype, :rate_type, :interest_rate, :term_months, :initial_balance,
+    :day_count_convention,
     { offset_account_ids: [] }
   )
 
