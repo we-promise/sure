@@ -1,35 +1,25 @@
 # Loan amortisation release evidence
 
-Status: G3 evidence below has been executed against production-shaped data.
-**Release remains blocked on the lender reconciliation gate G2 (#11), which is
-unsigned.** This branch is held unmerged until it is.
+Status: G3 evidence below has been executed against production-shaped data, and
+**gate G2 is signed** (`docs/loans/methodology.md` records the signature and its
+carve-outs). Daily accrual is therefore released rather than prepared.
 
 `Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL` is `true` and
-`ALGORITHM_VERSION` is `3` on this branch. The persisted schedule now accrues
-daily and the figures genuinely change -- see the variance distribution below.
-The characterisation suite has been deliberately re-baselined on this branch.
+`ALGORITHM_VERSION` is `3`. The persisted schedule accrues daily and the figures
+genuinely changed -- see the variance distribution below. The characterisation
+suite was deliberately re-baselined, which the contract permits only after G2,
+and the sign-off is what permitted it.
 
-## What the G2 gate does and does not forbid
+## What the G2 gate permitted
 
 The contract says the characterisation suite "may be deliberately re-baselined
 only after the lender reconciliation gate has been reviewed line by line". That
-governs what reaches `main`, not what may exist on a branch: the gate exists so
-that no *deployed* figure changes without lender review, and an unmerged draft
-deploys nothing.
+condition is met: the re-baseline was prepared on an unmerged branch while the
+gate was open, and merged only once it was signed.
 
-So preparing the re-baseline here is in scope, and merging it is not. Concretely,
-while G2 is unsigned:
-
-- this branch may hold the flipped constants, the re-baselined masters and the
-  evidence below;
-- it must stay a draft, must not merge, and must not be cherry-picked onto
-  `main`;
-- the numbers below are candidate figures for review, not approved figures.
-
-If that reading of the gate is wrong, the correction is to close this branch —
-not to merge it — and the contract wording in
-`docs/loans/calculation-contract.md` should be tightened to say "must not be
-merged" rather than "may be re-baselined".
+The order matters and is worth preserving as precedent. The figures below were
+candidate figures under review until the signature, not approved figures --
+which is why the branch was held rather than merged and backfilled.
 
 ## What re-baselining means here
 
@@ -65,6 +55,80 @@ Run:
 
 Override workload or thresholds with `LOAN_COUNT`, `HISTORY_MONTHS`,
 `OFFSET_FREQUENCY_DAYS`, `MAX_P95_MS`, and `MAX_P99_MS`.
+
+### Two different numbers, on purpose
+
+The CI gate and the deployment SLO are not the same measurement and must not be
+conflated. Both are recorded here so nobody has to guess which one a given
+figure is.
+
+| | p95 | p99 | What it is |
+| --- | --- | --- | --- |
+| **Production-shaped SLO** | 100 ms | 150 ms | the deployment target, on hardware an SLO is written for. **Not enforced by CI.** |
+| **CI regression gate** | 200 ms | 400 ms | a ceiling calibrated to the shared GitHub runner, enforced by the `Loan daily-accrual performance gate` step |
+
+Calibration measurements, same workload, this runner:
+
+| Run | p95 | p99 | Thresholds in force |
+| --- | --- | --- | --- |
+| 1 | 116.128 ms | 230.508 ms | calibration (effectively unbounded) |
+| 2 | 112.643 ms | 221.674 ms | calibration (effectively unbounded) |
+| 3 | 93.454 ms | 203.411 ms | **200 / 400 — passed** |
+| 4 | 127.445 ms | 184.012 ms | **200 / 400 — passed** |
+
+The runner does not meet the production SLO and is not expected to. Setting the
+production number as the CI threshold would produce a permanently red build that
+says nothing about the code, and the first fix anyone reaches for is raising the
+threshold — which is how a gate stops meaning anything.
+
+Note the spread, and note how it behaved as samples accumulated. For *identical
+code* these four runs span roughly p95 93–127 ms and p99 184–231 ms — and every
+run so far has widened that span rather than settling inside it, at one end or
+the other. Run 3 set a new p95 low and run 4 immediately set a new p95 high
+while setting a new p99 low.
+
+Two things follow, and they are the reason this section exists:
+
+- **The span is a property of the shared runner, not of the calculation.** The
+  ceilings are sized against that noise rather than against any one measurement,
+  which is why they sit well clear of the worst figure yet seen instead of
+  snugly above the mean.
+- **A single CI measurement is not evidence of a performance change**, in either
+  direction. A figure near a ceiling is evidence about the runner until a second
+  run agrees; a fast run is not evidence of an optimisation. Do not retune the
+  thresholds from one build.
+
+Add new measurements to the table above rather than restating the range in prose
+or in the workflow comment — quoted ranges here have already gone stale twice.
+
+### The 74.984 ms figure recorded elsewhere
+
+An earlier local measurement of 74.984 ms appears in this repository's history
+with no commit id and no environment recorded. **Do not quote it as evidence for
+either threshold**, and note carefully what the measurements here do and do not
+establish about it.
+
+Two runs on this sandbox:
+
+| What was measured | p95 |
+| --- | --- |
+| commit `afcb0de` | 214.886 ms |
+| `main` at the time (`1fb3f4e`) | 200.960 ms |
+
+- **What this does establish:** nothing measured here comes anywhere near
+  74.984 ms, on either commit. Whatever conditions produced that figure are not
+  reproducible from what is written down, so it is not a number this code can be
+  held to.
+- **What this does NOT establish:** that the gap is caused by hardware. These are
+  two *different commits*, so code differences are not excluded — and the 74.984
+  figure has no recorded commit to compare against in the first place. An earlier
+  version of this section asserted "the variation is hardware, not code"; that
+  claim outran its evidence and has been removed.
+
+Isolating environment from code would need the *same* commit measured in both
+places. That has not been run, and is not worth running: the CI thresholds above
+are calibrated from repeated runs in the environment that enforces them, which is
+the comparison that actually matters.
 
 ## Defects the flip exposed
 
@@ -219,9 +283,11 @@ executed evidence above, not guessed:
 
 ## Outstanding approvals
 
-- **G2/#11: real approved lender statement and finance reviewer sign-off.
-  BLOCKING -- this branch must not merge until signed.** The evidence above
-  shows the change is internally consistent, reversible and bounded; it says
-  nothing about whether daily accrual matches any lender's actual statement.
+- **G2/#11: signed** by the repository owner, on the real statement
+  reconciliation in #65. The evidence above shows this change is internally
+  consistent, reversible and bounded; G2 is what speaks to whether daily accrual
+  matches a real lender, and it does so for one lender, one loan, and gross
+  interest only. `docs/loans/methodology.md` carries the carve-outs -- offset
+  accrual in particular remains unproven against a statement.
 - G1/#6: approved by the repository owner.
 - G3: production-shaped rebuild and rollback observations -- **executed above**.

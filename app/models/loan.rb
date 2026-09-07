@@ -251,12 +251,14 @@ class Loan < ApplicationRecord
     ]
 
     # Only a NON-default convention extends the signature, and it is appended
-    # rather than inserted. `ensure_amortization_schedule_current!` runs on read
-    # paths, so a signature that changed for every loan would rebuild every
-    # persisted schedule -- up to MAX_TERM_MONTHS rows under a row lock, on
-    # first view -- to produce byte-identical figures, since actual/365 is what
-    # they were already calculated on. Loans that opt into another basis do get
-    # a new signature, which is the rebuild that has to happen.
+    # rather than inserted. A signature that changed for every loan would make
+    # every persisted schedule stale at once: read paths (the Schedule tab, the
+    # amortization_schedule API) check #schedule_current? and enqueue
+    # LoanAmortizationRebuildJob when it is false (#39), so the cost is a
+    # rebuild of every schedule in the estate -- up to MAX_TERM_MONTHS rows
+    # each -- to produce byte-identical figures, since actual/365 is what they
+    # were already calculated on. Loans that opt into another basis do get a
+    # new signature, which is the rebuild that has to happen.
     components << day_count_convention unless day_count_convention == DEFAULT_DAY_COUNT_CONVENTION
 
     Digest::SHA256.hexdigest(components.to_json)
