@@ -12,6 +12,16 @@ namespace :loans do
     args[name].presence || ENV[name.to_s.upcase].presence || default
   end
 
+  # The population a rebuild walks. Shared so `schedule_version_status` reports
+  # on exactly the loans `rebuild_schedules` would visit -- if these two drift
+  # apart, the status task reports staleness the rebuild task will never clear,
+  # and the "is the prebuild finished?" signal stops being answerable.
+  #
+  # Note this is a superset of *amortizable* loans: `term_months` is the widest
+  # thing SQL can filter on, and `Loan::AmortizationSchedule#amortizable?` needs
+  # the account and its opening valuation. The status task narrows it in Ruby.
+  loan_rebuild_scope = -> { Loan.where.not(term_months: nil).order(:id) }
+
   desc "Verify every C1-C16 contract row maps to an existing test"
   task verify_contract_coverage: :environment do
     require "yaml"
@@ -236,6 +246,89 @@ namespace :loans do
     output ? File.write(output, csv) : puts(csv)
   end
 
+  # The runbook (docs/loans/release-evidence.md) tells an operator to watch
+  # "stale schedules, trending to 0" during a version prebuild. Nothing measured
+  # it. `Loan#schedule_current?` compares a SHA256 computed in Ruby per loan, so
+  # counting stale loans that way is one query and one digest per loan -- fine
+  # for a request serving one loan, useless as an estate-wide signal mid-deploy.
+  #
+  # `loan_amortizations.algorithm_version` was added to make exactly this
+  # queryable and, until now, was written and validated but never read.
+  #
+  # Scope, stated because the difference matters when reading the output: this
+  # reports VERSION staleness -- rows produced by an older calculation -- which
+  # is what a version bump creates and what the prebuild clears. It does not
+  # report INPUT staleness, a loan whose own rate or balance moved since its
+  # rows were built at the current version. That is per-loan by nature and stays
+  # with `schedule_current?`.
+  desc "Report loan schedule staleness by algorithm version (deploy monitoring)"
+  task schedule_version_status: :environment do
+    current = Loan::AmortizationSchedule::ALGORITHM_VERSION
+
+    # The same population `rebuild_schedules` walks, so "stale" counts what that
+    # task would still have to do rather than a different set of loans.
+    scope = loan_rebuild_scope.call
+    total = scope.count
+
+    # Version staleness is answered in one grouped query -- the reason
+    # algorithm_version exists and the reason this is usable mid-deploy.
+    versions = LoanAmortization
+      .where(loan_id: scope.select(:id))
+      .group(:algorithm_version)
+      .distinct
+      .count(:loan_id)
+
+    with_rows = versions.values.sum
+    behind = versions.reject { |version, _| version == current }.values.sum
+
+    # Having no rows is NOT the same as being stale. `rebuild_schedules` deletes
+    # rows and returns for a loan that is not amortizable (Loan
+    # #rebuild_amortization_schedule_locked!), so a loan with a term but no
+    # rate -- in this scope, never amortizable -- would sit in a naive
+    # "missing" count forever and this task could never exit 0. That would make
+    # the one signal answering "is the prebuild finished?" permanently red.
+    #
+    # Most of `amortizable?` IS expressible in SQL, so it is, and only the part
+    # that is not -- a positive opening balance, which reads the account's first
+    # valuation -- falls through to Ruby. What is left is walked in batches: the
+    # one time this set is large is before the first prebuild, when every loan
+    # lacks rows, and loading them all (worse, with their accounts' entries)
+    # would exhaust memory exactly when the deploy gate is most needed.
+    missing = scope.where.missing(:amortizations)
+
+    candidates = missing
+      .where(term_months: 1..)
+      .where.not(interest_rate: nil)
+      .where(rate_type: %w[fixed variable])
+      .where(id: Account.where(accountable_type: "Loan").select(:accountable_id))
+
+    awaiting = 0
+    candidates.in_batches(of: 500) do |batch|
+      awaiting += batch.includes(:account).count { |loan| loan.amortization_schedule.amortizable? }
+    end
+    not_amortizable = missing.count - awaiting
+
+    stale = behind + awaiting
+
+    puts "algorithm_version=#{current}"
+    puts "loans=#{total} with_rows=#{with_rows} awaiting_first_build=#{awaiting} " \
+         "not_amortizable=#{not_amortizable}"
+    versions.sort.each do |version, count|
+      marker = version == current ? "current" : "STALE"
+      puts "  version #{version}: #{count} loans (#{marker})"
+    end
+    puts "stale=#{stale} (#{behind} at an older version, #{awaiting} awaiting a first build)"
+
+    # Non-zero exit on any staleness, so this can gate a deploy step or drive an
+    # alert without the caller parsing stdout. A prebuild is finished when this
+    # exits 0.
+    if stale > 0
+      abort "Schedules are not fully rebuilt at version #{current}. Run loans:rebuild_schedules."
+    end
+
+    puts "All schedules are at the current algorithm version."
+  end
+
   desc "Rebuild loan amortization schedules in bounded, rate-limited batches"
   task :rebuild_schedules, [ :batch_size, :limit, :sleep ] => :environment do |_, args|
     batch_size = [ loan_task_option.call(args, :batch_size, "100").to_i, 1 ].max
@@ -243,7 +336,7 @@ namespace :loans do
     pause = loan_task_option.call(args, :sleep, "0").to_f
     rebuilt = 0
 
-    scope = Loan.where.not(term_months: nil).order(:id)
+    scope = loan_rebuild_scope.call
     scope = scope.limit(limit) if limit&.positive?
 
     # Print the EFFECTIVE options, not the requested ones, so a rehearsal
