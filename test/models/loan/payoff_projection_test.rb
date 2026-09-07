@@ -564,7 +564,57 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
       reamortized.payments.first[:payment_amount]
   end
 
+  # CodeRabbit, #79. :reamortize spreads the balance over the payments left to
+  # the ORIGINAL maturity. Past maturity there are none, so there is nothing to
+  # spread it over. Falling back to the doubled :hold window INVENTED a horizon
+  # and reported a payoff years after the date the loan was meant to end.
+  #
+  # :hold legitimately finds a date past maturity -- an underpaid loan really
+  # does run long -- which is why this guard is strategy-specific.
+  test "a re-amortising projection invents no horizon for a matured loan" do
+    loan = matured_loan_still_carrying_a_balance
+
+    reamortized = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert_equal 0, loan.amortization_schedule.remaining_payment_count,
+      "the fixture must actually be matured, or this test proves nothing"
+    assert loan.account.balance.positive?,
+      "and must still carry a balance, or there is nothing to project"
+    assert_not reamortized.applicable?,
+      "no payments remain to the original maturity, so there is no projection to make"
+    assert_nil loan.current_minimum_payment,
+      "the model already says there is no repayment to quote; the projection must agree"
+  end
+
+  # A typo like :reamortised read as neither :hold nor :reamortize by the
+  # branches in this class, silently selecting a hybrid of the two. Simulator
+  # does reject it, but only once a schedule is generated.
+  test "an unknown payment strategy is rejected at construction" do
+    loan = reamortize_loan
+
+    error = assert_raises(ArgumentError) do
+      Loan::PayoffProjection.new(loan, payment_strategy: :reamortised)
+    end
+
+    assert_match(/unsupported payment strategy/, error.message)
+    assert_nothing_raised { Loan::PayoffProjection.new(loan, payment_strategy: :hold) }
+    assert_nothing_raised { Loan::PayoffProjection.new(loan, payment_strategy: :reamortize) }
+  end
+
   private
+
+    # Term ended a year ago, and $250,000 is still outstanding.
+    def matured_loan_still_carrying_a_balance
+      families(:dylan_family).accounts.create!(
+        name: "Matured Loan",
+        balance: 250_000.00,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 6.0, term_months: 12,
+          initial_balance: 400_000, start_date: Date.current - 24.months
+        )
+      ).loan.reload
+    end
 
     # Contracted at 1%, then a rise to 12% that is already in effect: the
     # contracted repayment no longer covers a single period's interest.

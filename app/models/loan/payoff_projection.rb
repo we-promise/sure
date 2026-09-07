@@ -19,6 +19,7 @@ class Loan
   # balance that includes escrow will understate interest/time saved.
   class PayoffProjection
     MAX_ITERATIONS_MULTIPLIER = 2
+    PAYMENT_STRATEGIES = %i[hold reamortize].freeze
     EXTRA_PAYMENT_FREQUENCIES = %w[weekly monthly yearly].freeze
 
     attr_reader :loan, :extra_payment
@@ -48,6 +49,16 @@ class Loan
       @loan = loan
       @extra_payment = extra_payment
       @payment_strategy = payment_strategy.to_sym
+      # Validated HERE, not left to Simulator. Simulator does reject an unknown
+      # strategy, but only when the schedule is first generated -- and until
+      # then every branch in this class reads `== :hold` or `== :reamortize`, so
+      # a typo like :reamortised silently selects a hybrid that is neither:
+      # re-amortised repayments over the doubled :hold window, with no
+      # settlement. Failing at construction is both earlier and clearer
+      # (CodeRabbit, #79).
+      unless PAYMENT_STRATEGIES.include?(@payment_strategy)
+        raise ArgumentError, "unsupported payment strategy: #{payment_strategy.inspect}"
+      end
       # No rebuild is enqueued here. The version of this on #4 did so from the
       # constructor, which makes merely instantiating a projection a
       # side-effecting act. Since #39 the read paths own that: the Schedule tab
@@ -132,6 +143,10 @@ class Loan
     # would take an implausibly long time is treated as not applicable
     # rather than silently reporting a truncated, non-payoff "payoff date").
     def applicable?
+      # Checked first, and deliberately before anything that builds the
+      # simulation: with no horizon there is no schedule to build.
+      return false if reamortize_without_horizon?
+
       loan.amortization_schedule.amortizable? &&
         original_schedule_rows.any? &&
         monthly_payment.present? && monthly_payment.amount.positive? &&
@@ -377,6 +392,10 @@ class Loan
         else
           MAX_ITERATIONS_MULTIPLIER * loan.term_months
         end
+        # Unreachable via applicable?, which rejects a horizonless re-amortising
+        # projection above. Guarded anyway so a direct caller gets this message
+        # rather than Simulator's "payment schedule must not be empty".
+        raise ArgumentError, "no payments remain to the original maturity" unless periods.positive?
 
         Array.new(periods) { |index| first_date >> index }
       end
@@ -385,11 +404,26 @@ class Loan
       # projection will pay on -- the same term basis `current_minimum_payment`
       # re-amortises over, so the table's balances and its quotes agree.
       def remaining_payments_to_original_maturity
-        count = loan.amortization_schedule.remaining_payment_count(
+        loan.amortization_schedule.remaining_payment_count(
           as_of: first_projected_payment_date, including_on_date: true
         )
+      end
 
-        count.positive? ? count : MAX_ITERATIONS_MULTIPLIER * loan.term_months
+      # A re-amortising projection spreads the balance over the payments left to
+      # the ORIGINAL maturity. Past maturity there are none, so there is nothing
+      # to spread it over and no projection to make.
+      #
+      # This previously fell back to the doubled :hold window, which INVENTED a
+      # horizon: a matured loan still carrying $250,000 came back applicable and
+      # reported a payoff three years after the date it was supposed to end
+      # (CodeRabbit, #79). `:hold` legitimately discovers a date past maturity --
+      # an underpaid loan really does run long -- but :reamortize holds the date
+      # fixed, so for it that answer is fiction.
+      #
+      # `current_minimum_payment` already returns nil for exactly this loan; the
+      # projection now agrees with it instead of contradicting it.
+      def reamortize_without_horizon?
+        @payment_strategy == :reamortize && !remaining_payments_to_original_maturity.positive?
       end
 
       def currency_precision
