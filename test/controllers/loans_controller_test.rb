@@ -69,6 +69,10 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
+    # The update must SUCCEED with the parameter ignored, not fail because of
+    # it: asserting only the empty schedule would also pass if the request had
+    # been rejected outright, which is a different behaviour.
+    assert_redirected_to @account
     assert_empty @account.accountable.reload.variable_rate_schedule.to_h,
       "the jsonb column must only be writable through assembled rate_changes rows"
   end
@@ -87,6 +91,33 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_empty @account.accountable.reload.variable_rate_schedule.to_h
+
+    # The re-rendered row must show what was typed. A date input blanks a value
+    # it cannot parse, so echoing an invalid date into type="date" leaves the
+    # user an empty box beside an error about a value they can no longer see.
+    assert_select "input[name=?][type=text][value=?]",
+      "account[accountable_attributes][rate_changes][][effective_date]", "not-a-date"
+  end
+
+  # cubic, #77: two ISO-8601 spellings of one day must not become two rows --
+  # the schedule would carry a duplicate the replace-on-repeat rule is supposed
+  # to prevent, and which rate wins would fall out of hash order.
+  test "equivalent spellings of one effective date collapse to a single row" do
+    @account.accountable.update!(rate_type: "variable")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          rate_changes: [
+            { effective_date: "2024-03-01", rate: "4.5" },
+            { effective_date: "20240301", rate: "6.0" }
+          ]
+        }
+      }
+    }
+
+    assert_equal({ "2024-03-01" => 6.0 }, @account.accountable.reload.variable_rate_schedule)
   end
 
   test "creates with loan details" do

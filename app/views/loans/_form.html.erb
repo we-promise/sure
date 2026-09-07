@@ -65,15 +65,26 @@
 
         <div class="space-y-2" data-loan-rate-changes-target="rows">
           <% loan_form.object.rate_change_rows.each_with_index do |(effective_date, rate), index| %>
+            <%# A date input sanitises a value it cannot parse to the empty
+                string (WHATWG value sanitization algorithm). So when a bad date
+                is what failed validation, rendering it back into type="date"
+                shows the user an empty box beside an error about a value they
+                can no longer see. Only the invalid case falls back to a text
+                input; valid dates keep the native picker. The same holds for
+                a non-numeric rate in type="number". %>
+            <% date_valid = Loan.renderable_effective_date?(effective_date) %>
+            <% rate_valid = Loan.renderable_rate?(rate) %>
             <div class="flex items-end gap-2" data-loan-rate-changes-target="row">
               <label class="sr-only" for="loan_rate_change_date_<%= index %>"><%= t("loans.form.rate_change_effective_date") %></label>
-              <input type="date" id="loan_rate_change_date_<%= index %>"
+              <input type="<%= date_valid ? "date" : "text" %>" id="loan_rate_change_date_<%= index %>"
                      name="<%= loan_form.object_name %>[rate_changes][][effective_date]"
-                     value="<%= effective_date %>" class="form-field__input">
+                     value="<%= effective_date %>" class="form-field__input"
+                     aria-invalid="<%= !date_valid %>">
               <label class="sr-only" for="loan_rate_change_rate_<%= index %>"><%= t("loans.form.rate_change_rate") %></label>
-              <input type="number" step="0.005" min="0" max="100" id="loan_rate_change_rate_<%= index %>"
+              <input type="<%= rate_valid ? "number" : "text" %>" step="0.005" min="0" max="100" id="loan_rate_change_rate_<%= index %>"
                      name="<%= loan_form.object_name %>[rate_changes][][rate]"
-                     value="<%= rate %>" class="form-field__input">
+                     value="<%= rate %>" class="form-field__input"
+                     aria-invalid="<%= !rate_valid %>">
               <input type="hidden" name="<%= loan_form.object_name %>[rate_changes][][_destroy]" value="0">
               <button type="button" class="text-sm text-secondary underline"
                       data-action="loan-rate-changes#remove">

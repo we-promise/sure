@@ -134,6 +134,38 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal 6, loan.amortization_schedule.payment_count
   end
 
+  # FR-205 markers follow the ACCRUAL clock (C7), not the payment-sizing clock
+  # (C8). Comparing consecutive rows' `interest_rate` -- which is C8 -- gets
+  # both of these wrong, and did (cubic, #77).
+  test "the rate-change marker falls on the payment whose accrual period carries the new rate" do
+    loan = variable_loan_for_markers("Marker Effective On Payment Date")
+    payment_dates = loan.amortization_schedule.payments.map { |payment| payment[:payment_date] }
+
+    # Effective ON payment 4's date. Accrual windows are half-open, so it
+    # governs [payment 4, payment 5) -- payment 4 accrued entirely at the old
+    # rate, and payment 5 is the first the borrower is charged the new one.
+    loan.add_variable_rate_change(payment_dates[3], 9.5)
+
+    assert_equal({ 5 => 9.5 }, loan.amortization_schedule.accrual_rate_change_markers)
+  end
+
+  test "a rate change that reverts inside one payment period is still marked" do
+    loan = variable_loan_for_markers("Marker Reverted Mid Period")
+    payment_dates = loan.amortization_schedule.payments.map { |payment| payment[:payment_date] }
+
+    # Both changes fall strictly inside [payment 3, payment 4), so neither
+    # payment's sizing rate moves and comparing them marks nothing -- even
+    # though the borrower was charged 9.5% for part of that period.
+    loan.add_variable_rate_change(payment_dates[2] + 5, 9.5)
+    loan.add_variable_rate_change(payment_dates[2] + 12, 3.5)
+
+    assert_equal [ 4 ], loan.amortization_schedule.accrual_rate_change_markers.keys
+  end
+
+  test "a fixed-rate loan has no rate-change markers" do
+    assert_empty @schedule.accrual_rate_change_markers
+  end
+
   test "monthly payment uses the rate effective on the first payment date" do
     variable_loan = Account.create! \
       family: @family,
@@ -663,5 +695,20 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
         assert_equal current[:ending_balance], following[:beginning_balance]
       end
       assert_equal BigDecimal("0"), actual_rows.last[:ending_balance]
+    end
+
+    def variable_loan_for_markers(name)
+      Account.create!(
+        family: @family,
+        name: name,
+        balance: 500000,
+        currency: "USD",
+        accountable: Loan.create!(
+          rate_type: "variable",
+          interest_rate: 3.5,
+          term_months: 12,
+          start_date: Date.new(2023, 1, 1)
+        )
+      ).loan
     end
 end

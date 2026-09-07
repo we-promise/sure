@@ -64,7 +64,7 @@ en:
         variable_rate_notice: "This loan has a variable interest rate. The schedule below reflects the current rate and any recorded rate changes; future rate changes will shift it."
         offset_notice: "Projected interest assumes your linked offset balance stays at today's total. The loan balance itself is unchanged."
         rate_change_marker: "rate change"
-        rate_change_marker_title: "The interest rate changes to %{rate}% from this payment."
+        rate_change_marker_title: "The interest rate changes during this payment's period, to %{rate}%."
         day_count_notice: "Interest accrues on an %{basis} basis. If your lender uses a different day-count basis, the interest figures here are an approximation."
         chart:
           today: Today

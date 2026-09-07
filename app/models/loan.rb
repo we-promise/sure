@@ -55,6 +55,32 @@ class Loan < ApplicationRecord
 
   after_save :enqueue_amortization_rebuild, if: :amortization_inputs_changed?
 
+  # Whether the form can hand these values to their native controls.
+  #
+  # A date or number input applies the WHATWG value sanitization algorithm and
+  # silently blanks a value it cannot parse. Rendering a rejected submission
+  # back into one would show the user an empty box next to an error about the
+  # value they just typed, leaving them nothing to correct. The form falls back
+  # to a text input for exactly these cases -- which are the same cases
+  # `variable_rate_schedule_entries_are_valid` rejects, so a value that renders
+  # as text is always a value the user has been told about.
+  def self.renderable_effective_date?(value)
+    return true if value.blank?
+
+    Date.iso8601(value.to_s)
+    true
+  rescue ArgumentError, TypeError
+    false
+  end
+
+  def self.renderable_rate?(value)
+    return true if value.blank?
+
+    BigDecimal(value.to_s).finite?
+  rescue ArgumentError, TypeError
+    false
+  end
+
   def monthly_payment
     amortization_schedule.monthly_payment
   end
@@ -236,7 +262,14 @@ class Loan < ApplicationRecord
       # unused row from the editor.
       next if date.blank? && rate.to_s.strip.blank?
 
-      schedule[date] = rate
+      # ISO-8601 has more than one spelling for the same day ("2024-03-01" and
+      # "20240301"), and storing both would defeat the replace-on-repeat rule
+      # above: the schedule would carry two rows for one date, and which rate
+      # wins in `current_variable_rate` would fall out of hash order rather
+      # than out of the contract. Canonicalise what parses; keep what does not
+      # exactly as entered, so validation can name it and the form can echo it
+      # back to the user who typed it.
+      schedule[parseable_date(date)&.iso8601 || date] = rate
     end
   end
 

@@ -175,6 +175,55 @@ class Loan
       end
     end
 
+    # FR-205: which displayed payments open a period carrying a new ACCRUAL
+    # rate, keyed by payment number and valued by the rate that period ends on.
+    #
+    # Derived from the accrual clock (C7), NOT by comparing consecutive rows'
+    # `interest_rate` -- that column is the PAYMENT-sizing clock (C8), and the
+    # two deliberately do not coincide:
+    #
+    # - a change effective ON a payment date sizes THAT payment, but accrual
+    #   windows are half-open, so it belongs to the FOLLOWING window; comparing
+    #   payment rates marks the row one payment early;
+    # - a change that moves and reverts inside a single payment interval never
+    #   shows up in either neighbouring payment's rate at all, so comparing
+    #   payment rates marks nothing where the borrower was in fact charged a
+    #   different rate for part of the period.
+    #
+    # The first row is included: its window opens at the accrual start date,
+    # which is where Simulator#run opens it too.
+    def accrual_rate_change_markers(rows = display_rows)
+      return {} unless loan.rate_type == "variable"
+      return {} if rows.empty?
+
+      # One resolver call over the whole span, then bucketed by walking the two
+      # already-sorted lists together. Asking the resolver per row is the
+      # obvious shape and was the first one written, but it re-parses and
+      # re-sorts every rate change once per payment: 190 ms on a 360-row
+      # schedule with 30 changes, on a page render, for a marker.
+      changes = RateResolver.for(loan).accrual_rate_changes(
+        loan.start_date || loan.account_opening_anchor_date,
+        rows.last.payment_date
+      )
+      return {} if changes.empty?
+
+      next_change = 0
+
+      rows.each_with_object({}) do |row, markers|
+        latest = nil
+
+        # Accrual windows are half-open and contiguous, so a change not yet
+        # consumed and falling before this row's payment date falls in this
+        # row's window. The LAST such change is the rate the window ends on.
+        while next_change < changes.length && changes[next_change].fetch(:date) < row.payment_date
+          latest = changes[next_change]
+          next_change += 1
+        end
+
+        markers[row.payment_number] = latest.fetch(:rate) if latest
+      end
+    end
+
     # Get a specific payment by date, or nil if not found
     def payment_for(date)
       payment = payments.find { |p| p[:payment_date] == date }
