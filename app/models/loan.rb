@@ -550,7 +550,21 @@ class Loan < ApplicationRecord
     end
 
     def sync_offset_accounts
-      ids = variable_rate_type? ? offset_account_ids_for_sync.map(&:id) : []
+      # An absent virtual attribute means "this save was not about offsets" --
+      # a rate-type-only edit, say -- NOT "remove them all". Reading it as the
+      # latter deleted every link on a variable -> adjustable transition, which
+      # is the one transition #14 exists to make safe. Only reproducible on a
+      # freshly loaded record: an instance that set offset_account_ids earlier
+      # still carries them, which is why the first test written for this
+      # passed.
+      ids = if !variable_rate_type?
+        []
+      elsif offset_account_ids_supplied?
+        offset_account_ids_for_sync.map(&:id)
+      else
+        loan_offset_accounts.pluck(:account_id)
+      end
+
       loan_offset_accounts.where.not(account_id: ids).delete_all
       ids.each do |account_id|
         loan_offset_accounts.find_or_create_by!(account_id:)

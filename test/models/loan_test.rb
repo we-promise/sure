@@ -673,6 +673,48 @@ class LoanTest < ActiveSupport::TestCase
     assert_nil payload
   end
 
+  # cubic, #78: a rate-type-only edit must not take the offset links with it.
+  #
+  # Asserted on a FRESHLY LOADED record on purpose. The first version of this
+  # test reused the instance that had just set offset_account_ids, so the
+  # virtual attribute was still populated and the deletion never happened --
+  # a green test over a live defect. A real request always loads the loan
+  # fresh, which is the case that mattered.
+  test "moving between two variable rate types without submitting offsets keeps them" do
+    family = families(:dylan_family)
+    loan = family.accounts.create!(
+      name: "Offset Retention Loan", balance: 250_000, currency: "USD",
+      accountable: Loan.new(rate_type: "variable", interest_rate: 5, term_months: 240)
+    ).loan
+    offset = family.accounts.create!(
+      name: "Retention Offset", balance: 10_000, currency: "USD", accountable: Depository.new
+    )
+    loan.update!(offset_account_ids: [ offset.id ])
+    assert_equal [ offset.id ], Loan.find(loan.id).offset_accounts.pluck(:id)
+
+    Loan.find(loan.id).update!(rate_type: "adjustable")
+
+    assert_equal [ offset.id ], Loan.find(loan.id).offset_accounts.pluck(:id),
+      "a rate-type-only edit submits no offset ids; that must not be read as 'remove them all'"
+  end
+
+  test "moving to a fixed rate without submitting offsets still removes them" do
+    family = families(:dylan_family)
+    loan = family.accounts.create!(
+      name: "Offset Removal Loan", balance: 250_000, currency: "USD",
+      accountable: Loan.new(rate_type: "variable", interest_rate: 5, term_months: 240)
+    ).loan
+    offset = family.accounts.create!(
+      name: "Removal Offset", balance: 10_000, currency: "USD", accountable: Depository.new
+    )
+    loan.update!(offset_account_ids: [ offset.id ])
+
+    Loan.find(loan.id).update!(rate_type: "fixed")
+
+    assert_empty Loan.find(loan.id).offset_accounts,
+      "a fixed-rate loan has no offset, so the links must go"
+  end
+
   private
     def build_chart_loan(balance:, interest_rate: 3.5, term_months: 360, start_date: Date.current, rate_type: "fixed")
       account = Account.create! \
