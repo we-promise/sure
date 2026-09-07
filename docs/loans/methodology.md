@@ -1,14 +1,34 @@
 # Loan reconciliation methodology
 
-Status: **partially reconciled; G2 not signed.** A real lender statement has
-since been reconciled against the engine (#65, summarised below), so the earlier
-"nothing here has met a real charge" framing no longer holds. What is still
-missing is an offset case, a re-run against the per-loan basis, and a named
-finance reviewer — see *Outstanding before G2 can be signed off*.
+Status: **Gate G2 signed.**
 
-Note on #11's state: the issue is **closed**, but no sign-off is recorded on it
-or here, and its final comment says closure was not intended as sign-off. Treat
-G2 as unsigned until a reviewer is named in this document.
+| | |
+| --- | --- |
+| Signed by | Jonathan Kaiser (`jaysbeekay`), repository owner |
+| Recorded | 2026-09-07, confirming the closure of #11 on 2026-09-05 was the sign-off |
+| Basis | the real statement reconciliation in #65, summarised below |
+
+The signature is recorded here because a gate with no durable record is not a
+gate. It was previously inferable only from an issue closure with no closing
+comment, and #11's last comment said the opposite.
+
+**What the signature covers:** gross monthly interest for one lender and one
+loan, reconciled 43/43 under actual/actual.
+
+**What it does not cover, and was signed in the knowledge of:**
+
+- **Offset accrual is unproven.** The offset side was reconstructed from the
+  lender's own disclosed saving, not checked independently, because the
+  statements carry no daily offset balances.
+- **One lender, one loan.** Nothing here establishes a basis as correct for any
+  other lender.
+- **The reconciliation predates the per-loan basis** (`day_count_convention`,
+  #70) and has not been re-run against it.
+- **The C2 disclosure is not built.** See the outstanding list below; this one is
+  a hard requirement of #11 rather than a nice-to-have, and it is unmet.
+
+The remaining items below are therefore no longer gate blockers. They are open
+work, and the last one should land before daily accrual reaches users.
 
 ## Why the fixture is synthetic
 
@@ -109,7 +129,10 @@ Loan::InterestAccrual", compares that reference to the engine. A reference
 calculation that is never compared to the implementation demonstrates nothing,
 so the comparison — not the formula — is the evidence.
 
-## Outstanding before G2 can be signed off
+## Outstanding after sign-off
+
+G2 is signed (above), so none of these block the gate. The UI disclosure is the
+one that should still land before daily accrual is user-visible.
 
 - **Re-run the reconciliation against the per-loan basis.** The #65 run predates
   `loans.day_count_convention` (#70). It reconciled the engine against a fixed
@@ -132,8 +155,11 @@ so the comparison — not the formula — is the evidence.
   `main`, so production accrues monthly (#36) and a statement reconciliation
   exercises code users' numbers do not currently come from. Enabling it is #10,
   prepared and evidenced but deliberately unmerged pending this gate.
-- **Finance review.** No reviewer has signed off any figure in this document.
-  This is the item that cannot be discharged from the repository at all.
+- **Independent finance review.** The sign-off above is the repository owner's,
+  who is also the borrower whose statement was reconciled. That is a legitimate
+  decision for a self-hosted project and it is what was given; it is not the
+  same as an independent reviewer, and this document should not be read as
+  claiming one.
 - **Which basis a loan uses is now the borrower's assertion** (#65). The
   reconciliation that motivated it covers one lender and one loan: 43/43 charges
   resolve under actual/actual against 30/43 under a fixed 365, with every

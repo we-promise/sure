@@ -70,7 +70,9 @@ The algorithm version is part of schedule identity. A calculation change must:
 
 Daily accrual and its version/backfill release are one deployment train. The
 characterisation suite may be deliberately re-baselined only after the lender
-reconciliation gate has been reviewed line by line.
+reconciliation gate has been reviewed line by line. That gate is now signed
+(`docs/loans/methodology.md`), so the re-baseline prepared in #10 is permitted
+to merge.
 
 ## Traceability baseline
 
@@ -119,11 +121,23 @@ the specified behaviour is right for any lender — which is G2's job. Where a
 row spans two behaviours, the mutation exercises one of them; C16 is the
 standing example (see its row above).
 
-G1 is not complete until engineering and product approve this document and its
-tests are represented in #8. C7/C8 timing remains an explicit
-verify-against-statement item. The day-count basis is no longer a single
-assumption to verify — it is per-loan (C2) — but no basis is *verified* for any
-lender by the app selecting it; #65's reconciliation covers one lender and one
-loan only. A de-identified lender statement has
-not yet been supplied in this checkout; its owner, privacy approval, and source
-must be recorded on #6 before #10/#11 deployment.
+G1 is approved by the repository owner. **G2 is signed** — see
+`docs/loans/methodology.md`, which records the signature, the evidence behind it
+(#65) and, importantly, its carve-outs.
+
+Two of those carve-outs bear directly on rows in this document:
+
+- **C2's disclosure is specified but not built.** The row says the schedule
+  discloses which basis is in force and that a mismatch makes the figures an
+  approximation. No view, component or locale string currently mentions the
+  day-count basis; it exists only in the model layer. Until that ships, C2 is
+  half-satisfied — the basis is per-loan, but the user is not told which one
+  applies. #11 requires the disclosure in terms.
+- **C15/C16 offset behaviour is unreconciled.** #65 verified gross interest
+  only; the offset side came from the lender's own disclosed saving rather than
+  an independent check, because the statements carry no daily offset balances.
+  The offset rows remain specified and unit-tested, not lender-verified.
+
+C7/C8 timing remains an explicit verify-against-statement item. And the standing
+caution still holds: no basis is *verified* for any lender by the app selecting
+it — #65 covers one lender and one loan.
