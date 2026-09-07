@@ -1,6 +1,11 @@
 require "test_helper"
 
 class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
+  DOCUMENTED_NATIVE_REDIRECT_URIS = [
+    "cursor://anysphere.cursor-mcp/oauth/callback",
+    "http://localhost:8787/callback",
+    "https://www.cursor.com/agents/mcp/oauth/callback"
+  ].freeze
   test "registers a public client and returns client_id" do
     post "/register",
       params: {
@@ -290,5 +295,45 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     assert response.location.start_with?("cursor://anysphere.cursor-mcp/oauth/callback")
     code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
     assert code.present?, "Authorization response should contain a code"
+
+    post "/oauth/token", params: {
+      grant_type: "authorization_code",
+      client_id: app.uid,
+      redirect_uri: "cursor://anysphere.cursor-mcp/oauth/callback",
+      code: code,
+      code_verifier: verifier
+    }
+
+    assert_response :success
+    token_response = JSON.parse(response.body)
+    assert_equal "Bearer", token_response["token_type"]
+    assert token_response["access_token"].present?
+  end
+
+  test "hosting docs document native MCP client redirect URIs" do
+    doc = Rails.root.join("docs/hosting/mcp.md").read
+
+    DOCUMENTED_NATIVE_REDIRECT_URIS.each do |uri|
+      assert_includes doc, uri
+    end
+    assert_includes doc, "vscode://"
+    assert_includes doc, "POST /register"
+    assert_includes doc, "PKCE"
+    assert_includes doc, "MCP_API_TOKEN"
+  end
+
+  test "registers each redirect uri documented for native MCP clients" do
+    DOCUMENTED_NATIVE_REDIRECT_URIS.each do |redirect_uri|
+      post "/register",
+        params: {
+          client_name: "Cursor",
+          redirect_uris: [ redirect_uri ]
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+
+      assert_response :created, "expected #{redirect_uri} to register"
+      json = JSON.parse(response.body)
+      assert_equal [ redirect_uri ], json["redirect_uris"]
+    end
   end
 end

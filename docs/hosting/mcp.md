@@ -399,6 +399,7 @@ Desktop MCP clients such as Cursor and VS Code authenticate with OAuth Dynamic C
 
 - Cursor desktop: `cursor://anysphere.cursor-mcp/oauth/callback`
 - Newer Cursor IDE/CLI builds: `http://localhost:8787/callback`
+- Cursor web: `https://www.cursor.com/agents/mcp/oauth/callback`
 - VS Code extensions: `vscode://...`
 
 Sure accepts those native-app URI schemes, loopback `http://` callbacks, and `https://` callbacks. After you authorize in the browser, the client exchanges the authorization code (PKCE) for a bearer token and calls `/mcp`.
