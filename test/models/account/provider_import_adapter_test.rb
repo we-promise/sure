@@ -1610,6 +1610,40 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "My groceries", entry.reload.name
   end
 
+  # extra is provider-owned rather than user-editable, so a user edit elsewhere
+  # on the entry must not freeze its metadata: a replay has to be able to
+  # refresh the drawer and drop fields the provider no longer sends.
+  test "refreshes provider metadata on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online", "payment_meta" => { "payee" => "Amazon" } } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.transaction.lock_attr!(:category_id)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    plaid_extra = entry.reload.transaction.extra.fetch("plaid")
+    assert_equal "in store", plaid_extra["payment_channel"]
+    assert_nil plaid_extra["payment_meta"], "a dropped field must not survive on a user-modified entry"
+  end
+
   test "does not rename excluded entries" do
     entry = @adapter.import_transaction(
       external_id: "excluded_entry_name",
