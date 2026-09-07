@@ -173,10 +173,6 @@ export default class extends Controller {
   }
 
   _drawXAxis(group, x, days, innerHeight, axisLabels, currentDays = days) {
-    // On mobile-width viewports, label only the selected month's own days:
-    // when the previous month is longer it owns the axis tail, and a tick
-    // like "Aug 31" on a September view reads like a bug. Wider viewports
-    // keep the full-axis ticks (start / middle / end).
     const mobile = !window.matchMedia("(min-width: 640px)").matches;
     const span = mobile ? Math.min(days, currentDays) : days;
     const tickDays = [...new Set([1, Math.round((1 + span) / 2), span])];

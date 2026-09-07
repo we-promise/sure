@@ -508,9 +508,6 @@ class PagesController < ApplicationController
         current_period: current_period,
         previous_period: previous_period,
         days: axis_days,
-        # The selected month's own length, so the chart can label only its
-        # days on narrow (mobile) widths instead of showing the previous
-        # month's tail tick.
         current_days: month_end.day,
         axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
         current: current_series,
@@ -518,8 +515,6 @@ class PagesController < ApplicationController
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
-        # Names the compared month outright - "Previous month" truncated on
-        # mobile ("Previous mon…") and says less than the real label.
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
         date_range_short: spending_trend_compact_date_range(current_period)
       }
