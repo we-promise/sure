@@ -71,6 +71,92 @@ namespace :loans do
     puts "Verified #{manifest.length} contract rows against existing tests"
   end
 
+  desc "Prove each C1-C16 contract row's tests fail when that row's behaviour is broken"
+  task :verify_contract_mutations, [ :rows ] => :environment do |_, args|
+    require "yaml"
+    require "open3"
+
+    # Coverage (loans:verify_contract_coverage) proves a row NAMES a test that
+    # exists. It cannot prove the test would notice if the behaviour changed --
+    # a passing test that asserts nothing about the row satisfies it. G1 asks
+    # for evidence, so this task produces it the only way that is not a claim:
+    # break the behaviour in production code, and require the row's own tests
+    # to go red. A row whose tests survive its mutation is reported as a
+    # survivor and fails the task.
+    manifest = YAML.load_file(Rails.root.join("config/loan_contract_tests.yml"))
+    mutations = YAML.load_file(Rails.root.join("config/loan_contract_mutations.yml"))
+    expected_ids = (1..16).map { |id| "C#{id}" }
+    sorted = ->(ids) { ids.sort_by { |id| id.delete_prefix("C").to_i } }
+
+    abort "mutation manifest must cover C1-C16" unless sorted.call(mutations.keys) == expected_ids
+
+    # `rake "loans:verify_contract_mutations[C8,C10]"` delivers C8 as :rows and
+    # C10 in extras, so reading :rows alone would silently run half the request
+    # -- the same shape of bug #38 found in the rollout options.
+    requested = [ loan_task_option.call(args, :rows), *args.extras ]
+      .compact_blank
+      .flat_map { |value| value.split(/[\s,]+/) }
+      .map(&:upcase)
+      .presence
+    unknown = Array(requested) - expected_ids
+    abort "unknown rows: #{unknown.join(', ')}" if unknown.any?
+    ids = requested.presence || expected_ids
+
+    # Mutating a file that already carries uncommitted edits would restore it
+    # to the wrong content on the way out. Refuse rather than risk it.
+    targets = ids.map { |id| mutations.fetch(id).fetch("file") }.uniq
+    dirty = targets.select { |path| `git status --porcelain -- #{path}`.present? }
+    abort "refusing to mutate files with uncommitted changes: #{dirty.join(', ')}" if dirty.any?
+
+    run_tests = ->(entry) do
+      pattern = entry.fetch("tests").map { |name| Regexp.escape(name) }.join("|")
+      command = [ "bin/rails", "test", entry.fetch("file"), "-n", "/#{pattern}/" ]
+      output, status = Open3.capture2e({ "RAILS_ENV" => "test" }, *command, chdir: Rails.root.to_s)
+      [ status.success?, output ]
+    end
+
+    survivors = []
+    unprovable = []
+    results = ids.map do |id|
+      entry = manifest.fetch(id)
+      mutation = mutations.fetch(id)
+      path = Rails.root.join(mutation.fetch("file"))
+      original = File.read(path)
+      occurrences = original.scan(mutation.fetch("find")).length
+      # A stale anchor mutates nothing, so the tests would pass and the row
+      # would look like a survivor for the wrong reason. Fail loudly instead.
+      abort "#{id}: anchor matches #{occurrences} times in #{mutation.fetch('file')} (expected exactly 1)" unless occurrences == 1
+
+      baseline_passed, baseline_output = run_tests.call(entry)
+      unless baseline_passed
+        unprovable << id
+        next { id: id, baseline: "FAIL", mutated: "-", output: baseline_output }
+      end
+
+      begin
+        File.write(path, original.sub(mutation.fetch("find"), mutation.fetch("replace")))
+        mutated_passed, mutated_output = run_tests.call(entry)
+      ensure
+        File.write(path, original)
+      end
+
+      survivors << id if mutated_passed
+      { id: id, baseline: "pass", mutated: mutated_passed ? "SURVIVED" : "failed", output: mutated_output }
+    end
+
+    results.each do |result|
+      puts format(
+        "%-4s baseline=%-5s mutated=%-9s %s",
+        result[:id], result[:baseline], result[:mutated], mutations.fetch(result[:id]).fetch("defect")
+      )
+    end
+
+    abort "rows whose tests do not run clean before mutation: #{unprovable.join(', ')}" if unprovable.any?
+    abort "rows whose tests survived their mutation: #{survivors.join(', ')}" if survivors.any?
+
+    puts "Verified #{ids.length} contract rows: every row's tests pass unmutated and fail when its behaviour is broken"
+  end
+
   desc "Benchmark production-shaped daily accrual and report p95/p99 latency"
   task :amortization_benchmark, [ :loan_count, :history_months, :offset_frequency_days, :max_p95_ms, :max_p99_ms ] => :environment do |_, args|
     require "benchmark"

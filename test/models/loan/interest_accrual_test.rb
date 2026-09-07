@@ -128,6 +128,45 @@ class Loan::InterestAccrualTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), interest
   end
 
+  # The case above uses the legacy `offset_changes:` shape. Production calls the
+  # accrual with `change_points:` (Loan::Simulator always supplies them), and
+  # that list is filtered by a different method -- so without this the row's
+  # evidence covered a call shape production does not make.
+  test "a change point at the range start applies to the full range" do
+    interest = accrue(
+      from_date: Date.new(2024, 1, 1), to_date: Date.new(2024, 2, 1),
+      balance: "1000", annual_rate: "12",
+      change_points: [ { date: Date.new(2024, 1, 1), offset: "1000" } ]
+    )
+
+    assert_equal BigDecimal("0"), interest
+  end
+
+  # C12's single-segment charge below cannot distinguish one rounding from two
+  # at the same precision -- rounding 10.19178... to cents twice gives the same
+  # answer as rounding it once. This case can: rounded per segment the three
+  # halves each lose a fraction of a cent, and the charge lands a cent low.
+  test "charge accumulates segments unrounded and rounds once at the end" do
+    changes = [ { date: Date.new(2024, 1, 11), amount: "1" }, { date: Date.new(2024, 1, 21), amount: "6" } ]
+    args = {
+      from_date: Date.new(2024, 1, 1), to_date: Date.new(2024, 2, 1),
+      balance: "1000", annual_rate: "12", offset_changes: changes
+    }
+
+    unrounded = Loan::InterestAccrual.calculate(**args)
+    per_segment = [
+      [ Date.new(2024, 1, 1), Date.new(2024, 1, 11), "1000" ],
+      [ Date.new(2024, 1, 11), Date.new(2024, 1, 21), "999" ],
+      [ Date.new(2024, 1, 21), Date.new(2024, 2, 1), "994" ]
+    ].sum do |from, to, balance|
+      ((to - from).to_i * BigDecimal(balance) * BigDecimal("12") / 100 / 365).round(2)
+    end
+
+    assert_equal unrounded.round(2), Loan::InterestAccrual.charge(currency_precision: 2, **args)
+    assert_not_equal per_segment, unrounded.round(2),
+      "the fixture must be one where rounding per segment and rounding once disagree"
+  end
+
   test "charge rounds once after unrounded accumulation" do
     interest = Loan::InterestAccrual.charge(
       currency_precision: 2,

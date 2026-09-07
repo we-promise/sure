@@ -62,6 +62,7 @@ C12:
   class: Loan::InterestAccrualTest
   tests:
     - charge rounds once after unrounded accumulation
+    - charge accumulates segments unrounded and rounds once at the end
 C13:
   file: test/models/loan/interest_accrual_test.rb
   class: Loan::InterestAccrualTest
@@ -82,3 +83,4 @@ C16:
   class: Loan::InterestAccrualTest
   tests:
     - an offset change at the range start applies to the full range
+    - a change point at the range start applies to the full range
