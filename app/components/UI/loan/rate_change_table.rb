@@ -133,7 +133,26 @@ class UI::Loan::RateChangeTable < ApplicationComponent
 
     # From today's actual balance forward -- see the note at the top of this
     # class for why this is not the contracted schedule.
+    #
+    # Re-amortising, not the default :hold projection the payoff card uses
+    # (CodeRabbit, #79). Two reasons, and the second is the serious one:
+    #
+    #   1. Consistency. This table quotes the RE-AMORTISED repayment at each
+    #      change, so the balance those quotes are read off must be the one
+    #      that repayment produces. Under :hold the trajectory assumed the
+    #      borrower kept paying today's amount through every future change,
+    #      so the second and later rows were quoted off a balance that could
+    #      not occur.
+    #   2. A held repayment stops covering the interest once the rate rises
+    #      far enough, the simulation never converges, `applicable?` goes
+    #      false and this table renders NOTHING -- precisely the case a
+    #      borrower opens it for. On a ~$400k loan at 6.18% the cliff was a
+    #      rise to about 7.5%.
+    def projection
+      @projection ||= Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+    end
+
     def projected_rows
-      @projected_rows ||= loan.payoff_projection.applicable? ? loan.payoff_projection.payments : []
+      @projected_rows ||= projection.applicable? ? projection.payments : []
     end
 end

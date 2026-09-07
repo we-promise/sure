@@ -121,6 +121,41 @@ class UI::Loan::RateChangeTableTest < ViewComponent::TestCase
     assert component.render?
   end
 
+  # CodeRabbit, #79. The payoff card's projection HOLDS today's repayment, so a
+  # large enough rate rise leaves it no longer covering the interest, the
+  # simulation never converges, `applicable?` goes false and this table rendered
+  # NOTHING -- precisely the case a borrower opens it for. On this fixture the
+  # cliff was between 7.00% and 7.50%.
+  test "a rate rise steep enough to break a held repayment still renders" do
+    @loan.add_variable_rate_change(Date.current + 3.months, 9.00)
+
+    component = UI::Loan::RateChangeTable.new(loan: @loan.reload)
+    row = component.rows.sole
+
+    assert component.render?
+    assert row[:new_payment] > row[:current_payment],
+      "a rate rise must raise the quoted repayment"
+    assert_not Loan::PayoffProjection.new(@loan).applicable?,
+      "the fixture must actually break the HELD projection, or this proves nothing"
+  end
+
+  # The balances the table quotes off must be produced by the very repayment it
+  # quotes. Under the held projection the trajectory assumed the borrower kept
+  # paying today's amount through every future change, so the second and later
+  # rows were read off a balance that could not occur.
+  test "later rows are quoted off balances the earlier re-amortisation produces" do
+    @loan.add_variable_rate_change(Date.current + 3.months, 7.50)
+    @loan.reload.add_variable_rate_change(Date.current + 15.months, 8.50)
+
+    rows = UI::Loan::RateChangeTable.new(loan: @loan.reload).rows
+
+    assert_equal 2, rows.length
+    assert rows[1][:balance] < rows[0][:balance],
+      "the balance must fall between the two changes"
+    assert rows[1][:new_payment] > rows[0][:new_payment],
+      "the second, higher rate must quote a higher repayment than the first"
+  end
+
   # Codacy, #79. The offset is held flat at today's total by construction, so
   # asking per row was one query per row for an answer that cannot change
   # between them.

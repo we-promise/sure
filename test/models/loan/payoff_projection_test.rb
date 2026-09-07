@@ -490,4 +490,68 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_predicate money.amount, :finite?
     assert_in_delta 216.67, money.amount.to_f, 0.01, "50/week is 50 * 52 / 12 monthly-equivalent"
   end
+  # CodeRabbit, #79. :reamortize exists for UI::Loan::RateChangeTable, which
+  # quotes the re-amortised repayment and so needs the balance trajectory that
+  # repayment produces.
+  #
+  # The term basis is the trap. The simulator sizes each segment's repayment
+  # over the payments left IN ITS SCHEDULE, and the :hold window is deliberately
+  # twice the term so a moving payoff date has room. Re-amortising over that
+  # doubled window spreads the balance over ~720 periods instead of ~277: a
+  # repayment far too small to cover the interest, and a balance that climbs.
+  #
+  # Pinning the first projected payment to `current_minimum_payment` is what
+  # catches that, because that method re-amortises over the term to the ORIGINAL
+  # maturity. Assertions on the balance trajectory alone do NOT catch it -- the
+  # under-sized repayment leaves the balance roughly flat rather than obviously
+  # wrong, which is exactly what makes it dangerous.
+  test "a re-amortising projection pays the current minimum payment from the start" do
+    loan = reamortize_loan
+
+    projection = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert projection.applicable?
+    assert_equal loan.current_minimum_payment.amount,
+      projection.payments.first[:payment_amount],
+      "the projection must be driven by the very repayment the table quotes"
+  end
+
+  # A re-amortising loan clears at its ORIGINAL maturity by construction: the
+  # repayment moves, the date does not.
+  test "a re-amortising projection clears at the original maturity" do
+    loan = reamortize_loan
+
+    projection = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert_equal loan.amortization_schedule.payoff_date, projection.payoff_date
+    assert_equal 0, projection.payments.last[:ending_balance]
+  end
+
+  # Every existing caller wants :hold, and nothing about adding the option may
+  # move their numbers.
+  test "the default projection is unchanged by the new option" do
+    loan = reamortize_loan
+
+    default = Loan::PayoffProjection.new(loan)
+    explicit = Loan::PayoffProjection.new(loan, payment_strategy: :hold)
+
+    assert_equal explicit.payments, default.payments
+    assert_equal loan.amortization_schedule.monthly_payment.amount,
+      default.payments.first[:payment_amount],
+      ":hold carries the contracted repayment, not a re-amortised one"
+  end
+
+  private
+
+    def reamortize_loan
+      families(:dylan_family).accounts.create!(
+        name: "Reamortise Projection Loan",
+        balance: 400_762.12,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 6.18, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months
+        )
+      ).loan.tap { |loan| loan.add_variable_rate_change(Date.current + 2.months, 5.93) }.reload
+    end
 end
