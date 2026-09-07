@@ -1,4 +1,7 @@
-ARG RUBY_VERSION=3.4.10
+# Keep in step with .ruby-version, Gemfile.lock and the production Dockerfile.
+# The Gemfile pins Ruby via `ruby file: ".ruby-version"`, so a mismatch here makes
+# the devcontainer's `bundle install` disagree with the one CI runs.
+ARG RUBY_VERSION=3.4.9
 FROM ruby:${RUBY_VERSION}-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
