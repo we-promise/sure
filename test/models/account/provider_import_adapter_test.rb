@@ -55,7 +55,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "applies an explicit provider kind on a depository account" do
+  test "does not apply an orphaned provider transfer kind" do
     entry = @adapter.import_transaction(
       external_id: "up_transfer_1",
       amount: -50.00,
@@ -66,7 +66,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       kind: "funds_movement"
     )
 
-    assert_equal "funds_movement", entry.transaction.kind
+    assert_equal "standard", entry.transaction.kind
   end
 
   test "account-type kind takes precedence over an explicit provider kind" do
@@ -84,6 +84,81 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     assert_equal "loan_payment", entry.transaction.kind,
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
+  end
+
+  test "preserves the matched transfer kind despite a provider contribution label" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    brokerage_entry = adapter.import_transaction(
+      external_id: "matched_contribution_inflow",
+      amount: -1750,
+      currency: "USD",
+      date: Date.current,
+      name: "Electronic Funds Transfer Received",
+      source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+    checking_entry = accounts(:depository).entries.create!(
+      entryable: Transaction.new(kind: "investment_contribution"),
+      amount: 1750,
+      currency: "USD",
+      date: Date.current,
+      name: "Brokerage contribution"
+    )
+    Transfer.create!(
+      outflow_transaction: checking_entry.transaction,
+      inflow_transaction: brokerage_entry.transaction,
+      amount: 1750,
+      status: "confirmed"
+    )
+    brokerage_entry.transaction.update!(kind: "funds_movement")
+
+    adapter.import_transaction(
+      external_id: "matched_contribution_inflow",
+      amount: -1750,
+      currency: "USD",
+      date: Date.current,
+      name: "Electronic Funds Transfer Received",
+      source: "plaid",
+      investment_activity_label: "Contribution"
+    )
+
+    assert_equal "funds_movement", brokerage_entry.transaction.reload.kind
+  end
+
+  test "keeps orphaned provider contributions as standard transactions" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    category = investment_account.family.investment_contributions_category
+
+    entry = adapter.import_transaction(
+      external_id: "orphaned_cashback_1",
+      amount: -25,
+      currency: "USD",
+      date: Date.current,
+      name: "Robinhood Gold cashback",
+      source: "robinhood",
+      investment_activity_label: "Contribution"
+    )
+
+    assert_equal "standard", entry.transaction.kind
+    assert_nil entry.transaction.category
+    assert_equal "Contribution", entry.transaction.investment_activity_label
+
+    entry.transaction.update!(kind: "investment_contribution", category: category)
+    adapter.import_transaction(
+      external_id: "orphaned_cashback_1",
+      amount: -25,
+      currency: "USD",
+      date: Date.current,
+      name: "Robinhood Gold cashback",
+      source: "robinhood"
+    )
+
+    entry.transaction.reload
+    assert_equal "standard", entry.transaction.kind
+    assert_nil entry.transaction.category
+    assert_equal "Contribution", entry.transaction.investment_activity_label
   end
 
   test "updates existing transaction instead of creating duplicate" do
