@@ -77,6 +77,19 @@ class Account::ProviderImportAdapter
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
+          # Provider metadata is not user-editable, so refreshing it overrides no
+          # user intent: `extra` records what the provider last reported. Left out,
+          # a user-modified entry would keep whatever payload it was created with,
+          # and a field the provider has since dropped would show in the drawer
+          # forever.
+          #
+          # determine_skip_reason reports "user_modified" before it checks
+          # import_locked?, so an entry carrying both flags arrives here. Import
+          # ownership is the stronger claim, so those are left alone.
+          if skip_reason == "user_modified" && !entry.import_locked?
+            apply_provider_extra(entry, extra, replace_extra_namespaces)
+          end
+
           record_skip(entry, skip_reason)
           return entry
         end
@@ -198,21 +211,7 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      if extra.present? && entry.entryable.is_a?(Transaction)
-        existing = entry.transaction.extra || {}
-        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-
-        # A namespace listed here is a snapshot, not an accumulation: the whole
-        # branch is dropped before merging so a nested key the provider stopped
-        # sending disappears with it. deep_merge alone recurses into nested
-        # hashes, so a removed payment_meta.payee would otherwise survive
-        # forever and the drawer would keep showing it. Only namespaces the
-        # incoming payload actually carries are replaced.
-        replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
-
-        entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
-        entry.transaction.save!
-      end
+      apply_provider_extra(entry, extra, replace_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
@@ -1058,6 +1057,30 @@ class Account::ProviderImportAdapter
       return @account_linked_to_any_goal if defined?(@account_linked_to_any_goal)
 
       @account_linked_to_any_goal = account.goal_accounts.exists?
+    end
+
+    # Writes provider-owned metadata onto the transaction.
+    #
+    # Namespaces named in replace_extra_namespaces are snapshots, not
+    # accumulations: the whole branch is dropped before merging, so a nested key
+    # the provider stopped sending disappears with it. deep_merge alone recurses
+    # into nested hashes, so a removed payment_meta.payee would otherwise survive
+    # forever and the drawer would keep showing it. Only namespaces the incoming
+    # payload actually carries are replaced.
+    #
+    # @param entry [Entry] the entry being imported
+    # @param extra [Hash, nil] provider metadata to apply
+    # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @return [void]
+    def apply_provider_extra(entry, extra, replace_extra_namespaces)
+      return unless extra.present? && entry.entryable.is_a?(Transaction)
+
+      existing = entry.transaction.extra || {}
+      incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+      replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
+
+      entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
+      entry.transaction.save!
     end
 
     def clear_pending_flags_from_extra(extra)
