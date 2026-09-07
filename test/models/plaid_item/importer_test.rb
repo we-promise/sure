@@ -54,7 +54,9 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
   # has actually fetched full history for it.
   test "consumes the replay marker once the replay has been imported" do
     @plaid_item.request_history_replay!
-    requested_at = @plaid_item.replay_requested_at
+    # Read it back so the value matches the database exactly, since the clear is
+    # decided by a WHERE on this column.
+    requested_at = @plaid_item.reload.replay_requested_at
 
     @importer.stubs(:fetch_and_import_item_data)
 
@@ -83,6 +85,31 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     @importer.import
 
     assert @plaid_item.reload.replay_pending?, "a replay requested mid-sync must not be dropped"
+  end
+
+  # The interleaving that in-memory comparison cannot see: another process
+  # records a newer request after this sync loaded the record. The clear has to
+  # be decided in the database, against the value actually stored there.
+  test "keeps a replay written to the database after this sync loaded the item" do
+    @plaid_item.request_history_replay!
+    served_at = @plaid_item.replay_requested_at
+
+    @importer.stubs(:fetch_and_import_item_data)
+
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:accounts).returns([])
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:transactions_cursor).returns("test_cursor_1")
+    PlaidItem::AccountsSnapshot.any_instance.stubs(:replay_consumed_at).returns(served_at)
+
+    # A preference change lands mid-sync. Our in-memory copy still holds the
+    # older timestamp, so only the database knows this request is outstanding.
+    newer_request = 1.minute.from_now.change(usec: 0)
+    PlaidItem.where(id: @plaid_item.id).update_all(replay_requested_at: newer_request)
+
+    @importer.import
+
+    assert @plaid_item.reload.replay_pending?,
+      "a replay recorded after the item was loaded must not be cleared by this sync"
+    assert_equal newer_request.to_i, @plaid_item.replay_requested_at.to_i
   end
 
   test "clears requires update status after a successful import" do
