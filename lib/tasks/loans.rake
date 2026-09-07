@@ -288,26 +288,36 @@ namespace :loans do
     # "missing" count forever and this task could never exit 0. That would make
     # the one signal answering "is the prebuild finished?" permanently red.
     #
-    # `amortizable?` needs the account and its opening valuation, so it cannot
-    # be expressed in SQL. It is resolved in Ruby for the loans that have no
-    # rows and only those: in steady state that set is empty, and the one time
-    # it is large is before a prebuild has run, when every loan is being
-    # visited anyway.
-    missing_ids = scope.where.missing(:amortizations).pluck(:id)
-    awaiting, not_amortizable = Loan.where(id: missing_ids)
-      .includes(account: :entries)
-      .partition { |loan| loan.amortization_schedule.amortizable? }
+    # Most of `amortizable?` IS expressible in SQL, so it is, and only the part
+    # that is not -- a positive opening balance, which reads the account's first
+    # valuation -- falls through to Ruby. What is left is walked in batches: the
+    # one time this set is large is before the first prebuild, when every loan
+    # lacks rows, and loading them all (worse, with their accounts' entries)
+    # would exhaust memory exactly when the deploy gate is most needed.
+    missing = scope.where.missing(:amortizations)
 
-    stale = behind + awaiting.length
+    candidates = missing
+      .where(term_months: 1..)
+      .where.not(interest_rate: nil)
+      .where(rate_type: %w[fixed variable])
+      .where(id: Account.where(accountable_type: "Loan").select(:accountable_id))
+
+    awaiting = 0
+    candidates.in_batches(of: 500) do |batch|
+      awaiting += batch.includes(:account).count { |loan| loan.amortization_schedule.amortizable? }
+    end
+    not_amortizable = missing.count - awaiting
+
+    stale = behind + awaiting
 
     puts "algorithm_version=#{current}"
-    puts "loans=#{total} with_rows=#{with_rows} awaiting_first_build=#{awaiting.length} " \
-         "not_amortizable=#{not_amortizable.length}"
+    puts "loans=#{total} with_rows=#{with_rows} awaiting_first_build=#{awaiting} " \
+         "not_amortizable=#{not_amortizable}"
     versions.sort.each do |version, count|
       marker = version == current ? "current" : "STALE"
       puts "  version #{version}: #{count} loans (#{marker})"
     end
-    puts "stale=#{stale} (#{behind} at an older version, #{awaiting.length} awaiting a first build)"
+    puts "stale=#{stale} (#{behind} at an older version, #{awaiting} awaiting a first build)"
 
     # Non-zero exit on any staleness, so this can gate a deploy step or drive an
     # alert without the caller parsing stdout. A prebuild is finished when this

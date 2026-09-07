@@ -189,12 +189,14 @@ class LoansTaskTest < ActiveSupport::TestCase
     # creates and what the prebuild has to clear.
     loan.amortizations.update_all(algorithm_version: current - 1)
 
-    output, exit_error = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
+    output, exit_error, stderr = capture_output_and_exit { Rake::Task["loans:schedule_version_status"].invoke }
 
     assert_failed_exit exit_error, "staleness must exit non-zero so this can gate a deploy step"
     assert_match(/version #{current - 1}: \d+ loans \(STALE\)/, output,
       "the older version must be reported as stale, and named")
     assert_match(/stale=[1-9]/, output)
+    assert_match(/loans:rebuild_schedules/, stderr,
+      "the failure message must tell an operator what to run, and must be capturable")
   end
 
   test "schedule version status counts a loan with no rows as stale, not as clean" do
@@ -351,18 +353,26 @@ class LoansTaskTest < ActiveSupport::TestCase
     # a boolean would let a task that stopped reporting failure keep passing
     # tests that assert it fails.
     def capture_output_and_exit
-      buffer = StringIO.new
-      original = $stdout
-      $stdout = buffer
+      out = StringIO.new
+      err = StringIO.new
+      original_out = $stdout
+      original_err = $stderr
+      # Both streams, because `abort` writes its message to $stderr. Capturing
+      # only $stdout left the failure diagnostic -- the part that tells an
+      # operator what to do -- uncapturable and leaking into the test run's own
+      # output, which is the opposite of this helper's purpose.
+      $stdout = out
+      $stderr = err
       exit_error = nil
       begin
         yield
       rescue SystemExit => e
         exit_error = e
       end
-      [ buffer.string, exit_error ]
+      [ out.string, exit_error, err.string ]
     ensure
-      $stdout = original
+      $stdout = original_out
+      $stderr = original_err
     end
 
     # Asserts a task both exited and exited unsuccessfully. `exit(0)` raises
