@@ -43,7 +43,14 @@ class AccountTest < ActiveSupport::TestCase
 
   test "default owner is stable when two admins share a created_at" do
     family = families(:empty)
-    family.users.where(role: "admin").update_all(created_at: 1.hour.ago)
+    tied_admins = family.users.where(role: "admin")
+    tied_admins.update_all(created_at: 1.hour.ago)
+    assert_operator tied_admins.count, :>, 1, "the tie this pins needs at least two admins"
+
+    # Naming the expected winner, not just "the same one twice": a test that
+    # only compares the two results passes under any deterministic rule,
+    # including one that ignores `id` entirely.
+    expected_owner = tied_admins.order(:id).first
 
     Current.reset
 
@@ -56,8 +63,8 @@ class AccountTest < ActiveSupport::TestCase
       ).owner
     end
 
-    assert_equal "admin", owners.first.role
-    assert_equal owners.first, owners.last
+    assert_equal [ expected_owner, expected_owner ], owners,
+      "a created_at tie must resolve to the lowest id, the same way every time"
   end
 
   test "create_and_sync calls sync_later by default" do

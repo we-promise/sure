@@ -79,13 +79,31 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # page, and silent when it does not: work done on the outgoing body (an
   # opened `#modal` dialog, say) is discarded by the render with no error.
   #
-  # Stamp the current body, click, then wait for the stamp to go. Turbo
-  # replaces the whole body when it renders the response, so the stamp's
-  # disappearance *is* the render — not a guess at how long it takes.
+  # Waiting for the body to be replaced is not enough on its own. A visit to a
+  # URL Turbo has cached renders TWICE — the cached snapshot first, then the
+  # fresh response — and each render replaces the body, so a "the old body is
+  # gone" check clears on the preview and hands the test a page Turbo is still
+  # about to replace. `turbo:load` fires once per visit, after the final
+  # render, so that is what we wait for; the outgoing-body stamp stays as the
+  # guarantee that a render happened at all rather than the flag being left
+  # over from an earlier navigation.
   def click_link_and_wait_for_render(locator, **options)
-    page.execute_script("document.body.dataset.preVisitBody = 'true'")
+    page.execute_script(<<~JAVASCRIPT)
+      document.body.dataset.preVisitBody = "true"
+      document.addEventListener(
+        "turbo:load",
+        () => { document.body.dataset.turboVisitComplete = "true" },
+        { once: true }
+      )
+    JAVASCRIPT
+
     click_link(locator, **options)
+
+    assert_selector "body[data-turbo-visit-complete]", visible: :all
     assert_no_selector "body[data-pre-visit-body]", visible: :all
+    # Turbo stamps the root element while a cached preview is on screen, so
+    # this fails loudly if the waits above ever start clearing on a preview.
+    assert_no_selector "html[data-turbo-preview]", visible: :all
   end
 
   def teardown
