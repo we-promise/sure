@@ -94,9 +94,13 @@ class UI::Loan::RateChangeTable < ApplicationComponent
       loan.account.currency
     end
 
+    # `Loan#variable_rates` already returns entries in date order, so this
+    # preserves that ordering. One parse per entry, not two (Codacy, #79).
     def future_rate_changes
-      loan.variable_rates.select { |date, _| Date.iso8601(date.to_s) > as_of }
-          .map { |date, rate| [ Date.iso8601(date.to_s), rate ] }
+      loan.variable_rates.filter_map do |date, rate|
+        effective_date = Date.iso8601(date.to_s)
+        [ effective_date, rate ] if effective_date > as_of
+      end
     end
 
     # Index of the first projected payment on or after the effective date.
@@ -116,9 +120,15 @@ class UI::Loan::RateChangeTable < ApplicationComponent
     # caption under this table states.
     def interest_bearing_projected_balance(row_index)
       gross = BigDecimal(projected_rows[row_index][:beginning_balance].to_s)
-      offset = BigDecimal(loan.offset_accounts.sum(:balance).to_s)
 
-      [ gross - offset, BigDecimal("0") ].max
+      [ gross - offset_total, BigDecimal("0") ].max
+    end
+
+    # One query for the whole table. The offset is held flat at today's total
+    # by construction, so asking per row was a query per row for an answer that
+    # cannot change between them (Codacy, #79).
+    def offset_total
+      @offset_total ||= BigDecimal(loan.offset_accounts.sum(:balance).to_s)
     end
 
     # From today's actual balance forward -- see the note at the top of this

@@ -108,7 +108,66 @@ class UI::Loan::RateChangeTableTest < ViewComponent::TestCase
     assert_not component.render?
   end
 
+  # #78 made "adjustable" mean variable. This table guarded on
+  # `rate_type == "variable"`, so an adjustable loan silently rendered nothing
+  # -- the exact defect #78 removed everywhere else.
+  test "an adjustable-rate loan gets the table too" do
+    @loan.update!(rate_type: "adjustable")
+    @loan.reload.add_variable_rate_change(Date.current + 2.months, 5.93)
+
+    component = UI::Loan::RateChangeTable.new(loan: @loan.reload)
+
+    assert_equal 1, component.rows.length
+    assert component.render?
+  end
+
+  # Codacy, #79. The offset is held flat at today's total by construction, so
+  # asking per row was one query per row for an answer that cannot change
+  # between them.
+  #
+  # Measured as a DELTA between a one-row and a three-row table rather than an
+  # absolute count: the payoff projection this component reads also sums the
+  # offset, and pinning an absolute number would make this test a tripwire for
+  # that unrelated code instead of for the per-row query it is about.
+  test "the offset total is summed once however many rows the table has" do
+    one_row = offset_sum_queries_building_rows(months: [ 2 ])
+    three_rows = offset_sum_queries_building_rows(months: [ 2, 4, 6 ])
+
+    assert_equal one_row, three_rows,
+      "summing the offset per row makes the query count grow with the table"
+  end
+
   private
+
+    # Returns how many "SUM(balance) over the offset accounts" queries run while
+    # the table's rows are built, for a loan with a rate change in each of the
+    # given months.
+    def offset_sum_queries_building_rows(months:)
+      loan = variable_loan
+      offset = @family.accounts.create!(
+        name: "Query Count Offset #{months.length}", balance: 50_000,
+        currency: "USD", accountable: Depository.new
+      )
+      loan.update!(offset_account_ids: [ offset.id ])
+      loan.reload
+      months.each { |n| loan.add_variable_rate_change(Date.current + n.months, 5.93) }
+
+      component = UI::Loan::RateChangeTable.new(loan: loan.reload)
+      sums = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        sums += 1 if sql.include?("loan_offset_accounts") && sql.match?(/SUM\(/i)
+      end
+
+      begin
+        assert_equal months.length, component.rows.length,
+          "the fixture must produce one row per requested month, or the delta proves nothing"
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+
+      sums
+    end
 
     def variable_loan
       @family.accounts.create!(
