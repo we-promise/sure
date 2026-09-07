@@ -50,9 +50,54 @@ jobs:
     with:
       require_js_dependency_audit: false
 
+  # Resolved once, outside the matrix. Each matrix child checking out the ref
+  # itself would let a branch that moves mid-run produce images from different
+  # commits, and colliding matrix outputs mean only one child's metadata
+  # survives — so the manifest could describe a commit it was not built from.
+  # Pinning an immutable SHA here makes every child build the same tree.
+  resolve:
+    name: Resolve requested ref
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    outputs:
+      sha: ${{ steps.built_ref.outputs.sha }}
+      ref_name: ${{ steps.built_ref.outputs.ref_name }}
+
+    steps:
+      - name: Check out the requested ref
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Resolve it to an immutable commit
+        id: built_ref
+        shell: bash
+        # The ref reaches the script through env rather than `${{ }}`: a workflow_dispatch
+        # input (or a ref name, which git permits `$` and backticks in) would otherwise be
+        # pasted into the generated bash and execute on the runner. Newlines are rejected
+        # because GITHUB_OUTPUT is line-oriented — a CR/LF would let the value declare
+        # further outputs.
+        env:
+          REQUESTED_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          BUILT_SHA="$(git rev-parse HEAD)"
+          BUILT_REF_NAME="$REQUESTED_REF"
+
+          if [[ -z "$BUILT_REF_NAME" || "$BUILT_REF_NAME" == *$'\r'* || "$BUILT_REF_NAME" == *$'\n'* ]]; then
+            echo "Refusing to build: ref name is empty or contains a line break" >&2
+            exit 1
+          fi
+
+          printf 'sha=%s\n' "$BUILT_SHA" >> "$GITHUB_OUTPUT"
+          printf 'ref_name=%s\n' "$BUILT_REF_NAME" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build Docker image
-    needs: [ ci ]
+    needs: [ ci, resolve ]
 
     strategy:
       fail-fast: false
@@ -69,8 +114,6 @@ jobs:
 
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
-      build_sha: ${{ steps.built_ref.outputs.sha }}
-      build_ref_name: ${{ steps.built_ref.outputs.ref_name }}
 
     permissions:
       contents: read
@@ -80,39 +123,13 @@ jobs:
       - name: Set lowercase image name
         run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
-      - name: Check out the repo
+      # The resolved SHA, not the mutable ref: both matrix children must build
+      # the identical tree even if the branch moves mid-run.
+      - name: Check out the resolved commit
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      # workflow_dispatch builds an arbitrary `ref`, but github.sha/github.ref_name
-      # still describe the branch the workflow was dispatched FROM. Resolve what
-      # was actually checked out so the tag, build arg and OCI labels describe the
-      # code inside the image rather than the workflow's own branch.
-      - name: Resolve built commit
-        id: built_ref
-        shell: bash
-        # The ref reaches the script through env rather than `${{ }}`: a workflow_dispatch
-        # input (or a ref name, which git permits `$` and backticks in) would otherwise be
-        # pasted into the generated bash and execute on the publishing runner. Newlines are
-        # rejected because GITHUB_ENV/GITHUB_OUTPUT are line-oriented — a CR/LF would let
-        # the value declare further variables.
-        env:
-          REQUESTED_REF: ${{ github.event.inputs.ref || github.ref_name }}
-        run: |
-          BUILT_SHA="$(git rev-parse HEAD)"
-          BUILT_REF_NAME="$REQUESTED_REF"
-
-          if [[ -z "$BUILT_REF_NAME" || "$BUILT_REF_NAME" == *$'\r'* || "$BUILT_REF_NAME" == *$'\n'* ]]; then
-            echo "Refusing to build: ref name is empty or contains a line break" >&2
-            exit 1
-          fi
-
-          printf 'sha=%s\n' "$BUILT_SHA" >> "$GITHUB_OUTPUT"
-          printf 'ref_name=%s\n' "$BUILT_REF_NAME" >> "$GITHUB_OUTPUT"
-          printf 'BUILD_SHA=%s\n' "$BUILT_SHA" >> "$GITHUB_ENV"
-          printf 'BUILD_REF_NAME=%s\n' "$BUILT_REF_NAME" >> "$GITHUB_ENV"
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
@@ -127,6 +144,8 @@ jobs:
       - name: Configure image tags
         id: tag_config
         shell: bash
+        env:
+          BUILD_SHA: ${{ needs.resolve.outputs.sha }}
         run: |
           # Equivalent to `type=sha,format=long`, but pinned to the commit we
           # checked out rather than to github.sha.
@@ -165,8 +184,8 @@ jobs:
           labels: |
             org.opencontainers.image.version=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
-            org.opencontainers.image.revision=${{ env.BUILD_SHA }}
-            org.opencontainers.image.ref.name=${{ env.BUILD_REF_NAME }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.sha }}
+            org.opencontainers.image.ref.name=${{ needs.resolve.outputs.ref_name }}
             org.opencontainers.image.vendor=we-promise
             org.opencontainers.image.title=Sure
             org.opencontainers.image.description=A multi-arch Docker image for the Sure Rails app
@@ -176,7 +195,7 @@ jobs:
         id: build
         with:
           context: .
-          build-args: BUILD_COMMIT_SHA=${{ env.BUILD_SHA }}
+          build-args: BUILD_COMMIT_SHA=${{ needs.resolve.outputs.sha }}
           platforms: 'linux/${{ matrix.platform }}'
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
@@ -208,7 +227,7 @@ jobs:
   merge:
     name: Merge multi-arch manifest & push multi-arch tag
     if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'schedule' || github.event.inputs.push }}
-    needs: [build]
+    needs: [ build, resolve ]
 
     timeout-minutes: 60
     runs-on: 'ubuntu-24.04'
@@ -241,8 +260,8 @@ jobs:
         env:
           TAGS: ${{ needs.build.outputs.tags }}
           DIGESTS_DIR: ${{ runner.temp }}/digests
-          REF_NAME: ${{ needs.build.outputs.build_ref_name }}
-          REVISION: ${{ needs.build.outputs.build_sha }}
+          REF_NAME: ${{ needs.resolve.outputs.ref_name }}
+          REVISION: ${{ needs.resolve.outputs.sha }}
         shell: bash -xeuo pipefail {0}
         run: |
           tag_args=()
