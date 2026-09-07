@@ -38,6 +38,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
         - `total_results`: The total number of results for the given filters
         - `total_income`: The total income for the given filters
         - `total_expenses`: The total expenses for the given filters
+        - `total_refunds`: The total refunds for the given filters, already deducted from expenses and excluded from income
       INSTRUCTIONS
     end
   end
