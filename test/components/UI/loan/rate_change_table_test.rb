@@ -156,6 +156,24 @@ class UI::Loan::RateChangeTableTest < ViewComponent::TestCase
       "the second, higher rate must quote a higher repayment than the first"
   end
 
+  # CodeRabbit, #79. `unamortizable_payment?` judges the CONTRACTED repayment,
+  # which is not the one a re-amortising projection uses. Left applying to
+  # :reamortize it blanked this table for a loan whose rate has ALREADY risen
+  # past what its old repayment services -- the loan most in need of it.
+  test "a loan whose old repayment no longer covers interest still gets the table" do
+    @loan.update!(interest_rate: 1.0)
+    @loan.reload.add_variable_rate_change(Date.current - 1.month, 12.0)
+    @loan.reload.add_variable_rate_change(Date.current + 6.months, 13.0)
+
+    component = UI::Loan::RateChangeTable.new(loan: @loan.reload)
+
+    assert_not Loan::PayoffProjection.new(@loan).applicable?,
+      "the fixture must actually defeat the held projection, or this proves nothing"
+    assert_equal 1, component.rows.length,
+      "the already-effective rise is the current rate, so only the future one is listed"
+    assert component.render?
+  end
+
   # Codacy, #79. The offset is held flat at today's total by construction, so
   # asking per row was one query per row for an answer that cannot change
   # between them.
