@@ -22,6 +22,11 @@ so operators can inspect it in the super-admin `/settings/debug` UI.
 ## Pending transactions and FX metadata
 
 Store provider metadata on `Transaction#extra` under the provider namespace.
+[`import_transaction`](../../app/models/account/provider_import_adapter.rb) deep-merges
+that hash, so a key the provider stops sending keeps its previous value. A provider
+that owns its namespace outright passes `replace_extra_namespaces: ["<key>"]` to have
+the branch replaced instead; emit every key on every sync (nil when absent) when doing
+so, or a removed field lingers in the UI.
 [`Transaction#pending?` and pending scopes](../../app/models/transaction.rb) share
 `PENDING_PROVIDERS`; that constant is the current list of supported namespaces,
 including providers beyond the three described below. The UI shows a Pending
@@ -31,7 +36,7 @@ metadata produces no badge; manual/CSV imports have no pending concept.
 | Provider | Detection and storage |
 | --- | --- |
 | SimpleFIN | [`SimplefinEntry::Processor.pending?`](../../app/models/simplefin_entry/processor.rb) accepts an explicitly truthy `pending` flag, or `posted` equal to numeric `0` or string `"0"` with a present, positive `transacted_at` timestamp. A blank/missing `posted` value does **not** imply pending. Writes `extra["simplefin"]["pending"]` as true or false so a posted update clears stale pending metadata. |
-| Plaid | [`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) stores bank/credit transaction `pending` and `pending_transaction_id` under `extra["plaid"]`; the linking ID supports pending-to-posted reconciliation. The investment transaction processor does not store pending metadata. |
+| Plaid | [`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) stores bank/credit transaction `pending` and `pending_transaction_id` under `extra["plaid"]`; the linking ID supports pending-to-posted reconciliation. It also stores `original_description`, `payment_channel`, `transaction_code`, `payment_meta` and `counterparties`, and passes `replace_extra_namespaces: ["plaid"]` so the namespace is a snapshot of what Plaid currently reports. The investment transaction processor does not store pending metadata. |
 | Lunchflow | [`LunchflowEntry::Processor`](../../app/models/lunchflow_entry/processor.rb) stores the boolean-cast `isPending` value under `extra["lunchflow"]["pending"]` when the upstream key is present. |
 
 SimpleFIN additionally stores `extra["simplefin"]["fx_from"]` when transaction and
@@ -67,6 +72,25 @@ Pending inclusion is provider- and layer-specific:
   that configuration as `include_pending:`. A direct [provider call](../../app/models/provider/lunchflow.rb)
   defaults the argument to false and adds `include_pending=true` only when enabled;
   it does not consult the shared SimpleFIN/Plaid setting.
+
+## Plaid transaction naming
+
+`families.plaid_prefer_original_description` (default off) makes
+[`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) name transactions
+with the bank's `original_description` instead of Plaid's `merchant_name`. It is
+family-scoped rather than an instance setting: `/settings/providers` is gated on family
+admin, while the provider configuration registry holds instance-wide credentials.
+
+Enabling it sets `plaid_items.replay_requested_at`.
+[`AccountsSnapshot`](../../app/models/plaid_item/accounts_snapshot.rb) discards
+`next_cursor` while that marker is set so Plaid returns full history, and
+[`Importer`](../../app/models/plaid_item/importer.rb) clears it with a conditional
+`UPDATE ... WHERE replay_requested_at = ?` once a fetch has served that exact request,
+leaving a replay requested mid-sync outstanding.
+
+Do not clear `next_cursor` inline to force a replay:
+[`sync_later`](../../app/models/concerns/syncable.rb) coalesces into an in-flight sync,
+which then writes its own cursor back over the reset.
 
 ## Raw payload debugging
 
