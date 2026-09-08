@@ -635,7 +635,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     # Both months are over, so both are compared whole - the selected month
     # being shorter must not truncate the previous month's total.
-    assert_operator previous_series.last.fetch("value"), :>, previous_series.fetch(selected_month.end_of_month.day - 1).fetch("value")
+    assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
+    assert_equal 1110.0, previous_series.last.fetch("value")
     assert_equal money_text(previous_series.last.fetch("value")), previous_total
     assert_select "#spending-trend-section span",
       text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: selected_month.end_of_month.day),
