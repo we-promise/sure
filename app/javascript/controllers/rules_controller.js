@@ -50,12 +50,15 @@ export default class extends Controller {
   }
 
   #uniqueKey() {
-    // Prefixed so it can never collide with the numeric indexes Rails
-    // assigns to already-persisted conditions/actions when rendering an
-    // edit form (0, 1, 2, ...). A plain monotonic counter starting at 1
-    // would otherwise reuse index 1 and clobber an existing nested record.
+    // Must stay numeric: strong params only recognize integer-keyed hashes
+    // as nested attributes (ActionController::Parameters.nested_attribute?
+    // matches /\A-?\d+\z/), so a "new_1"-style key is silently dropped and
+    // the submit fails validation. Date.now() alone can repeat when rows are
+    // added in the same millisecond, and a small counter alone can collide
+    // with the numeric indexes Rails assigns persisted rows on edit forms,
+    // so combine them.
     this.keySequence = (this.keySequence ?? 0) + 1;
-    return `new_${this.keySequence}`;
+    return Date.now() * 1000 + this.keySequence;
   }
 
   // Updates the prefix visibility of all conditions and condition groups
