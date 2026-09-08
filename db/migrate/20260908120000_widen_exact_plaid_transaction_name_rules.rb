@@ -17,7 +17,8 @@
 # change. This does widen those conditions: a family that deliberately wanted an
 # exact match now gets a substring one. That is the lesser harm — the alternative
 # leaves rules that quietly stop firing, or quietly start.
-class WidenExactPlaidTransactionNameRules < ActiveRecord::Migration[7.2]
+class WidenExactPlaidTransactionNameRules < ActiveRecord::Migration[8.1]
+  # @return [void]
   def up
     execute <<~SQL
       UPDATE rule_conditions

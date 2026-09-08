@@ -87,10 +87,15 @@ class WidenExactPlaidTransactionNameRulesMigrationTest < ActiveSupport::TestCase
   end
 
   private
+    # @param operator [String] the rule operator to store
+    # @param value [String] the value the condition compares against
+    # @param condition_type [String] which field the condition targets
+    # @return [Rule::Condition] a saved top-level condition on the Plaid family's rule
     def create_condition(operator:, value:, condition_type: "transaction_name")
       @rule.conditions.create!(condition_type: condition_type, operator: operator, value: value)
     end
 
+    # @return [void] runs the migration's up path with its output suppressed
     def run_migration
       ActiveRecord::Migration.suppress_messages do
         WidenExactPlaidTransactionNameRules.new.up

@@ -6,6 +6,9 @@ class PlaidEntry::Processor
     @category_matcher = category_matcher
   end
 
+  # Upserts one Plaid transaction into the account.
+  #
+  # @return [Entry] the created or updated entry
   def process
     import_adapter.import_transaction(
       external_id: external_id,
@@ -73,6 +76,7 @@ class PlaidEntry::Processor
       plaid_transaction["original_description"]
     end
 
+    # @return [Numeric] the transaction amount, in Plaid's sign convention
     def amount
       plaid_transaction["amount"]
     end
