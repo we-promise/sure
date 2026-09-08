@@ -161,6 +161,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_not @subcategory_inheriting_bc.over_budget?
   end
 
+  test "parent availability includes rollover carried by ring-fenced children" do
+    @parent_budget_category.update!(budgeted_spending: 100)
+    @subcategory_with_limit_bc.update!(budgeted_spending: 100, rollover_enabled: true)
+    @subcategory_with_limit_bc.update_column(:rolled_over_amount, 80)
+
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(150)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(150)
+
+    assert_equal 30, @parent_budget_category.available_to_spend
+    assert_equal 30, @subcategory_with_limit_bc.available_to_spend
+    assert_equal 30, @subcategory_inheriting_bc.available_to_spend
+    assert_not @parent_budget_category.over_budget?
+  end
+
   test "percent_of_budget_spent for inheriting subcategory uses parent budget" do
     # Mock spending
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(100)

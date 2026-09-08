@@ -272,8 +272,11 @@ class BudgetCategory < ApplicationRecord
       # A parent card displays its full allocation and total spending (including
       # all children), so the available amount must reconcile with those same
       # figures. Child allocations are already included in the parent's stored
-      # budget and must not be subtracted a second time here.
-      (self[:budgeted_spending] || 0) + rolled_over_amount - actual_spending
+      # budget, while ring-fenced children carry their rollover separately from
+      # the parent. Include that carry without counting child allocations twice.
+      child_rollover = subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
+
+      (self[:budgeted_spending] || 0) + rolled_over_amount + child_rollover - actual_spending
     end
   end
 
