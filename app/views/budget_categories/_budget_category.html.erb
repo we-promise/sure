@@ -77,6 +77,18 @@
               days: daily_info[:days_remaining]) %>
           </div>
         <% end %>
+        <%# Bills reservations are metadata like the budgeted figure above, so
+            compact callers that opt out of the meta row stay compact. %>
+        <% if (reserved = budget_category.bills_reserved).amount.positive? %>
+          <div class="whitespace-nowrap text-xs text-secondary">
+            <%= t("budget_categories.bills_reserved", amount: format_money(reserved)) %>
+          </div>
+        <% end %>
+        <% if (unconvertible = budget_category.bills_reserved_unconvertible_count).positive? %>
+          <div class="whitespace-nowrap text-xs text-warning">
+            <%= t("budget_categories.bills_reserved_unconvertible", count: unconvertible) %>
+          </div>
+        <% end %>
         <% end %>
         <div class="whitespace-nowrap w-full sm:w-auto lg:ml-auto">
           <% if budget_category.available_to_spend >= 0 %>

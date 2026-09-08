@@ -44,7 +44,6 @@ module Api
         # First user of an instance becomes super_admin
         family = Family.new
         user.family = family
-        user.role = User.role_for_new_family_creator
 
         # Atomic: user creation, invite-code claim, and device/token issuance
         # either all commit or none do. Without this, a post-commit device
@@ -53,6 +52,9 @@ module Api
         token_response = nil
         begin
           ActiveRecord::Base.transaction do
+            User.lock_first_user_role!
+            user.role = User.role_for_new_family_creator
+
             unless user.save
               render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
               raise ActiveRecord::Rollback
@@ -215,7 +217,6 @@ module Api
           # while intentional super_admin defaults remain supported.
           provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
           provider_default_role = provider_config&.dig(:settings, :default_role)
-          user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
         end
 
         identity = nil
@@ -223,6 +224,11 @@ module Api
 
         begin
           account_created = ActiveRecord::Base.transaction do
+            unless invitation.present?
+              User.lock_first_user_role!
+              user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+            end
+
             unless user.save
               raise ActiveRecord::Rollback
             end

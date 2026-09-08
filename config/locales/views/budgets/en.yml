@@ -74,6 +74,10 @@ en:
       no_source: "No previous budget found to copy from"
       already_initialized: "This budget has already been set up"
   budget_categories:
+    bills_reserved: "%{amount} reserved by bills"
+    bills_reserved_unconvertible:
+      one: "1 bill is not reserved, no exchange rate available"
+      other: "%{count} bills are not reserved, no exchange rate available"
     allocation_progress:
       budget_exceeded_html: 'Budget exceeded by <span class="text-red-500 privacy-sensitive">%{amount}</span>'
       left_to_allocate: left to allocate

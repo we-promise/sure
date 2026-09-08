@@ -1,0 +1,6 @@
+---
+pt-PT:
+  syncs:
+    cancel:
+      cancelled: Sincronização cancelada. O que já estava sincronizado é mantido; o trabalho em fila foi interrompido.
+      not_cancellable: Esta sincronização já terminou.

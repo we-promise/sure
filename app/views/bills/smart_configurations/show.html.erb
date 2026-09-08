@@ -1,0 +1,93 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @series.display_name)) %>
+  <% dialog.with_body do %>
+    <% if @error %>
+      <p class="text-sm text-secondary"><%= @error %></p>
+    <% elsif !@suggestion.any_proposal? %>
+      <div class="space-y-2">
+        <p class="text-sm text-primary"><%= t(".no_changes") %></p>
+        <% if @suggestion.rationale.present? %>
+          <p class="text-xs text-secondary"><%= @suggestion.rationale %></p>
+        <% end %>
+      </div>
+    <% else %>
+      <%# Each proposal is a checkbox CARRYING the proposed value as the real
+          form param: unchecked rows submit nothing, so only accepted changes
+          reach recurring_transactions#update. The schedule's companion day
+          fields ride as hidden inputs -- harmless when the preset checkbox is
+          unchecked, because FrequencyPreset.apply no-ops without a preset. %>
+      <%= form_with url: recurring_transaction_path(@series), method: :patch,
+                    data: { turbo_frame: :_top } do %>
+        <%# Keeps an all-unchecked submit a harmless no-op: params.require is
+            satisfied, and this unpermitted key is dropped on the other side. %>
+        <%= hidden_field_tag "recurring_transaction[_ai_review]", "1" %>
+        <div class="space-y-1">
+          <p class="text-sm text-secondary mb-2"><%= t(".intro") %></p>
+
+          <% if @suggestion.name.present? && @suggestion.name != @series.display_name %>
+            <%= render "bills/smart_configurations/proposal",
+                  name: "recurring_transaction[name]", value: @suggestion.name,
+                  label: t(".field_name"),
+                  current: @series.display_name, proposed: @suggestion.name %>
+          <% end %>
+
+          <% if @suggestion.amount.present? && @suggestion.amount != @series.amount.abs %>
+            <%= render "bills/smart_configurations/proposal",
+                  name: "recurring_transaction[amount]", value: @suggestion.amount.to_s,
+                  label: t(".field_amount"),
+                  current: format_money(@series.amount_money.abs),
+                  proposed: format_money(Money.new(@suggestion.amount, @series.currency)) %>
+          <% end %>
+
+          <% if @suggestion.frequency.present? %>
+            <%= render "bills/smart_configurations/proposal",
+                  name: "recurring_transaction[frequency_preset]", value: @suggestion.frequency,
+                  label: t(".field_schedule"),
+                  current: frequency_label(@series),
+                  proposed: t("recurring_transactions.frequency_presets.#{@suggestion.frequency}") %>
+            <%= hidden_field_tag "recurring_transaction[frequency_day_of_month]",
+                  @suggestion.day_of_month || @detection.day_of_month %>
+            <%= hidden_field_tag "recurring_transaction[frequency_weekday]",
+                  @suggestion.weekday || @detection.weekday %>
+            <%= hidden_field_tag "recurring_transaction[frequency_month_of_year]",
+                  @suggestion.month_of_year || @detection.month_of_year %>
+          <% end %>
+
+          <% if @suggestion.category_id.present? && @suggestion.category_id != @series.category_id %>
+            <%= render "bills/smart_configurations/proposal",
+                  name: "recurring_transaction[category_id]", value: @suggestion.category_id,
+                  label: t(".field_category"),
+                  current: @series.category&.name || t(".uncategorized"),
+                  proposed: @suggestion.category_name %>
+          <% end %>
+
+          <% if @suggestion.bill_type.present? && @suggestion.bill_type != @series.bill_type %>
+            <%= render "bills/smart_configurations/proposal",
+                  name: "recurring_transaction[bill_type]", value: @suggestion.bill_type,
+                  label: t(".field_kind"),
+                  current: t("bills.all.types.#{@series.bill_type}"),
+                  proposed: t("bills.all.types.#{@suggestion.bill_type}") %>
+          <% end %>
+
+          <%# false is a real proposal (turn autopay off), so the gate is
+              non-nil and different, not truthy. %>
+          <% unless @suggestion.autopay.nil? || @suggestion.autopay == @series.autopay %>
+            <%= render "bills/smart_configurations/proposal",
+                  name: "recurring_transaction[autopay]", value: @suggestion.autopay.to_s,
+                  label: t(".field_autopay"),
+                  current: @series.autopay ? t(".autopay_on") : t(".autopay_off"),
+                  proposed: @suggestion.autopay ? t(".autopay_on") : t(".autopay_off") %>
+          <% end %>
+        </div>
+
+        <% if @suggestion.rationale.present? %>
+          <p class="text-xs text-secondary mt-3"><%= @suggestion.rationale %></p>
+        <% end %>
+
+        <div class="flex items-center justify-end gap-2 mt-4">
+          <%= render DS::Button.new(text: t(".apply"), variant: "primary") %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

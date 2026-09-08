@@ -1,0 +1,5 @@
+---
+pt-PT:
+  coinbase:
+    processor:
+      paid_via: "Pago através de %{method}"

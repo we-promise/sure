@@ -1,4 +1,21 @@
+# Bills subsystem: exposes what this category's bills have already committed
+# inside the budget period, as a read-side hook only.
 class BudgetCategory < ApplicationRecord
+  # Money this category's bills still expect inside the budget period --
+  # committed but not yet spent. Read-side only: budgets stay derived from
+  # posted entries, and debt-payment transfers never reach here because
+  # transfer series carry no category.
+  def bills_reserved
+    bills_reservation.first
+  end
+
+  # Obligations in this period with no rate into the budget currency. Counted
+  # and reported rather than dropped: a reservation that silently omits money
+  # reads as money the user still has free to spend.
+  def bills_reserved_unconvertible_count
+    bills_reservation.last
+  end
+
   include Monetizable
 
   belongs_to :budget
@@ -400,6 +417,50 @@ class BudgetCategory < ApplicationRecord
   end
 
   private
+    # A foreign-currency obligation is converted, not skipped: it is still owed
+    # out of this category. Only one with no rate at all falls out, and that one
+    # is counted.
+    def bills_reservation
+      @bills_reservation ||= begin
+        occurrences = RecurringOccurrence
+                        .open_status
+                        .joins(:recurring_transaction)
+                        .where(recurring_transactions: {
+                                 family_id: budget.family_id,
+                                 category_id: category_id,
+                                 status: :active,
+                                 destination_account_id: nil
+                               })
+                        .where("recurring_transactions.amount > 0")
+                        .where(due_on: budget.start_date..budget.end_date)
+                        .includes(:recurring_transaction)
+                        .to_a
+
+        # One grouped sum for the whole set. Reading remaining_amount straight
+        # off each row issues a SUM per occurrence, which is a query count that
+        # grows with the number of bills the user has.
+        sums = RecurringAllocation.confirmed
+                                  .where(recurring_occurrence_id: occurrences.map(&:id))
+                                  .group(:recurring_occurrence_id)
+                                  .sum(:allocated_amount)
+
+        unconvertible = 0
+
+        total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
+          occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+
+          begin
+            sum + occurrence.remaining_amount_money.exchange_to(currency)
+          rescue Money::ConversionError
+            unconvertible += 1
+            sum
+          end
+        end
+
+        [ total, unconvertible ]
+      end
+    end
+
     def sync_parent_budgeted_spending!(previous_budgeted_spending:)
       parent_budget_category = budget.budget_categories.where(category_id: category.parent_id).lock.first
       return unless parent_budget_category

@@ -14,7 +14,7 @@ class Rule::Condition < ApplicationRecord
 
   validates :condition_type, presence: true, inclusion: { in: SUPPORTED_CONDITION_TYPES, allow_blank: true }
   validates :operator, presence: true
-  validates :value, presence: true, unless: -> { compound? || operator == "is_null" }
+  validates :value, presence: true, unless: -> { compound? || Rule::ConditionFilter::VALUELESS_OPERATORS.include?(operator) }
 
   accepts_nested_attributes_for :sub_conditions, allow_destroy: true
 

@@ -120,7 +120,7 @@ class LunchflowItemsController < ApplicationController
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      @error_message = t("lunchflow_items.api_error.unexpected_error")
       @return_path = safe_return_to_path
       render partial: "lunchflow_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
@@ -324,7 +324,7 @@ class LunchflowItemsController < ApplicationController
              layout: false
     rescue StandardError => e
       Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      @error_message = t("lunchflow_items.api_error.unexpected_error")
       render partial: "lunchflow_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
              layout: false
@@ -534,15 +534,17 @@ class LunchflowItemsController < ApplicationController
     @account_type_options = [ [ t(".account_types.skip"), "skip" ] ] + all_account_type_options
 
     # Helper to translate subtype options
-    translate_subtypes = ->(type_key, subtypes_hash) {
-      subtypes_hash.map { |k, v| [ t(".subtypes.#{type_key}.#{k}", default: v[:long] || k.humanize), k ] }
+    translate_subtypes = ->(type_key, accountable_class) {
+      accountable_class::SUBTYPES.keys.map do |key|
+        [ t(".subtypes.#{type_key}.#{key}", default: accountable_class.long_subtype_label_for(key)), key ]
+      end
     }
 
     # Subtype options for each account type (only include supported types)
     all_subtype_options = {
       "Depository" => {
         label: t(".subtype_labels.depository"),
-        options: translate_subtypes.call("depository", Depository::SUBTYPES)
+        options: translate_subtypes.call("depository", Depository)
       },
       "CreditCard" => {
         label: t(".subtype_labels.credit_card"),
@@ -551,11 +553,11 @@ class LunchflowItemsController < ApplicationController
       },
       "Investment" => {
         label: t(".subtype_labels.investment"),
-        options: translate_subtypes.call("investment", Investment::SUBTYPES)
+        options: translate_subtypes.call("investment", Investment)
       },
       "Loan" => {
         label: t(".subtype_labels.loan"),
-        options: translate_subtypes.call("loan", Loan::SUBTYPES)
+        options: translate_subtypes.call("loan", Loan)
       },
       "OtherAsset" => {
         label: t(".subtype_labels.other_asset").presence,
@@ -642,7 +644,7 @@ class LunchflowItemsController < ApplicationController
     rescue StandardError => e
       Rails.logger.error("LunchFlow account setup failed unexpectedly: #{e.class} - #{e.message}")
       Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: "An unexpected error occurred")
+      flash[:alert] = t(".creation_failed", error: t(".unexpected_error"))
       redirect_to accounts_path, status: :see_other
       return
     end

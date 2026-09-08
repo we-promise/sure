@@ -39,6 +39,22 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert_equal 1, ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).count
   end
 
+  # Regression for a `rake demo_data:default` crash: the goal-seeding matrix
+  # linked several active goals to the same account as a 100%-whole-account
+  # claim each, which violates GoalAccount#whole_account_link_must_be_exclusive
+  # the moment the second one tries to save.
+  test "generate_goals! seeds the full matrix without raising" do
+    @family.update!(currency: "USD")
+    @family.accounts.create!(accountable: Depository.new, name: "Primary Checking",
+                              currency: @family.currency, balance: 150_000)
+    @family.accounts.create!(accountable: Depository.new, name: "Secondary Savings",
+                              currency: @family.currency, balance: 10_000)
+
+    assert_difference "@family.goals.count", 9 do
+      Demo::Generator.new.send(:generate_goals!, @family)
+    end
+  end
+
   private
     def create_user!(family, email)
       family.users.create!(

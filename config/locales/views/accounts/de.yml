@@ -70,6 +70,8 @@ de:
       container:
         close: Schließen
         navigate: Navigieren
+        next: Weiter
+        previous: Zurück
         select: Auswählen
     show:
       activity:

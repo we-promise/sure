@@ -8,6 +8,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       tags 'Auth'
       consumes 'application/json'
       produces 'application/json'
+      description 'Creates a new user and family. The first user on a fresh instance is assigned ' \
+                  'the super_admin role; later family creators are assigned an admin role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -311,7 +313,10 @@ RSpec.describe 'API V1 Auth', type: :request do
       tags 'Auth'
       consumes 'application/json'
       produces 'application/json'
-      description 'Creates a new user and family from a previously issued linking code. Links the SSO identity via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have allow_account_creation enabled.'
+      description 'Creates a new user and family from a previously issued linking code. Links the SSO identity ' \
+                  'via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. ' \
+                  'The linking code must have allow_account_creation enabled. The first user on a fresh instance is ' \
+                  'assigned the super_admin role; later family creators are assigned an admin-capable role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {

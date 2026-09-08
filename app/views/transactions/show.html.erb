@@ -401,6 +401,35 @@
               ) %>
             </div>
           <% end %>
+          <%# Which bills this transaction paid. Bills has always linked out to
+              transactions; without this the trip back was a dead end. Loading
+              and preview-gating live with BillsHelper#entry_bill_allocations. %>
+          <% applied_to = entry_bill_allocations(@entry) %>
+          <% if applied_to.any? %>
+            <div class="p-3 space-y-2">
+              <h4 class="text-sm text-primary"><%= t(".applied_to_title") %></h4>
+              <% applied_to.each do |allocation| %>
+                <% occurrence = allocation.recurring_occurrence %>
+                <div class="flex items-center justify-between gap-2 text-sm">
+                  <div>
+                    <%= link_to occurrence.recurring_transaction.display_name,
+                                bill_path(occurrence.recurring_transaction),
+                                class: "text-primary font-medium hover:underline",
+                                data: { turbo_frame: "_top" } %>
+                    <p class="text-secondary text-xs privacy-sensitive">
+                      <%= t(".applied_to_detail",
+                            amount: format_money(allocation.allocated_amount_money),
+                            date: l(occurrence.due_on, format: :long)) %>
+                    </p>
+                  </div>
+                  <% if allocation.allocation_suggested? %>
+                    <span class="text-xs text-warning"><%= t(".applied_to_unreviewed") %></span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+
           <!-- Mark as Recurring Form -->
           <%= render "transactions/mark_recurring", entry: @entry %>
         <% end %>

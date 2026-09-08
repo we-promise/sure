@@ -147,7 +147,6 @@ class OidcAccountsController < ApplicationController
       # while intentional super_admin defaults remain supported.
       provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
       provider_default_role = provider_config&.dig(:settings, :default_role)
-      @user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
     end
 
     identity = nil
@@ -155,6 +154,11 @@ class OidcAccountsController < ApplicationController
 
     begin
       account_created = ActiveRecord::Base.transaction do
+        unless invitation.present?
+          User.lock_first_user_role!
+          @user.role = User.role_for_new_family_creator(fallback_role: provider_default_role || :admin)
+        end
+
         unless @user.save
           raise ActiveRecord::Rollback
         end

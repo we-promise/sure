@@ -87,6 +87,25 @@ module ApplicationHelper
     item.merge(preview: true)
   end
 
+  # Bills is only meaningful while recurring detection is on, since a family that has
+  # turned it off has nothing to list. Returns nil so the entry drops out of the
+  # `Array#compact` nav list entirely rather than leading to an empty page. The
+  # subsystem also ships as a preview feature, so the entry is preview-gated on
+  # top: hidden without the flag, violet-dotted with it.
+  def bills_nav_item
+    return nil if Current.family.nil? || Current.family.recurring_transactions_disabled?
+
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.bills"),
+        path: bills_path,
+        icon: "receipt",
+        icon_custom: false,
+        active: page_active?(bills_path)
+      }
+    )
+  end
+
   # Budgets and Goals share one nav slot. Preview users get the "Plan" hub
   # entry fronting both (it stays lit while browsing either subpage, since
   # page_active? is a path-prefix match and /budgets · /goals don't share
@@ -226,19 +245,21 @@ module ApplicationHelper
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
   end
 
-  # Formats quantity with adaptive precision based on the value size.
+  # Formats a holding quantity with adaptive precision based on the value size.
   # Shows more decimal places for small quantities (common with crypto).
   #
   # @param qty [Numeric] The quantity to format
-  # @param max_precision [Integer] Maximum precision for very small numbers
+  # @param exact [Boolean] Show the full stored precision, without rounding
   # @return [String] Formatted quantity with appropriate precision
-  def format_quantity(qty)
+  def format_quantity(qty, exact: false)
     return "0" if qty.nil? || qty.zero?
 
     abs_qty = qty.abs
 
-    precision = if abs_qty >= 1
-      1     # "10.5"
+    precision = if exact
+      8     # "10.374"
+    elsif abs_qty >= 1
+      1     # "10.4"
     elsif abs_qty >= 0.01
       2     # "0.52"
     elsif abs_qty >= 0.0001

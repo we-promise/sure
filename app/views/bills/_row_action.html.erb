@@ -1,0 +1,79 @@
+<%# locals: (occurrence:, suggestion: nil, labelled: false) %>
+<% series = occurrence.recurring_transaction %>
+
+<%# The row's one verb, chosen by what the bill actually needs.
+
+    Every row used to carry the same "Details" button plus a pay action plus a
+    category badge, which at 375px added up to more than the row was wide: the
+    bill's own name collapsed to nothing and the page scrolled sideways. A row
+    that needs nothing from you now shows nothing.
+
+    Below md the verb is an icon, which DS::Buttonish already gives a 44px
+    touch target via pointer-coarse. The labelled version lives in the row
+    expansion, which is one tap away and has room for words.
+
+    `labelled: true` is what the expansion passes to get the full-width,
+    spelled-out version of the same decision. %>
+
+<%
+  action =
+    if suggestion.present?
+      { key: "review_match", icon: "git-compare" }
+    elsif occurrence.partially_paid?
+      { key: "add_payment", icon: "plus" }
+    elsif !occurrence.scheduled?
+      # Settled, skipped or missed. Nothing to chase, but unlinking a payment
+      # and reopening a cycle live behind this door and nowhere else.
+      { key: "manage_payments", icon: "receipt-text" }
+    elsif series.autopay?
+      nil
+    elsif occurrence.derived_state.in?(%i[overdue due])
+      # A due bill with a payment portal wants paying, not reconciling.
+      RecurringTransaction.valid_payment_url?(series.payment_url) ? nil : { key: "find_payment", icon: "search" }
+    end
+
+  # A row that needs nothing stays silent; the expansion never does, or
+  # unlinking, reopening and manual payment would be stranded.
+  action ||= { key: "find_payment", icon: "search" } if labelled && occurrence.scheduled?
+%>
+
+<% if action.nil? %>
+  <%# Nothing to resolve here, so the only thing worth offering is the portal
+      when there is one. show_add stays false: a dashed "Add link" on every
+      row is exactly the chrome this pass exists to remove. %>
+  <%= render "recurring_transactions/pay_action",
+        recurring_transaction: series, show_add: false, show_state: false %>
+<% elsif labelled %>
+  <%= render DS::Link.new(
+        text: t("bills.#{action[:key]}"),
+        icon: action[:icon],
+        variant: "primary",
+        href: recurring_occurrence_path(occurrence),
+        frame: :drawer
+      ) %>
+<% else %>
+  <%# Container-relative, not viewport-relative: the row's own list is the
+      @container, because the app shell's sidebars mean a 1280px viewport can
+      still leave this row about 420px to work with. A labelled verb needs
+      roughly 500px of row before it stops eating the bill's name. %>
+  <span class="hidden @lg:inline-flex">
+    <%= render DS::Link.new(
+          text: t("bills.#{action[:key]}"),
+          icon: action[:icon],
+          variant: "outline",
+          size: "sm",
+          href: recurring_occurrence_path(occurrence),
+          frame: :drawer
+        ) %>
+  </span>
+  <span class="@lg:hidden">
+    <%= render DS::Link.new(
+          icon: action[:icon],
+          variant: "icon",
+          href: recurring_occurrence_path(occurrence),
+          frame: :drawer,
+          title: t("bills.#{action[:key]}"),
+          aria: { label: t("bills.#{action[:key]}") }
+        ) %>
+  </span>
+<% end %>
