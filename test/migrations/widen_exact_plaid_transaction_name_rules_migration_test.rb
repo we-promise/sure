@@ -58,7 +58,12 @@ class WidenExactPlaidTransactionNameRulesMigrationTest < ActiveSupport::TestCase
   # No Plaid connection means no name change, so there is nothing to preserve
   # and no reason to widen what the user asked for.
   test "a family without a Plaid connection is left alone" do
-    other_rule = Rule.create!(family: @family_without_plaid, resource_type: "transaction")
+    # Saved without validation: `min_actions` requires an action, which has no
+    # bearing on a migration that only rewrites rule_conditions. The rule
+    # fixtures are actionless for the same reason.
+    other_rule = Rule.new(family: @family_without_plaid, resource_type: "transaction")
+    other_rule.save!(validate: false)
+
     condition = other_rule.conditions.create!(
       condition_type: "transaction_name", operator: "=", value: "Target"
     )

@@ -28,6 +28,11 @@ class WidenExactPlaidTransactionNameRules < ActiveRecord::Migration[7.2]
         AND (
           -- Top-level conditions carry rule_id; sub-conditions carry parent_id
           -- and leave rule_id null, so both shapes have to be reached.
+          --
+          -- Two levels is the whole tree: Rule#no_nested_compound_conditions
+          -- rejects a compound condition inside a compound one, so a
+          -- transaction_name condition is either a rule's own or one level
+          -- below it. A recursive walk would cover states the model forbids.
           rule_id IN (
             SELECT id FROM rules
             WHERE family_id IN (SELECT DISTINCT family_id FROM plaid_items)
