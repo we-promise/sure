@@ -156,6 +156,21 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
     assert_empty member_result[:payees]
   end
 
+  # The tool is constructed with an explicit user (Assistant::Builtin passes
+  # chat.user) and runs inside AssistantResponseJob, where nothing ever assigns
+  # Current.session. Reaching for Current.user or Current.family here would raise
+  # NoMethodError on nil for every chat-driven call, so both the account scope and
+  # the enrichment diagnostic must resolve through the injected user.
+  test "resolves its scope from the injected user when there is no session" do
+    Current.session = nil
+    create_uncategorized(name: "CB 02/09 CARREFOUR", amount: 25)
+
+    result = @fn.call
+
+    assert_includes result[:payees].map { |payee| payee[:payee] }, "CARREFOUR"
+    assert_not_nil result[:enrichment][:auto_categorize_rule]
+  end
+
   test "prefers a real merchant name over the cleaned label" do
     entry = create_uncategorized(name: "CB 02/09 SOMETHING RAW", amount: 20)
     entry.entryable.update!(merchant: merchants(:netflix))
