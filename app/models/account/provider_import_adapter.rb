@@ -224,8 +224,6 @@ class Account::ProviderImportAdapter
         auto_category = account.family.investment_contributions_category
       elsif account.accountable_type == "Loan" && amount.negative?
         auto_kind = "loan_payment"
-      elsif account.accountable_type == "CreditCard" && amount.negative?
-        auto_kind = "cc_payment"
       end
       auto_kind ||= kind.presence
 
