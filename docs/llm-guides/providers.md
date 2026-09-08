@@ -68,6 +68,22 @@ Pending inclusion is provider- and layer-specific:
   defaults the argument to false and adds `include_pending=true` only when enabled;
   it does not consult the shared SimpleFIN/Plaid setting.
 
+## Transaction naming
+
+Where a provider supplies both a cleaned merchant name and the bank's own
+description, combine them rather than choosing one:
+[`SimplefinEntry::Processor`](../../app/models/simplefin_entry/processor.rb) emits
+`"#{payee} - #{description}"` when both are present and differ, and
+[`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) does the same
+with `merchant_name` and `original_description`.
+
+The merchant name alone collapses distinct transactions into one name, and
+[rules](../../app/models/rule/condition.rb) match on `transaction_name`, so the
+collapse removes the only signal that could separate them. Substring matching
+(`ILIKE '%value%'`) means a rule written against the merchant name still matches the
+combined form. Merchant records are built from the cleaned name on a separate path,
+so grouping is unaffected.
+
 ## Raw payload debugging
 
 Raw debugging is default-off. `SIMPLEFIN_DEBUG_RAW=1` and

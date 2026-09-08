@@ -41,8 +41,36 @@ class PlaidEntry::Processor
       plaid_transaction["transaction_id"]
     end
 
+    # Combines Plaid's cleaned merchant name with the bank's original description,
+    # mirroring SimplefinEntry::Processor#name.
+    #
+    # merchant_name alone collapses distinct transactions into one indistinguishable
+    # name — every Target purchase becomes "Target", every Tesla charge "Tesla" —
+    # and rules match on the transaction name (Rule::Condition's transaction_name,
+    # compiled to ILIKE '%value%'), so nothing can tell the variants apart. Keeping
+    # both means existing "Target" rules still match while narrower ones become
+    # possible.
+    #
+    # @return [String, nil] the transaction name, or nil when Plaid sent neither
     def name
-      plaid_transaction["merchant_name"] || plaid_transaction["original_description"]
+      merchant = merchant_name.presence
+      original = original_description.presence
+
+      if merchant.present? && original.present? && merchant != original
+        "#{merchant} - #{original}"
+      else
+        merchant || original
+      end
+    end
+
+    # @return [String, nil] Plaid's cleaned-up merchant name, when it resolved one
+    def merchant_name
+      plaid_transaction["merchant_name"]
+    end
+
+    # @return [String, nil] the raw description as the bank wrote it
+    def original_description
+      plaid_transaction["original_description"]
     end
 
     def amount
