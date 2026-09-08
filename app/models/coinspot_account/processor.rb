@@ -18,12 +18,15 @@ class CoinspotAccount::Processor
   def process
     return unless coinspot_account.current_account.present?
 
-    CoinspotAccount::HoldingsProcessor.new(coinspot_account).process
+    holdings_result = CoinspotAccount::HoldingsProcessor.new(coinspot_account).process
+    failures = Array(holdings_result&.dig(:failures))
     process_account!
-    process_orders
-    process_send_receive
-    process_fiat_deposits
-    process_fiat_withdrawals
+    failures.concat(process_orders)
+    failures.concat(process_send_receive)
+    failures.concat(process_fiat_deposits)
+    failures.concat(process_fiat_withdrawals)
+
+    { success: failures.empty?, failures: failures }
   end
 
   private
@@ -62,9 +65,11 @@ class CoinspotAccount::Processor
     # the market-order fallback (a flat "orders" list whose type is inferred
     # per order rather than split by endpoint).
     def process_orders
-      Array(raw_transactions.dig("orders", "buyorders")).each { |order| process_order(order, "buy") }
-      Array(raw_transactions.dig("orders", "sellorders")).each { |order| process_order(order, "sell") }
-      Array(raw_transactions.dig("orders", "orders")).each { |order| process_order(order, infer_order_type(order)) }
+      failures = []
+      Array(raw_transactions.dig("orders", "buyorders")).each { |order| failures << process_order(order, "buy") }
+      Array(raw_transactions.dig("orders", "sellorders")).each { |order| failures << process_order(order, "sell") }
+      Array(raw_transactions.dig("orders", "orders")).each { |order| failures << process_order(order, infer_order_type(order)) }
+      failures.compact
     end
 
     # Imports one buy/sell order as a trade, plus its fee as a separate
@@ -104,25 +109,19 @@ class CoinspotAccount::Processor
 
       import_fee(order, fee_aud, date, symbol) if fee_aud.positive?
     rescue StandardError => e
-      DebugLogEntry.capture(
-        category: "provider_sync_error",
-        level: "error",
-        message: "Failed to process CoinSpot order: #{e.message}",
-        source: self.class.name,
-        provider_key: "coinspot",
-        family: coinspot_account.coinspot_item&.family,
-        metadata: { order: order, error_class: e.class.name }
-      )
+      log_record_failure("order", order, e)
     end
 
     # Imports every on-chain send and receive as account activity.
     def process_send_receive
+      failures = []
       Array(raw_transactions.dig("send_receive", "sendtransactions")).each do |transaction|
-        process_coin_movement(transaction, "send")
+        failures << process_coin_movement(transaction, "send")
       end
       Array(raw_transactions.dig("send_receive", "receivetransactions")).each do |transaction|
-        process_coin_movement(transaction, "receive")
+        failures << process_coin_movement(transaction, "receive")
       end
+      failures.compact
     end
 
     # Imports one on-chain send/receive as a contribution (receive) or
@@ -156,16 +155,20 @@ class CoinspotAccount::Processor
 
     # Imports every AUD deposit as account activity.
     def process_fiat_deposits
+      failures = []
       Array(raw_transactions.dig("deposits", "deposits")).each do |deposit|
-        process_fiat_movement(deposit, "deposit")
+        failures << process_fiat_movement(deposit, "deposit")
       end
+      failures.compact
     end
 
     # Imports every AUD withdrawal as account activity.
     def process_fiat_withdrawals
+      failures = []
       Array(raw_transactions.dig("withdrawals", "withdrawals")).each do |withdrawal|
-        process_fiat_movement(withdrawal, "withdrawal")
+        failures << process_fiat_movement(withdrawal, "withdrawal")
       end
+      failures.compact
     end
 
     # Imports one AUD deposit/withdrawal as a contribution/withdrawal transaction.
@@ -200,6 +203,7 @@ class CoinspotAccount::Processor
         family: coinspot_account.coinspot_item&.family,
         metadata: { record: record, error_class: error.class.name }
       )
+      { kind: kind, error: error.message, error_class: error.class.name, record: record }
     end
 
     # Imports a fee (already in AUD) as its own transaction, keyed off a hash

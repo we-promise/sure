@@ -108,6 +108,19 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "AUD", @account.currency
   end
 
+  test "does not persist an AUD amount under a non-AUD account currency when FX is unavailable" do
+    @family.update!(currency: "USD")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    assert_raises(CoinspotAccount::AudConverter::ConversionUnavailableError) do
+      CoinspotAccount::Processor.new(@coinspot_account).process
+    end
+
+    @account.reload
+    assert_equal 0.to_d, @account.balance
+    assert_equal "AUD", @account.currency
+  end
+
   test "derives market order price from aud total instead of quote asset rate" do
     @coinspot_account.update!(
       raw_transactions_payload: {
@@ -134,6 +147,22 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     trade = @account.entries.find_by!(external_id: "coinspot_order_buy_ETH_2026-01-08_eth-btc-1", source: "coinspot").trade
     assert_equal 2.to_d, trade.qty
     assert_equal 3000.to_d, trade.price
+  end
+
+  test "imports an order without a provider id using a stable content hash" do
+    order = {
+      "coin" => "btc",
+      "amount" => "0.001",
+      "audtotal" => "100.00",
+      "rate" => "100000.00",
+      "created" => "2026-01-09T10:00:00Z"
+    }
+    @coinspot_account.update!(raw_transactions_payload: { "orders" => { "buyorders" => [ order ] } })
+
+    CoinspotAccount::Processor.new(@coinspot_account).process
+
+    digest = Digest::SHA256.hexdigest(order.to_json)[0, 24]
+    assert @account.entries.exists?(external_id: "coinspot_order_buy_BTC_2026-01-09_#{digest}", source: "coinspot")
   end
 
   private

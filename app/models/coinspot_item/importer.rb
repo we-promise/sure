@@ -129,7 +129,8 @@ class CoinspotItem::Importer
       buckets.each do |kind, orders|
         orders.each do |order|
           order_id = order["id"] || order[:id]
-          orders_by_id[kind][order_id] = order if order_id
+          deduplication_key = order_id.presence || Digest::SHA256.hexdigest(order.to_json)
+          orders_by_id[kind][deduplication_key] = order
         end
       end
     end

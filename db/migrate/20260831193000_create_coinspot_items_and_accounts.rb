@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateCoinspotItemsAndAccounts < ActiveRecord::Migration[7.2]
+class CreateCoinspotItemsAndAccounts < ActiveRecord::Migration[8.1]
   def change
     create_table :coinspot_items, id: :uuid do |t|
       t.references :family, null: false, foreign_key: true, type: :uuid

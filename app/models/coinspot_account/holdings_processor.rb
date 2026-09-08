@@ -12,16 +12,17 @@ class CoinspotAccount::HoldingsProcessor
   # Imports every non-AUD asset in the account's latest balance snapshot as a
   # holding, then zeroes out any previously-imported holding whose security
   # is absent from that snapshot (sold/transferred away entirely). No-op for
-  # accounts not yet linked to a Crypto Sure account. Swallows errors rather
-  # than raising so one bad snapshot doesn't abort the wider sync.
+  # accounts not yet linked to a Crypto Sure account. Returns structured
+  # failures so the parent sync cannot report a partial import as successful.
   def process
     return unless account&.accountable_type == "Crypto"
 
-    raw_assets.each { |asset| process_asset(asset) }
+    failures = raw_assets.filter_map { |asset| process_asset(asset) }
     mark_absent_provider_holdings_zero!
+    { success: failures.empty?, failures: failures }
   rescue StandardError => e
-    Rails.logger.error "CoinspotAccount::HoldingsProcessor - error: #{e.message}"
-    nil
+    failure = log_failure(nil, e)
+    { success: false, failures: [ failure ] }
   end
 
   private
@@ -46,7 +47,7 @@ class CoinspotAccount::HoldingsProcessor
     # Resolves one raw balance-snapshot asset to a Security and imports it as
     # a holding for today. Skips AUD (cash, not a holding) and anything
     # missing a symbol, balance, or AUD amount. A single asset's failure is
-    # logged and skipped rather than aborting the rest of the snapshot.
+    # logged and returned while the rest of the snapshot is still attempted.
     def process_asset(asset)
       symbol = asset["symbol"] || asset[:symbol]
       return if symbol.to_s.upcase == "AUD"
@@ -83,7 +84,21 @@ class CoinspotAccount::HoldingsProcessor
         delete_future_holdings: false
       )
     rescue StandardError => e
-      Rails.logger.error "CoinspotAccount::HoldingsProcessor - failed asset symbol=#{symbol.presence || "unknown"}: #{e.message}"
+      log_failure(symbol, e, asset)
+    end
+
+    def log_failure(symbol, error, asset = nil)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process CoinSpot holding#{" #{symbol}" if symbol.present?}: #{error.message}",
+        source: self.class.name,
+        provider_key: "coinspot",
+        family: coinspot_account.coinspot_item&.family,
+        account_provider: coinspot_account.account_provider,
+        metadata: { symbol: symbol, asset: asset, error_class: error.class.name }
+      )
+      { kind: "holding", symbol: symbol, error: error.message, error_class: error.class.name }
     end
 
     def import_adapter

@@ -46,4 +46,16 @@ class CoinspotItem::SyncerTest < ActiveSupport::TestCase
     assert sync.reload.failed?
     assert_equal error.message, sync.error
   end
+
+  test "propagates per-account processor failures to the syncer" do
+    CoinspotAccount::Processor.any_instance.stubs(:process).returns(
+      success: false,
+      failures: [ { kind: "holding", error: "boom" } ]
+    )
+
+    result = @item.process_accounts
+
+    assert_equal false, result.first[:success]
+    assert_equal "holding", result.first[:result][:failures].first[:kind]
+  end
 end

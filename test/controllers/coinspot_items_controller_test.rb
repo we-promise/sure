@@ -89,6 +89,20 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/API key can't be blank/i, flash[:alert])
   end
 
+  test "turbo create errors render the provider panel with existing connections" do
+    post coinspot_items_url, params: {
+      coinspot_item: {
+        name: "Broken CoinSpot",
+        api_key: "   ",
+        api_secret: "\n"
+      }
+    }, as: :turbo_stream, headers: { "Turbo-Frame" => "coinspot-providers-panel" }
+
+    assert_response :unprocessable_entity
+    assert_includes @response.body, "coinspot-providers-panel"
+    assert_includes @response.body, "Api key can&#39;t be blank"
+  end
+
   test "select accounts requires an explicit connection when multiple coinspot items exist" do
     get select_accounts_coinspot_items_url, params: { accountable_type: "Crypto" }
 
@@ -277,10 +291,10 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
 
     post complete_account_setup_coinspot_item_url(@second_item), params: {
       selected_accounts: [ second_account.id ],
-      return_to: "/accounts"
+      return_to: settings_providers_path
     }
 
-    assert_redirected_to accounts_path
+    assert_redirected_to settings_providers_path
   end
 
   test "complete account setup rejects malicious return_to paths" do

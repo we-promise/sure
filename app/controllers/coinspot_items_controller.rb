@@ -232,6 +232,7 @@ class CoinspotItemsController < ApplicationController
     # frame request, or a full-page redirect with an alert otherwise.
     def render_panel_error(message)
       if turbo_frame_request?
+        @coinspot_items = Current.family.coinspot_items.active.ordered
         render turbo_stream: turbo_stream.replace(
           "coinspot-providers-panel",
           partial: "settings/providers/coinspot_panel",

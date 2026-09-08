@@ -89,6 +89,23 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ { "id" => "s1", "coin" => "BTC" } ], payload.dig("orders", "sellorders")
   end
 
+  test "preserves distinct orders that do not have provider ids" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).returns(
+      "buyorders" => [
+        { "coin" => "BTC", "amount" => "0.1", "audtotal" => "1000", "created" => "2026-01-02T10:00:00Z" },
+        { "coin" => "BTC", "amount" => "0.2", "audtotal" => "2000", "created" => "2026-01-03T10:00:00Z" }
+      ],
+      "sellorders" => []
+    )
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    assert_equal 2, result[:orders_imported]
+    orders = @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "buyorders")
+    assert_equal [ "0.1", "0.2" ], orders.map { |order| order["amount"] }
+  end
+
   test "bisects a window that comes back saturated at the record limit" do
     travel_to Date.new(2026, 1, 20) do
       @provider.stubs(:get_balances).returns("balances" => [])

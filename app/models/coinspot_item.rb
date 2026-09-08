@@ -60,9 +60,19 @@ class CoinspotItem < ApplicationRecord
     coinspot_accounts.joins(:account).merge(Account.visible).each do |coinspot_account|
       begin
         result = CoinspotAccount::Processor.new(coinspot_account).process
-        results << { coinspot_account_id: coinspot_account.id, success: true, result: result }
+        success = result.nil? || result[:success] != false
+        results << { coinspot_account_id: coinspot_account.id, success: success, result: result }
       rescue StandardError => e
-        Rails.logger.error "CoinspotItem #{id} - Failed to process account #{coinspot_account.id}: #{e.full_message}"
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "Failed to process CoinSpot account: #{e.message}",
+          source: self.class.name,
+          provider_key: "coinspot",
+          family: family,
+          account_provider: coinspot_account.account_provider,
+          metadata: { coinspot_item_id: id, coinspot_account_id: coinspot_account.id, error_class: e.class.name }
+        )
         results << { coinspot_account_id: coinspot_account.id, success: false, error: e.message }
       end
     end
