@@ -59,6 +59,7 @@ fr:
           conservative: Défensif
           moderate: Modéré
           high: Aggressif        
+        leverage_multiplier: "%{ratio}x"
         debt_over_down_payment: Dette / apport
         total_cost: Coût total
         principal: Capital

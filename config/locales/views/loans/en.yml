@@ -59,6 +59,7 @@ en:
           conservative: Defensive
           moderate: Moderate
           high: Aggressive
+        leverage_multiplier: "%{ratio}x"
         debt_over_down_payment: Debt / down payment
         total_cost: Total cost
         principal: Principal

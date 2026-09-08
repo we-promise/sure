@@ -72,7 +72,7 @@
         <% ratio = loan.initial_leverage_ratio %>
         <% color = loan_leverage_band_class(band) %>
         <div class="text-2xl font-semibold <%= color %>">
-          <%= number_with_precision(ratio, precision: 1) %>x
+          <%= t(".leverage_multiplier", ratio: number_with_precision(ratio, precision: 1)) %>
         </div>
         <div class="text-xs font-medium <%= color %> mt-0.5">
           <%= t(".leverage_bands.#{band}") %>
