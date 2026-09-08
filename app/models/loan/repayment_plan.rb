@@ -65,8 +65,13 @@ class Loan
       totals = Hash.new { |hash, key| hash[key] = BigDecimal("0") }
 
       @repayments.each do |repayment|
+        # Converted ONCE per repayment, not once per occurrence. It sat inside
+        # the inner loop, so a weekly repayment re-converted the same amount for
+        # every date it fired on (Codacy, #83).
+        amount = decimal_amount(repayment)
+
         dates_for(repayment, from_date, to_date, closes_inclusively).each do |date|
-          totals[date] += BigDecimal(repayment.amount.to_s)
+          totals[date] += amount
         end
       end
 
@@ -110,7 +115,31 @@ class Loan
           .occurrences_between(window_start, window_end)
       end
 
+      # `amount` is a decimal column, so a persisted row already yields a
+      # BigDecimal and the string round-trip is waste. The conversion is kept
+      # for the unsaved case, where a Float can still be assigned in memory.
+      def decimal_amount(repayment)
+        amount = repayment.amount
+        amount.is_a?(BigDecimal) ? amount : BigDecimal(amount.to_s)
+      end
+
+      # Memoized per repayment. `PayoffProjection` calls `change_points` once
+      # per payment period -- up to 360 times for a 30-year loan -- and this
+      # built a fresh Schedule and Rule on every one of them. The schedule
+      # depends only on the repayment, its rule and its anchor, all fixed for
+      # the life of the plan, so rebuilding it per period was pure allocation
+      # (Codacy, #83). Measured over 276 windows with 5 weekly repayments:
+      # 135,404 allocations / 57.5ms before, 100,904 / 53.3ms after. Codacy
+      # expected more; construction turned out to be only about a quarter of
+      # the cost, and `occurrences_between` is the rest. Left there: it is the
+      # recurrence engine this deliberately delegates to rather than
+      # reimplementing, and optimising it is not this PR's business.
       def schedule_for(repayment, rule, anchor)
+        @schedules ||= {}
+        @schedules[repayment] ||= build_schedule(repayment, rule, anchor)
+      end
+
+      def build_schedule(repayment, rule, anchor)
         RecurringTransaction::Schedule.new(
           expected_day_of_month: anchor.day,
           rules: [

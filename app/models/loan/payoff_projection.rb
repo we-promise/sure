@@ -438,6 +438,8 @@ class Loan
       # a repayment far too small to cover the interest, and a balance that
       # climbs instead of falling.
       def projected_payment_dates
+        return @projected_payment_dates if defined?(@projected_payment_dates)
+
         first_date = first_projected_payment_date
         periods = if @payment_strategy == :reamortize
           remaining_payments_to_original_maturity
@@ -449,7 +451,7 @@ class Loan
         # rather than Simulator's "payment schedule must not be empty".
         raise ArgumentError, "no payments remain to the original maturity" unless periods.positive?
 
-        Array.new(periods) { |index| first_date >> index }
+        @projected_payment_dates = Array.new(periods) { |index| first_date >> index }
       end
 
       # Payments left to the ORIGINAL maturity, counted from the first date this
