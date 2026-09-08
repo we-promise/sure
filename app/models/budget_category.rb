@@ -230,7 +230,7 @@ class BudgetCategory < ApplicationRecord
   end
 
   def rolled_over?
-    rolled_over_amount.positive?
+    display_rolled_over_amount.positive?
   end
 
   # Returns true if this subcategory has no individual budget limit and should use parent's budget
@@ -332,12 +332,14 @@ class BudgetCategory < ApplicationRecord
     (display_budgeted_spending.to_d + display_rolled_over_amount.to_d).positive?
   end
 
-  # Sibling of `display_budgeted_spending`: a subcategory sharing its
-  # parent's budget shares its parent's carry as well.
+  # Sibling of `display_budgeted_spending`: shared children show the parent's
+  # shared carry, while parents aggregate carry held by ring-fenced children so
+  # their displayed budget, rollover, spending, and availability reconcile.
   def display_rolled_over_amount
-    return rolled_over_amount unless inherits_parent_budget?
+    return parent_budget_category&.rolled_over_amount || 0 if inherits_parent_budget?
+    return rolled_over_amount if subcategory?
 
-    parent_budget_category&.rolled_over_amount || 0
+    rolled_over_amount + subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
   end
 
   def unbudgeted_with_spending?

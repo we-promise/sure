@@ -80,6 +80,37 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", budget_budget_category_path(budget, shared_budget_category), count: 0
   end
 
+  test "show displays ring-fenced child carry on the parent card" do
+    budget = budgets(:one)
+    parent_category = budget.family.categories.create!(name: "Parent rollover card", color: "#4da568")
+    child_category = budget.family.categories.create!(name: "Child rollover card", parent: parent_category)
+    previous_budget = budget.family.budgets.create!(
+      start_date: 6.months.ago.beginning_of_month.to_date,
+      end_date: 6.months.ago.end_of_month.to_date,
+      budgeted_spending: 20,
+      expected_income: 100,
+      currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: parent_category, budgeted_spending: 20, currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: child_category, budgeted_spending: 20, currency: "USD", rollover_enabled: true
+    )
+    parent_budget_category = budget.budget_categories.create!(
+      category: parent_category, budgeted_spending: 100, currency: "USD"
+    )
+    budget.budget_categories.create!(
+      category: child_category, budgeted_spending: 100, currency: "USD", rollover_enabled: true
+    )
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+    assert_select "a[href=?]", budget_budget_category_path(budget, parent_budget_category),
+                  text: /\+\$20\.00 rolled over/
+  end
+
   test "breadcrumbs include the Plan hub for preview users" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
 

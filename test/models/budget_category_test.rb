@@ -174,6 +174,8 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 30, @parent_budget_category.available_to_spend
     assert_equal 30, @subcategory_with_limit_bc.available_to_spend
     assert_equal 0, @subcategory_inheriting_bc.available_to_spend
+    assert_equal 80, @parent_budget_category.display_rolled_over_amount
+    assert @parent_budget_category.rolled_over?
     assert_in_delta 83.33, @parent_budget_category.percent_of_budget_spent, 0.01
     assert_not @parent_budget_category.over_budget?
     assert_not @parent_budget_category.near_limit?
