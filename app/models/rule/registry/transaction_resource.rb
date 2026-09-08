@@ -16,7 +16,13 @@ class Rule::Registry::TransactionResource < Rule::Registry
   end
 
   def resource_scope
-    family.transactions.visible.with_entry.merge(Entry.excluding_split_parents).where(entry: { date: rule.effective_date.. })
+    # System-generated entries are excluded: they are derived output that the
+    # generating code rewrites on every sync, so a rule that renamed or
+    # recategorized one would fight the syncer indefinitely.
+    family.transactions.visible.with_entry
+          .merge(Entry.excluding_split_parents)
+          .merge(Entry.excluding_system_generated)
+          .where(entry: { date: rule.effective_date.. })
   end
 
   def condition_filters

@@ -92,4 +92,105 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Loan account updated", flash[:notice]
     assert_enqueued_with(job: SyncJob)
   end
+
+  test "persists interest accrual settings through the shared update action" do
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          interest_rate: 6,
+          accrue_interest: "1",
+          interest_accrual_start_date: "2026-01-01",
+          interest_accrual_day: 15
+        }
+      }
+    }
+
+    loan = @account.reload.accountable
+    assert loan.accrue_interest?
+    assert_equal Date.new(2026, 1, 1), loan.interest_accrual_start_date
+    assert_equal 15, loan.interest_accrual_day
+
+    # And back off again — the DS::Toggle's paired hidden field sends "0".
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "Loan",
+        accountable_attributes: { id: @account.accountable_id, accrue_interest: "0" }
+      }
+    }
+
+    assert_not @account.reload.accountable.accrue_interest?
+  end
+
+  test "persists rate changes through the shared update action" do
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          interest_rate: 6,
+          accrue_interest: "1",
+          interest_accrual_start_date: "2026-01-01",
+          rate_changes_attributes: {
+            "0" => { effective_date: "2026-06-01", rate: 9 }
+          }
+        }
+      }
+    }
+
+    rate_change = @account.reload.accountable.rate_changes.sole
+    assert_equal Date.new(2026, 6, 1), rate_change.effective_date
+    assert_equal 9, rate_change.rate
+
+    # And remove it again via the _destroy flag the row's remove button sets.
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          rate_changes_attributes: {
+            "0" => { id: rate_change.id, _destroy: "1" }
+          }
+        }
+      }
+    }
+
+    assert_empty @account.reload.accountable.rate_changes
+  end
+
+  test "rejects enabling accrual without the inputs it needs" do
+    patch loan_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          accrue_interest: "1",
+          interest_rate: "",
+          interest_accrual_start_date: ""
+        }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_not @account.reload.accountable.accrue_interest?
+  end
+
+  test "shows the accrual toggle only for unlinked loans" do
+    get edit_account_url(@account)
+    assert_response :success
+    assert_select "input[name=?]", "account[accountable_attributes][accrue_interest]"
+
+    Account.any_instance.stubs(:unlinked?).returns(false)
+
+    get edit_account_url(@account)
+    assert_response :success
+    assert_select "input[name=?]", "account[accountable_attributes][accrue_interest]", count: 0
+  end
 end

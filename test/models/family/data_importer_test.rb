@@ -31,6 +31,40 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  # Generated interest entries are deliberately excluded from the export, so a
+  # restored loan can only rebuild them if it still knows accrual is on. Without
+  # this round-trip the balance comes back understated.
+  test "imports loan interest accrual settings" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan-1",
+          name: "Mortgage",
+          balance: "200000.00",
+          currency: "USD",
+          accountable_type: "Loan",
+          accountable: {
+            subtype: "mortgage",
+            interest_rate: "6.0",
+            accrue_interest: true,
+            interest_accrual_start_date: "2026-01-01",
+            interest_accrual_day: 15
+          }
+        }
+      }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    loan = result[:accounts].first.accountable
+    assert loan.accrue_interest?
+    assert_equal 6.0, loan.interest_rate.to_f
+    assert_equal Date.new(2026, 1, 1), loan.interest_accrual_start_date
+    assert_equal 15, loan.interest_accrual_day
+    assert loan.accrues_interest?, "restored loan should resume accruing on the next sync"
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {

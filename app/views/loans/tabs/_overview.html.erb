@@ -1,5 +1,7 @@
 <%# locals: (account:) %>
 
+<% accruing_interest = account.loan.accrues_interest? %>
+
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".original_principal") do %>
     <%= format_money account.loan.original_balance %>
@@ -42,7 +44,19 @@
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
   <% end %>
+
+  <% if accruing_interest %>
+    <%= summary_card title: t(".interest_charged") do %>
+      <%= format_money account.loan.accrued_interest_total %>
+    <% end %>
+  <% end %>
 </div>
+
+<% if accruing_interest %>
+  <p class="text-secondary text-sm text-center pt-4">
+    <%= t(".interest_accrual_hint") %>
+  </p>
+<% end %>
 
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
