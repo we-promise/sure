@@ -70,4 +70,16 @@
       <%= number_with_delimiter(initial_length) %> / <%= number_with_delimiter(Family::AiPromptable::MAX_LENGTH) %>
     </p>
   </div>
+
+  <%# Server-rendered so it persists while the override does, rather than
+      vanishing with a one-shot flash. Names the provider because one textarea
+      is shared between them. %>
+  <% prompts.select { |prompt| family.ai_prompt_format_risk?(prompt[:key]) }.each do |prompt| %>
+    <p class="flex items-start gap-1.5 text-xs text-warning">
+      <%= icon "circle-alert", size: "sm", class: "!w-3.5 !h-3.5 text-warning shrink-0 mt-0.5" %>
+      <span><%= t(".format_risk",
+                  provider: provider_label.call(prompt[:key]),
+                  key: Family::AiPromptable::WRAPPER_KEYS.fetch(prompt[:key].to_sym)) %></span>
+    </p>
+  <% end %>
 </div>

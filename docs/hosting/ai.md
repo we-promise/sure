@@ -1311,6 +1311,12 @@ if one was saved. Leaving a field blank falls back to the default, and clicking
 A status label and live character counter sit below each field, with an override
 cap of 20,000 characters per prompt.
 
+The categorizer and merchant detector ship two OpenAI variants: a terse one for
+smaller local models and a detailed one written for larger models. A single
+override replaces both, so on a deployment pointed at a custom endpoint
+(`OPENAI_URI_BASE` set) those fields open with the terse variant your models
+receive.
+
 Overriding the chat prompt gives up some prompt caching. The static half is
 byte-stable so providers discount the repeated prefix; a family that overrides it
 gets its own prefix, which no longer shares a cache entry with other families on
@@ -1321,12 +1327,20 @@ Evals always score the default. `Eval::Runners::ChatRunner` reads
 `STATIC_INSTRUCTIONS` directly, which keeps eval scores reproducible. Editing a
 family's prompt does not change them.
 
-Custom OpenAI-compatible endpoints need more care. When `LLM_JSON_MODE=none`
-there is no server-side schema, and the categorizer and merchant response parser
-falls back to matching the `{"categorizations": [...]}` or `{"merchants": [...]}`
-wrapper key in the prompt's example JSON. Keep that block and its top-level key
-intact. Native OpenAI (strict schema) and Anthropic (forced tool use) enforce the
-shape server-side, so you can reword those two freely.
+Custom OpenAI-compatible endpoints need a little more care. The categorizer and
+merchant parsers look for a `{"categorizations": [...]}` or `{"merchants": [...]}`
+wrapper key, but Sure also asks for that key in a per-request message your
+override does not replace, so rewording or dropping the example JSON is safe on
+its own. Parsing breaks when an override *contradicts* the output format:
+asking for reasoning before the answer, a different wrapper key, YAML, or tags
+around the result. Smaller local models tend to follow the system prompt over
+the per-request one.
+
+That risk applies to every mode except a strict schema the endpoint honors:
+`none` applies no constraint, `json_object` guarantees JSON but not the shape,
+and `auto` (the default) retries in `none` mode once more than half the results
+come back empty. Native OpenAI (strict schema) and Anthropic (forced tool use)
+enforce the shape server-side.
 
 #### In code (the default every family starts from)
 

@@ -40,6 +40,46 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_equal "CAT OPENAI", categorizer.instructions
   end
 
+  # One override key feeds both OpenAI variants, so the editor has to pre-fill
+  # the one this deployment sends. Getting it backwards hands a small local
+  # model a prompt written for GPT-4, with no error to trace it back to.
+  test "openai defaults follow the deployment's provider mode" do
+    Family::AiPromptable.stubs(:custom_openai_provider?).returns(true)
+
+    assert_includes @family.ai_prompt_default(:categorizer_openai), '{"categorizations":'
+    assert_includes @family.ai_prompt_default(:merchant_openai), '{"merchants":'
+
+    Family::AiPromptable.stubs(:custom_openai_provider?).returns(false)
+
+    assert_not_includes @family.ai_prompt_default(:categorizer_openai), '{"categorizations":'
+    assert_not_includes @family.ai_prompt_default(:merchant_openai), '{"merchants":'
+  end
+
+  # Advisory only. It has to stay quiet for the pre-filled default (which now
+  # carries the key on custom providers), or admins learn to ignore it.
+  test "flags only an openai override that dropped the wrapper key" do
+    Family::AiPromptable.stubs(:custom_openai_provider?).returns(true)
+
+    assert_not @family.ai_prompt_format_risk?(:categorizer_openai), "no override should not warn"
+
+    @family.update!(ai_prompt_categorizer_openai: "Categorise them. Be conservative.")
+    assert @family.ai_prompt_format_risk?(:categorizer_openai)
+
+    @family.update!(ai_prompt_categorizer_openai: 'Be conservative. {"categorizations": [...]}')
+    assert_not @family.ai_prompt_format_risk?(:categorizer_openai)
+
+    # Anthropic's wrapper key comes from the tool schema, so wording can't drop it.
+    @family.update!(ai_prompt_categorizer_anthropic: "No wrapper key in here.")
+    assert_not @family.ai_prompt_format_risk?(:categorizer_anthropic)
+  end
+
+  test "does not flag a dropped wrapper key on native openai" do
+    Family::AiPromptable.stubs(:custom_openai_provider?).returns(false)
+    @family.update!(ai_prompt_categorizer_openai: "Categorise them. Be conservative.")
+
+    assert_not @family.ai_prompt_format_risk?(:categorizer_openai)
+  end
+
   test "a blank value resets the key rather than storing an empty prompt" do
     @family.update!(ai_prompt_chat_system: "Be terse.")
     assert_equal "Be terse.", @family.ai_prompt(:chat_system)

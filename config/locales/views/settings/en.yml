@@ -122,6 +122,7 @@ en:
         reset_confirm_body: This will discard your custom prompt and restore the built-in default instructions.
         status_custom: Using your custom prompt
         status_default: Using the built-in default
+        format_risk: 'Your %{provider} prompt dropped the {"%{key}": ...} example. Each request still asks for that shape, so parsing usually holds, but an override that asks for a different output format will break it.'
       show:
         page_title: AI Prompts
         disable_ai: Disable AI Assistant
