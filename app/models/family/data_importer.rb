@@ -1430,6 +1430,13 @@ class Family::DataImporter
 
     def resolve_rule_action_value(action_data)
       action_type = action_data["action_type"]
+
+      # Tags store a comma-separated list of ids (see Rule::Action#value=) and
+      # value_ref may be an array for multi-tag actions, so this needs its own
+      # resolution path rather than the generic scalar one below (which
+      # assumes value_ref is nil or a single hash).
+      return resolve_multi_tag_action_value(action_data) if action_type == "set_transaction_tags"
+
       value = rule_operand_value(action_data)
 
       return value unless value.present?
@@ -1453,14 +1460,28 @@ class Family::DataImporter
         return merchant.id
       end
 
-      # Map tag names to IDs
-      if action_type == "set_transaction_tags"
-        tag = @family.tags.find_by(name: value)
-        tag ||= @family.tags.create!(name: value)
-        return tag.id
+      value
+    end
+
+    def resolve_multi_tag_action_value(action_data)
+      value_ref = action_data["value_ref"]
+      refs = case value_ref
+      when Array then value_ref
+      when Hash then [ value_ref ]
+      else []
       end
 
-      value
+      names = refs.any? ? refs.map { |ref| ref["name"] } : Rule::Action.decode_multi_value_names(action_data["value"])
+      tags_by_name = @family.tags.where(name: names).index_by(&:name)
+
+      tag_ids = names.filter_map do |name|
+        next if name.blank?
+
+        tag = tags_by_name[name] ||= @family.tags.create!(name: name)
+        tag.id
+      end
+
+      tag_ids.join(",")
     end
 
     def rule_operand_value(data)

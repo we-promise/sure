@@ -143,10 +143,12 @@ es:
         max_response_tokens_help: 'Tokens reservados para la respuesta del modelo. Predeterminado: 512. Bájalo para dejar sitio a un historial más largo.'
         max_items_per_call_label: Elementos máximos por lote (opcional)
         max_items_per_call_help: 'Límite superior para los lotes de categorización automática / detección de comercios. Predeterminado: 25. Los lotes más grandes se dividen automáticamente para caber en la ventana de contexto.'
-        ai_response_timeout_heading: Tiempo de espera de respuesta del chat
-        ai_response_timeout_description: Cuánto tiempo espera el chat al asistente antes de mostrar un error de "sin respuesta". Auméntalo si ejecutas un modelo local en hardware lento; las respuestas de proveedores compatibles con OpenAI no se transmiten por streaming, y las rondas de llamadas a herramientas no muestran nada, así que el chat puede quedarse en "Pensando..." durante todo el turno.
+        timeout_heading: Tiempos de espera
+        timeout_description: Controla cuánto tiempo pueden ejecutarse las llamadas a modelos compatibles con OpenAI antes de que Sure las cancele. Auméntalos si ejecutas un modelo local en hardware lento.
+        openai_request_timeout_label: Tiempo de espera de solicitud en segundos (opcional)
+        openai_request_timeout_help: "Predeterminado: 60. Se aplica a cada solicitud HTTP compatible con OpenAI, incluida la categorización automática, la detección de comercios, el chat, el procesamiento de PDF y las llamadas al almacén vectorial. OPENAI_REQUEST_TIMEOUT sobrescribe este campo."
         ai_response_timeout_label: Tiempo de espera de respuesta en segundos (opcional)
-        ai_response_timeout_help: 'Predeterminado: 90. Cubre todo el turno, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, más el tiempo de ejecución de herramientas y cola. Reducir ASSISTANT_MAX_TOOL_CALL_ITERATIONS disminuye cuánto debe crecer este valor y suele ser la mejor palanca en hardware lento.'
+        ai_response_timeout_help: "Predeterminado: 90. Solo se aplica al monitor de turno completo del chat, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tiempo de espera de solicitud, más el tiempo de ejecución de herramientas y cola. AI_RESPONSE_TIMEOUT sobrescribe este campo."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

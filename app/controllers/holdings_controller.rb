@@ -6,6 +6,7 @@ class HoldingsController < ApplicationController
 
   def index
     @account = accessible_accounts.find(params[:account_id])
+    @trade_republic_categories = trade_republic_categories_for(@account)
   end
 
   def show
@@ -147,6 +148,26 @@ class HoldingsController < ApplicationController
   end
 
   private
+
+    def trade_republic_categories_for(account)
+      provider = account.account_providers.includes(:provider).map(&:provider).find do |candidate|
+        candidate.is_a?(TradeRepublicAccount) && candidate.portfolio?
+      end
+      return if provider.blank?
+
+      values = Array(provider.raw_positions_payload).group_by { |position| position["category"].presence || "brokerage" }
+      TradeRepublicClientCategories::ALL.index_with do |category|
+        positions = values.fetch(category, [])
+        {
+          count: positions.size,
+          value: positions.sum do |position|
+            quantity = position["quantity"].presence&.to_d || BigDecimal("0")
+            price = position["price"].presence&.to_d || BigDecimal("0")
+            quantity * price
+          end
+        }
+      end
+    end
     def set_holding
       @holding = Current.family.holdings
                    .joins(:account)

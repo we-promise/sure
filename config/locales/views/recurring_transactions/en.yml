@@ -1,6 +1,15 @@
 ---
 en:
   recurring_transactions:
+    title: Recurring Transactions
+    upcoming: Upcoming Recurring Transactions
+    projected: Projected
+    recurring: Recurring
+    expected_today: "Expected today"
+    expected_in:
+      one: "Expected in %{count} day"
+      other: "Expected in %{count} days"
+    day_of_month: Day %{day} of month
     frequency_presets:
       monthly: Monthly
       weekly: Weekly
@@ -20,17 +29,115 @@ en:
       annual: "Yearly on %{month} %{day}"
       custom: Custom schedule
       last_day: last day
-    title: Recurring Transactions
-    upcoming: Upcoming Recurring Transactions
-    projected: Projected
-    recurring: Recurring
-    expected_today: "Expected today"
-    expected_in:
-      one: "Expected in %{count} day"
-      other: "Expected in %{count} days"
-    day_of_month: Day %{day} of month
     identify_patterns: Identify Patterns
     cleanup_stale: Clean Up Stale
+    actions:
+      edit_payment_link: Edit payment link
+      pause: Pause
+      resume: Resume
+      delete: Remove
+    pay_action:
+      pay: Pay
+      pay_aria: "Pay %{name} (opens in new tab)"
+      add_link: Add link
+      add_link_aria: "Add a payment link for %{name}"
+      autopay: Autopay
+      autopay_aria: "%{name} pays automatically, open its portal in a new tab"
+      open_site: Open bill site
+    new:
+      title: Add a bill
+      income_title: Add income
+      start_from_title: Start from a recurring charge we spotted
+      start_from_income_title: Start from a recurring deposit we spotted
+      start_from_hint: Optional. Picking one just fills in the form; you can still change anything.
+      candidate_meta: "%{count}× · last %{date}"
+      search_all_prompt: Not seeing what you're looking for?
+      search_all_cta: Search all your transactions
+      pick_different: Start from a different transaction
+      smart_fill: Smart-fill with AI
+      smart_fill_applied: AI suggested these values from the charge history. Review before saving.
+    smart_fills:
+      create:
+        failed: Could not analyze the charge history right now. The form kept the transaction's own values.
+    pick_entry:
+      title: Find a transaction to start from
+      income_title: Find a deposit to start from
+      hint: Picking one just fills in the form; you can still change anything.
+      search_placeholder: Search by name, notes or merchant
+      back: Back to the form
+      showing_recent: Showing your %{count} most recent. Search to narrow it down.
+      no_results: Nothing matches “%{query}”. Try fewer words, or go back and fill in the form yourself.
+    picker_row:
+      claimed: Part of %{name}
+    create:
+      success: Bill added
+      success_income: Income added
+      due_date_required: "Enter the bill's next due date"
+      amount_invalid: "Enter the amount as a plain number"
+      account_invalid: "Pick an account you can add bills to, or leave it blank"
+      already_exists: "This bill already exists"
+    edit:
+      trigger_label: Edit bill
+      title: "Edit %{name}"
+      income_title: "Edit income · %{name}"
+    form:
+      payment_url_label: Payment link
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Where you go to pay this bill. Opens in a new tab from your recurring and upcoming lists.
+      autopay_label: Pays automatically
+      autopay_hint: Keep it on your bills list, but stop treating it as something to do.
+      more_options: More options
+      notes_label: Notes
+      notes_placeholder: Account 4821, charged to the Amex
+      notes_hint: Anything you want in front of you when paying. Shown on the bill.
+      apply_to_siblings:
+        one: "Also use this link for the other %{name} bill"
+        other: "Also use this link for the other %{count} %{name} bills"
+      submit: Save bill
+      submit_income: Save income
+      income_name_label: Source
+      income_name_placeholder: Employer, client, side gig
+      income_amount_label: Amount per paycheck
+      income_due_on_label: Next payday
+      income_account_label: Deposits into
+      income_frequency_hint: How often you're paid. Pick the day details to match your payday.
+      income_frequency_label: How often you're paid
+      income_frequency_new_hint: The payday details come from the date above. You can refine the schedule after saving.
+      income_notes_placeholder: Direct deposit, splits across two accounts
+      income_notes_hint: Anything worth remembering about this income.
+      name_label: Name
+      name_placeholder: Rent, PG&E, Netflix
+      amount_label: Amount
+      first_due_on_label: Next due
+      account_label: Paid from
+      account_blank: Any account
+      bill_type_label: Kind
+      installment_count_label: Number of payments
+      installment_count_hint: The plan ends after this many payments and shows its progress until then.
+      renews_on_label: Renews
+      trial_ends_on_label: Trial ends
+      amount_edit_hint: Applies to bills due from now on. Anything already due keeps the amount it was.
+      income_amount_edit_hint: Applies to paydays from now on. Anything already due keeps the amount it was.
+      cancelled_on_label: Cancelled
+      cancelled_on_hint: Recording the date is for your own reference. Pause the bill to stop future ones appearing.
+      category_label: Category
+      category_blank: No category
+      frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.
+      frequency_label: How often
+      frequency_hint: How often this bill comes due. Pick the day details to match your statement.
+      frequency_day_label: On day
+      frequency_second_day_label: And day
+      frequency_weekday_label: "On"
+      frequency_month_label: "In"
+    update:
+      success: Bill updated
+      success_with_siblings:
+        one: "Bill updated, and the payment link was copied to 1 other bill"
+        other: "Bill updated, and the payment link was copied to %{count} other bills"
+    manage:
+      title: Your bills live on the Bills page
+      description: Declare, edit, pause and pay everything from there. This page controls detection.
+      cta: Open all bills
     settings:
       enable_label: Enable Recurring Transactions
       enable_description: Automatically detect recurring transaction patterns and show upcoming projected transactions.
@@ -43,11 +150,14 @@ en:
         - CSV imports complete (transactions, trades, accounts, etc. )
         - Any provider sync completes ( Plaid, SimpleFIN, etc. )
     identified: Identified %{count} recurring transaction patterns
+    identify_already_running: Detection is already running. Check back in a moment.
     cleaned_up: Cleaned up %{count} stale recurring transactions
-    marked_inactive: Recurring transaction marked as inactive
-    marked_active: Recurring transaction marked as active
-    deleted: Recurring transaction deleted
-    confirm_delete: Are you sure you want to delete this recurring transaction?
+    marked_inactive: Paused. It won't appear again until you resume it.
+    marked_active: Resumed.
+    deleted: Bill removed. Your transactions were not touched.
+    deleted_income: Income removed. Your transactions were not touched.
+    confirm_delete: "Remove %{name} from your bills? Your transactions stay exactly as they are. This only removes the bill and its payment schedule."
+    confirm_delete_income: "Remove %{name} as income? Your transactions stay exactly as they are. This only removes the income and its schedule."
     marked_as_recurring: Transaction marked as recurring
     already_exists: A manual recurring transaction already exists for this pattern
     creation_failed: Failed to create recurring transaction. Please check the transaction details and try again.
@@ -59,14 +169,27 @@ en:
     table:
       merchant: Name
       amount: Amount
-      expected_day: Expected Day
+      frequency: Frequency
       next_date: Next Date
       last_occurrence: Last Occurrence
       status: Status
       actions: Actions
     status:
       active: Active
-      inactive: Inactive
+      inactive: Paused
+      suggested: Possible bill
+      paused: Paused
+      ended: Dismissed
+    suggested:
+      title: Possible new bills
+      seen_count:
+        one: "seen once"
+        other: "seen %{count} times"
+      collapsed_hint: Tap to review
+      confirm: Add bill
+      dismiss: Not a bill
+    confirmed: Bill added to your recurring transactions
+    dismissed: "Dismissed. This pattern won't be suggested again."
     badges:
       manual: Manual
     transfer_marked_as_recurring: Transfer marked as recurring

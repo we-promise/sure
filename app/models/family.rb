@@ -5,6 +5,7 @@ class Family < ApplicationRecord
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
   include Trading212Connectable
+  include TradeRepublicConnectable
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
@@ -177,6 +178,21 @@ class Family < ApplicationRecord
     nil
   end
 
+  # Callers should still enqueue the normal family sync immediately. Plaid's
+  # refresh is asynchronous, and its polling chain schedules a distinct item
+  # sync after the cursor advances (or after the bounded polling fallback), so
+  # fresh transactions are imported even if the baseline family sync runs first.
+  def request_plaid_transactions_refreshes_later(source:)
+    enqueued_job = PlaidTransactionsRefreshAllJob.perform_later(self, source: source)
+    return enqueued_job if enqueued_job
+
+    capture_plaid_refresh_enqueue_failure(source:, error_class: "ActiveJob::EnqueueError")
+    nil
+  rescue => error
+    capture_plaid_refresh_enqueue_failure(source:, error_class: error.class.name)
+    nil
+  end
+
   def custom_enabled_currencies?
     enabled_currencies.present?
   end
@@ -198,6 +214,23 @@ class Family < ApplicationRecord
   def secondary_enabled_currency_objects(extra: [])
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
   end
+
+  def capture_plaid_refresh_enqueue_failure(source:, error_class:)
+    DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "warn",
+      message: "Plaid transaction refresh could not be enqueued; continuing with normal sync",
+      source: source,
+      provider_key: "plaid",
+      family: self,
+      metadata: { error_class: error_class }
+    )
+  rescue => logging_error
+    Rails.logger.warn(
+      "Plaid refresh enqueue diagnostic failed: #{logging_error.class.name}"
+    )
+  end
+  private :capture_plaid_refresh_enqueue_failure
 
 
   def moniker_label
@@ -541,6 +574,46 @@ class Family < ApplicationRecord
 
   def self_hoster?
     Rails.application.config.app_mode.self_hosted?
+  end
+
+  # Lazy so existing families get a token on first render, and resetting is
+  # revocation.
+  def bills_feed_token!
+    return bills_feed_token if bills_feed_token.present?
+
+    update!(bills_feed_token: SecureRandom.urlsafe_base64(24))
+    bills_feed_token
+  end
+
+  def reset_bills_feed_token!
+    update!(bills_feed_token: SecureRandom.urlsafe_base64(24))
+    bills_feed_token
+  end
+
+  # The URL a member subscribes to carries the MEMBER's identity, because the
+  # feed must honor per-account sharing: a member who can reach a subset of
+  # accounts must not receive the whole family's obligations. The family
+  # secret never appears in the URL; only a digest of it does, so rotating
+  # `bills_feed_token` still revokes every previously shared URL at once.
+  def bills_feed_token_for(user)
+    self.class.bills_feed_verifier.generate([ user.id, bills_feed_stamp! ])
+  end
+
+  def bills_feed_stamp!
+    Digest::SHA256.hexdigest(bills_feed_token!).first(16)
+  end
+
+  # Non-minting read for the verification side: a family that never rendered
+  # a feed link has no token, and a signed URL from some earlier life must
+  # not conjure one into existence to match against.
+  def bills_feed_stamp
+    return nil if bills_feed_token.blank?
+
+    Digest::SHA256.hexdigest(bills_feed_token).first(16)
+  end
+
+  def self.bills_feed_verifier
+    Rails.application.message_verifier("bills-user-feed")
   end
 
   private

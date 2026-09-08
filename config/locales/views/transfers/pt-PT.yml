@@ -1,0 +1,54 @@
+---
+pt-PT:
+  transfers:
+    create:
+      success: Transferência criada
+      exchange_rate_unavailable: Taxa de câmbio indisponível para as moedas e data selecionadas
+      date_invalid: é inválida
+    destroy:
+      success: Transferência removida
+    form:
+      amount: Montante
+      bank_charges: Comissões Bancárias
+      outgoing_fee: Comissão de transferência de saída
+      incoming_fee: Comissão de transferência de entrada
+      date: Data
+      destination_amount: Montante de destino
+      destination_amount_display: "Montante de destino: %{amount}"
+      exchange_rate_display: "Taxa de câmbio: %{rate}"
+      expense: Despesa
+      from: De
+      income: Rendimento
+      select_account: Selecionar conta
+      source_amount: Montante de origem
+      submit: Criar transferência
+      to: Para
+      transfer: Transferência
+    new:
+      title: Nova transferência
+    show:
+      delete: Eliminar transferência
+      delete_subtitle: Isto elimina a transferência. Não eliminará as transações
+        subjacentes.
+      delete_title: Eliminar transferência?
+      details: Detalhes
+      mark_recurring: Marcar como recorrente
+      mark_recurring_subtitle: Acompanhe esta transferência como um padrão recorrente no feed
+        de próximos eventos e na página de recorrentes.
+      mark_recurring_title: Marcar transferência como recorrente
+      note_label: Notas
+      note_placeholder: Adicionar uma nota a esta transferência
+      overview: Visão geral
+      settings: Definições
+      from: De
+      to: Para
+      date: Data
+      transfer_amount: Montante da transferência
+      total: Total
+      bank_charges: Comissões Bancárias
+      source_fee: Comissão de origem
+      destination_fee: Comissão de destino
+      category: Categoria
+      uncategorized: Sem categoria
+    update:
+      success: Transferência atualizada

@@ -28,6 +28,7 @@ module Assistant::Configurable
     - Reuse data already present in this conversation or in the Session context below instead of calling a tool again for it. Exception: always re-fetch when the data may have changed (for example after you created or updated something) or when the user asks for a different time range or more detail.
     - Prefer the most specific tool: use get_income_statement or get_balance_sheet for totals and trends; use get_transactions only to find or inspect individual transactions.
     - If a tool result contains an "error" and a "hint", follow the hint and retry once with corrected arguments. Never repeat an identical failing call.
+    - Never mention internal tool or function names in your responses. Describe what you did in plain language ("I checked your bills", not "I called get_bills").
     - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
 
     ### Response rules
