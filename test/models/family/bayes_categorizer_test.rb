@@ -87,6 +87,28 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
       "a description with no known tokens must not be classified from corpus-size bias alone"
   end
 
+  test "training data with no usable tokens classifies nothing" do
+    # Degenerate corpus: every training transaction tokenizes to nothing, so the
+    # vocabulary is empty. Scoring against a zero-sized vocabulary would divide
+    # by a zero token total and produce Infinity, whose softmax is NaN — and NaN
+    # fails every comparison, so a threshold check cannot reject it. Guard is
+    # that an empty vocabulary leaves no known tokens to score at all.
+    10.times { create_transaction(account: @account, name: "---", category: @coffee) }
+    10.times { create_transaction(account: @account, name: "...", category: @groceries) }
+
+    categorizer = Family::BayesCategorizer.new(@family)
+    assert categorizer.enough_training_data?
+
+    txn = create_transaction(account: @account, name: "Starbucks Coffee")
+
+    assert_nil categorizer.classify(txn.transaction)
+    assert_difference "DataEnrichment.count", 0 do
+      result = categorizer.classify_and_apply([ txn.transaction.id ])
+      assert_equal [], result.categorized_ids
+    end
+    assert_nil txn.transaction.reload.category
+  end
+
   test "novel merchant below threshold is left alone" do
     train_two_categories
     categorizer = Family::BayesCategorizer.new(@family)
