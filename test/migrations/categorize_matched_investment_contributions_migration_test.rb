@@ -59,6 +59,25 @@ class CategorizeMatchedInvestmentContributionsMigrationTest < ActiveSupport::Tes
     assert_equal category.id, outflow.reload.entryable.category_id
   end
 
+  test "uses the durable key when the category was renamed" do
+    family = Family.create!(name: "Migration renamed keyed family")
+    source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
+    destination = family.accounts.create!(name: "Migration destination", currency: "USD", balance: 0, accountable: Investment.new)
+    category = family.categories.create!(
+      name: "Long-term investing",
+      color: "#0d9488",
+      lucide_icon: "trending-up",
+      default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY
+    )
+    outflow = create_transaction(account: source, amount: 100, kind: "investment_contribution")
+    inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+
+    AddInvestmentContributionReportingSupport.new.backfill_confirmed_matches
+
+    assert_equal category.id, outflow.reload.entryable.category_id
+  end
+
   test "does not infer a category from its display name" do
     family = Family.create!(name: "Migration display name family")
     source = family.accounts.create!(name: "Migration source", currency: "USD", balance: 0, accountable: Depository.new)
