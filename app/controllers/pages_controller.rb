@@ -481,7 +481,9 @@ class PagesController < ApplicationController
 
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
-    # the two lines share one day-of-month axis.
+    # the two lines share one day-of-month axis. The header totals compare the
+    # same number of elapsed days; only the chart draws the previous month out
+    # to its final day.
     def build_spending_trend_data(income_statement, selected_month)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
@@ -507,7 +509,28 @@ class PagesController < ApplicationController
       )
 
       current_total = current_series.last&.fetch(:value) || 0
-      previous_total = previous_series.last&.fetch(:value) || 0
+
+      # The header answers "how am I tracking against last month at this point
+      # in the month?", so it reads the previous month's curve at the same
+      # day-of-month the current period reached, not at its final day. Taking
+      # the last point of both series compared a month-to-date figure against a
+      # complete month, which made the delta a large, flattering negative on
+      # the 1st that shrank as the month filled in.
+      # https://github.com/we-promise/sure/issues/3455
+      #
+      # Clamped to the shorter series because the previous month can end before
+      # the current day-of-month (Mar 30 has no Feb 30); in that case it has
+      # fully elapsed, so its total is the right comparison. For a month that
+      # is already over, current_series spans the whole month and this is a
+      # no-op.
+      comparison_days = [ current_series.size, previous_series.size ].min
+      previous_total = comparison_days.positive? ? previous_series[comparison_days - 1][:value] : 0
+
+      # Set only while the comparison stops short of the previous month's end,
+      # so the header can say which days it is comparing instead of implying
+      # the whole month.
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_series.size
+
       currency = income_statement.family.currency
 
 
@@ -524,6 +547,7 @@ class PagesController < ApplicationController
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        previous_comparison_day: previous_comparison_day,
         date_range_short: spending_trend_compact_date_range(current_period)
       }
     end
