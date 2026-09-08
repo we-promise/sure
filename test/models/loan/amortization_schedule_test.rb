@@ -162,6 +162,28 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal [ 4 ], loan.amortization_schedule.accrual_rate_change_markers.keys
   end
 
+  # #14: `adjustable` had been an option in the loan form since 2024 and was
+  # read by nothing -- amortizable? tested for "fixed" or "variable", so the
+  # loan silently had no schedule, no chart and no summary cards. It now
+  # schedules off the variable path.
+  test "an adjustable-rate loan is amortizable and honours its rate changes" do
+    loan = variable_loan_for_markers("Adjustable Rate Loan")
+    loan.update!(rate_type: "adjustable")
+
+    assert loan.amortization_schedule.amortizable?,
+      "selecting Adjustable must not silently remove the schedule"
+
+    payment_dates = loan.amortization_schedule.payments.map { |payment| payment[:payment_date] }
+    loan.add_variable_rate_change(payment_dates[3], 9.5)
+
+    assert_equal({ 5 => 9.5 }, loan.amortization_schedule.accrual_rate_change_markers)
+  end
+
+  test "a fixed-rate loan is amortizable and has no rate changes" do
+    assert @schedule.amortizable?
+    assert_not @schedule.has_rate_changes?
+  end
+
   test "a fixed-rate loan has no rate-change markers" do
     assert_empty @schedule.accrual_rate_change_markers
   end

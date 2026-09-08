@@ -1,8 +1,14 @@
 # Loan amortisation release evidence
 
 Status: G3 evidence below has been executed against production-shaped data, and
-**gate G2 is signed** (`docs/loans/methodology.md` records the signature and its
-carve-outs). Daily accrual is therefore released rather than prepared.
+**gate G2a is signed** -- the non-offset scope. **G2b, offset reconciliation,
+remains open**, and `docs/loans/methodology.md` carries the split, the owners and
+the release-reporting rule. Daily accrual is therefore released rather than
+prepared, on that qualified basis.
+
+Any statement that "G2 is signed" without naming G2a overstates the evidence:
+contract rows C15 and C16 are specified and unit-tested but **not
+lender-reconciled**.
 
 `Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL` is `true` and
 `ALGORITHM_VERSION` is `3`. The persisted schedule accrues daily and the figures
@@ -296,7 +302,7 @@ deploy step can block on it rather than an operator eyeballing a number:
 
 ## Outstanding approvals
 
-- **G2/#11: signed** by the repository owner, on the real statement
+- **G2a/#11: signed** (non-offset scope only; **G2b remains open**) by the repository owner, on the real statement
   reconciliation in #65. The evidence above shows this change is internally
   consistent, reversible and bounded; G2 is what speaks to whether daily accrual
   matches a real lender, and it does so for one lender, one loan, and gross

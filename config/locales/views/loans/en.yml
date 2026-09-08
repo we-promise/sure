@@ -36,6 +36,7 @@ en:
       overview:
         interest_rate: Interest Rate
         monthly_payment: Monthly Payment
+        minimum_payment_rate: "At the current rate of %{rate}, to the original payoff date"
         not_applicable: N/A
         original_principal: Original Principal
         remaining_principal: Remaining loan balance
@@ -61,7 +62,8 @@ en:
           other: "%{count} months later"
         projection_not_converged: The projected payoff does not converge within the supported term.
         recalculating: "These figures were recalculated for this page. The saved schedule is being refreshed in the background and will match shortly."
-        variable_rate_notice: "This loan has a variable interest rate. The schedule below reflects the current rate and any recorded rate changes; future rate changes will shift it."
+        minimum_payment_rate: "At the current rate of %{rate}, to the original payoff date"
+        variable_rate_notice: "This loan has a variable interest rate. The schedule re-amortises at each recorded rate change, keeping the original payoff date and resizing the repayment; a rate change that has not been recorded yet will shift these figures."
         offset_notice: "Projected interest assumes your linked offset balance stays at today's total. The loan balance itself is unchanged."
         rate_change_marker: "rate change"
         rate_change_marker_title: "The interest rate changes during this payment's period, to %{rate}%."

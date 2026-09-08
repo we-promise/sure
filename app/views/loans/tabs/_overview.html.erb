@@ -24,11 +24,29 @@
     <% end %>
   <% end %>
 
+  <%# FR-204: a variable loan printed "N/A" here, because the contracted
+      monthly_payment is sized from the ORIGINAL balance at the FIRST payment
+      date and describes a loan that no longer exists. current_minimum_payment
+      re-amortises today's balance at today's rate over the payments left to
+      the original maturity -- the figure a lender quotes. The Schedule tab
+      shows the same value from the same method, so the two cannot disagree. %>
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
-      <%= t(".not_applicable") %>
-    <% elsif account.loan.rate_type == 'fixed' && account.loan.monthly_payment.present? %>
-      <%= format_money(account.loan.monthly_payment) %>
+    <%# One as_of for both calls. Read separately, a render that crosses
+        midnight on a rate-change date can size the repayment at yesterday's
+        rate while the caption below it names today's. %>
+    <% as_of = Date.current %>
+    <% current_payment = account.loan.current_minimum_payment(as_of: as_of) %>
+    <% if current_payment.present? %>
+      <%= format_money(current_payment) %>
+      <% if account.loan.rate_type != 'fixed' %>
+        <%# A block-level span, not a <p>: summary_card already wraps this in a
+            <p class="privacy-sensitive">, and a nested <p> makes the browser
+            close that wrapper early -- which drops the rate out of Privacy
+            Mode's blur as well as being invalid markup. %>
+        <span class="block text-xs text-subdued mt-1">
+          <%= t(".minimum_payment_rate", rate: number_to_percentage(account.loan.current_variable_rate(as_of), precision: 3, strip_insignificant_zeros: true)) %>
+        </span>
+      <% end %>
     <% else %>
       <%= t(".unknown") %>
     <% end %>
@@ -56,7 +74,7 @@
 
   <%= summary_card title: t(".type") do %>
     <% type = account.loan.rate_type&.titleize || t(".unknown") %>
-    <% type = t(".variable_with_offset") if account.loan.rate_type == "variable" && account.loan.offset_accounts.any? %>
+    <% type = t(".variable_with_offset") if account.loan.variable_rate_type? && account.loan.offset_accounts.any? %>
     <%= type %>
   <% end %>
 </div>

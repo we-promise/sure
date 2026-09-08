@@ -59,8 +59,12 @@ class Loan
     # doesn't need a configured variable_rate_schedule to be amortizable --
     # it simply amortizes at the flat interest_rate until a rate change is
     # recorded.
+    #
+    # Covers every rate type that can move (Loan::VARIABLE_RATE_TYPES), which
+    # includes `adjustable`: before #14 it fell through both branches here and
+    # the loan silently had no schedule at all.
     def variable_rate?
-      loan.rate_type == "variable"
+      loan.variable_rate_type?
     end
 
     # Check if the loan has any recorded rate changes to apply mid-schedule
@@ -193,7 +197,7 @@ class Loan
     # The first row is included: its window opens at the accrual start date,
     # which is where Simulator#run opens it too.
     def accrual_rate_change_markers(rows = display_rows)
-      return {} unless loan.rate_type == "variable"
+      return {} unless loan.variable_rate_type?
       return {} if rows.empty?
 
       # One resolver call over the whole span, then bucketed by walking the two
@@ -221,6 +225,31 @@ class Loan
         end
 
         markers[row.payment_number] = latest.fetch(:rate) if latest
+      end
+    end
+
+    # Payments still to come as of `as_of`, counted against the CONTRACTED
+    # schedule -- the payments remaining to the original maturity, not a fresh
+    # term. Public because #15's current minimum repayment re-amortises over
+    # exactly this count, and deriving it separately is how two surfaces end up
+    # quoting different figures for one loan.
+    # `including_on_date` decides which side of the boundary a payment falling
+    # exactly on `as_of` sits. Both callers need a different answer, and the
+    # answer must match the balance each is spreading:
+    #
+    # - today's repayment (default, exclusive): a payment due today has been
+    #   made and is already reflected in the balance, so it is not one of the
+    #   payments left to spread that balance over;
+    # - a future rate change (inclusive): the balance used is that payment's
+    #   OPENING balance, so that payment is still to come and must be counted.
+    #
+    # Getting this wrong is silent -- it moves the quote by one period, which
+    # looks like a plausible number.
+    def remaining_payment_count(as_of: Date.current, including_on_date: false)
+      return 0 unless amortizable?
+
+      scheduled_payment_dates.count do |date|
+        including_on_date ? date >= as_of : date > as_of
       end
     end
 
@@ -300,17 +329,12 @@ class Loan
       # amortized over remaining_payments -- the payments left through loan
       # maturity, not just this segment's own length.
       def calculate_segment_payment(rate, balance, remaining_payments)
-        return BigDecimal("0") if remaining_payments <= 0 || balance <= 0
-
-        monthly_rate = (rate / BigDecimal("100")) / BigDecimal("12")
-
-        if monthly_rate.zero?
-          (balance / remaining_payments).round(currency_precision)
-        else
-          numerator = balance * monthly_rate * ((1 + monthly_rate) ** remaining_payments)
-          denominator = ((1 + monthly_rate) ** remaining_payments) - 1
-          (numerator / denominator).round(currency_precision)
-        end
+        AmortizationMath.level_payment(
+          balance: balance,
+          monthly_rate: Loan.monthly_rate(rate),
+          remaining_payments: remaining_payments,
+          currency_precision: currency_precision
+        )
       end
 
       # Get the currency's decimal precision for rounding

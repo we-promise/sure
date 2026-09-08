@@ -1,0 +1,37 @@
+<div class="space-y-2">
+  <h3 class="text-sm font-medium text-primary"><%= t("UI.loan.rate_change_table.title") %></h3>
+
+  <div class="rounded-lg bg-container shadow-xs border border-alpha-black-25 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-container border-b border-alpha-black-25">
+          <tr class="text-secondary text-left">
+            <th scope="col" class="font-medium px-4 py-3"><%= t("UI.loan.rate_change_table.effective_date") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t("UI.loan.rate_change_table.balance") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t("UI.loan.rate_change_table.current_rate") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t("UI.loan.rate_change_table.new_rate") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t("UI.loan.rate_change_table.current_payment") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t("UI.loan.rate_change_table.new_payment") %></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-alpha-black-25" data-rate-change-table>
+          <% rows.each do |row| %>
+            <tr>
+              <td class="px-4 py-2"><%= l row[:effective_date], format: :long %></td>
+              <td class="px-4 py-2 text-right"><%= helpers.format_money row[:balance] %></td>
+              <td class="px-4 py-2 text-right"><%= number_to_percentage(row[:current_rate], precision: 3, strip_insignificant_zeros: true) %></td>
+              <td class="px-4 py-2 text-right"><%= number_to_percentage(row[:new_rate], precision: 3, strip_insignificant_zeros: true) %></td>
+              <td class="px-4 py-2 text-right"><%= row[:current_payment] ? helpers.format_money(row[:current_payment]) : t("UI.loan.rate_change_table.unknown") %></td>
+              <td class="px-4 py-2 text-right font-medium"><%= helpers.format_money row[:new_payment] %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%# The assumptions are stated rather than implied: every figure here is a
+      projection, and a borrower comparing it to a lender letter needs to know
+      what it holds constant. %>
+  <p class="text-sm text-secondary"><%= t("UI.loan.rate_change_table.assumptions") %></p>
+</div>

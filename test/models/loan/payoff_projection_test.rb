@@ -490,4 +490,211 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_predicate money.amount, :finite?
     assert_in_delta 216.67, money.amount.to_f, 0.01, "50/week is 50 * 52 / 12 monthly-equivalent"
   end
+  # CodeRabbit, #79. :reamortize exists for UI::Loan::RateChangeTable, which
+  # quotes the re-amortised repayment and so needs the balance trajectory that
+  # repayment produces.
+  #
+  # The term basis is the trap. The simulator sizes each segment's repayment
+  # over the payments left IN ITS SCHEDULE, and the :hold window is deliberately
+  # twice the term so a moving payoff date has room. Re-amortising over that
+  # doubled window spreads the balance over ~720 periods instead of ~277: a
+  # repayment far too small to cover the interest, and a balance that climbs.
+  #
+  # Pinning the first projected payment to `current_minimum_payment` is what
+  # catches that, because that method re-amortises over the term to the ORIGINAL
+  # maturity. Assertions on the balance trajectory alone do NOT catch it -- the
+  # under-sized repayment leaves the balance roughly flat rather than obviously
+  # wrong, which is exactly what makes it dangerous.
+  test "a re-amortising projection pays the current minimum payment from the start" do
+    loan = reamortize_loan
+
+    projection = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert projection.applicable?
+    assert_equal loan.current_minimum_payment.amount,
+      projection.payments.first[:payment_amount],
+      "the projection must be driven by the very repayment the table quotes"
+  end
+
+  # A re-amortising loan clears at its ORIGINAL maturity by construction: the
+  # repayment moves, the date does not.
+  test "a re-amortising projection clears at the original maturity" do
+    loan = reamortize_loan
+
+    projection = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert_equal loan.amortization_schedule.payoff_date, projection.payoff_date
+    assert_equal 0, projection.payments.last[:ending_balance]
+  end
+
+  # Every existing caller wants :hold, and nothing about adding the option may
+  # move their numbers.
+  test "the default projection is unchanged by the new option" do
+    loan = reamortize_loan
+
+    default = Loan::PayoffProjection.new(loan)
+    explicit = Loan::PayoffProjection.new(loan, payment_strategy: :hold)
+
+    assert_equal explicit.payments, default.payments
+    assert_equal loan.amortization_schedule.monthly_payment.amount,
+      default.payments.first[:payment_amount],
+      ":hold carries the contracted repayment, not a re-amortised one"
+  end
+
+  # CodeRabbit, #79. `unamortizable_payment?` asks whether the CONTRACTED
+  # repayment covers the first period's interest. That is the right question for
+  # :hold, which is stuck with it, and the wrong one for :reamortize, which
+  # computes a repayment that covers the interest by construction.
+  #
+  # Left in place it blanked the rate-change table for a loan whose rate has
+  # ALREADY risen past what its old repayment services -- the loan most in need
+  # of the table.
+  test "a re-amortising projection is not blocked by an insufficient contracted payment" do
+    loan = loan_whose_contracted_payment_no_longer_covers_interest
+
+    held = Loan::PayoffProjection.new(loan)
+    reamortized = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert reamortized.send(:unamortizable_payment?),
+      "the fixture must actually trip the guard, or this test proves nothing"
+    assert_not held.applicable?, ":hold genuinely cannot amortise this loan"
+    assert reamortized.applicable?,
+      ":reamortize sizes its own repayment, so the contracted one cannot disqualify it"
+    assert_equal loan.current_minimum_payment.amount,
+      reamortized.payments.first[:payment_amount]
+  end
+
+  # CodeRabbit, #79. :reamortize spreads the balance over the payments left to
+  # the ORIGINAL maturity. Past maturity there are none, so there is nothing to
+  # spread it over. Falling back to the doubled :hold window INVENTED a horizon
+  # and reported a payoff years after the date the loan was meant to end.
+  #
+  # :hold legitimately finds a date past maturity -- an underpaid loan really
+  # does run long -- which is why this guard is strategy-specific.
+  test "a re-amortising projection invents no horizon for a matured loan" do
+    loan = matured_loan_still_carrying_a_balance
+
+    reamortized = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert_equal 0, loan.amortization_schedule.remaining_payment_count,
+      "the fixture must actually be matured, or this test proves nothing"
+    assert loan.account.balance.positive?,
+      "and must still carry a balance, or there is nothing to project"
+    assert_not reamortized.applicable?,
+      "no payments remain to the original maturity, so there is no projection to make"
+    assert_nil loan.current_minimum_payment,
+      "the model already says there is no repayment to quote; the projection must agree"
+  end
+
+  # A typo like :reamortised read as neither :hold nor :reamortize by the
+  # branches in this class, silently selecting a hybrid of the two. Simulator
+  # does reject it, but only once a schedule is generated.
+  test "an unknown payment strategy is rejected at construction" do
+    loan = reamortize_loan
+
+    error = assert_raises(ArgumentError) do
+      Loan::PayoffProjection.new(loan, payment_strategy: :reamortised)
+    end
+
+    assert_match(/unsupported payment strategy/, error.message)
+
+    # nil, false and numerics reach `to_sym` before the allowlist. Without
+    # normalising first they raise NoMethodError, bypassing the ArgumentError
+    # contract for precisely the sloppy inputs it exists to catch.
+    [ nil, false, 1 ].each do |bad|
+      assert_raises(ArgumentError, "#{bad.inspect} must raise ArgumentError, not NoMethodError") do
+        Loan::PayoffProjection.new(loan, payment_strategy: bad)
+      end
+    end
+
+    assert_nothing_raised { Loan::PayoffProjection.new(loan, payment_strategy: :hold) }
+    assert_nothing_raised { Loan::PayoffProjection.new(loan, payment_strategy: :reamortize) }
+  end
+
+  # CodeRabbit, #79. The THIRD occurrence of two bases in one row on this PR.
+  #
+  # Simulator tracks the GROSS balance -- an offset reduces the interest
+  # charged, not the principal owed -- but a repayment is quoted on the
+  # interest-bearing balance, which is what `current_minimum_payment` and
+  # `UI::Loan::RateChangeTable` both use. Sizing this projection on gross drove
+  # the trajectory with a repayment $678.54 above the one on screen.
+  #
+  # The earlier "driven by one number" test passes on a loan with NO offset,
+  # which is exactly why this went unnoticed.
+  test "a re-amortising projection sizes its repayment net of offset" do
+    loan = offset_loan
+
+    projection = Loan::PayoffProjection.new(loan, payment_strategy: :reamortize)
+
+    assert_operator loan.interest_bearing_balance.amount, :<, loan.account.balance,
+      "the fixture must actually carry an offset, or this test proves nothing"
+    assert_equal loan.current_minimum_payment.amount,
+      projection.payments.first[:payment_amount],
+      "an offset loan's projection must be driven by the repayment the table quotes"
+  end
+
+  private
+
+    # $400,762.12 owed against a $100,000 offset.
+    def offset_loan
+      family = families(:dylan_family)
+      loan = family.accounts.create!(
+        name: "Offset Projection Loan",
+        balance: 400_762.12,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 6.18, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months
+        )
+      ).loan
+
+      offset = family.accounts.create!(
+        name: "Projection Offset", balance: 100_000, currency: "USD", accountable: Depository.new
+      )
+      loan.update!(offset_account_ids: [ offset.id ])
+      loan.reload
+    end
+
+    # Term ended a year ago, and $250,000 is still outstanding.
+    def matured_loan_still_carrying_a_balance
+      families(:dylan_family).accounts.create!(
+        name: "Matured Loan",
+        balance: 250_000.00,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 6.0, term_months: 12,
+          initial_balance: 400_000, start_date: Date.current - 24.months
+        )
+      ).loan.reload
+    end
+
+    # Contracted at 1%, then a rise to 12% that is already in effect: the
+    # contracted repayment no longer covers a single period's interest.
+    def loan_whose_contracted_payment_no_longer_covers_interest
+      loan = families(:dylan_family).accounts.create!(
+        name: "Under-serviced Loan",
+        balance: 400_762.12,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 1.0, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months
+        )
+      ).loan
+
+      loan.add_variable_rate_change(Date.current - 1.month, 12.0)
+      loan.reload.add_variable_rate_change(Date.current + 6.months, 13.0)
+      loan.reload
+    end
+
+    def reamortize_loan
+      families(:dylan_family).accounts.create!(
+        name: "Reamortise Projection Loan",
+        balance: 400_762.12,
+        currency: "USD",
+        accountable: Loan.new(
+          rate_type: "variable", interest_rate: 6.18, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months
+        )
+      ).loan.tap { |loan| loan.add_variable_rate_change(Date.current + 2.months, 5.93) }.reload
+    end
 end

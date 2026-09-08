@@ -13,6 +13,37 @@ class Loan < ApplicationRecord
     "other" => { short: "Other Loan", long: "Other Loan" }
   }.freeze
 
+  # Rate types whose interest can move over the life of the loan, and which
+  # therefore schedule off the variable-rate path: the base rate applies until
+  # a change is recorded in variable_rate_schedule, and offset accounts are
+  # available.
+  #
+  # `adjustable` is here by decision, not by history. It has been an option in
+  # the loan form since 2024 (upstream 65db4927) and until now was read by
+  # nothing: every branch in the engine tested for "fixed" or "variable", so
+  # selecting it produced a loan with no schedule, no payoff chart, no what-if
+  # control and no summary cards, and nothing on screen saying why. #14 chose
+  # to give it the variable meaning rather than remove the option.
+  #
+  # Note this is a set of rate types, not a validation: `rate_type` is an
+  # unconstrained string column, and PlaidAccount::Liabilities::MortgageProcessor
+  # writes it straight from the provider payload. A value outside this list
+  # still behaves as `adjustable` did -- deliberately left alone here.
+  VARIABLE_RATE_TYPES = %w[variable adjustable].freeze
+
+  # Every rate type the calculator can build a schedule for.
+  #
+  # THE single authority for that question, in SQL and in Ruby alike.
+  # `loans:schedule_version_status` has to express it as a WHERE clause and
+  # cannot call `amortizable?`, so before this constant it carried its own copy
+  # of the list -- and adding `adjustable` to VARIABLE_RATE_TYPES silently
+  # broke it: `rebuild_schedules` builds an adjustable loan's schedule, while
+  # the status task's hardcoded %w[fixed variable] did not count it as awaiting
+  # one. The task could then exit 0 with a loan still unbuilt, and the runbook
+  # treats that exit code as "the prebuild is finished". A false-clean deploy
+  # signal is worse than a red one.
+  AMORTIZABLE_RATE_TYPES = ([ "fixed" ] + VARIABLE_RATE_TYPES).freeze
+
   # Loans up to 100 years cover any real mortgage, business, or personal loan
   # term while keeping a rebuild's array allocation, exponentiation, and bulk
   # insert bounded. Matches the DB check constraint in
@@ -230,8 +261,75 @@ class Loan < ApplicationRecord
     }
   end
 
+  # One annual percentage -> monthly decimal rate conversion, so the two
+  # callers of the annuity formula cannot drift apart on it.
+  def self.monthly_rate(annual_percentage)
+    (BigDecimal(annual_percentage.to_s) / BigDecimal("100")) / BigDecimal("12")
+  end
+
+  # Whether this loan's rate can move over its life. The one place the answer
+  # is defined -- callers must not compare rate_type to a string.
+  def variable_rate_type?
+    VARIABLE_RATE_TYPES.include?(rate_type)
+  end
+
   def amortizable?
     amortization_schedule.amortizable?
+  end
+
+  # FR-204: the repayment a lender would quote TODAY.
+  #
+  # `AmortizationSchedule#monthly_payment` sizes the contracted payment from
+  # the ORIGINAL balance at the rate effective on the FIRST payment date. For a
+  # variable loan several years in, that number describes a loan that no longer
+  # exists -- which is why the Overview card printed a hardcoded "N/A" for
+  # every non-fixed loan rather than show it.
+  #
+  # This re-amortises today's interest-bearing balance at today's rate over the
+  # payments still remaining to the ORIGINAL maturity. Re-amortising to the
+  # original maturity rather than to a fresh full term is what makes it the
+  # lender's figure: a rate change resizes the repayment, it does not extend
+  # the loan.
+  #
+  # Display only. The contracted schedule never tracks the live balance
+  # (invariant A7), so nothing here is persisted or fed back into it.
+  # The maturity checks come FIRST, before the fixed-rate branch. Past maturity
+  # there are no payments left to spread a balance over, so there is no
+  # repayment to quote -- and that is true of a fixed loan as much as a variable
+  # one. Answering the question for one rate type and not the other left a
+  # matured fixed loan quoting its contracted repayment while a matured variable
+  # loan next to it said "Unknown" (CodeRabbit, #79).
+  #
+  # This does change what a matured FIXED loan displays. #15's "fixed-rate loans
+  # are unaffected" is about the figure quoted while the loan is live, which is
+  # untouched: a fixed loan still quotes `amortization_schedule.monthly_payment`
+  # for every day of its term.
+  def current_minimum_payment(as_of: Date.current)
+    return nil unless amortizable?
+
+    remaining = amortization_schedule.remaining_payment_count(as_of: as_of)
+    return nil unless remaining.positive?
+
+    return amortization_schedule.monthly_payment unless variable_rate_type?
+
+    payment = AmortizationMath.level_payment(
+      balance: interest_bearing_balance.amount,
+      monthly_rate: Loan.monthly_rate(current_variable_rate(as_of)),
+      remaining_payments: remaining,
+      currency_precision: Money::Currency.new(account.currency).default_precision
+    )
+
+    return nil unless payment.positive?
+
+    Money.new(payment, account.currency)
+  end
+
+  # Today's balance net of any linked offset, floored at zero: the balance
+  # interest is actually charged on, which is what the repayment must clear.
+  def interest_bearing_balance
+    gross = BigDecimal(account.balance.to_s)
+    offset = offset_accounts.sum(:balance)
+    Money.new([ gross - BigDecimal(offset.to_s), BigDecimal("0") ].max, account.currency)
   end
 
   # Assembles variable_rate_schedule from the form's rows.
@@ -327,7 +425,7 @@ class Loan < ApplicationRecord
   # This is derived rather than stored because a persisted "next" date becomes
   # stale when the current date passes it.
   def next_rate_change_date
-    return nil unless rate_type == "variable"
+    return nil unless variable_rate_type?
 
     variable_rates.map { |date, _| Date.iso8601(date.to_s) }.find { |date| date > Date.current }
   end
@@ -538,7 +636,21 @@ class Loan < ApplicationRecord
     end
 
     def sync_offset_accounts
-      ids = rate_type == "variable" ? offset_account_ids_for_sync.map(&:id) : []
+      # An absent virtual attribute means "this save was not about offsets" --
+      # a rate-type-only edit, say -- NOT "remove them all". Reading it as the
+      # latter deleted every link on a variable -> adjustable transition, which
+      # is the one transition #14 exists to make safe. Only reproducible on a
+      # freshly loaded record: an instance that set offset_account_ids earlier
+      # still carries them, which is why the first test written for this
+      # passed.
+      ids = if !variable_rate_type?
+        []
+      elsif offset_account_ids_supplied?
+        offset_account_ids_for_sync.map(&:id)
+      else
+        loan_offset_accounts.pluck(:account_id)
+      end
+
       loan_offset_accounts.where.not(account_id: ids).delete_all
       ids.each do |account_id|
         loan_offset_accounts.find_or_create_by!(account_id:)
@@ -546,7 +658,7 @@ class Loan < ApplicationRecord
     end
 
     def validate_offset_accounts
-      return if rate_type != "variable"
+      return unless variable_rate_type?
 
       ids = normalized_offset_account_ids
       accounts = offset_account_ids_for_sync

@@ -1,6 +1,17 @@
 ---
 en:
   UI:
+    loan:
+      rate_change_table:
+        title: Scheduled rate changes
+        effective_date: Effective date
+        balance: Projected balance
+        current_rate: Current rate
+        new_rate: New rate
+        current_payment: Current repayment
+        new_payment: New repayment
+        unknown: Unknown
+        assumptions: "Projected from the recorded rate changes: the repayment is re-amortised over the payments remaining to the original payoff date, any linked offset balance is held at today's total, and no extra repayments are assumed. Your lender's figure may differ slightly through rounding."
     period_picker:
       aria_label: "Time period: %{period}"
     account:
