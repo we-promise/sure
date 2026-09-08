@@ -451,6 +451,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 75.0, current.last.fetch("value")
     assert_equal 200.0, previous.last.fetch("value")
     assert_equal [ selected_month.end_of_month.day, previous_month.end_of_month.day ].max, chart.fetch("days")
+    # The chart needs the selected month's own length to label only its days
+    # on narrow (mobile) widths.
+    assert_equal selected_month.end_of_month.day, chart.fetch("current_days")
   end
 
   test "dashboard spending trend widget caps an in-progress month at today" do
@@ -491,6 +494,40 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # The tail day belongs to the previous, longer month - not a date rolled
     # past the selected month's end (e.g. "Jan 31", not "Mar 3").
     assert_equal I18n.l(previous_month.end_of_month, format: :short), labels.last
+  end
+
+  test "dashboard spending trend names the compared month in the comparison header" do
+    account = @family.accounts.create!(name: "Spending Trend Label Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    selected_month = 2.months.ago.beginning_of_month.to_date
+    previous_month = 3.months.ago.beginning_of_month.to_date
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    # The real month name replaces the generic "Previous month" label, which
+    # truncated on mobile ("Previous mon…").
+    expected_label = I18n.l(previous_month, format: :month_year).capitalize
+    assert_select "#spending-trend-section p", text: expected_label
+    chart_element = css_select("[data-controller='spending-chart']").first
+    assert_equal expected_label, chart_element["data-spending-chart-previous-label-value"]
+  end
+
+  test "dashboard spending trend renders a compact date range for mobile" do
+    account = @family.accounts.create!(name: "Spending Trend Range Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    selected_month = 2.months.ago.beginning_of_month.to_date
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    # Full form for wide viewports, compact form for narrow ones.
+    assert_select "p[class*='hidden sm:block']",
+      text: I18n.t("pages.dashboard.spending_trend.date_range",
+        start_date: I18n.l(selected_month, format: :long),
+        end_date: I18n.l(selected_month.end_of_month, format: :long))
+    assert_select "p[class*='sm:hidden']",
+      text: "#{I18n.l(selected_month, format: :short)} - #{selected_month.end_of_month.day}, #{selected_month.year}"
   end
 
   test "dashboard spending trend widget clamps invalid and future month params" do
