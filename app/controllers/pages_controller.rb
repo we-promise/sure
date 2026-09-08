@@ -503,10 +503,8 @@ class PagesController < ApplicationController
       axis_days = month_end.day
 
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_series = fold_extra_days(
-        cumulative_spending_series(previous_period, previous_daily),
-        axis_days
-      )
+      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_series = fold_extra_days(previous_header_series, axis_days)
 
       current_total = current_series.last&.fetch(:value) || 0
 
@@ -524,21 +522,22 @@ class PagesController < ApplicationController
       # day-of-month (Mar 30 has no Feb 30); it has fully elapsed by then, so
       # its complete total is the right comparison.
       #
-      # Once the selected month is over, both months are compared whole. The
-      # clamp must not apply here: a completed month shorter than the one
-      # before it (Feb after Jan) would otherwise truncate the previous month.
-      comparison_days = if current_period.end_date < month_end
-        [ current_series.size, previous_series.size ].min
+      # Once the selected month is over, both months are compared whole. A
+      # current month is still in progress through its final calendar day; the
+      # previous month may have one extra folded chart point (Sep 30 vs Aug 31),
+      # but the header should still compare only days 1-30.
+      comparison_days = if month_start == Date.current.beginning_of_month
+        [ current_series.size, previous_header_series.size ].min
       else
-        previous_series.size
+        previous_header_series.size
       end
 
-      previous_total = comparison_days.positive? ? previous_series[comparison_days - 1][:value] : 0
+      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
 
       # Set only while the comparison stops short of the previous month's end,
       # so the header can say which days it is comparing instead of implying
       # the whole month.
-      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_series.size
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
 
       currency = income_statement.family.currency
 

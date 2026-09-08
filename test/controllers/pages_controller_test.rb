@@ -592,6 +592,32 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "dashboard spending trend header treats current month final day as in progress" do
+    selected_month = (0..24).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
+    previous_month = (selected_month - 1.month).beginning_of_month
+
+    travel_to selected_month.end_of_month do
+      account = @family.accounts.create!(name: "Spending Trend Final Day Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+
+      create_transaction(account: account, name: "Prev early", amount: 111, date: previous_month)
+      create_transaction(account: account, name: "Prev extra day", amount: 999, date: previous_month.end_of_month)
+      create_transaction(account: account, name: "Current", amount: 7, date: Date.current)
+
+      get root_path, params: { spending_month: selected_month.iso8601 }
+      assert_response :ok
+
+      previous_series = spending_trend_chart_data.fetch("previous")
+      _current_total, previous_total = spending_trend_header_totals
+
+      assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
+      assert_equal money_text(111), previous_total
+      refute_equal money_text(previous_series.last.fetch("value")), previous_total
+      assert_select "#spending-trend-section span",
+        text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: Date.current.day)
+    end
+  end
+
   test "dashboard spending trend header compares complete months once the month is over" do
     account = @family.accounts.create!(name: "Spending Trend Past Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
     selected_month = 2.months.ago.beginning_of_month.to_date
