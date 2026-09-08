@@ -107,6 +107,18 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "funds_movement"
     )
 
+    uncategorized_cc_payment = create_transaction(
+      account: @credit_card_account,
+      amount: 250,
+      kind: "cc_payment"
+    )
+
+    uncategorized_one_time = create_transaction(
+      account: @checking_account,
+      amount: 275,
+      kind: "one_time"
+    )
+
     # Search for uncategorized transactions
     uncategorized_results = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] }).transactions_scope
     uncategorized_ids = uncategorized_results.pluck(:id)
@@ -114,11 +126,18 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # Should include standard uncategorized transactions
     assert_includes uncategorized_ids, uncategorized_standard.entryable.id
 
-    # Uncategorized transfer kinds (funds_movement, one_time, cc_payment —
-    # BUDGET_EXCLUDED_KINDS) never land in the uncategorized bucket because
-    # the dashboard aggregate (IncomeStatement::Totals) excludes them, so
-    # the list shown in Transactions must match.
+    # UNCATEGORIZED_EXCLUDED_KINDS (funds_movement, cc_payment) are paired legs
+    # of a Transfer between the user's own accounts, so there is nothing to
+    # categorize and they never land in the uncategorized bucket.
     assert_not_includes uncategorized_ids, uncategorized_transfer.entryable.id
+    assert_not_includes uncategorized_ids, uncategorized_cc_payment.entryable.id
+
+    # one_time is NOT excluded: it's a real expense/income the user flagged so
+    # it doesn't skew budget medians, and it is still categorizable. Excluding
+    # it would make an uncategorized one-time transaction undiscoverable
+    # through its actual category state.
+    assert_includes uncategorized_ids, uncategorized_one_time.entryable.id,
+      "one_time is excluded from budget analytics, not from categorization"
   end
 
   test "uncategorized filter lists budget-tracked transfers (loan_payment, investment_contribution)" do
@@ -126,11 +145,11 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # The dashboard Cashflow widget counts uncategorized loan_payment /
     # investment_contribution transactions under Outflows → Uncategorized,
     # but the Transactions page filter used TRANSFER_KINDS and hid them, so
-    # the widget's figure could not be reproduced from the list. The
-    # exclusion must match BUDGET_EXCLUDED_KINDS (the exact set the dashboard
-    # aggregate excludes), keeping budget-tracked transfers visible — the
-    # same intentional-tracking contract asserted by the
-    # BudgetCategoriesController drilldown tests.
+    # the widget's figure could not be reproduced from the list — and the
+    # transactions could not be found, let alone categorized. These two kinds
+    # are budget-tracked outflows (the intentional-tracking contract also
+    # asserted by the BudgetCategoriesController drilldown tests), so they
+    # stay listed.
     loan_payment = create_transaction(account: @loan_account, amount: 300, kind: "loan_payment")
     investment_contribution = create_transaction(account: @checking_account, amount: 400, kind: "investment_contribution")
 
@@ -141,6 +160,33 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       "uncategorized loan_payment is visible on the dashboard; the list must include it (see #2592)"
     assert_includes uncategorized_ids, investment_contribution.entryable.id,
       "uncategorized investment_contribution is visible on the dashboard; the list must include it (see #2592)"
+  end
+
+  test "uncategorized filter and Entry.uncategorized_transactions agree on every kind" do
+    # The Transactions filter, the uncategorized badge count and the Quick
+    # Categorize wizard must describe the same set, or the badge promises rows
+    # the list won't show (and vice versa). Both read
+    # Transaction::UNCATEGORIZED_EXCLUDED_KINDS; this pins them together.
+    made = Transaction.kinds.keys.index_with do |kind|
+      account = kind == "loan_payment" ? @loan_account : @checking_account
+      create_transaction(account: account, amount: 100, kind: kind).entryable.id
+    end
+
+    filter_ids = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] })
+                                    .transactions_scope.pluck(:id).to_set
+    wizard_ids = @family.entries.uncategorized_transactions.pluck(:entryable_id).to_set
+
+    made.each do |kind, id|
+      assert_equal filter_ids.include?(id), wizard_ids.include?(id),
+        "#{kind}: Transactions filter and Entry.uncategorized_transactions disagree"
+    end
+
+    Transaction::UNCATEGORIZED_EXCLUDED_KINDS.each do |kind|
+      assert_not_includes filter_ids, made.fetch(kind), "#{kind} must not be uncategorizable"
+    end
+    (Transaction.kinds.keys - Transaction::UNCATEGORIZED_EXCLUDED_KINDS).each do |kind|
+      assert_includes filter_ids, made.fetch(kind), "#{kind} has no category and must be listed"
+    end
   end
 
   test "filtering for only Uncategorized returns only uncategorized transactions" do

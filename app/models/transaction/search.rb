@@ -139,15 +139,13 @@ class Transaction::Search
       # Get parent category IDs for the given category names
       parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
-      # Uncategorized bucket = rows without a category. Exclude only pure
-      # transfer-like kinds (funds_movement, cc_payment) which represent transfers
-      # between accounts, not uncategorized expenses/income. Preserve one_time
-      # Exclude transfer kinds that the dashboard's uncategorized totals exclude
-      # (funds_movement, one_time, cc_payment), but preserve loan_payment and
-      # investment_contribution which are budget-tracked transfers that align with
-      # the dashboard's uncategorized entries. https://github.com/we-promise/sure/issues/2592
+      # The Uncategorized bucket answers "which rows have no category", so it
+      # excludes only the kinds that have nothing to categorize — the paired
+      # legs of a Transfer. Shared with Entry.uncategorized_transactions so
+      # this list, the uncategorized badge count and the Quick Categorize
+      # wizard can't drift apart. https://github.com/we-promise/sure/issues/2592
       uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
-      uncategorized_excluded_kinds = Transaction::BUDGET_EXCLUDED_KINDS
+      uncategorized_excluded_kinds = Transaction::UNCATEGORIZED_EXCLUDED_KINDS
 
       # Build condition based on whether parent_category_ids is empty
       if parent_category_ids.empty?
