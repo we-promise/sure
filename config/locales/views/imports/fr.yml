@@ -506,6 +506,6 @@ fr:
       transaction_import: Import de transactions
       ynab_import: Importation YNAB
     update:
-      account_locked: Cet import a déjà été publié, son compte ne peut donc plus être modifié. Annulez-le d'abord si vous devez l'importer ailleurs.
+      account_locked: Cet import a déjà été publié, son compte ne peut donc plus être modifié. Rétablissez-le d'abord si vous devez l'importer ailleurs.
       account_saved: Compte enregistré.
       invalid_account: Compte introuvable.

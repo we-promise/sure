@@ -5,7 +5,7 @@ fr:
       missed: Manquée
       paid: Payée
       scheduled: Ouverte
-      skipped: Passée
+      skipped: Ignorée
     mark_paid:
       success: Facture marquée comme payée
     override_amount:
@@ -41,13 +41,13 @@ fr:
       search_all: Rechercher dans toutes les transactions
       search_placeholder: Rechercher des transactions
       settled: Payée intégralement
-      skip: Passer
-      skipped: Passée
+      skip: Ignorer
+      skipped: Ignorée
       snooze_week: Reporter d'une semaine
       unlink: Délier
       view_bill: Voir la facture complète
     skip:
-      success: Facture passée
+      success: Facture ignorée
     snooze:
       invalid_date: Cette date n'a pas pu être interprétée
       success: Reportée au %{date}

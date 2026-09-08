@@ -161,12 +161,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Uses a locale that has no yahoo_finance_settings translations yet. Pick another
+  # such locale if Italian ever gains them, rather than dropping the coverage.
   test "falls back to English for untranslated Yahoo Finance health guidance" do
     @provider.stubs(:health_status).returns(:rate_limited)
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
       with_self_hosting do
-        get settings_hosting_url(locale: :fr)
+        get settings_hosting_url(locale: :it)
 
         assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
         assert_not_includes response.body, "translation missing"

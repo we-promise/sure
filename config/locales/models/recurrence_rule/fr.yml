@@ -8,7 +8,7 @@ fr:
         interval: Intervalle
         month_of_year: Mois
         weekday: Jour de la semaine
-        weekday_ordinal: Semaine du mois
+        weekday_ordinal: Rang dans le mois
     errors:
       models:
         recurrence_rule:

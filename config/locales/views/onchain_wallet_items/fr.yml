@@ -28,9 +28,9 @@ fr:
       wallet_not_found: Ce portefeuille n'est pas suivi par cette connexion.
     link_wallet:
       errors:
-        none_tracked: 'Rien n''a été suivi : %{assets} n''a pas pu être ajouté. Réessayez dans un instant.'
+        none_tracked: 'Rien n''a été suivi : impossible d''ajouter %{assets}. Réessayez dans un instant.'
         nothing_selected: Choisissez au moins un actif à suivre.
-        some_failed: "%{assets} n'a pas pu être suivi et a été laissé de côté."
+        some_failed: Impossible de suivre %{assets}.
       success:
         one: Suivi d'un actif de ce portefeuille.
         other: Suivi de %{count} actifs de ce portefeuille.
@@ -93,8 +93,8 @@ fr:
     update_tokens:
       errors:
         no_changes: Rien n'a changé ; les mêmes actifs restent cochés.
-        none_tracked: 'Rien n''a changé : %{assets} n''a pas pu être ajouté. Réessayez dans un instant.'
-        some_failed: "%{assets} n'a pas pu être suivi et a été laissé de côté."
+        none_tracked: 'Rien n''a changé : impossible d''ajouter %{assets}. Réessayez dans un instant.'
+        some_failed: Impossible de suivre %{assets}.
       success: Actifs suivis mis à jour (%{created} ajoutés, %{removed} retirés).
     wallet_card:
       addresses_tracked:

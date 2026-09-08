@@ -6,8 +6,8 @@ fr:
       creation_failed: 'Impossible de créer les comptes : %{error}'
       creation_failed_generic: Impossible de créer les comptes.
       no_accounts: Aucun compte à configurer.
-      setup_failed: "%{count} compte(s) n'ont pas pu être créés. Rien d'autre n'a été modifié : corrigez le problème et réessayez."
-      success: "%{count} compte(s) créés avec succès."
+      setup_failed: 'Impossible de créer %{count} compte(s). Rien d''autre n''a été modifié : corrigez le problème et réessayez.'
+      success: "%{count} compte(s) créé(s) avec succès."
     create:
       success: Connexion Redbark créée avec succès
     default_name: Connexion Redbark
