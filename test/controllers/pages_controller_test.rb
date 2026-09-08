@@ -646,8 +646,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   test "dashboard spending trend header clamps to a previous month shorter than today" do
     # A month longer than the one before it (e.g. March after February), frozen
     # to a day that the previous month never reaches.
-    selected_month = (1..11).map { |i| i.months.ago.beginning_of_month.to_date }
-      .find { |m| (m - 1.month).end_of_month.day < m.end_of_month.day }
+    selected_month = (1..24).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day < m.end_of_month.day - 1 }
     previous_month = (selected_month - 1.month).beginning_of_month
 
     # The day after the previous month's last day, which the selected month
@@ -658,6 +658,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       create_transaction(account: account, name: "Current", amount: 5, date: selected_month)
 
       assert_operator Date.current.day, :>, previous_month.end_of_month.day
+      assert_operator Date.current, :<, selected_month.end_of_month
 
       get root_path, params: { spending_month: selected_month.iso8601 }
       assert_response :ok
