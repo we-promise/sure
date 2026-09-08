@@ -507,38 +507,13 @@ class PagesController < ApplicationController
       previous_series = fold_extra_days(previous_header_series, axis_days)
 
       current_total = current_series.last&.fetch(:value) || 0
-
-      # How many days of the previous month the header compares against.
-      #
-      # While the selected month is still running, that is the number of days
-      # it has itself reached: the header answers "how am I tracking against
-      # last month at this point in the month?". Reading the last point of both
-      # series instead compared a month-to-date figure against a complete
-      # month, which made the delta a large, flattering negative on the 1st
-      # that shrank as the month filled in.
-      # https://github.com/we-promise/sure/issues/3455
-      #
-      # It is clamped because the previous month can end before the current
-      # day-of-month (Mar 30 has no Feb 30); it has fully elapsed by then, so
-      # its complete total is the right comparison.
-      #
-      # Once the selected month is over, both months are compared whole. A
-      # current month is still in progress through its final calendar day; the
-      # previous month may have one extra folded chart point (Sep 30 vs Aug 31),
-      # but the header should still compare only days 1-30.
       comparison_days = if month_start == Date.current.beginning_of_month
         [ current_series.size, previous_header_series.size ].min
       else
         previous_header_series.size
       end
-
       previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
-
-      # Set only while the comparison stops short of the previous month's end,
-      # so the header can say which days it is comparing instead of implying
-      # the whole month.
       previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
-
       currency = income_statement.family.currency
 
 
