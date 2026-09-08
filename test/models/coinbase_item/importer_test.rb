@@ -12,7 +12,7 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
     )
   end
 
-  test "persists an eight-decimal Coinbase asset balance after reload" do
+  test "persists an eighteen-decimal Coinbase asset balance after reload" do
     provider = mock("coinbase provider")
     provider.expects(:get_accounts).returns([ btc_account_payload ])
     provider.expects(:get_transactions).with("cb_btc_123", limit: 100).returns([])
@@ -20,7 +20,7 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
     CoinbaseItem::Importer.new(@item, coinbase_provider: provider).import
 
     coinbase_account = @item.coinbase_accounts.find_by!(account_id: "cb_btc_123")
-    assert_equal BigDecimal("0.00014884"), coinbase_account.current_balance
+    assert_equal BigDecimal("0.000000000000000148"), coinbase_account.current_balance
   end
 
   private
@@ -31,7 +31,7 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
         "name" => "BTC Wallet",
         "type" => "wallet",
         "status" => "active",
-        "balance" => { "amount" => "0.00014884", "currency" => "BTC" },
+        "balance" => { "amount" => "0.000000000000000148", "currency" => "BTC" },
         "currency" => { "code" => "BTC", "name" => "Bitcoin", "type" => "crypto" }
       }
     end

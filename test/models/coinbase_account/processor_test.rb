@@ -88,4 +88,18 @@ class CoinbaseAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("9.91"), @account.reload.balance
     assert_equal "EUR", @account.currency
   end
+
+  test "keeps eighteen-decimal Coinbase quantities" do
+    quantity = BigDecimal("0.000000000000000148")
+    @coinbase_account.update!(current_balance: quantity, raw_payload: {})
+    provider = mock("coinbase provider")
+    provider.stubs(:get_spot_price).with("BTC-USD").returns({ "amount" => "66580" })
+    CoinbaseItem.any_instance.stubs(:coinbase_provider).returns(provider)
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:resolve_security).returns(@security)
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    holding = @account.holdings.find_by!(security: @security, date: Date.current)
+    assert_equal quantity, holding.qty
+  end
 end
