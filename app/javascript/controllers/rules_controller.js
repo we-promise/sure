@@ -50,13 +50,6 @@ export default class extends Controller {
   }
 
   #uniqueKey() {
-    // Must stay numeric: strong params only recognize integer-keyed hashes
-    // as nested attributes (ActionController::Parameters.nested_attribute?
-    // matches /\A-?\d+\z/), so a "new_1"-style key is silently dropped and
-    // the submit fails validation. Date.now() alone can repeat when rows are
-    // added in the same millisecond, and a small counter alone can collide
-    // with the numeric indexes Rails assigns persisted rows on edit forms,
-    // so combine them.
     this.keySequence = (this.keySequence ?? 0) + 1;
     return Date.now() * 1000 + this.keySequence;
   }
