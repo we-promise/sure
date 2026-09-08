@@ -835,7 +835,10 @@ class Family::DataExporter
 
     def operand_records(relation_key)
       @operand_records ||= {}
-      @operand_records[relation_key] ||= @family.public_send(relation_key).to_a
+      # `.reload` bypasses any pre-existing in-memory association cache on
+      # `@family` (e.g. a prior `create!` through the same association) so
+      # destroyed records aren't served stale from that cache.
+      @operand_records[relation_key] ||= @family.public_send(relation_key).reload.to_a
     end
 
     def operand_records_by_id(relation_key)
