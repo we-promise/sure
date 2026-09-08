@@ -6,7 +6,7 @@
     <%= icon "alert-triangle", size: "lg", color: "current", class: "mr-2" %>
     <span class="text-inverse font-semibold uppercase">Access <%= in_progress_session.present? ? "Session" : "Request" %></span>
   </div>
-  <div class="flex items-center space-x-2 px-2 py-2 text-white gap-4">
+  <div class="flex items-center space-x-2 px-2 py-2 text-inverse gap-4">
     <% if pending_session.present? %>
       <p class="text-xs max-w-3xl text-right">Sure support staff has requested access to your account (likely to help you with a support request). If you approve the request, all activity they take will be logged for security and audit purposes.</p>
       <%= button_to "Approve", approve_impersonation_session_path(pending_session), method: :put, class: "inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-green-500" %>
