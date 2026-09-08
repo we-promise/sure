@@ -258,37 +258,22 @@ class BudgetCategory < ApplicationRecord
 
   def available_to_spend
     if inherits_parent_budget?
-      # Subcategories using parent budget share the parent's available_to_spend
+      # A shared subcategory can use its parent's positive balance, but it does
+      # not own the parent's overspending. Copying a negative balance makes an
+      # inactive $0 child appear over budget by the parent's amount.
       parent = parent_budget_category
       return 0 unless parent
-      parent.available_to_spend
+
+      [ parent.available_to_spend, 0 ].max
     elsif subcategory?
       # Subcategory with individual limit
       (self[:budgeted_spending] || 0) + rolled_over_amount - actual_spending
     else
-      # Parent category
-      parent_budget = (self[:budgeted_spending] || 0) + rolled_over_amount
-
-      # Get subcategories with and without individual limits
-      subcategories_with_limits = subcategories.reject(&:inherits_parent_budget?)
-
-      # Ring-fenced budgets for subcategories with individual limits
-      subcategories_individual_budgets = subcategories_with_limits.sum { |sc| sc[:budgeted_spending] || 0 }
-
-      # Shared pool = parent budget - ring-fenced budgets
-      shared_pool = parent_budget - subcategories_individual_budgets
-
-      # Get actual spending from income statement (includes all subcategories)
-      total_spending = actual_spending
-
-      # Subtract spending from subcategories with individual budgets (they use their ring-fenced money)
-      subcategories_with_limits_spending = subcategories_with_limits.sum(&:actual_spending)
-
-      # Spending from shared pool = total spending - ring-fenced spending
-      shared_pool_spending = total_spending - subcategories_with_limits_spending
-
-      # Available in shared pool
-      shared_pool - shared_pool_spending
+      # A parent card displays its full allocation and total spending (including
+      # all children), so the available amount must reconcile with those same
+      # figures. Child allocations are already included in the parent's stored
+      # budget and must not be subtracted a second time here.
+      (self[:budgeted_spending] || 0) + rolled_over_amount - actual_spending
     end
   end
 

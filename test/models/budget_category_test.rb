@@ -133,24 +133,32 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 1000, @parent_budget_category.display_budgeted_spending
   end
 
-  test "inheriting subcategory shares parent available_to_spend" do
+  test "parent available_to_spend reflects its displayed budget and total spending" do
     # Mock the actual spending values
     # Parent's actual_spending from income_statement includes all children
     @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(150)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(100)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(50)
 
-    # Parent available calculation:
-    # shared_pool = 1000 (parent budget) - 300 (subcategory with limit budget) = 700
-    # shared_pool_spending = 150 (total) - 100 (subcategory with limit spending) = 50
-    # available = 700 - 50 = 650
-    assert_equal 650, @parent_budget_category.available_to_spend
+    # The parent displays the full 1000 budget and 150 total spending, so its
+    # available amount must reconcile with those figures.
+    assert_equal 850, @parent_budget_category.available_to_spend
 
-    # Inheriting subcategory shares parent's available (650)
-    assert_equal 650, @subcategory_inheriting_bc.available_to_spend
+    # An inheriting subcategory shares the parent's positive balance.
+    assert_equal 850, @subcategory_inheriting_bc.available_to_spend
 
     # Subcategory with limit: 300 (its budget) - 100 (its spending) = 200
     assert_equal 200, @subcategory_with_limit_bc.available_to_spend
+  end
+
+  test "inheriting subcategory does not copy parent overspending" do
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(1050)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(0)
+
+    assert_equal(-50, @parent_budget_category.available_to_spend)
+    assert_equal 0, @subcategory_inheriting_bc.available_to_spend
+    assert @parent_budget_category.over_budget?
+    assert_not @subcategory_inheriting_bc.over_budget?
   end
 
   test "percent_of_budget_spent for inheriting subcategory uses parent budget" do
