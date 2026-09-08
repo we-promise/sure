@@ -258,13 +258,18 @@ class BudgetCategory < ApplicationRecord
 
   def available_to_spend
     if inherits_parent_budget?
-      # A shared subcategory can use its parent's positive balance, but it does
-      # not own the parent's overspending. Copying a negative balance makes an
-      # inactive $0 child appear over budget by the parent's amount.
       parent = parent_budget_category
       return 0 unless parent
 
-      [ parent.available_to_spend, 0 ].max
+      # Shared children can use only the portion of the parent allocation that
+      # is not reserved for ring-fenced siblings. Their spending is the parent
+      # aggregate less those siblings' spending.
+      ring_fenced_children = parent.subcategories.reject(&:inherits_parent_budget?)
+      shared_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount -
+                      ring_fenced_children.sum { |child| child[:budgeted_spending] || 0 }
+      shared_spending = parent.actual_spending - ring_fenced_children.sum(&:actual_spending)
+
+      [ shared_budget - shared_spending, 0 ].max
     elsif subcategory?
       # Subcategory with individual limit
       (self[:budgeted_spending] || 0) + rolled_over_amount - actual_spending
@@ -288,16 +293,20 @@ class BudgetCategory < ApplicationRecord
   # allocation alone: a category funded only by rollover has money to spend.
   def percent_of_budget_spent
     if inherits_parent_budget?
-      # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category
       return 0 unless parent
 
-      parent_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount
-      return 0 if parent_budget == 0 && actual_spending == 0
-      return 100 if parent_budget == 0 && actual_spending > 0
-      (actual_spending.to_f / parent_budget) * 100
+      ring_fenced_children = parent.subcategories.reject(&:inherits_parent_budget?)
+      shared_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount -
+                      ring_fenced_children.sum { |child| child[:budgeted_spending] || 0 }
+      shared_budget = [ shared_budget, 0 ].max
+
+      return 0 if shared_budget == 0 && actual_spending == 0
+      return 100 if shared_budget == 0 && actual_spending > 0
+      (actual_spending.to_f / shared_budget) * 100
     else
-      budget_amount = (self[:budgeted_spending] || 0) + rolled_over_amount
+      child_rollover = subcategory? ? 0 : subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
+      budget_amount = (self[:budgeted_spending] || 0) + rolled_over_amount + child_rollover
       return 0 if budget_amount == 0 && actual_spending == 0
       return 0 if budget_amount > 0 && actual_spending == 0
       return 100 if budget_amount == 0 && actual_spending > 0

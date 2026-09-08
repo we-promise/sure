@@ -144,8 +144,9 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     # available amount must reconcile with those figures.
     assert_equal 850, @parent_budget_category.available_to_spend
 
-    # An inheriting subcategory shares the parent's positive balance.
-    assert_equal 850, @subcategory_inheriting_bc.available_to_spend
+    # The inheriting subcategory can use the $700 shared pool after the $300
+    # ring-fenced allocation, less its $50 spending.
+    assert_equal 650, @subcategory_inheriting_bc.available_to_spend
 
     # Subcategory with limit: 300 (its budget) - 100 (its spending) = 200
     assert_equal 200, @subcategory_with_limit_bc.available_to_spend
@@ -153,6 +154,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
 
   test "inheriting subcategory does not copy parent overspending" do
     @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(1050)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(300)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(0)
 
     assert_equal(-50, @parent_budget_category.available_to_spend)
@@ -171,16 +173,31 @@ class BudgetCategoryTest < ActiveSupport::TestCase
 
     assert_equal 30, @parent_budget_category.available_to_spend
     assert_equal 30, @subcategory_with_limit_bc.available_to_spend
-    assert_equal 30, @subcategory_inheriting_bc.available_to_spend
+    assert_equal 0, @subcategory_inheriting_bc.available_to_spend
+    assert_in_delta 83.33, @parent_budget_category.percent_of_budget_spent, 0.01
     assert_not @parent_budget_category.over_budget?
+    assert_not @parent_budget_category.near_limit?
   end
 
-  test "percent_of_budget_spent for inheriting subcategory uses parent budget" do
+  test "inheriting subcategory excludes ring-fenced sibling funds" do
+    @parent_budget_category.update!(budgeted_spending: 100)
+    @subcategory_with_limit_bc.update!(budgeted_spending: 80)
+
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(10)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(0)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(10)
+
+    assert_equal 90, @parent_budget_category.available_to_spend
+    assert_equal 10, @subcategory_inheriting_bc.available_to_spend
+    assert_equal 50.0, @subcategory_inheriting_bc.percent_of_budget_spent
+  end
+
+  test "percent_of_budget_spent for inheriting subcategory uses shared parent budget" do
     # Mock spending
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(100)
 
-    # 100 / 1000 (parent budget) = 10%
-    assert_equal 10.0, @subcategory_inheriting_bc.percent_of_budget_spent
+    # 100 / 700 (parent budget less the $300 ring-fenced sibling) = 14.29%
+    assert_in_delta 14.29, @subcategory_inheriting_bc.percent_of_budget_spent, 0.01
   end
 
   test "parent with no subcategories works as before" do
