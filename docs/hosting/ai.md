@@ -1334,7 +1334,10 @@ override does not replace, so rewording or dropping the example JSON is safe on
 its own. Parsing breaks when an override *contradicts* the output format:
 asking for reasoning before the answer, a different wrapper key, YAML, or tags
 around the result. Smaller local models tend to follow the system prompt over
-the per-request one.
+the per-request one. Because of that, the editor still warns when a custom
+OpenAI override drops the example JSON: the request-level fallback usually
+covers it, but the warning is a precaution for models that don't fall back
+that way.
 
 That risk applies to every mode except a strict schema the endpoint honors:
 `none` applies no constraint, `json_object` guarantees JSON but not the shape,
