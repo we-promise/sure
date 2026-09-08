@@ -17,8 +17,12 @@ class BudgetCategoriesController < ApplicationController
     # correctly tags inflow as funds_movement and outflow per destination
     # account) shows under the Uncategorized card -- or any retained
     # category -- even though the aggregate ignores it. See issue #1059.
+    # Keep this drilldown aligned with the transfer-aware aggregates: matched
+    # transfer legs are excluded, while investment contribution and loan
+    # payment outflows remain visible as cash-flow expenses.
     @recent_transactions = @budget.transactions
                                   .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
+                                  .for_cash_flow_reporting
 
     if params[:id] == BudgetCategory.uncategorized.id
       @budget_category = @budget.uncategorized_budget_category
