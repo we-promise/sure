@@ -388,6 +388,11 @@ class Transaction::LabelNormalizer::Dictionary
     def candidates_for(label)
       buckets, loose = prefix_index
 
+      # A miss returns nil, not an empty array: #prefix_index builds its hash
+      # with a default proc but returns the one #transform_values gives back,
+      # and that copies entries only, never the default. So a label whose
+      # prefix has no bucket falls through to the Regexp markers, which is how
+      # "CB 02/09 CARREFOUR" still resolves.
       buckets[label[0, PREFIX_LENGTH].to_s.upcase] || loose
     end
 
