@@ -1,0 +1,17 @@
+---
+en:
+  activerecord:
+    attributes:
+      loan_scenario:
+        name: Name
+        currency: Currency
+        assumed_offset_balance: Assumed offset balance
+        rate_override: Rate override
+        slot: Slot
+        created_by_user: Created by
+    errors:
+      models:
+        loan_scenario:
+          attributes:
+            base:
+              slot_cap_reached: This loan already has five scenarios. Delete one to add another.

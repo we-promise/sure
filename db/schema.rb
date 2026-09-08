@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_111845) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_07_170100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1337,6 +1337,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_111845) do
     t.check_constraint "principal_payment >= 0::numeric", name: "chk_loan_amortizations_principal_payment_non_negative"
   end
 
+  create_table "loan_extra_repayments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.date "ends_on"
+    t.string "frequency"
+    t.integer "interval", default: 1
+    t.string "kind", null: false
+    t.uuid "loan_scenario_id", null: false
+    t.date "occurs_on"
+    t.date "starts_on"
+    t.datetime "updated_at", null: false
+    t.index ["loan_scenario_id"], name: "index_loan_extra_repayments_on_loan_scenario_id"
+    t.check_constraint "\"interval\" IS NULL OR \"interval\" > 0", name: "chk_loan_extra_repayments_interval_positive"
+    t.check_constraint "amount > 0::numeric", name: "chk_loan_extra_repayments_amount_positive"
+    t.check_constraint "frequency IS NULL OR (frequency::text = ANY (ARRAY['weekly'::character varying, 'fortnightly'::character varying, 'monthly'::character varying, 'quarterly'::character varying, 'yearly'::character varying]::text[]))", name: "chk_loan_extra_repayments_frequency"
+    t.check_constraint "kind::text <> 'recurring'::text OR starts_on IS NOT NULL", name: "chk_loan_extra_repayments_recurring_has_start"
+    t.check_constraint "kind::text = 'one_off'::text AND occurs_on IS NOT NULL AND frequency IS NULL OR kind::text = 'recurring'::text AND frequency IS NOT NULL AND occurs_on IS NULL", name: "chk_loan_extra_repayments_kind_coherent"
+    t.check_constraint "starts_on IS NULL OR ends_on IS NULL OR ends_on >= starts_on", name: "chk_loan_extra_repayments_date_order"
+  end
+
   create_table "loan_offset_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
@@ -1345,6 +1365,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_111845) do
     t.index ["account_id"], name: "index_loan_offset_accounts_on_account_id"
     t.index ["loan_id", "account_id"], name: "index_loan_offset_accounts_on_loan_id_and_account_id", unique: true
     t.index ["loan_id"], name: "index_loan_offset_accounts_on_loan_id"
+  end
+
+  create_table "loan_scenarios", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "assumed_offset_balance", precision: 19, scale: 4
+    t.integer "calculator_version", null: false
+    t.datetime "created_at", null: false
+    t.uuid "created_by_user_id"
+    t.string "currency", null: false
+    t.datetime "last_calculated_at"
+    t.uuid "loan_id", null: false
+    t.string "name", limit: 100, null: false
+    t.decimal "rate_override", precision: 10, scale: 3
+    t.integer "slot", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_user_id"], name: "index_loan_scenarios_on_created_by_user_id"
+    t.index ["loan_id", "slot"], name: "index_loan_scenarios_on_loan_id_and_slot", unique: true
+    t.index ["loan_id"], name: "index_loan_scenarios_on_loan_id"
+    t.check_constraint "assumed_offset_balance IS NULL OR assumed_offset_balance >= 0::numeric", name: "chk_loan_scenarios_offset_non_negative"
+    t.check_constraint "rate_override IS NULL OR rate_override >= 0::numeric AND rate_override <= 100::numeric", name: "chk_loan_scenarios_rate_override_range"
+    t.check_constraint "slot >= 0 AND slot <= 4", name: "chk_loan_scenarios_slot_range"
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2708,8 +2748,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_111845) do
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
   add_foreign_key "loan_amortizations", "loans"
+  add_foreign_key "loan_extra_repayments", "loan_scenarios", on_delete: :cascade
   add_foreign_key "loan_offset_accounts", "accounts", on_delete: :cascade
   add_foreign_key "loan_offset_accounts", "loans", on_delete: :cascade
+  add_foreign_key "loan_scenarios", "loans", on_delete: :cascade
+  add_foreign_key "loan_scenarios", "users", column: "created_by_user_id", on_delete: :nullify
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"
