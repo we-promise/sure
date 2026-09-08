@@ -79,10 +79,17 @@ with `merchant_name` and `original_description`.
 
 The merchant name alone collapses distinct transactions into one name, and
 [rules](../../app/models/rule/condition.rb) match on `transaction_name`, so the
-collapse removes the only signal that could separate them. Substring matching
-(`ILIKE '%value%'`) means a rule written against the merchant name still matches the
-combined form. Merchant records are built from the cleaned name on a separate path,
-so grouping is unaffected.
+collapse removes the only signal that could separate them. Merchant records are
+built from the cleaned name on a separate path, so grouping is unaffected.
+
+Changing a name that rules already target is the cost of this. `transaction_name`
+is a text filter, so it offers `=` and `!=` as well as `like`/`not_like`, and only
+the latter compile with substring wildcards
+([`condition_filter.rb`](../../app/models/rule/condition_filter.rb)). A `like` rule
+written against the merchant name still matches the combined form; an `=` rule stops
+matching, and a `!=` rule starts matching what it was written to exclude. Any change
+to how a provider names transactions has to account for the exact-match operators,
+not just the substring ones.
 
 ## Raw payload debugging
 
