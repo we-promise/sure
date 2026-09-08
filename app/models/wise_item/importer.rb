@@ -146,6 +146,7 @@ class WiseItem::Importer
       cutoff = transfer_cutoff
       activities = []
       cursor = nil
+      seen_cursors = Set.new
 
       loop do
         trace_wise_fetch(operation: "activities", status: "started", level: "info", cursor: cursor, page_size: 100)
@@ -167,8 +168,23 @@ class WiseItem::Importer
 
         break if old_ones.any? || batch.size < 100
 
-        cursor = result["cursor"]
-        break if cursor.nil?
+        next_cursor = result["cursor"].presence
+        break if next_cursor.nil?
+
+        if seen_cursors.include?(next_cursor)
+          trace_wise_fetch(
+            operation: "activities",
+            status: "failed",
+            level: "warn",
+            cursor: cursor,
+            next_cursor: next_cursor,
+            error: StandardError.new("Wise activities pagination cursor did not advance")
+          )
+          break
+        end
+
+        seen_cursors << next_cursor
+        cursor = next_cursor
       end
 
       activities.uniq { |a| a["id"] }
@@ -427,6 +443,8 @@ class WiseItem::Importer
       message = "WiseItem::Importer - Wise #{operation} fetch #{status}"
       message = "#{message} for wise_account #{wise_account.id}" if wise_account
       message = "#{message}: #{error.message}" if error
+
+      return Rails.logger.debug(message) unless error
 
       Rails.logger.public_send(level, message)
       DebugLogEntry.capture(

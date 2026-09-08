@@ -121,10 +121,9 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
   end
 
-  # The key is only ever stored encrypted, and the test environment configures
-  # no encryption keys, so the flow has to be exercised as an install that does.
   test "generate_sca_keypair stores a keypair on the item" do
-    WiseItem.stubs(:encryption_ready?).returns(true)
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
     assert_nil @wise_item.sca_private_key
 
     post generate_sca_keypair_wise_item_url(@wise_item)
@@ -134,7 +133,8 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "generate_sca_keypair replaces a previously generated keypair" do
-    WiseItem.stubs(:encryption_ready?).returns(true)
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
     @wise_item.generate_sca_keypair!
     previous_key = @wise_item.sca_private_key
 

@@ -509,13 +509,33 @@ class PagesController < ApplicationController
         current_period: current_period,
         previous_period: previous_period,
         days: axis_days,
+        current_days: month_end.day,
         axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
         current: current_series,
         previous: previous_series,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
-        delta: Money.new(current_total - previous_total, currency)
+        delta: Money.new(current_total - previous_total, currency),
+        previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        date_range_short: spending_trend_compact_date_range(current_period)
       }
+    end
+
+    # Compact range for narrow viewports ("Sep 01 - 6, 2026"). The period
+    # never spans months, so the end date only needs its day.
+    def spending_trend_compact_date_range(period)
+      date_range = period.date_range
+
+      if date_range.begin == date_range.end
+        t("pages.dashboard.spending_trend.date_range_short_single",
+          date: I18n.l(date_range.begin, format: :short),
+          year: date_range.end.year)
+      else
+        t("pages.dashboard.spending_trend.date_range_short",
+          start_date: I18n.l(date_range.begin, format: :short),
+          end_day: date_range.end.day,
+          year: date_range.end.year)
+      end
     end
 
     # Localized tick labels, one per axis day. The selected month owns the

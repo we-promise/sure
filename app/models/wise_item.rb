@@ -3,6 +3,8 @@
 class WiseItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable
 
+  SCA_PRIVATE_KEY_ATTRIBUTE = "sca_private_key"
+
   # Raised rather than returned so no caller can mistake "not stored" for
   # "stored"; the controller turns it into the same panel error as any other
   # keypair failure.
@@ -156,7 +158,8 @@ class WiseItem < ApplicationRecord
   end
 
   def sca_encryption_available?
-    self.class.encryption_ready?
+    self.class.encryption_ready? &&
+      Array(self.class.encrypted_attributes).map(&:to_s).include?(SCA_PRIVATE_KEY_ATTRIBUTE)
   end
 
   def sca_public_key
