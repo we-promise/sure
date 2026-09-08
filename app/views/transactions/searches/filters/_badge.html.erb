@@ -40,6 +40,14 @@
       <%= icon(param_value.downcase == "pending" ? "clock" : "check", size: "sm") %>
       <p><%= t(".#{param_value.downcase}") %></p>
     </div>
+  <% elsif param_key == "merchants" && param_value == Merchant::NO_MERCHANT_FILTER_VALUE %>
+    <div class="flex items-center gap-2">
+      <p><%= Merchant.no_merchant_name %></p>
+    </div>
+  <% elsif param_key == "tags" && param_value == Tag::UNTAGGED_FILTER_VALUE %>
+    <div class="flex items-center gap-2">
+      <p><%= Tag.untagged_name %></p>
+    </div>
   <% else %>
     <div class="flex items-center gap-2">
       <p><%= param_value %></p>

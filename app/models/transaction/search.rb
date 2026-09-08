@@ -184,7 +184,15 @@ class Transaction::Search
 
     def apply_merchant_filter(query, merchants)
       return query unless merchants.present?
-      query.joins(:merchant).where(merchants: { name: merchants })
+
+      include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
+      real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
+
+      if include_no_merchant
+        query.left_joins(:merchant).where("merchants.name IN (?) OR merchants.id IS NULL", real_merchants)
+      else
+        query.joins(:merchant).where(merchants: { name: real_merchants })
+      end
     end
 
     # Filter transactions by tag name, matching any transaction that carries
@@ -192,12 +200,24 @@ class Transaction::Search
     def apply_tag_filter(query, tags)
       return query unless tags.present?
 
-      # Use a subquery instead of an INNER JOIN: `.joins(:tags)` fans out to
+      include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
+      real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
+
+      # Use a subquery instead of an INNER/LEFT JOIN: `.joins(:tags)` fans out to
       # one row per matching tag, so a transaction tagged with two of the
       # filtered tags produces two rows and double-counts in the summary
-      # box (COUNT / SUM) even though the list renders it once.
+      # box (COUNT / SUM) even though the list renders it once. A top-level
+      # `.distinct` doesn't work either, since PostgreSQL rejects DISTINCT
+      # combined with reverse_chronological's CASE-expression ORDER BY unless
+      # that expression is also in the select list (PG::InvalidColumnReference).
+      # `query` is already scoped to the current family, so the subquery
+      # inherits that scoping too.
       # See https://github.com/we-promise/sure/issues/3174
-      matching_ids = query.joins(:tags).where(tags: { name: tags }).distinct.select(:id)
+      matching_ids = if include_untagged
+        query.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).distinct.select(:id)
+      else
+        query.joins(:tags).where(tags: { name: real_tags }).distinct.select(:id)
+      end
       query.where(id: matching_ids)
     end
 
