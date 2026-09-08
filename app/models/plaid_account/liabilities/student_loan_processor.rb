@@ -21,10 +21,17 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
       plaid_account.current_account
     end
 
+    # A loan within ~30 days of payoff (or, from bad upstream data, one whose
+    # payoff date isn't after its origination date) rounds down to a
+    # non-positive value here, which Loan's term_months validation rejects.
+    # nil (rather than 0 or negative) keeps that row out of the update so the
+    # rest of this sync -- interest_rate, initial_balance -- isn't rolled
+    # back by an otherwise-avoidable ActiveRecord::RecordInvalid.
     def term_months
       return nil unless origination_date && expected_payoff_date
 
-      ((expected_payoff_date - origination_date).to_i / 30).to_i
+      months = ((expected_payoff_date - origination_date).to_i / 30).to_i
+      months.positive? ? months : nil
     end
 
     def origination_date

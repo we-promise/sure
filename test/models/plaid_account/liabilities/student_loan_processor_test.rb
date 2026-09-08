@@ -53,6 +53,28 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_equal 15000, loan.initial_balance
   end
 
+  test "clamps a non-positive computed term_months to nil instead of failing the whole update" do
+    @plaid_account.update!(raw_liabilities_payload: {
+      student: {
+        interest_rate_percentage: 6.1,
+        origination_principal_amount: 8000,
+        origination_date: Date.new(2024, 1, 1),
+        expected_payoff_date: Date.new(2024, 1, 15) # 14 days -- rounds down to 0 months
+      }
+    })
+
+    processor = PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account)
+    processor.process
+
+    loan = @plaid_account.current_account.loan
+
+    assert_nil loan.term_months
+    # The regression: term_months: 0 used to fail Loan's validation and roll
+    # back interest_rate/initial_balance too, since update! is atomic.
+    assert_equal 6.1, loan.interest_rate
+    assert_equal 8000, loan.initial_balance
+  end
+
   test "does nothing when loan data absent" do
     @plaid_account.update!(raw_liabilities_payload: {})
 
