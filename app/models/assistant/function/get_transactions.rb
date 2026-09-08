@@ -256,7 +256,7 @@ class Assistant::Function::GetTransactions < Assistant::Function
     # card was used earlier, which is the gap that makes fee timing impossible
     # to explain from `date` alone.
     def apply_label_hints(row, entry)
-      label = Transaction::LabelNormalizer.normalize(entry.name, on: entry.date)
+      label = Transaction::LabelNormalizer.normalize(entry.name, on: entry.date, region: family.country)
 
       row[:clean_name] = label.name if label.normalized?(entry.name)
       row[:rail] = label.rail if label.rail

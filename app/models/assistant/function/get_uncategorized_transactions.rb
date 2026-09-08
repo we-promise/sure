@@ -186,7 +186,7 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
       merchant = entry.entryable.merchant
       return [ merchant.name, nil, entry.currency, classification_of(entry) ] if merchant
 
-      label = Transaction::LabelNormalizer.normalize(entry.name, on: entry.date)
+      label = Transaction::LabelNormalizer.normalize(entry.name, on: entry.date, region: family.country)
       [ label.name.upcase, label.rail, entry.currency, classification_of(entry) ]
     end
 
