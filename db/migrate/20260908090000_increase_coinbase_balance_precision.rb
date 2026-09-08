@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class IncreaseCoinbaseBalancePrecision < ActiveRecord::Migration[8.1]
+class IncreaseCoinbaseBalancePrecision < ActiveRecord::Migration[7.2]
   def up
     change_column :coinbase_accounts, :current_balance, :decimal, precision: 24, scale: 8
   end
