@@ -481,7 +481,9 @@ class PagesController < ApplicationController
 
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
-    # the two lines share one day-of-month axis.
+    # the two lines share one day-of-month axis. The header totals compare the
+    # same number of elapsed days; only the chart draws the previous month out
+    # to its final day.
     def build_spending_trend_data(income_statement, selected_month)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
@@ -501,13 +503,17 @@ class PagesController < ApplicationController
       axis_days = month_end.day
 
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_series = fold_extra_days(
-        cumulative_spending_series(previous_period, previous_daily),
-        axis_days
-      )
+      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_series = fold_extra_days(previous_header_series, axis_days)
 
       current_total = current_series.last&.fetch(:value) || 0
-      previous_total = previous_series.last&.fetch(:value) || 0
+      comparison_days = if month_start == Date.current.beginning_of_month
+        [ current_series.size, previous_header_series.size ].min
+      else
+        previous_header_series.size
+      end
+      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
       currency = income_statement.family.currency
 
 
@@ -524,6 +530,7 @@ class PagesController < ApplicationController
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        previous_comparison_day: previous_comparison_day,
         date_range_short: spending_trend_compact_date_range(current_period)
       }
     end

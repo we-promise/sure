@@ -546,6 +546,160 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.current.beginning_of_month.iso8601, chart.fetch("current").first.fetch("date")
   end
 
+  test "dashboard spending trend header compares the same elapsed days in both months" do
+    # Mid-month so the previous month always has spending both on or before and
+    # after the current day-of-month, whatever day the suite runs on.
+    travel_to Date.current.beginning_of_month + 14.days do
+      account = @family.accounts.create!(name: "Spending Trend Aligned Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+      previous_month = (Date.current.beginning_of_month - 1.month).beginning_of_month
+
+      create_transaction(account: account, name: "Prev early", amount: 111, date: previous_month)
+      create_transaction(account: account, name: "Prev late", amount: 999, date: previous_month.end_of_month)
+      create_transaction(account: account, name: "Current", amount: 7, date: Date.current)
+
+      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601 }
+      assert_response :ok
+
+      chart = spending_trend_chart_data
+      previous_series = chart.fetch("previous")
+      aligned = previous_series.fetch(Date.current.day - 1).fetch("value")
+      full_month = previous_series.last.fetch("value")
+      current_value = chart.fetch("current").last.fetch("value")
+
+      # The late transaction guarantees the two figures differ, so this pins
+      # which one the header reads.
+      assert_operator full_month, :>, aligned
+
+      _current_total, previous_total = spending_trend_header_totals
+      assert_equal money_text(aligned), previous_total
+      refute_equal money_text(full_month), previous_total
+
+      # The delta must be built from the same day-aligned figure.
+      assert_equal money_text(current_value - aligned), spending_trend_header_delta
+    end
+  end
+
+  test "dashboard spending trend header labels the days it compares while the month is in progress" do
+    travel_to Date.current.beginning_of_month + 14.days do
+      account = @family.accounts.create!(name: "Spending Trend Label Days Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+      create_transaction(account: account, name: "Spend", amount: 10, date: Date.current)
+
+      get root_path, params: { spending_month: Date.current.beginning_of_month.iso8601 }
+      assert_response :ok
+
+      assert_select "#spending-trend-section span",
+        text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: Date.current.day)
+    end
+  end
+
+  test "dashboard spending trend header treats current month final day as in progress" do
+    selected_month = (0..24).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
+    previous_month = (selected_month - 1.month).beginning_of_month
+
+    travel_to selected_month.end_of_month do
+      account = @family.accounts.create!(name: "Spending Trend Final Day Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+
+      create_transaction(account: account, name: "Prev early", amount: 111, date: previous_month)
+      create_transaction(account: account, name: "Prev extra day", amount: 999, date: previous_month.end_of_month)
+      create_transaction(account: account, name: "Current", amount: 7, date: Date.current)
+
+      get root_path, params: { spending_month: selected_month.iso8601 }
+      assert_response :ok
+
+      previous_series = spending_trend_chart_data.fetch("previous")
+      _current_total, previous_total = spending_trend_header_totals
+
+      assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
+      assert_equal money_text(111), previous_total
+      refute_equal money_text(previous_series.last.fetch("value")), previous_total
+      assert_select "#spending-trend-section span",
+        text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: Date.current.day)
+    end
+  end
+
+  test "dashboard spending trend header compares complete months once the month is over" do
+    account = @family.accounts.create!(name: "Spending Trend Past Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    selected_month = 2.months.ago.beginning_of_month.to_date
+    previous_month = 3.months.ago.beginning_of_month.to_date
+
+    create_transaction(account: account, name: "Selected", amount: 50, date: selected_month)
+    create_transaction(account: account, name: "Previous early", amount: 111, date: previous_month)
+    create_transaction(account: account, name: "Previous late", amount: 999, date: previous_month.end_of_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    assert_response :ok
+
+    previous_series = spending_trend_chart_data.fetch("previous")
+    _current_total, previous_total = spending_trend_header_totals
+
+    # A month that has fully elapsed is still compared whole-to-whole.
+    assert_equal money_text(previous_series.last.fetch("value")), previous_total
+    # ...and the header does not claim to be comparing a partial range.
+    assert_select "#spending-trend-section span",
+      text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: selected_month.end_of_month.day),
+      count: 0
+  end
+
+  test "dashboard spending trend header compares complete months when the selected month is the shorter one" do
+    account = @family.accounts.create!(name: "Spending Trend Short Month Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    # A past month shorter than the one before it (e.g. February after January),
+    # where clamping to the shorter series would truncate the previous month.
+    selected_month = (1..11).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
+    previous_month = (selected_month - 1.month).beginning_of_month
+
+    create_transaction(account: account, name: "Selected", amount: 50, date: selected_month)
+    create_transaction(account: account, name: "Previous early", amount: 111, date: previous_month)
+    create_transaction(account: account, name: "Previous last day", amount: 999, date: previous_month.end_of_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    assert_response :ok
+
+    previous_series = spending_trend_chart_data.fetch("previous")
+    _current_total, previous_total = spending_trend_header_totals
+
+    # Both months are over, so both are compared whole - the selected month
+    # being shorter must not truncate the previous month's total.
+    assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
+    assert_equal 1110.0, previous_series.last.fetch("value")
+    assert_equal money_text(previous_series.last.fetch("value")), previous_total
+    assert_select "#spending-trend-section span",
+      text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: selected_month.end_of_month.day),
+      count: 0
+  end
+
+  test "dashboard spending trend header clamps to a previous month shorter than today" do
+    # A month longer than the one before it (e.g. March after February), frozen
+    # to a day that the previous month never reaches.
+    selected_month = (1..24).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day < m.end_of_month.day - 1 }
+    previous_month = (selected_month - 1.month).beginning_of_month
+
+    # The day after the previous month's last day, which the selected month
+    # always reaches because it is the longer of the two.
+    travel_to selected_month + previous_month.end_of_month.day.days do
+      account = @family.accounts.create!(name: "Spending Trend Clamp Checking 2", currency: @family.currency, balance: 0, accountable: Depository.new)
+      create_transaction(account: account, name: "Prev", amount: 40, date: previous_month.end_of_month)
+      create_transaction(account: account, name: "Current", amount: 5, date: selected_month)
+
+      assert_operator Date.current.day, :>, previous_month.end_of_month.day
+      assert_operator Date.current, :<, selected_month.end_of_month
+
+      get root_path, params: { spending_month: selected_month.iso8601 }
+      assert_response :ok
+
+      previous_series = spending_trend_chart_data.fetch("previous")
+      _current_total, previous_total = spending_trend_header_totals
+
+      # There is no day 30 in February: the previous month has fully elapsed, so
+      # its complete total is the comparison. Without the clamp this read past
+      # the end of the series and showed zero.
+      assert_equal money_text(previous_series.last.fetch("value")), previous_total
+      refute_equal money_text(0), previous_total
+    end
+  end
+
   private
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
@@ -553,5 +707,19 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     def spending_trend_chart_data
       JSON.parse(css_select("[data-controller='spending-chart']").first["data-spending-chart-data-value"])
+    end
+
+    # The two large figures in the widget header: the selected month's
+    # month-to-date total and the previous month's comparison total.
+    def spending_trend_header_totals
+      css_select("#spending-trend-section .text-lg").map { |node| node.text.strip }
+    end
+
+    def spending_trend_header_delta
+      css_select("#spending-trend-section span.text-sm.tabular-nums").first.text.strip
+    end
+
+    def money_text(amount)
+      ApplicationController.helpers.format_money(Money.new(amount, @family.currency))
     end
 end
