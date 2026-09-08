@@ -62,7 +62,11 @@ class RulesTest < ApplicationSystemTestCase
 
     within "dialog" do
       click_on "Add condition"
-      find("[data-rules-target='conditionsList'] input[name$='[value]']").fill_in(with: "Coffee")
+      click_on "Add condition"
+      values = all("[data-rules-target='conditionsList'] input[name$='[value]']")
+      values[0].fill_in(with: "Coffee")
+      values[1].fill_in(with: "Tea")
+      click_on "Add action"
       click_on "Add action"
       click_on "Create Rule"
     end
@@ -73,9 +77,12 @@ class RulesTest < ApplicationSystemTestCase
     assert_text "Confirm changes"
 
     rule = Rule.order(:created_at).last
-    assert_equal "transaction_name", rule.conditions.first.condition_type
-    assert_equal "Coffee", rule.conditions.first.value
-    assert_equal "set_transaction_category", rule.actions.first.action_type
-    assert rule.actions.first.value.present?
+    # Two rows of each type cover repeated key generation: timestamp-only
+    # keys would collapse same-millisecond additions into a single row.
+    assert_equal 2, rule.conditions.size
+    assert_equal %w[Coffee Tea].sort, rule.conditions.map(&:value).sort
+    assert_equal 2, rule.actions.size
+    assert_equal [ "set_transaction_category" ], rule.actions.map(&:action_type).uniq
+    assert rule.actions.all? { |a| a.value.present? }
   end
 end
