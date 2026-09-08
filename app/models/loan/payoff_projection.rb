@@ -175,7 +175,7 @@ class Loan
         # projection never uses -- and answering "no" blanked the rate-change
         # table for a loan whose rate has already risen, which is the loan most
         # in need of it (CodeRabbit, #79).
-        (@payment_strategy == :reamortize || !unamortizable_payment?) &&
+        (@payment_strategy == :reamortize || extra_repayments_may_cover_shortfall? || !unamortizable_payment?) &&
         converged?
     end
 
@@ -378,7 +378,7 @@ class Loan
 
       def generate_schedule
         payment_dates = projected_payment_dates
-        rate_resolver = Loan::RateResolver.for(loan)
+        rate_resolver = scenario_rate_resolver || Loan::RateResolver.for(loan)
 
         Loan::Simulator.new(
           starting_balance: current_balance.amount,
@@ -419,11 +419,66 @@ class Loan
           # branch so linking an empty asset does not change figures merely
           # by changing the calculation mode.
           daily_accrual: Loan::AmortizationSchedule::SCHEDULE_DAILY_ACCRUAL ||
+            assumed_offset_balance.present? ||
             (loan.offset_accounts.any? && loan.offset_accounts.sum(:balance).positive?),
           day_count_convention: loan.day_count_convention,
-          offset_for: Loan::OffsetResolver.new(loan).method(:change_points),
+          offset_for: offset_resolver,
           extra_for: extra_repayment_resolver
         ).run.payments
+      end
+
+      # `unamortizable_payment?` asks whether the contracted repayment covers the
+      # FIRST period's interest. A scenario's extra repayments are not in that
+      # comparison, so a lump sum large enough to fix the shortfall was rejected
+      # before it could be applied and the scenario returned no payments at all
+      # -- the same shape as the :reamortize case above (CodeRabbit, #83).
+      #
+      # This does not assume the repayments are sufficient; it defers to
+      # `converged?`, which runs the real simulation with them applied. A
+      # scenario that genuinely cannot amortise still comes back inapplicable.
+      def extra_repayments_may_cover_shortfall?
+        extra_repayment_resolver.present?
+      end
+
+      # A scenario may pin the rate for the whole projection. Overriding the
+      # rate means there are no rate CHANGES either, so both the change points
+      # and the re-amortisation events go empty -- leaving the real loan's
+      # changes in place would model a rate that both is and is not pinned.
+      def scenario_rate_resolver
+        override = @scenario&.rate_override
+        return nil if override.blank?
+
+        FlatRateResolver.new(override)
+      end
+
+      # Held flat for the life of the projection, matching how the rate-change
+      # table states the offset assumption. An assumed balance replaces the
+      # linked accounts rather than adding to them: the question a scenario asks
+      # is "what if my offset held $X", not "$X on top of what I have".
+      def offset_resolver
+        assumed = assumed_offset_balance
+        return Loan::OffsetResolver.new(loan).method(:change_points) if assumed.nil?
+
+        ->(from_date, to_date) {
+          next [] if from_date >= to_date
+          [ { date: from_date, amount: assumed } ]
+        }
+      end
+
+      def assumed_offset_balance
+        value = @scenario&.assumed_offset_balance
+        value.blank? ? nil : BigDecimal(value.to_s)
+      end
+
+      # Supplies the Simulator's rate interface for a pinned rate.
+      class FlatRateResolver
+        def initialize(rate)
+          @rate = rate
+        end
+
+        def accrual_rate_for(_date) = @rate
+        def accrual_rate_changes(_from_date, _to_date) = []
+        def re_amortisation_events(_from_date, _to_date) = []
       end
 
       # Under :hold the window is deliberately longer than the term -- the whole

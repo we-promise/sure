@@ -115,18 +115,86 @@ class LoanScenarioTest < ActiveSupport::TestCase
   test "a slot collision below the cap retries instead of reporting the cap" do
     2.times { |i| LoanScenario.create_in_free_slot(loan: @loan, attributes: { name: "S#{i}" }) }
 
-    # Simulate the race: the first save collides, the retry must find slot 3.
-    collided = false
-    LoanScenario.any_instance.stubs(:save).with do
-      next true if collided
-      collided = true
-      raise ActiveRecord::RecordNotUnique, "duplicate key"
-    end.returns(true)
+    # Simulate the race properly. The old version stubbed `save` to return true
+    # without persisting, so the retry was never observed to LAND anywhere --
+    # `errors` was empty simply because nothing had happened. It passed whether
+    # or not the retry worked (CodeRabbit, #83).
+    #
+    # Now a competing row really takes slot 2, the first save really raises, and
+    # the retry delegates to the real `save`, so the assertion is on where the
+    # scenario actually ended up.
+    @loan.loan_scenarios.create!(name: "Competitor", slot: 2, currency: @loan.account.currency,
+      calculator_version: Loan::AmortizationSchedule::ALGORITHM_VERSION)
 
-    scenario = LoanScenario.create_in_free_slot(loan: @loan.reload, attributes: { name: "Racer" })
+    original_save = LoanScenario.instance_method(:save)
+    collided = false
+    LoanScenario.define_method(:save) do |*args|
+      unless collided
+        collided = true
+        raise ActiveRecord::RecordNotUnique, "duplicate key"
+      end
+      original_save.bind(self).call(*args)
+    end
+
+    begin
+      scenario = LoanScenario.create_in_free_slot(loan: @loan.reload, attributes: { name: "Racer" })
+    ensure
+      LoanScenario.define_method(:save, original_save)
+    end
 
     assert_empty scenario.errors.full_messages,
       "a collision with free slots remaining must retry, not report the cap"
+    assert_equal 3, scenario.slot,
+      "the retry must land in the next free slot, not re-report the collided one"
+  end
+
+  # CodeRabbit, #83. `unamortizable_payment?` asks whether the CONTRACTED
+  # repayment covers the first period's interest. A scenario's extra repayments
+  # are not in that comparison, so a lump sum big enough to fix the shortfall
+  # was rejected before it could be applied and the scenario showed nothing --
+  # the same shape as the gate bug fixed on #79.
+  test "a lump sum that fixes an interest shortfall is not rejected before it applies" do
+    loan = under_serviced_loan
+    scenario = LoanScenario.create_in_free_slot(loan: loan, attributes: { name: "Lump" })
+    scenario.extra_repayments.create!(kind: "one_off", amount: 350_000, occurs_on: Date.current)
+
+    projection = loan.payoff_projection_for_scenario(scenario.reload)
+
+    assert projection.send(:unamortizable_payment?),
+      "the fixture must actually trip the guard, or this test proves nothing"
+    assert projection.applicable?
+    assert projection.payments.any?,
+      "the repayment clears most of the balance; the scenario must produce a projection"
+  end
+
+  # CodeRabbit, #83. Both columns were stored and validated but never read, so a
+  # scenario carrying either produced a projection identical to the baseline.
+  test "a rate override changes the projection" do
+    loan = seasoned_loan
+    baseline = loan.payoff_projection_for_scenario(
+      LoanScenario.create_in_free_slot(loan: loan, attributes: { name: "Plain" }).reload
+    )
+    overridden = loan.payoff_projection_for_scenario(
+      LoanScenario.create_in_free_slot(loan: loan, attributes: { name: "Cheap", rate_override: 2.0 }).reload
+    )
+
+    assert_operator overridden.total_interest.amount, :<, baseline.total_interest.amount,
+      "pinning the rate to 2% must cost less interest than the loan's own 6.18%"
+  end
+
+  test "an assumed offset balance changes the projection" do
+    loan = seasoned_loan
+    baseline = loan.payoff_projection_for_scenario(
+      LoanScenario.create_in_free_slot(loan: loan, attributes: { name: "No offset" }).reload
+    )
+    offset = loan.payoff_projection_for_scenario(
+      LoanScenario.create_in_free_slot(
+        loan: loan, attributes: { name: "Offset", assumed_offset_balance: 150_000 }
+      ).reload
+    )
+
+    assert_operator offset.total_interest.amount, :<, baseline.total_interest.amount,
+      "an assumed $150,000 offset must reduce the interest charged"
   end
 
   test "record_calculation! stamps when and by which engine" do
@@ -170,4 +238,25 @@ class LoanScenarioTest < ActiveSupport::TestCase
       ).save(validate: false)
     end
   end
+  private
+
+    # Contracted at 1%, then a rise to 12% already in effect: the contracted
+    # repayment no longer covers a single period's interest.
+    def under_serviced_loan
+      loan = families(:dylan_family).accounts.create!(
+        name: "Under-serviced Scenario Loan", balance: 400_762.12, currency: "USD",
+        accountable: Loan.new(rate_type: "variable", interest_rate: 1.0, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months)
+      ).loan
+      loan.add_variable_rate_change(Date.current - 1.month, 12.0)
+      loan.reload
+    end
+
+    def seasoned_loan
+      families(:dylan_family).accounts.create!(
+        name: "Seasoned Scenario Loan #{SecureRandom.hex(4)}", balance: 400_762.12, currency: "USD",
+        accountable: Loan.new(rate_type: "variable", interest_rate: 6.18, term_months: 360,
+          initial_balance: 400_762.12, start_date: Date.current - 83.months)
+      ).loan.reload
+    end
 end
