@@ -26,6 +26,28 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
   end
 
+  test "shows the exact stored quantity for a small crypto holding in the holdings list" do
+    account = accounts(:crypto)
+    security = Security.create!(
+      ticker: "CRYPTO:BTC",
+      name: "Bitcoin",
+      exchange_operating_mic: "XCBS",
+      offline: true
+    )
+    holding = account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: BigDecimal("0.00014884"),
+      price: 100_000,
+      amount: 14.884,
+      currency: "USD"
+    )
+
+    get holdings_url(account_id: account.id)
+
+    assert_select "##{dom_id(holding)} p", text: "0.00014884 shares"
+  end
+
   test "destroys holding and associated entries" do
     assert_difference -> { Holding.count } => -1,
                       -> { Entry.count } => -1 do

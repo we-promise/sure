@@ -6,6 +6,7 @@ class HoldingsController < ApplicationController
 
   def index
     @account = accessible_accounts.find(params[:account_id])
+    @current_holdings = @account.current_holdings.includes(:account)
     @trade_republic_categories = trade_republic_categories_for(@account)
   end
 
