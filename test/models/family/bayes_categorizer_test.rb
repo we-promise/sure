@@ -63,6 +63,30 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     assert_operator confidence, :>=, Family::BayesCategorizer::CONFIDENCE_THRESHOLD
   end
 
+  test "wholly novel tokens stay unclassified even when class corpora are lopsided" do
+    # The symmetric fixture above cannot catch this: with equal token totals an
+    # unknown token contributes the same smoothed likelihood to every class and
+    # the bias cancels. Give one class a much larger corpus and an unseen
+    # description would otherwise land on the smaller class with high
+    # confidence, purely because 1/(total + |V|) is larger there.
+    10.times { create_transaction(account: @account, name: "Starbucks Coffee", category: @coffee) }
+    10.times do
+      create_transaction(
+        account: @account,
+        name: "Safeway Groceries Produce Dairy Bakery Deli Frozen Pantry",
+        category: @groceries
+      )
+    end
+
+    categorizer = Family::BayesCategorizer.new(@family)
+    assert categorizer.enough_training_data?
+
+    novel = create_transaction(account: @account, name: "Zzyzx Blorptronics")
+
+    assert_nil categorizer.classify(novel.transaction),
+      "a description with no known tokens must not be classified from corpus-size bias alone"
+  end
+
   test "novel merchant below threshold is left alone" do
     train_two_categories
     categorizer = Family::BayesCategorizer.new(@family)

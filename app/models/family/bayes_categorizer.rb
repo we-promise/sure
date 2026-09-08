@@ -102,19 +102,26 @@ class Family::BayesCategorizer
     end
 
     def vocabulary
-      @vocabulary ||= class_models.values.flat_map { |model| model[:counts].keys }.uniq
+      @vocabulary ||= Set.new(class_models.values.flat_map { |model| model[:counts].keys })
     end
 
     # Multinomial NB log-score per category with Laplace add-1 smoothing and
     # a uniform prior (constant across classes, so it drops out of softmax).
     # log(P(c)) + Σ_tokens log((count_t + 1) / (total + |V|))
     def log_scores_for(tokens)
-      return {} if tokens.empty? || class_models.empty?
+      # Score only tokens the model has actually seen. An unknown token's
+      # smoothed likelihood is 1/(total_c + |V|), which varies with the class's
+      # own token count, so keeping them would let a wholly novel description
+      # accumulate confidence for whichever category simply has the smallest
+      # corpus. Dropping them leaves nothing to score, which is the honest
+      # answer: no known signal, no classification, fall through to the LLM.
+      known_tokens = tokens.select { |token| vocabulary.include?(token) }
+      return {} if known_tokens.empty? || class_models.empty?
 
       denominator = vocabulary.size
       class_models.each_with_object({}) do |(category_id, model), scores|
         score = Math.log(1.0 / class_models.size)
-        score += tokens.sum do |token|
+        score += known_tokens.sum do |token|
           count = model[:counts][token] || 0
           Math.log((count + 1).to_f / (model[:total] + denominator))
         end
