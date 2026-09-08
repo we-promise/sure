@@ -6,15 +6,21 @@
   has_data = data[:current].any? { |p| p[:value].positive? } || data[:previous].any? { |p| p[:value].positive? }
   chart_data = {
     days: data[:days],
+    current_days: data[:current_days],
     axis_labels: data[:axis_labels],
     current: data[:current],
     previous: data[:previous]
   }
+  previous_label = data[:previous_label]
+  date_range_short = data[:date_range_short]
 %>
 <div id="spending-trend-section" class="px-4 space-y-4">
   <div class="flex items-center justify-between gap-3">
-    <p class="text-sm text-secondary">
+    <p class="text-sm text-secondary hidden sm:block">
       <%= t(".date_range", start_date: l(period.date_range.begin, format: :long), end_date: l(period.date_range.end, format: :long)) %>
+    </p>
+    <p class="text-sm text-secondary sm:hidden">
+      <%= date_range_short %>
     </p>
 
     <div class="flex items-center gap-2">
@@ -45,9 +51,9 @@
       <span class="w-1 h-10 rounded-full bg-success shrink-0"></span>
       <div class="min-w-0">
         <p class="text-sm text-primary capitalize truncate"><%= I18n.l(data[:month], format: :month_year) %></p>
-        <p class="flex items-baseline gap-2">
-          <span class="font-medium text-lg tabular-nums text-primary privacy-sensitive"><%= format_money data[:current_total] %></span>
-          <span class="text-sm tabular-nums privacy-sensitive <%= data[:delta].negative? ? "text-success" : (data[:delta].zero? ? "text-secondary" : "text-destructive") %>">
+        <p class="flex flex-wrap items-baseline gap-x-2">
+          <span class="font-medium text-lg tabular-nums text-primary privacy-sensitive whitespace-nowrap"><%= format_money data[:current_total] %></span>
+          <span class="text-sm tabular-nums privacy-sensitive whitespace-nowrap <%= data[:delta].negative? ? "text-success" : (data[:delta].zero? ? "text-secondary" : "text-destructive") %>">
             <%= format_money data[:delta] %>
           </span>
         </p>
@@ -57,8 +63,8 @@
     <div class="flex items-center gap-3 min-w-0">
       <span class="w-1 h-10 rounded-full bg-subdued shrink-0"></span>
       <div class="min-w-0">
-        <p class="text-sm text-secondary truncate"><%= t(".previous_month") %></p>
-        <p class="font-medium text-lg tabular-nums text-secondary privacy-sensitive"><%= format_money data[:previous_total] %></p>
+        <p class="text-sm text-secondary capitalize truncate"><%= previous_label %></p>
+        <p class="font-medium text-lg tabular-nums text-secondary privacy-sensitive whitespace-nowrap"><%= format_money data[:previous_total] %></p>
       </div>
     </div>
   </div>
@@ -70,7 +76,7 @@
       data-spending-chart-data-value="<%= chart_data.to_json %>"
       data-spending-chart-currency-value="<%= Current.family.currency %>"
       data-spending-chart-current-label-value="<%= I18n.l(data[:month], format: :month_year).capitalize %>"
-      data-spending-chart-previous-label-value="<%= t(".previous_month") %>">
+      data-spending-chart-previous-label-value="<%= previous_label %>">
     </div>
   <% else %>
     <div class="w-full h-52 flex items-center justify-center">
