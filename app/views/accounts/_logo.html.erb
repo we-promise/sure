@@ -24,15 +24,21 @@
 
   <% if reconciliation_indicator.present? %>
     <% if reconciliation_indicator == :matched %>
-      <%= tag.span(
-            icon("check", class: "w-2 h-2 text-inverse"),
-            title: t("accounts.reconciliation_indicator.matched"),
-            class: "absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success"
+      <%= render DS::Tooltip.new(
+            text: t("accounts.reconciliation_indicator.matched"),
+            as: :span,
+            trigger_content: tag.span(
+              icon("check", class: "w-2 h-2 text-inverse"),
+              class: "absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success"
+            )
           ) %>
     <% else %>
-      <%= tag.span(
-            title: t("accounts.reconciliation_indicator.needs_attention"),
-            class: "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-container bg-warning"
+      <%= render DS::Tooltip.new(
+            text: t("accounts.reconciliation_indicator.needs_attention"),
+            as: :span,
+            trigger_content: tag.span(
+              class: "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-container bg-warning"
+            )
           ) %>
     <% end %>
   <% end %>
