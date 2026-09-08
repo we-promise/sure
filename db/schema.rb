@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_012131) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2546,6 +2546,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
     t.check_constraint "sign_count >= 0", name: "chk_webauthn_credentials_sign_count_non_negative"
   end
 
+  create_table "weekly_cleanup_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.date "period_start", null: false
+    t.jsonb "summary", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["family_id", "user_id", "period_start"], name: "idx_weekly_cleanup_runs_dedup", unique: true
+    t.index ["family_id"], name: "index_weekly_cleanup_runs_on_family_id"
+    t.index ["user_id"], name: "index_weekly_cleanup_runs_on_user_id"
+  end
+
   create_table "wise_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "balance_id", null: false
     t.datetime "created_at", null: false
@@ -2739,4 +2751,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
+  add_foreign_key "weekly_cleanup_runs", "families"
+  add_foreign_key "weekly_cleanup_runs", "users"
 end

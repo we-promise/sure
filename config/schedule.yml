@@ -61,6 +61,13 @@ generate_recurring_occurrences:
   queue: "scheduled"
   description: "Materializes the rolling window of recurring-transaction occurrences for every family"
 
+
+weekly_cleanup:
+  cron: "0 7 * * 1" # Mondays at 7:00 AM UTC, after the nightly jobs
+  class: "WeeklyCleanupJob"
+  queue: "scheduled"
+  description: "Opens a proactive weekly cleanup chat for each admin of preview-enabled families"
+
 generate_insights:
   cron: "0 6 * * *" # daily at 6:00 AM UTC, after the nightly cleanup jobs
   class: "GenerateInsightsJob"
