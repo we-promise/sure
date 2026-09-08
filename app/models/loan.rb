@@ -249,6 +249,12 @@ class Loan < ApplicationRecord
     }
   end
 
+  # One annual percentage -> monthly decimal rate conversion, so the two
+  # callers of the annuity formula cannot drift apart on it.
+  def self.monthly_rate(annual_percentage)
+    (BigDecimal(annual_percentage.to_s) / BigDecimal("100")) / BigDecimal("12")
+  end
+
   # Whether this loan's rate can move over its life. The one place the answer
   # is defined -- callers must not compare rate_type to a string.
   def variable_rate_type?
@@ -257,6 +263,61 @@ class Loan < ApplicationRecord
 
   def amortizable?
     amortization_schedule.amortizable?
+  end
+
+  # FR-204: the repayment a lender would quote TODAY.
+  #
+  # `AmortizationSchedule#monthly_payment` sizes the contracted payment from
+  # the ORIGINAL balance at the rate effective on the FIRST payment date. For a
+  # variable loan several years in, that number describes a loan that no longer
+  # exists -- which is why the Overview card printed a hardcoded "N/A" for
+  # every non-fixed loan rather than show it.
+  #
+  # This re-amortises today's interest-bearing balance at today's rate over the
+  # payments still remaining to the ORIGINAL maturity. Re-amortising to the
+  # original maturity rather than to a fresh full term is what makes it the
+  # lender's figure: a rate change resizes the repayment, it does not extend
+  # the loan.
+  #
+  # Display only. The contracted schedule never tracks the live balance
+  # (invariant A7), so nothing here is persisted or fed back into it.
+  # The maturity checks come FIRST, before the fixed-rate branch. Past maturity
+  # there are no payments left to spread a balance over, so there is no
+  # repayment to quote -- and that is true of a fixed loan as much as a variable
+  # one. Answering the question for one rate type and not the other left a
+  # matured fixed loan quoting its contracted repayment while a matured variable
+  # loan next to it said "Unknown" (CodeRabbit, #79).
+  #
+  # This does change what a matured FIXED loan displays. #15's "fixed-rate loans
+  # are unaffected" is about the figure quoted while the loan is live, which is
+  # untouched: a fixed loan still quotes `amortization_schedule.monthly_payment`
+  # for every day of its term.
+  def current_minimum_payment(as_of: Date.current)
+    return nil unless amortizable?
+
+    remaining = amortization_schedule.remaining_payment_count(as_of: as_of)
+    return nil unless remaining.positive?
+
+    return amortization_schedule.monthly_payment unless variable_rate_type?
+
+    payment = AmortizationMath.level_payment(
+      balance: interest_bearing_balance.amount,
+      monthly_rate: Loan.monthly_rate(current_variable_rate(as_of)),
+      remaining_payments: remaining,
+      currency_precision: Money::Currency.new(account.currency).default_precision
+    )
+
+    return nil unless payment.positive?
+
+    Money.new(payment, account.currency)
+  end
+
+  # Today's balance net of any linked offset, floored at zero: the balance
+  # interest is actually charged on, which is what the repayment must clear.
+  def interest_bearing_balance
+    gross = BigDecimal(account.balance.to_s)
+    offset = offset_accounts.sum(:balance)
+    Money.new([ gross - BigDecimal(offset.to_s), BigDecimal("0") ].max, account.currency)
   end
 
   # Assembles variable_rate_schedule from the form's rows.

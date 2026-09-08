@@ -28,8 +28,22 @@
 
 <div class="space-y-4">
   <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <%# The same method the Overview card uses: the acceptance criterion for
+        #15 is that the two tabs never show different figures for one loan. %>
     <%= summary_card title: t(".monthly_payment") do %>
-      <%= format_money schedule.monthly_payment %>
+      <%# One as_of for both calls -- see the note on the Overview card. %>
+      <% as_of = Date.current %>
+      <% current_payment = loan.current_minimum_payment(as_of: as_of) %>
+      <%# Falling back to the contracted payment here would break the very
+          agreement this card exists to keep: past maturity there is no
+          repayment to quote, Overview says so, and this tab must say the same
+          thing rather than reaching for a different number. %>
+      <%= current_payment ? format_money(current_payment) : t("loans.tabs.overview.unknown") %>
+      <% if loan.rate_type != "fixed" && current_payment %>
+        <span class="block text-xs text-subdued mt-1">
+          <%= t(".minimum_payment_rate", rate: number_to_percentage(loan.current_variable_rate(as_of), precision: 3, strip_insignificant_zeros: true)) %>
+        </span>
+      <% end %>
     <% end %>
 
     <%= summary_card title: t(".total_interest") do %>
@@ -158,6 +172,10 @@
       <%= t(".variable_rate_notice") %>
     </p>
   <% end %>
+
+  <%# FR-405. Renders nothing when there are no FUTURE changes -- a change
+      already in effect is the current rate, not news. %>
+  <%= render UI::Loan::RateChangeTable.new(loan: loan) %>
 
   <% if loan.offset_accounts.any? %>
     <p class="text-sm text-secondary">
