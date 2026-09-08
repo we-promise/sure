@@ -153,7 +153,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     loan_payment = create_transaction(account: @loan_account, amount: 300, kind: "loan_payment")
     investment_contribution = create_transaction(account: @checking_account, amount: 400, kind: "investment_contribution")
 
-    uncategorized_ids = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] })
+    uncategorized_ids = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] })
                                    .transactions_scope.pluck(:id)
 
     assert_includes uncategorized_ids, loan_payment.entryable.id,
@@ -172,7 +172,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       create_transaction(account: account, amount: 100, kind: kind).entryable.id
     end
 
-    filter_ids = Transaction::Search.new(@family, filters: { categories: [ Category.uncategorized.name ] })
+    filter_ids = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] })
                                     .transactions_scope.pluck(:id).to_set
     wizard_ids = @family.entries.uncategorized_transactions.pluck(:entryable_id).to_set
 
