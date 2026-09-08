@@ -833,14 +833,19 @@ class Family::DataExporter
       operand_records_by_name(relation_key)[value] if fallback_to_name
     end
 
+    def operand_records(relation_key)
+      @operand_records ||= {}
+      @operand_records[relation_key] ||= @family.public_send(relation_key).to_a
+    end
+
     def operand_records_by_id(relation_key)
       @operand_records_by_id ||= {}
-      @operand_records_by_id[relation_key] ||= @family.public_send(relation_key).index_by(&:id)
+      @operand_records_by_id[relation_key] ||= operand_records(relation_key).index_by(&:id)
     end
 
     def operand_records_by_name(relation_key)
       @operand_records_by_name ||= {}
-      @operand_records_by_name[relation_key] ||= @family.public_send(relation_key).index_by(&:name)
+      @operand_records_by_name[relation_key] ||= operand_records(relation_key).index_by(&:name)
     end
 
     def rule_value_ref(type, record)

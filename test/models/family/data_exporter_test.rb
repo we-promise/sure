@@ -551,6 +551,13 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     assert_nil operand[:value_ref]
   end
 
+  test "operand id and name lookups for the same relation share a single query" do
+    assert_queries_count(1) do
+      @exporter.send(:operand_records_by_id, :categories)
+      @exporter.send(:operand_records_by_name, :categories)
+    end
+  end
+
   test "exports rule actions and maps tag UUIDs to names" do
     # Create a rule with a tag action
     tag_rule = @family.rules.build(
