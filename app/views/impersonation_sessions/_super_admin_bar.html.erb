@@ -11,7 +11,7 @@
 
   <div class="flex items-center space-x-2 px-2 py-2 text-inverse">
     <% if Current.session.active_impersonator_session.present? %>
-      <div class="flex items-center space-x-3 bg-inverse border border-inverse rounded-md pl-3">
+      <div class="flex items-center space-x-3 bg-inverse-hover border border-inverse rounded-md pl-3">
         <div class="text-sm">
           <%= t(".impersonating") %>: <span class="font-semibold text-red-400"><%= Current.impersonated_user.email %></span>
         </div>
