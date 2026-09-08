@@ -52,4 +52,25 @@ class CoinspotAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 0.to_d, zero_holding.amount
     assert_empty @account.current_holdings
   end
+
+  test "preserves an eight-decimal asset quantity from the balance snapshot" do
+    @coinspot_account.update!(raw_payload: {
+      "assets" => [
+        {
+          "symbol" => "BTC",
+          "balance" => "0.00014884",
+          "amount_aud" => "14.884",
+          "price_aud" => "100000",
+          "source" => "spot"
+        }
+      ]
+    })
+    CoinspotAccount::SecurityResolver.stubs(:resolve).with("BTC").returns(@security)
+
+    CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+
+    holding = @account.holdings.find_by!(security: @security, date: Date.current)
+    assert_equal BigDecimal("0.00014884"), holding.qty
+    assert_equal BigDecimal("14.884"), holding.amount
+  end
 end
