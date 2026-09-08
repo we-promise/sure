@@ -378,10 +378,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal selected_month.end_of_month.day, current.size
     assert_equal previous_month.end_of_month.day, previous.size
 
-    # Cumulative: each month's final point carries the month's total.
+    # Cumulative: each month's final point carries the month's total. When the
+    # previous month is longer its curve is folded, but the final visible
+    # point still carries the full-month total.
     assert_equal 75.0, current.last.fetch("value")
     assert_equal 200.0, previous.last.fetch("value")
-    assert_equal [ selected_month.end_of_month.day, previous_month.end_of_month.day ].max, chart.fetch("days")
+    assert_equal selected_month.end_of_month.day, chart.fetch("days")
+    assert_equal [ previous_month.end_of_month.day, selected_month.end_of_month.day ].min, previous.size
     # The chart needs the selected month's own length to label only its days
     # on narrow (mobile) widths.
     assert_equal selected_month.end_of_month.day, chart.fetch("current_days")
@@ -400,11 +403,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert chart.fetch("days") >= Date.current.day
   end
 
-  test "dashboard spending trend axis labels follow the month that owns each day" do
+  test "dashboard spending trend axis labels stay inside the selected month when the previous month is longer" do
     account = @family.accounts.create!(name: "Spending Trend Axis Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
 
     # Find a recent past month whose previous month is longer (e.g. February
-    # after January), so the axis has tail days owned by the previous month.
+    # after January), so the previous curve has days beyond the axis.
     selected_month = (1..11).map { |i| i.months.ago.beginning_of_month.to_date }
       .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
     previous_month = (selected_month - 1.month).beginning_of_month
@@ -419,12 +422,70 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     chart = spending_trend_chart_data
     labels = chart.fetch("axis_labels")
 
-    assert_equal previous_month.end_of_month.day, chart.fetch("days")
+    # The selected month always owns the axis, so no tick can roll into the
+    # previous month's dates (e.g. a September view ends at "Sep 30", not
+    # "Aug 31").
+    assert_equal selected_month.end_of_month.day, chart.fetch("days")
     assert_equal chart.fetch("days"), labels.size
     assert_equal I18n.l(selected_month, format: :short), labels.first
-    # The tail day belongs to the previous, longer month - not a date rolled
-    # past the selected month's end (e.g. "Jan 31", not "Mar 3").
-    assert_equal I18n.l(previous_month.end_of_month, format: :short), labels.last
+    assert_equal I18n.l(selected_month.end_of_month, format: :short), labels.last
+    expected_labels = (1..selected_month.end_of_month.day).map { |d| I18n.l(selected_month + (d - 1), format: :short) }
+    assert_equal expected_labels, labels
+  end
+
+  test "dashboard spending trend folds a longer previous month into the final axis point (February)" do
+    account = @family.accounts.create!(name: "Spending Trend Fold Feb Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+
+    selected_month = Date.new(2026, 2, 1)  # 28 days, previous January has 31
+    create_transaction(account: account, name: "Jan mid", amount: 100, date: Date.new(2026, 1, 15))
+    create_transaction(account: account, name: "Jan extra day", amount: 40, date: Date.new(2026, 1, 31))
+    create_transaction(account: account, name: "Feb spend", amount: 25, date: Date.new(2026, 2, 10))
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    chart = spending_trend_chart_data
+    previous = chart.fetch("previous")
+
+    # The January curve is clipped to February's 28-day axis, with day 31's
+    # spend folded into the final visible point so it still lands on the
+    # full-month total.
+    assert_equal 28, chart.fetch("days")
+    assert_equal 28, previous.size
+    expected_total = IncomeStatement.new(@family)
+      .daily_expense_series(period: Period.custom(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 1, 31)))
+      .sum { |row| row.total.to_d }.to_f.round(2)
+    assert_equal 140.0, expected_total # sanity: no fixture transactions leaked into January
+    assert_equal expected_total, previous.last.fetch("value")
+    assert_equal 25.0, chart.fetch("current").last.fetch("value")
+
+    labels = chart.fetch("axis_labels")
+    assert_equal 28, labels.size
+    assert_equal I18n.l(Date.new(2026, 2, 28), format: :short), labels.last
+    assert_equal (1..28).map { |d| I18n.l(Date.new(2026, 2, d), format: :short) }, labels
+  end
+
+  test "dashboard spending trend folds a longer previous month into the final axis point (30-day month)" do
+    account = @family.accounts.create!(name: "Spending Trend Fold Jun Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+
+    selected_month = Date.new(2026, 6, 1)  # 30 days, previous May has 31
+    create_transaction(account: account, name: "May mid", amount: 90, date: Date.new(2026, 5, 10))
+    create_transaction(account: account, name: "May extra day", amount: 60, date: Date.new(2026, 5, 31))
+    create_transaction(account: account, name: "Jun spend", amount: 15, date: Date.new(2026, 6, 5))
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    chart = spending_trend_chart_data
+    previous = chart.fetch("previous")
+
+    assert_equal 30, chart.fetch("days")
+    assert_equal 30, previous.size
+    assert_equal 150.0, previous.last.fetch("value")
+
+    labels = chart.fetch("axis_labels")
+    assert_equal I18n.l(Date.new(2026, 6, 30), format: :short), labels.last
+    assert_equal (1..30).map { |d| I18n.l(Date.new(2026, 6, d), format: :short) }, labels
   end
 
   test "dashboard spending trend names the compared month in the comparison header" do
