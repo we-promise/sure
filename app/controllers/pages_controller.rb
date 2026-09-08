@@ -555,12 +555,19 @@ class PagesController < ApplicationController
 
     # A longer previous month's curve is clipped to the axis, with the extra
     # days' spend folded into the final visible point, so the curve still
-    # ends at the full-month total shown in the header.
+    # ends at the full-month total shown in the header. The folded point
+    # keeps its axis slot (day) for positioning but carries the true
+    # endpoint's date metadata, so the tooltip says what the value actually
+    # contains (e.g. "Jan 31" and the total through Jan 31).
     def fold_extra_days(series, axis_days)
       return series if series.size <= axis_days
 
       series.first(axis_days).tap do |folded|
-        folded[-1] = folded[-1].merge(value: series.last[:value])
+        folded[-1] = folded[-1].merge(
+          value: series.last[:value],
+          date: series.last[:date],
+          date_formatted: series.last[:date_formatted]
+        )
       end
     end
 

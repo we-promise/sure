@@ -374,9 +374,10 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     current = chart.fetch("current")
     previous = chart.fetch("previous")
 
-    # Both months are past, so both curves run their full length.
+    # Both months are past, so the selected month's curve runs its full
+    # length; the previous curve runs its own length unless folded to the
+    # shorter axis.
     assert_equal selected_month.end_of_month.day, current.size
-    assert_equal previous_month.end_of_month.day, previous.size
 
     # Cumulative: each month's final point carries the month's total. When the
     # previous month is longer its curve is folded, but the final visible
@@ -457,6 +458,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       .sum { |row| row.total.to_d }.to_f.round(2)
     assert_equal 140.0, expected_total # sanity: no fixture transactions leaked into January
     assert_equal expected_total, previous.last.fetch("value")
+    assert_equal "2026-01-31", previous.last.fetch("date")
+    assert_equal I18n.l(Date.new(2026, 1, 31), format: :short), previous.last.fetch("date_formatted")
     assert_equal 25.0, chart.fetch("current").last.fetch("value")
 
     labels = chart.fetch("axis_labels")
