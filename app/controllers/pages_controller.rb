@@ -510,20 +510,29 @@ class PagesController < ApplicationController
 
       current_total = current_series.last&.fetch(:value) || 0
 
-      # The header answers "how am I tracking against last month at this point
-      # in the month?", so it reads the previous month's curve at the same
-      # day-of-month the current period reached, not at its final day. Taking
-      # the last point of both series compared a month-to-date figure against a
-      # complete month, which made the delta a large, flattering negative on
-      # the 1st that shrank as the month filled in.
+      # How many days of the previous month the header compares against.
+      #
+      # While the selected month is still running, that is the number of days
+      # it has itself reached: the header answers "how am I tracking against
+      # last month at this point in the month?". Reading the last point of both
+      # series instead compared a month-to-date figure against a complete
+      # month, which made the delta a large, flattering negative on the 1st
+      # that shrank as the month filled in.
       # https://github.com/we-promise/sure/issues/3455
       #
-      # Clamped to the shorter series because the previous month can end before
-      # the current day-of-month (Mar 30 has no Feb 30); in that case it has
-      # fully elapsed, so its total is the right comparison. For a month that
-      # is already over, current_series spans the whole month and this is a
-      # no-op.
-      comparison_days = [ current_series.size, previous_series.size ].min
+      # It is clamped because the previous month can end before the current
+      # day-of-month (Mar 30 has no Feb 30); it has fully elapsed by then, so
+      # its complete total is the right comparison.
+      #
+      # Once the selected month is over, both months are compared whole. The
+      # clamp must not apply here: a completed month shorter than the one
+      # before it (Feb after Jan) would otherwise truncate the previous month.
+      comparison_days = if current_period.end_date < month_end
+        [ current_series.size, previous_series.size ].min
+      else
+        previous_series.size
+      end
+
       previous_total = comparison_days.positive? ? previous_series[comparison_days - 1][:value] : 0
 
       # Set only while the comparison stops short of the previous month's end,

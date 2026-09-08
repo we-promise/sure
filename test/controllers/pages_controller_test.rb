@@ -615,6 +615,33 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       count: 0
   end
 
+  test "dashboard spending trend header compares complete months when the selected month is the shorter one" do
+    account = @family.accounts.create!(name: "Spending Trend Short Month Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    # A past month shorter than the one before it (e.g. February after January),
+    # where clamping to the shorter series would truncate the previous month.
+    selected_month = (1..11).map { |i| i.months.ago.beginning_of_month.to_date }
+      .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
+    previous_month = (selected_month - 1.month).beginning_of_month
+
+    create_transaction(account: account, name: "Selected", amount: 50, date: selected_month)
+    create_transaction(account: account, name: "Previous early", amount: 111, date: previous_month)
+    create_transaction(account: account, name: "Previous last day", amount: 999, date: previous_month.end_of_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    assert_response :ok
+
+    previous_series = spending_trend_chart_data.fetch("previous")
+    _current_total, previous_total = spending_trend_header_totals
+
+    # Both months are over, so both are compared whole - the selected month
+    # being shorter must not truncate the previous month's total.
+    assert_operator previous_series.last.fetch("value"), :>, previous_series.fetch(selected_month.end_of_month.day - 1).fetch("value")
+    assert_equal money_text(previous_series.last.fetch("value")), previous_total
+    assert_select "#spending-trend-section span",
+      text: I18n.t("pages.dashboard.spending_trend.previous_comparison_days", end_day: selected_month.end_of_month.day),
+      count: 0
+  end
+
   test "dashboard spending trend header clamps to a previous month shorter than today" do
     # A month longer than the one before it (e.g. March after February), frozen
     # to a day that the previous month never reaches.
