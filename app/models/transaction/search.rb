@@ -201,21 +201,22 @@ class Transaction::Search
       include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
       real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
 
-      # Use a subquery instead of an INNER JOIN: `.joins(:tags)` fans out to
+      # Use a subquery instead of an INNER/LEFT JOIN: `.joins(:tags)` fans out to
       # one row per matching tag, so a transaction tagged with two of the
       # filtered tags produces two rows and double-counts in the summary
-      # box (COUNT / SUM) even though the list renders it once.
+      # box (COUNT / SUM) even though the list renders it once. A top-level
+      # `.distinct` doesn't work either, since PostgreSQL rejects DISTINCT
+      # combined with reverse_chronological's CASE-expression ORDER BY unless
+      # that expression is also in the select list (PG::InvalidColumnReference).
+      # `query` is already scoped to the current family, so the subquery
+      # inherits that scoping too.
       # See https://github.com/we-promise/sure/issues/3174
-      #
-      # A top-level `.distinct` would break controller-level ordering (e.g. reverse_chronological's
-      # CASE expression) under PostgreSQL, since DISTINCT requires all ORDER BY expressions to appear in
-      # the select list. Deduplicate via a subquery instead so `query`'s own select/order stay untouched.
-      matching_transaction_ids = if include_untagged
-        family.transactions.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).select(:id)
+      matching_ids = if include_untagged
+        query.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).distinct.select(:id)
       else
-        family.transactions.joins(:tags).where(tags: { name: real_tags }).select(:id)
+        query.joins(:tags).where(tags: { name: real_tags }).distinct.select(:id)
       end
-      query.where(transactions: { id: matching_transaction_ids })
+      query.where(id: matching_ids)
     end
 
     def apply_status_filter(query, statuses)

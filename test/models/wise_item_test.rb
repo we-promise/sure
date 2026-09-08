@@ -59,7 +59,8 @@ class WiseItemTest < ActiveSupport::TestCase
   end
 
   test "generate_sca_keypair! stores a private key and returns a matching public key" do
-    WiseItem.stubs(:encryption_ready?).returns(true)
+    stub_sca_encryption_available
+
     public_pem = @wise_item.generate_sca_keypair!
 
     assert @wise_item.sca_configured?
@@ -68,6 +69,24 @@ class WiseItemTest < ActiveSupport::TestCase
 
     private_key = OpenSSL::PKey::RSA.new(@wise_item.sca_private_key)
     assert_equal private_key.public_key.to_pem, public_pem
+  end
+
+  test "refuses to store an SCA private key unless the attribute is registered encrypted" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
+    WiseItem.stubs(:encrypted_attributes).returns([])
+
+    assert_not @wise_item.sca_encryption_available?
+    assert_raises(WiseItem::SCAEncryptionUnavailable) { @wise_item.generate_sca_keypair! }
+    assert_nil @wise_item.reload.sca_private_key
+  end
+
+  test "refuses to store an SCA private key when encrypted attributes are unset" do
+    WiseItem.stubs(:encryption_ready?).returns(true)
+    WiseItem.stubs(:encrypted_attributes).returns(nil)
+
+    assert_not @wise_item.sca_encryption_available?
+    assert_raises(WiseItem::SCAEncryptionUnavailable) { @wise_item.generate_sca_keypair! }
+    assert_nil @wise_item.reload.sca_private_key
   end
 
   # An SCA private key signs requests to Wise. Storing it unencrypted is not a
@@ -110,7 +129,8 @@ class WiseItemTest < ActiveSupport::TestCase
   end
 
   test "generate_sca_keypair! replaces a previously generated key" do
-    WiseItem.stubs(:encryption_ready?).returns(true)
+    stub_sca_encryption_available
+
     first_public_key = @wise_item.generate_sca_keypair!
     second_public_key = @wise_item.generate_sca_keypair!
 
@@ -170,6 +190,11 @@ class WiseItemTest < ActiveSupport::TestCase
   end
 
   private
+
+    def stub_sca_encryption_available
+      WiseItem.stubs(:encryption_ready?).returns(true)
+      WiseItem.stubs(:encrypted_attributes).returns([ "sca_private_key" ])
+    end
 
     def create_interbalance_entry(account, resource_id, side:, amount:)
       external_id = "wise_interbalance_#{resource_id}_#{side}"
