@@ -38,8 +38,8 @@ fr:
         transactions_subtitle: Personnalisez l'affichage des transactions
     background_jobs:
       cancel:
-        cancelled: "%{type} marqué comme perdu."
-        cancelled_error: 'Marqué en échec par un administrateur : la tâche en arrière-plan a été présumée perdue.'
+        cancelled: "L'opération a été marquée comme annulée."
+        cancelled_error: "Marqué en échec par un administrateur : la tâche en arrière-plan a été présumée perdue."
         not_cancellable: Cette opération ne peut pas être modifiée pour l'instant, sa tâche est peut-être encore en file d'attente ou en cours. Réessayez après 30 minutes d'inactivité.
       operation:
         actions:
@@ -70,7 +70,7 @@ fr:
           retries: Nouvelles tentatives
           scheduled: Planifiées
           workers: Workers
-        subtitle: 'État d''exécution de Sidekiq en direct : processus workers, profondeur des files d''attente et ensembles de nouvelles tentatives et de tâches abandonnées.'
+        subtitle: "État d'exécution de Sidekiq en direct : processus workers, profondeur des files d'attente et ensembles de nouvelles tentatives et de tâches abandonnées."
         table:
           action: Action
           family: Famille
@@ -303,13 +303,13 @@ fr:
         connect_button: Connecter Binance
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter Binance ?
         historical_import: Paramètres d'importation historique
-        ip_hint_body: 'Ajoutez l''IP de sortie du serveur de l''application à la liste blanche de la clé API Binance :'
+        ip_hint_body: "Ajoutez l'IP de sortie du serveur de l'application à la liste blanche de la clé API Binance :"
         ip_hint_contact_admin: Contactez votre administrateur pour obtenir l'adresse IP de sortie du serveur de l'application.
         ip_hint_title: Liste blanche d'IP requise
         no_withdraw_body: N'activez pas les permissions de retrait lors de la création de votre clé API Binance. Sure requiert uniquement un accès en lecture.
         no_withdraw_title: Clé en lecture seule uniquement
-        no_withdraw_warning: 'Attention : n''activez PAS les permissions de retrait'
-        setup_instructions: 'Pour connecter Binance, créez une clé API en lecture seule :'
+        no_withdraw_warning: "Attention : n'activez PAS les permissions de retrait"
+        setup_instructions: "Pour connecter Binance, créez une clé API en lecture seule :"
         step1_html: Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestion des API Binance</a>
         step2: Créez une nouvelle clé API avec la permission Enable Reading uniquement
         step3: Collez votre clé API et votre secret ci-dessous
@@ -325,7 +325,7 @@ fr:
         api_secret_placeholder: Entrez votre secret API Coinbase
         connect_button: Connecter Coinbase
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
-        setup_instructions: 'Pour connecter Coinbase :'
+        setup_instructions: "Pour connecter Coinbase :"
         step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>
         step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir les comptes, voir les transactions)
         step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
@@ -357,7 +357,7 @@ fr:
         save_and_connect: Enregistrer et connecter
         select_country: Sélectionner le pays...
         session_expired_reconnect: Session expirée - reconnecter
-        session_expires: 'La session expire le : %{date}'
+        session_expires: "La session expire le : %{date}"
         step_1_html: Allez sur %{link} et récupérez vos identifiants de développeur.
         step_2: Choisissez votre pays et collez l'identifiant de l'application (Application ID) et le certificat client ci-dessous.
         step_3: Enregistrez, puis utilisez Ajouter une connexion pour lier votre banque.
@@ -381,13 +381,13 @@ fr:
         accounts_tab: Comptes
         configuration:
           all_other_options: 'All other configuration options : "No"'
-          date_format: 'Date Format : yyyy-MM-dd'
-          date_time_separator: 'Date/Time Separator : ; (semi-colon)'
-          format: 'Format : XML'
-          models: 'Models : Optional'
-          period: 'Period : Last 365 Calendar Days'
-          profit_and_loss: 'Profit and Loss : Default'
-          time_format: 'Time Format : HH:mm:ss'
+          date_format: "Date Format : yyyy-MM-dd"
+          date_time_separator: "Date/Time Separator : ; (semi-colon)"
+          format: "Format : XML"
+          models: "Models : Optional"
+          period: "Period : Last 365 Calendar Days"
+          profit_and_loss: "Profit and Loss : Default"
+          time_format: "Time Format : HH:mm:ss"
         disconnect_confirm: Déconnecter Interactive Brokers ?
         flex_query_details:
           configuration_heading: Définissez ces options de requête
@@ -402,23 +402,23 @@ fr:
         report_window_note: Les rapports IBKR Flex sont limités à la fenêtre de requête que vous avez configurée dans IBKR. Sure importera la totalité des positions actuelles ainsi que jusqu'aux 365 derniers jours d'activité de ce rapport.
         save_configuration: Enregistrer la configuration
         sections:
-          account_information: 'Account Information: Account ID, Currency'
-          cash_report: 'Cash Report :'
-          cash_report_fields: 'Fields : Currency, Ending Cash'
-          cash_report_options: 'Options : None'
-          cash_transactions: 'Cash Transactions :'
-          cash_transactions_fields: 'Fields : Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
-          cash_transactions_options: 'Options : Dividends, Deposits & Withdrawals, Detail'
-          change_in_position_value_summary: 'Change In Position Value Summary : Currency, End Of Period Value'
-          net_asset_value: 'Net Asset Value (NAV) in Base :'
-          net_asset_value_fields: 'Fields : Currency, Report Date, Total'
-          net_asset_value_options: 'Options : None'
-          open_positions: 'Open Positions :'
-          open_positions_fields: 'Fields : Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
-          open_positions_options: 'Options : Summary'
-          trades: 'Trades :'
-          trades_fields: 'Fields : Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
-          trades_options: 'Options : Execution'
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report :"
+          cash_report_fields: "Fields : Currency, Ending Cash"
+          cash_report_options: "Options : None"
+          cash_transactions: "Cash Transactions :"
+          cash_transactions_fields: "Fields : Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          cash_transactions_options: "Options : Dividends, Deposits & Withdrawals, Detail"
+          change_in_position_value_summary: "Change In Position Value Summary : Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base :"
+          net_asset_value_fields: "Fields : Currency, Report Date, Total"
+          net_asset_value_options: "Options : None"
+          open_positions: "Open Positions :"
+          open_positions_fields: "Fields : Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          open_positions_options: "Options : Summary"
+          trades: "Trades :"
+          trades_fields: "Fields : Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+          trades_options: "Options : Execution"
         status_configured_prefix: "%{summary}. Visitez l'onglet"
         status_configured_suffix: pour gérer les comptes découverts.
         steps:
@@ -527,8 +527,8 @@ fr:
         step_3: Ensuite, allez dans Comptes pour lier vos comptes synchronisés.
       status:
         err: Erreur
-        'false': Non configuré
-        'off': Non configuré
+        "false": Non configuré
+        "off": Non configuré
         ok: Connecté
         warn: Action nécessaire
       sync_all: Tout synchroniser
@@ -632,7 +632,7 @@ fr:
         status_configured_suffix: pour gérer les comptes détectés.
         steps:
           step_1: Ouvrez Trading 212 → Paramètres → API (application web ou mobile).
-          step_2: 'Générez une nouvelle clé d''API : Trading 212 vous affichera un identifiant d''API et une clé secrète.'
+          step_2: "Générez une nouvelle clé d'API : Trading 212 vous affichera un identifiant d'API et une clé secrète."
           step_3: Collez les deux ci-dessous, sélectionnez votre environnement et la devise du compte, puis enregistrez.
         sync: Synchroniser
         update_configuration: Mettre à jour la configuration
@@ -649,12 +649,12 @@ fr:
         disable_mfa_confirm: Voulez-vous vraiment désactiver l'authentification à deux facteurs ?
         enable_mfa: Activer la 2FA
         encryption_warning:
-          generate: 'Générez un ensemble avec : bin/rails db:encryption:init'
-          intro: 'Les données sensibles (clés API, jetons de fournisseur, secrets MFA et PII) sont stockées non chiffrées au repos. Pour activer le chiffrement, définissez les clés suivantes dans vos variables d''environnement ou identifiants Rails :'
+          generate: "Générez un ensemble avec : bin/rails db:encryption:init"
+          intro: "Les données sensibles (clés API, jetons de fournisseur, secrets MFA et PII) sont stockées non chiffrées au repos. Pour activer le chiffrement, définissez les clés suivantes dans vos variables d'environnement ou identifiants Rails :"
           keys:
-          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Clés de chiffrement manquantes
         mfa_description: Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code de votre application d'authentification lors de la connexion
         mfa_title: Authentification à deux facteurs

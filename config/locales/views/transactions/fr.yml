@@ -276,7 +276,7 @@ fr:
       activity_type_description: Type d'activité d'investissement (Achat, Vente, Dividende, etc.). Détecté automatiquement ou défini manuellement.
       additional_details: Détails supplémentaires
       amount: Montant
-      applied_to_detail: "%{amount} affectés à la facture échue le %{date}"
+      applied_to_detail: "%{amount} affectés à la facture à échéance le %{date}"
       applied_to_title: Factures réglées par cette transaction
       applied_to_unreviewed: À vérifier
       attachments: Pièces jointes

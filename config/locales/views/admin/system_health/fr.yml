@@ -140,7 +140,7 @@ fr:
             available_not_enabled: Disponible, non activé
             configured: Configuré
             enabled: Activé
-            fallback: "(par défaut)"
+            fallback: "(solution de repli)"
             'no': Non
             not_available: Non disponible
             not_configured: Non configuré

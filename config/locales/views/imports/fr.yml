@@ -443,7 +443,7 @@ fr:
     summary:
       already_recorded: Déjà enregistrée
       already_recorded_hint: Rapprochée d'une transaction que ce compte contenait déjà, et marquée comme rapprochée.
-      awaiting_review: En attente d'import
+      awaiting_review: En attente d'examen
       close: Fermer
       extracted: Trouvée sur le relevé
       fully_reconciled:
@@ -463,7 +463,7 @@ fr:
         status: Statut
       row:
         actions:
-          confirm_mark_failed: Cet import est inactif depuis un moment et sa tâche en arrière-plan a probablement été interrompue. Le marquer en échec pour pouvoir réessayer ? Aucune donnée importée n'est conservée.
+          confirm_mark_failed: Cet import est inactif depuis un moment et sa tâche en arrière-plan a probablement été interrompue. Des données peuvent avoir été partiellement enregistrées. Le marquer en échec pour pouvoir réessayer peut entraîner des doublons.
           confirm_revert: Cette opération supprimera les transactions importées, mais vous pourrez toujours consulter et réimporter vos données à tout moment.
           delete: Supprimer
           mark_failed: Marquer en échec

@@ -170,7 +170,7 @@ fr:
         failed: Impossible d'analyser l'historique des prélèvements pour le moment. Le formulaire a conservé les valeurs de la transaction elle-même.
     status:
       active: Actif
-      ended: Ignorée
+      ended: Terminée
       inactive: Inactif
       paused: En pause
       suggested: Facture possible

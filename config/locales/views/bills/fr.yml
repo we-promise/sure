@@ -28,7 +28,7 @@ fr:
       sort_name: Par nom
       status_filters:
         due: Bientôt due
-        ended: Ignorée
+        ended: Terminée
         overdue: En retard
         paid: Payée
         partial: Partiellement payée
@@ -61,7 +61,7 @@ fr:
       reset_feed: Réinitialiser le lien
       subscribe_ical: S'abonner (iCal)
       today: Aujourd'hui
-    cancelled_still_scheduled: 'Vous l''avez marquée comme annulée le %{date}, mais elle reste programmée : de nouvelles factures continueront donc d''apparaître.'
+    cancelled_still_scheduled: "Vous l'avez marquée comme annulée le %{date}, mais elle reste programmée : de nouvelles factures continueront donc d'apparaître."
     debt_payment: "· remboursement de dette"
     detail:
       annualized: Par an
@@ -73,7 +73,7 @@ fr:
       history: Historique
       history_aria: Paiements des douze derniers mois
       history_title: 12 derniers mois
-      key_metrics: Par an
+      key_metrics: Indicateurs clés
       last_account: Dernier compte utilisé
       manual_payment: Paiement manuel
       next_payment: Prochain paiement
@@ -146,7 +146,7 @@ fr:
         other: "%{count} requièrent votre attention"
       needs_attention: Requiert votre attention
       needs_review: À vérifier
-      notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent})"
+      notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent} %)"
       notice_renewal: "%{name} se renouvelle le %{date}"
       notice_trial: L'essai de %{name} se termine le %{date}
       notices_routine:
@@ -267,7 +267,7 @@ fr:
       short_short: Déficit
       shortfall_amount: "· %{amount}"
       shortfall_label: Déficit avant votre prochaine paie
-      shortfall_largest: 'Plus gros engagement à venir :'
+      shortfall_largest: "Plus gros engagement à venir :"
       shortfall_split: "%{obligations} sont à payer avant le %{date} et vos comptes contiennent %{cash}."
       unconvertible:
         one: 1 engagement n'est pas inclus, aucun taux de change disponible

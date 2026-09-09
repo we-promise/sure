@@ -4,7 +4,7 @@ fr:
     history_status:
       missed: Manquée
       paid: Payée
-      scheduled: Ouverte
+      scheduled: Planifiée
       skipped: Ignorée
     mark_paid:
       success: Facture marquée comme payée

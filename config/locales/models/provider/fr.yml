@@ -2,7 +2,7 @@
 fr:
   providers:
     property_valuation:
-      missing_fields: Indiquez un nom et une adresse complète (rue, ville, État et code postal).
+      missing_fields: Indiquez un nom et une adresse américaine complète (rue, ville, État et code postal).
       not_configured: Ce fournisseur de données immobilières n'est pas configuré.
       preview_expired: Cet aperçu de bien a expiré, relancez la recherche sur l'adresse.
     realie:
