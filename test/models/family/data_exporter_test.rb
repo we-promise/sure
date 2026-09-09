@@ -522,22 +522,40 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "rule operand lookup matches uppercase UUID values" do
+    operand = @exporter.send(
+      :rule_operand,
+      @category.id.upcase,
+      type: "Category",
+      relation: :categories,
+      fallback_to_name: true
+    )
+
+    assert_equal "Test Category", operand[:value]
+    assert_equal({ type: "Category", id: @category.id, name: "Test Category" }, operand[:value_ref])
+  end
+
   test "rule operand lookup skips name fallback for stale UUID values" do
     stale_uuid = SecureRandom.uuid
-    relation = mock
-    relation.expects(:find_by).with(id: stale_uuid).once.returns(nil)
-    relation.expects(:find_by).with(name: stale_uuid).never
+    @exporter.expects(:operand_records_by_name).never
 
     operand = @exporter.send(
       :rule_operand,
       stale_uuid,
       type: "Category",
-      relation: relation,
+      relation: :categories,
       fallback_to_name: true
     )
 
     assert_equal stale_uuid, operand[:value]
     assert_nil operand[:value_ref]
+  end
+
+  test "operand id and name lookups for the same relation share a single query" do
+    assert_queries_count(1) do
+      @exporter.send(:operand_records_by_id, :categories)
+      @exporter.send(:operand_records_by_name, :categories)
+    end
   end
 
   test "exports rule actions and maps tag UUIDs to names" do

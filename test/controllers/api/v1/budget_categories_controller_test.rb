@@ -114,6 +114,38 @@ class Api::V1::BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 70_000, response_data["available_to_spend_cents"]
   end
 
+  test "show exposes ring-fenced child carry included in parent availability" do
+    parent_category = @family.categories.create!(name: "Parent rollover API", color: "#123456")
+    child_category = @family.categories.create!(name: "Child rollover API", parent: parent_category)
+    previous_budget = @family.budgets.create!(
+      start_date: 6.months.ago.beginning_of_month.to_date,
+      end_date: 6.months.ago.end_of_month.to_date,
+      budgeted_spending: 80,
+      expected_income: 100,
+      currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: parent_category, budgeted_spending: 80, currency: "USD"
+    )
+    previous_budget.budget_categories.create!(
+      category: child_category, budgeted_spending: 80, currency: "USD", rollover_enabled: true
+    )
+    parent_budget_category = @budget.budget_categories.create!(
+      category: parent_category, budgeted_spending: 100, currency: "USD"
+    )
+    @budget.budget_categories.create!(
+      category: child_category, budgeted_spending: 100, currency: "USD", rollover_enabled: true
+    )
+
+    get api_v1_budget_category_url(parent_budget_category), headers: api_headers(@api_key)
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_equal 10_000, response_data["budgeted_spending_cents"]
+    assert_equal 8_000, response_data["rolled_over_amount_cents"]
+    assert_equal 18_000, response_data["available_to_spend_cents"]
+  end
+
   test "returns not found for another family's budget category" do
     get api_v1_budget_category_url(@other_budget_category), headers: api_headers(@api_key)
 
