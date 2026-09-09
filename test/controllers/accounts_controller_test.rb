@@ -240,6 +240,111 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, per_row_split_parent, "N+1 per-row split-parent lookups detected (#{per_row_split_parent})"
   end
 
+  # --- Compact view: valuations, split groups, running balance, and filters ---
+
+  test "show renders valuations with the compact partial when compact and grouped by date" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => true))
+    create_valuation(account: @account, amount: 5000)
+
+    get account_url(@account)
+
+    assert_response :success
+    # compact_valuation renders a flex row; the full-size partial renders a grid-cols-12 row instead
+    assert_select "turbo-frame[id^='valuation_']"
+    assert_select "turbo-frame[id^='valuation_'] div.grid-cols-12", count: 0
+  end
+
+  test "show groups split parents into a single split-group row in the compact flat (ungrouped) view" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "show_split_grouped" => true))
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    # Split children should not render as orphaned rows outside the split-group wrapper
+    assert_select ".split-group [id^='entry_']", minimum: 1
+  end
+
+  test "show renders split children as flat rows in the compact flat view when grouping is disabled" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "show_split_grouped" => false))
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 0
+  end
+
+  test "show computes running balances only for compact flat (ungrouped) view" do
+    @account.balances.where(date: Date.current).destroy_all
+    @account.balances.create!(date: Date.current, balance: 500, currency: @account.currency, start_balance: 500, end_balance: 500)
+    create_transaction(name: "Coffee", amount: 5, account: @account, date: Date.current)
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    get account_url(@account)
+    assert_response :success
+    assert @controller.instance_variable_get(:@running_balances).present?
+
+    @user.update!(preferences: (@user.preferences || {}).merge("transactions_group_by_date" => true))
+    get account_url(@account)
+    assert_response :success
+    assert_equal({}, @controller.instance_variable_get(:@running_balances))
+  end
+
+  test "show filters entries by search term" do
+    create_transaction(name: "Uniquely Named Coffee Shop", amount: 5, account: @account)
+    create_transaction(name: "Grocery Store", amount: 40, account: @account)
+
+    get account_url(@account, q: { search: "Uniquely Named" })
+
+    assert_response :success
+    assert_match "Uniquely Named Coffee Shop", response.body
+    assert_no_match "Grocery Store", response.body
+  end
+
+  test "show filters entries by date range" do
+    in_range = create_transaction(name: "In Range Entry", amount: 10, account: @account, date: 5.days.ago.to_date)
+    out_of_range = create_transaction(name: "Out Of Range Entry", amount: 10, account: @account, date: 30.days.ago.to_date)
+
+    get account_url(@account, q: { start_date: 10.days.ago.to_date.to_s, end_date: Date.current.to_s })
+
+    assert_response :success
+    assert_match in_range.name, response.body
+    assert_no_match out_of_range.name, response.body
+  end
+
+  test "show filters entries by amount" do
+    create_transaction(name: "Small Amount Entry", amount: 5, account: @account)
+    create_transaction(name: "Big Amount Entry", amount: 500, account: @account)
+
+    get account_url(@account, q: { amount: "100", amount_operator: "greater" })
+
+    assert_response :success
+    assert_match "Big Amount Entry", response.body
+    assert_no_match "Small Amount Entry", response.body
+  end
+
+  test "show filters entries by category" do
+    category = categories(:food_and_drink)
+    matching = create_transaction(name: "Categorized Entry", amount: 10, account: @account, category: category)
+    non_matching = create_transaction(name: "Uncategorized Entry", amount: 10, account: @account)
+
+    get account_url(@account, q: { categories: [ category.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
     AccountStatement.expects(:reconciliation_statuses_for).never

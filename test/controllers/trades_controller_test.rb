@@ -1,6 +1,7 @@
 require "test_helper"
 
 class TradesControllerTest < ActionDispatch::IntegrationTest
+  include ActionView::RecordIdentifier
   include EntryableResourceInterfaceTest
 
   setup do
@@ -484,5 +485,49 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert @entry.user_modified?, "Entry should be marked as user_modified"
     assert @entry.trade.locked_attributes.key?("investment_activity_label"), "investment_activity_label should be locked"
     assert @entry.protected_from_sync?, "Entry should be protected from sync"
+  end
+
+  test "turbo stream update replaces the entry row with the compact partial when compact preview is enabled" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => true))
+
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/turbo-stream/, response.content_type)
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    entry_row_stream = doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(@entry) }
+    assert entry_row_stream.present?, "Expected a turbo-stream replacing the entry row"
+    # Compact partial renders a flex row; the full-size partial renders a grid-cols-12 row instead
+    assert_no_match(/grid-cols-12/, entry_row_stream.to_html)
+  end
+
+  test "turbo stream update replaces the entry row with the full-size partial when compact preview is disabled" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false, "transactions_compact" => true, "transactions_group_by_date" => true))
+
+    patch trade_url(@entry), params: {
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    entry_row_stream = doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(@entry) }
+    assert entry_row_stream.present?, "Expected a turbo-stream replacing the entry row"
+    assert_match(/grid-cols-12/, entry_row_stream.to_html)
   end
 end
