@@ -20,7 +20,7 @@ class CategoriesController < ApplicationController
   end
 
   def merge
-    @categories = Current.family.categories.alphabetically
+    @categories = Current.family.categories.alphabetically_by_hierarchy
 
     render layout: turbo_frame_request? ? false : "settings"
   end
