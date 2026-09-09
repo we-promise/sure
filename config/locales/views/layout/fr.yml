@@ -5,9 +5,11 @@ fr:
       insights: Analyses
       nav:
         assistant: Assistant
+        bills: Factures
         budgets: Budgets
         goals: Objectifs
         home: Accueil
+        plan: Plan
         reports: Rapports
         transactions: Transactions
       privacy_mode: Activer/désactiver le mode confidentialité
