@@ -179,10 +179,10 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       akahu_items binance_items brex_items coinbase_items coinstats_items
       ibkr_items indexa_capital_items kraken_items mercury_items
       onchain_wallet_items questrade_items redbark_items snaptrade_items
-      sophtron_items trading212_items up_items wise_items
+      sophtron_items trade_republic_items trading212_items up_items wise_items
       akahu_accounts binance_accounts brex_accounts ibkr_accounts
       indexa_capital_accounts kraken_accounts onchain_wallet_accounts
-      questrade_accounts redbark_accounts sophtron_accounts
+      questrade_accounts redbark_accounts sophtron_accounts trade_republic_accounts
       trading212_accounts up_accounts wise_accounts
       api_keys sso_providers sso_identity_blocks
     ].each do |key|
