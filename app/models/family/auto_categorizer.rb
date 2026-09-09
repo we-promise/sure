@@ -33,6 +33,7 @@ class Family::AutoCategorizer
         message: "AI categorization failed: no categories available",
         source: self.class.name,
         family: family,
+        provider: llm_provider,
         metadata: {
           requested_transaction_ids: transaction_ids
         }

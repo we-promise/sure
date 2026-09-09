@@ -30,9 +30,11 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
-    blocked_transaction_ids = transaction_scope
-      .where(Arel.sql("transactions.locked_attributes ? :attribute"), attribute: "category_id")
-      .pluck(:id)
+    protected_scope = protected_transactions(transaction_scope)
+    cached_transaction_ids = cached_transaction_ids(protected_scope)
+    blocked_transaction_ids = protected_scope.pluck(:id) - cached_transaction_ids
+
+    log_cache_usage(cached_transaction_ids) if cached_transaction_ids.any?
     log_blocked_transactions(blocked_transaction_ids) if blocked_transaction_ids.any?
 
     enrichable_transactions = transaction_scope.enrichable(:category_id)
@@ -63,6 +65,33 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
   end
 
   private
+    def protected_transactions(transaction_scope)
+      transaction_scope.where(Arel.sql("transactions.locked_attributes ? :attribute"), attribute: "category_id")
+    end
+
+    def cached_transaction_ids(protected_scope)
+      protected_scope
+        .joins(:data_enrichments)
+        .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
+        .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
+        .distinct
+        .pluck(:id)
+    end
+
+    def log_cache_usage(transaction_ids)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "AI categorization cache used",
+        source: self.class.name,
+        family: rule.family,
+        metadata: {
+          rule_id: rule.id,
+          cached_transaction_ids: transaction_ids
+        }
+      )
+    end
+
     def log_blocked_transactions(transaction_ids)
       DebugLogEntry.capture(
         category: "auto_categorization",

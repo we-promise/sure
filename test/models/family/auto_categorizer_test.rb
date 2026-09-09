@@ -55,7 +55,9 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   test "logs and raises when no categories are available" do
     @family.categories.destroy_all
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    @llm_provider.expects(:auto_categorize).never
+    provider = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).never
 
     assert_difference "DebugLogEntry.count", 1 do
       error = assert_raises(Family::AutoCategorizer::Error) do
@@ -70,6 +72,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "AI categorization failed: no categories available", log_entry.message
     assert_equal "Family::AutoCategorizer", log_entry.source
     assert_equal @family, log_entry.family
+    assert_equal "openai", log_entry.provider_key
     assert_equal [ txn.id ], log_entry.metadata["requested_transaction_ids"]
   end
 
