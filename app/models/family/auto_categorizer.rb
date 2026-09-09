@@ -9,6 +9,12 @@ class Family::AutoCategorizer
   def auto_categorize
     raise Error, "No LLM provider for auto-categorization" unless llm_provider
 
+    protected_ids = protected_transaction_ids
+    cached_ids = cached_transaction_ids
+    blocked_ids = protected_ids - cached_ids
+    log_cache_usage(cached_ids) if cached_ids.any?
+    log_blocked_transactions(blocked_ids) if blocked_ids.any?
+
     if scope.none?
       Rails.logger.info("No transactions to auto-categorize for family #{family.id}")
       return 0
@@ -19,8 +25,19 @@ class Family::AutoCategorizer
     categories_input = user_categories_input
 
     if categories_input.empty?
-      Rails.logger.error("Cannot auto-categorize transactions for family #{family.id}: no categories available")
-      return 0
+      message = "Cannot auto-categorize transactions for family #{family.id}: no categories available"
+      Rails.logger.error(message)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "error",
+        message: "AI categorization failed: no categories available",
+        source: self.class.name,
+        family: family,
+        metadata: {
+          requested_transaction_ids: transaction_ids
+        }
+      )
+      raise Error, "No categories available for auto-categorization"
     end
 
     result = llm_provider.auto_categorize(
@@ -34,12 +51,14 @@ class Family::AutoCategorizer
     end
 
     modified_count = 0
+    categorized_transaction_ids = []
     scope.each do |transaction|
       auto_categorization = result.data.find { |c| c.transaction_id == transaction.id }
 
       category_id = categories_input.find { |c| c[:name] == auto_categorization&.category_name }&.dig(:id)
 
       if category_id.present?
+        categorized_transaction_ids << transaction.id
         was_modified = transaction.enrich_attribute(
           :category_id,
           category_id,
@@ -50,6 +69,22 @@ class Family::AutoCategorizer
         modified_count += 1 if was_modified
       end
     end
+
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "AI categorization completed",
+      source: self.class.name,
+      family: family,
+      provider: llm_provider,
+      metadata: {
+        requested_transaction_ids: transaction_ids,
+        categorized_transaction_ids: categorized_transaction_ids,
+        cached_transaction_ids: cached_ids,
+        blocked_transaction_ids: blocked_ids,
+        modified_count: modified_count
+      }
+    )
 
     modified_count
   end
@@ -85,6 +120,51 @@ class Family::AutoCategorizer
           merchant: transaction.merchant&.name
         }
       end
+    end
+
+    def cached_transaction_ids
+      protected_transactions
+            .joins(:data_enrichments)
+            .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
+            .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
+            .distinct
+            .pluck(:id)
+    end
+
+    def protected_transaction_ids
+      protected_transactions.pluck(:id)
+    end
+
+    def protected_transactions
+      family.transactions
+            .where(id: transaction_ids)
+            .where(Arel.sql("transactions.locked_attributes ? :attribute"), attribute: "category_id")
+    end
+
+    def log_cache_usage(cached_transaction_ids)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "AI categorization cache used",
+        source: self.class.name,
+        family: family,
+        metadata: {
+          cached_transaction_ids: cached_transaction_ids
+        }
+      )
+    end
+
+    def log_blocked_transactions(blocked_transaction_ids)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "AI categorization blocked by enrichment protection",
+        source: self.class.name,
+        family: family,
+        metadata: {
+          blocked_transaction_ids: blocked_transaction_ids
+        }
+      )
     end
 
     def scope

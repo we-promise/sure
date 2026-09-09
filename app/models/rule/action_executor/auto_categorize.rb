@@ -30,6 +30,11 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
+    blocked_transaction_ids = transaction_scope
+      .where(Arel.sql("transactions.locked_attributes ? :attribute"), attribute: "category_id")
+      .pluck(:id)
+    log_blocked_transactions(blocked_transaction_ids) if blocked_transaction_ids.any?
+
     enrichable_transactions = transaction_scope.enrichable(:category_id)
 
     if enrichable_transactions.empty?
@@ -56,4 +61,19 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       jobs_count: jobs_count
     }
   end
+
+  private
+    def log_blocked_transactions(transaction_ids)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "AI categorization blocked by enrichment protection",
+        source: self.class.name,
+        family: rule.family,
+        metadata: {
+          rule_id: rule.id,
+          blocked_transaction_ids: transaction_ids
+        }
+      )
+    end
 end
