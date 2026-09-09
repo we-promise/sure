@@ -526,7 +526,7 @@ class TransactionsController < ApplicationController
     # active status (AccountsController#toggle_active) doesn't touch `entries`
     # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v3/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 

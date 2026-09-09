@@ -163,6 +163,11 @@ en:
       show:
         description: Select the columns that correspond to each field in your CSV.
         title: Configure your import
+        template_found: Template configuration found
+        template_description: We found a configuration from a previous import for this account.  Would you like to apply it to this import?
+        manually_configure: Manually configure
+        apply_template: Apply template
+        sample_caption: Sample data from your uploaded CSV
     confirms:
       sure_import:
         title: Confirm your import

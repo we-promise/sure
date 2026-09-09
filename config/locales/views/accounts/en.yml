@@ -68,6 +68,8 @@ en:
         select: Select
         navigate: Navigate
         close: Close
+        next: Next
+        previous: Previous
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account
@@ -82,6 +84,7 @@ en:
         activity: Activity
         holdings: Holdings
         overview: Overview
+        schedule: Schedule
         statements: Statements
       activity:
         amount: Amount

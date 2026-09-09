@@ -51,6 +51,7 @@ en:
       view_usage_history: View usage history
       confirm_changes: Confirm changes
     actions:
+      to_label: to
       value_placeholder: Enter a value
     update:
       success: Rule updated

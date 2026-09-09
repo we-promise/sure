@@ -8,7 +8,7 @@ class Provider::WiseAdapterTest < ActiveSupport::TestCase
 
   test "build_provider threads sca_private_key through to Provider::Wise" do
     key = OpenSSL::PKey::RSA.new(2048).to_pem
-    @wise_item.update!(sca_private_key: key)
+    @wise_item.update_column(:sca_private_key, key)
 
     provider = Provider::WiseAdapter.build_provider(family: @family, wise_item_id: @wise_item.id)
 
