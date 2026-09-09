@@ -83,7 +83,7 @@ pub fn grant_server_capability(app: &tauri::AppHandle, origin: &str) {
             .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
             .collect::<String>()
     );
-    let capability = tauri::ipc::CapabilityBuilder::new(id)
+    let capability = tauri::ipc::CapabilityBuilder::new(id.clone())
         .window("main")
         .remote(format!("{canonical}/**"))
         .permission("core:window:allow-start-dragging")
@@ -94,6 +94,16 @@ pub fn grant_server_capability(app: &tauri::AppHandle, origin: &str) {
         .permission("notification:default");
     if let Err(e) = app.add_capability(capability) {
         eprintln!("[sure] failed to grant capability for {canonical}: {e}");
+    }
+    // Tauri implements window.print() through this IPC permission on macOS.
+    // Report windows only need printing, not the main window's bridge access.
+    let print_capability = tauri::ipc::CapabilityBuilder::new(format!("{id}-print"))
+        .window("main")
+        .window("report-*")
+        .remote(format!("{canonical}/**"))
+        .permission("core:webview:allow-print");
+    if let Err(e) = app.add_capability(print_capability) {
+        eprintln!("[sure] failed to grant print capability for {canonical}: {e}");
     }
 }
 
