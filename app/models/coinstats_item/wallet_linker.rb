@@ -22,7 +22,7 @@ class CoinstatsItem::WalletLinker
     balance_data = fetch_balance_data
     tokens = normalize_tokens(balance_data)
 
-    return Result.new(success?: false, created_count: 0, errors: [ "No tokens found for wallet" ]) if tokens.empty?
+    return Result.new(success?: false, created_count: 0, errors: [ I18n.t("models.coinstats_item.wallet_linker.no_tokens_found") ]) if tokens.empty?
 
     created_count = 0
     errors = []

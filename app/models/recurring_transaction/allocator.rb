@@ -32,12 +32,24 @@ class RecurringTransaction
     # entry-less manual payment. Amounts are in the occurrence's currency;
     # a cross-currency entry converts at its own date's rate, or requires an
     # explicit amount when no rate exists.
-    def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil)
+    def allocate!(amount: nil, entry: nil, paid_on: nil, source: nil, cap_at_remaining: false)
       occurrence.with_lock do
         with_entry_lock(entry) do
           allocated, source_amount, source_currency = resolve_amounts(amount, entry)
           guard_entry_capacity!(entry, source_amount) if entry
           freeze_expected_amount!
+
+          # Opt-in, because exceeding the remainder is load-bearing elsewhere:
+          # a single settlement above the expected amount is exactly how a
+          # price rise gets recorded and learned from. A caller that promises
+          # capping (the AI payment tool) enforces it HERE, under the
+          # occurrence lock, because its own pre-lock check is advisory only:
+          # two concurrent payments can both read the same stale remainder.
+          if cap_at_remaining && allocated > occurrence.remaining_amount
+            raise OverAllocationError, I18n.t("recurring_transactions.allocator.exceeds_remaining",
+              amount: Money.new(allocated, occurrence.currency).format,
+              remaining: Money.new(occurrence.remaining_amount, occurrence.currency).format)
+          end
 
           allocation = occurrence.allocations.create!(
             entry: entry,

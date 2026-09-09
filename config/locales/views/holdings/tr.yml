@@ -30,6 +30,9 @@ tr:
       shares: "%{qty} adet hisse"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} pozisyon"
+        other: "%{count} pozisyon"
       average_cost: Ortalama maliyet
       holdings: Varlıklar
       name: İsim

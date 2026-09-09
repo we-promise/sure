@@ -21,6 +21,7 @@ en:
       cancel: Cancel
       creating: Importing...
     complete_account_setup:
+      invalid_sync_start_date: Sync start date must be a valid date in the past.
       success:
         one: "Imported %{count} account"
         other: "Imported %{count} accounts"

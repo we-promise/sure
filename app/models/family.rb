@@ -5,6 +5,7 @@ class Family < ApplicationRecord
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
   include Trading212Connectable
+  include TradeRepublicConnectable
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
@@ -177,6 +178,21 @@ class Family < ApplicationRecord
     nil
   end
 
+  # Callers should still enqueue the normal family sync immediately. Plaid's
+  # refresh is asynchronous, and its polling chain schedules a distinct item
+  # sync after the cursor advances (or after the bounded polling fallback), so
+  # fresh transactions are imported even if the baseline family sync runs first.
+  def request_plaid_transactions_refreshes_later(source:)
+    enqueued_job = PlaidTransactionsRefreshAllJob.perform_later(self, source: source)
+    return enqueued_job if enqueued_job
+
+    capture_plaid_refresh_enqueue_failure(source:, error_class: "ActiveJob::EnqueueError")
+    nil
+  rescue => error
+    capture_plaid_refresh_enqueue_failure(source:, error_class: error.class.name)
+    nil
+  end
+
   def custom_enabled_currencies?
     enabled_currencies.present?
   end
@@ -198,6 +214,23 @@ class Family < ApplicationRecord
   def secondary_enabled_currency_objects(extra: [])
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
   end
+
+  def capture_plaid_refresh_enqueue_failure(source:, error_class:)
+    DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "warn",
+      message: "Plaid transaction refresh could not be enqueued; continuing with normal sync",
+      source: source,
+      provider_key: "plaid",
+      family: self,
+      metadata: { error_class: error_class }
+    )
+  rescue => logging_error
+    Rails.logger.warn(
+      "Plaid refresh enqueue diagnostic failed: #{logging_error.class.name}"
+    )
+  end
+  private :capture_plaid_refresh_enqueue_failure
 
 
   def moniker_label
@@ -330,7 +363,15 @@ class Family < ApplicationRecord
   end
 
   def auto_categorize_transactions(transaction_ids)
-    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+    bayes_result = Family::BayesCategorizer.new(self).classify_and_apply(transaction_ids)
+    remaining_ids = Array(transaction_ids) - bayes_result.categorized_ids
+
+    # Bayes handled everything with sufficient confidence — skip the LLM
+    # categorizer entirely (including its no-provider error contract).
+    return bayes_result.modified_count if bayes_result.categorized_ids.any? && remaining_ids.empty?
+
+    llm_modified_count = AutoCategorizer.new(self, transaction_ids: remaining_ids).auto_categorize
+    bayes_result.modified_count + llm_modified_count
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)

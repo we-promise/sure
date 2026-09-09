@@ -1,0 +1,117 @@
+---
+pt-PT:
+  rules:
+    no_action: Sem ação
+    no_condition: Sem condição
+    rule:
+      edit: Editar
+      re_apply_rule: Reaplicar regra
+      delete: Eliminar
+      then: THEN
+      and_more_conditions:
+        one: e mais 1 condição
+        other: e mais %{count} condições
+      and_more_actions:
+        one: e mais 1 ação
+        other: e mais %{count} ações
+      action_label_to: "%{label} para %{value}"
+      all_past_and_future: Todos os %{resource} passados e futuros
+      on_or_after: "%{resource} em ou após %{date}"
+    form:
+      rule_name_label: Designação da regra (opcional)
+      rule_name_placeholder: Introduza uma designação para esta regra
+      add_condition: Adicionar condição
+      add_condition_group: Adicionar grupo de condições
+      add_action: Adicionar ação
+      all_past_and_future: Todos os %{resource} passados e futuros
+      starting_from: A partir de
+      then: THEN
+    index:
+      page_title: Regras
+      delete_all_rules: Eliminar todas as regras
+      new_rule: Nova regra
+      ai_cost_warning: As ações de regras ativadas por IA implicam custos. Filtre o mais restritivamente possível para evitar custos desnecessários.
+      rules_heading: Regras
+      sort_by: "Ordenar por:"
+      sort_name: Nome
+      sort_updated_at: Atualizado em
+      toggle_sort_direction: Alternar direção da ordenação
+      no_rules_title: Ainda não existem regras
+      no_rules_description: Defina regras para executar ações nas suas transações e noutros dados em cada sincronização de conta.
+    confirm:
+      title: Confirmar alterações
+      title_with_name: "Confirmar alterações a \"%{name}\""
+      apply_notice_html: "Está prestes a aplicar esta regra a <span class=\"text-primary font-medium\">%{count} %{resource}</span> que cumprem os critérios da regra especificada. Confirme se pretende prosseguir com esta alteração."
+      ai_cost_title: Estimativa de custo de IA
+      ai_cost_with_estimate_html: "Isto utilizará IA para categorizar %{count} transação(ões). Custo estimado: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Isto utilizará IA para categorizar %{count} transação(ões)."
+      cost_unavailable_model: "Indisponível estimativa de custo para o modelo \"%{model}\"."
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de AI configurado).
+      cost_warning: Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais atualizados.
+      view_usage_history: Ver histórico de utilização
+      confirm_changes: Confirmar alterações
+    actions:
+      value_placeholder: Introduza um valor
+    update:
+      success: Regra atualizada
+    destroy:
+      success: Regra eliminada
+    destroy_all:
+      success: Todas as regras eliminadas
+    apply_all:
+      button: Aplicar todas
+      confirm_title: Aplicar todas as regras
+      confirm_message: Está prestes a aplicar %{count} regras que afetam %{transactions} transações únicas. Confirme se pretende prosseguir.
+      confirm_button: Confirmar e aplicar todas
+      success: Todas as regras foram colocadas em fila para execução
+      ai_cost_title: Estimativa de custo de IA
+      ai_cost_message: Isto utilizará IA para categorizar até %{transactions} transações.
+      estimated_cost: "Custo estimado: ~$%{cost}"
+      cost_unavailable_model: Indisponível estimativa de custo para o modelo "%{model}".
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de AI configurado).
+      cost_warning: Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais atualizados.
+      view_usage: Ver histórico de utilização
+    recent_runs:
+      title: Execuções recentes
+      description: Veja o histórico de execução das suas regras, incluindo o estado de sucesso/falha e as contagens de transações.
+      unnamed_rule: Regra sem nome
+      columns:
+        date_time: Data/Hora
+        execution_type: Tipo
+        status: Estado
+        rule_name: Designação da regra
+        transactions_counts:
+          queued: Em fila
+          processed: Processadas
+          modified: Modificadas
+          blocked: Bloqueadas
+      execution_types:
+        manual: Manual
+        scheduled: Agendado
+      statuses:
+        pending: Pendente
+        success: Sucesso
+        failed: Falhou
+    clear_ai_cache:
+      button: Repor cache de IA
+      confirm_title: Repor cache de IA?
+      confirm_body: Tem a certeza de que pretende repor a cache de IA? Isto permitirá que as regras de IA voltem a processar todas as transações. Poderão ocorrer custos adicionais de API.
+      confirm_button: Repor cache
+      success: A cache de IA está a ser limpa. Isto pode demorar alguns instantes.
+    condition_filters:
+      transaction_type:
+        income: Rendimento
+        expense: Despesa
+        transfer: Transferência
+        equal_to: Igual a
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: e
+        match: corresponder
+        all: todas
+        any: qualquer
+        of_the_following_conditions: às seguintes condições
+        add_condition: Adicionar condição
+      condition:
+        value_placeholder: Introduza um valor

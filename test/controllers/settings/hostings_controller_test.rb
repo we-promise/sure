@@ -52,6 +52,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "renders OpenAI model and timeout guidance in German" do
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      get settings_hosting_url(locale: :de)
+
+      assert_response :success
+      assert_includes response.body, "Konfiguriertes Modell prüfen"
+      assert_includes response.body, "Tools beziehungsweise Function Calling unterstützt"
+      assert_includes response.body, "Zeitlimits"
+      assert_includes response.body, "Anfragezeitlimit in Sekunden (optional)"
+      assert_includes response.body, "OPENAI_REQUEST_TIMEOUT"
+      assert_includes response.body, "Antwortzeitlimit in Sekunden (optional)"
+      assert_includes response.body, "(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit"
+      assert_includes response.body, "AI_RESPONSE_TIMEOUT"
+      refute_includes response.body, "Request Timeout in Seconds"
+    end
+
+    %w[
+      model_function_calling_help
+      model_function_calling_link
+      timeout_heading
+      timeout_description
+      openai_request_timeout_label
+      openai_request_timeout_help
+      ai_response_timeout_label
+      ai_response_timeout_help
+    ].each do |key|
+      assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
   test "can update rentcast api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }
@@ -710,5 +742,86 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   ensure
     Setting.securities_providers = ""
+  end
+
+  test "unchecking every securities provider does not re-enable twelve_data via the legacy fallback" do
+    with_self_hosting do
+      # Start from the out-of-the-box default (only twelve_data enabled)
+      assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+
+      patch settings_hosting_url, params: { setting: { securities_providers: [] } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal [], Setting.enabled_securities_providers
+    end
+  ensure
+    # Explicitly restore the real default value rather than assigning nil —
+    # rails-settings-cached's cache layer doesn't reliably invalidate on
+    # delete within a single test process, so a later test can still read
+    # back the just-deleted blank override instead of falling through to
+    # the field's default.
+    Setting.securities_providers = ""
+    Setting.securities_provider = "twelve_data"
+  end
+
+  # --- T-Invest visibility (issue #3089) ---
+
+  test "hides T-Invest settings when neither tinkoff_invest nor moex_public is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      # "T-Invest (T-Bank)" also appears as a checkbox label in the always-rendered
+      # securities checklist, so assert on the settings block's own field instead.
+      assert_select "input[name='setting[tinkoff_invest_api_key]']", false
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings when tinkoff_invest is enabled, without the moex-only notice" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "tinkoff_invest" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_not_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings with the moex-only notice when moex_public is enabled, even without tinkoff_invest" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "moex_public" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings when a token is already configured, even with neither checkbox enabled" do
+    with_self_hosting do
+      Setting.tinkoff_invest_api_key = "some-token"
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+    Setting.tinkoff_invest_api_key = nil
   end
 end
