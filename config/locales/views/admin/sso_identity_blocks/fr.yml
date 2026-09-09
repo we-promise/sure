@@ -1,0 +1,6 @@
+---
+fr:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: Cette identité SSO peut de nouveau se connecter ou créer un compte.

@@ -1,0 +1,215 @@
+---
+fr:
+  admin:
+    system_health:
+      show:
+        ai:
+          adapters:
+            openai: Magasin de vecteurs hébergé OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: Le point de terminaison configuré n'a pas passé le test de disponibilité /v1/vector_stores. La plupart des points de terminaison locaux et compatibles OpenAI n'implémentent pas cette API. Le chat et le traitement des PDF peuvent tout de même fonctionner ; utilisez pgvector avec un point de terminaison d'embeddings distinct pour une installation locale classique. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification du magasin de vecteurs hébergé a échoué sur ce point de terminaison personnalisé
+            embedding_dimensions_mismatch:
+              message: Le point de terminaison d'embeddings a renvoyé un vecteur dont la longueur ne correspond pas à EMBEDDING_DIMENSIONS. Définissez EMBEDDING_MODEL et EMBEDDING_DIMENSIONS avec la taille de vecteur documentée du modèle, redémarrez Sure pour que l'environnement soit pris en compte, puis modifiez ou recréez la colonne / la table d'embeddings pgvector et réindexez les documents si les données existantes utilisaient une autre taille.
+              title: Les dimensions d'embedding ne correspondent pas
+            embedding_probe_failed:
+              message: Sure n'a pas pu créer un court embedding de test via le point de terminaison et le modèle configurés. Vérifiez EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN et les journaux du fournisseur d'embeddings. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification en direct des embeddings a échoué
+            embedding_probe_timeout:
+              message: Le point de terminaison d'embeddings n'a pas répondu avant AI_HEALTH_PROBE_TIMEOUT. Augmentez ce délai de vérification si le fournisseur est lent, puis redémarrez Sure pour que l'environnement soit pris en compte dans tous les processus. Si les appels de chat IA normaux expirent aussi, augmentez OPENAI_REQUEST_TIMEOUT séparément.
+              title: La vérification en direct des embeddings a expiré
+            function_calling_not_used:
+              message: 'Le point de terminaison a accepté le paramètre tools, mais le modèle a répondu par du texte au lieu d''appeler l''outil de vérification. L''assistant IA ne peut pas lire les données financières sans appels d''outils : le chat risque donc de ne rien répondre ou d''inventer des chiffres. Préférez un modèle dont le fournisseur documente la prise en charge des appels de fonctions.'
+              title: Le modèle a répondu sans appeler l'outil demandé
+            function_calling_unsupported:
+              message: 'Le point de terminaison a traité une requête de chat simple mais a rejeté la même requête accompagnée du paramètre tools. L''assistant IA lit les comptes, les transactions et les positions via des appels de fonctions : le chat continuera donc d''échouer, souvent avec une erreur 404 peu explicite, tant que le modèle ne prendra pas en charge les outils. Choisissez un modèle dont le fournisseur documente la prise en charge des appels de fonctions. L''échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.'
+              title: Le modèle ne prend pas en charge les appels de fonctions
+            llm_model_not_available:
+              message: Le point de terminaison a répondu, mais il n'a ni listé ni servi le modèle configuré. Choisissez un modèle actif pour le fournisseur sélectionné, puis relancez les vérifications. Pour Gemini via une couche de traduction compatible OpenAI, utilisez un modèle actuellement pris en charge, par exemple gemini-2.5-flash.
+              title: Le modèle d'IA configuré n'est pas disponible
+            llm_probe_failed:
+              message: Sure n'a pas pu vérifier à la fois le point de terminaison et le modèle configurés. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification en direct du LLM a échoué
+            missing_vector_store:
+              message: Les documents téléversés ne peuvent être ni indexés ni recherchés tant qu'un adaptateur de magasin de vecteurs et ses prérequis ne sont pas configurés.
+              title: Aucun magasin de vecteurs n'est configuré
+            pdf_text_extraction_failed:
+              message: Sure n'a pas pu mener à bien le traitement « texte d'abord », qui extrait localement le texte intégré au PDF et l'envoie au modèle configuré. Aucune donnée client n'a été envoyée. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification d'extraction de texte sur PDF synthétique a échoué
+            pdf_vision_processing_failed:
+              message: Sure n'a pas pu mener à bien le traitement par image ou par document natif du PDF via le modèle configuré. Aucune donnée client n'a été envoyée. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification vision / natif sur PDF synthétique a échoué
+            pgvector_extension_not_enabled:
+              message: L'adaptateur pgvector est sélectionné, mais PostgreSQL n'a pas activé l'extension vector pour cette base de données. Utilisez une image PostgreSQL qui inclut pgvector, puis activez l'extension en tant que propriétaire de la base ou superutilisateur et relancez les migrations avec VECTOR_STORE_PROVIDER=pgvector.
+              title: L'extension vector de PostgreSQL n'est pas activée
+            pgvector_probe_failed:
+              message: Sure n'a pas pu interroger la table de fragments pgvector. Vérifiez les permissions PostgreSQL, l'extension vector et la migration vector_store_chunks. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification du stockage pgvector a échoué
+            pgvector_table_not_found:
+              message: L'extension pgvector est activée, mais la table de fragments est introuvable. Vérifiez l'état des migrations, puis relancez la migration du magasin de vecteurs avec VECTOR_STORE_PROVIDER=pgvector pour que Sure puisse créer vector_store_chunks.
+              title: La table vector_store_chunks est absente
+            qdrant:
+              message: L'adaptateur Qdrant est ébauché, mais le téléversement et la recherche de documents échouent pour l'instant. Sélectionnez OpenAI ou pgvector pour la recherche documentaire.
+              title: La prise en charge de Qdrant n'est pas encore implémentée
+            unavailable_vector_store:
+              message: Vérifiez les prérequis de l'adaptateur ci-dessous. Pour pgvector, la base de données doit fournir l'extension vector ou une table vector_store_chunks existante.
+              title: Le magasin de vecteurs sélectionné est indisponible
+            vector_probe_failed:
+              message: Sure n'a pas pu vérifier le magasin de vecteurs sélectionné ni l'ensemble des services d'embeddings requis. L'échec a été consigné dans Paramètres → Journaux de débogage et dans Rails.logger.
+              title: La vérification en direct de la recherche documentaire a échoué
+          failure_codes:
+            dimensions_mismatch: Les dimensions du vecteur d'embedding ne correspondent pas aux dimensions configurées
+            extension_not_enabled: L'extension vector de PostgreSQL n'est pas activée
+            invalid_response: Le service a renvoyé une réponse inattendue
+            model_not_available: Le modèle configuré n'a pas été renvoyé par le fournisseur
+            no_tool_call: Le modèle a répondu sans appeler l'outil de vérification
+            render_missing_binary: Le moteur de rendu pdftoppm (poppler-utils) n'est pas disponible dans ce conteneur
+            request_failed: La requête au service a échoué
+            table_not_found: La table vector_store_chunks est introuvable
+            timeout: Le service n'a pas répondu avant l'expiration du délai de vérification
+            tools_refused: Le service a traité la même requête sans outils et l'a refusée avec eux
+            unsupported_provider: Le fournisseur ne prend pas en charge cette vérification
+          function_calling_statuses:
+            failing: Vérification en direct échouée
+            not_checked: Non vérifié
+            not_used: Outils acceptés, mais le modèle n'en a appelé aucun
+            supported: Appel d'outil en direct réussi
+            unavailable: Indisponible tant qu'aucun fournisseur de LLM n'est configuré
+            unsupported: Non pris en charge par le fournisseur ou le modèle effectif
+          labels:
+            adapter: Adaptateur
+            adapter_available: Adaptateur disponible
+            anthropic_credentials: Identifiants Anthropic
+            effective_provider: Fournisseur effectif
+            embedding_dimensions: Dimensions d'embedding
+            embedding_endpoint: Point de terminaison d'embeddings
+            embedding_model: Modèle d'embeddings
+            embedding_probe: Vérification du point de terminaison d'embeddings
+            endpoint: Point de terminaison
+            failure_reason: Motif de l'échec
+            function_calling: Appels de fonctions (outils)
+            function_calling_failure_reason: Motif de l'échec des appels de fonctions
+            llm_request_timeout: Délai d'expiration des requêtes LLM
+            model: Modèle
+            openai_compatible_credentials: Identifiants d'API compatible OpenAI
+            openai_credentials: Identifiants OpenAI
+            pdf_text_extraction: Traitement PDF par extraction de texte
+            pdf_text_extraction_failure_reason: Motif de l'échec de l'extraction de texte
+            pdf_vision_processing: Traitement PDF vision / natif
+            pdf_vision_processing_failure_reason: Motif de l'échec vision / natif
+            pgvector_extension: Extension vector de PostgreSQL
+            pgvector_table: Table des fragments vectoriels
+            probe_request_timeout: Délai d'expiration de la sonde de vérification
+            selected_provider: Fournisseur sélectionné
+            storage_probe: Vérification du stockage pgvector
+          last_checked: Vérifications en direct terminées il y a %{time_ago}. Les résultats sont mis en cache brièvement.
+          llm:
+            description: Les vérifications en direct contrôlent le modèle configuré, lui demandent un appel de fonction trivial comme le fait l'assistant, puis testent séparément l'extraction de texte et le traitement vision / natif à l'aide d'un PDF synthétique d'une page ne contenant aucune donnée client. Les valeurs des identifiants ne sont jamais affichées.
+            title: LLM et traitement des PDF
+          local_setup:
+            description: Faites tourner le LLM via votre point de terminaison local compatible OpenAI, stockez les vecteurs de documents dans pgvector et faites pointer les paramètres d'embeddings vers un point de terminaison d'embeddings compatible OpenAI. L'image PostgreSQL doit inclure l'extension vector, et les dimensions d'embedding doivent correspondre au modèle sélectionné.
+            title: Installation locale recommandée
+          not_checked_help: Ouvrez directement l'URL de statut de l'IA ou lancez les vérifications pour contrôler la disponibilité des services.
+          pdf_statuses:
+            failing: Vérification du PDF synthétique échouée
+            not_checked: Non vérifié
+            supported: Vérification du PDF synthétique réussie
+            unavailable: Indisponible tant qu'aucun fournisseur de LLM n'est configuré
+            unsupported: Désactivé ou non pris en charge par le fournisseur ou le modèle effectif
+          probe_statuses:
+            failing: Vérification en direct échouée
+            not_checked: Non vérifié
+            not_configured: Non configuré
+            passing: Vérification en direct réussie
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: Point de terminaison personnalisé
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openai_compatible: Compatible OpenAI
+            openrouter: OpenRouter
+            together: Together
+          run_checks: Relancer les vérifications
+          values:
+            available: Disponible
+            available_not_enabled: Disponible, non activé
+            configured: Configuré
+            enabled: Activé
+            fallback: "(solution de repli)"
+            'no': Non
+            not_available: Non disponible
+            not_configured: Non configuré
+            not_found: Introuvable
+            not_set: Non défini
+            'yes': Oui
+          vector_statuses:
+            failing: Vérification en direct échouée
+            missing: Non configuré
+            not_checked: Non vérifié
+            not_configured: Non configuré
+            passing: Vérifications en direct réussies
+            scaffolded: Ébauché
+          vector_store:
+            description: La vérification en direct interroge l'API du magasin de vecteurs hébergé, ou teste la table pgvector et crée un court embedding sans le stocker.
+            title: Magasin de vecteurs et recherche documentaire
+          worker:
+            configuration_statuses:
+              match: Identique au web
+              mismatch: Différente du web
+            coverage_notice: Chaque vérification ne contrôle qu'un seul processus worker, celui qui la dépile. Avec plusieurs réplicas de worker, un résultat positif ne garantit pas que tous les workers sont sains ; relancez la vérification pour en tester un autre.
+            description: Les vérifications ci-dessus ont été exécutées depuis ce processus web. La majeure partie du travail lié à l'IA (réponses de l'assistant, traitement des PDF, embeddings, catégorisation automatique et détection des marchands) s'exécute en réalité dans un processus worker Sidekiq, dont l'accès réseau, le DNS, les règles de proxy ou même les identifiants chargés peuvent différer. Mettez une vérification en file d'attente pour contrôler la configuration et la connectivité propres à un worker.
+            empty:
+              description: Cliquez sur « Vérifier la configuration du worker » pour mettre une vérification asynchrone en file d'attente. Le résultat apparaît ici dès qu'un processus worker la prend en charge.
+              title: Aucun worker ne s'est encore manifesté
+            labels:
+              checked_at: Vérifié le
+              configuration: Configuration
+              process: Processus worker
+            settings_origin:
+              database_backed: 'Les paramètres de fournisseur, de modèle et de clé d''API modifiés dans Paramètres → Auto-hébergement sont stockés en base de données. rails-settings-cached invalide le cache partagé à l''écriture : le web comme le worker résolvent donc la nouvelle valeur dès la requête ou la tâche suivante, sans redémarrage.'
+              env_backed: 'La configuration des embeddings, ainsi que toute valeur définie uniquement par variable d''environnement, est figée au démarrage de chaque conteneur. Rails ne peut pas modifier l''environnement d''un autre conteneur : changer ces valeurs impose donc de redémarrer ou de recréer à la fois le service web et le service worker. Tout outillage de déploiement qui n''en redémarre qu''un seul (déploiement partiel, Secret mis à jour sans redémarrage du pod) ne prendra pas le changement en compte.'
+              title: Quels paramètres exigent un redémarrage ?
+            statuses:
+              failing: En échec
+              passing: Opérationnel
+              stale: Obsolète
+            title: Vérification du worker
+            verify_button: Vérifier la configuration du worker
+        alert:
+          title: Les tâches en arrière-plan ne s'exécutent pas
+        counters_section_description: Compteurs Sidekiq agrégés sur toutes les files d'attente.
+        counters_section_title: Compteurs de tâches
+        labels:
+          enqueued: En file d'attente
+          failed: En échec
+          last_heartbeat: Dernier signal de vie
+          latency: Latence
+          max_queue_latency: Ancienneté de la plus vieille tâche
+          processed_total: Total traité
+          processes: Processus workers
+          queue: File d'attente
+          retries: Nouvelles tentatives
+          size: Taille
+          status: Statut
+        queues_section_description: Profondeur par file d'attente et ancienneté de la plus vieille tâche. La latence correspond au nombre de secondes d'attente de la plus vieille tâche.
+        queues_section_title: Files d'attente
+        status_section_description: État actuel du worker en arrière-plan qui assure les synchronisations, les soldes et les calculs de patrimoine net.
+        status_section_title: Statut de Sidekiq
+        tabs:
+          ai: Statut de l'IA
+          background_jobs: Tâches en arrière-plan
+        title: Santé du système
+        values:
+          healthy: Sain
+          never: Jamais
+          no_queues: Aucune file d'attente enregistrée. Le worker n'est peut-être pas en cours d'exécution.
+          seconds: "%{seconds} s"
+          time_ago: il y a %{time_ago}
+          unhealthy: Dégradé
+      verify_worker_ai:
+        queued: Vérification du worker mise en file d'attente. Elle apparaîtra ci-dessous dès qu'un processus worker la prendra en charge, généralement en quelques secondes.

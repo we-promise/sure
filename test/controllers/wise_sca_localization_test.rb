@@ -68,8 +68,6 @@ class WiseScaPanelLocalizationTest < ActionDispatch::IntegrationTest
     assert_sca_copy "regenerate_confirm"
   end
 
-  # The key is only ever stored encrypted, and the test environment configures
-  # no encryption keys, so the flow has to be exercised as an install that does.
   test "German Wise SCA keypair generation returns the localized success message" do
     WiseItem.stubs(:encryption_ready?).returns(true)
     WiseItem.any_instance.expects(:generate_sca_keypair!).once.returns("SYNTHETIC PUBLIC KEY")
