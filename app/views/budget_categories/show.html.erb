@@ -73,7 +73,7 @@
               <div class="flex items-center justify-between text-sm">
                 <dt class="text-secondary"><%= t(".rolled_over") %></dt>
                 <dd class="text-primary font-medium privacy-sensitive">
-                  <%= format_money @budget_category.rolled_over_amount_money %>
+                  <%= format_money Money.new(@budget_category.display_rolled_over_amount, @budget_category.currency) %>
                 </dd>
               </div>
             <% end %>
