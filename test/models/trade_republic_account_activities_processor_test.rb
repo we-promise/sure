@@ -120,6 +120,21 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Dividend", entry.transaction.investment_activity_label
   end
 
+  test "order executions carry canonical activity labels under a non-English locale" do
+    I18n.with_locale(:de) do
+      import_event({
+        id: "evt_buy_de",
+        timestamp: "2026-08-01T10:00:00Z",
+        category: "orderExecution",
+        detail: { isin: "US0378331005", name: "Apple", quantity: "2", amount: "300.00", currency: "EUR" }
+      })
+    end
+
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_buy_de")
+    assert_not_nil entry, "Trade::ACTIVITY_LABELS are canonical English, so order executions must import under any locale"
+    assert_equal "Buy", entry.trade.investment_activity_label
+  end
+
   test "card events keep a card-specific activity label" do
     import_event({
       id: "evt_card_payment",

@@ -94,6 +94,41 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Delete unused family/, response.body)
   end
 
+  test "index renders the profile picture of users who have one" do
+    user = users(:family_admin)
+    user.profile_image.attach(
+      io: File.open(Rails.root.join("test/fixtures/files/profile_image.png")),
+      filename: "profile_image.png",
+      content_type: "image/png"
+    )
+    # The disk service URL embeds a token signed with an expiry, so freeze time
+    # to keep the expected URL identical to the one rendered by the request.
+    travel_to Time.current do
+      variant = user.profile_image.variant(:small).processed
+      ActiveStorage::Current.url_options = { host: "www.example.com", protocol: "http" }
+      expected_src = variant.url
+
+      get admin_users_url
+      assert_response :success
+
+      assert_select "img[src=?]", expected_src, { count: 1 },
+        "User management should render the small profile image variant for users who have one"
+    end
+  end
+
+  test "index falls back to initials for users without a profile picture" do
+    user = users(:family_admin)
+    assert_not user.profile_image.attached?
+
+    get admin_users_url
+    assert_response :success
+
+    assert_match user.initials, response.body,
+      "User management should fall back to initials when there is no profile picture"
+    assert_select "img[src*=?]", "active_storage", { count: 0 },
+      "No avatar image should render for users without a profile picture"
+  end
+
 
 
   test "update can move a user to an existing family" do

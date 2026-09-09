@@ -9,6 +9,11 @@ empty:
   email: user1@example.com
   password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   onboarded_at: <%= 3.days.ago %>
+  # Explicit created_at so this admin sorts before the other admin fixture
+  # (sso_only) in family "empty" — without it, both rows get the same
+  # fixture-load timestamp and Account#assign_default_owner's
+  # order(:created_at).first becomes non-deterministic (test/models/account_test.rb).
+  created_at: <%= 4.days.ago %>
   role: admin
   ai_enabled: true
   show_sidebar: true

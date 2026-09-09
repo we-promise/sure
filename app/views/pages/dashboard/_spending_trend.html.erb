@@ -12,6 +12,7 @@
     previous: data[:previous]
   }
   previous_label = data[:previous_label]
+  previous_comparison_day = data[:previous_comparison_day]
   date_range_short = data[:date_range_short]
 %>
 <div id="spending-trend-section" class="px-4 space-y-4">
@@ -63,7 +64,14 @@
     <div class="flex items-center gap-3 min-w-0">
       <span class="w-1 h-10 rounded-full bg-subdued shrink-0"></span>
       <div class="min-w-0">
-        <p class="text-sm text-secondary capitalize truncate"><%= previous_label %></p>
+        <p class="text-sm text-secondary truncate">
+          <span class="capitalize"><%= previous_label %></span>
+          <%# While the selected month is still running, the figure below covers %>
+          <%# the same elapsed days rather than the whole previous month. %>
+          <% if previous_comparison_day %>
+            <span class="text-xs"><%= t(".previous_comparison_days", end_day: previous_comparison_day) %></span>
+          <% end %>
+        </p>
         <p class="font-medium text-lg tabular-nums text-secondary privacy-sensitive whitespace-nowrap"><%= format_money data[:previous_total] %></p>
       </div>
     </div>
