@@ -17,6 +17,9 @@ class SimplefinAccount < ApplicationRecord
   has_one :account_provider, as: :provider, dependent: :destroy
   has_one :linked_account, through: :account_provider, source: :account
 
+  scope :not_ignored, -> { where(ignored: false) }
+  scope :unlinked, -> { left_joins(:account, :account_provider).where(accounts: { id: nil }, account_providers: { id: nil }) }
+
   validates :name, :account_type, :currency, presence: true
   validates :account_id, uniqueness: { scope: :simplefin_item_id, allow_nil: true }
   validate :has_balance

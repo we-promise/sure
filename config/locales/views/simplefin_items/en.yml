@@ -39,6 +39,8 @@ en:
       update: Update
       cancel: Cancel
     setup_accounts:
+      ignore_account: "Ignore this account"
+      ignore_help: "Ignored accounts stay out of setup reminders after syncing. To restore one, choose an account type or Skip this account and save. Skipped accounts may need setup again after the next sync."
       title: Set Up Your SimpleFIN Accounts
       header_subtitle: Choose the correct account types for your imported accounts
       choose_account_type: "Choose the correct account type for each SimpleFIN account:"
@@ -55,8 +57,8 @@ en:
       transaction_history_title: "Transaction History:"
       transaction_history_description_html: "SimpleFIN typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
       account_type_label: "Account Type:"
-      create_accounts: Create Accounts
-      creating_accounts: Creating Accounts...
+      create_accounts: Save Account Choices
+      creating_accounts: Saving Account Choices...
       cancel: Cancel
       account_card:
         balance: "Balance"
@@ -83,7 +85,7 @@ en:
           one: "%{count} transaction"
           other: "%{count} transactions"
     complete_account_setup:
-      all_skipped: "All accounts were skipped. No accounts were created."
+      all_skipped: "Account preferences saved. No accounts were created."
       no_accounts: "No accounts to set up."
       success:
         one: "Successfully created %{count} SimpleFIN account! Your transactions and holdings are being imported in the background."
@@ -159,6 +161,7 @@ en:
         only_manual: Only manual accounts can be linked
         different_provider: This account is linked to a different provider. Unlink it from that provider first, then link to SimpleFIN.
         invalid_simplefin_account: Invalid SimpleFIN account selected
+        ignored_account: "This account is ignored. Restore it in the SimpleFIN connection’s Setup Accounts screen before linking it."
     dismiss_replacement_suggestion:
       dismissed: Replacement suggestion dismissed
     replacement_prompt:

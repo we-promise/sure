@@ -92,7 +92,7 @@ class SimplefinItem < ApplicationRecord
     all_accounts = SimplefinAccount.where(simplefin_item_id: id).includes(:account, :linked_account, account_provider: :account).to_a
 
     linked = all_accounts.select { |sfa| sfa.current_account.present? }
-    unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
+    unlinked = all_accounts.reject { |sfa| sfa.current_account.present? || sfa.ignored? }
 
     Rails.logger.info "SimplefinItem#process_accounts - After repair: #{linked.count} linked, #{unlinked.count} unlinked"
 
@@ -128,7 +128,7 @@ class SimplefinItem < ApplicationRecord
   # This method detects such cases and transfers the linkage from old to new.
   def repair_stale_linkages(all_accounts)
     linked = all_accounts.select { |sfa| sfa.current_account.present? }
-    unlinked = all_accounts.reject { |sfa| sfa.current_account.present? }
+    unlinked = all_accounts.reject { |sfa| sfa.current_account.present? || sfa.ignored? }
 
     Rails.logger.info "SimplefinItem#repair_stale_linkages - #{linked.count} linked, #{unlinked.count} unlinked SimplefinAccounts"
 
@@ -322,7 +322,7 @@ class SimplefinItem < ApplicationRecord
       # Fallback to current account counts
       total = simplefin_accounts.count
       linked = accounts.count
-      unlinked = total - linked
+      unlinked = simplefin_accounts.not_ignored.unlinked.count
     end
 
     if total == 0

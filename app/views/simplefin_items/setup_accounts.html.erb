@@ -64,7 +64,9 @@
           <% likely_closed = activity.last_transacted_at.present? && activity.dormant? && near_zero_balance %>
           <%# Default likely-closed accounts (dormant AND near-zero balance) to "skip" so
              users don't accidentally create empty Sure accounts for closed/replaced cards. %>
-          <% selected_type = if likely_closed
+          <% selected_type = if simplefin_account.ignored?
+            "ignore"
+          elsif likely_closed
             "skip"
           else
             inferred[:confidence] == :high ? inferred[:type] : "skip"
@@ -93,6 +95,7 @@
                   <%= t(".account_card.balance") %>: <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency) %>
                 </p>
                 <%= render "activity_badge", activity: activity, likely_closed: likely_closed %>
+                <p class="text-sm text-secondary"><%= t(".ignore_help") %></p>
               </div>
             </div>
 

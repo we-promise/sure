@@ -14,6 +14,77 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
 
+  test "turbo ignore response has no setup reminder and retains restore menu" do
+    candidate = @simplefin_item.simplefin_accounts.create!(name: "Replaced", account_id: "replaced", account_type: "credit", current_balance: 0, currency: "USD")
+    post complete_account_setup_simplefin_item_path(@simplefin_item), params: { account_types: { candidate.id => "ignore" } }, headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert candidate.reload.ignored?
+    assert_select "a[href='#{setup_accounts_simplefin_item_path(@simplefin_item)}']", count: 1
+    refute_includes response.body, I18n.t("simplefin_items.simplefin_item.setup_needed")
+  end
+
+  test "failed account creation preserves ignore preference" do
+    candidate = @simplefin_item.simplefin_accounts.create!(name: "Ignored", account_id: "ignored", account_type: "credit", current_balance: 0, currency: "USD", ignored: true)
+    Account.expects(:create_from_simplefin_account).raises(ActiveRecord::RecordInvalid)
+    post complete_account_setup_simplefin_item_path(@simplefin_item), params: { account_types: { candidate.id => "CreditCard" } }
+    assert_response :unprocessable_entity
+    assert candidate.reload.ignored?
+    assert_nil candidate.current_account
+  end
+
+  test "ignore is persistent reversible and preserves existing account history" do
+    candidate = @simplefin_item.simplefin_accounts.create!(name: "Replaced card", account_id: "replaced", account_type: "credit", currency: "USD", current_balance: 0)
+    counts = [ Account.count, Entry.count, Transaction.count, Holding.count ]
+    post complete_account_setup_simplefin_item_path(@simplefin_item), params: { account_types: { candidate.id => "ignore" } }
+    assert_redirected_to accounts_path
+    assert candidate.reload.ignored?
+    refute @simplefin_item.reload.pending_account_setup?
+    assert_equal counts, [ Account.count, Entry.count, Transaction.count, Holding.count ]
+
+    candidate.upsert_simplefin_snapshot!({ id: "replaced", name: "Replaced card", balance: 0, currency: "USD", type: "credit", extra: {} })
+    sync = @simplefin_item.syncs.create!
+    SimplefinItem::Syncer.new(@simplefin_item).send(:finalize_setup_counts, sync)
+    assert candidate.reload.ignored?
+    refute @simplefin_item.reload.pending_account_setup?
+    assert_equal 0, sync.reload.sync_stats["unlinked_accounts"]
+    assert_equal 1, sync.sync_stats["ignored_accounts"]
+    refute_match /need setup/, @simplefin_item.sync_status_summary
+
+    get setup_accounts_simplefin_item_path(@simplefin_item)
+    assert_response :success
+    assert_select "select[name='account_types[#{candidate.id}]'] option[selected][value=ignore]"
+    get accounts_path
+    assert_select "a[href='#{setup_accounts_simplefin_item_path(@simplefin_item)}']"
+
+    post complete_account_setup_simplefin_item_path(@simplefin_item), params: { account_types: { candidate.id => "skip" } }
+    refute candidate.reload.ignored?
+    refute @simplefin_item.reload.pending_account_setup?
+    SimplefinItem::Syncer.new(@simplefin_item).send(:finalize_setup_counts, sync)
+    assert @simplefin_item.reload.pending_account_setup?
+    assert_equal counts, [ Account.count, Entry.count, Transaction.count, Holding.count ]
+  end
+
+  test "ignored account relink explains how to restore it" do
+    candidate = @simplefin_item.simplefin_accounts.create!(name: "Ignored", account_id: "ignored", account_type: "credit", currency: "USD", current_balance: 0, ignored: true)
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_simplefin_items_path, params: { account_id: accounts(:depository).id, simplefin_account_id: candidate.id }
+    end
+    assert_includes flash[:alert], "Restore it"
+    assert candidate.reload.ignored?
+  end
+
+  test "ignore cannot affect linked or foreign accounts" do
+    linked = @simplefin_item.simplefin_accounts.create!(name: "Active", account_id: "active", account_type: "credit", currency: "USD", current_balance: 1)
+    AccountProvider.create!(account: accounts(:depository), provider: linked)
+    foreign_item = SimplefinItem.create!(family: Family.create!(name: "Foreign", currency: "USD"), name: "Foreign", access_url: "https://example.com/foreign")
+    foreign = foreign_item.simplefin_accounts.create!(name: "Foreign", account_id: "foreign", account_type: "credit", currency: "USD", current_balance: 0)
+    counts = [ Account.count, Entry.count, AccountProvider.count ]
+    post complete_account_setup_simplefin_item_path(@simplefin_item), params: { account_types: { linked.id => "ignore", foreign.id => "ignore" } }
+    refute linked.reload.ignored?
+    refute foreign.reload.ignored?
+    assert_equal counts, [ Account.count, Entry.count, AccountProvider.count ]
+  end
+
   test "should destroy simplefin item" do
     assert_difference("SimplefinItem.count", 0) do # doesn't actually delete immediately
       delete simplefin_item_url(@simplefin_item)

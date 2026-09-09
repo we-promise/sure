@@ -164,6 +164,7 @@ class SimplefinItemsController < ApplicationController
       .where(accounts: { id: nil }, account_providers: { id: nil })
     @account_type_options = [
       [ "Skip this account", "skip" ],
+      [ t("simplefin_items.setup_accounts.ignore_account"), "ignore" ],
       [ "Checking or Savings Account", "Depository" ],
       [ "Credit Card", "CreditCard" ],
       [ "Investment Account", "Investment" ],
@@ -258,8 +259,11 @@ class SimplefinItemsController < ApplicationController
     skipped_count = 0
 
     account_types.each do |simplefin_account_id, selected_type|
-      # Skip accounts marked as "skip"
-      if selected_type == "skip" || selected_type.blank?
+      simplefin_account = @simplefin_item.simplefin_accounts.find_by(id: simplefin_account_id)
+      next unless simplefin_account && simplefin_account.current_account.nil?
+
+      if selected_type == "ignore" || selected_type == "skip" || selected_type.blank?
+        simplefin_account.update!(ignored: selected_type == "ignore")
         skipped_count += 1
         next
       end
@@ -270,37 +274,26 @@ class SimplefinItemsController < ApplicationController
         next
       end
 
-      # Find account - scoped to this item to prevent cross-item manipulation
-      simplefin_account = @simplefin_item.simplefin_accounts.find_by(id: simplefin_account_id)
-      unless simplefin_account
-        Rails.logger.warn("SimpleFIN account #{simplefin_account_id} not found for item #{@simplefin_item.id}")
-        next
+      simplefin_account.transaction do
+        simplefin_account.update!(ignored: false)
+        selected_subtype = account_subtypes[simplefin_account_id]
+
+        # Default subtype for CreditCard since it only has one option
+        selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
+
+        # Create account with user-selected type and subtype
+        account = Account.create_from_simplefin_account(
+          simplefin_account,
+          selected_type,
+          selected_subtype
+        )
+        simplefin_account.update!(account: account)
+        # Also create AccountProvider for consistency with the new linking system
+        simplefin_account.ensure_account_provider!
+        created_accounts << account
       end
-
-      # Skip if already linked (race condition protection)
-      if simplefin_account.account.present?
-        Rails.logger.info("SimpleFIN account #{simplefin_account_id} already linked, skipping")
-        next
-      end
-
-      selected_subtype = account_subtypes[simplefin_account_id]
-
-      # Default subtype for CreditCard since it only has one option
-      selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
-
-      # Create account with user-selected type and subtype
-      account = Account.create_from_simplefin_account(
-        simplefin_account,
-        selected_type,
-        selected_subtype
-      )
-      simplefin_account.update!(account: account)
-      # Also create AccountProvider for consistency with the new linking system
-      simplefin_account.ensure_account_provider!
-      created_accounts << account
     end
 
-    # Clear pending status and mark as complete
     @simplefin_item.update!(pending_account_setup: false)
 
     # Trigger a sync to process the imported SimpleFin data (transactions and holdings)
@@ -375,7 +368,7 @@ class SimplefinItemsController < ApplicationController
       # - Show SFAs that are still legacy-linked (`sfa.account.present?`) => candidates to move.
       # - Show SFAs that are fully unlinked (no legacy account and no account_provider) => candidates to link.
       # - Hide SFAs that are linked via AccountProvider but no longer legacy-linked => already relinked.
-      .select { |sfa| sfa.account.present? || sfa.account_provider.nil? }
+      .select { |sfa| !sfa.ignored? && (sfa.account.present? || sfa.account_provider.nil?) }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -405,8 +398,10 @@ class SimplefinItemsController < ApplicationController
     end
 
     # Verify the SimpleFIN account belongs to this family's SimpleFIN items
-    unless Current.family.simplefin_items.include?(simplefin_account.simplefin_item)
-      flash[:alert] = t("simplefin_items.link_existing_account.errors.invalid_simplefin_account")
+    belongs_to_family = Current.family.simplefin_items.include?(simplefin_account.simplefin_item)
+    if !belongs_to_family || simplefin_account.ignored?
+      error_key = belongs_to_family ? "ignored_account" : "invalid_simplefin_account"
+      flash[:alert] = t("simplefin_items.link_existing_account.errors.#{error_key}")
       if turbo_frame_request?
         render turbo_stream: Array(flash_notification_stream_items)
       else

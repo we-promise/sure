@@ -39,6 +39,14 @@ class SimplefinItem::ReplacementDetectorTest < ActiveSupport::TestCase
     { "id" => SecureRandom.hex(4), "transacted_at" => when_ago.ago.to_i, "posted" => when_ago.ago.to_i, "amount" => "-5" }
   end
 
+  test "ignored accounts are not suggested as replacements" do
+    dormant = make_sfa(name: "Old", account_id: "old", balance: 0, transactions: [ tx(when_ago: 60.days) ])
+    link(dormant, name: "Existing card")
+    candidate = make_sfa(name: "Ignored", account_id: "ignored", balance: 10, transactions: [ tx(when_ago: 1.day) ])
+    candidate.update!(ignored: true)
+    assert_empty SimplefinItem::ReplacementDetector.new(@item).call
+  end
+
   test "returns empty when simplefin_item has no accounts" do
     assert_equal [], SimplefinItem::ReplacementDetector.new(@item).call
   end

@@ -11,6 +11,15 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     @importer = SimplefinItem::Importer.new(@item, simplefin_provider: nil)
   end
 
+  test "ignored account survives upstream omission and return" do
+    candidate = @item.simplefin_accounts.create!(name: "Replaced", account_id: "replaced", account_type: "credit", current_balance: 0, currency: "USD", ignored: true)
+    @importer.send(:prune_orphaned_simplefin_accounts, [ "active" ])
+    assert candidate.reload.ignored?
+    candidate.upsert_simplefin_snapshot!({ id: "replaced", name: "Replaced", balance: 0, currency: "USD", type: "credit", extra: {} })
+    assert candidate.reload.ignored?
+    assert_equal 0, @item.simplefin_accounts.not_ignored.unlinked.count
+  end
+
   test "normalizes numeric-string epoch balance-date for importer upserts" do
     epoch_string = Time.utc(2026, 6, 17, 12, 34, 56).to_i.to_s
 

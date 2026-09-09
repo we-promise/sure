@@ -439,9 +439,10 @@ class AccountsController < ApplicationController
         else
           {}
         end
+      @simplefin_accounts_count_map = simplefin_accounts_counts_by_item_id
       simplefin_unlinked_counts_by_item_id =
         if simplefin_item_ids.any?
-          SimplefinAccount.where(simplefin_item_id: simplefin_item_ids)
+          SimplefinAccount.not_ignored.where(simplefin_item_id: simplefin_item_ids)
             .left_joins(:account, :account_provider)
             .where(accounts: { id: nil }, account_providers: { id: nil })
             .group(:simplefin_item_id)

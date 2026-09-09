@@ -631,7 +631,7 @@ class SimplefinItem::Importer
 
       # Find SimplefinAccount records with account_ids NOT in the upstream set
       # Eager-load associations to prevent N+1 queries when checking linkage
-      orphaned = simplefin_item.simplefin_accounts
+      orphaned = simplefin_item.simplefin_accounts.not_ignored
         .includes(:account, :account_provider)
         .where.not(account_id: upstream_account_ids)
         .where.not(account_id: nil)

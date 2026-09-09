@@ -35,7 +35,7 @@ class SimplefinItem
 
     # @return [Array<Hash>] suggestions. Empty when no replacements detected.
     def call
-      sfas = @simplefin_item.simplefin_accounts
+      sfas = @simplefin_item.simplefin_accounts.not_ignored
                             .includes(:linked_account, :account)
                             .to_a
                             .select { |sfa| supported_type?(sfa) }

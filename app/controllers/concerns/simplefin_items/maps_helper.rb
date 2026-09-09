@@ -25,8 +25,10 @@ module SimplefinItems
         .pluck(:family_id)
         .to_set
 
+      @simplefin_accounts_count_map = SimplefinAccount.where(simplefin_item_id: items.map(&:id)).group(:simplefin_item_id).count
+
       # Batch-fetch unlinked counts for all items in one query
-      unlinked_counts = SimplefinAccount
+      unlinked_counts = SimplefinAccount.not_ignored
         .where(simplefin_item_id: items.map(&:id))
         .left_joins(:account, :account_provider)
         .where(accounts: { id: nil }, account_providers: { id: nil })
@@ -57,11 +59,7 @@ module SimplefinItems
         begin
           unlinked_count = @simplefin_unlinked_count_map[item.id] || 0
           manuals_exist = @simplefin_has_unlinked_map[item.id]
-          sfa_any = if item.simplefin_accounts.loaded?
-            item.simplefin_accounts.any?
-          else
-            item.simplefin_accounts.exists?
-          end
+          sfa_any = @simplefin_accounts_count_map[item.id].to_i > 0
           @simplefin_show_relink_map[item.id] = (unlinked_count.to_i == 0 && manuals_exist && sfa_any)
         rescue StandardError => e
           Rails.logger.warn("SimpleFin card: CTA computation failed for item #{item.id}: #{e.class} - #{e.message}")

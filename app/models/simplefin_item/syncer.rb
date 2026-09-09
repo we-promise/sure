@@ -97,9 +97,7 @@ class SimplefinItem::Syncer
       linked_count = simplefin_item.simplefin_accounts.count { |sfa| sfa.current_account.present? }
 
       # Unlinked = no legacy FK AND no AccountProvider
-      unlinked_accounts = simplefin_item.simplefin_accounts
-        .left_joins(:account, :account_provider)
-        .where(accounts: { id: nil }, account_providers: { id: nil })
+      unlinked_accounts = simplefin_item.simplefin_accounts.not_ignored.unlinked
 
       if unlinked_accounts.any?
         simplefin_item.update!(pending_account_setup: true)
@@ -113,7 +111,8 @@ class SimplefinItem::Syncer
         setup_stats = {
           "total_accounts" => total_accounts,
           "linked_accounts" => linked_count,
-          "unlinked_accounts" => unlinked_accounts.count
+          "unlinked_accounts" => unlinked_accounts.count,
+          "ignored_accounts" => simplefin_item.simplefin_accounts.where(ignored: true).count
         }
         sync.update!(sync_stats: existing.merge(setup_stats))
       end

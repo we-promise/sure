@@ -7,7 +7,7 @@
        @simplefin_unlinked_count_map[simplefin_item.id] || 0
      else
        begin
-         simplefin_item.simplefin_accounts
+         simplefin_item.simplefin_accounts.not_ignored
            .left_joins(:account, :account_provider)
            .where(accounts: { id: nil }, account_providers: { id: nil })
            .count
@@ -167,7 +167,7 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
-              <% if unlinked_count.to_i > 0 %>
+              <% if @simplefin_accounts_count_map ? @simplefin_accounts_count_map[simplefin_item.id].to_i > 0 : simplefin_item.simplefin_accounts.exists? %>
                 <% menu.with_item(
                   variant: "link",
                   text: t(".setup_accounts_menu"),
