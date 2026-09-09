@@ -42,9 +42,10 @@
           <% end %>
 
           <% if @current_holdings.any? %>
-            <%= render partial: "holdings/holding",
-                      collection: @current_holdings,
-                      spacer_template: "shared/ruler" %>
+            <% @current_holdings.each_with_index do |holding, index| %>
+              <%= render "holdings/holding", holding: holding, crypto: @account.crypto? %>
+              <%= render "shared/ruler" unless index == @current_holdings.length - 1 %>
+            <% end %>
           <% end %>
         </div>
       </div>

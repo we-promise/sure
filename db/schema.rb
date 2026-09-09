@@ -435,7 +435,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.uuid "coinbase_item_id", null: false
     t.datetime "created_at", null: false
     t.string "currency"
-    t.decimal "current_balance", precision: 30, scale: 18
+    t.decimal "current_balance", precision: 34, scale: 18
     t.jsonb "institution_metadata"
     t.string "name"
     t.string "provider"
@@ -915,7 +915,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.string "external_id"
     t.decimal "price", precision: 19, scale: 4, null: false
     t.uuid "provider_security_id"
-    t.decimal "qty", precision: 30, scale: 18, null: false
+    t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
     t.boolean "security_locked", default: false, null: false
     t.datetime "updated_at", null: false
@@ -2392,7 +2392,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_08_090000) do
     t.string "investment_activity_label"
     t.jsonb "locked_attributes", default: {}
     t.decimal "price", precision: 19, scale: 10
-    t.decimal "qty", precision: 30, scale: 18
+    t.decimal "qty", precision: 34, scale: 18
     t.uuid "security_id", null: false
     t.datetime "updated_at", null: false
     t.index ["extra"], name: "index_trades_on_extra", using: :gin

@@ -23,6 +23,12 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.000000000000000148"), coinbase_account.current_balance
   end
 
+  test "quantity columns preserve sixteen integer and eighteen fractional digits" do
+    assert_quantity_precision CoinbaseAccount, "current_balance", nullable: true
+    assert_quantity_precision Holding, "qty", nullable: false
+    assert_quantity_precision Trade, "qty", nullable: true
+  end
+
   private
 
     def btc_account_payload
@@ -34,5 +40,13 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
         "balance" => { "amount" => "0.000000000000000148", "currency" => "BTC" },
         "currency" => { "code" => "BTC", "name" => "Bitcoin", "type" => "crypto" }
       }
+    end
+
+    def assert_quantity_precision(model, column_name, nullable:)
+      column = model.columns_hash.fetch(column_name)
+
+      assert_equal 34, column.precision
+      assert_equal 18, column.scale
+      assert_equal nullable, column.null
     end
 end
