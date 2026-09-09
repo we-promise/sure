@@ -368,7 +368,21 @@ class Family < ApplicationRecord
 
     # Bayes handled everything with sufficient confidence — skip the LLM
     # categorizer entirely (including its no-provider error contract).
-    return bayes_result.modified_count if bayes_result.categorized_ids.any? && remaining_ids.empty?
+    if bayes_result.categorized_ids.any? && remaining_ids.empty?
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "Bayesian categorization handled all transactions; skipped LLM categorization",
+        source: self.class.name,
+        family: self,
+        metadata: {
+          requested_transaction_ids: Array(transaction_ids),
+          categorized_transaction_ids: bayes_result.categorized_ids,
+          modified_count: bayes_result.modified_count
+        }
+      )
+      return bayes_result.modified_count
+    end
 
     llm_modified_count = AutoCategorizer.new(self, transaction_ids: remaining_ids).auto_categorize
     bayes_result.modified_count + llm_modified_count
