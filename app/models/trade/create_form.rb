@@ -15,8 +15,9 @@ class Trade::CreateForm
     "fee" => "Fee"
   }.freeze
 
+  ACTIVITY_LABELS = SECURITY_TRADE_LABELS.merge(CASH_TRADE_LABELS).freeze
   TRANSFER_TYPES = %w[deposit withdrawal].freeze
-  SUPPORTED_TYPES = (SECURITY_TRADE_LABELS.keys + CASH_TRADE_LABELS.keys + TRANSFER_TYPES).freeze
+  SUPPORTED_TYPES = (ACTIVITY_LABELS.keys + TRANSFER_TYPES).freeze
 
   attr_accessor :account, :date, :amount, :currency, :qty,
                 :price, :fee, :ticker, :manual_ticker, :type, :transfer_account_id

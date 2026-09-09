@@ -51,7 +51,15 @@ class Api::V1::TradesController < Api::V1::BaseController
     create_params = build_create_form_params(account)
     return if performed? # build_create_form_params may have rendered validation errors
 
-    model = Trade::CreateForm.new(create_params).create
+    create_options = build_trade_create_options(create_params[:type])
+    return if performed?
+
+    model = ApplicationRecord.transaction do
+      created_model = Trade::CreateForm.new(create_params).create
+      created_trade = trade_from_created_model(created_model)
+      created_trade.update!(create_options) if created_model.persisted? && created_trade && create_options.any?
+      created_model
+    end
 
     unless model.persisted?
       errors = model.is_a?(Entry) ? model.errors.full_messages : [ "Trade could not be created" ]
@@ -68,8 +76,6 @@ class Api::V1::TradesController < Api::V1::BaseController
         render template: "api/v1/transactions/show", status: :created
       else
         @trade = model.trade
-        apply_trade_create_options!
-        return if performed?
         @entry = @trade.entry
         render :show, status: :created
       end
@@ -78,8 +84,6 @@ class Api::V1::TradesController < Api::V1::BaseController
       render template: "api/v1/transfers/show", status: :created
     else
       @trade = model
-      apply_trade_create_options!
-      return if performed?
       @entry = @trade.entry
       render :show, status: :created
     end
@@ -91,6 +95,8 @@ class Api::V1::TradesController < Api::V1::BaseController
   end
 
   def update
+    return unless valid_trade_update_semantics?
+
     updatable = build_entry_params_for_update
 
     if @entry.update(updatable.except(:nature))
@@ -198,7 +204,8 @@ class Api::V1::TradesController < Api::V1::BaseController
         entry_params[:amount] = signed_qty * price.to_d
         ticker = @trade.security&.ticker
         entry_params[:name] = Trade.build_name(is_sell ? "sell" : "buy", signed_qty.abs, ticker) if ticker.present?
-        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
+        type_label = Trade::CreateForm::SECURITY_TRADE_LABELS[flat[:type].to_s.downcase]
+        entry_params[:entryable_attributes][:investment_activity_label] = flat[:investment_activity_label].presence || type_label || @trade.investment_activity_label.presence || (is_sell ? "Sell" : "Buy")
       end
 
       entry_params
@@ -215,9 +222,10 @@ class Api::V1::TradesController < Api::V1::BaseController
     def build_create_form_params(account)
       type = params.dig(:trade, :type).to_s.downcase
       unless Trade::CreateForm::SUPPORTED_TYPES.include?(type)
+        supported_types = Trade::CreateForm::SUPPORTED_TYPES.join(", ")
         render_validation_error(
-          "Invalid type",
-          [ "type must be one of: #{Trade::CreateForm::SUPPORTED_TYPES.join(', ')}" ]
+          I18n.t("trades.api_errors.invalid_type"),
+          [ I18n.t("trades.api_errors.supported_types", types: supported_types) ]
         )
         return nil
       end
@@ -367,13 +375,19 @@ class Api::V1::TradesController < Api::V1::BaseController
       }.compact
     end
 
-    def apply_trade_create_options!
+    def build_trade_create_options(type)
+      return {} unless Trade::CreateForm::ACTIVITY_LABELS.key?(type)
+
       attrs = {}
       if trade_params[:investment_activity_label].present?
         label = trade_params[:investment_activity_label]
-        unless Trade::ACTIVITY_LABELS.include?(label)
-          render_validation_error("Invalid investment_activity_label", [ "investment_activity_label must be one of: #{Trade::ACTIVITY_LABELS.join(', ')}" ])
-          return
+        expected_label = Trade::CreateForm::ACTIVITY_LABELS.fetch(type)
+        unless label == expected_label
+          render_validation_error(
+            I18n.t("trades.api_errors.invalid_activity_label"),
+            [ I18n.t("trades.api_errors.activity_label_must_match_type", label: expected_label, type: type) ]
+          )
+          return {}
         end
         attrs[:investment_activity_label] = label
       end
@@ -381,11 +395,43 @@ class Api::V1::TradesController < Api::V1::BaseController
         category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
         unless category
           render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
-          return
+          return {}
         end
         attrs[:category_id] = category.id
       end
-      @trade.update!(attrs) if attrs.any?
+      attrs
+    end
+
+    def trade_from_created_model(model)
+      return model.trade if model.is_a?(Entry) && model.entryable_type == "Trade"
+      return model if model.is_a?(Trade)
+
+      nil
+    end
+
+    def valid_trade_update_semantics?
+      type = trade_update_params[:type].to_s.downcase
+      label = trade_update_params[:investment_activity_label]
+      return true if type.blank?
+
+      expected_label = Trade::CreateForm::SECURITY_TRADE_LABELS[type]
+      unless expected_label
+        render_validation_error(
+          I18n.t("trades.api_errors.invalid_type"),
+          [ I18n.t("trades.api_errors.supported_types", types: Trade::CreateForm::SECURITY_TRADE_LABELS.keys.join(", ")) ]
+        )
+        return false
+      end
+
+      if label.present? && label != expected_label
+        render_validation_error(
+          I18n.t("trades.api_errors.invalid_activity_label"),
+          [ I18n.t("trades.api_errors.activity_label_must_match_type", label: expected_label, type: type) ]
+        )
+        return false
+      end
+
+      true
     end
 
     def ticker_from_security(security)

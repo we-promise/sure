@@ -91,9 +91,9 @@ class Holding::ForwardCalculator
 
         security_id = trade.security_id
 
-        # A transfer is not a purchase: it contributes no cost and it makes the
-        # whole position unknowable, not just its own units.
-        if trade.investment_activity_label == Trade::TRANSFER_LABEL
+        # An internal movement is not a purchase: it contributes no cost and it
+        # makes the whole position unknowable, not just its own units.
+        if trade.internal_movement?
           @transferred_security_ids << security_id
           next
         end

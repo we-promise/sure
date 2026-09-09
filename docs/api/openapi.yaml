@@ -7294,7 +7294,7 @@ paths:
       parameters: []
       responses:
         '201':
-          description: interest created
+          description: trade created
           content:
             application/json:
               schema:
@@ -7312,7 +7312,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: deposit without amount returns error
+          description: invalid trade request
           content:
             application/json:
               schema:
@@ -7485,10 +7485,9 @@ paths:
                       enum:
                       - buy
                       - sell
-                      - dividend
-                      - deposit
-                      - withdrawal
-                      - interest
+                      - sweep_in
+                      - sweep_out
+                      - reinvestment
                     nature:
                       type: string
                       enum:

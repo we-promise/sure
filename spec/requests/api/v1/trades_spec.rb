@@ -441,7 +441,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '201', 'interest created' do
+      response '201', 'trade created' do
         schema '$ref' => '#/components/schemas/TransactionResponse'
 
         let(:body) do
@@ -459,7 +459,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '422', 'deposit without amount returns error' do
+      response '422', 'invalid trade request' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -526,7 +526,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               date: { type: :string, format: :date },
               qty: { type: :number },
               price: { type: :number },
-              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest] },
+              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment] },
               nature: { type: :string, enum: %w[inflow outflow] },
               name: { type: :string },
               notes: { type: :string },
