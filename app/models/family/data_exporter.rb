@@ -801,20 +801,28 @@ class Family::DataExporter
     end
 
     def resolve_multi_tag_operand(value)
-      ids = value.to_s.split(",")
-      records = ids.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
-      names = records.each_with_index.map { |record, i| record&.name || ids[i] }
+      exact_name_record = operand_records_by_name(:tags)[value.to_s] unless uuid_like?(value)
+      if exact_name_record
+        return {
+          value: Rule::Action.encode_multi_value_names([ exact_name_record.name ]),
+          value_ref: rule_value_ref("Tag", exact_name_record)
+        }
+      end
+
+      values = Rule::Action.decode_multi_value_names(value)
+      records = values.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
+      names = records.each_with_index.map { |record, i| record&.name || values[i] }
       refs = records.compact.map { |record| rule_value_ref("Tag", record) }
 
       {
         value: Rule::Action.encode_multi_value_names(names),
         # A single tag keeps the pre-existing scalar value_ref shape for
         # backward compatibility with older exports; only genuinely
-        # multi-tag actions use an array. Keyed off `ids.size` (not
+        # multi-tag actions use an array. Keyed off `values.size` (not
         # `refs.size`) so a partially-orphaned multi-tag action (one tag
         # since deleted) still round-trips as an array instead of silently
         # dropping the surviving tag's name on import.
-        value_ref: ids.size <= 1 ? refs.first : refs
+        value_ref: values.size <= 1 ? refs.first : refs
       }
     end
 

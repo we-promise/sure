@@ -690,6 +690,47 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports a scalar tag action value matching a comma-containing tag name" do
+    comma_tag = @family.tags.create!(name: "Food, Dining", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Legacy Comma Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: comma_tag.name
+    )
+    tag_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Legacy Comma Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      assert_equal "\"Food, Dining\"", actions[0]["value"]
+      assert_equal({ "type" => "Tag", "id" => comma_tag.id, "name" => "Food, Dining" }, actions[0]["value_ref"])
+    end
+  end
+
   test "exports a partially-orphaned multi-tag action's value_ref as an array" do
     second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
 
