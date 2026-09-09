@@ -121,7 +121,9 @@ en:
       spending_trend:
         title: "Spending"
         date_range: "%{start_date} to %{end_date}"
+        date_range_short: "%{start_date} - %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
         month_picker_aria_label: "Select month"
         period_scope_hint: "Shows the month you pick here — independent of the dashboard's time period at the top."
-        previous_month: "Previous month"
         no_data: "No spending data for this month"
+        previous_comparison_days: "(1-%{end_day})"

@@ -6,6 +6,18 @@ class EnableBankingEntry::Processor
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
   PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
 
+  # Payment wallets that some ASPSPs prefix onto the descriptor of a card
+  # purchase, e.g. "Apple pay: <payee and terminal text>". The wallet is how the
+  # card was presented, not who was paid, so it is stripped before anything reads
+  # the remittance text.
+  #
+  # Without this, a family that already knows a merchant named after the wallet
+  # -- which happens after one purchase from that brand's own store, since
+  # Family#known_merchant_names contains every merchant already assigned to a
+  # transaction -- has every wallet-paid transaction named after the wallet and
+  # assigned to it, and the real payee is never read.
+  WALLET_PREFIX = /\A(?:apple|google|samsung)\s+pay\s*:\s*/i
+
   # Guard against spurious matches from very short known merchant names (e.g. a
   # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
   # inside "NAME IT" -- a real chain name observed in this issue's own data).
@@ -240,10 +252,20 @@ class EnableBankingEntry::Processor
       matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(descriptive)
     end
 
+    # The remittance lines describing who was paid, one per element, with any
+    # payment-wallet prefix removed and blank lines dropped.
+    #
+    # Stripping WALLET_PREFIX here rather than at each call site keeps every
+    # consumer -- the known-merchant match, the merchant candidate and the entry
+    # name -- looking at the payee instead of the wallet. #notes deliberately
+    # reads data[:remittance_information] directly, so the wallet used to pay is
+    # still recorded on the transaction.
+    #
+    # @return [Array<String>] non-blank remittance lines, wallet prefix removed
     def remittance_information_lines
       remittance = data[:remittance_information]
       Array.wrap(remittance)
-        .map { |value| value.to_s.strip.presence }
+        .map { |value| value.to_s.strip.sub(WALLET_PREFIX, "").strip.presence }
         .compact
     end
 

@@ -1413,28 +1413,17 @@ class Family::DataImporter
 
       # Map category names to IDs
       if condition_type == "transaction_category"
-        category = @family.categories.find_by(name: value)
-        category ||= @family.categories.create!(
-          name: value,
-          color: Category::UNCATEGORIZED_COLOR,
-          classification_unused: "expense",
-          lucide_icon: "shapes"
-        )
-        return category.id
+        return find_or_create_rule_category(value).id
       end
 
       # Map merchant names to IDs
       if condition_type == "transaction_merchant"
-        merchant = @family.merchants.find_by(name: value)
-        merchant ||= @family.merchants.create!(name: value)
-        return merchant.id
+        return find_or_create_rule_merchant(value).id
       end
 
       # Map tag names to IDs
       if condition_type == "transaction_tag"
-        tag = @family.tags.find_by(name: value)
-        tag ||= @family.tags.create!(name: value)
-        return tag.id
+        return find_or_create_rule_tag(value).id
       end
 
       value
@@ -1455,21 +1444,12 @@ class Family::DataImporter
 
       # Map category names to IDs
       if action_type == "set_transaction_category"
-        category = @family.categories.find_by(name: value)
-        category ||= @family.categories.create!(
-          name: value,
-          color: Category::UNCATEGORIZED_COLOR,
-          classification_unused: "expense",
-          lucide_icon: "shapes"
-        )
-        return category.id
+        return find_or_create_rule_category(value).id
       end
 
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
-        merchant = @family.merchants.find_by(name: value)
-        merchant ||= @family.merchants.create!(name: value)
-        return merchant.id
+        return find_or_create_rule_merchant(value).id
       end
 
       value
@@ -1484,16 +1464,47 @@ class Family::DataImporter
       end
 
       names = refs.any? ? refs.map { |ref| ref["name"] } : Rule::Action.decode_multi_value_names(action_data["value"])
-      tags_by_name = @family.tags.where(name: names).index_by(&:name)
 
       tag_ids = names.filter_map do |name|
         next if name.blank?
 
-        tag = tags_by_name[name] ||= @family.tags.create!(name: name)
-        tag.id
+        find_or_create_rule_tag(name).id
       end
 
       tag_ids.join(",")
+    end
+
+    # Preloaded once per import and extended in place on cache-miss, so a
+    # category/merchant/tag created for an earlier record is immediately
+    # visible to a later record referencing the same name, instead of one
+    # query per condition/action across every imported rule.
+    def rule_categories_by_name
+      @rule_categories_by_name ||= @family.categories.index_by(&:name)
+    end
+
+    def rule_merchants_by_name
+      @rule_merchants_by_name ||= @family.merchants.index_by(&:name)
+    end
+
+    def rule_tags_by_name
+      @rule_tags_by_name ||= @family.tags.index_by(&:name)
+    end
+
+    def find_or_create_rule_category(name)
+      rule_categories_by_name[name] ||= @family.categories.create!(
+        name: name,
+        color: Category::UNCATEGORIZED_COLOR,
+        classification_unused: "expense",
+        lucide_icon: "shapes"
+      )
+    end
+
+    def find_or_create_rule_merchant(name)
+      rule_merchants_by_name[name] ||= @family.merchants.create!(name: name)
+    end
+
+    def find_or_create_rule_tag(name)
+      rule_tags_by_name[name] ||= @family.tags.create!(name: name)
     end
 
     def rule_operand_value(data)

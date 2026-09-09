@@ -7,3 +7,6 @@ fr:
           duplicate_actions: La règle ne peut pas avoir d'actions en double %{types}
           min_actions: doit avoir au moins une action
           nested_conditions: Les conditions composées ne peuvent pas être imbriquées
+  rule:
+    conditions:
+      unsupported_label: Non pris en charge (%{type})

@@ -1,0 +1,114 @@
+<%# locals: (monobank_item:) %>
+
+<%= tag.div id: dom_id(monobank_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2 w-full">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
+            <p class="text-primary text-xs font-medium"><%= monobank_item.name.to_s.first.to_s.upcase %></p>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p monobank_item.name, class: "font-medium text-primary" %>
+              <% if monobank_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+
+            <% if monobank_item.accounts.any? %>
+              <p class="text-xs text-secondary"><%= monobank_item.institution_summary %></p>
+            <% end %>
+
+            <% if monobank_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif monobank_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: monobank_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if monobank_item.last_synced_at %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(monobank_item.last_synced_at), summary: monobank_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: monobank_item_path(monobank_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(monobank_item.name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless monobank_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if monobank_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: monobank_item.accounts %>
+        <% end %>
+
+        <% stats = if defined?(@monobank_sync_stats_map) && @monobank_sync_stats_map
+             @monobank_sync_stats_map[monobank_item.id] || {}
+           else
+             monobank_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: monobank_item,
+          institutions_count: monobank_item.connected_institutions.size
+        ) %>
+
+        <% unlinked_count = monobank_item.unlinked_accounts_count %>
+        <% linked_count = monobank_item.linked_accounts_count %>
+        <% total_count = monobank_item.total_accounts_count %>
+
+        <% if unlinked_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: linked_count, total: total_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_monobank_item_path(monobank_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif monobank_item.accounts.empty? && total_count == 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_monobank_item_path(monobank_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

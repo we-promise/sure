@@ -419,6 +419,7 @@ en:
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
+        monobank: Sync Ukrainian monobank cards and jars with a personal API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
@@ -572,6 +573,10 @@ en:
         step_1_html: "Go to %{link} and generate a personal access token."
         step_2: "Copy your personal access token."
         step_3: "Paste the token below, save, then link your synced accounts."
+      monobank_panel:
+        step_1_html: "Go to %{link}, sign in with the monobank app and generate a personal token."
+        step_2: "Copy the token — it is shown only once."
+        step_3: "Paste the token below, save, then link the cards and jars you want to track."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
