@@ -217,6 +217,7 @@ de:
       sso_providers_label: SSO-Anbieter
       statement_vault_label: Auszugsarchiv
       users_label: Benutzer
+      system_health_label: Systemstatus
     settings_nav_link_large:
       next: Weiter
       previous: Zurück
