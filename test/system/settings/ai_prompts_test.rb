@@ -156,7 +156,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
 
     assert_selector "#confirm-dialog", visible: true
     within "#confirm-dialog" do
-      find("[data-action='DS--dialog#close']").click
+      find("[type='submit'][value='cancel']").click
     end
     assert_no_selector "#confirm-dialog"
 
