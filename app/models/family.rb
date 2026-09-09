@@ -4,6 +4,7 @@ class Family < ApplicationRecord
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
+  include MonobankConnectable
   include Trading212Connectable
   include TradeRepublicConnectable
   include QuestradeConnectable

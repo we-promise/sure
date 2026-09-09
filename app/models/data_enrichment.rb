@@ -8,6 +8,7 @@ class DataEnrichment < ApplicationRecord
     lunchflow: "lunchflow",
     akahu: "akahu",
     up: "up",
+    monobank: "monobank",
     synth: "synth",
     ai: "ai",
     enable_banking: "enable_banking",
