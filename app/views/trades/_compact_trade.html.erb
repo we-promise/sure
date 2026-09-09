@@ -55,8 +55,8 @@
       <%# AMOUNT mint %>
       <div class="w-[120px] shrink-0 flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
         <% if entry.protected_from_sync? && !entry.excluded? %>
-          <%= link_to entry_path(entry), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "invisible group-hover:visible transition-opacity", title: t("entries.protection.tooltip") do %>
-            <%= icon "lock", size: "sm", class: "text-secondary" %>
+          <%= link_to entry_path(entry), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "invisible group-hover:visible transition-opacity" do %>
+            <%= render DS::Tooltip.new(text: t("entries.protection.tooltip"), icon: "lock", size: "sm", as: :span) %>
           <% end %>
         <% end %>
         <%= content_tag :p,
