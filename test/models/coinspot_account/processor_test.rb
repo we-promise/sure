@@ -61,9 +61,11 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "imports orders, transfers, fiat movements, and native send fees" do
+    result = nil
     assert_difference -> { @account.entries.where(source: "coinspot").count }, 9 do
-      CoinspotAccount::Processor.new(@coinspot_account).process
+      result = CoinspotAccount::Processor.new(@coinspot_account).process
     end
+    assert_equal true, result[:success], result.inspect
 
     buy = @account.entries.find_by!(external_id: "coinspot_order_buy_BTC_2026-01-02_buy-1", source: "coinspot")
     assert_equal(-100.to_d, buy.amount)
@@ -87,6 +89,58 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     withdrawal = @account.entries.find_by!(external_id: "coinspot_withdrawal_aud_2026-01-07_withdrawal-1", source: "coinspot")
     assert_equal 150.to_d, withdrawal.amount
     assert_equal "Withdrawal", withdrawal.transaction.investment_activity_label
+  end
+
+  test "prices a historical send fee from the transfer instead of the current holdings snapshot" do
+    @coinspot_account.update!(
+      raw_payload: { "assets" => [] },
+      raw_transactions_payload: {
+        "send_receive" => {
+          "sendtransactions" => [
+            { "txid" => "historical-send", "coin" => "btc", "amount" => "0.01", "aud" => "1000", "sendfee" => "0.00001", "timestamp" => "2025-01-04T10:00:00Z" }
+          ]
+        }
+      }
+    )
+
+    result = CoinspotAccount::Processor.new(@coinspot_account).process
+
+    assert_equal true, result[:success], result.inspect
+    source_record = @coinspot_account.raw_transactions_payload.dig("send_receive", "sendtransactions").first
+    fee = @account.entries.find_by!(external_id: "coinspot_fee_#{Digest::SHA256.hexdigest(source_record.to_json)[0, 24]}")
+    assert_equal BigDecimal("1"), fee.amount
+  end
+
+  test "rolls back a movement when its native fee has no transaction-date AUD valuation" do
+    @coinspot_account.update!(raw_transactions_payload: {
+      "send_receive" => {
+        "sendtransactions" => [
+          { "txid" => "unpriced-fee", "coin" => "btc", "amount" => "0.01", "aud" => "0", "sendfee" => "0.00001", "timestamp" => "2025-01-04T10:00:00Z" }
+        ]
+      }
+    })
+
+    result = CoinspotAccount::Processor.new(@coinspot_account).process
+
+    assert_equal false, result[:success]
+    assert_equal "send_receive", result[:failures].first[:kind]
+    assert_not @account.entries.exists?(external_id: "coinspot_send_BTC_2025-01-04_unpriced-fee")
+  end
+
+  test "rolls back an order when its fee cannot be imported" do
+    @coinspot_account.update!(raw_transactions_payload: {
+      "orders" => {
+        "buyorders" => [ order_payload("atomic-buy", "btc", "0.001", "100.00", "100000.00", "1.00") ]
+      }
+    })
+    processor = CoinspotAccount::Processor.new(@coinspot_account)
+    processor.stubs(:import_fee).raises(StandardError, "fee import failed")
+
+    result = processor.process
+
+    assert_equal false, result[:success]
+    assert_equal "order", result[:failures].first[:kind]
+    assert_not @account.entries.exists?(external_id: "coinspot_order_buy_BTC_2026-01-03_atomic-buy")
   end
 
   test "processing is idempotent by external id and source" do

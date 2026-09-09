@@ -83,6 +83,7 @@ class CoinspotAccount::HoldingsProcessor
         source: "coinspot",
         delete_future_holdings: false
       )
+      nil
     rescue StandardError => e
       log_failure(symbol, e, asset)
     end

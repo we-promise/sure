@@ -3,6 +3,8 @@
 class CoinspotAccount::Processor
   include CoinspotAccount::AudConverter
 
+  class NativeFeeConversionUnavailableError < StandardError; end
+
   attr_reader :coinspot_account
 
   # Initializes with the CoinspotAccount whose latest synced snapshot
@@ -94,20 +96,23 @@ class CoinspotAccount::Processor
       price = trade_price(amount: amount, quantity: quantity, fallback_rate: rate, date: date)
       external_id = order_external_id(order, type, symbol, date)
 
-      import_adapter.import_trade(
-        external_id: external_id,
-        security: security,
-        quantity: signed_quantity,
-        price: price,
-        amount: amount,
-        currency: target_currency,
-        date: date,
-        name: "#{type.capitalize} #{quantity.round(8)} #{symbol}",
-        source: "coinspot",
-        activity_label: type == "sell" ? "Sell" : "Buy"
-      )
+      Entry.transaction do
+        import_adapter.import_trade(
+          external_id: external_id,
+          security: security,
+          quantity: signed_quantity,
+          price: price,
+          amount: amount,
+          currency: target_currency,
+          date: date,
+          name: "#{type.capitalize} #{quantity.round(8)} #{symbol}",
+          source: "coinspot",
+          activity_label: type == "sell" ? "Sell" : "Buy"
+        )
 
-      import_fee(order, fee_aud, date, symbol) if fee_aud.positive?
+        import_fee(order, fee_aud, date, symbol) if fee_aud.positive?
+      end
+      nil
     rescue StandardError => e
       log_record_failure("order", order, e)
     end
@@ -136,19 +141,22 @@ class CoinspotAccount::Processor
       label = type == "receive" ? "Contribution" : "Withdrawal"
       external_id = coin_movement_external_id(transaction, type, symbol, date)
 
-      import_adapter.import_transaction(
-        external_id: external_id,
-        amount: amount,
-        currency: target_currency,
-        date: date,
-        name: "#{label} #{transaction["amount"]} #{symbol}",
-        source: "coinspot",
-        investment_activity_label: label,
-        extra: { "coinspot" => transaction.merge("type" => type) }
-      )
+      Entry.transaction do
+        import_adapter.import_transaction(
+          external_id: external_id,
+          amount: amount,
+          currency: target_currency,
+          date: date,
+          name: "#{label} #{transaction["amount"]} #{symbol}",
+          source: "coinspot",
+          investment_activity_label: label,
+          extra: { "coinspot" => transaction.merge("type" => type) }
+        )
 
-      send_fee_aud = native_fee_to_aud(transaction["sendfee"], symbol)
-      import_fee(transaction, send_fee_aud, date, symbol) if send_fee_aud&.positive?
+        send_fee_aud = native_fee_to_aud(transaction["sendfee"], transaction)
+        import_fee(transaction, send_fee_aud, date, symbol) if send_fee_aud&.positive?
+      end
+      nil
     rescue StandardError => e
       log_record_failure("send_receive", transaction, e)
     end
@@ -189,6 +197,7 @@ class CoinspotAccount::Processor
         investment_activity_label: label,
         extra: { "coinspot" => transaction.merge("type" => type) }
       )
+      nil
     rescue StandardError => e
       log_record_failure(type, transaction, e)
     end
@@ -224,24 +233,19 @@ class CoinspotAccount::Processor
       )
     end
 
-    # Converts a network fee denominated in the traded asset itself into AUD,
-    # using that asset's price from the current balance snapshot. Returns nil
-    # when there's nothing to convert or no price is available.
-    def native_fee_to_aud(native_fee, symbol)
+    # Converts a network fee denominated in the transferred asset into AUD
+    # using the transfer's own AUD value, which reflects the transaction date.
+    def native_fee_to_aud(native_fee, transaction)
       fee = native_fee.presence&.to_d
       return nil unless fee&.positive?
 
-      price_aud = asset_price_aud(symbol)
-      return nil unless price_aud&.positive?
+      native_amount = transaction["amount"].to_d.abs
+      aud_amount = transaction["aud"].to_d.abs
+      unless native_amount.positive? && aud_amount.positive?
+        raise NativeFeeConversionUnavailableError, "CoinSpot send fee has no transaction-date AUD valuation"
+      end
 
-      fee * price_aud
-    end
-
-    # The asset's AUD price from the account's latest balance snapshot.
-    def asset_price_aud(symbol)
-      Array(coinspot_account.raw_payload&.dig("assets")).find do |asset|
-        asset["symbol"] == symbol
-      end&.dig("price_aud")&.to_d
+      fee * aud_amount / native_amount
     end
 
     # The cached order/transfer/deposit/withdrawal history payload for this account.

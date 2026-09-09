@@ -60,18 +60,34 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [], payload.dig("orders", "buyorders")
   end
 
-  test "does not raise when both order history endpoints fail for the same window" do
+  test "fails without persisting a partial snapshot when both order history endpoints fail" do
     @provider.stubs(:get_balances).returns("balances" => [])
     @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
     @provider.stubs(:get_market_order_history).raises(Provider::Coinspot::ApiError, "also unavailable")
+    @item.update!(sync_start_date: Date.current)
 
-    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+    error = assert_raises(CoinspotItem::Importer::OrderHistoryUnavailableError) do
+      CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+    end
 
-    assert_equal 0, result[:orders_imported]
-    payload = @item.coinspot_accounts.first.raw_transactions_payload
-    assert_equal [], payload.dig("orders", "buyorders")
-    assert_equal [], payload.dig("orders", "sellorders")
-    assert_equal [], payload.dig("orders", "orders")
+    assert_includes error.message, Date.current.to_s
+    assert_empty @item.coinspot_accounts
+  end
+
+  test "fails rather than valuing a nonzero asset at zero when its AUD price is missing" do
+    @provider.stubs(:get_balances).returns(
+      "balances" => [ { "xyz" => { "balance" => "12.5" } } ]
+    )
+
+    error = nil
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      error = assert_raises(CoinspotItem::Importer::MissingAssetPriceError) do
+        CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+      end
+    end
+
+    assert_equal "CoinSpot returned XYZ without an AUD balance or rate", error.message
+    assert_empty @item.coinspot_accounts
   end
 
   test "preserves sell orders alongside buy orders from the primary endpoint" do

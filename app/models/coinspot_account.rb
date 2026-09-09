@@ -4,7 +4,6 @@ class CoinspotAccount < ApplicationRecord
   include Encryptable
 
   FIAT_CURRENCIES = %w[AUD USD EUR GBP CAD CHF JPY NZD SGD HKD].freeze
-  STABLECOINS = %w[USDT USDC DAI PYUSD USDP TUSD USDG].freeze
 
   if encryption_ready?
     encrypts :raw_payload

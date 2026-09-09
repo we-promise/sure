@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class CoinspotItem::Importer
+  class OrderHistoryUnavailableError < StandardError; end
+  class MissingAssetPriceError < StandardError; end
+
   # CoinSpot's history endpoints default to the last 24 hours when `startdate`
   # is omitted, so an initial sync with no user-configured sync_start_date
   # would otherwise silently import almost nothing. Mirrors Wise::Importer's
@@ -87,6 +90,7 @@ class CoinspotItem::Importer
     # records exist in that window than a single response can return.
     def fetch_order_history
       orders_by_id = ORDER_BUCKETS.index_with { {} }
+      @failed_order_windows = []
       window_start = history_window[:startdate]
       window_end = history_window[:enddate]
 
@@ -94,6 +98,11 @@ class CoinspotItem::Importer
         current_window_end = [ window_start + 29.days, window_end ].min
         merge_window!(orders_by_id, startdate: window_start, enddate: current_window_end)
         window_start = current_window_end + 1.day
+      end
+
+      if @failed_order_windows.any?
+        windows = @failed_order_windows.map { |window| "#{window[:startdate]}-#{window[:enddate]}" }.join(", ")
+        raise OrderHistoryUnavailableError, "CoinSpot order history unavailable for #{windows}"
       end
 
       orders_by_id.transform_values(&:values)
@@ -141,9 +150,8 @@ class CoinspotItem::Importer
 
     # Returns the primary endpoint's buy/sell orders for the window, or the
     # market-order fallback's mixed-type orders if the primary endpoint
-    # errors. Both the primary and fallback failing for the same window
-    # degrades to an empty result (logged) rather than aborting the sync,
-    # so one bad window doesn't lose every other window's history.
+    # errors. Both endpoints failing records the window; the importer checks
+    # all remaining windows, then raises before replacing the saved snapshot.
     def fetch_orders_for_window(startdate:, enddate:)
       response = coinspot_provider.get_order_history(startdate: startdate, enddate: enddate)
       { "buyorders" => Array(response["buyorders"]), "sellorders" => Array(response["sellorders"]) }
@@ -171,6 +179,7 @@ class CoinspotItem::Importer
           family: coinspot_item.family,
           metadata: { coinspot_item_id: coinspot_item.id, error_class: e.class.name }
         )
+        @failed_order_windows << { startdate: startdate, enddate: enddate }
         {}
       end
     end
@@ -187,7 +196,27 @@ class CoinspotItem::Importer
         balance = balance_data["balance"].to_d
         amount_aud = balance_data["audbalance"].presence&.to_d
         rate_aud = balance_data["rate"].presence&.to_d
-        amount_aud ||= symbol.to_s.upcase == "AUD" ? balance : balance * rate_aud.to_d
+        aud_asset = symbol.to_s.upcase == "AUD"
+        amount_aud ||= balance if aud_asset
+
+        if !aud_asset && balance.nonzero?
+          amount_aud = balance * rate_aud if !amount_aud&.nonzero? && rate_aud&.positive?
+        end
+
+        if !aud_asset && balance.nonzero? && !amount_aud&.nonzero?
+          DebugLogEntry.capture(
+            category: "provider_sync_error",
+            level: "error",
+            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation",
+            source: self.class.name,
+            provider_key: "coinspot",
+            family: coinspot_item.family,
+            metadata: { coinspot_item_id: coinspot_item.id, symbol: symbol.to_s.upcase, balance: balance.to_s("F") }
+          )
+          raise MissingAssetPriceError, "CoinSpot returned #{symbol.to_s.upcase} without an AUD balance or rate"
+        end
+
+        amount_aud ||= 0.to_d
         next if balance.zero? && amount_aud.zero?
 
         {

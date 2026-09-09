@@ -67,8 +67,9 @@ class CoinspotAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     })
     CoinspotAccount::SecurityResolver.stubs(:resolve).with("BTC").returns(@security)
 
-    CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+    result = CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
 
+    assert_equal true, result[:success], result.inspect
     holding = @account.holdings.find_by!(security: @security, date: Date.current)
     assert_equal BigDecimal("0.00014884"), holding.qty
     assert_equal BigDecimal("14.884"), holding.amount
