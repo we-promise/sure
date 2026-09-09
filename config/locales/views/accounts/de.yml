@@ -70,6 +70,8 @@ de:
       container:
         close: Schließen
         navigate: Navigieren
+        next: Weiter
+        previous: Zurück
         select: Auswählen
     show:
       activity:
@@ -117,6 +119,7 @@ de:
         activity: Aktivität
         holdings: Bestände
         overview: Übersicht
+        schedule: Tilgungsplan
         statements: Auszüge
     update:
       success: "%{type}-Konto aktualisiert"
