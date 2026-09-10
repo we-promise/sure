@@ -20,14 +20,14 @@ This guide also covers the differences between **asset** and **liability** accou
 Once Sure is installed, open a browser and navigate to [localhost:3000](http://localhost:3000).<br />
 On a fresh install you will land directly on the **Create account** page (pictured below) - there is no separate sign-up step.
 
-<img width="2508" height="1314" alt="Landing page on a fresh install." src="https://github.com/user-attachments/assets/2319dc87-5615-4473-bebc-8360dd983367" />
+<img width="1280" height="713" alt="Landing page on a fresh install." src="assets/guide-create-account.png" />
 <br />
 <br />
 
 You'll be guided through a short series of screens to set your **login details**, **personal information**, and **preferences**.<br />
 When you arrive at the main dashboard, showing **No accounts yet**, you're all set up!
 
-<img width="2508" height="1314" alt="Blank home screen of Sure, with no accounts yet." src="https://github.com/user-attachments/assets/f06ba8e2-f188-4bf9-98a7-fdef724e9b5a" />
+<img width="1280" height="713" alt="Blank home screen of Sure, with no accounts yet." src="assets/guide-empty-dashboard.png" />
 <br />
 <br />
 
@@ -127,7 +127,7 @@ Most bank accounts (checking, savings, money market) are **Cash Accounts**
    - **Subtype** (this is where you specify checking, savings, or another type)
 4. Click **Create Account** when you are ready to proceed.
 
-<img width="500" height="303" alt="Cash Account creation menu" src="https://github.com/user-attachments/assets/e564a447-c85e-403e-979b-efe770ea2a61" />
+<img width="570" height="455" alt="Cash Account creation menu" src="assets/guide-account-modal.png" />
 <br />
 <br />
 
@@ -138,7 +138,7 @@ You'll now see:
 
 To get this bar moving let's add some transactions!
 
-<img width="2508" height="1314" alt="Home screen of Sure, showing one account and no transactions." src="https://github.com/user-attachments/assets/7766a0cd-6b20-48f0-9ba2-87dfddd77236" />
+<img width="1280" height="713" alt="Home screen of Sure, showing one account and no transactions." src="assets/guide-dashboard-one-account.png" />
 
 ## 7. Adding Transactions
 
@@ -153,7 +153,7 @@ To add a transaction:
 
 You will now see the transaction you added in your **transaction history**, as well as the **net worth chart** updating accordingly.
 
-<img width="500" height="512" alt="Filled-out expense form" src="https://github.com/user-attachments/assets/7c1d38d1-edb8-4d12-8b3e-bbef4836cc92" />
+<img width="566" height="587" alt="Filled-out expense form" src="assets/guide-expense-form.png" />
 
 ## 8. Managing Investment Accounts
 
@@ -205,7 +205,7 @@ You can set cost basis in two ways:
 
 The system will show a confirmation if you're overwriting an existing cost basis.
 
-<img width="531" height="597" alt="image" src="https://github.com/user-attachments/assets/b5a6aafe-de9e-447e-95a6-6000e68fb695" />
+<img width="570" height="713" alt="Holding drawer with the cost basis editor for AAPL." src="assets/guide-cost-basis-editor.png" />
 
 
 **From the Holding Drawer:**
@@ -233,7 +233,7 @@ After unlocking:
 - Future syncs can update the cost basis
 - Calculated values (from trades) will replace the manual value
 
-<img width="529" height="231" alt="image" src="https://github.com/user-attachments/assets/89d4c64f-7151-4702-b79f-1e22d47a2bee" />
+<img width="570" height="713" alt="Holding settings showing the locked cost basis with the Unlock option." src="assets/guide-cost-basis-unlock.png" />
 
 #### Bidirectional Conversion
 
@@ -291,7 +291,7 @@ Create rules to automatically label transactions based on patterns:
 5. Choose the label (e.g., "Dividend")
 6. Save the rule
 
-<img width="577" height="666" alt="image" src="https://github.com/user-attachments/assets/6660a3cc-af78-4199-8edc-18c198bbaad3" />
+<img width="554" height="708" alt="New rule form that sets the investment activity label to Dividend when the transaction name contains DIVIDEND." src="assets/guide-rule-activity-label.png" />
 
 Example rules:
 - IF name contains "DIVIDEND" THEN set label to "Dividend"
