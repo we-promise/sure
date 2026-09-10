@@ -43,13 +43,27 @@ module Family::AutoTransferMatchable
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
+        inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
+        outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
+
+        # Defensive: the SQL candidate query already excludes EMI-kind
+        # transactions, but skip again here too, in case a kind changed
+        # between the query running and this loop reaching it (e.g. a
+        # concurrent EMI conversion), or transfer_match_candidates is ever
+        # called from elsewhere without the same filter. Without this,
+        # updating kind on an emi_purchase/emi_installment transaction
+        # below raises ActiveRecord::RecordInvalid (see
+        # Transaction#cannot_change_kind_of_active_emi_entry), which is
+        # unrescued here and would roll back the whole enclosing
+        # transaction and abort the sync.
+        next if inflow_transaction.kind.in?(%w[emi_purchase emi_installment emi_fee]) ||
+               outflow_transaction.kind.in?(%w[emi_purchase emi_installment emi_fee])
+
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
         # marking it matched here would leave a transaction matched with no Transfer.
         next unless find_or_create_transfer!(match)
 
-        inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
-        outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
         destination_account = inflow_transaction.entry.account
         transfer_kind = Transfer.kind_for_account(destination_account)
 
@@ -145,6 +159,10 @@ module Family::AutoTransferMatchable
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
+          JOIN transactions inflow_transactions ON (
+            inflow_transactions.id = inflow_candidates.entryable_id AND
+            inflow_transactions.kind NOT IN ('emi_purchase', 'emi_installment', 'emi_fee')
+          )
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
             outflow_candidates.excluded = FALSE AND
@@ -153,6 +171,10 @@ module Family::AutoTransferMatchable
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
             outflow_candidates.currency = inflow_candidates.currency AND
             outflow_candidates.amount = -inflow_candidates.amount
+          )
+          JOIN transactions outflow_transactions ON (
+            outflow_transactions.id = outflow_candidates.entryable_id AND
+            outflow_transactions.kind NOT IN ('emi_purchase', 'emi_installment', 'emi_fee')
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
           LEFT JOIN transfers existing_transfers ON (
@@ -184,6 +206,10 @@ module Family::AutoTransferMatchable
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
+          JOIN transactions inflow_transactions ON (
+            inflow_transactions.id = inflow_candidates.entryable_id AND
+            inflow_transactions.kind NOT IN ('emi_purchase', 'emi_installment', 'emi_fee')
+          )
           JOIN entries outflow_candidates ON (
             outflow_candidates.entryable_type = 'Transaction' AND
             outflow_candidates.excluded = FALSE AND
@@ -191,6 +217,10 @@ module Family::AutoTransferMatchable
             outflow_candidates.account_id <> inflow_candidates.account_id AND
             outflow_candidates.date BETWEEN inflow_candidates.date - :date_window AND inflow_candidates.date + :date_window AND
             outflow_candidates.currency <> inflow_candidates.currency
+          )
+          JOIN transactions outflow_transactions ON (
+            outflow_transactions.id = outflow_candidates.entryable_id AND
+            outflow_transactions.kind NOT IN ('emi_purchase', 'emi_installment', 'emi_fee')
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
           JOIN exchange_rates ON (

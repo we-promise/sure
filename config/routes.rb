@@ -530,6 +530,7 @@ Rails.application.routes.draw do
 
   resources :transactions, only: %i[index new create show update destroy] do
     resource :split, only: %i[new create edit update destroy]
+    resource :emi_plan, only: %i[new create show destroy]
     resource :transfer_match, only: %i[new create]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories

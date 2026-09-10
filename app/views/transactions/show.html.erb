@@ -52,6 +52,7 @@
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div>
         <% split_locked = @entry.split_child? || @entry.split_parent? %>
+        <% emi_locked = @entry.emi_purchase? || @entry.emi_installment? %>
         <% edit_locked = !can_edit_entry? %>
         <% annotate_locked = !can_annotate_entry? %>
         <%= styled_form_with model: @entry,
@@ -66,21 +67,21 @@
           <%= f.date_field :date,
                 label: t(".date_label"),
                 max: Date.current,
-                disabled: @entry.linked? || split_locked || edit_locked,
+                disabled: @entry.linked? || split_locked || emi_locked || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
                     [[t("shared.transaction_tabs.expense"), "outflow"], [t("shared.transaction_tabs.income"), "inflow"]],
                     { container_class: "w-1/3", label: t(".nature"), selected: @entry.amount.negative? ? "inflow" : "outflow" },
-                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? || split_locked || edit_locked } %>
+                    { data: { "auto-submit-form-target": "auto" }, disabled: @entry.linked? || split_locked || emi_locked || edit_locked } %>
               <%= f.money_field :amount, label: t(".amount"),
                     container_class: "w-2/3",
                     auto_submit: true,
                     min: 0,
                     value: @entry.amount.abs,
-                    disabled: @entry.linked? || split_locked || edit_locked,
-                    disable_currency: @entry.linked? || split_locked || edit_locked %>
+                    disabled: @entry.linked? || split_locked || emi_locked || edit_locked,
+                    disable_currency: @entry.linked? || split_locked || emi_locked || edit_locked %>
             </div>
             <%= f.fields_for :entryable do |ef| %>
               <%= render DS::CategorySelect.new(
@@ -228,6 +229,31 @@
       <% end %>
     <% end %>
 
+    <%# EMI installment: show link back to the plan %>
+    <% if @entry.emi_installment? %>
+      <% dialog.with_section(title: t("emi_plans.child.title"), open: true) do %>
+        <div class="px-3 py-2">
+          <div class="p-3 rounded-lg border border-secondary space-y-3">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-primary">
+                <%= t("emi_plans.child.description", number: @entry.emi_installment_number) %>
+              </p>
+            </div>
+            <div class="border-t border-primary pt-2">
+              <%= render DS::Link.new(
+                text: t("emi_plans.child.view_plan"),
+                icon: "calendar-clock",
+                variant: "ghost",
+                size: :sm,
+                href: transaction_emi_plan_path(@entry),
+                frame: :drawer
+              ) %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
     <%# For split child, show parent info and actions %>
     <% if @entry.split_child? %>
       <% dialog.with_section(title: t("splits.child.title"), open: true) do %>
@@ -317,6 +343,7 @@
           </div>
         <% end %>
         <% unless @entry.split_child? %>
+          <% emi_kind_locked = @entry.emi_purchase? && (@entry.originated_emi_plan.active? || @entry.originated_emi_plan.posted_installments.exists?) %>
           <div class="pb-4">
             <%= styled_form_with model: @entry,
                   url: transaction_path(@entry),
@@ -331,6 +358,7 @@
                   </div>
                   <%= ef.toggle :kind, {
                         checked: @entry.transaction.one_time?,
+                        disabled: emi_kind_locked,
                         data: { auto_submit_form_target: "auto" }
                       }, "one_time", "standard" %>
                 </div>
@@ -351,6 +379,38 @@
               variant: "outline",
               href: new_transaction_split_path(@entry),
               frame: :modal
+            ) %>
+          </div>
+        <% end %>
+        <%# Convert to EMI %>
+        <% if @entry.transaction.emi_convertible? %>
+          <div class="flex items-center justify-between gap-4 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t("emi_plans.show.button_title") %></h4>
+              <p class="text-secondary"><%= t("emi_plans.show.button_description") %></p>
+            </div>
+            <%= render DS::Link.new(
+              text: t("emi_plans.show.button"),
+              icon: "calendar-clock",
+              variant: "outline",
+              href: new_transaction_emi_plan_path(@entry),
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
+        <%# View EMI Plan (already converted) %>
+        <% if @entry.emi_purchase? %>
+          <div class="flex items-center justify-between gap-4 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t("emi_plans.show.view_button_title") %></h4>
+              <p class="text-secondary"><%= t("emi_plans.show.view_button_description", count: @entry.originated_emi_plan.tenure_months) %></p>
+            </div>
+            <%= render DS::Link.new(
+              text: t("emi_plans.show.view_button"),
+              icon: "calendar-clock",
+              variant: "outline",
+              href: transaction_emi_plan_path(@entry),
+              frame: :drawer
             ) %>
           </div>
         <% end %>
@@ -384,8 +444,8 @@
               ) %>
             </div>
           <% end %>
-          <!-- Convert to Trade (Investment Accounts Only, not already converted) -->
-          <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? %>
+          <!-- Convert to Trade (Investment Accounts Only, not already converted, not EMI-linked) -->
+          <% if @entry.account.investment? && @entry.entryable.is_a?(Transaction) && !@entry.excluded? && !@entry.emi_linked? %>
             <div class="flex items-center justify-between gap-2 p-3">
               <div class="text-sm space-y-1">
                 <h4 class="text-primary"><%= t(".convert_to_trade_title") %></h4>
@@ -433,8 +493,9 @@
           <!-- Mark as Recurring Form -->
           <%= render "transactions/mark_recurring", entry: @entry %>
         <% end %>
-        <%# Delete Transaction Form - hidden for split children %>
-        <% unless @entry.split_child? %>
+        <%# Delete Transaction Form - hidden for split children and EMI purchase/installment entries
+            (deleting those directly is blocked by Entry's before_destroy guards; foreclose the plan instead) %>
+        <% unless @entry.split_child? || @entry.emi_purchase? || @entry.emi_installment? %>
           <div class="flex items-center justify-between gap-2 p-3">
             <div class="text-sm space-y-1">
               <h4 class="text-primary"><%= t(".delete_title") %></h4>

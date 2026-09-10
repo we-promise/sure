@@ -14,6 +14,20 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
+      # Converting a purchase to EMI and converting it to a transfer are
+      # mutually exclusive operations. Skip silently here (same as the
+      # existing txn.transfer? skip below) rather than let it reach
+      # Transaction#update! and raise past
+      # cannot_change_kind_of_active_emi_entry mid-batch, which would halt
+      # every other transaction in this rule run.
+      #
+      # emi_fee entries are only linked to their plan via
+      # EmiPlan#processing_fee_entry (not emi_plan_id like installments), so
+      # Transaction#cannot_change_kind_of_active_emi_entry can't catch this
+      # path -- skip them explicitly via emi_linked? (covers purchase,
+      # installment, and fee) rather than relying on that guard.
+      next false if entry.emi_linked?
+
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
