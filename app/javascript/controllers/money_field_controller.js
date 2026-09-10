@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import { CurrenciesService } from "services/currencies_service";
 import parseLocaleFloat from "utils/parse_locale_float";
 import parseAmountPaste from "utils/parse_amount_paste";
-import evaluateAmountExpression from "utils/evaluate_amount_expression";
+import evaluateAmountExpression, { formatAmountForDisplay } from "utils/evaluate_amount_expression";
 
 // Connects to data-controller="money-field"
 // when currency select change, update the input value with the correct placeholder and step
@@ -53,7 +53,7 @@ export default class extends Controller {
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
               ? this.precisionValue
               : currencyData.default_precision;
-          this.amountTarget.value = this.#formatForDisplay(
+          this.amountTarget.value = formatAmountForDisplay(
             parsedAmount,
             precision,
             rawValue,
@@ -107,7 +107,7 @@ export default class extends Controller {
     if (result === null) return;
 
     const precision = this.#fieldPrecision();
-    this.amountTarget.value = this.#formatForDisplay(result, precision, raw);
+    this.amountTarget.value = formatAmountForDisplay(result, precision, raw);
 
     this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }));
     this.amountTarget.dispatchEvent(new Event("change", { bubbles: true }));
@@ -138,23 +138,11 @@ export default class extends Controller {
     input.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  // Formats a parsed amount for display, matching the decimal separator the
-  // user actually typed: `toFixed` always renders a dot, so a comma typed
-  // "12,50" would otherwise flip back to "12.50" the moment the field is
-  // normalized. Heuristic: if the raw text the user typed contains a comma
-  // at all, they're using a comma decimal convention, so render the result
-  // with a comma too.
-  #formatForDisplay(amount, precision, raw) {
-    const formatted = precision === null ? String(amount) : amount.toFixed(precision);
-    return typeof raw === "string" && raw.includes(",")
-      ? formatted.replace(".", ",")
-      : formatted;
-  }
-
   // The value displayed on screen may use a comma decimal (see
-  // #formatForDisplay above), but the server only accepts a dot — Rails'
-  // decimal typecast doesn't treat a comma as a decimal point, it just
-  // strips it, silently turning "54,43" into 5443. The "formdata" event
+  // formatAmountForDisplay in evaluate_amount_expression.js), but the
+  // server only accepts a dot — Rails' decimal typecast doesn't treat a
+  // comma as a decimal point, it just strips it, silently turning "54,43"
+  // into 5443. The "formdata" event
   // fires whenever this field's form is serialized — on a native submit and
   // on Turbo's fetch-based one alike — so the submitted entry can be
   // rewritten to the canonical dot form right here, without touching what's
