@@ -57,7 +57,7 @@
                 <%= render DS::Pill.new(label: t("transactions.transaction.split"), tone: :neutral, marker: false, icon: "split") %>
               <% end %>
               <% if entry.split_child? && !in_split_group %>
-                <span class="text-secondary" title="<%= t("transactions.transaction.split_child_tooltip") %>"><%= icon "corner-down-right", size: "sm", color: "current" %></span>
+                <%= render DS::Tooltip.new(text: t("transactions.transaction.split_child_tooltip"), icon: "corner-down-right", size: "sm") %>
               <% end %>
               <% if transaction.transfer.present? %>
                 <%= render "transactions/transfer_match", transaction: transaction %>
