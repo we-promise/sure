@@ -337,6 +337,24 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalizes Fidelity card payments to negative Sure inflows" do
+    [ "2303.00", "-2303.00" ].each_with_index do |raw_amount, index|
+      tx = {
+        id: "tx_card_payment_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: "PAYMENT MADE BY ACCOUNT ENDING IN:9923",
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_card_payment_#{index}", source: "simplefin")
+      assert_equal BigDecimal("-2303.00"), entry.amount
+      assert_equal "card_payment", entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
   test "leaves dividend expenses on upstream sign behavior" do
     [ "DIVIDEND TAX", "DIVIDEND WITHHOLDING" ].each_with_index do |description, index|
       tx = {
@@ -376,20 +394,27 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
   test "does not normalize transaction signs for non-Fidelity institutions" do
     @simplefin_account.update!(org_data: { name: "Example Credit Union" })
-    tx = {
-      id: "tx_other_institution_direct_debit",
-      amount: "25.00",
-      currency: "USD",
-      description: "DIRECT DEBIT",
-      posted: Date.current.to_s
-    }
+    cases = [
+      [ "direct_debit", "25.00", "DIRECT DEBIT", BigDecimal("-25.00") ],
+      [ "card_payment", "-25.00", "PAYMENT MADE BY ACCOUNT ENDING IN:9923", BigDecimal("25.00") ]
+    ]
 
-    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+    cases.each do |label, raw_amount, description, expected_amount|
+      tx = {
+        id: "tx_other_institution_#{label}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
 
-    entry = @account.entries.find_by!(external_id: "simplefin_tx_other_institution_direct_debit", source: "simplefin")
-    assert_equal BigDecimal("-25.00"), entry.amount
-    sf = entry.transaction.extra.fetch("simplefin")
-    assert_not sf.key?("amount_normalization"), "expected non-Fidelity transactions to carry no amount_normalization key"
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_other_institution_#{label}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      sf = entry.transaction.extra.fetch("simplefin")
+      assert_not sf.key?("amount_normalization"), "expected non-Fidelity transactions to carry no amount_normalization key"
+    end
   end
 
   test "does not raise or normalize when org_data is missing or malformed" do

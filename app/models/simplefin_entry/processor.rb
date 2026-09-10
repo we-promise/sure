@@ -13,6 +13,7 @@ class SimplefinEntry::Processor
     eft_paid: { direction: :expense, pattern: /\AEFT\s+PAID\b/i },
     direct_deposit: { direction: :income, pattern: /\ADIRECT\s+DEPOSIT\b/i },
     check_received: { direction: :income, pattern: /\ACHECK\s+RECEIVED\b/i },
+    card_payment: { direction: :income, pattern: /\APAYMENT MADE BY ACCOUNT ENDING IN:\s*\d+\z/i },
     dividend: { direction: :income, pattern: /\ADIVIDEND(?:\s+(?:PAYMENT|RECEIVED|INCOME|CREDIT))?\z/i }
   }.freeze
   INSTITUTION_AMOUNT_NORMALIZATION_RULES = {
