@@ -142,6 +142,30 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == OtherLiability.display_name }.total
   end
 
+  test "sorts business accounts after nil and personal accounts within each account group" do
+    create_account(name: "A Business", balance: 1000, usage_type: "business", accountable: Depository.new)
+    create_account(name: "B Unknown", balance: 1000, usage_type: nil, accountable: Depository.new)
+    create_account(name: "C Personal", balance: 1000, usage_type: "personal", accountable: Depository.new)
+
+    account_names = BalanceSheet.new(@family).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal [ "B Unknown", "C Personal", "A Business" ], account_names
+  end
+
+  test "keeps selected account order within usage type buckets" do
+    user = users(:empty)
+    user.update!(default_account_order: "balance_desc")
+
+    create_account(name: "Business Low", owner: user, balance: 1000, usage_type: "business", accountable: Depository.new)
+    create_account(name: "Personal Low", owner: user, balance: 2000, usage_type: "personal", accountable: Depository.new)
+    create_account(name: "Business High", owner: user, balance: 3000, usage_type: "business", accountable: Depository.new)
+    create_account(name: "Unknown High", owner: user, balance: 4000, usage_type: nil, accountable: Depository.new)
+
+    account_names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal [ "Unknown High", "Personal Low", "Business High", "Business Low" ], account_names
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes

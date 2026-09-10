@@ -11,6 +11,14 @@
 
     <%= form.text_field :name, placeholder: t(".name_placeholder"), required: "required", label: t(".name_label") %>
 
+    <div class="flex items-center justify-between gap-3 py-2">
+      <div class="space-y-1">
+        <p class="text-sm text-primary"><%= t(".business_usage_label") %></p>
+        <p class="text-secondary text-sm"><%= t(".business_usage_hint") %></p>
+      </div>
+      <%= form.toggle :business_usage %>
+    </div>
+
     <% unless account.linked? %>
       <%= form.money_field :balance, label: t(".balance"), required: true, default_currency: Current.family.currency %>
     <% end %>

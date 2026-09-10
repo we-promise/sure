@@ -1,0 +1,7 @@
+<%# locals: (account:) %>
+
+<%= render DS::Pill.new(
+  label: t("accounts.usage_types.#{account.usage_type}"),
+  tone: account.business? ? :info : :neutral,
+  marker: false
+) %>

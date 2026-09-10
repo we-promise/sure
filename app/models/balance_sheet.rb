@@ -64,6 +64,12 @@ class BalanceSheet
     end
 
     def sorted(accounts)
+      non_business_accounts, business_accounts = accounts.partition { |account| account.usage_type != "business" }
+
+      sort_by_account_order(non_business_accounts) + sort_by_account_order(business_accounts)
+    end
+
+    def sort_by_account_order(accounts)
       account_order = user&.account_order
       order_key = account_order&.key || "name_asc"
 
