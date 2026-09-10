@@ -72,7 +72,13 @@ class QuestradeAccount::ActivitiesProcessor
       if type == TRADE_TYPE
         process_trade(data)
       elsif CASH_TYPE_TO_LABEL.key?(type)
-        process_cash_activity(data, CASH_TYPE_TO_LABEL[type])
+        label = CASH_TYPE_TO_LABEL[type]
+        # Dividends and interest are Trades in Sure, not Transactions.
+        if Trade::INCOME_LABELS.include?(label)
+          process_trade_income_activity(data, label)
+        else
+          process_cash_activity(data, label)
+        end
       elsif JOURNAL_TYPES.include?(type)
         if journal?(data)
           process_journal(data)
@@ -179,6 +185,43 @@ class QuestradeAccount::ActivitiesProcessor
         activity_label: "Transfer"
       )
       @trades_count += 1 if result
+    end
+
+    # Dividends and interest are trades with no quantity. The security
+    # Questrade names on the activity is a real association here, rather than
+    # the `extra[:security_id]` a Transaction has to stash it in.
+    def process_trade_income_activity(data, label)
+      net = parse_decimal(data[:netAmount])
+      return if net.nil?
+
+      signed_amount = -net # Questrade +in / -out  ->  Sure -in / +out
+      date = parse_date(data[:settlementDate]) ||
+             parse_date(data[:transactionDate]) ||
+             parse_date(data[:tradeDate]) ||
+             Date.current
+      currency = extract_currency(data, fallback: account.currency)
+
+      symbol = data[:symbol].to_s.strip
+      security = symbol.present? ? resolve_security(symbol, { name: data[:description], currency: data[:currency] }) : nil
+
+      name = data[:description].presence ||
+             (symbol.present? ? "#{label}: #{symbol}" : label)
+
+      result = import_adapter.import_trade(
+        external_id: external_id(data, "cash"),
+        # Interest names no instrument; the account's synthetic cash security
+        # stands in, as it does for manual interest.
+        security: security || Security.cash_for(account, currency: currency),
+        quantity: 0,
+        price: 0,
+        amount: signed_amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "questrade",
+        activity_label: label
+      )
+      @trades_count += 1 if result&.entryable.is_a?(Trade)
     end
 
     def process_cash_activity(data, label)

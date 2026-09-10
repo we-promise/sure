@@ -82,6 +82,60 @@ class QuestradeAccount::ProcessorTest < ActiveSupport::TestCase
     assert entry.entryable.is_a?(Trade)
   end
 
+  test "activities processor imports a dividend as a zero-quantity trade" do
+    @questrade_account.update!(raw_activities_payload: [
+      { "type" => "Dividends", "action" => "DIV", "symbol" => "AAPL", "symbolId" => 8049,
+        "quantity" => 0, "price" => 0, "netAmount" => 25.5,
+        "transactionDate" => "2026-06-01", "settlementDate" => "2026-06-01",
+        "currency" => "USD", "description" => "AAPL Cash Dividend" }
+    ])
+
+    result = QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
+
+    assert_equal 1, result[:trades]
+    assert_equal 0, result[:transactions]
+
+    entry = @account.reload.entries.find_by(source: "questrade")
+    assert entry.entryable.is_a?(Trade), "Dividends are recorded as Trades, matching manual entry"
+    assert_equal "Dividend", entry.entryable.investment_activity_label
+    assert_equal 0, entry.entryable.qty
+    assert_equal 0, entry.entryable.price
+    assert_equal "AAPL", entry.entryable.security.ticker
+    # Questrade signs +in / -out; Sure stores an inflow as negative.
+    assert_equal(-25.5, entry.amount.to_d)
+  end
+
+  test "activities processor imports interest against the cash security" do
+    @questrade_account.update!(raw_activities_payload: [
+      { "type" => "Interest", "action" => "", "symbol" => "", "symbolId" => 0,
+        "quantity" => 0, "price" => 0, "netAmount" => 4.2,
+        "transactionDate" => "2026-06-01", "settlementDate" => "2026-06-01",
+        "currency" => "CAD", "description" => "Interest Paid" }
+    ])
+
+    result = QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
+
+    assert_equal 1, result[:trades]
+    entry = @account.reload.entries.find_by(source: "questrade")
+    assert_equal "Interest", entry.entryable.investment_activity_label
+    assert entry.entryable.security.cash?
+    assert_equal(-4.2, entry.amount.to_d)
+  end
+
+  test "activities processor keeps a dividend reversal as an outflow" do
+    @questrade_account.update!(raw_activities_payload: [
+      { "type" => "Dividends", "action" => "DIV", "symbol" => "AAPL", "symbolId" => 8049,
+        "quantity" => 0, "price" => 0, "netAmount" => -25.5,
+        "transactionDate" => "2026-06-01", "settlementDate" => "2026-06-01",
+        "currency" => "USD", "description" => "AAPL Dividend Reversal" }
+    ])
+
+    QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
+
+    entry = @account.reload.entries.find_by(source: "questrade")
+    assert_equal 25.5, entry.amount.to_d, "A reclaim keeps its outflow sign rather than being forced to income"
+  end
+
   test "activities processor skips entries with a blank type" do
     @questrade_account.update!(raw_activities_payload: [
       { "type" => "", "symbol" => "AAPL", "quantity" => 10, "price" => 100.0 }

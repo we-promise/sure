@@ -653,6 +653,149 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_match(/Entry with external_id.*already exists with different entryable type/i, exception.message)
   end
 
+  # Dividends and interest used to be imported as Transactions. Those rows are
+  # left as they are — Transaction carries merchant, transfer, taggings and
+  # attachments that Trade has no column for — while new income arrives as a
+  # trade. This is the one type mismatch that does not raise.
+  test "keeps a dividend already imported as a transaction instead of raising" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    original = adapter.import_transaction(
+      external_id: "legacy_div",
+      amount: -25.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Dividend - AAPL",
+      source: "plaid",
+      investment_activity_label: "Dividend"
+    )
+
+    result = nil
+    assert_no_difference "investment_account.entries.count" do
+      result = adapter.import_trade(
+        external_id: "legacy_div",
+        security: securities(:aapl),
+        quantity: 0,
+        price: 0,
+        amount: -25.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid",
+        activity_label: "Dividend"
+      )
+    end
+
+    assert_equal original.id, result.id
+    assert result.entryable.is_a?(Transaction), "the existing representation is preserved"
+    assert_equal [ "legacy_trade_income_transaction" ], adapter.skipped_entries.map { |e| e[:reason] }
+  end
+
+  test "still raises when a non-income trade collides with a transaction carrying an income label" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    adapter.import_transaction(
+      external_id: "legacy_div_buy",
+      amount: -25.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Dividend - AAPL",
+      source: "plaid",
+      investment_activity_label: "Dividend"
+    )
+
+    # The relaxation is keyed on the incoming trade being income, so a genuine
+    # buy landing on this external_id is still the collision it always was.
+    assert_raises(ArgumentError) do
+      adapter.import_trade(
+        external_id: "legacy_div_buy",
+        security: securities(:aapl),
+        quantity: 5,
+        price: 150.00,
+        amount: 750.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid",
+        activity_label: "Buy"
+      )
+    end
+  end
+
+  test "records a debug log entry when a legacy trade income transaction is skipped" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    adapter.import_transaction(
+      external_id: "mismatch_logged",
+      amount: 100.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Test Transaction",
+      source: "plaid"
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      adapter.import_trade(
+        external_id: "mismatch_logged",
+        security: securities(:aapl),
+        quantity: 0,
+        price: 0,
+        amount: -25.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid",
+        activity_label: "Dividend"
+      )
+    end
+
+    log = DebugLogEntry.order(created_at: :desc).first
+    assert_equal "sync", log.category
+    assert_equal "warn", log.level, "an actionable, persistent condition, not an incidental fact"
+    assert_equal investment_account, log.account
+    assert_equal "plaid", log.provider_key
+    assert_match(/Delete the Transaction/, log.message, "the operator needs to know the remedy")
+  end
+
+  test "rate limits the legacy income debug log so a re-delivered history cannot flood it" do
+    # The test env runs :null_store, where the lease can never be held, so swap
+    # in a real store — the rate limit is the behavior under test.
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    3.times do |i|
+      adapter.import_transaction(
+        external_id: "mismatch_flood_#{i}",
+        amount: 100.00 + i,
+        currency: "USD",
+        date: Date.today,
+        name: "Test Transaction #{i}",
+        source: "plaid"
+      )
+    end
+
+    # A provider that re-delivers its whole history hits this on every sync.
+    assert_difference "DebugLogEntry.count", 1 do
+      3.times do |i|
+        adapter.import_trade(
+          external_id: "mismatch_flood_#{i}",
+          security: securities(:aapl),
+          quantity: 0,
+          price: 0,
+          amount: -25.00,
+          currency: "USD",
+          date: Date.today,
+          source: "plaid",
+          activity_label: "Dividend"
+        )
+      end
+    end
+
+    assert_equal 3, adapter.skipped_entries.size, "every skip is still recorded for sync stats"
+  end
+
   test "claims manual transaction when provider syncs matching transaction" do
     # Create a manual transaction (no external_id or source)
     manual_entry = @account.entries.create!(
@@ -1548,5 +1691,56 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_not booked_entry.transaction.pending?,
         "pending flag must be cleared even for user-modified entries"
     end
+  end
+
+  # === Dividends and interest ===
+  #
+  # These are trades with no quantity: qty 0, price 0, and the cash value on the
+  # Entry — the shape Trade::CreateForm#create_income_trade builds for manual
+  # entry. Providers go through import_trade like any other trade.
+
+  test "imports a dividend as a zero-quantity trade" do
+    investment_adapter = Account::ProviderImportAdapter.new(accounts(:investment))
+
+    entry = investment_adapter.import_trade(
+      external_id: "prov_div_1",
+      security: securities(:aapl),
+      quantity: 0,
+      price: 0,
+      amount: -25.0,
+      currency: "USD",
+      date: Date.current,
+      name: "Dividend: AAPL",
+      source: "test_provider",
+      activity_label: "Dividend"
+    )
+
+    assert entry.entryable.is_a?(Trade)
+    assert_equal 0, entry.trade.qty
+    assert_equal 0, entry.trade.price
+    assert_equal 0, entry.trade.fee, "fee defaults to zero, matching manual income entry"
+    assert_equal "Dividend", entry.trade.investment_activity_label
+    assert_equal securities(:aapl), entry.trade.security
+    assert_equal(-25.0, entry.amount)
+  end
+
+  test "a zero-quantity income trade keeps its label rather than being inferred as a buy" do
+    investment_adapter = Account::ProviderImportAdapter.new(accounts(:investment))
+
+    entry = investment_adapter.import_trade(
+      external_id: "prov_int_1",
+      security: Security.cash_for(accounts(:investment)),
+      quantity: 0,
+      price: 0,
+      amount: -3.0,
+      currency: "USD",
+      date: Date.current,
+      name: "Interest",
+      source: "test_provider",
+      activity_label: "Interest"
+    )
+
+    assert_equal "Interest", entry.trade.investment_activity_label
+    assert entry.trade.security.cash?
   end
 end

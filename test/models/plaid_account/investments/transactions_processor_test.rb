@@ -43,6 +43,119 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Buy 1 share of AAPL", entry.name
   end
 
+  # The shared plaid_accounts(:one) fixture is linked to a Depository account,
+  # which cannot hold trades. Investment income only becomes a Trade on an
+  # account that can, so these tests link it to an Investment first.
+  def link_investment_account!
+    @plaid_account.account.update!(accountable: Investment.new)
+    @plaid_account.reload
+  end
+
+  test "creates dividends as zero-quantity trades carrying the cash amount" do
+    link_investment_account!
+    test_investments_payload = {
+      transactions: [
+        {
+          "investment_transaction_id" => "div_1",
+          "security_id" => "123",
+          "type" => "dividend",
+          # Plaid reports 0 qty and 0 price for an income payment: the value
+          # lives in `amount` alone, which qty * price would have thrown away.
+          "quantity" => 0,
+          "price" => 0,
+          "amount" => -25.5,
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "AAPL Dividend"
+        }
+      ]
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl)))
+
+    processor = PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
+      processor.process
+    end
+
+    entry = Entry.order(created_at: :desc).first
+
+    assert_equal(-25.5, entry.amount)
+    assert_equal "Dividend", entry.trade.investment_activity_label
+    assert_equal 0, entry.trade.qty
+    assert_equal 0, entry.trade.price
+    assert_equal securities(:aapl), entry.trade.security
+  end
+
+  test "creates interest as a zero-quantity trade" do
+    link_investment_account!
+    test_investments_payload = {
+      transactions: [
+        {
+          "investment_transaction_id" => "int_1",
+          "security_id" => "123",
+          "type" => "interest",
+          "quantity" => 0,
+          "price" => 0,
+          "amount" => -3.25,
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "Interest payment"
+        }
+      ]
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl)))
+
+    processor = PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference [ "Entry.count", "Trade.count" ], 1 do
+      processor.process
+    end
+
+    entry = Entry.order(created_at: :desc).first
+
+    assert_equal(-3.25, entry.amount)
+    assert_equal "Interest", entry.trade.investment_activity_label
+    assert_equal 0, entry.trade.qty
+  end
+
+  test "dividend reinvestment stays a real trade" do
+    link_investment_account!
+    test_investments_payload = {
+      transactions: [
+        {
+          "investment_transaction_id" => "rei_1",
+          "security_id" => "123",
+          "type" => "dividend reinvestment",
+          "quantity" => 2,
+          "price" => 10,
+          "amount" => 20,
+          "iso_currency_code" => "USD",
+          "date" => Date.current,
+          "name" => "Reinvest AAPL"
+        }
+      ]
+    }
+
+    @plaid_account.update!(raw_holdings_payload: test_investments_payload)
+
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl)))
+
+    processor = PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+    processor.process
+
+    entry = Entry.order(created_at: :desc).first
+
+    assert_equal "Reinvestment", entry.trade.investment_activity_label
+    assert_equal 2, entry.trade.qty
+  end
+
   test "creates cash transactions" do
     test_investments_payload = {
       transactions: [

@@ -42,7 +42,7 @@ class SnaptradeAccount::ActivitiesProcessor
   SELL_SIDE_TYPES = %w[SELL OPTION_SELL ASSIGNED].freeze
 
   # Activity types that result in Transaction records (cash movements)
-  CASH_TYPES = %w[DIVIDEND DIV CONTRIBUTION WITHDRAWAL TRANSFER_IN TRANSFER_OUT TRANSFER INTEREST FEE TAX CASH].freeze
+  CASH_TYPES = %w[CONTRIBUTION WITHDRAWAL TRANSFER_IN TRANSFER_OUT TRANSFER FEE TAX CASH].freeze
 
   def initialize(snaptrade_account)
     @snaptrade_account = snaptrade_account
@@ -90,9 +90,11 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing activity: type=#{activity_type}, id=#{external_id}"
 
-      # Determine if this is a trade or cash activity
+      # Determine if this is a trade, investment income, or cash activity
       if trade_activity?(activity_type)
         process_trade(data, activity_type, external_id)
+      elsif trade_income_activity?(activity_type)
+        process_trade_income_activity(data, activity_type, external_id)
       else
         process_cash_activity(data, activity_type, external_id)
       end
@@ -102,12 +104,19 @@ class SnaptradeAccount::ActivitiesProcessor
       TRADE_TYPES.include?(activity_type)
     end
 
-    def process_trade(data, activity_type, external_id)
-      # Extract and normalize symbol data
-      # SnapTrade activities have DIFFERENT structure than holdings:
-      #   activity.symbol.symbol = "MSTR" (ticker string directly)
-      #   activity.symbol.description = name
-      # Holdings have deeper nesting: symbol.symbol.symbol = ticker
+    # Dividends and interest are Trades in Sure, not Transactions. Routed on the
+    # resolved label so every alias (DIV as well as DIVIDEND) follows one path.
+    def trade_income_activity?(activity_type)
+      Trade::INCOME_LABELS.include?(label_from_type(activity_type))
+    end
+
+    # Extract and normalize symbol data.
+    # SnapTrade activities have DIFFERENT structure than holdings:
+    #   activity.symbol.symbol = "MSTR" (ticker string directly)
+    #   activity.symbol.description = name
+    # Holdings have deeper nesting: symbol.symbol.symbol = ticker
+    # Returns [ticker, symbol_data]; ticker is nil when the activity carries none.
+    def extract_symbol(data)
       raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
       symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
 
@@ -117,17 +126,20 @@ class SnaptradeAccount::ActivitiesProcessor
       # Determine ticker based on data type
       if raw_symbol_data.is_a?(String)
         # Activities: symbol.symbol is the ticker string directly
-        ticker = raw_symbol_data
-        symbol_data = symbol_wrapper # Use the wrapper for description, etc.
+        [ raw_symbol_data, symbol_wrapper ] # Use the wrapper for description, etc.
       elsif raw_symbol_data.is_a?(Hash)
         # Holdings structure: symbol.symbol is an object with symbol inside
         symbol_data = raw_symbol_data.with_indifferent_access
         ticker = symbol_data["symbol"] || symbol_data[:symbol]
         ticker = symbol_data["raw_symbol"] if ticker.is_a?(Hash)
+        [ ticker, symbol_data ]
       else
-        ticker = nil
-        symbol_data = {}
+        [ nil, {}.with_indifferent_access ]
       end
+    end
+
+    def process_trade(data, activity_type, external_id)
+      ticker, symbol_data = extract_symbol(data)
 
       # Must have a symbol for trades
       if ticker.blank?
@@ -200,6 +212,59 @@ class SnaptradeAccount::ActivitiesProcessor
         activity_label: label_from_type(activity_type)
       )
       @trades_count += 1 if result
+    end
+
+    # Dividends and interest are trades with no quantity.
+    def process_trade_income_activity(data, activity_type, external_id)
+      amount = parse_decimal(data[:amount]) || parse_decimal(data["amount"]) ||
+               parse_decimal(data[:net_amount]) || parse_decimal(data["net_amount"])
+      return if amount.nil? || amount.zero?
+
+      activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
+                      parse_date(data[:trade_date]) || parse_date(data["trade_date"]) || Date.current
+
+      ticker, symbol_data = extract_symbol(data)
+      security = ticker.present? ? resolve_security(ticker, symbol_data) : nil
+
+      # Same sign normalization the cash path applies, so the direction logic
+      # stays in one place and reversals keep their outflow sign.
+      amount = normalize_cash_amount(amount, activity_type)
+
+      label = label_from_type(activity_type)
+      description = data[:description] || data["description"] || build_trade_income_name(label, security&.ticker || ticker)
+
+      currency_data = data[:currency] || data["currency"]
+      currency = if currency_data.is_a?(Hash)
+        currency_data.with_indifferent_access[:code]
+      elsif currency_data.is_a?(String)
+        currency_data
+      else
+        account.currency
+      end
+
+      Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing #{label.downcase}: amount=#{amount} date=#{activity_date}"
+
+      result = import_adapter.import_trade(
+        external_id: external_id,
+        # SnapTrade names no instrument on an interest payment; the account's
+        # synthetic cash security stands in, as it does for manual interest.
+        security: security || Security.cash_for(account, currency: currency),
+        quantity: 0,
+        price: 0,
+        amount: amount,
+        currency: currency,
+        date: activity_date,
+        name: description,
+        source: "snaptrade",
+        activity_label: label
+      )
+      @trades_count += 1 if result&.entryable.is_a?(Trade)
+    end
+
+    # Mirrors the manual form's naming ("Dividend: AAPL", "Interest"), used only
+    # when SnapTrade sends no description of its own.
+    def build_trade_income_name(label, ticker)
+      ticker.present? ? "#{label}: #{ticker}" : label
     end
 
     def process_cash_activity(data, activity_type, external_id)

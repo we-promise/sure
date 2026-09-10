@@ -655,6 +655,14 @@ class Account::ProviderImportAdapter
 
       # Validate entryable type matches to prevent external_id collisions
       if entry.persisted? && !entry.entryable.is_a?(Trade)
+        # Dividends and interest used to be imported as Transactions instead of Trades, so entryable type won't match on sync.
+        # We can't convert them into Trades without deleting user data, so we skip them instead.
+        if legacy_trade_income_transaction?(entry, activity_label)
+          record_skip(entry, "legacy_trade_income_transaction")
+          log_legacy_trade_income_transaction(entry, source)
+          return entry
+        end
+
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
 
@@ -1039,6 +1047,47 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # Recognizes legacy income transactions that were imported as Transactions instead of Trades.
+    #
+    # @param entry [Entry] The entry to check
+    # @param activity_label [String] The investment activity label of the entry
+    # @return [Boolean] True if the entry is a legacy income transaction, false otherwise
+    def legacy_trade_income_transaction?(entry, activity_label)
+      Trade::INCOME_LABELS.include?(activity_label) && entry.entryable.is_a?(Transaction)
+    end
+
+    # How often to record the same account's legacy-trade-income skips.
+    LEGACY_TRADE_INCOME_LOG_INTERVAL = 1.day
+
+    # Logs when a legacy income transaction is skipped because it was previously imported
+    # as a Transaction instead of a Trade.
+    # Only log once per account per provider per interval to avoid log spam.
+    def log_legacy_trade_income_transaction(entry, source)
+      cache_key = [ "legacy_trade_income_transaction", account.id, source ]
+
+      # read-then-write is not atomic; `unless_exist` maps to Redis SET NX, so
+      # only one sync ever wins the lease and logs.
+      return unless Rails.cache.write(cache_key, true, expires_in: LEGACY_TRADE_INCOME_LOG_INTERVAL, unless_exist: true)
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "warn",
+        message: "Dividend/interest could not be synced as a Trade because it was previously synced as a Transaction. " \
+                 "Delete the Transaction manually to let the next sync import it as a Trade.",
+        source: "Account::ProviderImportAdapter#import_trade",
+        account: account,
+        provider_key: source,
+        metadata: {
+          # Sampled, not exhaustive: this logs at most once per account per day,
+          # so other entries on the same account are likely affected too.
+          sample_entry_id: entry.id,
+          sample_external_id: entry.external_id,
+          sample_investment_activity_label: entry.entryable.investment_activity_label,
+          source: source
+        }
+      )
+    end
 
     # Memoized per adapter instance (which is per-account). Membership in
     # goal_accounts is stable across a sync batch.
