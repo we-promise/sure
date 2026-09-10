@@ -342,11 +342,20 @@ class InvestmentStatement
         .to_a
         .group_by(&:security_id)
         .filter_map do |_security_id, holdings|
-          security = holdings.first.security
-          value = holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
-          next unless value.positive?
+          # Filter row by row rather than on the netted total. current_holdings
+          # is DISTINCT ON (account_id, security_id), so one security held in two
+          # accounts yields two rows; a negative row in one would otherwise net
+          # against the good row in the other and understate the position.
+          positive_holdings = holdings.select do |holding|
+            convert_to_family_currency(holding.amount, holding.currency).positive?
+          end
+          next if positive_holdings.empty?
 
-          [ security, value, holdings ]
+          security = positive_holdings.first.security
+          value = positive_holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
+
+          # positive_holdings, not holdings, so the trend excludes the bad row too.
+          [ security, value, positive_holdings ]
         end
         .sort_by { |_, value, _| -value }
     end

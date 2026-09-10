@@ -196,6 +196,43 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 100.0, top.first.weight, 0.01
   end
 
+  test "top_holdings ignores a negative row sharing a security with a good one" do
+    # current_holdings is DISTINCT ON (account_id, security_id), so one security
+    # held in two accounts yields two rows. A negative row in one account must
+    # not net against the good row in the other before the value is taken.
+    ira = create_investment_account(balance: 1000, cash_balance: 0, currency: "USD")
+    taxable = create_investment_account(balance: 0, cash_balance: 0, currency: "USD")
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+
+    Holding.create!(
+      account: ira, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    negative = Holding.new(
+      account: taxable, security: security, date: Date.current,
+      qty: 2, price: 250, amount: -500, currency: "USD"
+    )
+    negative.save!(validate: false)
+
+    # Trades give both rows a cost basis, so combined_holding_trend actually has
+    # something to combine — without them Holding#trend is nil and the trend
+    # half of the filtering would go unexercised.
+    create_trade_for(account: ira, security: security, qty: 5, price: 200)
+    create_trade_for(account: taxable, security: security, qty: 2, price: 250)
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal [ "AAPL" ], top.map(&:ticker)
+    assert_equal Money.new(1000, "USD"), top.first.amount_money
+    assert_in_delta 100.0, top.first.weight, 0.01
+
+    # The bad row must not reach the trend either: netting it in would give
+    # current 500 (1000 + -500) against previous 1500.
+    assert_equal Money.new(1000, "USD"), top.first.trend.current
+    assert_equal Money.new(1000, "USD"), top.first.trend.previous
+  end
+
   test "top_holdings computes trends only for the selected limit" do
     large = create_investment_account(balance: 5000, cash_balance: 0)
     small = create_investment_account(balance: 1000, cash_balance: 0)
@@ -467,6 +504,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    def create_trade_for(account:, security:, qty:, price:, date: Date.current)
+      account.entries.create!(
+        name: "Trade #{SecureRandom.hex(3)}",
+        amount: qty * price,
+        date: date,
+        currency: account.currency,
+        entryable: Trade.new(
+          security: security,
+          qty: qty,
+          price: price,
+          currency: account.currency
+        )
       )
     end
 
