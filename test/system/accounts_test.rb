@@ -162,11 +162,13 @@ class AccountsTest < ApplicationSystemTestCase
         click_on "All"
         # `text:`/`exact_text:` on the whole <details> would also have to match
         # the balance and sparkline placeholder rendered alongside the group
-        # name (see accounts/_accountable_group.html.erb), so match the name
-        # span itself instead — a click still bubbles to the native <summary>
-        # toggle. Exact match matters now that "Cash" (Depository) is a
-        # substring of "Physical Cash": substring matching made this ambiguous.
-        find("details summary span", exact_text: Accountable.from_type(accountable_type).display_name).click
+        # name (see accounts/_accountable_group.html.erb), so locate the name
+        # span with an exact match first (substring matching made "Cash" and
+        # "Physical Cash" ambiguous), then click its ancestor <details> — the
+        # element previously clicked directly, and the one whose collapsed
+        # bounding box reliably contains the click point.
+        group_name = Accountable.from_type(accountable_type).display_name
+        find("details summary span", exact_text: group_name).find(:xpath, "./ancestor::details[1]").click
         assert_text account_name
       end
 
