@@ -504,6 +504,16 @@ class User < ApplicationRecord
     account
   end
 
+  # Release highlight ("What's new" popup) tracking. Account-level so every
+  # device the user signs in from stays in sync.
+  def last_seen_release_tag
+    preferences&.[]("last_seen_release_tag")
+  end
+
+  def mark_release_seen!(tag)
+    update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+  end
+
   # Dashboard preferences management
   def dashboard_section_collapsed?(section_key)
     preferences&.dig("collapsed_sections", section_key) == true
