@@ -61,7 +61,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 2, @statement.current_holdings.count
   end
 
-  test "current_holdings uses the latest provider snapshot for linked accounts" do
+  test "current_holdings uses the latest provider import while preserving per-security price dates" do
     account = create_investment_account(balance: 2100, currency: "USD")
     coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
     coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
@@ -69,6 +69,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     current_security = Security.create!(ticker: "AAPL", name: "Apple")
     stale_security = Security.create!(ticker: "STALE", name: "Stale Security")
+    older_price_security = Security.create!(ticker: "MSFT", name: "Microsoft")
 
     current_holding = account.holdings.create!(
       security: current_security,
@@ -79,7 +80,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       currency: "USD",
       account_provider: account_provider
     )
-    account.holdings.create!(
+    stale_holding = account.holdings.create!(
       security: stale_security,
       date: Date.current - 1.day,
       qty: 5,
@@ -89,7 +90,19 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       account_provider: account_provider
     )
 
-    assert_equal [ current_holding.id ], @statement.current_holdings.pluck(:id)
+    older_price_current_holding = account.holdings.create!(
+      security: older_price_security,
+      date: Date.current - 1.day,
+      qty: 2,
+      price: 200,
+      amount: 400,
+      currency: "USD",
+      account_provider: account_provider
+    )
+    stale_holding.update_columns(created_at: 2.days.ago, updated_at: 2.days.ago)
+
+    assert_equal [ current_holding.id, older_price_current_holding.id ].sort,
+                 @statement.current_holdings.pluck(:id).sort
   end
 
   test "top_holdings ranks by family-currency value across currencies" do
@@ -315,7 +328,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       @statement.day_change
     end
 
-    holdings_queries = queries.grep(/FROM "holdings" INNER JOIN "accounts"/)
+    holdings_queries = queries.grep(/MAX\(provider_holdings\.updated_at::date\)/)
     assert_equal 1, holdings_queries.size,
       "current_holdings should only run its holdings query once per instance, not once per caller"
   end

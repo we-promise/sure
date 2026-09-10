@@ -73,13 +73,14 @@ class InvestmentStatement
       account_ids = investment_account_ids
 
       if account_ids.any?
-        # Match Account#current_holdings: provider-linked accounts use the
-        # latest provider snapshot, while manual accounts use their latest
-        # holding per security in the account currency.
+        # Provider price dates can differ within one import (for example,
+        # Plaid's institution_price_as_of is per security). Use the day each
+        # holding was imported to identify the latest provider snapshot while
+        # preserving each security's provider-supplied price date.
         provider_snapshot = <<~SQL.squish
           holdings.account_provider_id IS NOT NULL
-          AND holdings.date = (
-            SELECT MAX(provider_holdings.date)
+          AND holdings.updated_at::date = (
+            SELECT MAX(provider_holdings.updated_at::date)
             FROM holdings provider_holdings
             WHERE provider_holdings.account_id = holdings.account_id
               AND provider_holdings.account_provider_id IS NOT NULL
@@ -93,20 +94,23 @@ class InvestmentStatement
             WHERE provider_holdings.account_id = holdings.account_id
               AND provider_holdings.account_provider_id IS NOT NULL
           )
-          AND holdings.currency = accounts.currency
+          AND holdings.currency = (
+            SELECT accounts.currency
+            FROM accounts
+            WHERE accounts.id = holdings.account_id
+          )
           AND holdings.id = (
             SELECT latest_holdings.id
             FROM holdings latest_holdings
             WHERE latest_holdings.account_id = holdings.account_id
               AND latest_holdings.security_id = holdings.security_id
-              AND latest_holdings.currency = accounts.currency
+              AND latest_holdings.currency = holdings.currency
             ORDER BY latest_holdings.date DESC
             LIMIT 1
           )
         SQL
 
         Holding
-          .joins(:account)
           .where(account_id: account_ids)
           .where.not(qty: 0)
           .where(Arel.sql("(#{provider_snapshot}) OR (#{manual_snapshot})"))
