@@ -110,11 +110,13 @@ class MonobankEntry::Processor
     end
 
     # The id of the Sure category the transaction's MCC maps to, or nil when no matcher
-    # was injected, the MCC is missing, or it has no confident equivalent among the
-    # family's categories. The import adapter applies this via enrich_attribute, so it
-    # never overwrites a category the user has set or locked.
+    # was injected, the account has category matching switched off, the MCC is missing,
+    # or it has no confident equivalent among the family's categories. The import
+    # adapter applies this via enrich_attribute, so it never overwrites a category the
+    # user has set or locked.
     def matched_category_id
       return nil unless @category_matcher
+      return nil unless account&.enable_category_matcher?
 
       @category_matcher.match(data[:mcc])&.id
     end

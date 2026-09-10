@@ -129,12 +129,58 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
     assert first.start_with?("monobank_pending_")
   end
 
+  test "applies the matched Sure category when a category_matcher is provided" do
+    @family.categories.bootstrap!
+
+    entry = process(
+      **grocery_transaction,
+      category_matcher: category_matcher
+    )
+
+    assert_equal "Groceries", entry.transaction.category&.name
+    # The raw MCC is still preserved in extra for reference.
+    assert_equal 5411, entry.transaction.extra.dig("monobank", "mcc")
+  end
+
+  test "skips category matching when the account has the matcher switched off" do
+    @family.categories.bootstrap!
+    @account.update!(enable_category_matcher: false)
+
+    entry = process(
+      **grocery_transaction,
+      category_matcher: category_matcher
+    )
+
+    assert_nil entry.transaction.category_id
+    # Still imported, still carries the MCC — only the auto-category is withheld.
+    assert_equal 5411, entry.transaction.extra.dig("monobank", "mcc")
+  end
+
   private
 
-    def process(**transaction_data)
+    def process(category_matcher: nil, **transaction_data)
       MonobankEntry::Processor.new(
         transaction_data.deep_stringify_keys,
-        monobank_account: @monobank_account
+        monobank_account: @monobank_account,
+        category_matcher: category_matcher
       ).process
+    end
+
+    def grocery_transaction
+      {
+        id: "tx_cat_1",
+        time: MIDDAY_UNIX,
+        description: "Silpo",
+        mcc: 5411,
+        originalMcc: 5411,
+        hold: false,
+        amount: -50_000,
+        operationAmount: -50_000,
+        currencyCode: 980
+      }
+    end
+
+    def category_matcher
+      MonobankAccount::Transactions::CategoryMatcher.new(@family.categories.to_a, locale: @family.locale)
     end
 end
