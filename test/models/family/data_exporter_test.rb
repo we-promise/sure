@@ -172,7 +172,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     Zip::File.open_buffer(zip_data) do |zip|
       # Check accounts.csv
       accounts_csv = zip.read("accounts.csv")
-      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ],
+      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "iban", "created_at" ],
                    CSV.parse(accounts_csv, headers: true).headers
 
       # Check version marker
@@ -182,7 +182,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check transactions.csv
       transactions_csv = zip.read("transactions.csv")
-      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ],
+      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "counterparty_iban" ],
                    CSV.parse(transactions_csv, headers: true).headers
 
       # Check trades.csv
@@ -277,6 +277,52 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_includes row["tags"], "\\,"
       assert_includes row["tags"], "\\|"
       assert_equal [ @tag.name, tag2.name ].sort, Import::Row.new(tags: row["tags"]).tags_list.sort
+    end
+  end
+
+  test "exports account iban and leaves it blank when not set" do
+    @account.update!(iban: "DE89370400440532013000")
+    other_account = @family.accounts.create!(name: "No IBAN Account", balance: 0, currency: "USD", accountable: Depository.new)
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("accounts.csv"), headers: true)
+
+      with_iban = rows.find { |csv_row| csv_row["name"] == @account.name }
+      without_iban = rows.find { |csv_row| csv_row["name"] == other_account.name }
+
+      assert_equal "DE89370400440532013000", with_iban["iban"]
+      assert_nil without_iban["iban"]
+    end
+  end
+
+  test "exports transaction counterparty iban and leaves it blank when not present" do
+    with_iban_entry = @account.entries.create!(
+      name: "CSV Rent Payment",
+      amount: 850,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "DE89370400440532013000" })
+    )
+    without_iban_entry = @account.entries.create!(
+      name: "CSV Cash Withdrawal",
+      amount: 40,
+      currency: "USD",
+      date: Date.parse("2024-05-16"),
+      entryable: Transaction.new(category: @category)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("transactions.csv"), headers: true)
+
+      with_iban_row = rows.find { |csv_row| csv_row["name"] == with_iban_entry.name }
+      without_iban_row = rows.find { |csv_row| csv_row["name"] == without_iban_entry.name }
+
+      assert_equal "DE89370400440532013000", with_iban_row["counterparty_iban"]
+      assert_nil without_iban_row["counterparty_iban"]
     end
   end
 
