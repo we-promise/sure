@@ -35,13 +35,20 @@ class Provider::Github
       "#{owner}/#{name}"
     end
 
+    # Caches both hits (2h) and misses/failures (5min, as a false sentinel):
+    # without the sentinel, a missing tag or GitHub outage would retry the
+    # outbound call on every user's first interaction of every page.
     def fetch_cached_release_notes(cache_key)
-      Rails.cache.fetch(cache_key, expires_in: 2.hours) do
-        release = yield
-        release && serialize_release_notes(release)
-      end
+      cached = Rails.cache.read(cache_key)
+      return cached.presence unless cached.nil?
+
+      release = yield
+      notes = release && serialize_release_notes(release)
+      Rails.cache.write(cache_key, notes || false, expires_in: notes ? 2.hours : 5.minutes)
+      notes
     rescue => e
       Rails.logger.error "Failed to fetch GitHub release notes (#{cache_key}): #{e.message}"
+      Rails.cache.write(cache_key, false, expires_in: 5.minutes)
       nil
     end
 

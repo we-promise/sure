@@ -32,6 +32,20 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
     assert_nil ReleaseHighlights.pending_tag_for(@user)
   end
 
+  test "mark_release_seen! never regresses to an older tag" do
+    @user.mark_release_seen!("v0.7.5-alpha.7")
+    @user.mark_release_seen!("v0.7.4")
+
+    assert_equal "v0.7.5-alpha.7", @user.reload.last_seen_release_tag
+  end
+
+  test "mark_release_seen! accepts a newer tag" do
+    @user.mark_release_seen!("v0.7.4")
+    @user.mark_release_seen!("v0.7.5-alpha.7")
+
+    assert_equal "v0.7.5-alpha.7", @user.reload.last_seen_release_tag
+  end
+
   test "every release is eligible while the rollout is being tested" do
     assert ReleaseHighlights.eligible?(Semver.new("0.7.5-alpha.7"))
     assert ReleaseHighlights.eligible?(Semver.new("0.7.4"))

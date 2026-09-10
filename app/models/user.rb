@@ -511,7 +511,23 @@ class User < ApplicationRecord
   end
 
   def mark_release_seen!(tag)
-    update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+    with_lock do
+      current = last_seen_release_tag
+
+      # Never regress the marker: a stale tab (or an old app version during a
+      # rolling deploy) must not make an already-acknowledged release look
+      # unseen again. Unparseable tags fall back to last-write-wins.
+      if current
+        newer_or_same = begin
+          Gem::Version.new(tag.delete_prefix("v")) >= Gem::Version.new(current.delete_prefix("v"))
+        rescue ArgumentError
+          true
+        end
+        next unless newer_or_same
+      end
+
+      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+    end
   end
 
   # Dashboard preferences management
