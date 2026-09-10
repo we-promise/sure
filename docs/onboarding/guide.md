@@ -122,7 +122,7 @@ Most bank accounts (checking, savings, money market) are **Cash Accounts**
 2. Choose **Enter account balance** to add the account manually. (If bank sync is configured, admins also see **Link with ...** provider options here.)
 3. Fill in the details:
    - **Account name**
-   - **Balance on date** (your current balance)
+   - **Balance on date** (the balance as of the **Opening balance date** below - that date defaults to two years ago, so set it to today if you're entering your current balance)
    - **Opening balance date**
    - **Subtype** (this is where you specify checking, savings, or another type)
 4. Click **Create Account** when you are ready to proceed.
