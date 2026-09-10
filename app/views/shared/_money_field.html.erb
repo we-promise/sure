@@ -46,24 +46,23 @@
           <%= currency.symbol %>
         </span>
 
-        <%= form.number_field amount_method,
+        <%= form.text_field amount_method,
           class: "form-field__input",
           inline: true,
           placeholder: "100",
+          inputmode: "decimal",
           value: if options[:value]
             sprintf("%.#{options[:precision].presence || currency.default_precision}f", options[:value])
           elsif form.object && form.object.respond_to?(amount_method)
             val = form.object.public_send(amount_method)
             sprintf("%.#{options[:precision].presence || currency.default_precision}f", val) if val.present?
           end,
-          min: options[:min] || -99999999999999,
-          max: options[:max] || 99999999999999,
           step: options[:step] || currency.step,
           disabled: options[:disabled],
           data: (options[:amount_data] || {}).merge({
             "money-field-target": "amount",
             "auto-submit-form-target": ("auto" if options[:auto_submit]),
-            action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount" ].compact.join(" ")
+            action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount", "blur->money-field#normalizeAmount" ].compact.join(" ")
           }.compact),
           required: options[:required] %>
       </div>
