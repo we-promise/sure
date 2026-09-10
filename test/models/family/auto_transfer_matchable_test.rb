@@ -446,6 +446,56 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "funds_movement", inflow_entry.entryable.kind
   end
 
+  test "missing_transfer_suggestion_for finds an account whose iban matches the outflow's counterparty iban" do
+    @loan.update!(iban: "DE89370400440532013000")
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "de89 3704 0044 0532 0130 00" })
+
+    assert_equal @loan, @family.missing_transfer_suggestion_for(outflow_entry)
+  end
+
+  test "missing_transfer_suggestion_for returns nil without a counterparty iban" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry)
+  end
+
+  test "missing_transfer_suggestion_for returns nil when no account matches" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry)
+  end
+
+  test "missing_transfer_suggestion_for returns nil for an inflow entry" do
+    @loan.update!(iban: "DE89370400440532013000")
+    inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
+    inflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+
+    assert_nil @family.missing_transfer_suggestion_for(inflow_entry)
+  end
+
+  test "missing_transfer_suggestion_for returns nil once dismissed" do
+    @loan.update!(iban: "DE89370400440532013000")
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: {
+      "counterparty_iban" => "DE89370400440532013000",
+      "counterparty_transfer_suggestion_dismissed" => true
+    })
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry)
+  end
+
+  test "missing_transfer_suggestion_for returns nil for an already-matched transfer" do
+    @loan.update!(iban: "DE89370400440532013000")
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+    Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry.reload)
+  end
+
   private
     def load_exchange_prices
       rates = {
