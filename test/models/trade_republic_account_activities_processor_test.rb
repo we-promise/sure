@@ -106,18 +106,57 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Withdrawal", entry.transaction.investment_activity_label
   end
 
-  test "dividend maps to Dividend with negative amount" do
+  test "dividend maps to a zero-quantity Dividend trade with negative amount" do
     import_event({
       id: "evt_dividend",
       timestamp: "2026-08-01T10:00:00Z",
       category: "DIVIDEND",
-      detail: { amount: "25.50", currency: "EUR" }
+      detail: { amount: "25.50", currency: "EUR", isin: "US0378331005", name: "Apple" }
     })
 
     entry = Entry.find_by(external_id: "trade_republic_event_evt_dividend")
     assert_not_nil entry
     assert_equal BigDecimal("-25.50"), entry.amount
-    assert_equal "Dividend", entry.transaction.investment_activity_label
+    assert_equal "Trade", entry.entryable_type
+    assert_equal "Dividend", entry.trade.investment_activity_label
+    assert_equal 0, entry.trade.qty
+    assert_equal 0, entry.trade.price
+    assert_equal "US0378331005", entry.trade.security.ticker
+  end
+
+  test "interest maps to a zero-quantity Interest trade against cash" do
+    import_event({
+      id: "evt_interest",
+      timestamp: "2026-08-01T10:00:00Z",
+      category: "INTEREST_PAYOUT_CREATED",
+      detail: { amount: "4.10", currency: "EUR" }
+    })
+
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_interest")
+    assert_not_nil entry
+    assert_equal BigDecimal("-4.10"), entry.amount
+    assert_equal "Interest", entry.trade.investment_activity_label
+    assert entry.trade.security.cash?, "Interest carries no ISIN, so it falls back to the cash security"
+  end
+
+  test "interest on a depository-linked account stays a cash transaction" do
+    # A Trade Republic connection can point at a Depository account, where
+    # interest is ordinary income — there is no position for a trade to sit
+    # against. Mirrors the manual rule that income is a trade in an *investment*
+    # account.
+    @account.update!(accountable: Depository.new)
+
+    import_event({
+      id: "evt_interest_cash",
+      timestamp: "2026-08-01T10:00:00Z",
+      category: "INTEREST_PAYOUT_CREATED",
+      detail: { amount: "4.10", currency: "EUR" }
+    })
+
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_interest_cash")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction)
+    assert_equal BigDecimal("-4.10"), entry.amount
   end
 
   test "order executions carry canonical activity labels under a non-English locale" do

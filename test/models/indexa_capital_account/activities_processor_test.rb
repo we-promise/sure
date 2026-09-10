@@ -40,7 +40,7 @@ class IndexaCapitalAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Contribution", entry.entryable.investment_activity_label
   end
 
-  test "processes dividend cash activity as negative inflow" do
+  test "processes dividend as a zero-quantity trade with negative inflow" do
     @indexa_capital_account.update!(raw_activities_payload: [
       build_cash_activity(
         id: "div_001",
@@ -56,8 +56,32 @@ class IndexaCapitalAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "div_001", source: "indexa_capital")
     assert_not_nil entry
+    assert entry.entryable.is_a?(Trade), "Dividends are recorded as Trades, matching manual entry"
     assert_equal(-25.50, entry.amount.to_f)
     assert_equal "Dividend", entry.entryable.investment_activity_label
+    assert_equal 0, entry.entryable.qty
+    assert_equal 0, entry.entryable.price
+    assert_equal "IE00BFPM9V94", entry.entryable.security.ticker
+  end
+
+  test "processes interest as a zero-quantity trade against the cash security" do
+    @indexa_capital_account.update!(raw_activities_payload: [
+      build_cash_activity(
+        id: "int_001",
+        type: "INTEREST",
+        amount: 7.75,
+        date: Date.current.to_s
+      )
+    ])
+
+    IndexaCapitalAccount::ActivitiesProcessor.new(@indexa_capital_account).process
+
+    entry = @account.entries.find_by(external_id: "int_001", source: "indexa_capital")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal(-7.75, entry.amount.to_f)
+    assert_equal "Interest", entry.entryable.investment_activity_label
+    assert entry.entryable.security.cash?
   end
 
   test "processes withdrawal with positive outflow amount" do

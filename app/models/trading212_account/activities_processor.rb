@@ -106,6 +106,8 @@ class Trading212Account::ActivitiesProcessor
       false
     end
 
+    # A dividend is a trade with no quantity. The security is a real association
+    # rather than an `extra[:security_id]` stashed on a Transaction that cannot hold one.
     def process_dividend(dividend)
       reference = dividend[:reference].to_s
       return false if reference.blank?
@@ -118,25 +120,17 @@ class Trading212Account::ActivitiesProcessor
 
       date = parse_date(dividend[:paidOn]) || Date.current
 
-
-      import_adapter.import_transaction(
+      import_adapter.import_trade(
         external_id: "trading212_dividend_#{reference}",
+        security: security || Security.cash_for(account, currency: currency),
+        quantity: 0,
+        price: 0,
         amount: -amount.abs,
         currency: currency,
         date: date,
         name: build_dividend_name(security),
         source: "trading212",
-        investment_activity_label: "Dividend",
-        extra: {
-          security_id: security&.id,
-          trading212: {
-            reference: reference,
-            ticker: t212_ticker,
-            quantity: dividend[:quantity],
-            gross_amount_per_share: dividend[:grossAmountPerShare],
-            type: dividend[:type]
-          }.compact
-        }
+        activity_label: "Dividend"
       )
 
       true
@@ -166,22 +160,39 @@ class Trading212Account::ActivitiesProcessor
 
       date = parse_date(transaction[:dateTime]) || Date.current
 
-      import_adapter.import_transaction(
+      shared_args = {
         external_id: "trading212_transaction_#{reference}",
         amount: signed_amount,
         currency: currency,
         date: date,
         name: label,
-        source: "trading212",
-        investment_activity_label: label,
-        extra: {
-          trading212: {
-            reference: reference,
-            type: type,
-            amount: transaction[:amount]
-          }.compact
-        }
-      )
+        source: "trading212"
+      }
+
+      # Interest is a trade with no quantity. T212 names no instrument for it,
+      # so the account's synthetic cash security stands in, as it does for
+      # manual interest.
+      if Trade::INCOME_LABELS.include?(label)
+        import_adapter.import_trade(
+          **shared_args,
+          security: Security.cash_for(account, currency: currency),
+          quantity: 0,
+          price: 0,
+          activity_label: label
+        )
+      else
+        import_adapter.import_transaction(
+          **shared_args,
+          investment_activity_label: label,
+          extra: {
+            trading212: {
+              reference: reference,
+              type: type,
+              amount: transaction[:amount]
+            }.compact
+          }
+        )
+      end
 
       true
     rescue => e
