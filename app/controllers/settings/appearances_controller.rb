@@ -31,6 +31,7 @@ class Settings::AppearancesController < ApplicationController
         selected = (account_groups.is_a?(Array) ? account_groups : [ account_groups ])
         updated_prefs["always_expanded_account_groups"] = selected.select { |k| valid_keys.include?(k) }
       end
+      updated_prefs["show_counterparty_account"] = params.dig(:user, :show_counterparty_account) == "1" if params.dig(:user, :show_counterparty_account)
       @user.update!(preferences: updated_prefs)
     end
     redirect_to settings_appearance_path

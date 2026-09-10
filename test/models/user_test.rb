@@ -1104,4 +1104,18 @@ class UserTest < ActiveSupport::TestCase
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
   end
+
+  test "show_counterparty_account? defaults to true" do
+    user = users(:family_admin)
+    user.update!(preferences: {})
+
+    assert user.show_counterparty_account?
+  end
+
+  test "show_counterparty_account? respects an explicit false preference" do
+    user = users(:family_admin)
+    user.update!(preferences: { "show_counterparty_account" => false })
+
+    assert_not user.show_counterparty_account?
+  end
 end
