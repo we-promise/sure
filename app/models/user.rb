@@ -324,6 +324,29 @@ class User < ApplicationRecord
     oidc_identities.destroy_all
   end
 
+  # Raised by #with_active_lock! to reject session/token issuance for a
+  # deactivated or concurrently-purged user. The one error contract every
+  # web/JSON/mobile/OAuth-adapter caller rescues, so a deactivation result
+  # can never be confused with an unrelated persistence failure.
+  class InactiveError < StandardError; end
+
+  # The one locked primitive for the actual authorization boundary: asserts
+  # this user is eligible for new session/token issuance *right now*, under
+  # a row lock, immediately before minting. Callers may additionally check
+  # #active? earlier for a fast, friendly rejection (skip an MFA/device
+  # round trip) — that's a UX optimization only, never a substitute for
+  # this check, however "obviously" already-checked the user seems.
+  def with_active_lock!
+    with_lock do
+      raise InactiveError unless active?
+      yield self
+    end
+  rescue ActiveRecord::RecordNotFound
+    # The row was deleted (concurrent purge) between the query that found
+    # this user and the lock attempt — same rejection as "inactive".
+    raise InactiveError
+  end
+
   def can_deactivate
     if admin? && family.users.count > 1
       errors.add(:base, :cannot_deactivate_admin_with_other_users)

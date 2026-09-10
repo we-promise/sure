@@ -685,14 +685,18 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     }, expires_in: 10.minutes)
 
     # Simulate deactivation landing after the initial active? check but
-    # before issue_mobile_tokens actually mints a token — SsoAuditLog.log_link!
+    # before issue_token! actually mints a token — SsoAuditLog.log_link!
     # runs in that window in the real flow, so hook the deactivation there.
     SsoAuditLog.stubs(:log_link!).with do |**kwargs|
       kwargs[:user].update_column(:active, false)
       true
     end
 
-    assert_difference("OidcIdentity.count", 1) do
+    # The identity, the device, and the token mint all run in the same
+    # transaction as the locked active? recheck, so a deactivation landing
+    # in that window must roll all of it back — nothing may survive a
+    # rejected request.
+    assert_no_difference [ "OidcIdentity.count", "MobileDevice.count" ] do
       post "/api/v1/auth/sso_link", params: {
         linking_code: linking_code,
         email: user.email,
@@ -700,6 +704,25 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
+  test "login rejects a user purged between authentication and the reload fast-path" do
+    user = users(:family_admin)
+    User.stubs(:find_by).with(email: user.email).returns(user)
+    user.stubs(:reload).raises(ActiveRecord::RecordNotFound)
+
+    post "/api/v1/auth/login", params: {
+      email: user.email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    # Must fall through to the same "deactivated" response every other
+    # rejection on this endpoint uses, not BaseController's generic
+    # record_not_found handler.
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
     assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]

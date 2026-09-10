@@ -962,6 +962,25 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
+  test "purging an impersonated user nullifies the admin's active_impersonator_session instead of failing" do
+    admin = users(:sure_support_staff)
+    target = users(:family_member)
+    impersonation = ImpersonationSession.create!(impersonator: admin, impersonated: target, status: :in_progress)
+    admin_session = admin.sessions.create!(active_impersonator_session: impersonation)
+
+    # UserPurgeJob may run before the admin's next request notices the
+    # target is gone — dependent: :destroy on User#impersonated_support_sessions
+    # destroys the ImpersonationSession row underneath the admin's still-live
+    # Session. Without ON DELETE SET NULL on that FK, this raises
+    # ActiveRecord::InvalidForeignKey instead of completing the purge.
+    perform_enqueued_jobs do
+      target.purge
+    end
+
+    assert_not User.exists?(target.id)
+    assert_nil admin_session.reload.active_impersonator_session_id
+  end
+
   test "deactivate refuses the last active super admin" do
     family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
     target = User.create!(
