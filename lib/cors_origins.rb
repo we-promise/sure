@@ -28,6 +28,11 @@ module CorsOrigins
     [ normalize(origin) ].compact
   end
 
+  # Only reached through the APP_DOMAIN fallback, and only as good as what the
+  # app knows about how it is served. Behind a proxy that terminates TLS while
+  # neither RAILS_FORCE_SSL nor RAILS_ASSUME_SSL is set, this says http while
+  # the browser sends https, and a legitimate origin is refused. Set
+  # ALLOWED_ORIGINS explicitly on those deploys.
   def scheme
     config = Rails.application.config
     ssl = config.force_ssl || (config.respond_to?(:assume_ssl) && config.assume_ssl)
