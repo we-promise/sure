@@ -10,16 +10,29 @@ class SimplefinEntry::Processor
   FIDELITY_ORGANIZATION = /\AFidelity Investments\b/i
   FIDELITY_AMOUNT_NORMALIZATION_RULES = {
     direct_debit: { direction: :expense, pattern: /\ADIRECT\s+DEBIT\b/i },
-    eft_paid: { direction: :expense, pattern: /\AEFT\s+PAID\b/i },
+    eft_paid: { direction: :expense, pattern: /\A(?:EFT\s+PAID|ELECTRONIC\s+FUNDS\s+TRANSFER\s+PAID)\b/i },
     direct_deposit: { direction: :income, pattern: /\ADIRECT\s+DEPOSIT\b/i },
+    rollover_check: { direction: :income, pattern: /\AROLLOVER\s+CASH\s+CHECK\s+RECEIVED\b/i },
     check_received: { direction: :income, pattern: /\ACHECK\s+RECEIVED\b/i },
+    check_paid: { direction: :expense, pattern: /\ACHECK\s+PAID\b/i },
+    wire_out: { direction: :expense, pattern: /\AWIRE\s+TRANSFER\s+TO\s+BANK\b/i },
+    cash_advance: { direction: :expense, pattern: /\ACASH\s+ADVANCE\b/i },
+    fee: { direction: :expense, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\b/i },
+    core_purchase: { direction: :expense, pattern: /\APURCHASE\s+INTO\s+CORE\s+ACCOUNT\b/i },
+    core_redemption: { direction: :income, pattern: /\AREDEMPTION\s+FROM\s+CORE\s+ACCOUNT\b/i },
     card_payment: { direction: :income, pattern: /\APAYMENT MADE BY ACCOUNT ENDING IN:\s*\d+\z/i },
-    dividend: { direction: :income, pattern: /\ADIVIDEND(?:\s+(?:PAYMENT|RECEIVED|INCOME|CREDIT))?\z/i }
+    interest: { direction: :income, pattern: /\AINTEREST\s+FULLY\s+PAID\b/i },
+    reinvestment: { direction: :expense, pattern: /\AREINVESTMENT\b/i },
+    cash_in_lieu: { direction: :income, pattern: /\AIN\s+LIEU\s+OF\s+FRX\s+SHARE\s+LEU\s+PAYOUT\b/i },
+    dividend: {
+      direction: :income,
+      pattern: /\A(?:DIVIDEND\s+RECEIVED\b(?!.*\b(?:TAX|WITHHOLDING)\b)|DIVIDEND(?:\s+(?:PAYMENT|INCOME|CREDIT))?\z)/i
+    }
   }.freeze
   INSTITUTION_AMOUNT_NORMALIZATION_RULES = {
     FIDELITY_ORGANIZATION => FIDELITY_AMOUNT_NORMALIZATION_RULES
   }.freeze
-  AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND|REINVEST)/i
+  AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND)/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
   def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)

@@ -316,6 +316,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
   test "normalizes mapped transaction classes by semantic direction" do
     cases = [
       [ "eft_paid", "EFT PAID UTILITY", "35.00", BigDecimal("35.00") ],
+      [ "eft_paid", "ELECTRONIC FUNDS TRANSFER PAID (CASH)", "35.00", BigDecimal("35.00") ],
       [ "check_received", "CHECK RECEIVED", "-120.00", BigDecimal("-120.00") ],
       [ "dividend", "DIVIDEND PAYMENT", "-9.50", BigDecimal("-9.50") ]
     ]
@@ -337,6 +338,54 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalizes Fidelity rollover checks to negative Sure inflows" do
+    tx = {
+      id: "tx_rollover_check_1",
+      amount: "-171645.83",
+      currency: "USD",
+      description: "ROLLOVER CASH CHECK RECEIVED IRA DIR ROLOVR MOBILE DEPOSIT (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_rollover_check_1", source: "simplefin")
+    assert_equal BigDecimal("-171645.83"), entry.amount
+    assert_equal "rollover_check", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes Fidelity core-account purchases to positive Sure outflows" do
+    tx = {
+      id: "tx_core_purchase_1",
+      amount: "216.21",
+      currency: "USD",
+      description: "PURCHASE INTO CORE ACCOUNT FIDELITY GOVERNMENT MONEY MARKET (SPAXX) (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_core_purchase_1", source: "simplefin")
+    assert_equal BigDecimal("216.21"), entry.amount
+    assert_equal "core_purchase", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "marks Fidelity core-account redemptions as negative Sure inflows" do
+    tx = {
+      id: "tx_core_redemption_1",
+      amount: "3533.18",
+      currency: "USD",
+      description: "REDEMPTION FROM CORE ACCOUNT FIDELITY GOVERNMENT MONEY MARKET (SPAXX) MORNING TRADE (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_core_redemption_1", source: "simplefin")
+    assert_equal BigDecimal("-3533.18"), entry.amount
+    assert_equal "core_redemption", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
   test "normalizes Fidelity card payments to negative Sure inflows" do
     [ "2303.00", "-2303.00" ].each_with_index do |raw_amount, index|
       tx = {
@@ -352,6 +401,50 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       entry = @account.entries.find_by!(external_id: "simplefin_tx_card_payment_#{index}", source: "simplefin")
       assert_equal BigDecimal("-2303.00"), entry.amount
       assert_equal "card_payment", entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "marks Fidelity security dividends as negative Sure income" do
+    tx = {
+      id: "tx_security_dividend_1",
+      amount: "204.70",
+      currency: "USD",
+      description: "DIVIDEND RECEIVED PROSHARES BITCOIN ETF (BITO) (MARGIN)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_security_dividend_1", source: "simplefin")
+    assert_equal BigDecimal("-204.70"), entry.amount
+    assert_equal "dividend", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
+  test "normalizes the observed Fidelity cash-action matrix" do
+    cases = [
+      [ "check_paid", "CHECK PAID # 1234 (CASH)", "44.63", BigDecimal("44.63") ],
+      [ "wire_out", "WIRE TRANSFER TO BANK (CASH)", "500.00", BigDecimal("500.00") ],
+      [ "cash_advance", "CASH ADVANCE ATM (CASH)", "202.95", BigDecimal("202.95") ],
+      [ "fee", "ADJUST FEE CHARGED ATM FEE REBATE (CASH)", "2.95", BigDecimal("2.95") ],
+      [ "interest", "INTEREST FULLY PAID (CASH)", "-18.16", BigDecimal("-18.16") ],
+      [ "reinvestment", "REINVESTMENT PROSHARES BITCOIN ETF (BITO) (MARGIN)", "4.30", BigDecimal("4.30") ],
+      [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT SECURITY (CASH)", "-3.11", BigDecimal("-3.11") ]
+    ]
+
+    cases.each_with_index do |(normalization, description, raw_amount, expected_amount), index|
+      tx = {
+        id: "tx_fidelity_cash_action_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_cash_action_#{index}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
+      assert_equal normalization, entry.transaction.extra.dig("simplefin", "amount_normalization")
     end
   end
 
@@ -454,8 +547,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       [ "DIRECT DEBIT RETURNED", "11.00" ],
       [ "DIRECT DEBIT REVERSED", "12.00" ],
       [ "DIRECT DEPOSIT REFUNDED", "13.00" ],
-      [ "DIVIDEND REINVESTMENT", "14.00" ],
-      [ "REINVESTMENT", "15.00" ]
+      [ "DIVIDEND REINVESTMENT", "14.00" ]
     ]
 
     cases.each_with_index do |(description, raw_amount), index|
@@ -471,6 +563,32 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
 
       entry = @account.entries.find_by!(external_id: "simplefin_tx_unmapped_class_#{index}", source: "simplefin")
       assert_equal BigDecimal("-#{raw_amount}"), entry.amount
+      assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
+    end
+  end
+
+  test "preserves Fidelity nonfinancial and mixed-leg action signs" do
+    cases = [
+      [ "INCREASE COLLATERAL MARK TO MARKET ADJ COLLATERAL DELV TO US BANK NA SECURI... (L0C990063) (FINANCING)", "0", BigDecimal("0") ],
+      [ "DECREASE COLLATERAL MARK TO MARKET ADJ COLLATERAL DELV TO US BANK NA SECURI... (L0C990063) (FINANCING)", "0", BigDecimal("0") ],
+      [ "YOU LOANED VS X20-123-2 PROSHARES BITCOIN ETF (BITO) (FINANCING)", "-1217.58", BigDecimal("1217.58") ],
+      [ "LOAN RETURNED YOU RETURNED VS X20-123-2 PROSHARES BITCOIN ETF (BITO) (FINANCING)", "1217.58", BigDecimal("-1217.58") ],
+      [ "REVERSE SPLIT R/S FROM 92891H606#REOR M0051756140001 VS TRUST 2X LONG VIX FUT (UVIX) (FINANCING)", "335.00", BigDecimal("-335.00") ]
+    ]
+
+    cases.each_with_index do |(description, raw_amount, expected_amount), index|
+      tx = {
+        id: "tx_fidelity_passthrough_#{index}",
+        amount: raw_amount,
+        currency: "USD",
+        description: description,
+        posted: Date.current.to_s
+      }
+
+      SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+      entry = @account.entries.find_by!(external_id: "simplefin_tx_fidelity_passthrough_#{index}", source: "simplefin")
+      assert_equal expected_amount, entry.amount
       assert_nil entry.transaction.extra.dig("simplefin", "amount_normalization")
     end
   end
