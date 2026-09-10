@@ -33,7 +33,7 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_raises(Financekit::Error) { Financekit::Payload.money!(money.except("currency")) }
   end
 
-  test "identity-only imports never claim an ambiguous manual transaction" do
+  test "FinanceKit imports never claim an ambiguous manual transaction" do
     account = @source.account
     manual = account.entries.create!(amount: "12.34", currency: "USD", date: Date.new(2026, 9, 1),
       name: "Manual purchase", entryable: Transaction.new)

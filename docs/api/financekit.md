@@ -183,8 +183,8 @@ metadata. Supported states are authorized, pending, booked, rejected and memo;
 authorized/pending carry the shared pending flag. Rejected/memo are retained as
 source-only records rather than invented settled financial activity.
 
-The provider import adapter's identity-only mode disables automatic manual/CSV
-and amount/date pending claims. Different UUIDs remain different identities.
+The provider import adapter disables heuristic matching for FinanceKit imports:
+no automatic manual/CSV or amount/date pending claims. Different UUIDs remain different identities.
 Same-ID transitions respect excluded/import-locked/user-edited records and retain
 server categorization. An explicit tombstone retracts only an unprotected,
 provider-owned entry. Edited, locked, split, reconciled or transferred records

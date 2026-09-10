@@ -75,7 +75,7 @@ class Financekit::Processor
           amount: Financekit::Mapping.transaction_amount(record), currency: record.fetch("currency"),
           date: Financekit::Mapping.ledger_date(record, source.ledger_timezone),
           name: record["merchant"].presence || record["description"].presence || "Wallet transaction",
-          source: "financekit", identity_only: true,
+          source: "financekit", allow_heuristic_matching: false,
           extra: { "financekit" => record.merge("pending" => %w[authorized pending].include?(record["status"])) })
         identity.update!(entry: entry, ledger_imported: true, review_required: adapter.skipped_entries.any?)
         counts[identity.review_required ? "review_required" : "upserted"] += 1
