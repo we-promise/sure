@@ -61,50 +61,6 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 2, @statement.current_holdings.count
   end
 
-  test "current_holdings uses the latest provider import day while preserving per-security price dates" do
-    account = create_investment_account(balance: 2100, currency: "USD")
-    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
-    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
-    account_provider = AccountProvider.create!(account: account, provider: coinstats_account)
-
-    current_security = Security.create!(ticker: "AAPL", name: "Apple")
-    stale_security = Security.create!(ticker: "STALE", name: "Stale Security")
-    older_price_security = Security.create!(ticker: "MSFT", name: "Microsoft")
-
-    current_holding = account.holdings.create!(
-      security: current_security,
-      date: Date.current,
-      qty: 10,
-      price: 210,
-      amount: 2100,
-      currency: "USD",
-      account_provider: account_provider
-    )
-    stale_holding = account.holdings.create!(
-      security: stale_security,
-      date: Date.current - 1.day,
-      qty: 5,
-      price: 100,
-      amount: 500,
-      currency: "USD",
-      account_provider: account_provider
-    )
-
-    older_price_current_holding = account.holdings.create!(
-      security: older_price_security,
-      date: Date.current - 1.day,
-      qty: 2,
-      price: 200,
-      amount: 400,
-      currency: "USD",
-      account_provider: account_provider
-    )
-    stale_holding.update_columns(created_at: 2.days.ago, updated_at: 2.days.ago)
-
-    assert_equal [ current_holding.id, older_price_current_holding.id ].sort,
-                 @statement.current_holdings.pluck(:id).sort
-  end
-
   test "top_holdings ranks by family-currency value across currencies" do
     usd_account = create_investment_account(balance: 2100, currency: "USD")
     eur_account = create_investment_account(balance: 2000, currency: "EUR")

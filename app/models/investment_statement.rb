@@ -69,56 +69,10 @@ class InvestmentStatement
   # and day_change each call this, so an unmemoized version ran the same
   # DISTINCT ON query up to 5x per dashboard/report request.
   def current_holdings
-    @current_holdings ||= begin
-      account_ids = investment_account_ids
-
-      if account_ids.any?
-        # Provider price dates can differ within one import (for example,
-        # Plaid's institution_price_as_of is per security). Use the day each
-        # holding was imported to identify the latest provider import day while
-        # preserving each security's provider-supplied price date.
-        provider_snapshot = <<~SQL.squish
-          holdings.account_provider_id IS NOT NULL
-          AND holdings.updated_at::date = (
-            SELECT MAX(provider_holdings.updated_at::date)
-            FROM holdings provider_holdings
-            WHERE provider_holdings.account_id = holdings.account_id
-              AND provider_holdings.account_provider_id IS NOT NULL
-          )
-        SQL
-
-        manual_snapshot = <<~SQL.squish
-          NOT EXISTS (
-            SELECT 1
-            FROM holdings provider_holdings
-            WHERE provider_holdings.account_id = holdings.account_id
-              AND provider_holdings.account_provider_id IS NOT NULL
-          )
-          AND holdings.currency = (
-            SELECT accounts.currency
-            FROM accounts
-            WHERE accounts.id = holdings.account_id
-          )
-          AND holdings.id = (
-            SELECT latest_holdings.id
-            FROM holdings latest_holdings
-            WHERE latest_holdings.account_id = holdings.account_id
-              AND latest_holdings.security_id = holdings.security_id
-              AND latest_holdings.currency = holdings.currency
-            ORDER BY latest_holdings.date DESC
-            LIMIT 1
-          )
-        SQL
-
-        Holding
-          .where(account_id: account_ids)
-          .where.not(qty: 0)
-          .where(Arel.sql("(#{provider_snapshot}) OR (#{manual_snapshot})"))
-          .includes(:security, :account)
-      else
-        Holding.none
-      end
-    end
+    @current_holdings ||= Holding::CurrentForInvestmentAccounts
+      .new(investment_account_ids)
+      .relation
+      .includes(:security, :account)
   end
 
   # Top holdings by family-currency value
