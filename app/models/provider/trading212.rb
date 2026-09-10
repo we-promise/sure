@@ -18,6 +18,7 @@ class Provider::Trading212
 
   LIVE_BASE_URI = "https://live.trading212.com/api/v0".freeze
   DEMO_BASE_URI = "https://demo.trading212.com/api/v0".freeze
+  API_PATH_PREFIX = "/api/v0".freeze
 
   MAX_PAGES = 200
   PAGE_LIMIT = 50
@@ -86,7 +87,8 @@ class Provider::Trading212
     end
 
     def get(path, query: {})
-      url = "#{base_uri}#{path}"
+      request_path = path.delete_prefix(API_PATH_PREFIX)
+      url = "#{base_uri}#{request_path}"
       response = with_retries(path) do
         self.class.get(url, headers: auth_headers, query: query.compact)
       end
