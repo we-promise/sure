@@ -65,7 +65,7 @@ class OidcAccountsController < ApplicationController
       session.delete(:pending_oidc_auth)
 
       if user.otp_required?
-        session[:mfa_user_id] = user.id
+        begin_mfa_handoff(user)
         redirect_to verify_mfa_path
       else
         notice = if accept_pending_invitation_for(user)

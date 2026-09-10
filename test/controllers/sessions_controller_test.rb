@@ -20,7 +20,21 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:openid_connect] = nil
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def stub_provider(name)
+    ProviderLoader.stubs(:load_providers).returns([
+      { name: name, strategy: "openid_connect", issuer: "https://idp.example", label: "IdP" }
+    ])
+  end
+
+  def stub_discovery(end_session_endpoint)
+    body = { "end_session_endpoint" => end_session_endpoint }.to_json
+    response = OpenStruct.new(success?: true, body: body)
+    connection = mock
+    connection.stubs(:get).returns(response)
+    Faraday.stubs(:new).returns(connection)
+  end
+
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, id_token: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
@@ -29,7 +43,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
+      }.compact,
+      credentials: id_token ? { id_token: id_token } : {}
     })
   end
 
@@ -1001,5 +1016,182 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     ])
     get "/auth/desktop/openid_connect"
     assert_redirected_to new_session_path
+  end
+
+  # `?return_to=` is written into the session by StoreLocation on any request,
+  # including unauthenticated ones, so it is a pre-auth value a real browser
+  # can actually carry into the sign-in POST. Writing to `session` directly
+  # from an integration test does NOT reach the next request, so a sentinel
+  # seeded that way would make these assertions vacuous.
+  test "signing in discards pre-auth session state so a fixated session cannot survive" do
+    get new_session_url(return_to: "/transactions")
+    assert_equal "/transactions", session[:return_to], "the sentinel must really be in the pre-auth session"
+
+    sign_in @user
+
+    assert_nil session[:return_to], "pre-auth session state must not survive sign-in"
+  end
+
+  test "signing in keeps a pending invitation while discarding the rest" do
+    invitation = invitations(:one)
+
+    # Both values land in the pre-auth session through real requests. The
+    # invitation is on the preserve list, the return_to sentinel is not, so
+    # this fails both if nothing is rotated and if everything is.
+    get new_session_url(invitation: invitation.token, return_to: "/transactions")
+    assert_equal invitation.token, session[:pending_invitation_token]
+    assert_equal "/transactions", session[:return_to]
+
+    # @user's email does not match the invitation, so it is not consumed and
+    # can only still be here if the rotation carried it over.
+    sign_in @user
+
+    assert_equal invitation.token, session[:pending_invitation_token]
+    assert_nil session[:return_to]
+  end
+
+  # Both flags come from the framework: httponly is set where the cookie is
+  # written, and samesite from action_dispatch.cookies_same_site_protection,
+  # which also gets a `; secure` from ActionDispatch::SSL wherever force_ssl
+  # is on. Nothing in this app sets them per-cookie, so this guards against a
+  # config change quietly dropping them rather than against a regression here.
+  test "the session cookie is HttpOnly and SameSite=Lax" do
+    sign_in @user
+
+    # Set-Cookie is an array and Rails' own _sure_session cookie carries the
+    # same flags, so a regex over the joined header matches across cookie
+    # boundaries and passes even when session_token has neither. Isolate the
+    # one cookie under test.
+    session_cookie = Array(response.headers["Set-Cookie"])
+      .flat_map { |header| header.to_s.split("\n") }
+      .find { |cookie| cookie.start_with?("session_token=") }
+
+    assert session_cookie, "the sign-in response must set a session_token cookie"
+    assert_match(/;\s*httponly/i, session_cookie)
+    assert_match(/;\s*samesite=lax/i, session_cookie)
+  end
+
+  test "OIDC logout hints survive the session rotation, also after MFA" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-for-rp-logout"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    assert_equal "id-token-for-rp-logout", session[:id_token_hint]
+    assert_equal oidc_identity.provider, session[:sso_login_provider]
+    assert_nil session[:mfa_user_id]
+  end
+
+  # Seeding id_token_hint by assigning to `session` from the test would never
+  # reach the app. The OIDC callback is the only thing that really sets it, so
+  # this drives the real abandoned-OIDC flow: the user starts an SSO sign-in,
+  # is parked at the MFA prompt, gives up and signs in with their password.
+  test "signing in with a second provider does not keep the first provider's logout token" do
+    @user.sessions.destroy_all
+    first = oidc_identities(:bob_google)
+    second = @user.oidc_identities.create!(provider: "other_idp", uid: "other-idp-uid-1")
+
+    setup_omniauth_mock(
+      provider: first.provider,
+      uid: first.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-minted-by-the-first-provider"
+    )
+    get "/auth/openid_connect/callback"
+    assert_equal "id-token-minted-by-the-first-provider", session[:id_token_hint]
+
+    # The second provider issues no id_token. Carrying the first one over would
+    # hand its token to the second provider's end-session endpoint at logout.
+    setup_omniauth_mock(
+      provider: second.provider,
+      uid: second.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+    get "/auth/openid_connect/callback"
+
+    assert_equal second.provider, session[:sso_login_provider]
+    assert_nil session[:id_token_hint], "a stale hint must not be paired with a new provider"
+  end
+
+  test "a local sign-in does not inherit OIDC logout hints left by an abandoned SSO attempt" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.sessions.destroy_all
+    oidc_identity = oidc_identities(:bob_google)
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan",
+      id_token: "id-token-from-the-abandoned-attempt"
+    )
+
+    get "/auth/openid_connect/callback"
+    assert_redirected_to verify_mfa_path
+    assert_equal "id-token-from-the-abandoned-attempt", session[:id_token_hint],
+      "the OIDC attempt must really leave its hints behind for this to test anything"
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    post verify_mfa_path, params: { code: totp.now }
+    assert_redirected_to root_path
+
+    assert_nil session[:id_token_hint], "a local sign-in must not inherit SSO logout hints"
+    assert_nil session[:sso_login_provider]
+  end
+
+  # The end_session_endpoint comes out of the provider's discovery document, so
+  # the app does not choose it. Forwarding the ID token to an http:// endpoint
+  # would put the user's claims in a cleartext URL.
+  test "federated logout is skipped when the provider advertises a cleartext endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("http://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_no_match(/an-id-token/, response.location.to_s, "the token must not travel over http")
+    assert_no_match(%r{^http://idp\.example}, response.location.to_s)
+  end
+
+  test "federated logout still runs for an https endpoint" do
+    oidc_identity = oidc_identities(:bob_google)
+    stub_provider(oidc_identity.provider)
+    stub_discovery("https://idp.example/logout")
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider, uid: oidc_identity.uid,
+      email: @user.email, name: "Bob Dylan", id_token: "an-id-token"
+    )
+    get "/auth/openid_connect/callback"
+
+    delete session_path(Session.order(:created_at).last)
+
+    assert_match(%r{^https://idp\.example/logout}, response.location.to_s)
+    assert_match(/an-id-token/, response.location.to_s)
   end
 end
