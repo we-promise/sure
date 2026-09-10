@@ -37,6 +37,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > If you'd like to use an integration with a data provider instead, see:
 > 
 > - [**Lunch Flow**](https://www.lunchflow.app/)
+> - [**monobank**](/docs/hosting/monobank.md) (Ukrainian cards and jars)
 > - [**Plaid**](/docs/hosting/plaid.md)
 > - [**Redbark**](/docs/hosting/redbark.md) (Australian banks)
 > - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
