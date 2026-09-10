@@ -114,6 +114,13 @@ Rails.application.configure do
   # here raises NameError and the app never boots.
   require_relative "../../lib/allowed_hosts"
   allowed_hosts = AllowedHosts.list
+  rejected_hosts = AllowedHosts.rejected
+
+  if rejected_hosts.any?
+    config.after_initialize do
+      Rails.logger.warn("[SECURITY] Ignoring host entries that are not a single host: #{rejected_hosts.join(', ')}. Wildcards are not accepted; list each host.")
+    end
+  end
 
   if allowed_hosts.any?
     config.hosts = allowed_hosts

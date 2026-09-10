@@ -111,7 +111,13 @@ have today.
 |---|---|
 | `ALLOWED_ORIGINS` | Comma-separated list of browser origins allowed to call the app cross-origin, including the scheme, for example `https://app.example.com,https://staging.example.com`. Without it the app answers cross-origin requests the way any site does by default: it does not. Native mobile clients are unaffected, since they send no `Origin` header. |
 | `APP_DOMAIN` | The single host your instance is served on. Used as the fallback for `ALLOWED_ORIGINS`, and as part of the `Host` allow-list below. |
-| `ALLOWED_HOSTS` | Comma-separated extra hostnames the app answers to. Unioned with `APP_DOMAIN`. |
+| `ALLOWED_HOSTS` | Comma-separated extra hostnames the app answers to. Unioned with `APP_DOMAIN`. One host per entry: a leading dot is refused rather than read as a wildcard, and IPv6 goes in brackets, `[::1]`. |
+
+Prefer `ALLOWED_ORIGINS` when a reverse proxy terminates TLS for you. The
+`APP_DOMAIN` fallback has to guess the scheme from `RAILS_FORCE_SSL` and
+`RAILS_ASSUME_SSL`, so with both off, a common setting behind Traefik, NGINX or
+a Cloudflare Tunnel, it builds an `http://` origin while the browser sends
+`https://` and the request is refused.
 
 Setting `APP_DOMAIN` or `ALLOWED_HOSTS` turns on DNS-rebinding protection: any
 request whose `Host` header is not on the list is refused with a 403. If you set

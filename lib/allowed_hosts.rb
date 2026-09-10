@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The Host header values this instance answers to, for Rails' DNS-rebinding
 # protection.
 #
@@ -14,21 +16,53 @@ module AllowedHosts
   module_function
 
   def list
+    parse.fetch(:allowed)
+  end
+
+  # Entries that were thrown away, so the caller can say so at boot rather than
+  # leaving an operator to work out why their host still gets a 403.
+  def rejected
+    parse.fetch(:rejected)
+  end
+
+  def parse
+    allowed = []
+    rejected = []
+
+    raw_entries.each do |entry|
+      host = normalize(entry)
+      host ? allowed << host : rejected << entry
+    end
+
+    { allowed: allowed.uniq, rejected: rejected.uniq }
+  end
+
+  def raw_entries
     [ ENV["APP_DOMAIN"], *ENV["ALLOWED_HOSTS"].to_s.split(",") ]
-      .filter_map { |host| normalize(host) }
-      .uniq
+      .map { |entry| entry.to_s.strip }
+      .reject(&:empty?)
   end
 
   # A Host header is a bare hostname, so drop anything an operator may have
   # pasted around it. The WebAuthn initializer already does the same with
   # APP_DOMAIN, which is where most of these values come from.
-  def normalize(host)
-    host.to_s
-        .strip
-        .sub(%r{\Ahttps?://}i, "")
-        .split("/").first.to_s
-        .split(":").first.to_s
-        .downcase
-        .presence
+  def normalize(entry)
+    value = entry.to_s.strip.sub(%r{\Ahttps?://}i, "").split("/").first.to_s
+    return nil if value.empty?
+
+    # Rails reads a leading dot as "any subdomain of", so ".example.com" would
+    # quietly turn an allow-list into a wildcard. Hosts are listed one by one
+    # here, so this is refused rather than silently honoured.
+    return nil if value.start_with?(".")
+
+    # An IPv6 Host header is bracketed, and the brackets are part of what Rails
+    # matches, so they stay. Only the port comes off.
+    return value[/\A\[[^\]]+\]/]&.downcase if value.start_with?("[")
+
+    # A bare IPv6 address has no port to strip, and needs bracketing to match
+    # the Host header a browser actually sends.
+    return "[#{value.downcase}]" if value.count(":") > 1
+
+    value.split(":").first.to_s.downcase.presence
   end
 end
