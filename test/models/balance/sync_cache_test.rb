@@ -181,6 +181,74 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_in_delta 120.0, amounts[2], 0.01  # 100 EUR * 1.2
   end
 
+  test "excludes an entry with no available exchange rate instead of failing the whole account" do
+    convertible = @account.entries.create!(
+      date: Date.current,
+      name: "USD Transaction",
+      amount: 75,
+      currency: "USD",
+      entryable: Transaction.new(extra: {})
+    )
+    _unconvertible = @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction",
+      amount: 100,
+      currency: "EUR",
+      entryable: Transaction.new(extra: {})
+    )
+
+    sync_cache = Balance::SyncCache.new(@account)
+    converted_entries = sync_cache.send(:converted_entries)
+
+    assert_equal [ convertible.name ], converted_entries.map(&:name)
+    assert_equal 1, sync_cache.unconvertible_entry_count
+  end
+
+  test "records a debug log entry naming the missing currency pairs" do
+    @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction",
+      amount: 100,
+      currency: "EUR",
+      entryable: Transaction.new(extra: {})
+    )
+    @account.entries.create!(
+      date: Date.current,
+      name: "GBP Transaction",
+      amount: 50,
+      currency: "GBP",
+      entryable: Transaction.new(extra: {})
+    )
+
+    assert_difference "DebugLogEntry.count", 1 do
+      Balance::SyncCache.new(@account).send(:converted_entries)
+    end
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "Balance::SyncCache", log.source
+    assert_equal "warn", log.level
+    assert_equal @account, log.account
+    assert_equal 2, log.metadata["unconvertible_entry_count"]
+    assert_equal [ "EUR->USD", "GBP->USD" ], log.metadata["missing_rate_pairs"].sort
+  end
+
+  test "records no debug log entry when every entry converts" do
+    @account.entries.create!(
+      date: Date.current,
+      name: "USD Transaction",
+      amount: 75,
+      currency: "USD",
+      entryable: Transaction.new(extra: {})
+    )
+
+    assert_no_difference "DebugLogEntry.count" do
+      sync_cache = Balance::SyncCache.new(@account)
+      sync_cache.send(:converted_entries)
+
+      assert_equal 0, sync_cache.unconvertible_entry_count
+    end
+  end
+
   # get_holdings_value
 
   test "returns 0 for date with no holdings" do
