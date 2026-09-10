@@ -352,18 +352,34 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param website_url [String, nil] Optional merchant website
   # @param logo_url [String, nil] Optional merchant logo URL
+  # @param iban [String, nil] Optional counterparty IBAN, used as a preferred lookup key when present
   # @return [ProviderMerchant, nil] The merchant object or nil if data is insufficient
-  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
+  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil, iban: nil)
     return nil unless provider_merchant_id.present? && name.present?
+
+    normalized_iban = iban.to_s.delete(" ").upcase.presence
+
+    # IBAN is the most reliable signal when available (stable across
+    # different remittance text for the same real-world payee), but it isn't
+    # provided by every ASPSP/transaction, so it's a preferred lookup, never
+    # a replacement for the name-based identifiers below.
+    merchant = ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?
 
     # First try to find by provider_merchant_id (stable identifier derived from normalized name)
     # This handles case variations in merchant names (e.g., "ACME Corp" vs "Acme Corp")
-    merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
+    merchant ||= ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
 
     # If not found by provider_merchant_id, try by exact name match (backwards compatibility)
     merchant ||= ProviderMerchant.find_by(source: source, name: name)
 
     if merchant
+      if normalized_iban.present? && merchant.iban.blank?
+        begin
+          merchant.update!(iban: normalized_iban)
+        rescue ActiveRecord::RecordInvalid => e
+          Rails.logger.warn("Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}")
+        end
+      end
       # Update logo if provided and merchant doesn't have one (or has a different one)
       # Best-effort: don't fail transaction import if logo update fails
       if logo_url.present? && merchant.logo_url != logo_url
@@ -383,11 +399,16 @@ class Account::ProviderImportAdapter
         name: name,
         provider_merchant_id: provider_merchant_id,
         website_url: website_url,
-        logo_url: logo_url
+        logo_url: logo_url,
+        iban: normalized_iban
       )
     rescue ActiveRecord::RecordNotUnique
-      # Race condition - another process created the record
-      merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
+      # Race condition - another process created the record; the unique
+      # index on (source, iban) means a concurrent insert could have won on
+      # iban even when provider_merchant_id/name didn't collide, so that
+      # lookup needs to be retried here too.
+      merchant = (ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?) ||
+                 ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
                  ProviderMerchant.find_by(source: source, name: name)
     end
 
