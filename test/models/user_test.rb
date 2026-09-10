@@ -981,6 +981,34 @@ class UserTest < ActiveSupport::TestCase
     assert_nil admin_session.reload.active_impersonator_session_id
   end
 
+  test "with_active_lock! rejects an inactive user without yielding" do
+    @user.update_column(:active, false)
+    yielded = false
+
+    assert_raises(User::InactiveError) do
+      @user.with_active_lock! { yielded = true }
+    end
+
+    assert_not yielded
+  end
+
+  test "with_active_lock! translates RecordNotFound only when the lock itself can't find the row" do
+    @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
+
+    assert_raises(User::InactiveError) do
+      @user.with_active_lock! { flunk "should not yield when the row can't be locked" }
+    end
+  end
+
+  test "with_active_lock! does not misreport a RecordNotFound raised inside the yielded block" do
+    # A failure unrelated to the user's own activity status (e.g. resolving
+    # some other record inside the caller's block) must propagate as-is,
+    # not get swallowed into "this user is inactive".
+    assert_raises(ActiveRecord::RecordNotFound) do
+      @user.with_active_lock! { raise ActiveRecord::RecordNotFound, "unrelated record missing" }
+    end
+  end
+
   test "deactivate refuses the last active super admin" do
     family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
     target = User.create!(

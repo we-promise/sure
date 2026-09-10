@@ -337,13 +337,20 @@ class User < ApplicationRecord
   # round trip) — that's a UX optimization only, never a substitute for
   # this check, however "obviously" already-checked the user seems.
   def with_active_lock!
+    lock_acquired = false
+
     with_lock do
+      lock_acquired = true
       raise InactiveError unless active?
       yield self
     end
   rescue ActiveRecord::RecordNotFound
-    # The row was deleted (concurrent purge) between the query that found
-    # this user and the lock attempt — same rejection as "inactive".
+    # Only translate a RecordNotFound raised by with_lock's own reload (the
+    # row was deleted by a concurrent purge before we could lock it) into
+    # InactiveError. Once the lock is held, re-raise: a RecordNotFound from
+    # inside the caller's block is an unrelated failure and must not be
+    # misreported as "inactive" either.
+    raise if lock_acquired
     raise InactiveError
   end
 

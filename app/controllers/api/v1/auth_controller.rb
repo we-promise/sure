@@ -217,9 +217,11 @@ module Api
             token_response = device.issue_token!
           end
         rescue User::InactiveError
+          restore_linking_code!(linking_code, cached)
           render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
           return
         rescue ActiveRecord::RecordInvalid => e
+          restore_linking_code!(linking_code, cached)
           Rails.logger.error("[Auth] Device registration failed: #{e.message}")
           render json: { error: "Failed to register device" }, status: :unprocessable_entity
           return
@@ -497,6 +499,17 @@ module Api
         # Returns true only for the first caller; subsequent callers get false.
         def consume_linking_code!(linking_code)
           Rails.cache.delete("mobile_sso_link:#{linking_code}")
+        end
+
+        # Best-effort restore so a request rejected *after* consuming the
+        # code (deactivation race or a device-registration failure inside
+        # the transaction) can retry with the same code instead of
+        # restarting the SSO flow from the IdP. Safe to write back verbatim:
+        # a legitimate retry re-authenticates with email/password from
+        # scratch, and OidcIdentity's unique (provider, uid) index is the
+        # backstop if a second request somehow raced onto the restored code.
+        def restore_linking_code!(linking_code, cached)
+          Rails.cache.write("mobile_sso_link:#{linking_code}", cached, expires_in: 10.minutes)
         end
 
         # Used by sso_create_account for its brand-new user (always active —
