@@ -100,6 +100,8 @@ en:
       confirm_button: Reset Cache
       success: AI cache is being cleared. This may take a few moments.
     condition_filters:
+      keys:
+        transaction_counterparty_iban: Counterparty IBAN
       transaction_type:
         income: Income
         expense: Expense

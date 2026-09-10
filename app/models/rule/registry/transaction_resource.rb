@@ -8,6 +8,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
     Rule::ConditionFilter::TransactionTag,
     Rule::ConditionFilter::TransactionDetails,
     Rule::ConditionFilter::TransactionNotes,
+    Rule::ConditionFilter::TransactionCounterpartyIban,
     Rule::ConditionFilter::TransactionAccount
   ].freeze
 
