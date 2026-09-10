@@ -156,6 +156,46 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 100.0, top.first.weight, 0.01
   end
 
+  test "top_holdings weight stays within 100 when cash is negative" do
+    # Margin or an unsettled buy: balance 960 = holdings 1000 + cash -40.
+    account = create_investment_account(balance: 960, cash_balance: -40, currency: "USD")
+    security = Security.create!(ticker: "VTI", name: "Vanguard Total Market")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    top = @statement.top_holdings(limit: 1)
+
+    assert_equal 1, top.size
+    assert_in_delta 100.0, top.first.weight, 0.01
+  end
+
+  test "top_holdings ignores a negative holding row when weighting" do
+    # Holding validates amount >= 0, but Holding::Materializer writes via
+    # upsert_all, which skips validations — an over-sell can land a negative row.
+    account = create_investment_account(balance: 500, cash_balance: 0, currency: "USD")
+    good = Security.create!(ticker: "AAPL", name: "Apple")
+    bad = Security.create!(ticker: "MSFT", name: "Microsoft")
+
+    Holding.create!(
+      account: account, security: good, date: Date.current,
+      qty: 5, price: 200, amount: 1000, currency: "USD"
+    )
+
+    negative = Holding.new(
+      account: account, security: bad, date: Date.current,
+      qty: 2, price: 250, amount: -500, currency: "USD"
+    )
+    negative.save!(validate: false)
+
+    top = @statement.top_holdings(limit: 5)
+
+    assert_equal [ "AAPL" ], top.map(&:ticker)
+    assert_in_delta 100.0, top.first.weight, 0.01
+  end
+
   test "top_holdings computes trends only for the selected limit" do
     large = create_investment_account(balance: 5000, cash_balance: 0)
     small = create_investment_account(balance: 1000, cash_balance: 0)
@@ -182,9 +222,13 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal %w[TOP1], top.map(&:ticker)
   end
 
-  test "allocation rolls up duplicate securities and weights sum to 100%" do
-    ira = create_investment_account(balance: 3000, currency: "USD")
-    taxable = create_investment_account(balance: 2000, currency: "USD")
+  # allocation shares top_holdings' denominator, so its weights sum to the
+  # invested share of the portfolio and cash is the visible residual.
+  test "allocation rolls up duplicate securities and weights leave cash as the residual" do
+    # Coherent balances: each account's balance is its holdings plus its cash,
+    # so the weight residual is genuinely cash and not stale balance data.
+    ira = create_investment_account(balance: 3000, cash_balance: 0, currency: "USD")
+    taxable = create_investment_account(balance: 2000, cash_balance: 1500, currency: "USD")
 
     aapl = Security.create!(ticker: "AAPL", name: "Apple")
     msft = Security.create!(ticker: "MSFT", name: "Microsoft")
@@ -207,7 +251,31 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 2, allocation.size
     assert_equal %w[MSFT AAPL], allocation.map(&:ticker)
     assert_equal Money.new(1500, "USD"), allocation.find { |a| a.ticker == "AAPL" }.amount
-    assert_in_delta 100.0, allocation.sum(&:weight), 0.01
+
+    # 3500 of holdings against a 5000 portfolio: 70% invested, 30% cash.
+    assert_in_delta 70.0, allocation.sum(&:weight), 0.01
+
+    cash_share = @statement.cash_balance / @statement.portfolio_value * 100
+    assert_in_delta 100.0, allocation.sum(&:weight) + cash_share, 0.01
+  end
+
+  # The latent bug behind the divergence: the two methods used different
+  # denominators, so one security could report two percentages. Nothing renders
+  # allocation today, so this guards whoever wires it up.
+  test "top_holdings and allocation report the same weight for a security" do
+    account = create_investment_account(balance: 10_000, cash_balance: 4000, currency: "USD")
+    security = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 30, price: 200, amount: 6000, currency: "USD"
+    )
+
+    top_weight = @statement.top_holdings(limit: 1).first.weight
+    allocation_weight = @statement.allocation.find { |a| a.ticker == "VOO" }.weight
+
+    assert_in_delta top_weight, allocation_weight, 0.01
+    assert_in_delta 60.0, top_weight, 0.01
   end
 
   test "allocation weights sum to 100% with mixed currencies" do

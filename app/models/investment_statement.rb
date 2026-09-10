@@ -91,10 +91,7 @@ class InvestmentStatement
     holdings_total = rolled_up.sum { |_, value, _| value }
     return [] if holdings_total.zero?
 
-    # Prefer portfolio_value (includes cash) for weight; fall back to holdings
-    # total when cached account balances are stale/zero.
-    total = portfolio_value
-    total = holdings_total if total.zero?
+    total = weight_denominator(holdings_total)
 
     # Rank/limit on value first; only then compute cost-basis trends for the
     # rows that will be rendered (avoids avg_cost/trade lookups for the rest).
@@ -110,12 +107,16 @@ class InvestmentStatement
       end
   end
 
-  # Portfolio allocation by security (rolled up across accounts). Weights are
-  # relative to total holdings value (excludes cash) so they sum to ~100%.
+  # Portfolio allocation by security (rolled up across accounts). Shares the
+  # weight denominator with top_holdings so the same security never reports two
+  # different percentages. Weights therefore sum to the invested share of the
+  # portfolio, not to 100 — cash is the residual.
   def allocation
     rolled_up = holdings_rolled_up_by_security
-    total = rolled_up.sum { |_, value, _| value }
-    return [] if total.zero?
+    holdings_total = rolled_up.sum { |_, value, _| value }
+    return [] if holdings_total.zero?
+
+    total = weight_denominator(holdings_total)
 
     rolled_up.map do |security, value, holdings|
       HoldingAllocation.new(
@@ -324,6 +325,18 @@ class InvestmentStatement
     # Returns [[security, value, holdings], ...] sorted by value descending.
     # Callers that need return trends should call combined_holding_trend only
     # for rows they will render (e.g. after top_holdings applies its limit).
+    # Shared by top_holdings and allocation so one security cannot report two
+    # different percentages.
+    #
+    # max(portfolio_value, holdings_total) rather than portfolio_value alone:
+    # portfolio_value includes cash, which goes negative on margin or an
+    # unsettled buy and would push a weight past 100%. The holdings total acts
+    # as a floor. It also covers a stale-zero portfolio_value, where the cached
+    # Account#balance lags behind the Holding rows.
+    def weight_denominator(holdings_total)
+      [ portfolio_value, holdings_total ].max
+    end
+
     def holdings_rolled_up_by_security
       current_holdings
         .to_a
@@ -331,7 +344,7 @@ class InvestmentStatement
         .filter_map do |_security_id, holdings|
           security = holdings.first.security
           value = holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
-          next if value.zero?
+          next unless value.positive?
 
           [ security, value, holdings ]
         end
