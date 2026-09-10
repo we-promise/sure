@@ -61,7 +61,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 2, @statement.current_holdings.count
   end
 
-  test "current_holdings uses the latest provider import while preserving per-security price dates" do
+  test "current_holdings uses the latest provider import day while preserving per-security price dates" do
     account = create_investment_account(balance: 2100, currency: "USD")
     coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
     coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")

@@ -75,7 +75,7 @@ class InvestmentStatement
       if account_ids.any?
         # Provider price dates can differ within one import (for example,
         # Plaid's institution_price_as_of is per security). Use the day each
-        # holding was imported to identify the latest provider snapshot while
+        # holding was imported to identify the latest provider import day while
         # preserving each security's provider-supplied price date.
         provider_snapshot = <<~SQL.squish
           holdings.account_provider_id IS NOT NULL
