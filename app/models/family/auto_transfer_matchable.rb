@@ -1,4 +1,13 @@
 module Family::AutoTransferMatchable
+  # A confirmed IBAN match (the destination account's own IBAN equals the
+  # outflow's recorded counterparty IBAN) is the most precise signal
+  # available -- more precise than amount+date alone, which can be ambiguous
+  # with several similar transactions in flight. It therefore gets a wider
+  # date-tolerance window to absorb bank clearing delays; transactions
+  # without a confirmed IBAN keep the existing, narrower window unchanged.
+  IBAN_CONFIRMED_DATE_WINDOW = 14
+  DEFAULT_DATE_WINDOW = 4
+
   def transfer_match_candidates(
     date_window: 4,
     exchange_rate_tolerance: 0.1,
@@ -26,12 +35,29 @@ module Family::AutoTransferMatchable
   end
 
   def auto_match_transfers!(account: nil)
-    # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
+    # Exclude already matched transfers. Loads the wider IBAN-confirmed window
+    # up front; candidates that turn out not to be IBAN-confirmed are pruned
+    # back down to the normal window just below, so unconfirmed behavior is
+    # unchanged.
+    candidates_scope = transfer_match_candidates(
+      account_id: account&.id, include_rejected: false, date_window: IBAN_CONFIRMED_DATE_WINDOW
+    )
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
     transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
+
+    # IBAN-confirmed candidates may use the wider window and are tried first;
+    # everything else is restricted back to the original narrow window so
+    # transactions with no IBAN data see no behavior change. Confirmation is
+    # computed once per match and carried alongside it -- Transfer's own
+    # transfer_within_date_range validation caps unconfirmed transfers at 4
+    # days, so an IBAN-confirmed match also needs status: "confirmed" (its
+    # 30-day cap) to actually persist beyond that.
+    candidates_with_confirmation = candidates_scope
+      .map { |match| [ match, iban_confirmed?(match, transactions_by_id) ] }
+      .select { |match, confirmed| confirmed || match.date_diff <= DEFAULT_DATE_WINDOW }
+      .sort_by { |match, confirmed| [ confirmed ? 0 : 1, match.date_diff ] }
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
@@ -39,14 +65,14 @@ module Family::AutoTransferMatchable
     investment_category_loaded = false
 
     Transfer.transaction do
-      candidates_scope.each do |match|
+      candidates_with_confirmation.each do |match, confirmed|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
         # marking it matched here would leave a transaction matched with no Transfer.
-        next unless find_or_create_transfer!(match)
+        next unless find_or_create_transfer!(match, confirmed: confirmed)
 
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
@@ -76,6 +102,27 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # True when the inflow's destination account has its own IBAN set and it
+    # matches the outflow transaction's recorded counterparty IBAN. Blank on
+    # either side (no accounts.iban set, or the provider never supplied a
+    # counterparty IBAN for this transaction) always resolves to false --
+    # this is an additive signal, never a requirement.
+    def iban_confirmed?(match, transactions_by_id)
+      inflow = transactions_by_id[match.inflow_transaction_id]
+      outflow = transactions_by_id[match.outflow_transaction_id]
+      return false unless inflow && outflow
+
+      destination_iban = inflow.entry.account.iban
+      counterparty_iban = outflow.extra&.dig("counterparty_iban")
+      return false if destination_iban.blank? || counterparty_iban.blank?
+
+      normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
+    end
+
+    def normalize_iban(value)
+      value.to_s.delete(" ").upcase
+    end
+
     # Create the transfer for a matched candidate, tolerating a concurrent sync
     # that already inserted the same pair.
     #
@@ -85,12 +132,19 @@ module Family::AutoTransferMatchable
     # next write would fail with PG::InFailedSqlTransaction and the remaining
     # candidates would be silently dropped. Isolating the insert in a savepoint
     # rolls back only the failed statement, leaving the outer transaction healthy.
-    def find_or_create_transfer!(match)
+    def find_or_create_transfer!(match, confirmed: false)
       Transfer.transaction(requires_new: true) do
         Transfer.find_or_create_by!(
           inflow_transaction_id: match.inflow_transaction_id,
           outflow_transaction_id: match.outflow_transaction_id,
-        )
+        ) do |transfer|
+          # Only takes effect when a new record is being built -- an
+          # already-existing transfer's status is left untouched. Needed so
+          # an IBAN-confirmed match beyond the default 4-day window doesn't
+          # immediately fail transfer_within_date_range, which only allows
+          # up to 30 days for status: "confirmed".
+          transfer.status = "confirmed" if confirmed
+        end
       end
     rescue ActiveRecord::RecordNotUnique
       # The composite unique index rejected the insert because this exact
