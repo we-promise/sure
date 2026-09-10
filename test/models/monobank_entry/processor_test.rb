@@ -101,7 +101,7 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
   test "keeps the account currency when currencyCode names another one" do
     # The regression this replaces: 500 UAH leaving a hryvnia card to fund a euro card
     # was stored as 500 EUR, because `currencyCode` reports the operation currency.
-    entry = process(id: "tx_transfer", time: MIDDAY_UNIX, description: "Переказ на картку", amount: -50_000, operationAmount: -960, currencyCode: 978, hold: false)
+    entry = process(id: "tx_transfer", time: MIDDAY_UNIX, description: "Card transfer", amount: -50_000, operationAmount: -960, currencyCode: 978, hold: false)
 
     assert_equal "UAH", entry.currency
     assert_equal BigDecimal("500"), entry.amount
