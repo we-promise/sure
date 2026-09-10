@@ -120,4 +120,91 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     entry = Entry.order(created_at: :desc).first
     assert_nil entry.transaction.category_id
   end
+
+  # merchant_name alone collapses every Target purchase into "Target", which
+  # leaves nothing for a rule to distinguish the variants by.
+  test "combines merchant name and original description when both are present" do
+    plaid_transaction = {
+      "transaction_id" => "combined-name",
+      "merchant_name" => "Target",
+      "original_description" => "TARGET 00023 SAN MATEO CA",
+      "amount" => 100,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "combined-name-merchant"
+    }
+
+    @category_matcher.expects(:match).with("Food").returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    entry = Entry.find_by!(external_id: "combined-name", source: "plaid")
+
+    assert_equal "Target - TARGET 00023 SAN MATEO CA", entry.name
+    # The merchant record still carries the clean name, so grouping is unaffected.
+    assert_equal "Target", entry.transaction.merchant.name
+  end
+
+  test "uses the merchant name alone when there is no original description" do
+    plaid_transaction = {
+      "transaction_id" => "merchant-only",
+      "merchant_name" => "Amazon",
+      "amount" => 50,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "merchant-only-merchant"
+    }
+
+    @category_matcher.expects(:match).with("Food").returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    assert_equal "Amazon", Entry.find_by!(external_id: "merchant-only", source: "plaid").name
+  end
+
+  test "uses the original description alone when Plaid resolved no merchant" do
+    plaid_transaction = {
+      "transaction_id" => "description-only",
+      "original_description" => "SQ *COFFEE BAR",
+      "amount" => 5,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "personal_finance_category" => { "detailed" => "Food" }
+    }
+
+    @category_matcher.expects(:match).with("Food").returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    assert_equal "SQ *COFFEE BAR", Entry.find_by!(external_id: "description-only", source: "plaid").name
+  end
+
+  test "does not repeat itself when both values are identical" do
+    plaid_transaction = {
+      "transaction_id" => "identical-name",
+      "merchant_name" => "Netflix",
+      "original_description" => "Netflix",
+      "amount" => 15,
+      "date" => Date.current,
+      "iso_currency_code" => "USD",
+      "personal_finance_category" => { "detailed" => "Food" },
+      "merchant_entity_id" => "identical-name-merchant"
+    }
+
+    @category_matcher.expects(:match).with("Food").returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(
+      plaid_transaction, plaid_account: @plaid_account, category_matcher: @category_matcher
+    ).process
+
+    assert_equal "Netflix", Entry.find_by!(external_id: "identical-name", source: "plaid").name
+  end
 end
