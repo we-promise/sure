@@ -502,7 +502,8 @@ class QifImport < Import
       }
       attributes[:accountable_attributes] = { subtype: PhysicalCash::DEFAULT_SUBTYPE } if accountable_type == "PhysicalCash"
 
-      family.accounts.find_by(name: name) || Account.create_and_sync(attributes, skip_initial_sync: true)
+      family.accounts.find_by(name: name, accountable_type: accountable_type) ||
+        Account.create_and_sync(attributes, skip_initial_sync: true)
     end
 
     def accountable_type_for_qif_type(qif_type)

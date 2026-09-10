@@ -160,7 +160,13 @@ class AccountsTest < ApplicationSystemTestCase
 
       within_testid("account-sidebar-tabs") do
         click_on "All"
-        find("details", text: Accountable.from_type(accountable_type).display_name).click
+        # `text:`/`exact_text:` on the whole <details> would also have to match
+        # the balance and sparkline placeholder rendered alongside the group
+        # name (see accounts/_accountable_group.html.erb), so match the name
+        # span itself instead — a click still bubbles to the native <summary>
+        # toggle. Exact match matters now that "Cash" (Depository) is a
+        # substring of "Physical Cash": substring matching made this ambiguous.
+        find("details summary span", exact_text: Accountable.from_type(accountable_type).display_name).click
         assert_text account_name
       end
 

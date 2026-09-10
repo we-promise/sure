@@ -403,15 +403,21 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
 
     bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
 
-    assert_equal 620, bridge.cash_on_hand
+    assert_equal 620, bridge.cash_on_hand, "set_cash(500) parks 500 on one account; physical_cash adds its own 120 on top"
   end
 
   private
     # The family fixture carries more than one deposit account, and the plan
     # sums all of them, so a test that means to pin the cash has to set them all.
+    # Zeroes every cash account and parks the full amount on just one, rather
+    # than dividing across N accounts: an uneven split (e.g. 40 / 3 accounts)
+    # produces a repeating decimal whose rounded sum drifts a hair from the
+    # pinned total, which was enough to fail exact-equality assertions once
+    # a third cash account (physical_cash) joined the fixture set.
     def set_cash(amount)
       cash_accounts = @family.accounts.where(accountable_type: %w[Depository PhysicalCash])
-      cash_accounts.update_all(balance: amount / cash_accounts.count.to_d)
+      cash_accounts.update_all(balance: 0)
+      cash_accounts.where(accountable_type: "Depository").first.update!(balance: amount)
     end
 
     def create_series(name:, amount:, due:, preset: "monthly", income: false)
