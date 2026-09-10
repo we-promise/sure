@@ -513,6 +513,8 @@ class QifImport < Import
         "OtherAsset"
       when "Oth L"
         "OtherLiability"
+      when "Cash"
+        "PhysicalCash"
       else
         "Depository"
       end

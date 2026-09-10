@@ -250,9 +250,9 @@ class RecurringTransaction
       end
 
       # Cash a bill can actually be paid from before the next paycheck: the
-      # family's own deposit accounts, minus the tax-advantaged ones nobody
-      # spends rent out of. Credit cards share the `:cash` balance type but are
-      # a liability, so they are not money on hand.
+      # family's own deposit accounts and physical cash on hand, minus the
+      # tax-advantaged ones nobody spends rent out of. Credit cards share the
+      # `:cash` balance type but are a liability, so they are not money on hand.
       #
       # nil, never zero, when there is nothing to read. Zero would assert the
       # user is broke and raise a shortfall on that basis; nil says the balance
@@ -261,7 +261,7 @@ class RecurringTransaction
         return @cash_on_hand if defined?(@cash_on_hand)
 
         accounts = family.accounts.visible
-                         .where(accountable_type: "Depository")
+                         .where(accountable_type: [ "Depository", "PhysicalCash" ])
                          .merge(Account.accessible_by(user))
 
         excluded = family.tax_advantaged_account_ids

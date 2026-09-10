@@ -17,10 +17,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
         of their accounts will fund it. Only call once they've confirmed.
 
         Constraints:
-        - The goal must link to at least one of the user's Depository
-          accounts (checking, savings, HSA, CD, money-market).
+        - The goal must link to at least one of the user's Depository or
+          Physical Cash accounts (checking, savings, HSA, CD, money-market,
+          or physical cash like a wallet or safe).
         - All linked accounts must share the same currency.
-        - Use account names exactly as listed in the user's Depository
+        - Use account names exactly as listed in the user's available
           accounts.
 
         On success returns the new goal's URL so you can point the user to
@@ -29,6 +30,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
       INSTRUCTIONS
     end
   end
+
+  # Investment accounts are intentionally excluded here (unlike
+  # Goal::FUNDABLE_ACCOUNT_TYPES) to keep the assistant's mental model simple:
+  # only plain cash accounts, not brokerage holdings.
+  FUNDABLE_TYPES = %w[Depository PhysicalCash].freeze
 
   def strict_mode?
     false
@@ -53,7 +59,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         linked_account_names: {
           type: "array",
           items: { type: "string" },
-          description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
+          description: "Names of the user's Depository or Physical Cash accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
         },
         earmarks: {
           type: "object",
@@ -83,17 +89,17 @@ class Assistant::Function::CreateGoal < Assistant::Function
     if linked_account_names.empty?
       return error(
         "no_linked_accounts",
-        "Please specify at least one Depository account to link to this goal.",
+        "Please specify at least one Depository or Physical Cash account to link to this goal.",
         available_accounts: depository_account_payload
       )
     end
 
-    available = family.accounts.where(accountable_type: "Depository").visible.where(name: linked_account_names)
+    available = family.accounts.where(accountable_type: FUNDABLE_TYPES).visible.where(name: linked_account_names)
     missing = linked_account_names - available.pluck(:name).uniq
     if missing.any?
       return error(
         "unknown_accounts",
-        "Some account names didn't match the user's Depository accounts.",
+        "Some account names didn't match the user's Depository or Physical Cash accounts.",
         unknown_names: missing,
         available_accounts: depository_account_payload
       )
@@ -202,7 +208,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
     def depository_account_payload
       claimed = whole_account_claimed_ids
 
-      family.accounts.where(accountable_type: "Depository").visible.map do |account|
+      family.accounts.where(accountable_type: FUNDABLE_TYPES).visible.map do |account|
         {
           name: account.name,
           currency: account.currency,

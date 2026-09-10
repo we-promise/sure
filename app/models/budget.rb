@@ -198,7 +198,7 @@ class Budget < ApplicationRecord
   # accounts, the household one what the viewer can see — because a figure
   # labelled "available" must mean available to the person reading it.
   def cash_accounts
-    scope = family.accounts.visible.included_in_reports.where(accountable_type: "Depository")
+    scope = family.accounts.visible.included_in_reports.where(accountable_type: [ "Depository", "PhysicalCash" ])
 
     if user_id.present?
       scope.where(owner_id: user_id)

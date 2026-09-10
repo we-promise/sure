@@ -36,7 +36,7 @@ class Insight::Generators::IdleCashGenerator < Insight::Generator
     # nudge a different pair of accounts each night, churning the feed.
     def idle_accounts
       family.accounts.visible
-        .where(accountable_type: "Depository", currency: family.currency)
+        .where(accountable_type: [ "Depository", "PhysicalCash" ], currency: family.currency)
         .where("balance >= ?", MIN_BALANCE)
         .where.not(id: Entry.where("date >= ?", IDLE_DAYS.days.ago.to_date).select(:account_id))
         .order(balance: :desc)

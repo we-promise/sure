@@ -672,6 +672,7 @@ Rails.application.routes.draw do
   end
 
   resources :depositories, only: %i[new create edit update]
+  resources :physical_cashes, only: %i[new create edit update]
   resources :investments, only: %i[new create edit update]
   resources :properties, only: %i[new create edit update] do
     member do
