@@ -1,16 +1,15 @@
-import { readFile } from "node:fs/promises"
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 
-// Runs the shipped module directly (no bundler needed for a plain .js file
-// with no importmap-only specifiers), matching the other test/javascript
-// files in this directory.
-const SOURCE_URL = new URL(
+// Runs the shipped module directly, matching the other test/javascript files
+// in this directory.
+const MODULE_URL = new URL(
   "../../app/javascript/utils/evaluate_amount_expression.js",
   import.meta.url,
 )
 
-const { default: evaluateAmountExpression } = await import(SOURCE_URL)
+const { default: evaluateAmountExpression, formatAmountForDisplay } =
+  await import(MODULE_URL)
 
 describe("evaluateAmountExpression", () => {
   describe("plain amounts (no operator)", () => {
@@ -38,6 +37,11 @@ describe("evaluateAmountExpression", () => {
       assert.equal(evaluateAmountExpression("0.5"), 0.5)
       assert.equal(evaluateAmountExpression("0,5"), 0.5)
     })
+
+    it("parses a trailing separator with no digits after it", () => {
+      assert.equal(evaluateAmountExpression("12."), 12)
+      assert.equal(evaluateAmountExpression("12,"), 12)
+    })
   })
 
   describe("comma decimal with more than two decimal places (iOS bug report)", () => {
@@ -58,7 +62,7 @@ describe("evaluateAmountExpression", () => {
     })
   })
 
-  describe("thousands grouping (unambiguous only — repeated separator, or both present)", () => {
+  describe("thousands grouping (only accepted in strict 3-digit groups)", () => {
     it("treats a repeated comma as thousands grouping", () => {
       assert.equal(evaluateAmountExpression("1,234,567"), 1234567)
     })
@@ -67,12 +71,57 @@ describe("evaluateAmountExpression", () => {
       assert.equal(evaluateAmountExpression("1.234.567"), 1234567)
     })
 
+    it("a single separator is always the decimal point, never grouping — even with 3 digits after it", () => {
+      // This is the inverse of "treats a repeated comma/dot as thousands
+      // grouping" above: grouping only kicks in once the separator repeats
+      // (2+ groups). A single occurrence is always read as the decimal
+      // point, matching the iOS bug report's "10,321" case.
+      assert.equal(evaluateAmountExpression("12,345"), 12.345)
+      assert.equal(evaluateAmountExpression("1,234"), 1.234)
+    })
+
     it("resolves dot-thousands + comma-decimal (European) via last separator", () => {
       assert.equal(evaluateAmountExpression("1.234,56"), 1234.56)
     })
 
     it("resolves comma-thousands + dot-decimal (English) via last separator", () => {
       assert.equal(evaluateAmountExpression("1,234.56"), 1234.56)
+    })
+
+    it("resolves multi-group European amounts", () => {
+      assert.equal(evaluateAmountExpression("12.345.678,90"), 12345678.9)
+    })
+  })
+
+  describe("malformed separator use is rejected, not guessed at", () => {
+    it("rejects groups that aren't exactly 3 digits", () => {
+      assert.equal(evaluateAmountExpression("12,50,30"), null)
+      assert.equal(evaluateAmountExpression("1,23,456"), null)
+      assert.equal(evaluateAmountExpression("12.50.30"), null)
+    })
+
+    it("rejects a double separator with an empty group", () => {
+      assert.equal(evaluateAmountExpression("1,,234"), null)
+      assert.equal(evaluateAmountExpression("1..234"), null)
+      assert.equal(evaluateAmountExpression(",,"), null)
+      assert.equal(evaluateAmountExpression(".."), null)
+    })
+
+    it("rejects mixed separators that don't form a recognized thousands+decimal shape", () => {
+      assert.equal(evaluateAmountExpression("1.2,3.4"), null)
+      assert.equal(evaluateAmountExpression("1,2.3,4"), null)
+      assert.equal(evaluateAmountExpression("1,234.56,78"), null)
+      assert.equal(evaluateAmountExpression("1.234,56.78"), null)
+    })
+
+    it("rejects two decimal points of the same kind", () => {
+      assert.equal(evaluateAmountExpression("12.50.00"), null)
+      assert.equal(evaluateAmountExpression("12,50,00"), null)
+    })
+
+    it("rejects a separator with nothing before it", () => {
+      assert.equal(evaluateAmountExpression(","), null)
+      assert.equal(evaluateAmountExpression("."), null)
     })
   })
 
@@ -111,6 +160,11 @@ describe("evaluateAmountExpression", () => {
 
     it("adds three or more terms", () => {
       assert.equal(evaluateAmountExpression("1+2+3+4+5"), 15)
+    })
+
+    it("rejects a malformed operand inside an expression", () => {
+      assert.equal(evaluateAmountExpression("12,50,30+1"), null)
+      assert.equal(evaluateAmountExpression("1+12,50,30"), null)
     })
   })
 
@@ -193,10 +247,12 @@ describe("evaluateAmountExpression", () => {
 
     it("rejects a leading operator with no sign meaning", () => {
       assert.equal(evaluateAmountExpression("*12"), null)
+      assert.equal(evaluateAmountExpression("/12"), null)
     })
 
     it("rejects a lone sign", () => {
       assert.equal(evaluateAmountExpression("-"), null)
+      assert.equal(evaluateAmountExpression("+"), null)
     })
 
     it("rejects division by zero", () => {
@@ -215,6 +271,78 @@ describe("evaluateAmountExpression", () => {
       assert.equal(evaluateAmountExpression(42), null)
       assert.equal(evaluateAmountExpression(null), null)
       assert.equal(evaluateAmountExpression(undefined), null)
+      assert.equal(evaluateAmountExpression({}), null)
+      assert.equal(evaluateAmountExpression([1, 2]), null)
+      assert.equal(evaluateAmountExpression(true), null)
+    })
+  })
+
+  describe("deliberately adversarial input (malformed, oversized, or injection-shaped)", () => {
+    it("rejects HTML/script-looking payloads", () => {
+      assert.equal(evaluateAmountExpression("<script>alert(1)</script>"), null)
+      assert.equal(evaluateAmountExpression("<img src=x onerror=alert(1)>"), null)
+      assert.equal(evaluateAmountExpression("javascript:alert(1)"), null)
+    })
+
+    it("rejects SQL-injection-shaped strings", () => {
+      assert.equal(evaluateAmountExpression("1; DROP TABLE users;--"), null)
+      assert.equal(evaluateAmountExpression("1' OR '1'='1"), null)
+    })
+
+    it("rejects JS-prototype-shaped strings", () => {
+      assert.equal(evaluateAmountExpression("__proto__"), null)
+      assert.equal(evaluateAmountExpression("constructor.constructor"), null)
+    })
+
+    it("rejects template-literal/expression-injection-shaped strings", () => {
+      assert.equal(evaluateAmountExpression("${alert(1)}"), null)
+      assert.equal(evaluateAmountExpression("`${1+1}`"), null)
+    })
+
+    it("rejects a very long digit string instead of hanging or overflowing silently", () => {
+      const huge = "9".repeat(400)
+      assert.equal(evaluateAmountExpression(huge), null)
+    })
+
+    it("rejects a very long expression instead of hanging", () => {
+      const longExpr = Array(500).fill("1").join("+")
+      assert.equal(evaluateAmountExpression(longExpr), null)
+    })
+
+    it("rejects a number so large it would parse to Infinity", () => {
+      // Below the MAX_TOKEN_LENGTH cut-off in digit count, but still
+      // astronomically large — must be rejected via the finite check, not
+      // silently accepted as Infinity.
+      assert.equal(evaluateAmountExpression("1e400"), null)
+    })
+
+    it("rejects NaN/Infinity spelled out as text", () => {
+      assert.equal(evaluateAmountExpression("NaN"), null)
+      assert.equal(evaluateAmountExpression("Infinity"), null)
+    })
+
+    it("tolerates a plain grouping space between digits (by design, same as pasted grouped amounts)", () => {
+      assert.equal(evaluateAmountExpression("12 50"), 1250)
+    })
+
+    it("rejects a null byte or other control character embedded in a number", () => {
+      assert.equal(evaluateAmountExpression("1\x002"), null)
+      assert.equal(evaluateAmountExpression("12\x1b[31m3"), null)
+    })
+
+    it("trims incidental surrounding whitespace, including newlines, same as spaces", () => {
+      assert.equal(evaluateAmountExpression("12\n+3"), 15)
+    })
+
+    it("rejects full-width/unicode digit look-alikes", () => {
+      // U+FF11 etc. ("１２" fullwidth) are not ASCII digits and must not be
+      // silently treated as 0/rejected-to-0 — they should be refused outright.
+      assert.equal(evaluateAmountExpression("１２"), null)
+    })
+
+    it("rejects whitespace-only input", () => {
+      assert.equal(evaluateAmountExpression("   "), null)
+      assert.equal(evaluateAmountExpression("\t\n"), null)
     })
   })
 
@@ -237,5 +365,38 @@ describe("evaluateAmountExpression", () => {
         2.234,
       )
     })
+
+    it("still rejects malformed groups under a hint", () => {
+      assert.equal(evaluateAmountExpression("12,50,30", { separator: "." }), null)
+      assert.equal(evaluateAmountExpression("1,,234", { separator: "," }), null)
+    })
+  })
+})
+
+describe("formatAmountForDisplay", () => {
+  it("renders a dot when the raw text had no comma", () => {
+    assert.equal(formatAmountForDisplay(12.5, 2, "12.50"), "12.50")
+  })
+
+  it("renders a comma when the raw text the user typed had one", () => {
+    assert.equal(formatAmountForDisplay(12.5, 2, "12,50"), "12,50")
+  })
+
+  it("re-renders a 3-decimal comma amount rounded to the field's precision", () => {
+    // The exact iOS bug report round trip: "10,321" evaluates to 10.321,
+    // and at 2-decimal precision must redisplay as "10,32", not "10.32".
+    assert.equal(formatAmountForDisplay(10.321, 2, "10,321"), "10,32")
+  })
+
+  it("uses a comma even when the comma was inside an expression, not the result", () => {
+    assert.equal(formatAmountForDisplay(16.8, 2, "12,50+4,30"), "16,80")
+  })
+
+  it("renders without rounding when precision is null", () => {
+    assert.equal(formatAmountForDisplay(1.23456789, null, "1,23456789"), "1,23456789")
+  })
+
+  it("only substitutes the decimal point, not a negative sign", () => {
+    assert.equal(formatAmountForDisplay(-12.5, 2, "-12,50"), "-12,50")
   })
 })
