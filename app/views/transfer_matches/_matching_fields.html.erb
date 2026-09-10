@@ -1,4 +1,4 @@
-<%# locals: (form:, entry:, candidates:, accounts:) %>
+<%# locals: (form:, entry:, candidates:, accounts:, suggested_account: nil) %>
 
 <% if candidates.any? %>
   <div data-controller="transfer-match" class="space-y-2">
@@ -29,15 +29,26 @@
     </div>
   </div>
 <% else %>
-  <p class="text-sm text-secondary">
-    <%= t(".no_matching_transactions") %>
-  </p>
+  <% if suggested_account.present? %>
+    <div class="flex items-start justify-between gap-2 p-3 rounded-lg bg-container-inset">
+      <p class="text-sm text-secondary">
+        <%= t(".suggested_account_html", name: suggested_account.name) %>
+      </p>
+      <%= link_to t(".dismiss_suggestion"), dismiss_suggestion_transaction_transfer_match_path(entry),
+            data: { turbo_method: :post, turbo_frame: "_top" },
+            class: "text-sm text-secondary hover:text-primary underline whitespace-nowrap" %>
+    </div>
+  <% else %>
+    <p class="text-sm text-secondary">
+      <%= t(".no_matching_transactions") %>
+    </p>
+  <% end %>
 
   <%= form.hidden_field :method, value: "new" %>
 
   <div>
     <%= form.select :target_account_id,
                 accounts.map { |account| [account.name, account.id] },
-                { label: t(".target_account") } %>
+                { label: t(".target_account"), selected: suggested_account&.id } %>
   </div>
 <% end %>

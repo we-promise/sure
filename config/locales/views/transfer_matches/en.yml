@@ -3,6 +3,8 @@ en:
   transfer_matches:
     create:
       success: Transfer created
+    dismiss_suggestion:
+      success: Suggestion dismissed
     new:
       header:
         title: Match transfer or payment
@@ -22,3 +24,5 @@ en:
       matching_transaction: Matching transaction
       target_account: Target account
       no_matching_transactions: We couldn't find any transactions to match from your other accounts. Please select an account and we will create a new inflow transaction for you.
+      suggested_account_html: "This payment's IBAN matches your account <strong>%{name}</strong> — we've pre-selected it below."
+      dismiss_suggestion: Not a match

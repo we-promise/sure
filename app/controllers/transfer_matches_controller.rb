@@ -4,6 +4,16 @@ class TransferMatchesController < ApplicationController
   def new
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
     @transfer_match_candidates = @entry.transaction.transfer_match_candidates
+    @suggested_target_account = Current.family.missing_transfer_suggestion_for(@entry) if @transfer_match_candidates.empty?
+  end
+
+  def dismiss_suggestion
+    return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+
+    transaction = @entry.transaction
+    transaction.update!(extra: (transaction.extra || {}).merge("counterparty_transfer_suggestion_dismissed" => true))
+
+    redirect_back_or_to transactions_path, notice: t(".success")
   end
 
   def create

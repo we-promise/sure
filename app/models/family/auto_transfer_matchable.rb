@@ -117,6 +117,32 @@ module Family::AutoTransferMatchable
     end
   end
 
+  # An outflow entry whose counterparty IBAN matches another of this
+  # family's accounts (synced or manual) is a transfer whose destination
+  # account is known, even though the matching inflow transaction doesn't
+  # exist yet -- e.g. the destination is a manually-tracked account the
+  # user hasn't recorded this deposit on. Returns that account, or nil when
+  # there's nothing to suggest (no counterparty IBAN, no matching account,
+  # already a transfer, or the user already dismissed this suggestion).
+  #
+  # Deliberately entry-scoped rather than family-wide: this only needs to
+  # answer "should the transfer-match dialog for THIS entry pre-fill a
+  # target account", not enumerate every missing counterpart across the
+  # family (no UI surfaces that broader list yet).
+  def missing_transfer_suggestion_for(entry)
+    return nil unless entry.amount.positive?
+
+    transaction = entry.entryable
+    return nil unless transaction.is_a?(Transaction)
+    return nil if transaction.transfer?
+    return nil if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
+
+    counterparty_iban = transaction.extra&.dig("counterparty_iban")
+    return nil if counterparty_iban.blank?
+
+    accounts.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
+  end
+
   private
     # True when the inflow's destination account has its own IBAN set and it
     # matches the outflow transaction's recorded counterparty IBAN. Blank on
