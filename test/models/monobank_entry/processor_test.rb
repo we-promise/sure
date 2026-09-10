@@ -74,14 +74,49 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, entry.entryable.extra.dig("monobank", "pending")
   end
 
-  # The operation currency is not reported by Monobank, so only the raw operation amount
-  # is recorded — fx_from/fx_amount are deliberately left unset.
-  test "records the operation amount for a foreign-currency purchase" do
-    entry = process(id: "tx_fx", time: MIDDAY_UNIX, description: "Steam", amount: -41_500, operationAmount: -1_000, currencyCode: 980, hold: false)
+  test "records the operation currency and amount for a foreign-currency purchase" do
+    # A UAH card paying in EUR: `amount` is the UAH charge, `operationAmount` the EUR
+    # figure, and `currencyCode` names the euro — not the account's hryvnia.
+    entry = process(id: "tx_fx", time: MIDDAY_UNIX, description: "Steam", amount: -41_500, operationAmount: -1_000, currencyCode: 978, hold: false)
+
+    assert_equal "UAH", entry.currency, "the entry stays in the account currency"
+    assert_equal BigDecimal("415"), entry.amount
 
     extra = entry.entryable.extra["monobank"]
     assert_equal(-1_000, extra["operation_amount"])
+    assert_equal "EUR", extra["fx_from"]
+    assert_equal "-10.0", extra["fx_amount"]
+  end
+
+  test "does not treat an account-currency operation as foreign" do
+    entry = process(id: "tx_local", time: MIDDAY_UNIX, description: "Silpo", amount: -41_500, operationAmount: -41_500, currencyCode: 980, hold: false)
+
+    extra = entry.entryable.extra["monobank"]
+    assert_equal "UAH", entry.currency
     assert_nil extra["fx_from"]
+    assert_nil extra["fx_amount"]
+    assert_nil extra["operation_amount"]
+  end
+
+  test "keeps the account currency when currencyCode names another one" do
+    # The regression this replaces: 500 UAH leaving a hryvnia card to fund a euro card
+    # was stored as 500 EUR, because `currencyCode` reports the operation currency.
+    entry = process(id: "tx_transfer", time: MIDDAY_UNIX, description: "Переказ на картку", amount: -50_000, operationAmount: -960, currencyCode: 978, hold: false)
+
+    assert_equal "UAH", entry.currency
+    assert_equal BigDecimal("500"), entry.amount
+    assert_equal "EUR", entry.entryable.extra.dig("monobank", "fx_from")
+    assert_equal "-9.6", entry.entryable.extra.dig("monobank", "fx_amount")
+  end
+
+  test "leaves fx metadata unset when currencyCode is unrecognized" do
+    entry = process(id: "tx_bad_cur", time: MIDDAY_UNIX, description: "Unknown", amount: -1_000, operationAmount: -500, currencyCode: 1, hold: false)
+
+    extra = entry.entryable.extra["monobank"]
+    assert_equal "UAH", entry.currency
+    assert_nil extra["fx_from"]
+    assert_nil extra["fx_amount"]
+    assert_equal(-500, extra["operation_amount"], "the raw figure is still kept for reference")
   end
 
   test "stores counterparty details for business account transfers" do
