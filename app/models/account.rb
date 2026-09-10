@@ -1,7 +1,19 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable
+
+  # deterministic: true preserves equality lookups (e.g. find_by(iban:)) and
+  # the family_id+iban uniqueness index, since the same plaintext always
+  # produces the same ciphertext.
+  if encryption_ready?
+    encrypts :iban, deterministic: true
+  end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  # Strips whitespace and upcases so provider-supplied IBANs ("DE893704...")
+  # and manually-entered ones ("DE89 3704...") normalize to the same value —
+  # required for both the uniqueness index and deterministic-encryption
+  # equality lookups to actually match.
+  before_validation :normalize_iban
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -9,6 +21,7 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validates :iban, uniqueness: { scope: :family_id }, allow_nil: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -707,6 +720,10 @@ class Account < ApplicationRecord
   end
 
   private
+
+    def normalize_iban
+      self.iban = iban.to_s.delete(" ").upcase.presence
+    end
 
     def assign_default_owner
       return if owner.present?

@@ -77,8 +77,11 @@ class FamilyMerchantsController < ApplicationController
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       else
-        # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(merchant_params.slice(:website_url))
+        # Only website/iban changed — update the ProviderMerchant directly.
+        # iban is treated like website_url here: neither is part of the
+        # merchant's name-based identity, so changing it doesn't warrant
+        # converting the shared ProviderMerchant into a family-specific copy.
+        @merchant.update!(merchant_params.slice(:website_url, :iban))
         @merchant.generate_logo_url_from_website!
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".success") }
@@ -166,7 +169,7 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url)
+      params.require(key).permit(:name, :color, :website_url, :iban)
     end
 
     def merchant_json(merchant)
