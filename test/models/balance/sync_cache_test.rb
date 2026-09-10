@@ -294,6 +294,41 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 100, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
+  test "reports a holding valued at 1:1 rather than accepting the wrong number silently" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      sync_cache.get_holdings_value(Date.current)
+    end
+
+    assert_equal 1, sync_cache.unconvertible_holding_count
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "Balance::SyncCache", log.source
+    assert_equal "warn", log.level
+    assert_equal @account, log.account
+    assert_equal 1, log.metadata["unconvertible_holding_count"]
+    assert_equal [ "EUR->USD" ], log.metadata["missing_rate_pairs"]
+  end
+
+  test "records no holding diagnostic when every holding converts" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    assert_no_difference "DebugLogEntry.count" do
+      assert_equal 150.0, sync_cache.get_holdings_value(Date.current)
+    end
+
+    assert_equal 0, sync_cache.unconvertible_holding_count
+  end
+
   test "prioritizes custom rate over fetched rate" do
     # Create fetched rate
     ExchangeRate.create!(
