@@ -5,6 +5,10 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    # deterministic: true preserves equality lookups (e.g. find_by(iban:)) —
+    # the account's own IBAN was previously stored in plaintext here, unlike
+    # the other columns on this model.
+    encrypts :iban, deterministic: true
   end
 
   belongs_to :enable_banking_item
@@ -129,6 +133,8 @@ class EnableBankingAccount < ApplicationRecord
       }.compact,
       raw_payload: account_snapshot
     )
+
+    propagate_iban_to_account!
   end
 
   def upsert_enable_banking_transactions_snapshot!(transactions_snapshot)
@@ -140,6 +146,18 @@ class EnableBankingAccount < ApplicationRecord
   end
 
   private
+
+    # Only fills a blank Account#iban — mirrors institution_name/institution_domain,
+    # which likewise only offer the provider value as a placeholder rather than
+    # overwriting a value the user may have entered manually.
+    def propagate_iban_to_account!
+      return if iban.blank?
+
+      target = current_account
+      return if target.nil? || target.iban.present?
+
+      target.update(iban: iban)
+    end
 
     def build_account_name(snapshot)
       # Try to build a meaningful name from the account data

@@ -1,4 +1,6 @@
 class Merchant < ApplicationRecord
+  include Encryptable
+
   TYPES = %w[FamilyMerchant ProviderMerchant].freeze
 
   # Merchant name key for i18n
@@ -9,8 +11,18 @@ class Merchant < ApplicationRecord
   # merchant can never collide with it, regardless of name or locale.
   NO_MERCHANT_FILTER_VALUE = "__no_merchant__"
 
+  # deterministic: true preserves equality lookups (find_by(source:, iban:))
+  # and the source+iban uniqueness index. Only meaningful for ProviderMerchant
+  # rows in practice, but lives on the shared base class like other
+  # provider-specific columns (provider_merchant_id, source).
+  if encryption_ready?
+    encrypts :iban, deterministic: true
+  end
+
   has_many :transactions, dependent: :nullify
   has_many :recurring_transactions, dependent: :destroy
+
+  before_validation :normalize_iban
 
   validates :name, presence: true
   validates :name, exclusion: { in: [ NO_MERCHANT_FILTER_VALUE ] }
@@ -35,4 +47,9 @@ class Merchant < ApplicationRecord
   def filter_value
     persisted? ? name : NO_MERCHANT_FILTER_VALUE
   end
+
+  private
+    def normalize_iban
+      self.iban = iban.to_s.delete(" ").upcase.presence
+    end
 end

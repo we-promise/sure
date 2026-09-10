@@ -25,6 +25,10 @@
         <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
       </div>
       <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
+      <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
+        <%= f.text_field :iban, placeholder: t(".iban_placeholder") %>
+      </div>
+      <p class="text-xs text-subdued"><%= t(".iban_hint") %></p>
     </section>
 
     <section>

@@ -49,6 +49,10 @@
             label: t(".institution_domain_label"),
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
 
+        <%= form.text_field :iban,
+            label: t(".iban_label"),
+            placeholder: t(".iban_placeholder") %>
+
         <%= form.text_area :notes,
             label: t(".notes_label"),
             placeholder: t(".notes_placeholder"),
