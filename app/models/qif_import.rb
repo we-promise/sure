@@ -490,17 +490,19 @@ class QifImport < Import
     end
 
     def find_or_create_qif_account(name, qif_type)
-      family.accounts.find_by(name: name) || Account.create_and_sync(
-        {
-          family: family,
-          name: name,
-          balance: 0,
-          currency: default_currency,
-          accountable_type: accountable_type_for_qif_type(qif_type),
-          import: self
-        },
-        skip_initial_sync: true
-      )
+      accountable_type = accountable_type_for_qif_type(qif_type)
+
+      attributes = {
+        family: family,
+        name: name,
+        balance: 0,
+        currency: default_currency,
+        accountable_type: accountable_type,
+        import: self
+      }
+      attributes[:accountable_attributes] = { subtype: PhysicalCash::DEFAULT_SUBTYPE } if accountable_type == "PhysicalCash"
+
+      family.accounts.find_by(name: name) || Account.create_and_sync(attributes, skip_initial_sync: true)
     end
 
     def accountable_type_for_qif_type(qif_type)

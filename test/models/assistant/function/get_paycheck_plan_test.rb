@@ -160,7 +160,7 @@ class Assistant::Function::GetPaycheckPlanTest < ActiveSupport::TestCase
     end
 
     def set_cash(amount)
-      accounts = @family.accounts.where(accountable_type: "Depository")
+      accounts = @family.accounts.where(accountable_type: %w[Depository PhysicalCash])
       accounts.update_all(balance: amount / accounts.count.to_d)
     end
 

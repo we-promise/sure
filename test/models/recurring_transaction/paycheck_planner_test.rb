@@ -396,11 +396,22 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_not bridge.short?, "an unknown balance is not evidence of a shortfall"
   end
 
+  test "physical cash counts toward cash on hand alongside depository accounts" do
+    set_cash(500)
+    accounts(:physical_cash).update!(family: @family, balance: 120)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_equal 620, bridge.cash_on_hand
+  end
+
   private
     # The family fixture carries more than one deposit account, and the plan
     # sums all of them, so a test that means to pin the cash has to set them all.
     def set_cash(amount)
-      @family.accounts.where(accountable_type: %q(Depository)).update_all(balance: amount / @family.accounts.where(accountable_type: %q(Depository)).count.to_d)
+      cash_accounts = @family.accounts.where(accountable_type: %w[Depository PhysicalCash])
+      cash_accounts.update_all(balance: amount / cash_accounts.count.to_d)
     end
 
     def create_series(name:, amount:, due:, preset: "monthly", income: false)
