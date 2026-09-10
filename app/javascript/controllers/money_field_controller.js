@@ -15,6 +15,19 @@ export default class extends Controller {
 
   requestSequence = 0;
 
+  connect() {
+    // The amount field's displayed value can use a comma decimal, but the
+    // server only accepts a dot (see #canonicalizeForSubmit below), so every
+    // form containing this field needs its data intercepted at submit time.
+    this.form = this.element.closest("form");
+    this.canonicalizeForSubmit = this.canonicalizeForSubmit.bind(this);
+    this.form?.addEventListener("formdata", this.canonicalizeForSubmit);
+  }
+
+  disconnect() {
+    this.form?.removeEventListener("formdata", this.canonicalizeForSubmit);
+  }
+
   handleCurrencyChange(e) {
     const selectedCurrency = e.target.value;
     this.updateAmount(selectedCurrency);
@@ -34,13 +47,17 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = parseLocaleFloat(rawValue);
-        if (Number.isFinite(parsedAmount)) {
+        const parsedAmount = evaluateAmountExpression(rawValue);
+        if (parsedAmount !== null) {
           const precision =
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
               ? this.precisionValue
               : currencyData.default_precision;
-          this.amountTarget.value = parsedAmount.toFixed(precision);
+          this.amountTarget.value = this.#formatForDisplay(
+            parsedAmount,
+            precision,
+            rawValue,
+          );
         }
       }
 
@@ -90,11 +107,70 @@ export default class extends Controller {
     if (result === null) return;
 
     const precision = this.#fieldPrecision();
-    this.amountTarget.value =
-      precision === null ? String(result) : result.toFixed(precision);
+    this.amountTarget.value = this.#formatForDisplay(result, precision, raw);
 
     this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }));
     this.amountTarget.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // iOS/Android's decimal keypad (inputmode="decimal") has no +/-/*/÷ keys,
+  // so typing an expression on a phone is only possible with a physical
+  // keyboard. These buttons (rendered in the template, hidden until the
+  // field has focus) insert an operator at the cursor position instead.
+  // Bound to "mousedown"/"touchstart", not "click": those fire before the
+  // input loses focus, so calling preventDefault() here stops the field
+  // from blurring (which would otherwise dismiss the on-screen keyboard).
+  insertOperator(event) {
+    event.preventDefault();
+    const operator = event.params.operator;
+    const input = this.amountTarget;
+
+    input.focus();
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+
+    if (typeof input.setRangeText === "function") {
+      input.setRangeText(operator, start, end, "end");
+    } else {
+      input.value = input.value.slice(0, start) + operator + input.value.slice(end);
+    }
+
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // Formats a parsed amount for display, matching the decimal separator the
+  // user actually typed: `toFixed` always renders a dot, so a comma typed
+  // "12,50" would otherwise flip back to "12.50" the moment the field is
+  // normalized. Heuristic: if the raw text the user typed contains a comma
+  // at all, they're using a comma decimal convention, so render the result
+  // with a comma too.
+  #formatForDisplay(amount, precision, raw) {
+    const formatted = precision === null ? String(amount) : amount.toFixed(precision);
+    return typeof raw === "string" && raw.includes(",")
+      ? formatted.replace(".", ",")
+      : formatted;
+  }
+
+  // The value displayed on screen may use a comma decimal (see
+  // #formatForDisplay above), but the server only accepts a dot — Rails'
+  // decimal typecast doesn't treat a comma as a decimal point, it just
+  // strips it, silently turning "54,43" into 5443. The "formdata" event
+  // fires whenever this field's form is serialized — on a native submit and
+  // on Turbo's fetch-based one alike — so the submitted entry can be
+  // rewritten to the canonical dot form right here, without touching what's
+  // still on screen.
+  canonicalizeForSubmit(event) {
+    if (!this.hasAmountTarget || this.amountTarget.disabled) return;
+
+    const raw = this.amountTarget.value;
+    if (typeof raw !== "string" || raw.trim() === "") return;
+
+    const result = evaluateAmountExpression(raw);
+    if (result === null) return;
+
+    const precision = this.#fieldPrecision();
+    const canonical = precision === null ? String(result) : result.toFixed(precision);
+    event.formData.set(this.amountTarget.name, canonical);
   }
 
   // The amount input's step already carries the selected currency's precision,

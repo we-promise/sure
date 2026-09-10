@@ -1018,7 +1018,7 @@ end
     get new_transaction_url(duplicate_entry_id: @entry.id)
     assert_response :success
     assert_select "input[name='entry[name]'][value=?]", @entry.name
-    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+    assert_select "input[type='text'][name='entry[amount]']" do |elements|
       assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
     end
     assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"

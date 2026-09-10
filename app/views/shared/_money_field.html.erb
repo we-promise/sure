@@ -7,7 +7,7 @@
                    end
    currency = Money::Currency.new(currency_value || options[:default_currency] || "USD") %>
 
-<div class="form-field <%= options[:container_class] %>"
+<div class="form-field group <%= options[:container_class] %>"
      data-controller="money-field"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>>
@@ -86,6 +86,28 @@
                         } %>
         </div>
       <% end %>
+    </div>
+
+    <%# The decimal keypad (inputmode="decimal") iOS/Android show for this
+        field has no +/-×÷ keys, so an expression can only be typed with a
+        physical keyboard. This row gives touch users the same four
+        operators; hidden until the field has focus so it doesn't clutter
+        every money field on the page. Bound to "mousedown" (not "click") so
+        preventDefault in the controller stops the tap from blurring the
+        input, which would otherwise dismiss the on-screen keyboard. %>
+    <div class="hidden group-focus-within:flex items-center gap-1 mt-1">
+      <%= render DS::Button.new(text: "+", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "+" },
+            aria: { label: t(".operator_add") }) %>
+      <%= render DS::Button.new(text: "−", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "-" },
+            aria: { label: t(".operator_subtract") }) %>
+      <%= render DS::Button.new(text: "×", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "*" },
+            aria: { label: t(".operator_multiply") }) %>
+      <%= render DS::Button.new(text: "÷", variant: :outline, size: :sm,
+            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "/" },
+            aria: { label: t(".operator_divide") }) %>
     </div>
   </div>
 </div>
