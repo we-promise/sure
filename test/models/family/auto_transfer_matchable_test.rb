@@ -232,6 +232,55 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "matches an iban-confirmed transfer up to 14 days apart, beyond the default 4-day window" do
+    @credit_card.update!(iban: "DE89370400440532013000")
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "DE89 3704 0044 0532 0130 00" })
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "still does not match beyond 14 days even with a confirmed iban" do
+    @credit_card.update!(iban: "DE89370400440532013000")
+    outflow = create_transaction(date: 20.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "prefers the iban-confirmed candidate when two equally-plausible options exist" do
+    @credit_card.update!(iban: "DE89370400440532013000")
+
+    confirmed_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    confirmed_outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+
+    unconfirmed_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
+    assert_equal confirmed_outflow.entryable_id, transfer.outflow_transaction_id
+  end
+
+  test "does not treat a mismatched iban as confirmed" do
+    @credit_card.update!(iban: "DE89370400440532013000")
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "transfer candidate options require valid numeric input" do
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
