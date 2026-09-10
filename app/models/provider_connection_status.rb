@@ -2,6 +2,7 @@
 
 class ProviderConnectionStatus
   PROVIDERS = [
+    { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_accounts },
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
@@ -195,6 +196,10 @@ class ProviderConnectionStatus
     end
 
     def sync_status_summary
+      if provider[:key] == "financekit"
+        return item.last_imported_at ? "Device upload imported" : "Waiting for a device upload"
+      end
+
       stats = latest_completed_sync_stats
       counts = accounts_payload
       total = stats.fetch("total_accounts", counts[:total_count]).to_i

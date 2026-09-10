@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  has_many :financekit_items, dependent: :destroy
+
   include Encryptable
 
   # Allow nil password for SSO-only users (JIT provisioning).

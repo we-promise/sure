@@ -1778,5 +1778,9 @@ RSpec.configure do |config|
     }
   }
 
+  config.openapi_specs["openapi.yaml"][:components][:schemas].merge!(
+    JSON.parse(Rails.root.join("docs/api/financekit/schemas.json").read)
+  )
+
   config.openapi_format = :yaml
 end

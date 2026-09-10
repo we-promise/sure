@@ -43,6 +43,11 @@ class Family::DataExporter
       zipfile.put_next_entry("attachments.json")
       zipfile.write generate_attachments_manifest
 
+      # Provider source identity and consent are exportable; device credentials
+      # and retained encrypted upload bodies are deliberately excluded.
+      zipfile.put_next_entry("financekit.json")
+      zipfile.write JSON.generate(Financekit::Export.for_family(@family))
+
       # Add all.ndjson
       zipfile.put_next_entry("all.ndjson")
       zipfile.write generate_ndjson

@@ -78,3 +78,9 @@ refresh_maintained_goal_targets:
   class: "RefreshMaintainedGoalTargetsJob"
   queue: "scheduled"
   description: "Recomputes the floor of reserves expressed in months of expenses"
+
+financekit_inbox:
+  cron: "* * * * *"
+  class: "FinancekitInboxJob"
+  queue: "scheduled"
+  description: "Recover and process durably accepted FinanceKit device uploads"
