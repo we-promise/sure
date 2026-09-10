@@ -181,6 +181,9 @@ class EnableBankingEntry::Processor
 
       parts << data[:note] if data[:note].present?
 
+      bank_name = counterparty_account_info[:bank_name]
+      parts << "Bank: #{bank_name}" if bank_name.present?
+
       parts.join("\n\n").presence
     end
 
@@ -197,7 +200,43 @@ class EnableBankingEntry::Processor
       eb[:pending] = true if data[:_pending] == true
 
       eb.compact!
-      eb.empty? ? nil : { enable_banking: eb }
+
+      result = eb.empty? ? {} : { enable_banking: eb }
+
+      # Top-level, not namespaced under enable_banking: this is a
+      # provider-neutral fact about the transaction itself (who it was with),
+      # not an Enable-Banking-specific sync detail like fx_rate/mcc above.
+      # Any future provider that surfaces a counterparty IBAN writes to the
+      # same key, so consumers (rules, search, transfer matching) never need
+      # to know which provider populated it. See issue #3306 for the
+      # opposite, hardcoded-provider-list anti-pattern this avoids.
+      cp = counterparty_account_info
+      result[:counterparty_iban] = cp[:iban] if cp[:iban].present?
+      result[:counterparty_account_id] = cp[:other_id] if cp[:iban].blank? && cp[:other_id].present?
+
+      result.presence
+    end
+
+    # PSD2/Enable Banking exposes the counterparty's own account/bank details
+    # on creditor_account/creditor_agent (who we paid) or
+    # debtor_account/debtor_agent (who paid us), depending on direction.
+    # Populated for SEPA transfers/direct debits; typically blank for card
+    # and wallet payments (those aren't account-to-account), so callers must
+    # treat a blank result as "no data available", not an error.
+    def counterparty_account_info
+      @counterparty_account_info ||= begin
+        if credit_debit_indicator == "CRDT"
+          account_key, agent_key, additional_key = :debtor_account, :debtor_agent, :debtor_account_additional_identification
+        else
+          account_key, agent_key, additional_key = :creditor_account, :creditor_agent, :creditor_account_additional_identification
+        end
+
+        {
+          iban: data.dig(account_key, :iban).presence,
+          other_id: data.dig(additional_key, :identification).presence,
+          bank_name: data.dig(agent_key, :name).presence
+        }
+      end
     end
 
     def amount_value

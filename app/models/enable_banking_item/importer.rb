@@ -615,8 +615,18 @@ class EnableBankingItem::Importer
       remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
       tid = tx[:transaction_id]
       direction = tx[:credit_debit_indicator]
+      # Two transactions with otherwise-identical content (same name/amount/date,
+      # e.g. two different landlords named "Miete") but a different counterparty
+      # IBAN are guaranteed to be different real transactions — folds this into
+      # the key when present to reduce false-positive dedup (see issue #2720).
+      iban = counterparty_iban_for_content_key(tx, direction)
 
-      [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+      [ date, amount, currency, creditor, debtor, remittance_key, tid, direction, iban ].map(&:to_s).join("\x1F")
+    end
+
+    def counterparty_iban_for_content_key(tx, direction)
+      account_key = direction == "CRDT" ? :debtor_account : :creditor_account
+      tx.dig(account_key, :iban).presence
     end
 
     class PaginationTruncatedError < StandardError; end
