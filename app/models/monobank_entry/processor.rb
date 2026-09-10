@@ -249,9 +249,13 @@ class MonobankEntry::Processor
     end
 
     # fx_from/fx_amount follow the convention UpEntry::Processor uses: the currency the
-    # operation was made in, and the amount expressed in that currency. The divisor comes
-    # from the operation currency, not the account's, since the two can differ in minor
-    # units (JPY has none).
+    # operation was made in, and the amount expressed in that currency.
+    #
+    # Both are set only for a *recognized foreign* operation — one whose `currencyCode`
+    # maps to a known currency that differs from the account's. `fx_amount` additionally
+    # needs an `operationAmount` that is present and parseable. An operation in the
+    # account's own currency, or one whose code Sure does not know, leaves both unset while
+    # `operation_amount` still carries the raw figure whenever it differs from `amount`.
     def fx_from
       operation_currency if foreign_operation?
     end
@@ -265,7 +269,31 @@ class MonobankEntry::Processor
       divisor = BigDecimal(minor_unit_divisor(operation_currency).to_s)
       (minor_units(value) / divisor).to_s("F")
     rescue ArgumentError
+      report_unparseable_operation_amount(value)
       nil
+    end
+
+    # A foreign operation whose amount will not parse leaves partial FX metadata behind:
+    # `fx_from` names a currency that no `fx_amount` accompanies. `minor_units` only writes
+    # to the Rails log, which support cannot see, so record the incident where provider
+    # diagnostics are surfaced.
+    def report_unparseable_operation_amount(value)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Monobank operationAmount could not be parsed; fx_amount left unset",
+        source: self.class.name,
+        provider_key: "monobank",
+        family: account&.family,
+        account: account,
+        account_provider: monobank_account.account_provider,
+        metadata: {
+          external_id: external_id,
+          operation_currency: operation_currency,
+          operation_amount: value.to_s,
+          monobank_account_id: monobank_account.id
+        }
+      )
     end
 
     # Minor units of the account currency per major unit (100 for UAH).

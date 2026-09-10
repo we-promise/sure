@@ -109,6 +109,25 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "-9.6", entry.entryable.extra.dig("monobank", "fx_amount")
   end
 
+  test "captures a diagnostic when a foreign operation amount will not parse" do
+    entry = nil
+
+    assert_difference "DebugLogEntry.count", 1 do
+      entry = process(id: "tx_bad_op", time: MIDDAY_UNIX, description: "Steam", amount: -41_500, operationAmount: "not-a-number", currencyCode: 978, hold: false)
+    end
+
+    extra = entry.entryable.extra["monobank"]
+    assert_equal "EUR", extra["fx_from"], "the currency is still known"
+    assert_nil extra["fx_amount"]
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync_error", log.category
+    assert_equal "warn", log.level
+    assert_equal "monobank", log.provider_key
+    assert_equal "monobank_tx_bad_op", log.metadata["external_id"]
+    assert_equal "EUR", log.metadata["operation_currency"]
+  end
+
   test "leaves fx metadata unset when currencyCode is unrecognized" do
     entry = process(id: "tx_bad_cur", time: MIDDAY_UNIX, description: "Unknown", amount: -1_000, operationAmount: -500, currencyCode: 1, hold: false)
 
