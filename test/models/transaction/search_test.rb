@@ -597,6 +597,34 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes result_ids, no_match.entryable.id
   end
 
+  test "search matches a counterparty iban stored in extra" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+
+    no_match = create_transaction(
+      account: @checking_account,
+      amount: 50,
+      kind: "standard",
+      name: "Other Payment"
+    )
+    no_match.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "DE89370400440532013000" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+    assert_not_includes result_ids, no_match.entryable.id
+  end
+
   test "uncategorized filter works regardless of current locale since the filter value is a stable sentinel" do
     # The category filter now matches on the stable Category::UNCATEGORIZED_FILTER_VALUE sentinel
     # (not the translated display name), so the current locale can no longer affect matching.

@@ -40,7 +40,7 @@ class Transaction::Search
       query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
-      query = EntrySearch.apply_search_filter(query, search)
+      query = apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
       query = EntrySearch.apply_accounts_filter(query, accounts, account_ids)
@@ -116,6 +116,23 @@ class Transaction::Search
 
   private
     Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+
+    # Transaction-specific superset of EntrySearch.apply_search_filter: also
+    # matches a counterparty IBAN (or other provider-supplied account
+    # identifier) stored in transactions.extra, so a user can find a payment
+    # by searching the IBAN they have on a bank statement. Kept local to
+    # this class rather than added to the shared EntrySearch -- that class's
+    # build_query also runs against generic Entry scopes (e.g. Valuations),
+    # where a bare "transactions" table reference wouldn't resolve.
+    def apply_search_filter(query, search)
+      return query if search.blank?
+
+      sanitized_search = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
+      query.where(
+        "entries.name ILIKE :search OR entries.notes ILIKE :search OR transactions.extra::text ILIKE :search",
+        search: sanitized_search
+      )
+    end
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
