@@ -177,7 +177,8 @@ class EnableBankingEntry::Processor
         import_adapter.find_or_create_merchant(
           provider_merchant_id: "enable_banking_merchant_#{merchant_id}",
           name: merchant_name,
-          source: "enable_banking"
+          source: "enable_banking",
+          iban: counterparty_account_info[:iban]
         )
       rescue ActiveRecord::RecordInvalid => e
         Rails.logger.error "EnableBankingEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"

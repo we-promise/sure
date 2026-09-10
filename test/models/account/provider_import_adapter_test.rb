@@ -222,6 +222,93 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "finds or creates merchant with an iban" do
+    assert_difference "ProviderMerchant.count", 1 do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal "DE89370400440532013000", merchant.iban
+    end
+  end
+
+  test "finds an existing merchant by iban even when provider_merchant_id and name differ" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "old_hash",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000"
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "different_hash_because_remittance_text_changed",
+        name: "Different Remittance Text",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal existing_merchant.id, merchant.id
+    end
+  end
+
+  test "falls back to name-based lookup when no iban is provided" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_2",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_2",
+        name: "Landlord GmbH",
+        source: "enable_banking"
+      )
+
+      assert_equal existing_merchant.id, merchant.id
+      assert_nil merchant.iban
+    end
+  end
+
+  test "backfills a blank iban on an existing name-matched merchant" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_3",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_3",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000"
+    )
+
+    assert_equal "DE89370400440532013000", existing_merchant.reload.iban
+  end
+
+  test "does not overwrite an already-present merchant iban" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_4",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "AT611904300234573201"
+    )
+
+    @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_4",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000"
+    )
+
+    assert_equal "AT611904300234573201", existing_merchant.reload.iban
+  end
+
   test "updates account balance" do
     @adapter.update_balance(
       balance: 5000.00,
