@@ -10,20 +10,20 @@ class Api::V1::Financekit::BaseController < Api::V1::BaseController
 
     def require_financekit_access
       return unless authorize_scope!(request.get? ? :read : :write)
-      unless Current.user.admin? && Current.user.preview_features_enabled?
+      unless current_resource_owner.admin? && current_resource_owner.preview_features_enabled?
         raise Financekit::Error.new("publisher_forbidden", 403)
       end
-      unless action_name == "capabilities" || Financekit.enabled?(Current.family) || action_name == "destroy"
+      unless action_name == "capabilities" || Financekit.enabled?(current_resource_owner.family) || action_name == "destroy"
         raise Financekit::Error.new("unavailable", 503)
       end
     end
 
     def connection
-      @connection ||= Current.family.financekit_items.where(user: Current.user).find(params[:connection_id] || params[:id])
+      @connection ||= current_resource_owner.family.financekit_items.where(user: current_resource_owner).find(params[:connection_id] || params[:id])
     end
 
     def input
-      request.request_parameters.except("controller", "action")
+      request.request_parameters
     end
 
     def protocol_error(error)

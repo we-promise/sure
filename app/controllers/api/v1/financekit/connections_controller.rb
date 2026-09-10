@@ -1,6 +1,6 @@
 class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseController
   def capabilities
-    available = Financekit.enabled?(Current.family)
+    available = Financekit.enabled?(current_resource_owner.family)
     render_json({ available: available, protocol_versions: [ Financekit::VERSION ], envelope_versions: [ 1 ],
       delivery: "device_push", max_envelope_bytes: Financekit::MAX_BYTES, max_records: Financekit::MAX_RECORDS,
       max_accounts: Financekit::MAX_ACCOUNTS, max_queued_batches: Financekit::MAX_QUEUED,
@@ -10,7 +10,7 @@ class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseCont
   end
 
   def create
-    item = Financekit::Enrollment.create!(Current.user, input)
+    item = Financekit::Enrollment.create!(current_resource_owner, input)
     render_json(connection_data(item).merge(keys: Financekit::Crypto.keys), status: :created)
   end
 
@@ -52,7 +52,7 @@ class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseCont
         previous_digest: item.previous_digest, last_device_contact_at: item.last_device_contact_at,
         last_accepted_at: item.last_accepted_at, last_imported_at: item.last_imported_at,
         last_captured_at: item.last_captured_at,
-        device_key_thumbprint: JWT::JWK.import(item.device_public_key).thumbprint }
+        device_key_thumbprint: JWT::JWK::Thumbprint.new(JWT::JWK.import(item.device_public_key)).generate }
     end
 
     def mapping_data(source)

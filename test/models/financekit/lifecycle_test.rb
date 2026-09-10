@@ -7,7 +7,7 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
 
   test "another provider cannot attach to a FinanceKit canonical account" do
     assert_raises(ActiveRecord::RecordInvalid) do
-      @source.account.account_providers.create!(provider: simplefin_accounts(:one))
+      @source.account.account_providers.create!(provider: plaid_accounts(:one))
     end
   end
 
@@ -46,6 +46,7 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
   end
 
   test "family reset removes source tombstones and inbox but no foreign enrollment" do
+    Provider::Plaid.any_instance.stubs(:remove_item)
     FinancekitBatch.accept!(@item, financekit_envelope)
     Financekit::Processor.new(@item).apply_next!
     Family::FinancialDataReset.new(family: @family, dry_run: false, confirmed: true).call

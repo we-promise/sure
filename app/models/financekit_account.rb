@@ -39,10 +39,12 @@ class FinancekitAccount < ApplicationRecord
       canonical.with_lock do
         Financekit.require!(canonical.currency == input["currency"] && canonical.accountable_type == input["accountable_type"] &&
           canonical.accountable.subtype == input["subtype"], "account_type_conflict", 409)
-        Financekit.require!(!canonical.account_providers.exists?, "account_already_supplied", 409)
+        Financekit.require!(!canonical.linked?, "account_already_supplied", 409)
         # Another publisher is not allowed to share this canonical account.
         source = item.financekit_accounts.create!(input.slice("name", "currency", "accountable_type", "subtype", "ledger_timezone").merge("source_id" => source_id,
-          "mapping_digest" => Digest::SHA256.hexdigest(Financekit::Enrollment.canonical(input.except("expected_version")))))
+          "mapping_digest" => Digest::SHA256.hexdigest(Financekit::Enrollment.canonical(input.except("expected_version"))),
+          "booked_balance" => input["action"] == "create" ? input["booked_balance"] : nil,
+          "observed_at" => input["action"] == "create" ? input["observed_at"] : nil))
         canonical.account_providers.create!(provider: source)
         source
       end

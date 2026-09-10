@@ -3,6 +3,7 @@ require_relative "../../../../support/financekit_test_helper"
 
 class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::IntegrationTest
   include FinancekitTestHelper
+  include ActiveJob::TestHelper
   setup do
     financekit_setup
     @user.api_keys.active.destroy_all
@@ -62,13 +63,24 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
   end
 
   test "synthetic device can stop immediately after upload and read normal Sure data later" do
+    @family.rules.update_all(active: false)
+    category = @family.categories.create!(name: "Wallet test purchases")
+    @family.rules.create!(resource_type: "transaction", active: true, effective_date: Date.new(2026, 1, 1),
+      conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: "0") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ])
     envelope = financekit_envelope
     upload_url = "/api/v1/financekit/connections/#{@item.id}/batches"
     post upload_url, params: envelope, headers: { "CONTENT_TYPE" => "application/jose" }
     assert_response :accepted
     batch = @item.financekit_batches.sole
-    Financekit::Downstream.any_instance.stubs(:perform!)
+    perform_enqueued_jobs(only: SyncJob) { FinancekitInboxJob.perform_now }
+    perform_enqueued_jobs(only: RuleJob) { FinancekitInboxJob.perform_now }
+    travel 6.minutes
     FinancekitInboxJob.perform_now
+    assert_not_nil batch.reload.downstream_completed_at
+    assert_equal category, @source.account.entries.sole.transaction.category
+    assert @source.account.balances.exists?
+    assert_equal BigDecimal("112.66"), @source.account.reload.balance
     get "/api/v1/transactions", headers: @headers
     assert_response :success
     assert_includes response.body, "Synthetic shop"
@@ -99,5 +111,19 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     put "/api/v1/financekit/connections/#{@item.id}/account_mappings/#{@source_id}", headers: @headers, as: :json,
       params: @mapping_input.merge("currency" => "INVALID")
     assert_response :unprocessable_entity
+  end
+
+  test "read only credentials cannot map replace or disconnect" do
+    @key.update!(scopes: [ "read" ])
+    put "/api/v1/financekit/connections/#{@item.id}/account_mappings/#{@source_id}",
+      params: @mapping_input, headers: @headers, as: :json
+    assert_response :forbidden
+    post "/api/v1/financekit/connections/#{@item.id}/device_replacement", headers: @headers, as: :json,
+      params: { expected_generation: 1, device_public_key: @device_jwk, consent: @enrollment["consent"], continuity: "same_source_and_transaction_ids" }
+    assert_response :forbidden
+    delete "/api/v1/financekit/connections/#{@item.id}", headers: @headers
+    assert_response :forbidden
+    assert_equal "active", @item.reload.status
+    assert_equal 1, @item.generation
   end
 end

@@ -7,10 +7,9 @@ baseline `5594f8bc94c8e659838cac70d826bbcaeaa3bae2`. Main already derives the
 provider-import pending SQL and pending flag clearing from
 `Transaction::PENDING_PROVIDERS`; FinanceKit extends that shared list.
 
-**Draft: do not pin this contract in a shipping native client yet.** The Rails,
-request, migration, concurrency and recovery suites must run on the supported
-runtime; a controlled deployment and native interoperability review remain
-release gates. The PR author explicitly requested a draft without local tests.
+**Draft: do not pin this contract in a shipping native client yet.** Use an
+explicit revision for controlled integration testing. A controlled deployment
+and native interoperability review remain release gates.
 See [operations and release gates](../hosting/financekit.md).
 
 ## Boundary and discovery
@@ -35,8 +34,8 @@ transaction-write API.** Feature-gating 403 is not invalid credentials.
 
 OpenAPI includes the typed schemas from [schemas.json](financekit/schemas.json),
 also loaded by `spec/swagger_helper.rb`. Request documentation is in
-`spec/requests/api/v1/financekit_spec.rb`. The current OpenAPI additions were
-assembled from the same definitions; run rswag regeneration before merge.
+`spec/requests/api/v1/financekit_spec.rb`. OpenAPI is generated with rswag from
+those definitions.
 
 ## Foreground setup
 

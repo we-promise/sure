@@ -1,4 +1,5 @@
 class Provider::FinancekitAdapter < Provider::Base
+  include Provider::InstitutionMetadata
   Provider::Factory.register("FinancekitAccount", self)
 
   def self.supported_account_types

@@ -53,6 +53,7 @@ class CreateFinancekitInbox < ActiveRecord::Migration[8.1]
       t.datetime :captured_at, null: false
       t.datetime :applied_at
       t.datetime :downstream_completed_at
+      t.datetime :downstream_retry_at
       t.references :sync, type: :uuid, foreign_key: { on_delete: :nullify }
       t.timestamps
     end

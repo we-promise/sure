@@ -112,9 +112,25 @@ class Financekit::InboxTest < ActiveSupport::TestCase
 
   test "deactivated publisher cannot import already accepted data" do
     batch = FinancekitBatch.accept!(@item, financekit_envelope)
-    @item.user.stubs(:active?).returns(false)
+    @item.user.update_column(:active, false)
     assert_not Financekit::Processor.new(@item).apply_next!
     assert_equal "accepted", batch.reload.status
     assert_equal 0, @source.account.entries.count
+  end
+
+  test "transient processing failure recovers without another upload" do
+    batch = FinancekitBatch.accept!(@item, financekit_envelope)
+    Account::ProviderImportAdapter.any_instance.stubs(:update_balance).raises(StandardError, "sensitive provider response")
+    assert_not Financekit::Processor.new(@item).apply_next!
+    assert_equal "accepted", batch.reload.status
+    assert_equal "processing_error", batch.error_code
+    assert_equal 1, batch.attempts
+    assert_empty @source.account.entries
+    Account::ProviderImportAdapter.any_instance.unstub(:update_balance)
+    assert_not Financekit::Processor.new(@item).apply_next!
+    travel_to batch.retry_at + 1.second
+    assert Financekit::Processor.new(@item).apply_next!
+    assert_equal "applied", batch.reload.status
+    assert_equal 1, @source.account.entries.count
   end
 end

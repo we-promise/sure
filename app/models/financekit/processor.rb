@@ -88,8 +88,11 @@ class Financekit::Processor
         status: "deleted", tombstoned_at: Time.current, raw_payload: nil)
       entry = identity.entry
       if entry
-        entry.with_lock do
-          protected = entry.protected_from_sync? || entry.transfer_id.present? || entry.reconciled_at.present? ||
+        # Entry#transaction is the delegated transaction record, so its instance
+        # with_lock cannot open an ActiveRecord transaction. Use the class API.
+        Entry.transaction do
+          entry.lock!
+          protected = entry.protected_from_sync? || entry.transaction.transfer_id.present? || entry.reconciled_at.present? ||
             entry.split_parent? || entry.split_child? || entry.locked_attributes.present? || entry.transaction.locked_attributes.present?
           if protected || entry.source != "financekit" || entry.account_id != source.account.id
             identity.review_required = true

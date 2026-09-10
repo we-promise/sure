@@ -21,6 +21,12 @@ Deploy the migration and app/worker code together, with the flag disabled. Run
 This schedule processes received records; it says nothing about how often iOS
 collects Wallet changes. Observe last device contact, last accepted upload,
 last completed canonical import and the separate downstream completion time.
+Each sweep drains up to 100 contiguous batches per connection. Downstream
+completion waits for an account sync created after import and successful rule
+runs, including their asynchronous enrichment work. Missing acknowledgments are
+retried after a five-minute lease without another phone request. Rule/enrichment
+execution is at least once; this does not promise exactly-once external calls.
+A downstream failure leaves its outbox pending and does not stop other batches.
 
 Set reverse-proxy body limits to accommodate the 1 MiB outer JWS ceiling. The
 application also bounds request reads and record counts. Configure Redis-backed
@@ -68,15 +74,15 @@ an explicit data-export/retention decision.
 This is an implementation draft, not a claim that #3485's acceptance checklist
 has been completed. Before moving it out of draft:
 
-1. Run migrations and generate `db/schema.rb` with Ruby 3.4.9/Rails 8.1 and
-   PostgreSQL. Run the full Minitest suite, relevant system coverage, RuboCop,
-   ERB lint, Biome and Brakeman. The author requested skipping local execution
-   for this draft; CI and controlled-instance validation remain necessary.
+1. Run migrations with Ruby 3.4.9/Rails 8.1 and PostgreSQL. The schema is included.
+   Run the full Minitest suite, relevant system coverage, RuboCop, ERB lint,
+   Biome and Brakeman. See the [review record](../api/financekit-review.md)
+   for validation results; controlled-instance validation remains necessary.
 2. Regenerate OpenAPI with `RAILS_ENV=test bundle exec rake rswag:specs:swaggerize`
    and review the delta against the prepared schema/endpoint documentation.
-3. Run the production-library Apple/Ruby vectors. The local system Ruby uses
-   LibreSSL with a broken GCM AAD binding; standalone signature/money checks
-   passed, but its GCM cross-decryption check is explicitly skipped.
+3. Run the production-library Apple/Ruby vectors on the supported Ruby/OpenSSL
+   runtime. Ruby 3.4.9 verifies signatures and decrypts the Apple vectors without
+   skips. System Ruby/LibreSSL is not a supported interoperability test runtime.
 4. Exercise simultaneous uploads, disconnect/replacement races, failure between
    inbox commit and enqueue, rollback before acknowledgment, worker restart,
    downstream queue loss, user removal and family reset on a disposable instance.
@@ -93,3 +99,44 @@ has been completed. Before moving it out of draft:
 Only then identify the merged backend SHA for the Swift app to adopt deliberately.
 Physical locked-device/extension/offline behavior is a subsequent native gate.
 The Swift client's existing contract pin is unchanged by this server PR.
+
+## Controlled Swift integration testing
+
+Use a disposable family and synthetic data on an HTTPS instance. Record the
+exact backend revision (`git rev-parse HEAD`) in the Swift test configuration.
+Apply the migration and run the Sidekiq scheduled worker before enrollment.
+Provision fresh private RSA and P-256 keys through the instance's secret manager;
+the published vector keys are public test material and must never configure a
+real instance. Enable the global flag, allowlist only the test family, and enable
+preview features for its administrator.
+
+1. Authenticate with the existing API, fetch capabilities, and pin the returned
+   server identity and public keys. Verify Apple/Ruby interoperability using
+   `test/fixtures/files/financekit/apple_vectors.json` before uploading Wallet data.
+2. Enroll one device with explicit consent for a source UUID. Create its mapping
+   with a confirmed subtype, currency, ledger timezone and observed booked
+   balance. Keep the returned connection generation and mapping version.
+3. Sign and encrypt a bounded upload using the documented compact JOSE format.
+   Send its immutable file as `application/jose` and verify the signed receipt's
+   audience, batch UUID, generation, sequence and ciphertext digest.
+4. Stop the client immediately after acceptance. Let the scheduled worker run;
+   normal account/transaction reads must show the imported amount, booked balance
+   and configured categorization. A successful receipt means canonical import;
+   downstream completion is tracked separately on the batch.
+5. Replay the same bytes and verify no duplicate transaction. Upload sequence 3
+   before 2 and verify ordered processing after 2 arrives. Stop/restart workers
+   with accepted rows and verify recovery without another device request.
+6. Disconnect with an accepted upload outstanding; unapplied work must remain
+   revoked and existing ledger data must remain. Repeat device replacement with
+   confirmed stable UUIDs and verify old-generation uploads are rejected.
+
+For this draft, mappings are immutable, snapshots are additive, and unknown UUID
+continuity returns `identity_reconciliation_required`. Test those responses as
+explicit limits; do not silently recreate historical transactions or retarget a
+mapping. This test scope does not certify reinstall reconciliation, key-overlap
+rotation, production retention policy, or physical iOS background execution.
+
+The automated server counterpart is
+`test/controllers/api/v1/financekit/connections_controller_test.rb`, supported by
+the model concurrency, inbox, mapping and downstream tests. It exercises the
+server without requiring a running Rails development server.

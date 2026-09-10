@@ -57,7 +57,7 @@ class Financekit::Crypto
       jwe = JSON::JWE.decode(ciphertext, :skip_decryption)
       Financekit.require!(jwe.header.keys.map(&:to_s).sort == %w[alg enc] &&
         jwe.alg.to_s == "RSA-OAEP" && jwe.enc.to_s == "A256GCM", "invalid_envelope", 400)
-      jwe.decrypt!(encryption_key, [ :"RSA-OAEP" ], [ :A256GCM ])
+      jwe.decrypt!(encryption_key, [ "RSA-OAEP" ], [ "A256GCM" ])
       JSON.parse(jwe.plain_text, max_nesting: 12)
     rescue JSON::JWT::Exception, JSON::ParserError, OpenSSL::OpenSSLError, ArgumentError
       raise Financekit::Error.new("invalid_envelope", 400)

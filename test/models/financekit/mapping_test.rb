@@ -113,6 +113,28 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal "100.32", @source.reload.available_balance["amount"]
   end
 
+  test "initial booked balance observation fences older balance uploads" do
+    assert_equal "125.00", @source.booked_balance.fetch("amount")
+    data = financekit_payload
+    data["accounts"].first["observed_at"] = 1.day.ago.iso8601
+    batch = FinancekitBatch.accept!(@item, financekit_envelope(data))
+    assert_not Financekit::Processor.new(@item).apply_next!
+    assert_equal "stale_balance", batch.reload.error_code
+    assert_equal BigDecimal("125.00"), @source.account.reload.balance
+  end
+
+  test "legacy provider links cannot be silently supplied by FinanceKit" do
+    account = accounts(:depository)
+    account.accountable.update!(subtype: "checking")
+    account.update_column(:plaid_account_id, plaid_accounts(:one).id)
+    input = @mapping_input.except("booked_balance", "observed_at").merge(
+      "action" => "link", "account_id" => account.id,
+      "currency" => account.currency, "subtype" => account.accountable.subtype)
+    @source.destroy!
+    error = assert_raises(Financekit::Error) { FinancekitAccount.map!(@item, @source_id, input) }
+    assert_equal "account_already_supplied", error.code
+  end
+
   test "new identity after reinstall requires explicit reconciliation" do
     assert_equal "identity_reconciliation_required", assert_raises(Financekit::Error) {
       @item.replace_device!({ "expected_generation" => 1, "device_public_key" => @device_jwk,

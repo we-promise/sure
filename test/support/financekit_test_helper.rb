@@ -1,7 +1,7 @@
 module FinancekitTestHelper
-  def financekit_setup
+  def financekit_setup(user: users(:family_admin))
     travel_to Time.utc(2026, 9, 10, 12)
-    @user = users(:family_admin)
+    @user = user
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     @family = @user.family
     @device_key = OpenSSL::PKey::EC.generate("prime256v1")
