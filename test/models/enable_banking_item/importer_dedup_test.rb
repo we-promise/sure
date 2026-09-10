@@ -91,6 +91,60 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "keeps transactions with identical name/amount/date but different counterparty iban" do
+    transactions = [
+      {
+        entry_reference: "ref_landlord_1",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_landlord_2",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "AT611904300234573201" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 2, result.count
+  end
+
+  test "still deduplicates identical transactions that share the same counterparty iban" do
+    transactions = [
+      {
+        entry_reference: "ref_dup_1",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_dup_2",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+  end
+
   test "keeps transactions with different creditors" do
     transactions = [
       {

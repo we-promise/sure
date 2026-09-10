@@ -470,6 +470,86 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_nil entry.transaction&.extra&.dig("enable_banking")
   end
 
+  test "stores counterparty iban as a top-level extra key for an outgoing payment" do
+    tx = {
+      entry_reference: "ref_iban_out",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Landlord GmbH" },
+      creditor_account: { iban: "DE89370400440532013000" },
+      creditor_agent: { name: "Deutsche Bank", bic_fi: "DEUTDEFFXXX" },
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_out")
+    extra = entry.transaction.extra
+
+    assert_equal "DE89370400440532013000", extra["counterparty_iban"]
+    assert_nil extra["counterparty_account_id"]
+    assert_includes entry.notes, "Bank: Deutsche Bank"
+  end
+
+  test "stores counterparty iban from the debtor side for an incoming payment" do
+    tx = {
+      entry_reference: "ref_iban_in",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "Employer AG" },
+      debtor_account: { iban: "AT611904300234573201" },
+      debtor_agent: { name: "Erste Bank" },
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_in")
+
+    assert_equal "AT611904300234573201", entry.transaction.extra["counterparty_iban"]
+  end
+
+  test "falls back to counterparty_account_id when no iban is present" do
+    tx = {
+      entry_reference: "ref_other_id",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Some Shop" },
+      creditor_account_additional_identification: { identification: "ACC-998877" },
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_other_id")
+    extra = entry.transaction.extra
+
+    assert_nil extra["counterparty_iban"]
+    assert_equal "ACC-998877", extra["counterparty_account_id"]
+  end
+
+  test "does not store counterparty iban for a wallet-paid card transaction with no account data" do
+    tx = {
+      entry_reference: "ref_wallet",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "CARD-9999" },
+      remittance_information: [ "Apple pay: COMPRA EN ZARA" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_wallet")
+    extra = entry.transaction.extra
+
+    assert extra.blank? || extra["counterparty_iban"].blank?
+  end
+
   def build_processor(data)
     # A minimal stand-in that responds to current_account (real EnableBankingAccount
     # always does) so `account`/`known_merchant_names` resolve safely to nil/[] instead
