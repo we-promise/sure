@@ -675,6 +675,10 @@ class User < ApplicationRecord
     preferences&.dig("show_split_grouped") != false
   end
 
+  def show_counterparty_account?
+    preferences&.dig("show_counterparty_account") != false
+  end
+
   # Returns whether the user has enabled the two-column dashboard layout.
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
