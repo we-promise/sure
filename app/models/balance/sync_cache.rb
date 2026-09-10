@@ -88,11 +88,21 @@ class Balance::SyncCache
         message: "Excluded #{@unconvertible_entry_count} #{"entry".pluralize(@unconvertible_entry_count)} from balance calculation: no exchange rate available",
         account: account,
         family: account.family,
+        provider_key: exchange_rate_provider_key,
         metadata: {
           account_currency: account.currency,
           unconvertible_entry_count: @unconvertible_entry_count,
           missing_rate_pairs: @missing_rate_pairs.map { |from, to| "#{from}->#{to}" }
         }
       )
+    end
+
+    # Which FX backend was configured when the rate came up missing, so support can filter
+    # these entries by provider. Read from the setting rather than `ExchangeRate.provider`,
+    # which raises on an unrecognized configuration — diagnostics must never fail the sync.
+    def exchange_rate_provider_key
+      ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
+    rescue StandardError
+      nil
     end
 end

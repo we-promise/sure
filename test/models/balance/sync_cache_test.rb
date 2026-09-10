@@ -228,6 +228,7 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal "Balance::SyncCache", log.source
     assert_equal "warn", log.level
     assert_equal @account, log.account
+    assert_equal Setting.exchange_rate_provider, log.provider_key
     assert_equal 2, log.metadata["unconvertible_entry_count"]
     assert_equal [ "EUR->USD", "GBP->USD" ], log.metadata["missing_rate_pairs"].sort
   end
