@@ -251,11 +251,22 @@ class User < ApplicationRecord
     return true unless active?
 
     transaction do
-      update(active: false, email: deactivated_email)
+      next false unless update(active: false, email: deactivated_email)
+
+      revoke_credentials!
+      true
     end || false
   end
 
   private
+
+    # Every request path already turns a deactivated user away, but their
+    # sessions and access tokens outlived the deactivation and were only
+    # rejected lazily, one request at a time. Drop them at the source.
+    def revoke_credentials!
+      sessions.destroy_all
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).find_each(&:revoke)
+    end
 
     def losing_super_admin_privileges?
       (role_changed? && role_was == "super_admin" && role != "super_admin") ||

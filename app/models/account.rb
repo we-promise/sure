@@ -714,10 +714,12 @@ class Account < ApplicationRecord
       if Current.user.present? && Current.user.family_id == family_id
         self.owner = Current.user
       else
+        # :id breaks the tie. Two users created in the same transaction share a
+        # created_at, and without it which one owns the account is arbitrary.
         self.owner =
-          family&.users&.where(role: "admin")&.order(:created_at)&.first ||
-          family&.users&.where(role: "super_admin")&.order(:created_at)&.first ||
-          family&.users&.order(:created_at)&.first
+          family&.users&.where(role: "admin")&.order(:created_at, :id)&.first ||
+          family&.users&.where(role: "super_admin")&.order(:created_at, :id)&.first ||
+          family&.users&.order(:created_at, :id)&.first
       end
     end
 
