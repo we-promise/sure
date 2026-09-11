@@ -34,7 +34,11 @@ export default class extends Controller {
     this.handleFirstInteraction = this.handleFirstInteraction.bind(this);
     this.handleReleaseSettled = this.handleReleaseSettled.bind(this);
 
-    if (this.releaseHighlightMounted()) {
+    if (this.releaseHighlightSettled()) {
+      // The release popup already settled before this mount connected (e.g.
+      // a Turbo-cached page restored after dismissal): follow it directly.
+      this.handleReleaseSettled();
+    } else if (this.releaseHighlightMounted()) {
       window.addEventListener(
         "release-highlight:settled",
         this.handleReleaseSettled,
@@ -133,13 +137,19 @@ export default class extends Controller {
       if (candidate.offsetParent !== null) return candidate;
     }
 
-    return candidates[0] || null;
+    // No visible copy (e.g. the sidebar is collapsed): fall back to a
+    // centered popover rather than spotlighting a hidden element.
+    return null;
   }
 
   releaseHighlightMounted() {
     return Boolean(
       document.querySelector("[data-controller~='release-highlight']"),
     );
+  }
+
+  releaseHighlightSettled() {
+    return window.__releaseHighlightSettled === true;
   }
 
   armInteractionListeners() {

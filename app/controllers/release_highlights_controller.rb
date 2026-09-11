@@ -20,6 +20,11 @@ class ReleaseHighlightsController < ApplicationController
     tag = ReleaseHighlights.pending_tag_for(Current.user)
     return head :no_content unless tag
 
+    # The client submits the tag it actually displayed; a rolling deploy in
+    # between must not let a dismissal of the old popup mark the new release
+    # seen. Mismatch: leave it pending so the new popup still shows.
+    return head :conflict if params[:tag].present? && params[:tag] != tag
+
     Current.user.mark_release_seen!(tag)
 
     head :ok
