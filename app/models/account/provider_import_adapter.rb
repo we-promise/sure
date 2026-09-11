@@ -627,7 +627,7 @@ class Account::ProviderImportAdapter
   # @param security [Security] The security object
   # @param quantity [BigDecimal, Numeric] Number of shares (negative for sells, positive for buys)
   # @param price [BigDecimal, Numeric] Price per share
-  # @param amount [BigDecimal, Numeric] Total trade value
+  # @param amount [BigDecimal, Numeric] Total cash impact of the trade, fee included
   # @param currency [String] Currency code
   # @param date [Date, String] Trade date
   # @param name [String, nil] Optional custom name for the trade
@@ -635,8 +635,9 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
+  # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -677,6 +678,7 @@ class Account::ProviderImportAdapter
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+      trade_attributes[:fee] = fee unless fee.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
 

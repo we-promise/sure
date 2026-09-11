@@ -70,6 +70,101 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Sell", trade.investment_activity_label
   end
 
+  test "the trade amount, qty, price, and fee reported by SnapTrade are respected" do
+    process_activities(
+      build_trade_activity(id: "buy_rounded", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: -101.00, fee: 1.00)
+    )
+
+    entry = snaptrade_entry("buy_rounded")
+    assert_equal BigDecimal("101"), entry.amount
+    assert_equal BigDecimal("3"), entry.entryable.qty
+    assert_equal BigDecimal("33.33"), entry.entryable.price
+    assert_equal BigDecimal("1.00"), entry.entryable.fee
+  end
+
+  test "fractional share quantity is stored exactly" do
+    process_activities(
+      build_trade_activity(id: "buy_fractional", type: "BUY", symbol: "VTI", units: 0.12345678, price: 149.94, amount: -18.51)
+    )
+
+    entry = snaptrade_entry("buy_fractional")
+    assert_equal BigDecimal("0.12345678"), entry.entryable.qty
+    assert_equal BigDecimal("18.51"), entry.amount
+  end
+
+  test "trade direction comes from the activity type, not the sign of SnapTrade's amount" do
+    process_activities(
+      build_trade_activity(id: "buy_positive_amount", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: 100.00),
+      build_trade_activity(id: "sell_negative_amount", type: "SELL", symbol: "AAPL", units: 7, price: 14.29, amount: -100.00)
+    )
+
+    assert_equal BigDecimal("100"), snaptrade_entry("buy_positive_amount").amount
+    assert_equal BigDecimal("-100"), snaptrade_entry("sell_negative_amount").amount
+  end
+
+  test "records the trade fee as a cost regardless of the sign SnapTrade gives it" do
+    process_activities(
+      build_trade_activity(id: "buy_negative_fee", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1504.95, fee: -4.95)
+    )
+
+    assert_equal BigDecimal("4.95"), snaptrade_entry("buy_negative_fee").entryable.fee
+  end
+
+  test "a zero reported amount falls back to qty times price" do
+    process_activities(
+      build_trade_activity(id: "buy_zero_amount", type: "BUY", symbol: "AAPL", units: 2, price: 50.00, amount: 0)
+    )
+
+    assert_equal BigDecimal("100"), snaptrade_entry("buy_zero_amount").amount
+  end
+
+  test "when amount is not reported, the fallback amount includes the fee like a manually entered trade" do
+    process_activities(
+      build_trade_activity(id: "buy_no_amount", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, fee: 4.95),
+      build_trade_activity(id: "sell_no_amount", type: "SELL", symbol: "AAPL", units: 10, price: 150.00, fee: 4.95)
+    )
+
+    assert_equal BigDecimal("1504.95"), snaptrade_entry("buy_no_amount").amount
+    assert_equal BigDecimal("-1495.05"), snaptrade_entry("sell_no_amount").amount
+  end
+
+  test "trade without a price is imported with a price derived from amount and units" do
+    process_activities(
+      build_trade_activity(id: "buy_no_price", type: "BUY", symbol: "AAPL", units: 4, price: nil, amount: -100.00)
+    )
+
+    entry = snaptrade_entry("buy_no_price")
+    assert_not_nil entry, "a trade with units and amount but no price must still be imported"
+    assert_equal BigDecimal("25"), entry.entryable.price
+    assert_equal BigDecimal("4"), entry.entryable.qty
+    assert_equal BigDecimal("100"), entry.amount
+  end
+
+  test "a price derived from amount and units excludes the fee for buys and sells" do
+    process_activities(
+      build_trade_activity(id: "buy_no_price_fee", type: "BUY", symbol: "AAPL", units: 10, price: nil, amount: -1505.00, fee: 5.00),
+      build_trade_activity(id: "sell_no_price_fee", type: "SELL", symbol: "AAPL", units: 10, price: nil, amount: 1495.00, fee: 5.00)
+    )
+
+    assert_equal BigDecimal("150"), snaptrade_entry("buy_no_price_fee").entryable.price
+    assert_equal BigDecimal("150"), snaptrade_entry("sell_no_price_fee").entryable.price
+  end
+
+  test "resyncing corrects the amount of a previously imported trade" do
+    process_activities(
+      build_trade_activity(id: "buy_resync", type: "BUY", symbol: "AAPL", units: 3, price: 33.33)
+    )
+    assert_equal BigDecimal("99.99"), snaptrade_entry("buy_resync").amount
+
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "buy_resync", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: -100.00)
+      )
+    end
+
+    assert_equal BigDecimal("100"), snaptrade_entry("buy_resync").amount
+  end
+
   test "processes dividend cash activity as negative inflow" do
     @snaptrade_account.update!(raw_activities_payload: [
       build_cash_activity(
@@ -283,8 +378,17 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
   private
 
-    def build_trade_activity(id:, type:, symbol:, units:, price:, settlement_date:)
-      {
+    def process_activities(*activities)
+      @snaptrade_account.update!(raw_activities_payload: activities)
+      SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account).process
+    end
+
+    def snaptrade_entry(external_id)
+      @account.entries.find_by(external_id: external_id, source: "snaptrade")
+    end
+
+    def build_trade_activity(id:, type:, symbol:, units:, price:, settlement_date: Date.current.to_s, amount: nil, fee: nil)
+      activity = {
         "id" => id,
         "type" => type,
         "symbol" => {
@@ -296,6 +400,9 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         "settlement_date" => settlement_date,
         "currency" => { "code" => "USD" }
       }
+      activity["amount"] = amount unless amount.nil?
+      activity["fee"] = fee unless fee.nil?
+      activity
     end
 
     def build_cash_activity(id:, type:, amount:, settlement_date:, symbol: nil)

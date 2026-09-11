@@ -143,6 +143,9 @@ class SnaptradeAccount::ActivitiesProcessor
       quantity = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
                  parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
       price = parse_decimal(data[:price]) || parse_decimal(data["price"])
+      amount = parse_decimal(data[:amount]) || parse_decimal(data["amount"]) ||
+               parse_decimal(data[:trade_value]) || parse_decimal(data["trade_value"])
+      fee = (parse_decimal(data[:fee]) || parse_decimal(data["fee"]))&.abs || 0
 
       if quantity.nil?
         Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without quantity: #{external_id}"
@@ -156,18 +159,20 @@ class SnaptradeAccount::ActivitiesProcessor
         quantity.abs
       end
 
-      # Calculate amount
-      amount = if price
-        quantity * price
-      else
-        parse_decimal(data[:amount]) || parse_decimal(data["amount"]) ||
-        parse_decimal(data[:trade_value]) || parse_decimal(data["trade_value"])
+      amount = if amount&.nonzero?
+        quantity.negative? ? -amount.abs : amount.abs
+      elsif price
+        # Same convention as a manually entered trade: the fee adds to a buy's
+        # cost and comes out of a sell's proceeds.
+        quantity * price + fee
       end
 
       if amount.nil?
         Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without amount: #{external_id}"
         return
       end
+
+      price ||= (amount - fee) / quantity unless quantity.zero?
 
       # Get the activity date
       activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
@@ -185,7 +190,7 @@ class SnaptradeAccount::ActivitiesProcessor
 
       description = data[:description] || data["description"] || "#{activity_type} #{ticker}"
 
-      Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} date=#{activity_date}"
+      Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} amount=#{amount} fee=#{fee} date=#{activity_date}"
 
       result = import_adapter.import_trade(
         external_id: external_id,
@@ -193,6 +198,7 @@ class SnaptradeAccount::ActivitiesProcessor
         quantity: quantity,
         price: price,
         amount: amount,
+        fee: fee,
         currency: currency,
         date: activity_date,
         name: description,
