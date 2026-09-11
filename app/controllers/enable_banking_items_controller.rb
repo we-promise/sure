@@ -497,6 +497,14 @@ class EnableBankingItemsController < ApplicationController
       ap.account_id = @account.id
       ap.save!
 
+      # Account discovery (which stored enable_banking_account.iban) ran
+      # before this link existed, so it couldn't propagate to @account --
+      # do it now that there's a target. Unlike the two creation flows,
+      # this links to an EXISTING manual account the user picked, so it
+      # may already have its own iban; propagate_iban_to_account! only
+      # fills a blank one, same as everywhere else.
+      enable_banking_account.propagate_iban_to_account!
+
       # If the provider was previously linked to a different account in this family,
       # and that account is now orphaned, quietly disable it so it disappears from the
       # visible manual list. This mirrors the unified flow expectation that the provider
