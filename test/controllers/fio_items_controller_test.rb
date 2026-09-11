@@ -66,6 +66,29 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "fio-test-token", @fio_item.token
   end
 
+  # The edit form resubmits the stored start date, so a rename must not look like a
+  # fresh attempt at the history: the next sync would spend its one request on a period
+  # Fio has already refused.
+  test "update keeps the history lock when only the name changes" do
+    @fio_item.update!(sync_start_date: Date.new(2024, 1, 1), history_unlock_required_at: Time.current)
+
+    patch fio_item_url(@fio_item), params: {
+      fio_item: { name: "Renamed", token: "", sync_start_date: "2024-01-01" }
+    }
+
+    assert @fio_item.reload.history_unlock_required_at.present?
+  end
+
+  test "update drops the history lock when the start date moves" do
+    @fio_item.update!(sync_start_date: Date.new(2024, 1, 1), history_unlock_required_at: Time.current)
+
+    patch fio_item_url(@fio_item), params: {
+      fio_item: { name: @fio_item.name, token: "", sync_start_date: "2023-06-01" }
+    }
+
+    assert_nil @fio_item.reload.history_unlock_required_at
+  end
+
   test "sync enqueues a sync for the connection" do
     SyncJob.expects(:perform_later).with { |sync| sync.syncable == @fio_item }.once
 

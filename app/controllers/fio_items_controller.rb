@@ -42,9 +42,11 @@ class FioItemsController < ApplicationController
     attributes = update_params
     # A rotated token is the fix for the failed authorization that set requires_update.
     attributes[:status] = :good if attributes[:token].present? && @fio_item.requires_update?
-    # Changing the token or the start date is a fresh attempt at the history: let the
-    # next sync reach for the whole range again instead of the clamped one.
-    attributes[:history_unlock_required_at] = nil
+    # A new token or a moved start date is a fresh attempt at the history, so the next
+    # sync may reach for the whole range again. A rename is not: the form resubmits the
+    # stored start date unchanged, and clearing the marker for that would spend the next
+    # sync's single request on a period Fio has already refused.
+    attributes[:history_unlock_required_at] = nil if history_attempt_renewed?(attributes)
 
     if @fio_item.update(attributes)
       # Nothing else checks a rotated token: status is set from the form, and only a
@@ -302,6 +304,15 @@ class FioItemsController < ApplicationController
       token = permitted[:token].to_s.strip
 
       token.present? ? permitted.merge(token: token) : permitted.except(:token)
+    end
+
+    # True when an update is a fresh attempt at the account's history: a replacement
+    # token, or a start date that actually differs from the one on file.
+    def history_attempt_renewed?(attributes)
+      return true if attributes[:token].present?
+
+      attributes.key?(:sync_start_date) &&
+        attributes[:sync_start_date].to_s != @fio_item.sync_start_date.to_s
     end
 
     # Load the active item referenced by fio_item_id, scoped to the family.
