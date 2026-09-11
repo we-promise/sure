@@ -49,7 +49,7 @@ en:
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
       iban_label: IBAN
-      iban_placeholder: e.g., DE89370400440532013000
+      iban_placeholder: e.g., DE89370400440532013000 # pipelock:ignore IBAN
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports: Exclude from all reports

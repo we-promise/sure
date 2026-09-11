@@ -23,23 +23,23 @@ class ProviderMerchantTest < ActiveSupport::TestCase
   end
 
   test "convert_to_family_merchant_for carries over the existing iban when not overridden" do
-    @provider_merchant.update!(iban: "DE89370400440532013000")
+    @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     family_merchant = @provider_merchant.convert_to_family_merchant_for(@family)
 
-    assert_equal "DE89370400440532013000", family_merchant.iban
+    assert_equal "DE89370400440532013000", family_merchant.iban # pipelock:ignore IBAN
   end
 
   test "convert_to_family_merchant_for uses the submitted iban override" do
-    @provider_merchant.update!(iban: "DE89370400440532013000")
+    @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
-    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family, iban: "AT611904300234573201")
+    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family, iban: "AT611904300234573201") # pipelock:ignore IBAN
 
-    assert_equal "AT611904300234573201", family_merchant.iban
+    assert_equal "AT611904300234573201", family_merchant.iban # pipelock:ignore IBAN
   end
 
   test "convert_to_family_merchant_for preserves an explicitly cleared iban" do
-    @provider_merchant.update!(iban: "DE89370400440532013000")
+    @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     family_merchant = @provider_merchant.convert_to_family_merchant_for(@family, iban: "")
 
