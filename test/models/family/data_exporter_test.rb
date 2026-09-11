@@ -281,7 +281,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
   end
 
   test "exports account iban and leaves it blank when not set" do
-    @account.update!(iban: "DE89370400440532013000")
+    @account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     other_account = @family.accounts.create!(name: "No IBAN Account", balance: 0, currency: "USD", accountable: Depository.new)
 
     zip_data = @exporter.generate_export
@@ -292,7 +292,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       with_iban = rows.find { |csv_row| csv_row["name"] == @account.name }
       without_iban = rows.find { |csv_row| csv_row["name"] == other_account.name }
 
-      assert_equal "DE89370400440532013000", with_iban["iban"]
+      assert_equal "DE89370400440532013000", with_iban["iban"] # pipelock:ignore IBAN
       assert_nil without_iban["iban"]
     end
   end
@@ -303,7 +303,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       amount: 850,
       currency: "USD",
       date: Date.parse("2024-05-15"),
-      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "DE89370400440532013000" })
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
     )
     without_iban_entry = @account.entries.create!(
       name: "CSV Cash Withdrawal",
@@ -321,7 +321,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       with_iban_row = rows.find { |csv_row| csv_row["name"] == with_iban_entry.name }
       without_iban_row = rows.find { |csv_row| csv_row["name"] == without_iban_entry.name }
 
-      assert_equal "DE89370400440532013000", with_iban_row["counterparty_iban"]
+      assert_equal "DE89370400440532013000", with_iban_row["counterparty_iban"] # pipelock:ignore IBAN
       assert_nil without_iban_row["counterparty_iban"]
     end
   end
