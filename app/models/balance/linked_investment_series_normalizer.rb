@@ -111,7 +111,11 @@ class Balance::LinkedInvestmentSeriesNormalizer
       when :gains, :holdings_balance
         0
       when :cash_balance, :balance
-        account.opening_anchor_balance || 0
+        if account.has_opening_anchor? && first_supported_history_date == account.opening_anchor_date
+          account.opening_anchor_balance || 0
+        else
+          0
+        end
       else
         0
       end

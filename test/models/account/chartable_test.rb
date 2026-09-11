@@ -401,4 +401,49 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ thirty_days_ago, Date.current ], series.values.map(&:date)
     assert_equal Money.new(500, "USD"), series.values.first.value
   end
+
+  test "balance_series assigns 0 to prepended anchor when trade predates later opening anchor" do
+    account = accounts(:investment)
+    account.entries.destroy_all
+    account.holdings.destroy_all
+
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    early_trade_date = 15.days.ago.to_date
+    later_anchor_date = 8.days.ago.to_date
+
+    account.set_opening_anchor_balance(balance: 5000, date: later_anchor_date)
+    account.entries.create!(
+      name: "Early Trade",
+      date: early_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: 20.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 20.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 10.days.ago.to_date, date_formatted: "", value: Money.new(100, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(5100, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    builder = mock
+    Balance::ChartSeriesBuilder.expects(:new).returns(builder)
+    builder.expects(:balance_series).returns(raw_series)
+
+    series = account.balance_series
+
+    assert_equal early_trade_date, series.start_date
+    assert_equal [ early_trade_date, 10.days.ago.to_date, Date.current ], series.values.map(&:date)
+    assert_equal Money.new(0, "USD"), series.values.first.value
+  end
 end

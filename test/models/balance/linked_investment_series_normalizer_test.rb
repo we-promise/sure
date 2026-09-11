@@ -354,4 +354,92 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal [ opening_date, 3.days.ago.to_date, Date.current ], normalized.values.map(&:date)
     assert_equal Money.new(0, "USD"), normalized.values.first.value
   end
+
+  test "normalizer uses 0 balance when earlier provider activity predates later opening anchor" do
+    account = families(:empty).accounts.create!(
+      name: "Early Trade Later Anchor",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    early_trade_date = 15.days.ago.to_date
+    later_anchor_date = 8.days.ago.to_date
+
+    account.set_opening_anchor_balance(balance: 5000, date: later_anchor_date)
+    account.entries.create!(
+      name: "Early Trade",
+      date: early_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: 20.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 20.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 10.days.ago.to_date, date_formatted: "", value: Money.new(100, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(5100, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series, view: :balance)
+    normalized = normalizer.normalize
+
+    assert_equal early_trade_date, normalized.start_date
+    assert_equal [ early_trade_date, 10.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(0, "USD"), normalized.values.first.value
+  end
+
+  test "normalizer uses opening anchor balance when opening anchor matches earliest supported history date" do
+    account = families(:empty).accounts.create!(
+      name: "Anchor Is Earliest",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    anchor_date = 15.days.ago.to_date
+    later_trade_date = 8.days.ago.to_date
+
+    account.set_opening_anchor_balance(balance: 5000, date: anchor_date)
+    account.entries.create!(
+      name: "Later Trade",
+      date: later_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: 20.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 20.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 10.days.ago.to_date, date_formatted: "", value: Money.new(5000, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(5100, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series, view: :balance)
+    normalized = normalizer.normalize
+
+    assert_equal anchor_date, normalized.start_date
+    assert_equal [ anchor_date, 10.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(5000, "USD"), normalized.values.first.value
+  end
 end
