@@ -361,6 +361,7 @@ class AccountsController < ApplicationController
         @akahu_items,
         @up_items,
         @monobank_items,
+        @fio_items,
         @enable_banking_items,
         @coinstats_items,
         @mercury_items,
