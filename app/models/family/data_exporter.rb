@@ -62,7 +62,11 @@ class Family::DataExporter
 
     def generate_accounts_csv
       CSV.generate do |csv|
-        csv << [ "id", "name", "type", "subtype", "balance", "currency", "iban", "created_at" ]
+        # iban appended after created_at (not inserted before it) so a
+        # positional (non-header) reader of a pre-existing export -- the
+        # previous last column, created_at, stays at the same index instead
+        # of shifting a row's IBAN string into where a timestamp was expected.
+        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at", "iban" ]
 
         # Only export accounts belonging to this family
         @family.accounts.includes(:accountable).find_each do |account|
@@ -73,8 +77,8 @@ class Family::DataExporter
             account.subtype,
             account.balance.to_s,
             account.currency,
-            account.iban,
-            account.created_at.iso8601
+            account.created_at.iso8601,
+            account.iban
           ]
         end
       end
