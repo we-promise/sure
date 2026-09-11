@@ -243,7 +243,7 @@ class EnableBankingEntry::Processor
           # equality lookups/comparisons elsewhere (transfer matching, rule
           # conditions) to actually line up, regardless of whether an ASPSP
           # happens to include spaces in its IBAN formatting.
-          iban: data.dig(account_key, :iban).to_s.delete(" ").upcase.presence,
+          iban: data.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence,
           other_id: data.dig(additional_key, :identification).presence,
           bank_name: data.dig(agent_key, :name).presence
         }
