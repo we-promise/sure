@@ -1,13 +1,13 @@
-<%# locals: (entry:, balance_trend: nil, view_ctx: "account", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false) %>
+<%# locals: (entry:, balance_trend: nil, view_ctx: "account", is_filtered: false, in_split_group: false, running_balance: nil, hide_balance: false, flat: false) %>
 <% trade = entry.entryable %>
 <% has_running_balance = defined?(running_balance) && running_balance.present? %>
+<% show_date = flat || has_running_balance %>
 <% drawer_params = { view_ctx: view_ctx, is_filtered: is_filtered } %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(trade) do %>
-    <div class="group flex items-center gap-2 lg:gap-3 text-primary text-sm font-medium py-2 px-3 <%= "pl-6 lg:pl-8" if in_split_group %> <%= "opacity-50 text-secondary" if entry.excluded %>">
-      <%# ☐ mint %>
-      <div class="hidden lg:flex w-8 shrink-0 justify-center">
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: has_running_balance && view_ctx == "account" && !hide_balance, indent: in_split_group, muted: entry.excluded) do |row| %>
+      <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             class: "checkbox checkbox--light",
             data: {
@@ -17,15 +17,13 @@
               action: "bulk-select#toggleRowSelection",
               checkbox_toggle_target: "selectionEntry"
             } %>
-      </div>
-
-      <%# DATE mint — respects Settings date_format via format_date %>
-      <% if has_running_balance %>
-        <div class="hidden lg:flex w-[110px] shrink-0 text-secondary text-sm truncate pr-2"><%= format_date(entry.date) %></div>
       <% end %>
 
-      <%# TRANSACTION flex 2 — account link same as normal, both global and account %>
-      <div class="flex items-center gap-2 lg:gap-3 flex-[2] min-w-0 pr-2">
+      <% if show_date %>
+        <% row.with_date { format_date(entry.date) } %>
+      <% end %>
+
+      <% row.with_primary do %>
         <div class="min-w-0 flex-1">
           <div class="truncate">
             <%= link_to entry.name,
@@ -37,24 +35,19 @@
             <%= link_to entry.account.name, account_path(entry.account, tab: "transactions"), data: { turbo_frame: "_top" }, class: "hover:underline" %>
           </div>
         </div>
-      </div>
+      <% end %>
 
-      <%# NOTES flex 2 — single line truncate %>
-      <div class="hidden lg:flex min-w-0 flex-[2] px-2">
-        <% if entry.notes.present? %>
+      <% if entry.notes.present? %>
+        <% row.with_notes do %>
           <span class="truncate block text-sm text-secondary privacy-sensitive" title="<%= entry.notes %>"><%= entry.notes %></span>
-        <% else %>
-          <span class="text-secondary/40 text-sm">—</span>
         <% end %>
-      </div>
+      <% end %>
 
-      <%# CATEGORY flex 1 %>
-      <div class="hidden md:flex min-w-0 items-center gap-1 flex-[1]">
+      <% row.with_category do %>
         <%= render "investment_activity/quick_edit_badge", entry: entry, entryable: trade, view_ctx: view_ctx, is_filtered: is_filtered %>
-      </div>
+      <% end %>
 
-      <%# AMOUNT mint %>
-      <div class="w-[120px] shrink-0 flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
+      <% row.with_amount do %>
         <% if entry.protected_from_sync? && !entry.excluded? %>
           <%= link_to entry_path(entry, drawer_params), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "invisible group-hover:visible transition-opacity" do %>
             <%= render DS::Tooltip.new(text: t("entries.protection.tooltip"), icon: "lock", size: "sm", as: :span) %>
@@ -63,14 +56,13 @@
         <%= content_tag :p,
             format_money(-entry.amount_money),
             class: ["privacy-sensitive text-sm font-medium truncate", "text-green-600": entry.amount.negative?] %>
-      </div>
-
-      <%# BALANCE mint — global never, account filtered hides (partial table) %>
-      <% if has_running_balance && view_ctx == "account" && !hide_balance %>
-        <div class="hidden lg:flex w-[120px] shrink-0 justify-end px-2">
-          <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
-        </div>
       <% end %>
-    </div>
+
+      <% if has_running_balance && view_ctx == "account" && !hide_balance %>
+        <% row.with_balance do %>
+          <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+        <% end %>
+      <% end %>
+    <% end %>
   <% end %>
 <% end %>

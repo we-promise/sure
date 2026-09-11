@@ -1,24 +1,22 @@
-<%# locals: (entry:, running_balance: nil, hide_balance: false) %>
+<%# locals: (entry:, running_balance: nil, hide_balance: false, flat: false) %>
 <% valuation = entry.entryable %>
 <% has_running_balance = defined?(running_balance) && running_balance.present? %>
+<% show_date = flat || has_running_balance %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(valuation) do %>
-    <div class="group flex items-center gap-2 lg:gap-3 text-primary text-sm font-medium py-2 px-3">
-      <%# ☐ mint %>
-      <div class="hidden lg:flex w-8 shrink-0 justify-center">
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: has_running_balance && !hide_balance) do |row| %>
+      <% row.with_checkbox do %>
         <%= check_box_tag dom_id(entry, "selection"),
             class: "checkbox checkbox--light",
             data: { id: entry.id, entry_type: entry.entryable_type, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
-      </div>
-
-      <%# DATE mint — respects Settings date_format via format_date %>
-      <% if has_running_balance %>
-        <div class="hidden lg:flex w-[110px] shrink-0 text-secondary text-sm truncate pr-2"><%= format_date(entry.date) %></div>
       <% end %>
 
-      <%# TRANSACTION flex 2 — no logo, text only %>
-      <div class="flex items-center gap-2 lg:gap-3 flex-[2] min-w-0 pr-2">
+      <% if show_date %>
+        <% row.with_date { format_date(entry.date) } %>
+      <% end %>
+
+      <% row.with_primary do %>
         <div class="min-w-0 flex-1 truncate">
           <%= link_to(
                 valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name,
@@ -27,29 +25,17 @@
                 class: "hover:underline truncate"
               ) %>
         </div>
-      </div>
-
-      <%# NOTES flex 2 — empty as — %>
-      <div class="hidden lg:flex min-w-0 flex-[2] px-2">
-        <span class="text-secondary/40 text-sm">—</span>
-      </div>
-
-      <%# CATEGORY flex 1 — empty as — %>
-      <div class="hidden md:flex min-w-0 items-center flex-[1]">
-        <span class="text-secondary/40 text-sm">—</span>
-      </div>
-
-      <%# AMOUNT mint %>
-      <div class="w-[120px] shrink-0 flex items-center justify-end gap-2">
-        <%= tag.p format_money(entry.amount_money), class: "privacy-sensitive text-sm font-medium truncate" %>
-      </div>
-
-      <%# BALANCE mint — filtered hides (partial table) %>
-      <% if has_running_balance && !hide_balance %>
-        <div class="hidden lg:flex w-[120px] shrink-0 justify-end px-2">
-          <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
-        </div>
       <% end %>
-    </div>
+
+      <% row.with_amount do %>
+        <%= tag.p format_money(entry.amount_money), class: "privacy-sensitive text-sm font-medium truncate" %>
+      <% end %>
+
+      <% if has_running_balance && !hide_balance %>
+        <% row.with_balance do %>
+          <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+        <% end %>
+      <% end %>
+    <% end %>
   <% end %>
 <% end %>

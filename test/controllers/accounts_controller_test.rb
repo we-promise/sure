@@ -284,6 +284,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".split-group", count: 0
   end
 
+  test "show renders the split-parent row with the compact flex layout, not the legacy grid" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "show_split_grouped" => true))
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    # The split-parent row should use the same fixed-width flex shell as its
+    # compact siblings, not the old grid-cols-12 layout.
+    assert_select ".split-group div.grid-cols-12", count: 0
+    assert_select ".split-group .flex.items-center", minimum: 1
+  end
+
   test "show computes running balances only for compact flat (ungrouped) view" do
     @account.balances.where(date: Date.current).destroy_all
     @account.balances.create!(date: Date.current, balance: 500, currency: @account.currency, start_balance: 500, end_balance: 500)
@@ -298,6 +316,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get account_url(@account)
     assert_response :success
     assert_equal({}, @controller.instance_variable_get(:@running_balances))
+  end
+
+  test "show computes a distinct per-transaction running balance for same-day entries" do
+    @account.balances.where(date: Date.current - 1.day).destroy_all
+    @account.balances.create!(date: Date.current - 1.day, balance: 500, currency: @account.currency, start_balance: 500, end_balance: 500)
+
+    # Two same-day transactions should NOT both show the day's closing balance —
+    # each should reflect the balance immediately after that specific entry.
+    entry_1 = create_transaction(name: "Coffee", amount: 100, account: @account, date: Date.current, created_at: Time.current - 2.hours)
+    entry_2 = create_transaction(name: "Lunch", amount: -30, account: @account, date: Date.current, created_at: Time.current - 1.hour)
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    get account_url(@account)
+    assert_response :success
+
+    running_balances = @controller.instance_variable_get(:@running_balances)
+    assert_not_equal running_balances[entry_1.id], running_balances[entry_2.id]
   end
 
   test "show filters entries by search term" do

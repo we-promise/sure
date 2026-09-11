@@ -175,19 +175,16 @@ class AccountsController < ApplicationController
 
     @activity_feed_data = Account::ActivityFeedData.new(@account, @entries, split_parents: @split_parents)
 
-    # Running balance per entry for flat compact view only (when not grouped by date)
-    # Uses the same per-day closing balance source as the grouped header (Account::ActivityFeedData#balances_by_date)
-    # so flat rows match the grouped accuracy (e.g. Starting Balance / Opening balance rows).
-    # Per-day granularity is intentional: intra-day ordering is not reflected in the balances table,
-    # but it matches the authoritative balance store used elsewhere in the app.
+    # Running balance per entry for flat compact view only (when not grouped by date).
+    # Walks entries forward per account (Account::RunningBalanceCalculator) so
+    # each row reflects the balance immediately after that specific transaction,
+    # rather than the day's closing balance shared by every entry on the same date.
+    # Investment/holdings accounts intentionally keep the coarser per-day figure
+    # (see the calculator's docs) since intra-day holdings value can't be
+    # attributed to a single trade.
     @running_balances = {}
     if @compact_view && !@group_by_date && @entries.any?
-      dates = @entries.map(&:date).uniq
-      balances_by_date = @account.balances.where(date: dates, currency: @account.currency).index_by(&:date)
-      @entries.each do |e|
-        bal = balances_by_date[e.date]
-        @running_balances[e.id] = bal ? bal.end_balance_money : Money.new(0, @account.currency)
-      end
+      @running_balances = Account::RunningBalanceCalculator.new(@entries + @split_parents.values).running_balances
     end
   end
 

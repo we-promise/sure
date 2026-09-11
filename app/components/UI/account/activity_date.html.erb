@@ -43,7 +43,7 @@
         <% helpers.group_split_entries(entries, split_parents).each do |item| %>
           <% if item.is_a?(EntriesHelper::SplitGroup) %>
             <div class="split-group">
-              <%= render "transactions/split_parent_row", entry: item.parent, view_ctx: "account", is_filtered: filtered? %>
+              <%= render "transactions/compact_split_parent_row", entry: item.parent, view_ctx: "account", is_filtered: filtered? %>
               <% item.children.each do |child_entry| %>
                 <% if child_entry.entryable_type == "Transaction" %>
                   <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "account", in_split_group: true, is_filtered: filtered? %>

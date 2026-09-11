@@ -60,17 +60,10 @@ class TransactionsController < ApplicationController
     @compact_view = Current.user.preview_features_enabled? && Current.user.transactions_compact?
     @group_by_date = Current.user.transactions_group_by_date?
 
-    @running_balances = {}
-    if @compact_view && !@group_by_date && @transactions.any?
-      dates = @transactions.map { |t| t.entry.date }.uniq
-      account_ids = @transactions.map { |t| t.entry.account_id }.uniq
-      balances = Balance.where(account_id: account_ids, date: dates).index_by { |b| [ b.account_id, b.date ] }
-      @transactions.each do |txn|
-        entry = txn.entry
-        bal = balances[[ entry.account_id, entry.date ]]
-        @running_balances[entry.id] = bal ? bal.end_balance_money : Money.new(0, entry.currency)
-      end
-    end
+    # Note: the global transactions page never shows a per-row balance column
+    # (compact partials only render it when view_ctx == "account"), so unlike
+    # AccountsController#show we intentionally don't compute running balances
+    # here — it would be an extra Balance query whose result is never displayed.
 
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
