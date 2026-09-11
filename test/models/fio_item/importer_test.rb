@@ -210,6 +210,24 @@ class FioItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "requires_update", @fio_item.reload.status
   end
 
+  # Rotating in a token for a *different* Fio account must not quietly repoint the
+  # connection: the linked Sure account would start receiving another account's balance
+  # and movements.
+  test "refuses a statement naming a different account than the connection syncs" do
+    account = fio_account(current_balance: 195.01, raw_transactions_payload: [ movement(id: 1) ])
+    provider = FakeFioProvider.new(
+      statement: statement(movements: [ movement(id: 2) ]).deep_merge(info: { accountId: "9999999999" })
+    )
+
+    result = FioItem::Importer.new(@fio_item, fio_provider: provider).import
+
+    refute result[:success]
+    account.reload
+    assert_equal "2400222222", account.fio_account_id
+    assert_equal 195.01, account.current_balance
+    assert_equal %w[fio_1], account.raw_transactions_payload.map { |m| FioEntry::Processor.canonical_external_id(m) }
+  end
+
   test "reports a statement too large to fetch as a failure" do
     provider = FakeFioProvider.new(error: Provider::Fio::TooManyItemsError.new("413", failure_code: :too_many_items))
 

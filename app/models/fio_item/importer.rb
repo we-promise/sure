@@ -46,6 +46,8 @@ class FioItem::Importer
       return empty_result
     end
 
+    return @deferred_result if reject_foreign_account!(info)
+
     fio_item.upsert_fio_snapshot!(info) if info.present?
 
     # A quiet range answers with an empty body and no header, so an established
@@ -183,12 +185,39 @@ class FioItem::Importer
       Array(list).select { |transaction| transaction.is_a?(Hash) }
     end
 
+    # A connection stands for one token, and a token for one account, so a statement
+    # naming a different account than the one already stored means the token was
+    # replaced with one for another account. Reusing the row would hand the linked Sure
+    # account someone else's balance and movements, so the sync refuses instead; the
+    # user gets a second connection for the second account.
+    def reject_foreign_account!(info)
+      return false if info.blank?
+
+      stored = fio_account&.fio_account_id
+      incoming = info[:accountId].presence&.to_s
+      return false if stored.blank? || incoming.blank? || stored == incoming
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Fio token resolves to a different account than this connection",
+        source: self.class.name,
+        provider_key: "fio",
+        family: fio_item.family,
+        account_provider: fio_account&.account_provider,
+        metadata: { fio_item_id: fio_item.id, fio_account_id: fio_account&.id }
+      )
+
+      @deferred_result = failed_result(I18n.t("fio_item.errors.account_mismatch"))
+      true
+    end
+
     # Creates the account row on first sight, updates the header afterwards. Discovery
     # never creates a Sure account: linking is the user's decision, made in setup.
     def upsert_account!(info)
       account_number = info[:accountId].presence&.to_s
-      account = fio_account ||
-        fio_item.fio_accounts.find_by(fio_account_id: account_number) ||
+      account = fio_item.fio_accounts.find_by(fio_account_id: account_number) ||
+        fio_account ||
         fio_item.fio_accounts.new(currency: info[:currency], name: "")
 
       account.upsert_fio_snapshot!(info)

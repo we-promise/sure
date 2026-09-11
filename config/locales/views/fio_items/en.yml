@@ -11,6 +11,7 @@ en:
   fio_item:
     errors:
       account_processing_failed: Could not sync Fio account
+      account_mismatch: This token belongs to a different Fio account than the one this connection already syncs. Add it as a separate connection instead.
       account_sync_schedule_failed: Could not schedule Fio account sync
       statement_too_large: The statement has more transactions than Fio serves in one request. Move the sync start date forward and sync again.
       statement_fetch_failed: Could not fetch the statement from Fio
