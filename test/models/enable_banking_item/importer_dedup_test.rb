@@ -124,7 +124,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     # a blank IBAN on one side must not be treated as proof they're
     # different real transactions (see issue this regresses: a pending row
     # settling into its booked form would otherwise both survive and
-    # double-count the balance).
+    # double-count the balance). The richer (booked, IBAN-bearing) row is
+    # kept, not just whichever one the API happened to list first.
     transactions = [
       {
         entry_reference: "ref_pending",
@@ -148,7 +149,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
     assert_equal 1, result.count
-    assert_equal "ref_pending", result.first[:entry_reference]
+    assert_equal "ref_booked", result.first[:entry_reference]
   end
 
   test "still deduplicates identical transactions that share the same counterparty iban" do
@@ -468,6 +469,55 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
     assert_equal 2, result.count
+  end
+
+  test "a blank-iban row occupying a bucket first does not block the row that actually owns it" do
+    # Same 3-row split-group shape as above, but the blank-IBAN row is
+    # listed FIRST in the array, ahead of the row for the bucket it
+    # aliases into. Naively keeping "whichever row is seen first" per key
+    # would let the blank row claim that bucket and then discard the real,
+    # IBAN-bearing row as a "duplicate" -- losing that transaction's actual
+    # counterparty data (or, worse, an entirely different real transaction
+    # if the API ever also reused the blank row's own entry_reference).
+    transactions = [
+      {
+        entry_reference: "ref_a_pending",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_a",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "AT611904300234573201" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_b",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 2, result.count
+    kept_refs = result.map { |tx| tx[:entry_reference] }
+    assert_includes kept_refs, "ref_a"
+    assert_includes kept_refs, "ref_b"
+    assert_not_includes kept_refs, "ref_a_pending"
   end
 
   test "returns empty array for empty input" do

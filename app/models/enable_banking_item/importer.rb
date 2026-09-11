@@ -578,31 +578,43 @@ class EnableBankingItem::Importer
       distinct_ibans_by_base_key = normalized.group_by { |tx| build_transaction_base_key(tx) }
         .transform_values { |group| group.filter_map { |tx| counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) }.uniq.sort }
 
-      seen = {}
-      duplicates_removed = 0
-
-      result = normalized.select do |tx|
+      keyed_with_index = normalized.each_with_index.group_by do |tx, _index|
         base_key = build_transaction_base_key(tx)
-        key = if distinct_ibans_by_base_key[base_key].size >= 2
+        if distinct_ibans_by_base_key[base_key].size >= 2
           # A blank-IBAN row (e.g. a pending duplicate that hasn't gained
           # account data yet) can't be attributed to any one of the split
           # transactions, but it must still collapse into ONE of them
           # rather than forming a third, phantom transaction -- so it
-          # aliases to the first (sorted) IBAN bucket in the group.
+          # aliases to the first (sorted) IBAN bucket in the group. It's
+          # ranked below any real member of that bucket just below, so it
+          # only "wins" the bucket when no fuller row claims it.
           iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) || distinct_ibans_by_base_key[base_key].first
           "#{base_key}\x1F#{iban}"
         else
           base_key
         end
-
-        if seen[key]
-          duplicates_removed += 1
-          false
-        else
-          seen[key] = true
-          true
-        end
       end
+
+      duplicates_removed = 0
+
+      # Within each duplicate group, keep the richest representative --
+      # BOOK over PDNG, then a present counterparty IBAN -- rather than
+      # whichever row the API happened to return first. Array order isn't a
+      # reliability signal, and picking the first row arbitrarily could
+      # discard a settled/IBAN-bearing row in favor of a thinner one (or, in
+      # a bucket a blank-IBAN row aliases into, discard the row that
+      # actually owns that IBAN).
+      result = keyed_with_index.values.map do |group|
+        duplicates_removed += group.size - 1 if group.size > 1
+
+        group.min_by do |tx, index|
+          [
+            tx[:status].to_s == "BOOK" ? 0 : 1,
+            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present? ? 0 : 1,
+            index
+          ]
+        end
+      end.sort_by { |_tx, index| index }.map(&:first)
 
       if duplicates_removed > 0
         Rails.logger.info(

@@ -48,6 +48,18 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "DE89370400440532013000", created.iban # pipelock:ignore IBAN
   end
 
+  test "create re-renders the form instead of a 500 when the iban is already used in the family" do
+    @account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    assert_no_difference -> { Account.count } do
+      post depositories_path, params: {
+        account: { name: "Duplicate IBAN Checking", currency: "USD", balance: 100, accountable_type: "Depository", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "update persists a manually entered iban through the shared update action" do
     linked_account = accounts(:connected)
 
