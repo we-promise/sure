@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -437,7 +437,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.uuid "coinbase_item_id", null: false
     t.datetime "created_at", null: false
     t.string "currency"
-    t.decimal "current_balance", precision: 19, scale: 4
+    t.decimal "current_balance", precision: 34, scale: 18
     t.jsonb "institution_metadata"
     t.string "name"
     t.string "provider"
@@ -779,6 +779,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   end
 
   create_table "families", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
@@ -917,7 +918,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.string "external_id"
     t.decimal "price", precision: 19, scale: 4, null: false
     t.uuid "provider_security_id"
-    t.decimal "qty", precision: 24, scale: 8, null: false
+    t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
     t.boolean "security_locked", default: false, null: false
     t.datetime "updated_at", null: false
@@ -2396,7 +2397,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
     t.string "investment_activity_label"
     t.jsonb "locked_attributes", default: {}
     t.decimal "price", precision: 19, scale: 10
-    t.decimal "qty", precision: 24, scale: 8
+    t.decimal "qty", precision: 34, scale: 18
     t.uuid "security_id", null: false
     t.datetime "updated_at", null: false
     t.index ["extra"], name: "index_trades_on_extra", using: :gin
@@ -2761,7 +2762,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_120000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "security_prices", "securities"
-  add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
+  add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
   add_foreign_key "simplefin_accounts", "simplefin_items"
   add_foreign_key "simplefin_items", "families"
