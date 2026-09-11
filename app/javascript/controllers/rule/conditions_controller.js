@@ -123,7 +123,8 @@ export default class extends Controller {
   }
 
   #uniqueKey() {
-    return Date.now();
+    this.keySequence = (this.keySequence ?? 0) + 1;
+    return Date.now() * 1000 + this.keySequence;
   }
 
   #toggleValueFieldVisibility() {

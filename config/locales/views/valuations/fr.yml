@@ -13,8 +13,16 @@ fr:
       opening_balance: Solde d'ouverture
       original_principal: Principal initial
       original_purchase_price: Prix d'achat initial
+    confirm_create:
+      confirm: Confirmer
+      title: Confirmer le nouveau solde
+    confirm_update:
+      title: Mettre à jour le solde
+      update: Mettre à jour
     confirmation_contents:
       account_balance: solde du compte
+      action_set: définira
+      action_update: mettra à jour
       asset_value: valeur de l'actif
       balance: solde
       brokerage_cash: Trésorerie de courtage

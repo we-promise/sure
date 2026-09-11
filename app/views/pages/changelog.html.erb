@@ -9,7 +9,7 @@
             <%= image_tag @release_notes[:avatar], class: "rounded-full w-full h-full object-cover" %>
           </div>
         <% else %>
-          <div class="bg-gray-300 text-gray-600 shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium">
+          <div class="bg-surface-inset text-secondary shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium">
             <%= @release_notes[:username]&.first&.upcase || "?" %>
           </div>
         <% end %>

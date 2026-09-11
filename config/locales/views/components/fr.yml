@@ -90,6 +90,9 @@ fr:
         warning: Avertissement
     dialog:
       close: Fermer
+    icon_picker:
+      no_matching_icons: Aucune icône correspondante
+      search_placeholder: Rechercher des icônes...
     link:
       opens_in_new_tab: "(ouvre dans un nouvel onglet)"
     pill:

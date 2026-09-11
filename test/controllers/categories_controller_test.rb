@@ -184,6 +184,37 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "dialog"
   end
 
+  test "merge orders subcategories immediately after their parent" do
+    parent = @family.categories.create!(
+      name: "Zoo",
+      color: "#000000",
+      lucide_icon: "folder"
+    )
+    child = @family.categories.create!(
+      name: "Apple",
+      color: "#111111",
+      lucide_icon: "folder",
+      parent: parent
+    )
+
+    get merge_categories_path
+
+    assert_response :success
+
+    form = Nokogiri::HTML(response.body).at_css("form[action='#{perform_merge_categories_path}']")
+    assert_not_nil form
+
+    category_ids = form.css("[data-select-target='option']").map { |option| option["data-value"] }
+    source_ids = form.css("input[name='source_ids[]']").map { |input| input["value"] }
+    parent_index = category_ids.index(parent.id)
+    child_index = category_ids.index(child.id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+    assert_equal category_ids, source_ids
+  end
+
   test "merge selected categories into an existing category" do
     target = @family.categories.create!(
       name: "Dining",
