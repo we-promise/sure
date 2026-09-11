@@ -76,7 +76,10 @@ class ValuableValuation
       response = symbol == "XAU" ? provider.fetch_gold_price(date:) : provider.fetch_bullion_price(symbol:, date:)
       if response.success? && response.data
         price = convert_twelve_data_price(response.data)
-        return price if price&.price_per_troy_ounce.to_d&.positive? && price.date == date
+        return price if price &&
+          price.price_per_troy_ounce.present? &&
+          price.price_per_troy_ounce.to_d.positive? &&
+          price.date == date
       end
       yield(response.error || Provider::TwelveData::Error.new("#{symbol} spot quote or currency conversion unavailable")) if block_given?
       nil

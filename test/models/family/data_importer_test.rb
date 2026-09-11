@@ -703,6 +703,21 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Hallmarked", lot.notes
   end
 
+  test "imports a gemstone without assigning bullion purity" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "gem-account", name: "Gem Collection", balance: "500", currency: "USD", accountable_type: "Valuable", accountable: {} } },
+      { type: "ValuableItem", data: { id: "gem-item", account_id: "gem-account", description: "Sapphire ring", acquired_on: "2026-01-15", item_type: "gemstone", material: "sapphire", weight: "1.5", weight_unit: "carat", cost_amount: "300", currency: "USD", manual_value: "500" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    item = @family.accounts.find_by!(name: "Gem Collection").valuable.items.sole
+    assert_predicate item, :gemstone?
+    assert_equal "sapphire", item.material
+    assert_nil item.purity
+    assert_equal 500, item.manual_value
+  end
+
   test "imports recurring transactions with unknown status fallback" do
     ndjson = build_ndjson([
       {

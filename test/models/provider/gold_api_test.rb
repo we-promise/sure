@@ -43,6 +43,23 @@ class Provider::GoldApiTest < ActiveSupport::TestCase
     assert_equal "GoldAPI returned no XAU timestamp", result.error.message
   end
 
+  test "uses the active timezone to date a quote" do
+    Time.use_zone("Pacific/Honolulu") do
+      travel_to Time.utc(2026, 9, 12, 0, 30) do
+        provider = Provider::GoldApi.new("test-key")
+        response = Struct.new(:body).new({ "timestamp" => Time.current.to_i, "price" => 3_110.34768 }.to_json)
+        client = mock
+        client.expects(:get).with("/api/price/XAU/USD").yields(Struct.new(:headers).new({})).returns(response)
+        provider.stubs(:client).returns(client)
+
+        result = provider.fetch_gold_price(currency: "USD")
+
+        assert result.success?
+        assert_equal Date.current, result.data.date
+      end
+    end
+  end
+
   test "requests the matching bullion symbol" do
     provider = Provider::GoldApi.new("test-key")
     response = Struct.new(:body).new({ "timestamp" => Time.zone.now.to_i, "price" => 1_000 }.to_json)

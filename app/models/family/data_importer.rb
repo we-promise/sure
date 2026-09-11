@@ -520,7 +520,7 @@ class Family::DataImporter
           weight_unit: data["weight_unit"],
           item_type: data["item_type"] || "bullion",
           material: data["material"] || "gold",
-          purity: (data["purity"] || data["karat"].to_d * 100 / 24),
+          purity: imported_valuable_purity(data),
           cost_amount: data["cost_amount"],
           currency: data["currency"] || account.currency,
           making_charge: data["making_charge"].presence&.to_d,
@@ -533,6 +533,14 @@ class Family::DataImporter
         map_source!(:valuable_items, old_id, lot)
         increment_summary("ValuableItem", created ? :created : :updated)
       end
+    end
+
+    def imported_valuable_purity(data)
+      return data["purity"] if data["purity"].present?
+      return unless data["karat"].present?
+      return unless (data["material"] || "gold") == "gold"
+
+      data["karat"].to_d * 100 / 24
     end
 
     def import_recurring_transactions(records)
