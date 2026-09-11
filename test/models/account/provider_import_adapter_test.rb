@@ -255,6 +255,42 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "survives a concurrent insert winning the (source, iban) unique index during backfill" do
+    # A merchant found by name/provider_merchant_id, blank iban -- the
+    # backfill path. Simulates another process's row winning the (source,
+    # iban) unique index in the window between our find and our update.
+    name_matched_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "hash_1",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+    concurrent_winner = ProviderMerchant.create!(
+      provider_merchant_id: "hash_2",
+      name: "Concurrent Winner",
+      source: "enable_banking",
+      iban: "DE89370400440532013000"
+    )
+    name_matched_merchant.stubs(:update!).with(iban: "DE89370400440532013000").raises(
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", iban: "DE89370400440532013000").returns(nil)
+    ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_1", source: "enable_banking").returns(name_matched_merchant)
+
+    merchant = nil
+    assert_nothing_raised do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "hash_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "DE89370400440532013000"
+      )
+    end
+
+    assert_equal name_matched_merchant.id, merchant.id
+    assert_nil name_matched_merchant.reload.iban
+    assert_equal "DE89370400440532013000", concurrent_winner.reload.iban
+  end
+
   test "falls back to name-based lookup when no iban is provided" do
     existing_merchant = ProviderMerchant.create!(
       provider_merchant_id: "enable_banking_merchant_2",
