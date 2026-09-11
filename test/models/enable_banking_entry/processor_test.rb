@@ -763,7 +763,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     processor = build_processor(
       credit_debit_indicator: "DBIT",
       creditor: { name: "Landlord GmbH" },
-      creditor_account: { iban: "DE89370400440532013000" }
+      creditor_account: { iban: "DE89370400440532013000" } # pipelock:ignore IBAN
     )
 
     merchant = stub(id: 999)
@@ -772,7 +772,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       provider_merchant_id: "enable_banking_merchant_#{Digest::MD5.hexdigest('landlord gmbh')}",
       name: "Landlord GmbH",
       source: "enable_banking",
-      iban: "DE89370400440532013000"
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
     ).returns(merchant)
 
     processor.stubs(:import_adapter).returns(import_adapter)
@@ -788,7 +788,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_amount: { amount: "80.00", currency: "EUR" },
       credit_debit_indicator: "DBIT",
       creditor: { name: "Insurance Co" },
-      creditor_account: { iban: "DE89370400440532013000" },
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
       remittance_information: [ "Policy 12345" ],
       status: "BOOK"
     }
@@ -799,7 +799,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_amount: { amount: "80.00", currency: "EUR" },
       credit_debit_indicator: "DBIT",
       creditor: { name: "Insurance Co Renamed" },
-      creditor_account: { iban: "DE89370400440532013000" },
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
       remittance_information: [ "Policy 12345 - renewal" ],
       status: "BOOK"
     }
@@ -811,7 +811,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     entry2 = @account.entries.find_by!(external_id: "enable_banking_ref_merchant_iban_2")
 
     assert_equal entry1.transaction.merchant_id, entry2.transaction.merchant_id
-    assert_equal "DE89370400440532013000", entry1.transaction.merchant.iban
+    assert_equal "DE89370400440532013000", entry1.transaction.merchant.iban # pipelock:ignore IBAN
   end
 
   test "falls back to name-based merchant matching when no iban is present" do
