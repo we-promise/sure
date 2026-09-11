@@ -484,7 +484,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   test "missing_transfer_suggestion_for finds an account whose iban matches the outflow's counterparty iban" do
-    @loan.update!(iban: "DE89370400440532013000")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     outflow_entry.entryable.update!(extra: { "counterparty_iban" => "de89 3704 0044 0532 0130 00" })
 
@@ -499,24 +499,24 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
   test "missing_transfer_suggestion_for returns nil when no account matches" do
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
 
     assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil for an inflow entry" do
-    @loan.update!(iban: "DE89370400440532013000")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
-    inflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    inflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     assert_nil @family.missing_transfer_suggestion_for(inflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil once dismissed" do
-    @loan.update!(iban: "DE89370400440532013000")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     outflow_entry.entryable.update!(extra: {
-      "counterparty_iban" => "DE89370400440532013000",
+      "counterparty_iban" => "DE89370400440532013000", # pipelock:ignore IBAN
       "counterparty_transfer_suggestion_dismissed" => true
     })
 
@@ -524,9 +524,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   test "missing_transfer_suggestion_for returns nil for an already-matched transfer" do
-    @loan.update!(iban: "DE89370400440532013000")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }, kind: "funds_movement")
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }, kind: "funds_movement") # pipelock:ignore IBAN
     inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
     Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
 
@@ -534,19 +534,19 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   test "missing_transfer_suggestion_for does not suggest a disabled account" do
-    @loan.update!(iban: "DE89370400440532013000")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     @loan.disable!
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for does not suggest an account the user cannot write to" do
-    @loan.update!(iban: "DE89370400440532013000")
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     other_member = users(:family_member)
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     # @loan is owned by @user (family_admin) with no share granted to
     # other_member, so it's outside other_member's writable_by scope --
