@@ -54,11 +54,18 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Sure.version.to_release_tag, @user.reload.last_seen_release_tag
   end
 
-  test "dismiss ignores a client-supplied tag and binds to the pending release" do
-    patch release_highlight_dismiss_path, params: { tag: "v9.9.9" }, as: :json
+  test "dismiss accepts the tag the client actually displayed" do
+    patch release_highlight_dismiss_path, params: { tag: Sure.version.to_release_tag }, as: :json
 
     assert_response :ok
     assert_equal Sure.version.to_release_tag, @user.reload.last_seen_release_tag
+  end
+
+  test "dismiss rejects a stale tag so a rolling deploy cannot suppress the new popup" do
+    patch release_highlight_dismiss_path, params: { tag: "v9.9.9" }, as: :json
+
+    assert_response :conflict
+    assert_nil @user.reload.last_seen_release_tag
   end
 
   test "dismiss returns no content when no release is pending" do
