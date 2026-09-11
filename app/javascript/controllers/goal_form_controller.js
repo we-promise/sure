@@ -89,9 +89,19 @@ export default class extends Controller {
   // button only enables when a submit would actually succeed.
   isValid() {
     const name = this.hasNameInputTarget ? this.nameInputTarget.value.trim() : "";
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
     const accountOk = !this.requireAccountValue || this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
-    return name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk;
+    return name.length > 0 && this.#amountValid() && accountOk;
+  }
+
+  // goal-kind disables the amount input in months-of-expenses mode: the
+  // figure is derived server-side, not typed, so the field is legitimately
+  // blank. Requiring a positive number there would refuse a submit on a
+  // field the user cannot fill in.
+  #amountValid() {
+    if (!this.hasAmountInputTarget) return false;
+    if (this.amountInputTarget.disabled) return true;
+    const amount = Number.parseFloat(this.amountInputTarget.value);
+    return Number.isFinite(amount) && amount > 0;
   }
 
   // `aria-disabled` instead of the `disabled` attribute: a truly disabled
@@ -116,8 +126,7 @@ export default class extends Controller {
     event.preventDefault();
 
     const nameEmpty = !(this.hasNameInputTarget && this.nameInputTarget.value.trim().length > 0);
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
-    const amountInvalid = !(Number.isFinite(amount) && amount > 0);
+    const amountInvalid = !this.#amountValid();
     const noAccount = this.requireAccountValue && !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
 
     if (nameEmpty) {
