@@ -426,6 +426,50 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "collapses a blank-iban duplicate into an existing bucket instead of forming a third transaction" do
+    # A base-content group with two genuinely distinct counterparty IBANs
+    # (a same-tx_id collision, per issue #954) plus a pending duplicate of
+    # one of them that hasn't gained account data yet must still resolve
+    # to 2 transactions -- not 3, which would happen if the blank-IBAN row
+    # formed its own bucket instead of aliasing into one of the existing
+    # IBAN buckets.
+    transactions = [
+      {
+        entry_reference: "ref_a",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_b",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "AT611904300234573201" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_a_pending",
+        transaction_id: "shared_tid",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 2, result.count
+  end
+
   test "returns empty array for empty input" do
     result = @importer.send(:deduplicate_api_transactions, [])
     assert_equal [], result
