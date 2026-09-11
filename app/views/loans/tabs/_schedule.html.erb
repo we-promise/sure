@@ -1,8 +1,10 @@
-<%# locals: (account:) %>
+<%# locals: (account:, as_of: Date.current) %>
 
+<%# `as_of` is the page's one reference date: the chart above the tabs and
+    this table shade "past" against the same day. %>
+<% today = as_of %>
 <% schedule = account.loan.amortization_schedule %>
 <% payments = schedule.payments %>
-<% today = Date.current %>
 
 <div class="space-y-4">
   <div class="grid grid-cols-2 md:grid-cols-4 gap-2">

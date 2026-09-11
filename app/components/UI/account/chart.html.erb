@@ -42,19 +42,101 @@
       <%= render partial: "shared/trend_change", locals: { trend: trend, comparison_label: comparison_label } %>
     </div>
 
-    <div class="h-64 pb-4">
-      <% if series.any? %>
-        <div
-        id="lineChart"
-        class="w-full h-full privacy-sensitive"
-        data-controller="time-series-chart"
-        data-time-series-chart-data-value="<%= series.to_json %>"
-        data-time-series-chart-selectable-value="true"></div>
-      <% else %>
-        <div class="w-full h-full flex items-center justify-center">
-          <p class="text-secondary text-sm"><%= t("UI.account.chart.no_data_available") %></p>
+    <% if loan_chart? %>
+      <%# The loan balance chart (#100): recorded balance, original schedule and
+          projection on one axis, with the figures the projection produces beside
+          it. Everything in this branch is loan-only; the else branch below is the
+          chart every other account type has always had. %>
+      <div class="px-4 mb-2 grid grid-cols-2 gap-2">
+        <% if loan_projected_payoff_date %>
+          <%= render "accounts/summary_card", title: t("UI.account.chart.loan.projected_payoff"), content: capture { %>
+            <%= I18n.l(loan_projected_payoff_date, format: :long) %>
+            <span class="block text-xs text-secondary mt-1"><%= loan_schedule_comparison %></span>
+          <% } %>
+          <%= render "accounts/summary_card", title: loan_interest_saved_title, content: capture { %>
+            <%= loan_interest_saved_money.format %>
+          <% } %>
+          <%# The basis of the comparison, beside the figures it governs: the
+              schedule's dates are anniversaries of origination, not the
+              lender's posting dates, so a payment posted before its date
+              reads as ahead until that date and one posted after as behind. %>
+          <p class="col-span-2 text-xs text-secondary"><%= t("UI.account.chart.loan.projection_basis") %></p>
+        <% elsif loan_projection_not_converged? %>
+          <p class="col-span-2 text-sm text-secondary"><%= t("UI.account.chart.loan.not_converged", balloon: loan_balloon_money.format) %></p>
+        <% end %>
+      </div>
+
+      <div class="h-64 px-4">
+        <%# privacy-sensitive: the axis, the lines and the tooltip are all
+            balances, and Privacy Mode blurs balances everywhere else here.
+            text-primary so the axis can draw in currentColor. %>
+        <div id="<%= loan_chart_id %>"
+             class="w-full h-full privacy-sensitive text-primary"
+             data-controller="loan-payoff-chart"
+             data-loan-payoff-chart-data-value="<%= loan_chart.to_json %>"
+             data-loan-payoff-chart-table-id-value="<%= loan_table_id %>"></div>
+      </div>
+
+      <ul class="flex flex-wrap gap-x-4 gap-y-1 px-4 pt-2 text-xs text-secondary" aria-label="<%= t("UI.account.chart.loan.legend") %>">
+        <% loan_legend.each do |key, style| %>
+          <li class="flex items-center gap-1.5">
+            <span class="inline-block w-4 h-0 border-t-2 <%= "border-dashed" if style[:dashed] %>" style="border-color: var(<%= style[:token] %>);" aria-hidden="true"></span>
+            <%= loan_chart[:labels][key.to_sym] %>
+          </li>
+        <% end %>
+      </ul>
+
+      <%# Real DOM text, not only the SVG's aria-label (gate G6). %>
+      <p class="sr-only"><%= loan_chart[:aria_description] %></p>
+
+      <%# The tabular alternative the SVG points at through aria-details: the
+          same rows the lines are drawn from, so the two cannot disagree. The
+          inline disclosure keeps the toggle a quiet text link under the legend. %>
+      <%= render DS::Disclosure.new(variant: :inline, class: "px-4 pb-4 text-sm") do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <span class="inline-flex items-center gap-1 text-secondary">
+            <%= t("UI.account.chart.loan.view_as_table") %>
+            <%= helpers.icon "chevron-down", class: "group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150" %>
+          </span>
+        <% end %>
+        <div class="max-h-64 overflow-y-auto rounded-lg border border-alpha-black-25">
+          <table id="<%= loan_table_id %>" class="w-full text-sm">
+            <thead class="sticky top-0 bg-container border-b border-alpha-black-25">
+              <tr class="text-secondary text-left">
+                <th scope="col" class="font-medium px-3 py-2"><%= t("UI.account.chart.loan.table.date") %></th>
+                <th scope="col" class="font-medium px-3 py-2 text-right"><%= t("UI.account.chart.loan.table.actual") %></th>
+                <th scope="col" class="font-medium px-3 py-2 text-right"><%= t("UI.account.chart.loan.table.scheduled") %></th>
+                <th scope="col" class="font-medium px-3 py-2 text-right"><%= t("UI.account.chart.loan.table.projected") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% loan_chart[:rows].each do |row| %>
+                <tr class="border-b border-alpha-black-25 last:border-0">
+                  <td class="px-3 py-1.5 text-primary"><%= I18n.l(Date.iso8601(row[:date]), format: :long) %></td>
+                  <td class="px-3 py-1.5 text-right tabular-nums privacy-sensitive"><%= loan_money(row[:actual]) %></td>
+                  <td class="px-3 py-1.5 text-right tabular-nums privacy-sensitive"><%= loan_money(row[:scheduled]) %></td>
+                  <td class="px-3 py-1.5 text-right tabular-nums privacy-sensitive"><%= loan_money(row[:projected]) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
         </div>
       <% end %>
-    </div>
+    <% else %>
+      <div class="h-64 pb-4">
+        <% if series.any? %>
+          <div
+          id="lineChart"
+          class="w-full h-full privacy-sensitive"
+          data-controller="time-series-chart"
+          data-time-series-chart-data-value="<%= series.to_json %>"
+          data-time-series-chart-selectable-value="true"></div>
+        <% else %>
+          <div class="w-full h-full flex items-center justify-center">
+            <p class="text-secondary text-sm"><%= t("UI.account.chart.no_data_available") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 </div>

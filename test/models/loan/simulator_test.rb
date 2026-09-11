@@ -121,6 +121,46 @@ class Loan::SimulatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("24"), after[:sizing_rate]
   end
 
+  # The strategy a projection uses. Asked every period, and never re-sized off
+  # the balance: a borrower ahead of schedule keeps paying what the contract
+  # asks and finishes early, rather than being sized back onto the maturity.
+  test "scheduled asks the callable every period and keeps its answer whatever the balance" do
+    asked = []
+    result = Loan::Simulator.new(
+      starting_balance: 12_000,
+      accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: SCHEDULE,
+      accrual_rate_for: ->(_date) { 6 },
+      currency_precision: 2,
+      payment_strategy: :scheduled,
+      payment_amount: ->(index:, balance:, **) { asked << [ index, balance ]; 2_000 },
+      settle_at_schedule_end: false
+    ).run
+
+    assert_operator result.payment_count, :<, SCHEDULE.length, "2,000 a month clears 12,000 well inside a year"
+    assert result.converged?
+    assert_equal (0...result.payment_count).to_a, asked.map(&:first), "one call per period walked, in order"
+    assert_equal result.payments.first[:ending_balance], asked[1].last, "each call sees the running balance"
+    result.payments[0..-2].each do |payment|
+      assert_equal BigDecimal("2000"), payment[:payment_amount],
+        "the callable's answer is the payment, not a level payment re-derived from the balance"
+    end
+  end
+
+  test "scheduled needs a callable, and the other strategies need a number" do
+    build = ->(strategy, amount) {
+      Loan::Simulator.new(
+        starting_balance: 12_000, accrual_start_date: Date.new(2026, 1, 1),
+        payment_schedule: SCHEDULE, accrual_rate_for: ->(_date) { 6 },
+        currency_precision: 2, payment_strategy: strategy, payment_amount: amount
+      )
+    }
+
+    assert_raises(ArgumentError) { build.call(:scheduled, 1_000) }
+    assert_raises(ArgumentError) { build.call(:hold, ->(**) { 1_000 }) }
+    assert_nothing_raised { build.call(:scheduled, ->(**) { 1_000 }) }
+  end
+
   # A resized payment must stay level to maturity. The period that closes on a
   # rate change accrued at the OLD rate, but the annuity formula assumes every
   # remaining period, this one included, accrues at the new one; sized that

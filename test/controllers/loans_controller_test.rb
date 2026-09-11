@@ -97,7 +97,10 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     get account_path(@account, tab: "schedule")
 
     assert_response :success
-    assert_select "table tbody tr", count: @account.loan.term_months
+    # The chart card above the tabs carries its own data table (#100), so the
+    # count is scoped to the schedule's table.
+    chart_table = ActionView::RecordIdentifier.dom_id(@account, :loan_chart_table)
+    assert_select "table:not(##{chart_table}) tbody tr", count: @account.loan.term_months
     assert_match "Total Interest", response.body
   end
 
@@ -140,7 +143,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     @account.loan.update!(rate_type: "variable", interest_rate: 6, term_months: 24)
 
     get account_path(@account, tab: "schedule")
-    flat_body = response.body
+    flat_payments = schedule_table_cells
 
     # A year into the 24-month term, whatever today is. The fixture loan has no
     # start_date, so its origination moves with the clock; a fixed date would
@@ -151,8 +154,11 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     get account_path(@account, tab: "schedule")
 
     assert_response :success
-    assert_not_equal flat_body, response.body,
-      "recording a rate change must change what the schedule tab renders"
+    # The schedule's own cells, not the whole body: the chart card above the
+    # tabs carries its own data table, which moves for the same change.
+    assert_equal flat_payments.length, schedule_table_cells.length
+    assert_not_equal flat_payments, schedule_table_cells,
+      "recording a rate change must change the payments the schedule tab renders"
     # A substring free of characters ERB escapes -- the full string contains an
     # apostrophe and renders as &#39;.
     assert_match "re-amortises at each recorded change", response.body
@@ -225,6 +231,68 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_empty @account.loan.reload.variable_rate_schedule
   end
 
+  # Reads the payload off the mounted controller's own data attribute rather
+  # than parsing rendered SVG paths, which would be a brittle way to assert on
+  # data that already has model-level coverage. This test's job is to prove the
+  # right payload reaches the browser and mounts the controller.
+  def chart_payload
+    node = css_select("[data-controller='loan-payoff-chart']").first
+    node && JSON.parse(node["data-loan-payoff-chart-data-value"])
+  end
+
+  # #100: the chart lives at the top of the account page, inside the chart
+  # card's Turbo frame, on whichever tab is open. The Schedule tab keeps its
+  # table and cards and no longer carries a chart of its own.
+  test "the account page mounts the loan balance chart with its three series" do
+    # All three lines need somewhere to be: a period that reaches past today
+    # for the forecasts, and a recorded history for the actual line. The
+    # earlier intersection assertion here passed with `visible` empty.
+    origination = Date.current.prev_year
+    @account.loan.update!(start_date: origination)
+    @account.balances.create!(date: origination, balance: 500_000, currency: "USD",
+                              start_cash_balance: 500_000, flows_factor: -1)
+    @account.balances.create!(date: Date.current, balance: 490_000, currency: "USD",
+                              start_cash_balance: 490_000, flows_factor: -1)
+
+    get account_path(@account, period: "all_time")
+
+    assert_response :success
+    payload = chart_payload
+    assert payload["scheduled"].length > 1
+    assert payload["projected"].length > 1
+    assert_equal %w[actual projected scheduled], payload.fetch("visible").sort
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(@account, :chart_details)} [data-controller='loan-payoff-chart']", count: 1
+    assert_select "turbo-frame##{ActionView::RecordIdentifier.dom_id(@account, :chart_details)} table", count: 1
+  end
+
+  test "the schedule tab renders its table without a chart of its own" do
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_select "[data-controller='loan-payoff-chart']", { count: 1 }, "one chart on the page, in the chart card"
+    assert_select "table", { minimum: 2 }, "the schedule table and the chart's data table"
+  end
+
+  # A stray what-if parameter from an old link must change nothing: the
+  # feature is not in this tranche (#100 decision 10).
+  test "an extra-payment parameter is ignored" do
+    get account_path(@account)
+    baseline = chart_payload
+    get account_path(@account, extra_payment: { amount: "2000", frequency: "monthly" })
+
+    assert_response :success
+    assert_equal baseline, chart_payload
+  end
+
+  test "a loan with no schedule renders the page without a loan chart" do
+    @account.loan.update!(rate_type: "")
+
+    get account_path(@account)
+
+    assert_response :success
+    assert_nil chart_payload
+    assert_select "[data-controller='time-series-chart']", count: 1
+  end
   # The validation lives on Loan and is reached through nested attributes, which
   # validate the nested record only when it has changes. Resubmitting the stored
   # rows plus a typo'd one leaves the column equal to its stored value, so
@@ -296,6 +364,21 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-loan-rate-changes-target=section] input[name='account[accountable_attributes][rate_changes][]']:not([disabled])", count: 1
   end
 
+  # The payload runs the schedule, the projection and a balance query on every
+  # loan page view, from provider-written and user-written inputs. A raise in
+  # any of them must cost the chart, not the page: before this guard the whole
+  # account page was a 500 for a loan that rendered fine without the chart.
+  test "a chart payload that raises degrades to the time-series chart instead of a 500" do
+    Loan::PayoffChart.any_instance.stubs(:payload).raises(ArgumentError, "boom")
+
+    get account_path(@account, tab: "schedule")
+
+    assert_response :success
+    assert_select "[data-controller='time-series-chart']", count: 1
+    assert_select "[data-controller='loan-payoff-chart']", count: 0
+    assert_match "Total Interest", response.body, "the Schedule tab still renders"
+  end
+
   # `Account.create_and_sync` saves with `save!`, and this is the first Loan
   # validation a user can trip from the create form. Without a rescue the
   # request ended on the generic 422 error page and the form was gone.
@@ -341,6 +424,37 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_match "6.000%", response.body
     # 500,000 at 6% over 360 months, the fixture loan's contracted repayment.
     assert_match "2,997.75", response.body
+  end
+
+  # Brief 7.4 row 8: the period picker re-renders the chart card's frame, and
+  # the cards and the mount must both live inside it.
+  test "a chart_details frame request carries the mount and both cards inside the frame" do
+    frame_id = ActionView::RecordIdentifier.dom_id(@account, :chart_details)
+
+    get account_path(@account, period: "all_time"), headers: { "Turbo-Frame" => frame_id }
+
+    assert_response :success
+    assert_select "turbo-frame##{frame_id} [data-controller='loan-payoff-chart']", count: 1
+    assert_select "turbo-frame##{frame_id} h4", text: I18n.t("UI.account.chart.loan.projected_payoff"), count: 1
+    assert_select "turbo-frame##{frame_id} h4", text: I18n.t("UI.account.chart.loan.interest_saved"), count: 1
+  end
+
+  # The activity feed paginates through its own `entries` frame. That request
+  # renders the whole page and keeps one frame, so building the chart payload
+  # for it ran a full simulation per page turn for nothing.
+  test "a frame request outside the chart card does not build the chart payload" do
+    Loan::PayoffChart.any_instance.expects(:payload).never
+
+    get account_path(@account, page: 2), headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(@account, "entries") }
+
+    assert_response :success
+  end
+
+  test "the account's container frame request still builds the chart payload" do
+    get account_path(@account, period: "all_time"), headers: { "Turbo-Frame" => ActionView::RecordIdentifier.dom_id(@account, :container) }
+
+    assert_response :success
+    assert_select "[data-controller='loan-payoff-chart']", count: 1
   end
 
   # Codex on we-promise/sure#3473: `update` persisted the balance change (a
@@ -443,5 +557,17 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_select "form[action='#{loans_path}']", count: 1
+    # Rebuilt from the submission, not a blank account: what was typed comes
+    # back for correction.
+    assert_select "input[name='account[name]'][value='Loan With Bad Anchor']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]'][value='6']", count: 1
   end
+
+  private
+    # The payment cells of the Schedule tab's table, leaving out the chart
+    # card's data table that sits above the tabs.
+    def schedule_table_cells
+      chart_table = ActionView::RecordIdentifier.dom_id(@account, :loan_chart_table)
+      css_select("table:not(##{chart_table}) tbody td").map { |cell| cell.text.strip }
+    end
 end

@@ -204,6 +204,12 @@ class Loan < ApplicationRecord
     super
   end
 
+  # Where the loan is heading from today's balance. Not memoised: `as_of`
+  # makes each call a different question.
+  def payoff_projection(as_of: Date.current)
+    PayoffProjection.new(self, as_of: as_of)
+  end
+
   # The date the loan was drawn down. Recorded explicitly when the borrower
   # knows it -- a loan is often drawn down before the account tracking it is
   # created -- and otherwise taken from the account's first valuation (the
