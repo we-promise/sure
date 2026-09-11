@@ -803,11 +803,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { securities_providers: [ "moex_public" ] } }
 
-      get settings_hosting_url
+      notices = {
+        en: "Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.",
+        de: "Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab."
+      }
+      notices.each do |locale, notice|
+        get settings_hosting_url(locale: locale)
 
-      assert_response :success
-      assert_select "input[name='setting[tinkoff_invest_api_key]']"
-      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+        assert_response :success
+        assert_select "input[name='setting[tinkoff_invest_api_key]']"
+        assert_includes response.body, notice
+        assert_equal notice, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice", locale: locale, fallback: false, raise: true)
+      end
     end
   ensure
     Setting.securities_providers = ""
