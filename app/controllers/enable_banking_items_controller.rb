@@ -312,6 +312,11 @@ class EnableBankingItemsController < ApplicationController
             provider: enable_banking_account
           )
 
+          # Account discovery (which stored enable_banking_account.iban) ran
+          # before this link existed, so it couldn't propagate to the new
+          # Account -- do it now that there's a target.
+          enable_banking_account.propagate_iban_to_account!
+
           created_accounts << account
         end
       end
@@ -414,6 +419,11 @@ class EnableBankingItemsController < ApplicationController
         account: account,
         provider: enable_banking_account
       )
+
+      # Account discovery (which stored enable_banking_account.iban) ran
+      # before this link existed, so it couldn't propagate to the new
+      # Account -- do it now that there's a target.
+      enable_banking_account.propagate_iban_to_account!
 
       created_count += 1
     end
