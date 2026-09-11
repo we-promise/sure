@@ -45,6 +45,19 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
     assert_equal [ @with_iban.transaction.id ], filtered.pluck(:id)
   end
 
+  test "equal_to normalizes a value entered with tabs and newlines" do
+    condition = Rule::Condition.new(
+      rule: @rule,
+      condition_type: "transaction_counterparty_iban",
+      operator: "=",
+      value: "de89\t3704\n0044 0532 0130 00"
+    )
+
+    filtered = condition.apply(condition.prepare(@rule_scope))
+
+    assert_equal [ @with_iban.transaction.id ], filtered.pluck(:id)
+  end
+
   test "does not match a substring of a different iban" do
     condition = Rule::Condition.new(
       rule: @rule,

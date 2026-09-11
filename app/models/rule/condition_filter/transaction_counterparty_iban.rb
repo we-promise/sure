@@ -39,9 +39,10 @@ class Rule::ConditionFilter::TransactionCounterpartyIban < Rule::ConditionFilter
       scope.where("#{field} IS NOT NULL")
     else
       # Normalized the same way accounts.iban/merchants.iban and the stored
-      # extra value are: a user pasting an IBAN with spaces into the rule
-      # form must still match the compact value Enable Banking stores.
-      normalized_value = value.to_s.delete(" ").upcase
+      # extra value are: a user pasting an IBAN with a tab, newline, or NBSP
+      # (common when copying from a formatted PDF) must still match the
+      # compact value Enable Banking stores.
+      normalized_value = value.to_s.gsub(/[[:space:]]+/, "").upcase
       sql_operator = operator == "!=" ? "IS DISTINCT FROM" : "="
 
       scope.where(
