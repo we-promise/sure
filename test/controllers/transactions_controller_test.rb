@@ -77,6 +77,9 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
+    # The dedicated row is gone, but the pre-existing raw-extra debug dump
+    # (Additional Details) would otherwise still leak the same value.
+    assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
   end
 
   test "falls back to counterparty_account_id when no iban is present" do
