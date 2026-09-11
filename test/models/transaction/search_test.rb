@@ -663,6 +663,28 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes result_ids, iban_match.entryable.id
   end
 
+  test "search matches a counterparty_account_id with its original spacing" do
+    # Unlike counterparty_iban, the processor stores this fallback
+    # identifier verbatim (not normalized) -- searching it with the exact
+    # spacing it was stored with must still match.
+    account_id_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "POS Terminal"
+    )
+    account_id_match.entryable.update!(extra: { "counterparty_account_id" => "ACC 998877" })
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "ACC 998877" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, account_id_match.entryable.id
+  end
+
   test "search does not match unrelated data elsewhere in the extra jsonb blob" do
     pending_match = create_transaction(
       account: @checking_account,

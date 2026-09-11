@@ -141,10 +141,16 @@ class Transaction::Search
       # merge/match state, ...), and matching anywhere in that JSON would
       # surface transactions whose name/notes/counterparty don't actually
       # contain the search term.
+      #
+      # counterparty_account_id (the non-IBAN fallback identifier) is stored
+      # verbatim, unlike counterparty_iban -- the processor only normalizes
+      # the IBAN case (see EnableBankingEntry::Processor#counterparty_account_info),
+      # so matching it against the whitespace-stripped term would miss an
+      # identifier like "ACC 998877" searched with its original spacing.
       query.where(
         "entries.name ILIKE :search OR entries.notes ILIKE :search " \
         "OR (transactions.extra ->> 'counterparty_iban') ILIKE :normalized_search " \
-        "OR (transactions.extra ->> 'counterparty_account_id') ILIKE :normalized_search",
+        "OR (transactions.extra ->> 'counterparty_account_id') ILIKE :search",
         search: sanitized_search, normalized_search: normalized_search
       )
     end
