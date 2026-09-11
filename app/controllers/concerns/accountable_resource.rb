@@ -59,6 +59,17 @@ module AccountableResource
       set_link_options
       render :new, status: :unprocessable_entity
       return
+    rescue ActiveRecord::RecordNotUnique
+      # A raw DB-level race on the partial unique index: two concurrent
+      # requests both passed the Rails uniqueness validation before either
+      # committed, so it surfaces from the adapter instead of being caught
+      # above. Same user-facing outcome, just a different failure point.
+      @account = Current.family.accounts.build(account_params.except(:return_to, :opening_balance_date))
+      @account.errors.add(:iban, :taken)
+      @error_message = @account.errors.full_messages.join(", ")
+      set_link_options
+      render :new, status: :unprocessable_entity
+      return
     end
 
     # Prefer the form-carried return_to, then the session value StoreLocation
@@ -129,6 +140,12 @@ module AccountableResource
       true
     rescue ActiveRecord::RecordInvalid => e
       @error_message = e.record.errors.full_messages.join(", ").presence || e.message
+      raise ActiveRecord::Rollback
+    rescue ActiveRecord::RecordNotUnique
+      # Same raw DB-level race as #create: another request's iban committed
+      # between our validation check and this update's own commit.
+      @account.errors.add(:iban, :taken)
+      @error_message = @account.errors.full_messages.join(", ")
       raise ActiveRecord::Rollback
     end
 
