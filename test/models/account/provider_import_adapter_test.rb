@@ -235,6 +235,24 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "prefers a family merchant matched by iban over creating a provider merchant" do
+    family_merchant = @family.merchants.create!(
+      name: "My Landlord",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_new_name",
+        name: "Some Varying Provider Name",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal family_merchant.id, merchant.id
+    end
+  end
+
   test "finds an existing merchant by iban even when provider_merchant_id and name differ" do
     existing_merchant = ProviderMerchant.create!(
       provider_merchant_id: "old_hash",

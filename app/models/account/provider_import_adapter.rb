@@ -359,6 +359,14 @@ class Account::ProviderImportAdapter
 
     normalized_iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
 
+    # A FamilyMerchant with a manually-entered IBAN (see FamilyMerchantsController)
+    # is the family's own canonical identity for that counterparty -- typically set
+    # up because the provider's name for them varies across transactions. Prefer it
+    # outright over creating/matching a ProviderMerchant, so future imports keep
+    # landing on the merchant the user configured instead of a fresh provider one.
+    merchant = account.family.merchants.find_by(iban: normalized_iban) if normalized_iban.present?
+    return merchant if merchant
+
     # IBAN is the most reliable signal when available (stable across
     # different remittance text for the same real-world payee), but it isn't
     # provided by every ASPSP/transaction, so it's a preferred lookup, never
