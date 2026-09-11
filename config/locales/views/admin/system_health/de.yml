@@ -1,0 +1,36 @@
+---
+de:
+  admin:
+    system_health:
+      show:
+        title: Systemstatus
+        tabs:
+          background_jobs: Hintergrundaufgaben
+          ai: KI-Status
+        alert:
+          title: Hintergrundaufgaben werden nicht ausgeführt
+        status_section_title: Sidekiq-Status
+        status_section_description: Aktueller Status des Hintergrundprozesses, der Synchronisierungen sowie die Berechnung von Kontoständen und Nettovermögen ausführt.
+        counters_section_title: Aufgabenstatistik
+        counters_section_description: Zusammengefasste Sidekiq-Zähler über alle Warteschlangen hinweg.
+        queues_section_title: Warteschlangen
+        queues_section_description: Anzahl der Aufgaben und Wartezeit der ältesten Aufgabe je Warteschlange. Die Wartezeit wird in Sekunden angegeben.
+        labels:
+          status: Status
+          processes: Worker-Prozesse
+          last_heartbeat: Letztes Lebenszeichen
+          max_queue_latency: Längste Wartezeit
+          enqueued: In der Warteschlange
+          retries: Zur Wiederholung vorgemerkt
+          failed: Fehlgeschlagen
+          processed_total: Insgesamt verarbeitet
+          queue: Warteschlange
+          size: Anzahl der Aufgaben
+          latency: Wartezeit
+        values:
+          healthy: Funktionsfähig
+          unhealthy: Beeinträchtigt
+          time_ago: vor %{time_ago}
+          never: Nie
+          seconds: "%{seconds} s"
+          no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
