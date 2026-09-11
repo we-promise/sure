@@ -39,6 +39,25 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(created) # not the external URL
   end
 
+  test "create persists a manually entered iban" do
+    post depositories_path, params: {
+      account: { name: "IBAN Checking", currency: "USD", balance: 100, accountable_type: "Depository", iban: "de89 3704 0044 0532 0130 00" }
+    }
+
+    created = Account.order(:created_at).last
+    assert_equal "DE89370400440532013000", created.iban
+  end
+
+  test "update persists a manually entered iban through the shared update action" do
+    linked_account = accounts(:connected)
+
+    patch depository_path(linked_account), params: {
+      account: { iban: "AT611904300234573201" }
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban
+  end
+
   test "update persists enable_category_matcher through the shared update action" do
     linked_account = accounts(:connected)
     assert linked_account.enable_category_matcher?
