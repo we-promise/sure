@@ -418,6 +418,16 @@ class Account::ProviderImportAdapter
       merchant = (ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?) ||
                  ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
                  ProviderMerchant.find_by(source: source, name: name)
+    rescue ActiveRecord::RecordInvalid => e
+      # Same race, surfaced through the Rails-level uniqueness validation
+      # instead of the raw DB constraint (a concurrent insert can commit
+      # between our find and this create!, so the validation itself catches
+      # it before an INSERT is even attempted). Re-raise anything else --
+      # only this specific race is safe to recover from by re-querying.
+      raise unless e.record.errors.of_kind?(:iban, :taken)
+      merchant = (ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?) ||
+                 ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
+                 ProviderMerchant.find_by(source: source, name: name)
     end
 
     merchant
