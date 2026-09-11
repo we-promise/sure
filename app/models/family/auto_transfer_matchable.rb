@@ -69,10 +69,20 @@ module Family::AutoTransferMatchable
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
 
+        # status: "confirmed" is only for the IBAN-confirmed candidates that
+        # actually NEED it to persist -- those beyond the default window,
+        # where transfer_within_date_range would otherwise reject an
+        # unconfirmed transfer. An IBAN-confirmed match that also falls
+        # inside the default window would have matched without the IBAN
+        # signal at all, so it must stay pending like every other automatic
+        # match, not skip user review just because it happens to be
+        # IBAN-confirmed too.
+        needs_confirmed_status = confirmed && match.date_diff > DEFAULT_DATE_WINDOW
+
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
         # marking it matched here would leave a transaction matched with no Transfer.
-        next unless find_or_create_transfer!(match, confirmed: confirmed)
+        next unless find_or_create_transfer!(match, confirmed: needs_confirmed_status)
 
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
