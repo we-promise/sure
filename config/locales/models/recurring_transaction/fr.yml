@@ -1,7 +1,32 @@
 ---
 fr:
   activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: Lien de paiement
     errors:
       models:
         recurring_transaction:
+          attributes:
+            account:
+              required_for_transfer: doit être renseigné sur un virement récurrent
+              wrong_family: doit appartenir à cette famille
+            anchor_date:
+              required_for_intervals: est obligatoire lorsqu'une règle se répète toutes les 2 périodes ou plus
+            bill_type:
+              transfer_shape_mismatch: ne peut valoir « virement » que si un compte de destination est défini
+            destination_account:
+              family_mismatch: doit appartenir à la même famille que le compte source
+              same_as_source: ne peut pas être identique au compte source
+              wrong_family: doit appartenir à cette famille
+            expected_amount_min:
+              greater_than_max: ne peut pas être supérieur au montant maximal prévu
+            payment_url:
+              invalid_scheme: doit être une adresse http:// ou https:// valide
           merchant_or_name_required: Le commerçant ou le nom doit être présent
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} dépasse les %{remaining} restants sur ce cycle"
+      missing_rate: aucun taux de change de %{from} vers %{to} ; saisissez un montant explicitement
+      over_allocated: affecter %{amount} dépasse les %{capacity} %{currency} restants sur la transaction
+      unmeasurable: "cette transaction porte une affectation qui ne peut pas être convertie en %{currency} : il est donc impossible de mesurer ce qu'il en reste. Ajoutez un taux de change pour le %{date} ou supprimez d'abord le paiement existant"

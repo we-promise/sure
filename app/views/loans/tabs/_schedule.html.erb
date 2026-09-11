@@ -1,0 +1,58 @@
+<%# locals: (account:) %>
+
+<% schedule = account.loan.amortization_schedule %>
+<% payments = schedule.payments %>
+<% today = Date.current %>
+
+<div class="space-y-4">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <%= summary_card title: t(".monthly_payment") do %>
+      <%= format_money schedule.periodic_payment %>
+    <% end %>
+
+    <%= summary_card title: t(".total_interest") do %>
+      <%= format_money schedule.total_interest %>
+    <% end %>
+
+    <%= summary_card title: t(".total_cost") do %>
+      <%= format_money schedule.total_paid %>
+    <% end %>
+
+    <%= summary_card title: t(".payoff_date") do %>
+      <%= l schedule.payoff_date, format: :long %>
+    <% end %>
+  </div>
+
+  <p class="text-sm text-secondary">
+    <%= t(".description", start_date: l(account.loan.origination_date, format: :long)) %>
+  </p>
+
+  <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 overflow-hidden">
+    <div class="max-h-[32rem] overflow-y-auto overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="sticky top-0 bg-container border-b border-alpha-black-25">
+          <tr class="text-secondary text-left">
+            <th scope="col" class="font-medium px-4 py-3"><%= t(".number") %></th>
+            <th scope="col" class="font-medium px-4 py-3"><%= t(".date") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".payment") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".principal") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".interest") %></th>
+            <th scope="col" class="font-medium px-4 py-3 text-right"><%= t(".remaining_balance") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% payments.each do |payment| %>
+            <tr class="border-b border-alpha-black-25 last:border-0 <%= "bg-container-inset" if payment.date <= today %>">
+              <td class="px-4 py-3 text-secondary tabular-nums"><%= payment.number %></td>
+              <td class="px-4 py-3 text-primary"><%= l payment.date, format: :long %></td>
+              <td class="px-4 py-3 text-right text-primary tabular-nums privacy-sensitive"><%= format_money payment.payment %></td>
+              <td class="px-4 py-3 text-right text-primary tabular-nums privacy-sensitive"><%= format_money payment.principal %></td>
+              <td class="px-4 py-3 text-right text-secondary tabular-nums privacy-sensitive"><%= format_money payment.interest %></td>
+              <td class="px-4 py-3 text-right text-primary tabular-nums privacy-sensitive"><%= format_money payment.ending_balance %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

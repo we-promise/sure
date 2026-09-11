@@ -1,0 +1,62 @@
+---
+de:
+  admin:
+    system_health:
+      verify_worker_ai:
+        queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
+      show:
+        title: Systemstatus
+        tabs:
+          background_jobs: Hintergrundaufgaben
+          ai: KI-Status
+        alert:
+          title: Hintergrundaufgaben werden nicht ausgeführt
+        status_section_title: Sidekiq-Status
+        status_section_description: Aktueller Status des Hintergrundprozesses, der Synchronisierungen sowie die Berechnung von Kontoständen und Nettovermögen ausführt.
+        counters_section_title: Aufgabenstatistik
+        counters_section_description: Zusammengefasste Sidekiq-Zähler über alle Warteschlangen hinweg.
+        queues_section_title: Warteschlangen
+        queues_section_description: Anzahl der Aufgaben und Wartezeit der ältesten Aufgabe je Warteschlange. Die Wartezeit wird in Sekunden angegeben.
+        labels:
+          status: Status
+          processes: Worker-Prozesse
+          last_heartbeat: Letztes Lebenszeichen
+          max_queue_latency: Längste Wartezeit
+          enqueued: In der Warteschlange
+          retries: Zur Wiederholung vorgemerkt
+          failed: Fehlgeschlagen
+          processed_total: Insgesamt verarbeitet
+          queue: Warteschlange
+          size: Anzahl der Aufgaben
+          latency: Wartezeit
+        values:
+          healthy: Funktionsfähig
+          unhealthy: Beeinträchtigt
+          time_ago: vor %{time_ago}
+          never: Nie
+          seconds: "%{seconds} s"
+          no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
+        ai:
+          worker:
+            title: Worker-Verifikation
+            description: Die obigen Prüfungen wurden in diesem Web-Prozess ausgeführt. Die meisten KI-Aufgaben – Antworten des Assistenten, PDF-Verarbeitung, Embeddings, automatische Kategorisierung und Händlererkennung – laufen jedoch in einem Sidekiq-Worker-Prozess. Dessen Netzwerkzugriff, DNS, Proxy-Regeln oder geladene Zugangsdaten können abweichen. Stelle eine Prüfung in die Warteschlange, um die Konfiguration und Erreichbarkeit aus Sicht eines Workers zu prüfen.
+            verify_button: Worker-Konfiguration prüfen
+            coverage_notice: Jede Prüfung erfasst genau einen Worker-Prozess – denjenigen, der sie aus der Warteschlange übernimmt. Bei mehreren Worker-Replikaten bestätigt ein erfolgreiches Ergebnis nicht, dass alle Worker funktionsfähig sind. Stelle die Prüfung erneut in die Warteschlange, um eine weitere Stichprobe zu erhalten.
+            empty:
+              title: Bisher hat kein Worker ein Prüfergebnis gemeldet
+              description: Klicke auf „Worker-Konfiguration prüfen“, um eine asynchrone Prüfung in die Warteschlange zu stellen. Das Ergebnis erscheint hier, sobald ein Worker-Prozess die Prüfung übernimmt.
+            labels:
+              process: Worker-Prozess
+              checked_at: Geprüft
+              configuration: Konfiguration
+            configuration_statuses:
+              match: Entspricht dem Web-Prozess
+              mismatch: Weicht vom Web-Prozess ab
+            statuses:
+              passing: Erfolgreich
+              failing: Fehlgeschlagen
+              stale: Veraltet
+            settings_origin:
+              title: Welche Einstellungen erfordern einen Neustart?
+              database_backed: Änderungen an Anbieter, Modell und API-Schlüssel unter Einstellungen → Self-Hosting werden in der Datenbank gespeichert. rails-settings-cached verwirft beim Speichern den gemeinsamen Cache. Web- und Worker-Prozess verwenden daher bei der nächsten Anfrage oder Aufgabe den neuen Wert – kein Neustart erforderlich.
+              env_backed: Die Embedding-Konfiguration und alle ausschließlich über Umgebungsvariablen gesetzten Werte werden beim Start des jeweiligen Containers festgelegt. Rails kann die Umgebung eines anderen Containers nicht ändern. Nach solchen Änderungen müssen daher sowohl der Web- als auch der Worker-Dienst neu gestartet oder neu erstellt werden. Wenn die Bereitstellung nur einen der Dienste neu startet oder ein Secret ohne Pod-Neustart aktualisiert, wird die Änderung nicht überall übernommen.

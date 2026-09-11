@@ -69,7 +69,84 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/No Sidekiq worker process is connected/, response.body)
   end
 
+  test "German background job translations are present without fallback" do
+    keys = %w[
+      title tabs.background_jobs tabs.ai alert.title
+      status_section_title status_section_description counters_section_title
+      counters_section_description queues_section_title queues_section_description
+      labels.status labels.processes labels.last_heartbeat labels.max_queue_latency
+      labels.enqueued labels.retries labels.failed labels.processed_total
+      labels.queue labels.size labels.latency values.healthy values.unhealthy
+      values.never values.no_queues
+    ]
+    keys.each do |key|
+      assert_kind_of String, I18n.t("admin.system_health.show.#{key}", locale: :de, fallback: false, raise: true)
+    end
+    assert_equal "vor 2 Minuten", I18n.t("admin.system_health.show.values.time_ago", locale: :de,
+      fallback: false, raise: true, time_ago: "2 Minuten")
+    assert_equal "1,5 s", I18n.t("admin.system_health.show.values.seconds", locale: :de,
+      fallback: false, raise: true, seconds: "1,5")
+  end
+
+  test "German super admin sees localized background job statistics" do
+    users(:sure_support_staff).update!(locale: "de")
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    travel_to Time.current do
+      SidekiqHealth.any_instance.stubs(:last_heartbeat_at).returns(2.minutes.ago)
+      SidekiqHealth.any_instance.stubs(:queue_breakdown).returns([ [ "default", 1234, 1.5 ] ])
+      get admin_system_health_url
+    end
+
+    assert_response :success
+    assert_select "h1", text: "Systemstatus"
+    assert_select "button[role='tab'][aria-selected='true']", text: "Hintergrundaufgaben"
+    assert_select "button[role='tab']", text: "KI-Status"
+    assert_select "h2", text: "Sidekiq-Status"
+    assert_select "h2", text: "Aufgabenstatistik"
+    assert_select "h2", text: "Warteschlangen"
+    assert_select "dd", text: "Funktionsfähig"
+    assert_select "dd", text: "vor 2 Minuten"
+    {
+      "Status" => "Funktionsfähig", "Worker-Prozesse" => "1",
+      "Letztes Lebenszeichen" => "vor 2 Minuten", "Längste Wartezeit" => "0,0 s",
+      "In der Warteschlange" => "0", "Zur Wiederholung vorgemerkt" => "0",
+      "Fehlgeschlagen" => "0", "Insgesamt verarbeitet" => "42"
+    }.each do |label, value|
+      assert_select "dl > div" do |items|
+        item = items.find { |element| element.at_css("dt")&.text == label }
+        assert item, "Missing statistic: #{label}"
+        assert_equal value, item.at_css("dd").text.strip
+      end
+    end
+    assert_select "th", text: "Anzahl der Aufgaben"
+    assert_select "th", text: "Wartezeit"
+    assert_select "td", text: "default"
+    assert_select "td", text: "1.234"
+    assert_select "td", text: "1,5 s"
+  end
+
+  test "German background job statistics show degraded and empty states" do
+    users(:sure_support_staff).update!(locale: "de")
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    SidekiqHealth.any_instance.stubs(:healthy?).returns(false)
+    SidekiqHealth.any_instance.stubs(:reason).returns(:no_worker_processes)
+    SidekiqHealth.any_instance.stubs(:last_heartbeat_at).returns(nil)
+    SidekiqHealth.any_instance.stubs(:queue_breakdown).returns([])
+
+    get admin_system_health_url
+
+    assert_response :success
+    assert_select "dd", text: "Beeinträchtigt"
+    assert_select "dd", text: "Nie"
+    assert_match "Hintergrundaufgaben werden nicht ausgeführt", response.body
+    assert_select "p", text: "Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht."
+  end
+
   test "non super admin is redirected away" do
+    users(:family_admin).update!(locale: "de")
     sign_in users(:family_admin)
 
     get admin_system_health_url
@@ -579,6 +656,83 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to new_session_path
+  end
+
+  test "German worker verification copy is present without fallback" do
+    keys = %w[
+      title description verify_button coverage_notice empty.title empty.description
+      labels.process labels.checked_at labels.configuration
+      configuration_statuses.match configuration_statuses.mismatch
+      statuses.passing statuses.failing statuses.stale
+      settings_origin.title settings_origin.database_backed settings_origin.env_backed
+    ]
+    keys.each do |key|
+      assert_kind_of String, I18n.t("admin.system_health.show.ai.worker.#{key}", locale: :de, fallback: false, raise: true)
+    end
+    assert_kind_of String, I18n.t("admin.system_health.verify_worker_ai.queued", locale: :de, fallback: false, raise: true)
+  end
+
+  test "German super admin sees worker verification guidance and queued notice" do
+    users(:sure_support_staff).update!(locale: "de")
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment do
+        get admin_system_health_url(tab: "ai")
+        assert_response :success
+        assert_select "h2", text: "Worker-Verifikation"
+        assert_select "button", text: "Worker-Konfiguration prüfen"
+        assert_match(/Bisher hat kein Worker ein Prüfergebnis gemeldet/, response.body)
+        assert_match(/Jede Prüfung erfasst genau einen Worker-Prozess/, response.body)
+        assert_match(/Welche Einstellungen erfordern einen Neustart\?/, response.body)
+        assert_match(/kein Neustart erforderlich/, response.body)
+        assert_match(/sowohl der Web- als auch der Worker-Dienst/, response.body)
+
+        assert_enqueued_with(job: WorkerAiHealthCheckJob) do
+          post verify_worker_ai_admin_system_health_url
+        end
+        assert_redirected_to admin_system_health_path(tab: "ai")
+        follow_redirect!
+        assert_match(/Die Worker-Prüfung wurde in die Warteschlange gestellt/, response.body)
+      end
+    end
+  end
+
+  test "German worker results distinguish passing failing stale and differing configurations" do
+    users(:sure_support_staff).update!(locale: "de")
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment("OPENAI_ACCESS_TOKEN" => "synthetic-token") do
+        [
+          [ {}, "Erfolgreich", "Entspricht dem Web-Prozess" ],
+          [ { llm_status: :failing, llm_model: "different-model" }, "Fehlgeschlagen", "Weicht vom Web-Prozess ab" ],
+          [ { checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago }, "Veraltet", "Entspricht dem Web-Prozess" ]
+        ].each do |overrides, status, configuration|
+          WorkerAiHealth.record!(worker_snapshot(**{ vector_store_adapter: :openai, vector_store_status: :passing }.merge(overrides)))
+          get admin_system_health_url(tab: "ai")
+          assert_response :success
+          assert_select "[data-testid='worker-ai-health-result']" do
+            assert_select "[data-testid='worker-process-identity']", text: "worker:1"
+            assert_select "p", text: /Geprüft vor/
+            assert_select "span", text: status
+            assert_select "span", text: configuration
+          end
+          assert_no_match(/synthetic-token/, response.body)
+        end
+      end
+    end
+  end
+
+  test "German family admin cannot queue worker verification" do
+    users(:family_admin).update!(locale: "de")
+    sign_in users(:family_admin)
+    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
+      post verify_worker_ai_admin_system_health_url
+    end
+    assert_redirected_to root_path
   end
 
   private

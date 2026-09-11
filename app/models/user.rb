@@ -245,6 +245,7 @@ class User < ApplicationRecord
   before_destroy :ensure_not_last_super_admin_on_destroy
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
     return true unless active?
@@ -323,6 +324,36 @@ class User < ApplicationRecord
     oidc_identities.destroy_all
   end
 
+  # Raised by #with_active_lock! to reject session/token issuance for a
+  # deactivated or concurrently-purged user. The one error contract every
+  # web/JSON/mobile/OAuth-adapter caller rescues, so a deactivation result
+  # can never be confused with an unrelated persistence failure.
+  class InactiveError < StandardError; end
+
+  # The one locked primitive for the actual authorization boundary: asserts
+  # this user is eligible for new session/token issuance *right now*, under
+  # a row lock, immediately before minting. Callers may additionally check
+  # #active? earlier for a fast, friendly rejection (skip an MFA/device
+  # round trip) — that's a UX optimization only, never a substitute for
+  # this check, however "obviously" already-checked the user seems.
+  def with_active_lock!
+    lock_acquired = false
+
+    with_lock do
+      lock_acquired = true
+      raise InactiveError unless active?
+      yield self
+    end
+  rescue ActiveRecord::RecordNotFound
+    # Only translate a RecordNotFound raised by with_lock's own reload (the
+    # row was deleted by a concurrent purge before we could lock it) into
+    # InactiveError. Once the lock is held, re-raise: a RecordNotFound from
+    # inside the caller's block is an unrelated failure and must not be
+    # misreported as "inactive" either.
+    raise if lock_acquired
+    raise InactiveError
+  end
+
   def can_deactivate
     if admin? && family.users.count > 1
       errors.add(:base, :cannot_deactivate_admin_with_other_users)
@@ -384,6 +415,29 @@ class User < ApplicationRecord
     end
 
     provider.public_send(item_association.name) if item_association
+  end
+
+  # Revokes mobile/third-party API access alongside the web-session
+  # invalidation above. Without this, a deactivated user's existing
+  # Doorkeeper tokens and API keys stay valid on the wire — currently
+  # harmless only because Api::V1::BaseController/McpController re-check
+  # active? on every request, but that's a second, independent safeguard,
+  # not a substitute for actually revoking the credentials. Also revokes
+  # unexchanged OAuth authorization grants — /oauth/token doesn't go
+  # through the cookie authenticator, so a still-valid grant issued right
+  # before deactivation could otherwise be exchanged for a fresh token
+  # afterward.
+  def revoke_all_access_tokens
+    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
+
+    if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn(
+        "[AUTH] Revoked #{tokens_revoked} access token(s), #{grants_revoked} authorization grant(s), " \
+        "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
+      )
+    end
   end
 
   def purge

@@ -72,6 +72,13 @@ fr:
         value: Valeur
         weight: Poids
       sections_aria_label: Sections du tableau de bord
+      spending_trend:
+        date_range: du %{start_date} au %{end_date}
+        month_picker_aria_label: Sélectionner un mois
+        no_data: Aucune dépense pour ce mois-ci
+        period_scope_hint: Affiche le mois choisi ici, indépendamment de la période sélectionnée en haut du tableau de bord.
+        previous_month: Mois précédent
+        title: Dépenses
       subtitle: Voici ce qui se passe avec vos finances
       toggle_section: Afficher/masquer la section
       welcome: Content de vous revoir, %{name}

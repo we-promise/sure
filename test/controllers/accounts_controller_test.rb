@@ -100,9 +100,74 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  test "index renders trading212 items" do
+    trading212_item = trading212_items(:configured_item)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+  end
+
+  test "index renders only accessible accounts for a visible trading212 item" do
+    accessible_account = accounts(:depository)
+    inaccessible_account = accounts(:investment)
+    trading212_item = trading212_items(:configured_item)
+    trading212_accounts(:main_account).ensure_account_provider!(accessible_account)
+    trading212_item.trading212_accounts.create!(
+      name: "Private Trading 212 Account",
+      trading212_account_id: "t212_private_123",
+      currency: "USD",
+      current_balance: 1000,
+      cash_balance: 100,
+      raw_positions_payload: [],
+      raw_orders_payload: [],
+      raw_dividends_payload: [],
+      raw_transactions_payload: []
+    ).ensure_account_provider!(inaccessible_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+    assert_select "turbo-frame##{dom_id(accessible_account)}", count: 1
+    assert_select "turbo-frame##{dom_id(inaccessible_account)}", count: 0
+  end
+
+  test "index renders only trading212 items with accessible accounts for members" do
+    shared_account = accounts(:credit_card)
+    trading212_accounts(:main_account).ensure_account_provider!(shared_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_items(:configured_item))}"
+    assert_select "##{dom_id(trading212_items(:pending_setup_item))}", count: 0
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
+  end
+
+  test "show renders the balance chart as drag-selectable for a custom date range" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#lineChart[data-time-series-chart-selectable-value='true']"
+  end
+
+  test "show honors a custom start_date/end_date range" do
+    start_date = 15.days.ago.to_date
+    end_date = Date.current
+
+    get account_url(@account), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+    assert_response :success
+    # If the params were ignored, the user's default preset would render as the
+    # checked option instead of the custom row.
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
   end
 
   test "sync all requests fresh Plaid transactions before syncing the family" do
