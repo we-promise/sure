@@ -30,14 +30,14 @@
   </div>
 <% else %>
   <% if suggested_account.present? %>
-    <div class="flex items-start justify-between gap-2 p-3 rounded-lg bg-container-inset">
-      <p class="text-sm text-secondary">
-        <%= t(".suggested_account_html", name: suggested_account.name) %>
-      </p>
-      <%= link_to t(".dismiss_suggestion"), dismiss_suggestion_transaction_transfer_match_path(entry),
-            data: { turbo_method: :post, turbo_frame: "_top" },
-            class: "text-sm text-secondary hover:text-primary underline whitespace-nowrap" %>
-    </div>
+    <%= render DS::Alert.new(variant: :info) do %>
+      <div class="flex items-start justify-between gap-2">
+        <p><%= t(".suggested_account_html", name: suggested_account.name) %></p>
+        <%= link_to t(".dismiss_suggestion"), dismiss_suggestion_transaction_transfer_match_path(entry),
+              data: { turbo_method: :post, turbo_frame: "_top" },
+              class: "text-secondary hover:text-primary underline whitespace-nowrap" %>
+      </div>
+    <% end %>
   <% else %>
     <p class="text-sm text-secondary">
       <%= t(".no_matching_transactions") %>
