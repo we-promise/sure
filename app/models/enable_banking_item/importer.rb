@@ -630,7 +630,7 @@ class EnableBankingItem::Importer
       # without this, two representations of the same duplicate transaction
       # with differently-formatted IBANs (spaces vs none) would produce
       # different content keys and defeat the dedup this key exists for.
-      tx.dig(account_key, :iban).to_s.delete(" ").upcase.presence
+      tx.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence
     end
 
     class PaginationTruncatedError < StandardError; end
