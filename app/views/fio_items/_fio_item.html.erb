@@ -1,0 +1,124 @@
+<%# locals: (fio_item:) %>
+
+<%= tag.div id: dom_id(fio_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2 w-full">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <div class="flex items-center justify-center h-8 w-8 bg-surface rounded-full">
+            <p class="text-primary text-xs font-medium"><%= fio_item.name.to_s.first.to_s.upcase %></p>
+          </div>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p fio_item.name, class: "font-medium text-primary" %>
+              <% if fio_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+
+            <p class="text-xs text-secondary"><%= fio_item.institution_display_name %></p>
+
+            <% if fio_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif fio_item.requires_update? %>
+              <div class="flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".requires_update"), class: "text-warning" %>
+              </div>
+            <% elsif fio_item.sync_error.present? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= render DS::Tooltip.new(text: fio_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive", as: :span) %>
+                <%= tag.span t(".error"), class: "text-destructive" %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if fio_item.last_synced_at %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(fio_item.last_synced_at), summary: fio_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Menu.new do |menu| %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: fio_item_path(fio_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(fio_item.name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless fio_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if fio_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: fio_item.accounts %>
+        <% end %>
+
+        <%# The accounts index preloads one stats row per item; a standalone render (the %>
+        <%# sync-complete broadcast) has to look it up itself. %>
+        <% stats = if defined?(@fio_sync_stats_map) && @fio_sync_stats_map
+             @fio_sync_stats_map[fio_item.id] || {}
+           else
+             fio_item.latest_sync_record&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: fio_item) %>
+
+        <% if fio_item.requires_update? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".requires_update_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".requires_update_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".update_token"),
+              icon: "key-round",
+              variant: "primary",
+              href: settings_providers_path,
+              frame: "_top"
+            ) %>
+          </div>
+        <% elsif fio_item.unlinked_accounts_count > 0 %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description") %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_fio_item_path(fio_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif fio_item.total_accounts_count.zero? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+            <%= render DS::Button.new(
+              text: t(".sync_now"),
+              icon: "refresh-cw",
+              variant: "primary",
+              href: sync_fio_item_path(fio_item),
+              method: :post,
+              disabled: fio_item.syncing?
+            ) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
