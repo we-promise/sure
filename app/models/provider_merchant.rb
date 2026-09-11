@@ -17,12 +17,12 @@ class ProviderMerchant < Merchant
       family_merchant = family.merchants.create!(
         name: attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
-        website_url: attributes[:website_url].presence || website_url,
-        # attributes.key?(:iban) distinguishes "the form submitted an empty
-        # iban field" (explicit clear -> nil) from "iban wasn't part of this
-        # submission at all" (fall back to the existing value) -- attributes[:iban].presence
-        # alone would treat both the same and make an intentionally-cleared
-        # IBAN silently come back.
+        # attributes.key?(...) distinguishes "the form submitted this field
+        # empty" (explicit clear -> nil) from "it wasn't part of this
+        # submission at all" (fall back to the existing value) --
+        # attributes[:x].presence alone would treat both the same and make
+        # an intentional clear silently come back.
+        website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url,
         iban: attributes.key?(:iban) ? attributes[:iban].presence : iban
       )
 
