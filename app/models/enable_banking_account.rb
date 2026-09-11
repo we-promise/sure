@@ -171,10 +171,22 @@ class EnableBankingAccount < ApplicationRecord
 
       # enrich_attribute no-ops if `iban` is locked (the user explicitly set
       # or cleared it via the account form -- lock_saved_attributes! locks
-      # either way), and uses `save` rather than `save!`, so another account
-      # in the family already holding this IBAN just fails to enrich instead
-      # of raising and aborting the link/sync this is piggybacking on.
-      target.enrich_attribute(:iban, iban, source: "enable_banking")
+      # either way), and uses `save` rather than `save!`, so a Rails-level
+      # uniqueness validation failure just fails to enrich instead of
+      # raising. #with_lock only serializes writers to THIS row though: two
+      # different blank-iban accounts in the family can both pass that
+      # validation concurrently and then lose at the raw DB unique index on
+      # commit, which surfaces as RecordNotUnique -- save doesn't rescue
+      # that. Isolated in its own savepoint (same pattern as
+      # Account::ProviderImportAdapter#backfill_merchant_iban!): a failed
+      # statement would otherwise abort the whole surrounding transaction.
+      begin
+        ActiveRecord::Base.transaction(requires_new: true) do
+          target.enrich_attribute(:iban, iban, source: "enable_banking")
+        end
+      rescue ActiveRecord::RecordNotUnique => e
+        Rails.logger.warn("EnableBankingAccount#propagate_iban_to_account! - Concurrent iban conflict on account #{target.id}: #{e.message}")
+      end
     end
   end
 

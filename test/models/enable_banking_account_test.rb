@@ -219,6 +219,29 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "does not raise or fail the sync on a raw unique-index race during propagation" do
+    # #with_lock only serializes writers to the target row; it can't stop a
+    # DIFFERENT blank-iban account in the family from concurrently passing
+    # the same Rails-level uniqueness check and then losing at the raw DB
+    # index on commit -- surfacing as RecordNotUnique, which enrich_attribute's
+    # plain `save` does not rescue on its own.
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+    Account.any_instance.stubs(:enrich_attribute).raises(
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+
+    assert_nothing_raised do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "EUR",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+  end
+
   test "does not touch linked account when snapshot has no iban" do
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
