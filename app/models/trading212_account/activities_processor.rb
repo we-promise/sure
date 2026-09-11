@@ -4,7 +4,7 @@ class Trading212Account::ActivitiesProcessor
   # T212 transaction types that map to cash flows
   DEPOSIT_TYPE = "DEPOSIT".freeze
   WITHDRAW_TYPE = "WITHDRAW".freeze
-  INTEREST_TYPE = "INTEREST".freeze
+  INTEREST_TYPES = %w[INTEREST INTEREST_ON_FREE_CASH].freeze
   FEE_TYPE = "FEE".freeze
 
   def initialize(trading212_account)
@@ -203,7 +203,7 @@ class Trading212Account::ActivitiesProcessor
         [ "Contribution", -amount.abs ]
       when WITHDRAW_TYPE
         [ "Withdrawal", amount.abs ]
-      when INTEREST_TYPE
+      when *INTEREST_TYPES
         [ "Interest", -amount.abs ]
       when FEE_TYPE
         [ "Fee", amount.abs ]
