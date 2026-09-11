@@ -190,7 +190,7 @@ class Settings::ProvidersController < ApplicationController
     FAMILY_PANELS = [
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
-      { key: "monobank",       title: "monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
+      { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
