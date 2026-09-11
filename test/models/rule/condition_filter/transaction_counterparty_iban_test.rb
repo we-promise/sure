@@ -9,10 +9,10 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
     @account = @family.accounts.create!(name: "Rule test", balance: 1000, currency: "USD", accountable: Depository.new)
 
     @with_iban = create_transaction(date: Date.current, account: @account, amount: 100, name: "Rent")
-    @with_iban.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    @with_iban.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     @with_other_iban = create_transaction(date: Date.current, account: @account, amount: 50, name: "Insurance")
-    @with_other_iban.transaction.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
+    @with_other_iban.transaction.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
 
     @without_iban = create_transaction(date: Date.current, account: @account, amount: 25, name: "Groceries")
 
@@ -24,7 +24,7 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
       rule: @rule,
       condition_type: "transaction_counterparty_iban",
       operator: "=",
-      value: "DE89370400440532013000"
+      value: "DE89370400440532013000" # pipelock:ignore IBAN
     )
 
     filtered = condition.apply(condition.prepare(@rule_scope))
@@ -87,7 +87,7 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
       rule: @rule,
       condition_type: "transaction_counterparty_iban",
       operator: "!=",
-      value: "DE89370400440532013000"
+      value: "DE89370400440532013000" # pipelock:ignore IBAN
     )
 
     filtered = condition.apply(condition.prepare(@rule_scope))
