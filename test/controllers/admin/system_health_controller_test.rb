@@ -658,6 +658,83 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "German worker verification copy is present without fallback" do
+    keys = %w[
+      title description verify_button coverage_notice empty.title empty.description
+      labels.process labels.checked_at labels.configuration
+      configuration_statuses.match configuration_statuses.mismatch
+      statuses.passing statuses.failing statuses.stale
+      settings_origin.title settings_origin.database_backed settings_origin.env_backed
+    ]
+    keys.each do |key|
+      assert_kind_of String, I18n.t("admin.system_health.show.ai.worker.#{key}", locale: :de, fallback: false, raise: true)
+    end
+    assert_kind_of String, I18n.t("admin.system_health.verify_worker_ai.queued", locale: :de, fallback: false, raise: true)
+  end
+
+  test "German super admin sees worker verification guidance and queued notice" do
+    users(:sure_support_staff).update!(locale: "de")
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment do
+        get admin_system_health_url(tab: "ai")
+        assert_response :success
+        assert_select "h2", text: "Worker-Verifikation"
+        assert_select "button", text: "Worker-Konfiguration prüfen"
+        assert_match(/Bisher hat kein Worker ein Prüfergebnis gemeldet/, response.body)
+        assert_match(/Jede Prüfung erfasst genau einen Worker-Prozess/, response.body)
+        assert_match(/Welche Einstellungen erfordern einen Neustart\?/, response.body)
+        assert_match(/kein Neustart erforderlich/, response.body)
+        assert_match(/sowohl der Web- als auch der Worker-Dienst/, response.body)
+
+        assert_enqueued_with(job: WorkerAiHealthCheckJob) do
+          post verify_worker_ai_admin_system_health_url
+        end
+        assert_redirected_to admin_system_health_path(tab: "ai")
+        follow_redirect!
+        assert_match(/Die Worker-Prüfung wurde in die Warteschlange gestellt/, response.body)
+      end
+    end
+  end
+
+  test "German worker results distinguish passing failing stale and differing configurations" do
+    users(:sure_support_staff).update!(locale: "de")
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+
+    with_memory_cache do
+      with_ai_environment("OPENAI_ACCESS_TOKEN" => "synthetic-token") do
+        [
+          [ {}, "Erfolgreich", "Entspricht dem Web-Prozess" ],
+          [ { llm_status: :failing, llm_model: "different-model" }, "Fehlgeschlagen", "Weicht vom Web-Prozess ab" ],
+          [ { checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago }, "Veraltet", "Entspricht dem Web-Prozess" ]
+        ].each do |overrides, status, configuration|
+          WorkerAiHealth.record!(worker_snapshot(**{ vector_store_adapter: :openai, vector_store_status: :passing }.merge(overrides)))
+          get admin_system_health_url(tab: "ai")
+          assert_response :success
+          assert_select "[data-testid='worker-ai-health-result']" do
+            assert_select "[data-testid='worker-process-identity']", text: "worker:1"
+            assert_select "p", text: /Geprüft vor/
+            assert_select "span", text: status
+            assert_select "span", text: configuration
+          end
+          assert_no_match(/synthetic-token/, response.body)
+        end
+      end
+    end
+  end
+
+  test "German family admin cannot queue worker verification" do
+    users(:family_admin).update!(locale: "de")
+    sign_in users(:family_admin)
+    assert_no_enqueued_jobs only: WorkerAiHealthCheckJob do
+      post verify_worker_ai_admin_system_health_url
+    end
+    assert_redirected_to root_path
+  end
+
   private
     # Stubs Rails.cache with an in-process MemoryStore for the duration of
     # the block. Test env normally runs a NullStore (see config/environments/test.rb),
