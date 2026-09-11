@@ -30,6 +30,22 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
+  #
+  # Deliberately excludes counterparty IBAN, unlike the importer's dedup key
+  # (see EnableBankingItem::Importer#build_transaction_base_key /
+  # #distinct_ibans_by_base_key). This is a known, narrower gap: two ID-less
+  # transactions that share identical base content but differ only by
+  # counterparty IBAN both survive dedup as distinct raw rows, but still
+  # collapse onto the same external_id here and get merged into one Entry by
+  # the transaction processor. Including the IBAN would close that gap, but
+  # would also change the external_id of every existing content-ID-based
+  # transaction on its next sync for ASPSPs that omit transaction_id/
+  # entry_reference (a real, pre-existing production code path) -- each one
+  # would import as a brand-new duplicate Entry instead of updating in place.
+  # Accepted as a tradeoff: the collision requires an ASPSP that omits both
+  # ID fields *and* two distinct payments with byte-identical date/amount/
+  # currency/direction/creditor/debtor/remittance text, which is rare enough
+  # to prefer stability for the common case.
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
