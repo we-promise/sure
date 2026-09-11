@@ -48,9 +48,12 @@ class UI::Account::ValuableOverview < ApplicationComponent
   end
 
   def item_return_percentage(item)
-    return if item.total_cost_amount.zero? || item_gain(item).zero?
+    return if item.total_cost_amount.zero?
 
-    item_gain(item).amount / item.total_cost_amount * 100
+    gain = item_gain(item)
+    return if gain.nil? || gain.zero?
+
+    gain.amount / item.total_cost_amount * 100
   end
 
   def editable? = account.permission_for(Current.user).in?([ :owner, :full_control ])

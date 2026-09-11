@@ -31,6 +31,12 @@ class UI::Account::ValuableOverviewTest < ViewComponent::TestCase
     assert_text "Gain: +$796.73 (159%)"
   end
 
+  test "does not calculate a return before a spot quote is available" do
+    component = UI::Account::ValuableOverview.new(account: @account)
+
+    assert_nil component.item_return_percentage(@gold_item)
+  end
+
   private
     def create_bullion_item(material:)
       @account.valuable.items.create!(
