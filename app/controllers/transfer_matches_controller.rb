@@ -4,7 +4,7 @@ class TransferMatchesController < ApplicationController
   def new
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
     @transfer_match_candidates = @entry.transaction.transfer_match_candidates
-    @suggested_target_account = Current.family.missing_transfer_suggestion_for(@entry) if @transfer_match_candidates.empty?
+    @suggested_target_account = Current.family.missing_transfer_suggestion_for(@entry, user: Current.user) if @transfer_match_candidates.empty?
   end
 
   def dismiss_suggestion

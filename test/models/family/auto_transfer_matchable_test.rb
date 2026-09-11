@@ -5,6 +5,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
   setup do
     @family = families(:dylan_family)
+    @user = users(:family_admin)
     @depository = accounts(:depository)
     @credit_card = accounts(:credit_card)
     @loan = accounts(:loan)
@@ -451,20 +452,20 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     outflow_entry.entryable.update!(extra: { "counterparty_iban" => "de89 3704 0044 0532 0130 00" })
 
-    assert_equal @loan, @family.missing_transfer_suggestion_for(outflow_entry)
+    assert_equal @loan, @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil without a counterparty iban" do
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
 
-    assert_nil @family.missing_transfer_suggestion_for(outflow_entry)
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil when no account matches" do
     outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
     outflow_entry.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
 
-    assert_nil @family.missing_transfer_suggestion_for(outflow_entry)
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil for an inflow entry" do
@@ -472,7 +473,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
     inflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
 
-    assert_nil @family.missing_transfer_suggestion_for(inflow_entry)
+    assert_nil @family.missing_transfer_suggestion_for(inflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil once dismissed" do
@@ -483,7 +484,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       "counterparty_transfer_suggestion_dismissed" => true
     })
 
-    assert_nil @family.missing_transfer_suggestion_for(outflow_entry)
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
   end
 
   test "missing_transfer_suggestion_for returns nil for an already-matched transfer" do
@@ -493,7 +494,29 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
     Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
 
-    assert_nil @family.missing_transfer_suggestion_for(outflow_entry.reload)
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry.reload, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for does not suggest a disabled account" do
+    @loan.update!(iban: "DE89370400440532013000")
+    @loan.disable!
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for does not suggest an account the user cannot write to" do
+    @loan.update!(iban: "DE89370400440532013000")
+    other_member = users(:family_member)
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+
+    # @loan is owned by @user (family_admin) with no share granted to
+    # other_member, so it's outside other_member's writable_by scope --
+    # the same restriction TransferMatchesController#new applies to its
+    # target_account_id dropdown.
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: other_member)
   end
 
   private
