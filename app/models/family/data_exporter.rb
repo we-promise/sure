@@ -78,7 +78,7 @@ class Family::DataExporter
             account.balance.to_s,
             account.currency,
             account.created_at.iso8601,
-            account.iban
+            csv_safe(account.iban)
           ]
         end
       end
@@ -102,7 +102,7 @@ class Family::DataExporter
               transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
               transaction.entry.currency,
-              transaction_counterparty_iban(transaction)
+              csv_safe(transaction_counterparty_iban(transaction))
             ]
           end
       end
@@ -124,6 +124,20 @@ class Family::DataExporter
 
     def escape_legacy_tag_name(name)
       name.to_s.gsub(/[\\,|]/) { |char| "\\#{char}" }
+    end
+
+    # iban/counterparty_iban are free text with no format validation (unlike
+    # most other exported columns, which are either system-generated or
+    # constrained by other means), so a family member with no export access
+    # of their own could plant a formula payload for an admin to later open
+    # in a spreadsheet application (CSV/formula injection). Prefixing a
+    # leading =, +, -, @, tab, or CR with a single quote is the standard
+    # mitigation: spreadsheet apps then treat the cell as plain text instead
+    # of evaluating it, while the value itself is unchanged for CSV/text
+    # consumers (including this app's own CSV importer).
+    def csv_safe(value)
+      return value if value.blank?
+      value.start_with?("=", "+", "-", "@", "\t", "\r") ? "'#{value}" : value
     end
 
     def generate_trades_csv

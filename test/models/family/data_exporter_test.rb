@@ -351,6 +351,40 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "neutralizes a formula-like account iban so it can't execute in a spreadsheet" do
+    # iban has no format validation, so a family member with no export access
+    # of their own could plant a formula payload here for an admin to later
+    # open in Excel/Sheets (CSV/formula injection). The account.rb model
+    # doesn't constrain iban's shape, so this must be handled at export time.
+    @account.update!(iban: "=1+1")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      row = CSV.parse(zip.read("accounts.csv"), headers: true).find { |csv_row| csv_row["name"] == @account.name }
+
+      assert_equal "'=1+1", row["iban"]
+    end
+  end
+
+  test "neutralizes a formula-like transaction counterparty iban" do
+    entry = @account.entries.create!(
+      name: "CSV Formula Payment",
+      amount: 10,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "@SUM(1+1)" })
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      row = CSV.parse(zip.read("transactions.csv"), headers: true).find { |csv_row| csv_row["name"] == entry.name }
+
+      assert_equal "'@SUM(1+1)", row["counterparty_iban"]
+    end
+  end
+
   test "exported CSV files can generate matching import rows" do
     create_csv_export_trade!
     @account.entries.create!(
