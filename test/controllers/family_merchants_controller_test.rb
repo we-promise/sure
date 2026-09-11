@@ -44,15 +44,35 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "AT611904300234573201", @merchant.reload.iban
   end
 
-  test "updating only iban on a provider merchant updates it directly without converting to a family merchant" do
+  test "updating only website on a provider merchant updates it directly without converting to a family merchant" do
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
     transactions(:one).update!(merchant: provider_merchant)
 
-    patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } }
+    patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com" } }
 
     assert_redirected_to family_merchants_path
-    assert_equal "AT611904300234573201", provider_merchant.reload.iban
+    assert_equal "https://example.com", provider_merchant.reload.website_url
     assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
+  end
+
+  test "updating iban on a provider merchant converts it to a family merchant instead of mutating the shared record" do
+    # A ProviderMerchant is shared across every family it's assigned to; iban
+    # drives cross-family merchant-identity matching (unlike website_url),
+    # so an edit must not leak into other families' future transactions.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_difference "FamilyMerchant.count", 1 do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } }
+    end
+
+    assert_redirected_to family_merchants_path
+    assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must be untouched"
+
+    converted = @user.family.merchants.find_by(name: "Provider Payee")
+    assert_instance_of FamilyMerchant, converted
+    assert_equal "AT611904300234573201", converted.iban
+    assert_equal converted.id, transactions(:one).reload.merchant_id
   end
 
   test "should destroy merchant" do
