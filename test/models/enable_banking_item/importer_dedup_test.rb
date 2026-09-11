@@ -118,6 +118,39 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
+  test "still deduplicates identical transactions when only one side has counterparty iban data" do
+    # A pending row and its later booked settlement can be otherwise
+    # identical but differ in whether the account data has arrived yet --
+    # a blank IBAN on one side must not be treated as proof they're
+    # different real transactions (see issue this regresses: a pending row
+    # settling into its booked form would otherwise both survive and
+    # double-count the balance).
+    transactions = [
+      {
+        entry_reference: "ref_pending",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_booked",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_pending", result.first[:entry_reference]
+  end
+
   test "still deduplicates identical transactions that share the same counterparty iban" do
     transactions = [
       {
