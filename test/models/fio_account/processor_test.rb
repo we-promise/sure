@@ -56,6 +56,26 @@ class FioAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 239.0, entry.amount
   end
 
+  # The stored payload is replayed in full on every sync, so treating an unusable
+  # movement as a failure would red the connection for good.
+  test "skips an unusable movement without failing the account" do
+    link(accountable: Depository.new(subtype: "checking"), currency: "CZK", balance: 0)
+    @fio_account.update!(raw_transactions_payload: [
+      { "column22" => { "value" => 1, "id" => 22 }, "column0" => { "value" => nil, "id" => 0 } },
+      {
+        "column22" => { "value" => 2, "id" => 22 },
+        "column0" => { "value" => 1_781_474_400_000, "id" => 0 },
+        "column1" => { "value" => -10.0, "id" => 1 }
+      }
+    ])
+
+    result = FioAccount::Transactions::Processor.new(@fio_account).process
+
+    assert result[:success]
+    assert_equal 1, result[:imported]
+    assert_equal 1, result[:skipped]
+  end
+
   private
 
     def link(accountable:, currency:, balance:)

@@ -15,10 +15,11 @@ class FioAccount::Transactions::Processor
 
     if transactions.empty?
       Rails.logger.info "FioAccount::Transactions::Processor - No Fio movements available to process"
-      return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
+      return { success: true, total: 0, imported: 0, skipped: 0, failed: 0, errors: [] }
     end
 
     imported_count = 0
+    skipped_count = 0
     failed_count = 0
     errors = []
 
@@ -26,8 +27,11 @@ class FioAccount::Transactions::Processor
       result = FioEntry::Processor.new(transaction_data, fio_account: fio_account).process
 
       if result.nil?
-        failed_count += 1
-        errors << { index: index, transaction_id: transaction_id(transaction_data), error: "Skipped" }
+        # A movement the entry processor declined: no usable amount or date. Counting it
+        # as a failure would fail every sync from here on, because the stored payload is
+        # replayed in full each time and one unusable movement never becomes usable.
+        skipped_count += 1
+        Rails.logger.warn "FioAccount::Transactions::Processor - Skipped movement #{transaction_id(transaction_data)}"
       else
         imported_count += 1
       end
@@ -45,6 +49,7 @@ class FioAccount::Transactions::Processor
       success: failed_count.zero?,
       total: transactions.size,
       imported: imported_count,
+      skipped: skipped_count,
       failed: failed_count,
       errors: errors
     }
