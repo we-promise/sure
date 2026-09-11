@@ -101,4 +101,20 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil linked_account
     assert_equal "AT611904300234573201", linked_account.iban # pipelock:ignore IBAN
   end
+
+  test "link_existing_account propagates the discovered iban to the manual account" do
+    @item.update!(session_id: "test_session")
+    enable_banking_account = @item.enable_banking_accounts.create!(
+      uid: "acct_uid_3",
+      name: "Checking",
+      currency: "EUR",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    manual_account = @family.accounts.create!(name: "Manual Checking", balance: 0, currency: "EUR", accountable: Depository.new)
+
+    post link_existing_account_enable_banking_items_url,
+         params: { account_id: manual_account.id, enable_banking_account_id: enable_banking_account.id }
+
+    assert_equal "DE89370400440532013000", manual_account.reload.iban # pipelock:ignore IBAN
+  end
 end
