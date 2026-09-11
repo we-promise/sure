@@ -217,6 +217,10 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil linked_account.reload.iban
     assert_equal "NL91ABNA0417164300", other_account.reload.iban # pipelock:ignore IBAN
     assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
+
+    debug_entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", debug_entry.category
+    assert_equal linked_account.id, debug_entry.account_id
   end
 
   test "does not raise or fail the sync on a raw unique-index race during propagation" do
@@ -240,6 +244,10 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
         iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
       })
     end
+
+    debug_entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", debug_entry.category
+    assert_match "Concurrent iban conflict", debug_entry.message
   end
 
   test "does not touch linked account when snapshot has no iban" do
