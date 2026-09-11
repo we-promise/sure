@@ -478,7 +478,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_amount: { amount: "50.00", currency: "EUR" },
       credit_debit_indicator: "DBIT",
       creditor: { name: "Landlord GmbH" },
-      creditor_account: { iban: "DE89370400440532013000" },
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
       creditor_agent: { name: "Deutsche Bank", bic_fi: "DEUTDEFFXXX" },
       status: "BOOK"
     }
@@ -487,7 +487,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_out")
     extra = entry.transaction.extra
 
-    assert_equal "DE89370400440532013000", extra["counterparty_iban"]
+    assert_equal "DE89370400440532013000", extra["counterparty_iban"] # pipelock:ignore IBAN
     assert_nil extra["counterparty_account_id"]
     assert_includes entry.notes, "Bank: Deutsche Bank"
   end
@@ -507,7 +507,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_spaces")
 
-    assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"]
+    assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
   end
 
   test "stores counterparty iban from the debtor side for an incoming payment" do
@@ -518,7 +518,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_amount: { amount: "50.00", currency: "EUR" },
       credit_debit_indicator: "CRDT",
       debtor: { name: "Employer AG" },
-      debtor_account: { iban: "AT611904300234573201" },
+      debtor_account: { iban: "AT611904300234573201" }, # pipelock:ignore IBAN
       debtor_agent: { name: "Erste Bank" },
       status: "BOOK"
     }
@@ -526,7 +526,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_in")
 
-    assert_equal "AT611904300234573201", entry.transaction.extra["counterparty_iban"]
+    assert_equal "AT611904300234573201", entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
   end
 
   test "falls back to counterparty_account_id when no iban is present" do
@@ -576,13 +576,13 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       transaction_amount: { amount: "50.00", currency: "EUR" },
       credit_debit_indicator: "DBIT",
       creditor: { name: "Landlord GmbH" },
-      creditor_account: { iban: "DE89370400440532013000" },
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
       status: "PDNG",
       _pending: true
     }
     EnableBankingEntry::Processor.new(with_iban, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_stale_iban")
-    assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"]
+    assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
 
     # The booked re-delivery of the same transaction (same external_id) omits
     # the account data this time -- a real PSD2 pattern where the pending
