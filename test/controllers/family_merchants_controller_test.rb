@@ -36,12 +36,12 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     post family_merchants_url, params: { family_merchant: { name: "Landlord", iban: "de89 3704 0044 0532 0130 00" } }
 
     created_merchant = FamilyMerchant.find_by(name: "Landlord")
-    assert_equal "DE89370400440532013000", created_merchant.iban
+    assert_equal "DE89370400440532013000", created_merchant.iban # pipelock:ignore IBAN
   end
 
   test "should update merchant iban" do
-    patch family_merchant_url(@merchant), params: { family_merchant: { name: @merchant.name, iban: "AT611904300234573201" } }
-    assert_equal "AT611904300234573201", @merchant.reload.iban
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: @merchant.name, iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+    assert_equal "AT611904300234573201", @merchant.reload.iban # pipelock:ignore IBAN
   end
 
   test "updating only website on a provider merchant updates it directly without converting to a family merchant" do
@@ -63,7 +63,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     transactions(:one).update!(merchant: provider_merchant)
 
     assert_difference "FamilyMerchant.count", 1 do
-      patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } }
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
     end
 
     assert_redirected_to family_merchants_path
@@ -71,7 +71,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     converted = @user.family.merchants.find_by(name: "Provider Payee")
     assert_instance_of FamilyMerchant, converted
-    assert_equal "AT611904300234573201", converted.iban
+    assert_equal "AT611904300234573201", converted.iban # pipelock:ignore IBAN
     assert_equal converted.id, transactions(:one).reload.merchant_id
   end
 
