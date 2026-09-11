@@ -15,8 +15,7 @@ class IndexaCapitalAccount::Processor
 
     Rails.logger.info "IndexaCapitalAccount::Processor - Processing account #{indexa_capital_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing transactions/holdings/activities)
-    update_account_balance(account)
+    anchor_balance = update_account_balance(account)
 
     # Process holdings
     holdings_count = indexa_capital_account.raw_holdings_payload&.size || 0
@@ -39,6 +38,10 @@ class IndexaCapitalAccount::Processor
     else
       Rails.logger.warn "IndexaCapitalAccount::Processor - No activities payload to process"
     end
+
+    # Anchor the reported balance AFTER importing, so the previous reading can be judged
+    # against a complete ledger. See Account::CurrentBalanceManager.
+    account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete
@@ -64,9 +67,8 @@ class IndexaCapitalAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance)
+      # Returned to `process`, which anchors it once holdings and activities are in.
+      total_balance
     end
 
     def calculate_total_balance

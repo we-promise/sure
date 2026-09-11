@@ -69,7 +69,7 @@ class Account::CurrentBalanceManager
     # The "auto-update strategies" are:
     # 1. Value tracking - If the account has a reconciliation already, we assume they are tracking the account value primarily with reconciliations, so we append a new one
     # 2. Transaction adjustment - If the account doesn't have recons, we assume user is tracking with transactions, so we adjust the opening balance with a delta until it
-    #                             gets us to the desired balance. This ensures we don't append unnecessary reconciliations to the account, which "reset" the value from that
+    #                             gets us to the desired current balance. This ensures we don't append unnecessary reconciliations to the account, which "reset" the value from that
     #                             date forward (not user's intent).
     #
     # For more documentation on these auto-update strategies, see the test cases.
@@ -98,11 +98,19 @@ class Account::CurrentBalanceManager
 
     # Linked accounts manage "current balance" via the special `current_anchor` valuation.
     # This is NOT a user-facing feature, and is primarily used in "processors" while syncing
-    # linked account data (e.g. via Plaid)
+    # linked account data (e.g. via Plaid).
     #
-    # Before overwriting a stale (previous-day) current_anchor, we convert it to a
-    # reconciliation valuation. This preserves the API-reported balance as a historical
-    # waypoint that the ReverseCalculator uses for more accurate balance history.
+    # Processors write the anchor AFTER importing the sync's transactions, so the ledger for
+    # the gap since the standing anchor is complete and we can judge it now:
+    #
+    # Gated on BALANCE_REUSE_EXPLAINED_ANCHOR; when it is off the old anchor always rotates.
+    #
+    #   * the imported ledger explains the move to the statement's reading -> the old anchor
+    #     carries nothing the transactions don't already carry, so it just moves forward
+    #     in place (date AND amount) exactly like a same-day update
+    #   * it doesn't -> the provider knew something the ledger doesn't, so the old anchor
+    #     is preserved as a reconciliation waypoint (#1492, #1484) and a fresh anchor is
+    #     created for the statement date
     def set_current_balance_for_linked_account(balance, date)
       changes_made = false
       error = nil
@@ -124,13 +132,16 @@ class Account::CurrentBalanceManager
           error = result.error
           historical = true
         else
-          # Only a statement that moves the balance forward leaves the previous
-          # anchor behind as a reconciliation. One carrying the anchor's own date
-          # is that same anchor restated, so it is updated rather than duplicated.
-          preserve_anchor_as_reconciliation_if_stale(date) if current_anchor_valuation
+          anchor = current_anchor_valuation
 
-          # Re-check: the memoized value was cleared if the anchor was converted
-          if current_anchor_valuation
+          if anchor && anchor.entry.date < date
+            unless ledger_explains?(anchor.entry, balance, date)
+              preserve_anchor_as_reconciliation_if_stale(date)
+              anchor = nil
+            end
+          end
+
+          if anchor
             changes_made = update_current_anchor(balance, date)
           else
             create_current_anchor(balance, date)
@@ -159,8 +170,11 @@ class Account::CurrentBalanceManager
       Result.new(success?: result.success?, changes_made?: result.success?, error: result.error_message)
     end
 
+    # Legacy data can still carry more than one anchor row, and the query has no ORDER BY,
+    # so pick the newest deterministically. Ids are random UUIDs: a last-resort tiebreak only.
     def current_anchor_valuation
-      @current_anchor_valuation ||= account.valuations.current_anchor.includes(:entry).first
+      @current_anchor_valuation ||=
+        account.valuations.current_anchor.includes(:entry).max_by { |v| [ v.entry.date, v.entry.created_at, v.entry.id ] }
     end
 
     # If the existing current_anchor is from a previous day, convert it to a
@@ -180,6 +194,57 @@ class Account::CurrentBalanceManager
       # The chained scope (.current_anchor.first) always issues a fresh SQL query,
       # so we don't need to reload the full association.
       @current_anchor_valuation = nil
+    end
+
+    # True when imported transactions and trades account for the entire move between the
+    # standing anchor and the reading we're about to write.
+    #
+    # Sign convention is Balance::ForwardCalculator#signed_entry_flows: a positive entry
+    # amount decreases an asset and increases a liability. One sum covers any gap length.
+    #
+    # The window is inclusive at both ends. The lower end matters because readings are taken
+    # mid-day, so entries dated on the anchor's own date can post after it was taken. On that
+    # date only, entries that predate the anchor's last write are skipped: the provider could
+    # already see them, so after an in-place move they are inside the stored amount and
+    # counting them again would make an explained move look unexplained. `updated_at` is the
+    # watermark (saved exactly when amount and/or date change) and `>` excludes entries
+    # imported in the same sync cycle as the anchor write, which share its timestamp.
+    #
+    # Restricted to :cash accounts: an :investment total moves with market prices, and
+    # :non_cash accounts are valuation-driven, so the identity means nothing for either.
+    # Off by default (BALANCE_REUSE_EXPLAINED_ANCHOR): every stale anchor rotates, as before.
+    def ledger_explains?(older_entry, new_balance, date)
+      return false unless Rails.configuration.x.balance.reuse_explained_anchor
+      return false unless account.balance_type == :cash
+
+      # The identity below adds account-currency flows to the anchor's own amount, so an anchor
+      # written before a provider corrected the account's currency mixes units. Moving it forward
+      # would not repair that: `update_current_anchor` only ever rewrites amount and date.
+      return false unless older_entry.currency == account.currency
+
+      # Same set the balance calculators see (Balance::SyncCache#converted_entries and
+      # #get_entries): transactions and trades only, pending and split parents out,
+      # `excluded` entries still counted.
+      flows = account.entries
+        .excluding_pending
+        .excluding_split_parents
+        .where(date: older_entry.date..date)
+        .where.not(entryable_type: "Valuation")
+        .where("entries.date > :anchor_date OR entries.created_at > :anchor_written_at",
+               anchor_date: older_entry.date, anchor_written_at: older_entry.updated_at)
+        .pluck(:currency, :amount)
+
+      # A plain sum would silently add EUR to USD; bail rather than guess an FX rate.
+      return false unless flows.all? { |currency, _| currency == account.currency }
+
+      net = flows.sum { |_, amount| amount }
+      expected = older_entry.amount + (account.asset? ? -net : net)
+
+      # Tolerance is the currency's own minor unit (0.001 for BHD, 1 for JPY), not a fixed
+      # 0.01. `step` is a Float, so go through its string form to keep the comparison exact.
+      tolerance = BigDecimal(Money::Currency.new(account.currency).step.to_s)
+
+      (expected - new_balance).abs <= tolerance
     end
 
     def create_current_anchor(balance, date)
