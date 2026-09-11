@@ -47,6 +47,29 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("150.25"), holding.price
   end
 
+  test "holdings processor preserves cash-equivalent flag from string-keyed payload" do
+    security = Security.find_or_create_by!(ticker: "SPAXX") { |s| s.name = "Money Market Fund" }
+
+    @snaptrade_account.update!(
+      raw_holdings_payload: [
+        {
+          "symbol" => {
+            "symbol" => { "symbol" => security.ticker, "description" => security.name }
+          },
+          "units" => "100",
+          "price" => "1.00",
+          "currency" => "USD",
+          "cash_equivalent" => true
+        }
+      ]
+    )
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.find_by!(security: security, qty: 100)
+    assert holding.cash_equivalent?
+  end
+
   test "holdings processor stores cost basis when available" do
     security = securities(:aapl)
 

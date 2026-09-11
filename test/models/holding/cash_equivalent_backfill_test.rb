@@ -6,7 +6,7 @@ class Holding::CashEquivalentBackfillTest < ActiveSupport::TestCase
     @spaxx = Security.find_or_create_by!(ticker: "SPAXX") do |security|
       security.name = "Fidelity Government Money Market Fund"
     end
-    @stock = securities(:aapl)
+    @stock = Security.create!(ticker: "TESTSTOCK", name: "Test Stock")
   end
 
   test "marks existing SnapTrade holdings with explicit provider cash_equivalent flag" do
