@@ -32,7 +32,8 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         })
         .on_download({
             let page = page.clone();
-            move |webview, event| on_download(&page, webview, event)
+            let refused = RefusedDownloads::default();
+            move |webview, event| on_download(&page, &refused, webview, event)
         })
         .on_new_window(move |url, _| on_new_window(&handle, &page, url))
         .build()?;
@@ -155,7 +156,8 @@ fn open_server_window(handle: &AppHandle, url: Url) {
         })
         .on_download({
             let page = page.clone();
-            move |webview, event| on_download(&page, webview, event)
+            let refused = RefusedDownloads::default();
+            move |webview, event| on_download(&page, &refused, webview, event)
         })
         .on_new_window(move |url, _| on_new_window(&popup_handle, &page, url))
         .on_document_title_changed(|window, title| {
@@ -185,19 +187,55 @@ fn print_loaded_report(window: WebviewWindow, payload: PageLoadPayload<'_>) {
     });
 }
 
-fn on_download(page: &ShownPage, webview: tauri::Webview, event: DownloadEvent<'_>) -> bool {
+/// Downloads a window refused. WebKit ends a refused download as a failure for
+/// the same request URL, which must not be reported to the user as one.
+#[derive(Clone, Default)]
+pub struct RefusedDownloads(Arc<Mutex<Vec<Url>>>);
+
+impl RefusedDownloads {
+    /// Remember the decision for a requested download, and return it.
+    pub fn remember(&self, url: &Url, allowed: bool) -> bool {
+        if !allowed {
+            self.0.lock().unwrap().push(url.clone());
+        }
+        allowed
+    }
+
+    /// Whether a finished download is reported: all of them but the refused.
+    pub fn should_report(&self, url: &Url, success: bool) -> bool {
+        if success {
+            return true;
+        }
+        let mut refused = self.0.lock().unwrap();
+        match refused.iter().position(|refused_url| refused_url == url) {
+            Some(index) => {
+                refused.remove(index);
+                false
+            }
+            None => true,
+        }
+    }
+}
+
+fn on_download(
+    page: &ShownPage,
+    refused: &RefusedDownloads,
+    webview: tauri::Webview,
+    event: DownloadEvent<'_>,
+) -> bool {
     match event {
         // Only a page of a saved server may save files into Downloads.
-        DownloadEvent::Requested { .. } => {
+        DownloadEvent::Requested { url, .. } => {
             let allowed = page.is_saved_server();
             if !allowed {
                 eprintln!("[sure] blocked a download from a page outside saved servers");
             }
-            allowed
+            refused.remember(&url, allowed)
         }
-        // A download refused above also ends here as a failure; stay quiet then.
-        DownloadEvent::Finished { success: false, .. } if !page.is_saved_server() => true,
-        DownloadEvent::Finished { success, .. } => {
+        DownloadEvent::Finished { url, success, .. } => {
+            if !refused.should_report(&url, success) {
+                return true;
+            }
             // macOS does not return a path in Finished. Wry saves downloads to the
             // Downloads directory and adds a suffix when a filename already exists.
             let body = if success {

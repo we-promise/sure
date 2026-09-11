@@ -1,5 +1,5 @@
 use sure_desktop_lib::servers::{base_covers, normalize_server_url};
-use sure_desktop_lib::window::{popup_action, print_report_server, PopupAction};
+use sure_desktop_lib::window::{popup_action, print_report_server, PopupAction, RefusedDownloads};
 use url::Url;
 
 #[test]
@@ -109,4 +109,30 @@ fn ignores_non_web_schemes_and_credentials() {
     ] {
         assert_eq!(action(url, true), PopupAction::Deny, "{url}");
     }
+}
+
+// The decision made when a download starts holds until it finishes, whatever
+// page the window has navigated to in between.
+#[test]
+fn reports_every_download_outcome_except_refused_downloads() {
+    let downloads = RefusedDownloads::default();
+    let export = Url::parse("https://sure.example.com/reports/export_transactions.csv").unwrap();
+    let tracker = Url::parse("https://tracker.example/file.zip").unwrap();
+
+    assert!(downloads.remember(&export, true));
+    assert!(!downloads.remember(&tracker, false));
+
+    assert!(
+        downloads.should_report(&export, false),
+        "an allowed download that fails is reported"
+    );
+    assert!(downloads.should_report(&export, true));
+    assert!(
+        !downloads.should_report(&tracker, false),
+        "a refused download ends quietly"
+    );
+    assert!(
+        downloads.should_report(&tracker, false),
+        "each refusal silences only its own failure"
+    );
 }
