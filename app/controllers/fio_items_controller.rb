@@ -47,6 +47,10 @@ class FioItemsController < ApplicationController
     attributes[:history_unlock_required_at] = nil
 
     if @fio_item.update(attributes)
+      # Nothing else checks a rotated token: status is set from the form, and only a
+      # sync can find out whether Fio still accepts it. Without this the connection sits
+      # marked healthy until the next scheduled run.
+      @fio_item.sync_later unless @fio_item.syncing?
       render_provider_panel(:notice, t(".success"))
     else
       render_provider_panel_error(@fio_item.errors.full_messages.join(", "))

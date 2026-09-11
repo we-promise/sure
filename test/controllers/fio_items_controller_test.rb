@@ -40,8 +40,11 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("fio_items.create.token_required"), flash[:alert]
   end
 
-  test "update rotates the token and clears requires_update" do
+  # The form sets the status, so only a sync can establish whether Fio accepts the new
+  # token — without one the connection would claim to be healthy on the user's word.
+  test "update rotates the token, clears requires_update and revalidates it" do
     @fio_item.update!(status: :requires_update)
+    SyncJob.expects(:perform_later).with { |sync| sync.syncable == @fio_item }.once
 
     patch fio_item_url(@fio_item), params: {
       fio_item: { name: "Rotated", token: "fresh-token" }
