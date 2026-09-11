@@ -1,0 +1,92 @@
+---
+zh-TW:
+  breadcrumbs:
+    account_sharings: 帳戶共享
+    account_statements: 對帳單管理
+    accounts: 帳戶管理
+    ai_prompts: AI 提示詞
+    api_key: API 金鑰
+    api_keys: API 金鑰
+    appearance: 外觀
+    appearances: 外觀
+    bank_sync: 銀行同步
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: 預算分類
+    budgets: 預算
+    categories: 分類管理
+    categorize: 分類
+    changelog: 更新日誌
+    chats: 對話
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: 信用卡
+    cryptos: 加密貨幣
+    dashboard: 儀表板
+    debug: 偵錯
+    debugs: 偵錯
+    depositories: 現金帳戶
+    enable_banking_items: Enable Banking
+    exports: 匯出
+    family_exports: 匯出
+    family_merchants: 商家管理
+    feedback: 意見回饋
+    guides: 使用指南
+    holdings: 持股
+    home: 首頁
+    hostings: 自行代管
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: 模擬登入
+    imports: 匯入紀錄
+    indexa_capital_items: Indexa Capital
+    intro: 簡介
+    investments: 投資
+    invitations: 邀請
+    invite_codes: 邀請碼
+    kraken_items: Kraken
+    llm_usage: LLM 使用量
+    llm_usages: LLM 使用量
+    loans: 貸款
+    lunchflow_items: Lunch Flow
+    mcp: MCP Server
+    merchants: 商家管理
+    mercury_items: Mercury
+    messages: 訊息
+    mfa: 雙重驗證
+    oidc_accounts: SSO 帳號
+    onboardings: 新手導覽
+    other_assets: 其他資產
+    other_liabilities: 其他負債
+    payments: 付款
+    pending_duplicate_merges: 重複交易檢視
+    plaid_items: Plaid
+    plan: 規劃
+    preferences: 偏好設定
+    profile: 個人資料
+    profiles: 個人資料
+    properties: 不動產
+    providers: 供應商
+    recurring_transactions: 定期交易
+    redbark_items: Redbark
+    registrations: 註冊
+    reports: 報表
+    rules: 自動化規則
+    securities: 安全性
+    security: 安全性
+    self_hosting: 自行代管
+    sessions: 登入
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: 拆分
+    sso_identities: SSO 連結
+    sso_providers: SSO 供應商
+    subscriptions: 訂閱
+    tags: 標籤
+    trades: 證券交易
+    transactions: 交易紀錄
+    transfer_matches: 轉帳配對
+    transfers: 轉帳
+    users: 使用者
+    valuations: 估值
+    vehicles: 車輛

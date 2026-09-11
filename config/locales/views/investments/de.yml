@@ -113,6 +113,75 @@ de:
       other:
         short: Sonstige
         long: Sonstige Anlage
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      corporate_bond:
+        long: Unternehmensanleihe
+        short: Unternehmensanleihe
+      fd:
+        long: Festgeld
+        short: Festgeld
+      g_sec:
+        long: Staatsanleihen (G-Secs)
+        short: G-Sec
+      gold:
+        long: Gold (physisch oder digital)
+        short: Gold
+      gold_etf:
+        long: Gold-ETF
+        short: Gold-ETF
+      gold_mf:
+        long: Gold-Investmentfonds
+        short: Gold-Fonds
+      indian_equity:
+        long: Indische Aktien
+        short: Indische Aktien
+      indian_etf:
+        long: Indischer ETF
+        short: Indischer ETF
+      indian_stocks:
+        long: Indische Aktien (Demat)
+        short: Indische Aktien
+      infrastructure_bond:
+        long: Infrastrukturanleihe
+        short: Infra-Anleihe
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Lebensversicherung
+        short: Lebensversicherung
+      nps:
+        long: National Pension System
+        short: NPS
+      nsc:
+        long: National Savings Certificate
+        short: NSC
+      pomis:
+        long: Post Office Monthly Income Scheme
+        short: POMIS
+      ppf:
+        long: Public Provident Fund
+        short: PPF
+      rd:
+        long: Sparplan-Einlage
+        short: Sparplan
+      scss:
+        long: Senior Citizens' Savings Scheme
+        short: SCSS
+      sdl:
+        long: State Development Loans (SDLs)
+        short: SDL
+      sgb:
+        long: Sovereign Gold Bond
+        short: SGB
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      tax_free_bond:
+        long: Steuerfreie Anleihe
+        short: Steuerfreie Anleihe
     value_tooltip:
       cash: Bargeld
       holdings: Positionen

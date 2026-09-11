@@ -1,7 +1,24 @@
 ---
 es:
   transfer_matches:
+    create:
+      success: Transferencia creada
     new:
       header:
         title: Vincular transferencia o pago
         subtitle: Vincula la transacción correspondiente en otra cuenta o crea una si no existe.
+      from_account: Cuenta de origen
+      from_account_named: 'Cuenta de origen: %{name}'
+      to_account: Cuenta de destino
+      to_account_named: 'Cuenta de destino: %{name}'
+      outflow_transaction: Transacción de salida
+      inflow_transaction: Transacción de entrada
+      create_transfer_match: Crear emparejamiento de transferencia
+    matching_fields:
+      select_method: Selecciona un método para emparejar tus transacciones.
+      match_existing_recommended: Emparejar con una transacción existente (recomendado)
+      create_new_transaction: Crear una transacción nueva
+      matching_method: Método de emparejamiento
+      matching_transaction: Transacción coincidente
+      target_account: Cuenta de destino
+      no_matching_transactions: No hemos encontrado transacciones para emparejar en tus otras cuentas. Selecciona una cuenta y crearemos una nueva transacción de entrada por ti.

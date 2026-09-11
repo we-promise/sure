@@ -22,8 +22,13 @@ class WiseAccount::Transactions::Processor
     errors = []
 
     wise_account.raw_transactions_payload.each_with_index do |tx_data, index|
-      # Activities (from the Wise activities API) carry a "type" field; transfers do not.
-      processor_class = tx_data["type"].present? ? WiseActivity::Processor : WiseEntry::Processor
+      processor_class = if WiseActivity::Processor::JAR_ACTIVITY_TYPES.include?(tx_data["type"])
+        WiseActivity::Processor
+      elsif tx_data["wise_statement"].present?
+        WiseStatement::Processor
+      else
+        WiseEntry::Processor
+      end
       result = processor_class.new(tx_data, wise_account: wise_account).process
 
       case result

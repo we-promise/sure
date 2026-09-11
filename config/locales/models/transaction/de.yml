@@ -1,0 +1,11 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              invalid_format: Datei %{index} hat ein nicht unterstütztes Format (%{file_format})
+              too_large: Datei %{index} ist zu groß (höchstens %{max_mb} MB)
+              too_many: darf %{max} Dateien pro Transaktion nicht überschreiten

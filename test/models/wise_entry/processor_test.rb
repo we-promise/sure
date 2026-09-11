@@ -125,6 +125,28 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1, @account.entries.where(source: "wise").count
   end
 
+  # Exchange rate for balance conversion
+
+  test "stores the Wise exchange rate for cross-currency transfers" do
+    transfer = build_transfer(id: 6001, target_account: 9999, source_value: 1828.25,
+                              target_value: 1372.47, source_currency: "CAD",
+                              target_currency: "USD", rate: 0.7507)
+
+    entry = WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
+
+    assert_equal BigDecimal("0.7507"), entry.entryable.extra.dig("exchange_rate").to_d
+    assert_equal BigDecimal("0.7507"), entry.entryable.extra.dig("wise", "rate").to_d
+  end
+
+  test "omits exchange_rate when Wise does not report a rate" do
+    transfer = build_transfer(id: 6002, target_account: 9999)
+    transfer["rate"] = nil
+
+    entry = WiseEntry::Processor.new(transfer, wise_account: @wise_account).process
+
+    assert_nil entry.entryable.extra.dig("exchange_rate")
+  end
+
   # Skips without linked account
 
   test "returns skipped when no account linked" do
@@ -159,7 +181,7 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
 
     def build_transfer(id:, target_account:, source_value: 100.0, target_value: nil,
                         source_currency: "EUR", target_currency: nil, status: "outgoing_payment_sent",
-                        reference: nil)
+                        reference: nil, rate: 1.0)
       {
         "id" => id,
         "targetAccount" => target_account,
@@ -169,7 +191,7 @@ class WiseEntry::ProcessorTest < ActiveSupport::TestCase
         "targetCurrency" => target_currency || source_currency,
         "targetValue" => target_value || source_value,
         "status" => status,
-        "rate" => 1.0,
+        "rate" => rate,
         "created" => "2026-01-15 10:00:00",
         "details" => reference ? { "reference" => reference } : {}
       }

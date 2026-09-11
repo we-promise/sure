@@ -2,6 +2,7 @@
 de:
   reports:
     index:
+      period_aria: Berichtszeitraum
       title: Berichte
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren
@@ -18,6 +19,21 @@ de:
         from: Von
         to: Bis
       showing_period: "Zeitraum: %{start} bis %{end}"
+      next_decade: Nächstes Jahrzehnt
+      next_period: Nächster Zeitraum
+      next_year: Nächstes Jahr
+      period_label:
+        last_6_months: "%{start} – %{end}"
+        past_year: "%{year}"
+        quarterly: Q%{quarter} %{year}
+        ytd: "%{year} bis heute"
+      period_picker:
+        quarter: Q%{quarter} %{year}
+        ytd: "%{year} bis heute"
+      previous_decade: Vorheriges Jahrzehnt
+      previous_period: Vorheriger Zeitraum
+      previous_year: Vorheriges Jahr
+      today: Heute
     invalid_date_range: "Das Enddatum kann nicht vor dem Startdatum liegen. Die Daten wurden vertauscht."
     summary:
       total_income: Gesamteinnahmen
@@ -121,12 +137,16 @@ de:
       holdings: Positionen
       sell_trades: Verkaufstrades
       and_more: "+%{count} weitere"
+      period_return: Rendite im Zeitraum
     investment_flows:
       title: Anlageflüsse
       description: Verfolge Geldflüsse in und aus deinen Anlagekonten
       contributions: Einlagen
       withdrawals: Entnahmen
       net_flow: Nettozufluss
+      contributions_description: In Investments eingezahlt
+      net_flow_description: Nettoveränderung gesamt
+      withdrawals_description: Aus Investments entnommen
     transactions_breakdown:
       title: Transaktionsübersicht
       no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
@@ -228,6 +248,7 @@ de:
         weight: Gewicht
         value: Wert
         return: Rendite
+        period_return: Rendite im Zeitraum
       spending:
         title: Ausgaben nach Kategorie
         income: Einnahmen

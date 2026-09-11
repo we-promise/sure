@@ -1,0 +1,106 @@
+---
+es:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Conecta una cuenta de inversión de Trade Republic mediante un inicio de sesión web seguro"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Cuenta de corretaje"
+      private_markets: "Mercados privados"
+      interest_products: "Productos de intereses"
+      crypto_wallet: "Cartera de criptomonedas"
+    trade_republic_item:
+      syncing: "Sincronizando"
+      requires_update: "Se requiere volver a autenticarse"
+      error: "Error"
+      synced: "Sincronizado hace %{time}. %{summary}."
+      setup_accounts: "Configurar cuentas"
+      delete: "Eliminar"
+      accounts_need_setup: "La cuenta necesita configuración"
+      accounts_need_setup_description: "Tu cuenta de Trade Republic debe vincularse a una cuenta de Sure."
+      no_accounts_discovered: "Aún no se ha descubierto ninguna cuenta de Trade Republic."
+      no_accounts_discovered_description: "Completa el inicio de sesión y ejecuta una sincronización para descubrir tu cuenta."
+      data_quality:
+        title: "Calidad de los datos y detalles de sincronización"
+        repair: "Reparar datos importados"
+        positions:
+          one: "%{count} posición"
+          other: "%{count} posiciones"
+        unpriced:
+          one: "%{count} sin precio actual"
+          other: "%{count} sin precio actual"
+        events:
+          one: "%{count} actividad"
+          other: "%{count} actividades"
+        unknown:
+          one: "%{count} actividad desconocida"
+          other: "%{count} actividades desconocidas"
+        expenses:
+          one: "%{count} gasto en los últimos 30 días (%{amount})"
+          other: "%{count} gastos en los últimos 30 días (%{amount})"
+        reconciliation: "%{matched}/%{total} saldos de cuenta conciliados"
+        sync_history: Sincronizaciones recientes
+        sync_status:
+          completed: Completada
+          failed: Fallida
+          pending: Pendiente
+          syncing: Sincronizando
+          stale: Desactualizada
+    setup_accounts:
+      page_title: "Configurar cuenta de Trade Republic"
+      subtitle: "Vincula tu cuenta de inversión de Trade Republic."
+      available_accounts:
+        account_type_investment: "Cartera de inversión"
+        account_type_cash: "Cuenta de efectivo"
+      buttons:
+        refresh: "Actualizar"
+        cancel: "Cancelar"
+        link: "Vincular"
+        done: "Listo"
+    sync:
+      errors:
+        phone_number_missing: "Falta el número de teléfono de Trade Republic."
+        reauthentication_required: "La sesión de Trade Republic falta o ha caducado. Vuelve a conectarla desde Ajustes > Proveedores."
+      status:
+        checking_credentials: "Comprobando las credenciales de Trade Republic..."
+        importing_account: "Importando la cuenta de Trade Republic..."
+        processing_activity: "Procesando posiciones y actividad..."
+        calculating_balances: "Calculando saldos..."
+    repair:
+      scheduled: "Se ha programado la reparación de los datos de Trade Republic."
+    select_existing_account:
+      title: "Vincular cuenta de Trade Republic"
+      link: "Vincular"
+      cancel: "Cancelar"
+    initiate_login:
+      verification_required: "Inicio de sesión iniciado. Confírmalo mediante %{method} y pulsa Confirmar inicio de sesión."
+    complete_login:
+      approval_pending: "Aún no se ha confirmado. Aprueba el inicio de sesión en la aplicación de Trade Republic y vuelve a intentarlo."
+      success: "Trade Republic se ha conectado correctamente."
+      login_expired: "La solicitud de inicio de sesión ha caducado. Vuelve a iniciarla."
+    link_existing_account:
+      not_found: "No se ha encontrado la cuenta o configuración de Trade Republic."
+      success: "Cuenta vinculada correctamente a Trade Republic."
+    complete_account_setup:
+      success:
+        one: "Se ha creado correctamente %{count} cuenta de Trade Republic."
+        other: "Se han creado correctamente %{count} cuentas de Trade Republic."
+      none_created: "No se ha creado ninguna cuenta."
+      partial_failure:
+        one: "No se pudo completar una cuenta de Trade Republic seleccionada. Revisa el registro de depuración y vuelve a intentarlo."
+        other: "No se pudieron completar %{count} cuentas de Trade Republic seleccionadas. Revisa el registro de depuración y vuelve a intentarlo."
+    activities:
+      labels:
+        contribution: Aportación
+        withdrawal: Retirada
+        interest: Intereses
+        dividend: Dividendo
+        card_payment: Pago con tarjeta
+        cash_withdrawal: Retirada de efectivo
+        card_fee: Comisión de tarjeta
+        card_refund: Reembolso de tarjeta
+        tax_refund: Devolución de impuestos
+        buy: Compra
+        sell: Venta

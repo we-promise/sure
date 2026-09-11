@@ -17,6 +17,11 @@ class InsightsController < ApplicationController
 
   def acknowledge
     @insight.acknowledge!
+    # Both surfaces: the response carries streams for the /insights list and the
+    # dashboard widget, and each page applies only the ones whose targets it has.
+    # The list (not just the acknowledged card) is reloaded so its empty state
+    # can take over when the last insight goes.
+    load_feed
     load_widget_feed
 
     respond_to do |format|

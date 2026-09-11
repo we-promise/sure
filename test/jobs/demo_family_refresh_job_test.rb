@@ -47,7 +47,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
 
       generator = mock
       generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
-        assert_nil ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+        assert ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
       end
       Demo::Generator.expects(:new).returns(generator)
 
@@ -70,5 +70,16 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Demo::Generator.expects(:new).returns(generator)
 
     DemoFamilyRefreshJob.perform_now
+  end
+
+  test "skips refresh when another worker holds the advisory lock" do
+    connection = ActiveRecord::Base.connection
+    connection.expects(:select_value).with(regexp_matches(/pg_try_advisory_lock/)).returns(false)
+    Rails.logger.expects(:warn).with("Skipped demo family refresh: advisory lock unavailable")
+    Demo::Generator.expects(:new).never
+
+    assert_no_enqueued_jobs do
+      DemoFamilyRefreshJob.perform_now
+    end
   end
 end

@@ -1,6 +1,6 @@
 class GoalsController < ApplicationController
   before_action :require_preview_features!
-  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen]
+  before_action :set_goal, only: %i[show edit update destroy pause resume complete archive unarchive reopen consume record_consumption]
 
   FUNDABLE_TYPES = Goal::FUNDABLE_ACCOUNT_TYPES
   rescue_from ActiveRecord::RecordNotFound, with: :goal_not_found
@@ -34,6 +34,7 @@ class GoalsController < ApplicationController
 
   def show
     @open_pledges = @goal.open_pledges.reverse_chronological.to_a
+    @unattributed_outflows = withdrawal_detector.unattributed_outflows.to_a
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ @goal.name, nil ]
@@ -46,6 +47,8 @@ class GoalsController < ApplicationController
       currency: Current.family.primary_currency_code
     )
     @linkable_accounts = linkable_accounts_for_new
+    @currently_linked_account_ids = []
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @breadcrumbs = plan_breadcrumb_prefix + [
       [ t("goals.index.title"), goals_path ],
       [ t("goals.new.heading"), nil ]
@@ -72,11 +75,19 @@ class GoalsController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid
     @linkable_accounts = linkable_accounts_for_new
+    # From the in-memory links, not `pluck`: nothing is persisted on a failed
+    # create, so a query would come back empty and every box the user ticked
+    # would render unchecked. The amounts survived — the form reads those off
+    # the same built records — so the user was left staring at an error telling
+    # them to enter an amount, on a form whose accounts had silently cleared.
+    @currently_linked_account_ids = @goal.goal_accounts.map { |ga| ga.account_id.to_s }
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     render :new, status: :unprocessable_entity
   end
 
   def edit
     @linkable_accounts = linkable_accounts_for_new
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
   end
 
@@ -88,14 +99,26 @@ class GoalsController < ApplicationController
     if accounts_supplied && accounts.empty?
       @goal.errors.add(:base, :at_least_one_linked_account_required)
       @linkable_accounts = linkable_accounts_for_new
+      @pooled_allocations = Goal.pooled_allocations_for(Current.family)
       @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
       render :edit, status: :unprocessable_entity
       return
     end
 
+    # Assign first, sync the links, then persist once. Saving the attributes
+    # up front ran `must_have_at_least_one_linked_account` against the goal's
+    # OLD links, so a goal orphaned by account deletion (Account has_many
+    # :goal_accounts, dependent: :destroy) could never be edited back to
+    # health: the save raised before the submitted accounts were attached.
+    # One save over the fully-assembled goal validates what the user actually
+    # submitted.
     Goal.transaction do
-      @goal.update!(goal_update_params)
-      sync_linked_accounts!(@goal, accounts, submitted_allocations) if accounts_supplied
+      @goal.assign_attributes(goal_update_params)
+      if accounts_supplied
+        sync_linked_accounts!(@goal, accounts, submitted_allocations)
+      else
+        @goal.save!
+      end
     end
 
     flash[:notice] = t(".success")
@@ -107,16 +130,18 @@ class GoalsController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid
     @linkable_accounts = linkable_accounts_for_new
+    @pooled_allocations = Goal.pooled_allocations_for(Current.family)
     @currently_linked_account_ids = @goal.goal_accounts.pluck(:account_id).map(&:to_s)
     render :edit, status: :unprocessable_entity
   end
 
+  # Deletable from any state. Destroying a goal cascades only to its own
+  # goal_accounts / goal_pledges — and GoalPledge#clear_matched_transaction_extra
+  # unstamps the pledge id it wrote onto a matched transaction. No account,
+  # balance, entry or transaction is removed, so the archive-first gate this
+  # used to enforce bought no safety; it only hid the action behind a two-step
+  # flow no other Sure resource requires.
   def destroy
-    unless @goal.archived?
-      redirect_to goal_path(@goal), alert: t(".archive_first")
-      return
-    end
-
     @goal.destroy!
     redirect_to goals_path, notice: t(".success")
   end
@@ -141,9 +166,29 @@ class GoalsController < ApplicationController
     perform_transition!(:unarchive)
   end
 
+  # Renders the dialog. The write lives in its own action below.
+  def consume
+    @consumption_accounts = eligible_consumption_accounts
+  end
+
+  def record_consumption
+    txn = consumption_transaction
+    amount = txn ? txn.entry.amount.to_d : params[:amount].to_d
+
+    @goal.consume!(amount, account: consumption_account(txn), transaction: txn)
+    redirect_to goal_path(@goal),
+                notice: t("goals.consume.success", amount: Money.new(amount, @goal.currency).format)
+  rescue Goal::ConsumptionRefused => e
+    redirect_to goal_path(@goal), alert: t("goals.consume.errors.#{e.reason}")
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to goal_path(@goal), alert: e.record.errors.full_messages.to_sentence
+  end
+
   def reopen
     perform_transition!(:reopen)
   end
+
+  helper_method :eligible_consumption_accounts
 
   private
     def set_goal
@@ -157,11 +202,11 @@ class GoalsController < ApplicationController
     end
 
     def goal_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
     end
 
     def goal_update_params
-      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes)
+      params.require(:goal).permit(:name, :target_amount, :target_date, :color, :icon, :notes, :kind, :target_mode, :target_months)
     end
 
     def lookup_accounts(ids)
@@ -264,10 +309,15 @@ class GoalsController < ApplicationController
       #   fund, etc.) has no required monthly pace, so "on track" is
       #   undefined. Counting it would penalise the user for having
       #   open-ended goals — they'd never improve the ratio.
+      # - maintained → a reserve has no deadline and no pace benchmark at
+      #   all. Its statuses are `funded`/`depleted`, which match none of the
+      #   exclusions above, so without this it would land in the denominator
+      #   and never in the numerator: a family with one reserve read
+      #   "0 of 1 on track" for a goal that is working exactly as intended.
       # When this hits zero the tile swaps to a celebration / empty
       # state in the view.
       tracked_total = active_goals.count do |g|
-        !g.paused? && g.status != :reached && g.status != :no_target_date
+        !g.paused? && !g.maintained? && g.status != :reached && g.status != :no_target_date
       end
 
       {
@@ -288,17 +338,81 @@ class GoalsController < ApplicationController
       }
     end
 
+    # A blank id means "the goal has one link, use it" and the model decides
+    # whether that is true. An id that resolves to nothing is refused here
+    # rather than falling back to nil: on a single-link goal, nil would consume
+    # from that link and the user would see a spend recorded against an account
+    # they did not name.
+    # Attributing a detected outflow: the transaction says both how much and
+    # from where, so neither is taken from the form.
+    def consumption_transaction
+      return nil if params[:transaction_id].blank?
+
+      withdrawal_detector.unattributed_outflows(limit: 50)
+                         .find_by(entryable_id: params[:transaction_id])
+                         &.entryable ||
+        raise(Goal::ConsumptionRefused.new(:transaction_not_found))
+    end
+
+    # The goal's links narrowed to what the VIEWER may see. A goal can be
+    # backed by a private account, and every half of that leak matters: the
+    # dialog would name an account the reader is not allowed to know exists,
+    # the outflow panel would list its transactions, and a POST would reduce
+    # its earmark — the figures moving afterwards saying how much was in it.
+    def eligible_consumption_accounts
+      @eligible_consumption_accounts ||= begin
+        linked = @goal.linked_accounts
+        visible_ids = Current.user.accessible_accounts.where(id: linked.map(&:id)).pluck(:id).to_set
+        linked.select { |account| visible_ids.include?(account.id) }
+      end
+    end
+
+    def withdrawal_detector
+      Goal::WithdrawalDetector.new(@goal, accounts: eligible_consumption_accounts)
+    end
+
+    def consumption_account(txn = nil)
+      eligible = eligible_consumption_accounts
+      raise Goal::ConsumptionRefused.new(:account_not_linked) if eligible.empty?
+
+      # An attributed outflow names its own account; a typed spend names one
+      # only when the goal has a choice to offer.
+      account_id = txn ? txn.entry.account_id : params[:account_id]
+
+      if account_id.present?
+        return eligible.find { |account| account.id.to_s == account_id.to_s } ||
+          raise(Goal::ConsumptionRefused.new(:account_not_linked))
+      end
+
+      # Named explicitly even when the goal has several links, because the one
+      # the viewer can reach is not necessarily the one the model would pick on
+      # its own. With more than one eligible link it stays nil, and the model
+      # refuses rather than guessing.
+      eligible.size == 1 ? eligible.first : nil
+    end
+
     def perform_transition!(event)
-      if @goal.aasm.may_fire_event?(event)
-        @goal.public_send("#{event}!")
-        respond_to do |format|
-          format.html { redirect_to goal_path(@goal), notice: t(".success") }
-          format.turbo_stream do
-            render turbo_stream: turbo_stream.action(:redirect, goal_path(@goal))
-          end
-        end
-      else
+      unless @goal.aasm.may_fire_event?(event)
         redirect_to goal_path(@goal), alert: t(".invalid_transition")
+        return
+      end
+
+      # AASM's bang event returns false — it does NOT raise — when the save
+      # that persists the new state fails validation. The return value used to
+      # be discarded, so an invalid goal (e.g. orphaned by account deletion)
+      # flashed "Goal archived." while the state never moved. Surface the
+      # validation error instead of claiming success.
+      unless @goal.public_send("#{event}!")
+        redirect_to goal_path(@goal),
+                    alert: @goal.errors.full_messages.to_sentence.presence || t(".invalid_transition")
+        return
+      end
+
+      respond_to do |format|
+        format.html { redirect_to goal_path(@goal), notice: t(".success") }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.action(:redirect, goal_path(@goal))
+        end
       end
     end
 end

@@ -1,14 +1,14 @@
 <%# locals: (budget:) %>
 
 <% steps = [
-  { name: "Setup", path: edit_budget_path(budget), is_complete: budget.initialized?, step_number: 1 },
-  { name: "Categories", path: budget_budget_categories_path(budget), is_complete: budget.allocations_valid?, step_number: 2 },
+  { name: "Setup", path: edit_budget_path(budget, **budget_owner_query), is_complete: budget.initialized?, step_number: 1 },
+  { name: "Categories", path: budget_budget_categories_path(budget, **budget_owner_query), is_complete: budget.allocations_valid?, step_number: 2 },
 ] %>
 
 <ul class="flex items-center gap-2">
   <% steps.each_with_index do |step, idx| %>
     <li class="flex items-center gap-2 group">
-      <% is_current = request.path == step[:path] %>
+      <% is_current = request.path == step[:path].split("?").first %>
 
       <% text_class = if is_current
                   "text-primary"

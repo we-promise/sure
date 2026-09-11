@@ -1,0 +1,189 @@
+---
+de:
+  redbark_items:
+    complete_account_setup:
+      all_skipped: Alle Konten wurden übersprungen. Es wurde keins angelegt.
+      creation_failed: 'Die Konten ließen sich nicht anlegen: %{error}'
+      creation_failed_generic: Die Konten ließen sich nicht anlegen.
+      no_accounts: Keine Konten einzurichten.
+      setup_failed: "%{count} Konto/Konten ließen sich nicht anlegen. Sonst wurde nichts geändert – behebe das Problem und versuch es noch einmal."
+      success: "%{count} Konto/Konten angelegt."
+    create:
+      success: Redbark-Verbindung erstellt
+    default_name: Redbark-Verbindung
+    destroy:
+      success: Redbark-Verbindung entfernt
+      unlink_failed:
+        one: "%{count} Konto ließ sich nicht trennen. Versuch es noch einmal."
+        other: "%{count} Konten ließen sich nicht trennen. Versuch es noch einmal."
+    errors:
+      provider_not_configured: Der Anbieter Redbark ist nicht eingerichtet
+    index:
+      title: Redbark-Verbindungen
+    institution_summary:
+      count:
+        one: "%{count} Institut"
+        other: "%{count} Institute"
+      none: Keine Institute verbunden
+    link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
+      api_error: 'API-Fehler: %{message}'
+      invalid_account_name: Ein Konto ohne Namen lässt sich nicht verknüpfen
+      missing_parameters: Es fehlen erforderliche Angaben
+      no_api_key: Kein Redbark-API-Key gefunden. Richte ihn in den Anbietereinstellungen ein.
+      provider_account_already_linked: Dieses Redbark-Konto ist bereits mit einem anderen Konto verknüpft
+      provider_account_not_found: Redbark-Konto nicht gefunden
+      success: "%{account_name} mit Redbark verknüpft"
+    loading:
+      loading_message: Redbark-Konten werden geladen …
+      loading_title: Wird geladen
+    panel:
+      field_descriptions: 'Erläuterung der Felder:'
+      fields:
+        api_key:
+          description: Dein Redbark-API-Key (beginnt mit rbk_live_)
+          label: API-Key
+          placeholder_new: rbk_live_…
+          placeholder_update: Neuen API-Key eintragen, um ihn zu ändern
+      optional: "(optional)"
+      optional_with_default: "(optional, Standard ist %{default_value})"
+      required: "(erforderlich)"
+      save_button: Konfiguration speichern
+      setup_instructions: 'So richtest du es ein:'
+      status_configured_html: Eingerichtet und einsatzbereit. Im Reiter <a href="%{accounts_path}" class="link">Konten</a> verwaltest und richtest du Konten ein.
+      status_not_configured: Nicht eingerichtet
+      step_1: Leg auf app.redbark.com unter „Settings“ einen API-Key an
+      step_2: Trag deinen API-Key unten ein und klick auf Speichern
+      step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein
+      update_button: Konfiguration aktualisieren
+    redbark_item:
+      accounts_need_setup: Konten müssen eingerichtet werden
+      delete: Verbindung löschen
+      deletion_in_progress: wird gelöscht …
+      error: Fehler
+      more_accounts_available:
+        one: "%{count} weiteres Konto verfügbar"
+        other: "%{count} weitere Konten verfügbar"
+      no_accounts_description: Diese Verbindung hat noch keine verknüpften Konten.
+      no_accounts_title: Keine Konten
+      provider_name: Redbark
+      requires_update: Verbindung muss aktualisiert werden
+      setup_action: Neue Konten einrichten
+      setup_description: "%{linked} von %{total} Konten verknüpft. Wähl die Kontoarten für deine neu importierten Redbark-Konten."
+      setup_needed: Neue Konten bereit zum Einrichten
+      status: Synchronisiert vor %{timestamp}
+      status_never: Noch nie synchronisiert
+      status_with_summary: Letzter Sync vor %{timestamp} – %{summary}
+      syncing: Sync läuft …
+      total: Gesamt
+      unlinked: Nicht verknüpft
+      update_credentials: Zugangsdaten aktualisieren
+    select_accounts:
+      accounts_selected: Konten ausgewählt
+      api_error: 'API-Fehler: %{message}'
+      cancel: Abbrechen
+      configure_name_in_provider: Import nicht möglich – hinterleg den Kontonamen in Redbark
+      description: Wähl die Konten, die du mit deinem %{product_name}-Konto verknüpfen willst.
+      link_accounts: Gewählte Konten verknüpfen
+      no_accounts_found: Keine Konten gefunden. Prüf die Konfiguration deines API-Keys.
+      no_api_key: Der Redbark-API-Key ist nicht eingerichtet. Trag ihn in den Einstellungen ein.
+      no_credentials_configured: Richte zuerst deine Redbark-Zugangsdaten in den Anbietereinstellungen ein.
+      no_name_placeholder: "(kein Name)"
+      title: Redbark-Konten wählen
+    select_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft
+      all_accounts_already_linked: Alle Redbark-Konten sind bereits verknüpft
+      api_error: 'API-Fehler: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Abbrechen
+      cancel_button: Abbrechen
+      configure_name_in_provider: Import nicht möglich – hinterleg den Kontonamen in Redbark
+      connect_hint: Verbinde ein Redbark-Konto, um den automatischen Abgleich zu nutzen.
+      description: Wähl ein Redbark-Konto, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen und Dubletten entfernt.
+      header: Mit Redbark verknüpfen
+      link_account: Konto verknüpfen
+      link_button: Dieses Konto verknüpfen
+      linking_to: 'Wird verknüpft mit:'
+      no_account_specified: Kein Konto angegeben
+      no_accounts: Keine unverknüpften Redbark-Konten gefunden.
+      no_accounts_found: Keine Redbark-Konten gefunden. Prüf die Konfiguration deines API-Keys.
+      no_api_key: Der Redbark-API-Key ist nicht eingerichtet. Trag ihn in den Einstellungen ein.
+      no_credentials_configured: Richte zuerst deine Redbark-Zugangsdaten in den Anbietereinstellungen ein.
+      no_name_placeholder: "(kein Name)"
+      settings_link: Zu den Anbietereinstellungen
+      subtitle: Ein Redbark-Konto wählen
+      title: "%{account_name} mit Redbark verknüpfen"
+    setup_accounts:
+      account_type_label: 'Kontoart:'
+      account_types:
+        credit_card: Kreditkarte
+        depository: Giro- oder Sparkonto
+        loan: Kredit oder Hypothek
+        other_asset: Sonstiger Vermögenswert
+        skip: Dieses Konto überspringen
+      accounts_count:
+        one: "%{count} Konto verfügbar"
+        other: "%{count} Konten verfügbar"
+      all_accounts_linked: Alle deine Redbark-Konten sind bereits eingerichtet.
+      api_error: 'API-Fehler: %{message}'
+      balance: Saldo
+      cancel: Abbrechen
+      choose_account_type: 'Wähl für jedes Redbark-Konto die passende Kontoart:'
+      create_accounts: Konten anlegen
+      creating: Konten werden angelegt …
+      creating_accounts: Konten werden angelegt …
+      done: Fertig
+      fetch_failed: Konten ließen sich nicht abrufen
+      historical_data_range: 'Zeitraum der Historie:'
+      import_selected: Gewählte Konten importieren
+      instructions: Wähl die Konten, die du aus Redbark importieren willst. Du kannst mehrere auswählen.
+      no_accounts: Aus dieser Redbark-Verbindung gibt es keine unverknüpften Konten.
+      no_accounts_to_setup: Keine Konten einzurichten
+      no_api_key: Der Redbark-API-Key ist nicht eingerichtet. Prüf deine Verbindungseinstellungen.
+      select_all: Alle auswählen
+      subtitle: Wähl die passende Kontoart für deine importierten Konten
+      subtype_labels:
+        credit_card: ''
+        depository: 'Konto-Untertyp:'
+        loan: 'Kreditart:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kreditkarten werden automatisch als Kreditkartenkonten angelegt.
+        other_asset: Für sonstige Vermögenswerte sind keine weiteren Angaben nötig.
+      subtypes:
+        depository:
+          cd: Festgeldkonto
+          checking: Girokonto
+          hsa: Health Savings Account
+          money_market: Geldmarktkonto
+          savings: Sparkonto
+        loan:
+          auto: Autokredit
+          mortgage: Hypothek
+          other: Sonstiger Kredit
+          student: Studienkredit
+      sync_start_date_help: Wähl, wie weit zurück die Transaktionshistorie geholt werden soll.
+      sync_start_date_label: 'Transaktionen synchronisieren ab:'
+      title: Redbark-Konten einrichten
+    setup_required:
+      go_to_provider_settings: Zu den Anbietereinstellungen
+      not_configured_description: Hinterleg deinen Redbark-API-Key in den Anbietereinstellungen und komm dann hierher zurück, um Konten zu verknüpfen.
+      not_configured_title: Redbark ist noch nicht verbunden
+      title: Zuerst Redbark verbinden
+    sync:
+      status:
+        calculating: Salden werden berechnet …
+        checking_setup: Kontokonfiguration wird geprüft …
+        importing: Konten werden aus Redbark importiert …
+        importing_data: Kontodaten werden importiert …
+        needs_setup: "%{count} Konten müssen eingerichtet werden …"
+        processing: Transaktionen werden verarbeitet …
+      success: Sync gestartet
+    sync_status:
+      no_accounts: Keine Konten gefunden
+      synced:
+        one: "%{count} Konto synchronisiert"
+        other: "%{count} Konten synchronisiert"
+      synced_with_setup: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+    update:
+      success: Redbark-Verbindung aktualisiert

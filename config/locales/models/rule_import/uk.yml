@@ -1,0 +1,9 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: "Непідтримуваний тип ресурсу: %{resource_type}"
+          invalid_json: "Недійсний JSON в умовах або діях: %{message}"
+          min_actions: "Правило повинно мати принаймні одну дію"

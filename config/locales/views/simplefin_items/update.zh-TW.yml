@@ -1,0 +1,8 @@
+---
+zh-TW:
+  simplefin_items:
+    update:
+      success: SimpleFIN 連線已更新。
+      errors:
+        blank_token: 缺少 SimpleFIN Access Token。請提供一組 Token，或改用「連結現有帳戶」繼續。
+        update_failed: 更新 SimpleFIN 連線失敗：%{message}

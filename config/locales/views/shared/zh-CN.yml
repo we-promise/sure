@@ -4,6 +4,7 @@ zh-CN:
     self_hostable:
       redis_configured: Redis 现已正确配置！您现在可以设置您的 Sure 应用了。
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: 确认
       body_html: "<p>此决定无法撤销</p>"
@@ -24,6 +25,9 @@ zh-CN:
       default_title: 确定吗？
       default_body: 此操作不可逆。
       default_btn_text: 确认
+      resource_deletion_title: "删除%{resource}？"
+      resource_deletion_body: "确定要删除%{resource}吗？此操作不可逆。"
+      resource_deletion_btn_text: "删除%{resource}"
     family_moniker:
       group_plural: 组
       group_singular: 组

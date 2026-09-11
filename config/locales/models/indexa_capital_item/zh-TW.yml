@@ -1,0 +1,7 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: 必須提供 INDEXA_API_TOKEN 環境變數，或是使用者名稱／證件號碼／密碼這組憑證

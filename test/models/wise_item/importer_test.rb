@@ -2,17 +2,21 @@ require "test_helper"
 
 class WiseItem::ImporterTest < ActiveSupport::TestCase
   class FakeWiseProvider
-    attr_reader :calls
+    attr_reader :calls, :statement_requests
 
     def initialize(balances: nil, savings_balances: nil, borderless_accounts: nil,
-                   transfers: nil, activities: nil, raise_on: {})
+                   transfers: nil, activities: nil, statements: nil, raise_on: {},
+                   statement_fail_balance_ids: [])
       @balances = balances || [ standard_balance ]
       @savings_balances = savings_balances || []
       @borderless_accounts = borderless_accounts || [ borderless_account ]
       @transfers = transfers || []
       @activities = activities || []
+      @statements = statements || []
       @raise_on = raise_on
+      @statement_fail_balance_ids = statement_fail_balance_ids
       @calls = []
+      @statement_requests = []
     end
 
     def get_balances(profile_id)
@@ -36,6 +40,15 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     def get_transfers(profile_id, limit: 100, offset: 0)
       @calls << :get_transfers
       @transfers
+    end
+
+    def get_balance_statements(profile_id, balance_id, currency:, start_date:, end_date:)
+      @calls << :get_balance_statements
+      @statement_requests << { profile_id: profile_id, balance_id: balance_id, currency: currency,
+                               start_date: start_date, end_date: end_date }
+      raise_if(:get_balance_statements)
+      raise Provider::Wise::WiseError.new("forbidden", :fetch_failed) if @statement_fail_balance_ids.include?(balance_id)
+      @statements
     end
 
     def get_activities(profile_id, cursor: nil, size: 100)
@@ -85,7 +98,10 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
   test "imports STANDARD balances and creates WiseAccount records" do
     provider = FakeWiseProvider.new
 
-    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    result = nil
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "wise").count } do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
 
     assert result[:success]
     assert_equal 1, result[:accounts_created]
@@ -145,7 +161,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
       build_transfer(id: 1, source_currency: "EUR", target_currency: "EUR", target_account: 9999),
       build_transfer(id: 2, source_currency: "USD", target_currency: "USD", target_account: 9999)
     ]
-    provider = FakeWiseProvider.new(transfers: transfers)
+    provider = FakeWiseProvider.new(transfers: transfers, raise_on: { get_balance_statements: "forbidden" })
 
     WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
@@ -158,12 +174,295 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     transfers = [
       build_transfer(id: 3, source_currency: "USD", target_currency: "EUR", target_account: 99999001)
     ]
-    provider = FakeWiseProvider.new(transfers: transfers)
+    provider = FakeWiseProvider.new(transfers: transfers, raise_on: { get_balance_statements: "forbidden" })
 
     WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 
     eur_account = @wise_item.wise_accounts.find_by(currency: "EUR")
     assert_equal 1, eur_account.raw_transactions_payload.size
+  end
+
+  test "imports standard account balance statements and honors configured history start" do
+    @wise_item.update!(sync_start_date: Date.new(2024, 1, 1))
+    statements = [
+      {
+        "type" => "CREDIT",
+        "date" => "2024-01-02T10:00:00Z",
+        "amount" => { "value" => "25.00", "currency" => "EUR" },
+        "details" => { "description" => "Salary" },
+        "referenceNumber" => "statement-1"
+      }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    assert_equal statements.first.merge("wise_statement" => true), account.raw_transactions_payload.first
+    assert_equal Date.new(2024, 1, 1), provider.statement_requests.first[:start_date]
+    assert_equal Date.current, provider.statement_requests.first[:end_date]
+  end
+
+  test "fetches full statement history when import_all_history is enabled" do
+    @wise_item.update!(import_all_history: true)
+    provider = FakeWiseProvider.new(statements: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal WiseItem::Importer::FULL_HISTORY_START_DATE, provider.statement_requests.first[:start_date]
+    assert_equal Date.current, provider.statement_requests.first[:end_date]
+  end
+
+  test "starts full history from balance creation time when available" do
+    @wise_item.update!(import_all_history: true)
+    balance = {
+      "id" => "10000001",
+      "amount" => { "value" => 100.0, "currency" => "EUR" },
+      "type" => "STANDARD",
+      "creationTime" => "2015-04-12T10:00:00Z"
+    }
+    provider = FakeWiseProvider.new(balances: [ balance ], statements: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal Date.new(2015, 4, 12), provider.statement_requests.first[:start_date]
+  end
+
+  test "keeps incremental sync window after statements already exist" do
+    @wise_item.update!(import_all_history: true)
+    statements = [
+      {
+        "type" => "CREDIT",
+        "date" => "2024-01-02T10:00:00Z",
+        "amount" => { "value" => "25.00", "currency" => "EUR" },
+        "details" => { "description" => "Salary" },
+        "referenceNumber" => "statement-1"
+      }
+    ]
+    WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: statements)).import
+
+    sync = @wise_item.syncs.create!(status: :completed, completed_at: Time.current)
+
+    second_provider = FakeWiseProvider.new(statements: [])
+    WiseItem::Importer.new(@wise_item, wise_provider: second_provider).import
+
+    assert_equal (sync.completed_at - 7.days).to_date, second_provider.statement_requests.first[:start_date]
+    assert_equal Date.current, second_provider.statement_requests.first[:end_date]
+    refute_includes second_provider.calls, :get_transfers
+  end
+
+  test "falls back to transfers when every statement request fails" do
+    transfers = [
+      build_transfer(id: 1, source_currency: "EUR", target_currency: "EUR", target_account: 9999)
+    ]
+    provider = FakeWiseProvider.new(transfers: transfers, raise_on: { get_balance_statements: "forbidden" })
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").count }, 1 do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
+
+    assert result[:success]
+    assert_includes provider.calls, :get_transfers
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    assert_equal 1, account.raw_transactions_payload.size
+
+    entry = DebugLogEntry.where(provider_key: "wise", category: "provider_sync_error").recent.first
+    assert_equal "WiseItem::Importer", entry.source
+    assert_equal @wise_item.id, entry.metadata["wise_item_id"]
+    assert_equal false, entry.metadata["sca_private_key_configured"]
+    assert_equal "Provider::Wise::WiseError", entry.metadata["error_class"]
+    assert_equal "fetch_failed", entry.metadata["error_type"]
+  end
+
+  test "surfaces partial statement fetch failures without the transfer fallback" do
+    balances = [
+      {
+        "id" => "10000001",
+        "amount" => { "value" => 1964.88, "currency" => "EUR" },
+        "type" => "STANDARD"
+      },
+      {
+        "id" => "10000002",
+        "amount" => { "value" => 500.0, "currency" => "USD" },
+        "type" => "STANDARD"
+      }
+    ]
+    provider = FakeWiseProvider.new(balances: balances, statement_fail_balance_ids: [ "10000002" ])
+
+    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_not result[:success]
+    assert_equal 1, result[:transactions_failed]
+    refute_includes provider.calls, :get_transfers
+  end
+
+  test "backfills incoming statement rows into the window already covered by legacy transfers" do
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 1,
+          "sourceCurrency" => "EUR",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 100.0,
+          "targetValue" => 100.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-10"
+        }
+      ]
+    )
+    statements = [
+      { "date" => "2024-01-15T10:00:00Z", "amount" => { "value" => "-50.00", "currency" => "EUR" }, "referenceNumber" => "st-outgoing-in-window" },
+      { "date" => "2024-01-20T10:00:00Z", "amount" => { "value" => "6780.00", "currency" => "EUR" }, "referenceNumber" => "st-incoming-in-window" },
+      { "date" => "2024-01-05T10:00:00Z", "amount" => { "value" => "20.00", "currency" => "EUR" }, "referenceNumber" => "st-before-window" }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+
+    assert_includes refs, "st-incoming-in-window"
+    assert_includes refs, "st-before-window"
+    refute_includes refs, "st-outgoing-in-window"
+  end
+
+  test "keeps an incoming statement row that coincidentally shares its date and amount with a legacy transfer" do
+    # A same-day, same-amount external payment must never be dropped just
+    # because it looks like it could be the credit leg of a prior internal
+    # conversion -- silently losing a real transaction is worse than an
+    # occasional visible duplicate (see legacy_overlap_outgoing_row?).
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD", "recipient_id" => 99999001 },
+      raw_transactions_payload: [
+        {
+          "id" => 10,
+          "targetAccount" => 99999001,
+          "sourceCurrency" => "USD",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 500.0,
+          "targetValue" => 450.0,
+          "status" => "incoming_payment_received",
+          "created" => "2024-02-01"
+        }
+      ]
+    )
+    statements = [
+      { "date" => "2024-02-01T09:00:00Z", "amount" => { "value" => "450.00", "currency" => "EUR" }, "referenceNumber" => "st-same-date-and-amount" }
+    ]
+    provider = FakeWiseProvider.new(statements: statements)
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    account = @wise_item.wise_accounts.find_by(currency: "EUR")
+    refs = account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }
+
+    assert_includes refs, "st-same-date-and-amount"
+  end
+
+  test "stops fetching legacy transfers once an account has a successful statement row" do
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 1,
+          "sourceCurrency" => "EUR",
+          "targetCurrency" => "EUR",
+          "sourceValue" => 100.0,
+          "targetValue" => 100.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-10"
+        },
+        {
+          "wise_statement" => true,
+          "date" => "2024-01-20",
+          "amount" => { "value" => "10.0", "currency" => "EUR" },
+          "referenceNumber" => "already-migrated"
+        }
+      ]
+    )
+    provider = FakeWiseProvider.new(statements: [])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    refute_includes provider.calls, :get_transfers
+  end
+
+  test "does not merge the profile-wide transfer fallback into an account that already migrated to statements" do
+    balances = [
+      { "id" => "10000001", "amount" => { "value" => 1000.0, "currency" => "EUR" }, "type" => "STANDARD" },
+      { "id" => "10000002", "amount" => { "value" => 500.0, "currency" => "USD" }, "type" => "STANDARD" }
+    ]
+    eur_account = @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "wise_statement" => true,
+          "date" => "2024-01-20",
+          "amount" => { "value" => "10.0", "currency" => "EUR" },
+          "referenceNumber" => "already-migrated-eur"
+        }
+      ]
+    )
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000002",
+      name: "Wise USD",
+      currency: "USD",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [
+        {
+          "id" => 5,
+          "sourceCurrency" => "USD",
+          "targetCurrency" => "USD",
+          "sourceValue" => 20.0,
+          "targetValue" => 20.0,
+          "status" => "outgoing_payment_sent",
+          "created" => "2024-01-05"
+        }
+      ]
+    )
+    # USD still needs the legacy fallback, so transfers get fetched profile-wide --
+    # including this EUR-currency row, which must not land on the already-migrated
+    # EUR account.
+    transfers = [ build_transfer(id: 99, source_currency: "EUR", target_currency: "EUR", target_account: 9999) ]
+    provider = FakeWiseProvider.new(balances: balances, transfers: transfers, statement_fail_balance_ids: [ "10000002" ])
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    eur_account.reload
+    assert_includes provider.calls, :get_transfers
+    refute_includes eur_account.raw_transactions_payload.filter_map { |t| t["id"] }, 99
+    assert_includes eur_account.raw_transactions_payload.filter_map { |t| t["referenceNumber"] }, "already-migrated-eur"
+  end
+
+  test "keeps transfer cutoff incremental after the first sync when full history is enabled" do
+    @wise_item.update!(import_all_history: true)
+    @wise_item.wise_accounts.create!(
+      balance_id: "10000001",
+      name: "Wise EUR",
+      currency: "EUR",
+      raw_payload: { "type" => "STANDARD" },
+      raw_transactions_payload: [ { "id" => 1 } ]
+    )
+    sync = @wise_item.syncs.create!(status: :completed, completed_at: Time.current)
+
+    importer = WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new)
+
+    assert_equal sync.completed_at - 7.days, importer.send(:transfer_cutoff)
   end
 
   # Activity routing
@@ -209,6 +508,20 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     assert_equal 1, jar.raw_transactions_payload.size
     assert_empty standard.raw_transactions_payload.select { |a| a["type"] == "BALANCE_CASHBACK" }
+  end
+
+  test "stops activity pagination when Wise repeats a cursor" do
+    activity = build_interbalance("To <strong>Jar</strong>", resource_id: "5001")
+    repeated_cursor = "repeated-cursor"
+    provider = FakeWiseProvider.new
+    provider.define_singleton_method(:get_activities) do |_profile_id, cursor: nil, size: 100|
+      calls << :get_activities
+      { "activities" => Array.new(size, activity), "cursor" => repeated_cursor }
+    end
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal 2, provider.calls.count(:get_activities)
   end
 
   # Returns failed result when balances fetch fails

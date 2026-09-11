@@ -1,0 +1,182 @@
+---
+zh-TW:
+  snaptrade_items:
+    default_name: SnapTrade 連線
+    destroy:
+      success: 已排定刪除這個 SnapTrade 連線。
+    connect:
+      decryption_failed: 無法讀取 SnapTrade 憑證。請刪除這個連線並重新建立。
+      connection_failed: 連線到 SnapTrade 失敗：%{message}
+    callback:
+      success: 券商已連結！請選擇要連結哪些帳戶。
+      no_item: 找不到 SnapTrade 設定。
+    complete_account_setup:
+      success:
+        one: 已成功連結 %{count} 個帳戶。
+        other: 已成功連結 %{count} 個帳戶。
+      partial_success:
+        one: 已連結 %{count} 個帳戶，有 %{failed_count} 個連結失敗。
+        other: 已連結 %{count} 個帳戶，有 %{failed_count} 個連結失敗。
+      link_failed: 連結帳戶失敗：%{errors}
+      no_accounts: 沒有選擇任何要連結的帳戶。
+    preload_accounts:
+      not_configured: 尚未設定 SnapTrade。
+    select_accounts:
+      not_configured: 尚未設定 SnapTrade。
+    oauth_authorize:
+      not_configured: 尚未設定 SnapTrade OAuth。請設定 SNAPTRADE_OAUTH_CLIENT_ID 與 SNAPTRADE_OAUTH_CLIENT_SECRET，重新啟動應用程式後再試。
+    oauth_callback:
+      success: SnapTrade 授權完成。
+      access_denied: SnapTrade 授權已取消。
+      state_mismatch: SnapTrade 授權未通過安全檢查。請再試一次。
+      failed: 無法完成 SnapTrade 授權。請再試一次。
+    select_existing_account:
+      not_found: 找不到帳戶或 SnapTrade 設定。
+      title: 連結到 SnapTrade 帳戶
+      header: 連結現有帳戶
+      subtitle: 選擇要連結至此帳戶的 SnapTrade 帳戶：
+      no_accounts: 沒有可用的未連結 SnapTrade 帳戶。
+      connect_hint: 您可能需要先連結一家券商。
+      settings_link: 前往供應商設定
+      linking_to: 要連結的帳戶：
+      balance_label: 餘額：
+      link_button: 連結
+      cancel_button: 取消
+    link_existing_account:
+      success: 已成功連結到 SnapTrade 帳戶。
+      failed: 連結帳戶失敗：%{message}
+      not_found: 找不到帳戶。
+    connections:
+      unknown_brokerage: 未知券商
+    delete_connection:
+      success: 連線刪除成功，釋出一個名額。
+      failed: 刪除連線失敗：%{message}
+      missing_authorization_id: 缺少授權 ID
+      api_deletion_failed: 無法從 SnapTrade 刪除這個連線 - 這個項目未經授權。該連線可能仍存在於您的 SnapTrade 帳戶中。
+    setup_accounts:
+      title: 設定 SnapTrade 帳戶
+      header: 設定您的 SnapTrade 帳戶
+      subtitle: 選擇要連結哪些券商帳戶
+      syncing: 正在取得您的帳戶...
+      loading: 正在從 SnapTrade 取得帳戶...
+      loading_hint: 點選「重新整理」以檢查是否有帳戶。
+      refresh: 重新整理
+      info_title: SnapTrade 投資資料
+      info_holdings: 含目前價格與數量的持股
+      info_cost_basis: 各部位的成本基礎（若有提供）
+      info_activities: 含活動標籤的交易紀錄（買入、賣出、股息等）
+      info_history: 最多 3 年的交易紀錄
+      free_tier_note: SnapTrade 免費方案可建立 20 個券商連線。
+      no_accounts_title: 找不到帳戶
+      no_accounts_message: 找不到任何券商帳戶。如果您取消了連結流程，或您的券商不在支援範圍內，就可能發生這種情況。
+      try_again: 連結券商
+      back_to_settings: 返回設定
+      available_accounts: 可用的帳戶
+      balance_label: 餘額：
+      account_number: 帳戶：
+      account_type_label: 帳戶類型
+      account_types:
+        depository: 支票或儲蓄帳戶
+        credit_card: 信用卡
+        investment: 投資帳戶
+        crypto: 加密貨幣帳戶
+        loan: 貸款或信用額度
+        other_asset: 其他資產
+      sync_start_date_label: 從何時開始匯入交易：
+      sync_start_date_help: 留白即匯入所有可用的歷史紀錄
+      create_button: 建立所選帳戶
+      cancel_button: 取消
+      creating: 正在建立帳戶...
+      done_button: 完成
+      or_link_existing: 或者連結到現有帳戶，而不是建立新的：
+      select_account: 選擇一個帳戶...
+      link_button: 連結
+      linked_accounts: 已連結
+      linked_to: 已連結到：
+    snaptrade_item:
+      accounts_need_setup:
+        one: 有 %{count} 個帳戶需要設定
+        other: 有 %{count} 個帳戶需要設定
+      deletion_in_progress: 正在刪除...
+      syncing: 同步中...
+      requires_update: 連線需要更新
+      error: 同步錯誤
+      status: 上次同步於 %{timestamp}前 - %{summary}
+      status_never: 從未同步
+      reconnect: 重新連線
+      connect_brokerage: 連結券商
+      add_another_brokerage: 再連結一家券商
+      delete: 刪除
+      setup_needed: 帳戶需要設定
+      setup_description: 有些來自 SnapTrade 的帳戶需要連結到 Sure 的帳戶。
+      setup_action: 設定帳戶
+      setup_accounts_menu: 設定帳戶
+      manage_connections: 管理連線
+      more_accounts_available:
+        one: 另有 %{count} 個帳戶可以設定
+        other: 另有 %{count} 個帳戶可以設定
+      no_accounts_title: 沒有偵測到任何帳戶
+      no_accounts_description: 連結一家券商以匯入您的投資帳戶。
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: 透過 SnapTrade 連結您的券商（支援 25 家以上）
+      description: SnapTrade 可連結 25 家以上的主要券商（Fidelity、Vanguard、Schwab、Robinhood 等），並提供含活動標籤與成本基礎的完整交易紀錄。
+      oauth_setup_step_1_html: 在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> 註冊一個 OAuth 應用程式
+      oauth_setup_step_2_html: 將這個應用程式的回呼網址（<code>%{callback_url}</code>）加入已註冊的 redirect URI
+      oauth_setup_step_3: 在環境變數中設定 SNAPTRADE_OAUTH_CLIENT_ID 與 SNAPTRADE_OAUTH_CLIENT_SECRET，然後重新啟動
+      free_tier_warning: SnapTrade 的免費方案涵蓋 20 個券商連線。
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: 授權 Sure 讀取您的 SnapTrade 帳戶資料。
+      oauth_status_authorized: 已完成 SnapTrade 授權。
+      oauth_connect_button: 連接 SnapTrade
+      oauth_reauthorize_button: 重新授權
+      status_connected:
+        one: 來自 SnapTrade 的 %{count} 個帳戶
+        other: 來自 SnapTrade 的 %{count} 個帳戶
+      needs_setup:
+        one: 有 %{count} 個需要設定
+        other: 有 %{count} 個需要設定
+      status_ready: 可以開始連結券商了
+      setup_accounts_button: 設定帳戶
+      connect_button: 連結券商
+      connected_brokerages: 已連結：
+      manage_connections: 管理連線
+      loading_connections: 正在載入連線...
+      connections_error: 載入連線失敗：%{message}
+      accounts_count:
+        one: '%{count} 個帳戶'
+        other: '%{count} 個帳戶'
+      orphaned_connection: 未對應的連線（未同步到本機）
+      needs_linking: 需要連結
+      no_connections: 找不到任何券商連線。
+      delete_connection: 刪除
+      delete_connection_title: 要刪除券商連線嗎？
+      delete_connection_body: 這會從 SnapTrade 永久移除 %{brokerage} 連線，該券商的所有帳戶都會取消連結。日後要再同步這些帳戶就得重新連結。
+      delete_connection_confirm: 刪除連線
+      manage_at_snaptrade: 在 SnapTrade 管理連線
+  snaptrade_item:
+    sync_status:
+      no_accounts: 找不到帳戶
+      synced:
+        one: 已同步 %{count} 個帳戶
+        other: 已同步 %{count} 個帳戶
+      synced_with_setup: 已同步 %{linked} 個，%{unlinked} 個需要設定
+    institution_summary:
+      none: 沒有已連線的機構
+      count:
+        one: '%{count} 個機構'
+        other: '%{count} 個機構'
+    brokerage_summary:
+      none: 沒有已連結的券商
+      count:
+        one: '%{count} 家券商'
+        other: '%{count} 家券商'
+    syncer:
+      discovering: 正在偵測帳戶...
+      importing: 正在從 SnapTrade 匯入帳戶...
+      processing: 正在處理持股和活動...
+      calculating: 正在計算餘額...
+      checking_config: 正在檢查帳戶設定...
+      needs_setup: '%{count} 個帳戶需要設定...'
+      activities_fetching_async: 正在背景取得交易活動。剛建立的券商連線可能需要一分鐘左右。

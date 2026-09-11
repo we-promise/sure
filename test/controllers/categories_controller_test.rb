@@ -83,6 +83,42 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create as json returns rendered category option" do
+    color = Category::COLORS.sample
+
+    assert_difference "Category.count", +1 do
+      post categories_url(format: :json), params: {
+        category: {
+          name: "JSON Category",
+          color: color } }
+    end
+
+    assert_response :created
+
+    response_json = JSON.parse(response.body)
+    new_category = Category.find(response_json.fetch("id"))
+
+    assert_equal "JSON Category", response_json.fetch("name")
+    assert_equal color, response_json.fetch("color")
+    assert_equal "JSON Category", new_category.name
+    assert_includes response_json.fetch("html"), "JSON Category"
+    assert_includes response_json.fetch("html"), new_category.id
+  end
+
+  test "create as json returns errors for invalid category" do
+    assert_no_difference "Category.count" do
+      post categories_url(format: :json), params: {
+        category: {
+          name: categories(:food_and_drink).name,
+          color: Category::COLORS.sample } }
+    end
+
+    assert_response :unprocessable_entity
+
+    response_json = JSON.parse(response.body)
+    assert response_json.fetch("errors").any?
+  end
+
   test "create and assign to transaction" do
     color = Category::COLORS.sample
 
@@ -136,6 +172,7 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#mobile-settings-nav"
+    assert_select "form[action='#{perform_merge_categories_path}'] button[type='submit']"
   end
 
   test "merge renders without the settings layout for modal frame requests" do
@@ -145,6 +182,37 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/<html/i, response.body)
     assert_no_match(/<turbo-frame id="modal"><\/turbo-frame>/, response.body)
     assert_select "dialog"
+  end
+
+  test "merge orders subcategories immediately after their parent" do
+    parent = @family.categories.create!(
+      name: "Zoo",
+      color: "#000000",
+      lucide_icon: "folder"
+    )
+    child = @family.categories.create!(
+      name: "Apple",
+      color: "#111111",
+      lucide_icon: "folder",
+      parent: parent
+    )
+
+    get merge_categories_path
+
+    assert_response :success
+
+    form = Nokogiri::HTML(response.body).at_css("form[action='#{perform_merge_categories_path}']")
+    assert_not_nil form
+
+    category_ids = form.css("[data-select-target='option']").map { |option| option["data-value"] }
+    source_ids = form.css("input[name='source_ids[]']").map { |input| input["value"] }
+    parent_index = category_ids.index(parent.id)
+    child_index = category_ids.index(child.id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+    assert_equal category_ids, source_ids
   end
 
   test "merge selected categories into an existing category" do

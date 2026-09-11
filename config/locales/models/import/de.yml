@@ -5,9 +5,14 @@ de:
       import:
         currency: Währung
         number_format: Zahlenformat
+        col_sep: Spaltentrennzeichen
+        col_seps:
+          comma: Komma (,)
+          semicolon: Semikolon (;)
     errors:
       models:
         import:
           attributes:
             raw_file_str:
               invalid_csv_format: ist kein gültiges CSV-Format
+          duplicate_headers: 'Nach der Normalisierung ergeben die CSV-Kopfzeilen doppelte Spalten: %{columns}'

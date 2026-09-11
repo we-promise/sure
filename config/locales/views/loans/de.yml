@@ -10,6 +10,12 @@ de:
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'
+      rate_type_adjustable: Anpassbar
+      rate_type_fixed: Fest
+      rate_type_variable: Variabel
+      none: Keine
+      subtype_none: Keine
+      subtype_prompt: Kreditart wählen
     new:
       title: Kreditdetails eingeben
     overview:
@@ -21,3 +27,26 @@ de:
       term: Laufzeit
       type: Typ
       unknown: Unbekannt
+    tabs:
+      schedule:
+        date: Datum
+        description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen und Zinsänderungen sind nicht berücksichtigt.
+        interest: Zinsen
+        monthly_payment: Monatsrate
+        number: "Nr."
+        payment: Rate
+        payoff_date: Ablösedatum
+        principal: Tilgung
+        remaining_balance: Restschuld
+        total_cost: Gesamtkosten
+        total_interest: Zinsen gesamt
+      overview:
+        edit_loan_details: Kreditdaten bearbeiten
+        interest_rate: Zinssatz
+        monthly_payment: Monatsrate
+        not_applicable: "–"
+        original_principal: Ursprüngliche Kreditsumme
+        remaining_principal: Restschuld
+        term: Laufzeit
+        type: Art
+        unknown: Unbekannt

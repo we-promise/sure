@@ -2,4 +2,4 @@
 zh-TW:
   invitation_mailer:
     invite_email:
-      subject: "%{inviter} 邀請您加入他們在 %{product_name} 的家庭帳號！"
+      subject: "%{inviter} 邀請您加入對方在 %{product_name} 的家庭帳號！"

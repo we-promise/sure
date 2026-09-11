@@ -370,7 +370,7 @@ export default class extends Controller {
     const shouldOpenUp = placement === "up" || (placement === "auto" && spaceBelow < menuHeight && spaceAbove > spaceBelow)
 
     this.menuTarget.style.left = "0"
-    this.menuTarget.style.width = "100%"
+    this.menuTarget.style.right = ""
     this.menuTarget.style.top = ""
     this.menuTarget.style.bottom = ""
     this.menuTarget.style.overflowY = "auto"
@@ -381,6 +381,15 @@ export default class extends Controller {
     } else {
       this.menuTarget.style.top = "100%"
       this.menuTarget.style.maxHeight = `${Math.max(0, spaceBelow - this.offsetValue)}px`
+    }
+
+    // A menu wider than its anchor (e.g. the split dialog's category select)
+    // can spill past the scroll container's right edge and force a horizontal
+    // scrollbar; anchor it to the right edge of the button instead.
+    const menuRect = this.menuTarget.getBoundingClientRect()
+    if (menuRect.right > containerRect.right) {
+      this.menuTarget.style.left = "auto"
+      this.menuTarget.style.right = "0"
     }
   }
 }

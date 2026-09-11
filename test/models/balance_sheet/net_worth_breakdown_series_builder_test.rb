@@ -62,6 +62,43 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilderTest < ActiveSupport::TestCase
     assert groups.all? { |g| g[:color].present? }
   end
 
+  test "does not serialize a sub-unit residue the chart would plot as a move" do
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
+
+    # Both amounts print as $0.00, so the chart has to draw a flat line
+    create_balance(account: @asset_account, date: period.start_date, balance: 0.0001)
+    create_balance(account: @asset_account, date: period.end_date, balance: 0.0002)
+
+    series = builder.breakdown_series(period: period)
+
+    assert series[:values].size >= 2
+    series[:values].each do |point|
+      assert_equal 0, point[:value].amount
+      assert point[:trend].direction.flat?, "expected no change between values printing as $0.00"
+      assert point[:trend].percent.finite?, "expected a finite percentage"
+    end
+  end
+
+  test "serializes a nil trend percentage when displayed value increases from zero" do
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
+
+    create_balance(account: @asset_account, date: period.start_date, balance: 0.0001)
+    create_balance(account: @asset_account, date: period.end_date, balance: 1)
+
+    series = builder.breakdown_series(period: period)
+    parsed = JSON.parse(series.to_json)
+
+    assert_equal 0, series[:values].first[:value].amount
+    assert_equal 1, series[:values].last[:value].amount
+    assert_nil parsed["values"].last["trend"]["percent"]
+  end
+
+  test "cache key includes payload version" do
+    period = Period.custom(start_date: Date.new(2026, 6, 15), end_date: Date.new(2026, 7, 15))
+
+    assert_includes builder.send(:cache_key, period), BalanceSheet::NetWorthBreakdownSeriesBuilder::CACHE_VERSION
+  end
+
   private
     def builder
       BalanceSheet::NetWorthBreakdownSeriesBuilder.new(@family)

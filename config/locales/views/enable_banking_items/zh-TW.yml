@@ -1,49 +1,115 @@
 ---
 zh-TW:
   enable_banking_items:
+    errors:
+      api_error: 與銀行通訊時發生錯誤。
+      network_unreachable: 銀行服務暫時無法連線，請稍後再試。
+      session_invalid: 工作階段已過期，請重新連線您的銀行。
+      unexpected: 同步過程中發生未預期的錯誤。
     authorize:
-      authorization_failed: 啟動授權失敗
+      authorization_failed: 啟動授權失敗：%{message}
       bank_required: 請選擇一家銀行。
-      invalid_redirect: 收到的授權 URL 無效。請重試或聯絡支援人員。
-      redirect_uri_not_allowed: 不允許重新導向。請在 Enable Banking 應用設定中設定 `%{callback_url}`。
-      unexpected_error: 發生未預期的錯誤。請重試。
+      invalid_redirect: 收到的授權 URL 無效。請重試。
+      redirect_uri_not_allowed: 不允許重新導向。請在 Enable Banking 應用程式設定中設定 `%{callback_url}`。
+      unexpected_error: 發生預期之外的錯誤。請再試一次。
     callback:
       authorization_error: 授權失敗
       invalid_callback: 回呼參數無效。
-      item_not_found: 未找到連線。
+      item_not_found: 找不到連線。
       session_failed: 無法完成授權
       success: 已成功連線到您的銀行。您的帳戶正在同步中。
-      unexpected_error: 發生未預期的錯誤。請重試。
+      unexpected_error: 發生預期之外的錯誤。請再試一次。
     complete_account_setup:
-      all_skipped: 已跳過所有帳戶。您可以稍後在帳戶頁面進行設定。
+      all_skipped: 已跳過所有帳戶。您可以稍後在帳戶頁面設定。
       no_accounts: 沒有可設定的帳戶。
       success: 成功建立了 %{count} 個帳戶！
     create:
       success: Enable Banking 設定成功。
     destroy:
-      success: Enable Banking 連線已加入刪除隊列。
+      success: Enable Banking 連線已加入刪除佇列。
     link_accounts:
-      already_linked: 所選帳戶已關聯。
-      link_failed: 關聯帳戶失敗
+      already_linked: 所選帳戶已連結。
+      link_failed: 連結帳戶失敗
       no_accounts_selected: 未選擇任何帳戶。
       no_session: 無活躍的 Enable Banking 連線。請先連線一家銀行。
-      success: 成功關聯了 %{count} 個帳戶。
+      success: 已成功連結 %{count} 個帳戶。
     link_existing_account:
+      success: 帳戶已成功連結到 Enable Banking
       errors:
+        only_manual: 僅能連結手動管理的帳戶
         invalid_enable_banking_account: 所選 Enable Banking 帳戶無效
-        only_manual: 只能關聯手動帳戶
-      success: 帳戶已成功關聯到 Enable Banking
+    enable_banking_item:
+      deletion_in_progress: 正在刪除
+      provider_name: Enable Banking
+      syncing: 同步中...
+      reconnect: 重新連線
+      last_synced: 上次同步於 %{time}前
+      never_synced: 從未同步
+      update: 更新
+      delete: 刪除
+      setup_needed: 需要設定
+      setup_needed_description:
+        one: 有 1 個從 Enable Banking 匯入的帳戶需要設定
+        other: 有 %{count} 個從 Enable Banking 匯入的帳戶需要設定
+      set_up_accounts: 設定帳戶
+      no_accounts_found: 找不到帳戶
+      no_accounts_found_description: 在 Enable Banking 找不到任何帳戶，請再同步一次。
+    select_existing_account:
+      title: 連結 Enable Banking 帳戶
+      all_linked: 所有 Enable Banking 帳戶看起來都已經連結過了。
+      try_after_sync: 如果您剛完成連線或同步，請在同步完成後再試一次。
+      unlink_to_move: 要改連結別的帳戶，請先從該帳戶的動作選單取消連結。
+      balance: 餘額
+      link: 連結
+      cancel: 取消
+    setup_accounts:
+      title: 設定您的 Enable Banking 帳戶
+      header_subtitle: 為您匯入的帳戶選擇正確的帳戶類型
+      choose_account_type: 請為每個 Enable Banking 帳戶選擇正確的帳戶類型：
+      historical_data_range: 歷史資料範圍：
+      sync_start_date_label: 開始同步交易的日期：
+      sync_start_date_help: 選擇要往回同步多久的交易紀錄，最多可取得 2 年的歷史資料。
+      account_type_label: 帳戶類型：
+      balance: 餘額
+      create_accounts: 建立帳戶
+      creating_accounts: 正在建立帳戶...
+      cancel: 取消
     new:
-      link_enable_banking_title: 關聯 Enable Banking
+      link_enable_banking_title: 連結 Enable Banking
+      session_expired: 工作階段已過期 - 需要重新授權
+      connected_bank: 已連結的銀行
+      session_expires: 工作階段到期時間
+      unknown: 未知
+      connection: 連線
+      configured: 已設定
+      ready_to_connect: 可以開始連結銀行了
+      sync: 同步
+      reconnect: 重新連線
+      connect_bank: 連結銀行
+      remove_confirm: 確定要移除這個連線嗎？
+      remove: 移除
+      add_connection: 新增連線
+      not_configured: 尚未設定 Enable Banking 連線
+      not_configured_description: 連結 Enable Banking 帳戶之前，您需要先設定您的 Enable Banking 連線。
+      setup_steps_title: 設定步驟：
+      setup_step_1_html: 前往 <strong>設定 → 供應商</strong>
+      setup_step_2_html: 找到 <strong>Enable Banking</strong> 區塊
+      setup_step_3: 輸入您的 Enable Banking 憑證
+      setup_step_4: 回到這裡連結您的帳戶
+      go_to_provider_settings: 前往供應商設定
     reauthorize:
-      invalid_redirect: 收到的授權 URL 無效。請重試或聯絡支援人員。
+      invalid_redirect: 收到的授權 URL 無效。請重試。
       reauthorization_failed: 重新授權失敗
     select_bank:
+      beta_label: Beta
       cancel: 取消
       check_country: 請檢查您的國家代碼設定。
       credentials_required: 請先設定您的 Enable Banking 憑證。
       description: 選擇您想要連線到帳戶的銀行。
-      no_banks: 該國家/地區暫無可用銀行。
+      no_banks: 這個國家/地區目前沒有可用的銀行。
+      no_search_results: 沒有符合您搜尋條件的銀行。
+      search_label: 搜尋您的銀行
+      search_placeholder: 搜尋您的銀行...
       title: 選擇您的銀行
     update:
       success: Enable Banking 設定已更新。

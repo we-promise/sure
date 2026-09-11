@@ -3,15 +3,15 @@ de:
   coinbase_items:
     create:
       default_name: Coinbase
-      success: Mit Coinbase verbunden! Ihre Konten werden synchronisiert.
+      success: Mit Coinbase verbunden! Deine Konten werden abgeglichen.
     update:
       success: Coinbase-Konfiguration wurde erfolgreich aktualisiert.
     destroy:
       success: Coinbase-Verbindung wurde zur Löschung vorgemerkt.
     setup_accounts:
       title: Coinbase-Wallets importieren
-      subtitle: Wählen Sie die zu verfolgenden Wallets
-      instructions: Wählen Sie die Wallets zum Import. Nicht ausgewählte Wallets bleiben verfügbar für einen späteren Import.
+      subtitle: Wähl die zu verfolgenden Wallets
+      instructions: Wähl die Wallets zum Import. Nicht ausgewählte Wallets bleiben verfügbar für einen späteren Import.
       no_accounts: Alle Wallets wurden bereits importiert.
       accounts_count:
         one: "%{count} Wallet verfügbar"
@@ -43,9 +43,9 @@ de:
       update_credentials: Zugangsdaten aktualisieren
       delete: Löschen
       no_accounts_title: Keine Konten gefunden
-      no_accounts_message: Ihre Coinbase-Wallets erscheinen hier nach dem Sync.
+      no_accounts_message: Deine Coinbase-Wallets erscheinen hier nach dem Sync.
       setup_needed: Wallets bereit zum Import
-      setup_description: Wählen Sie die Coinbase-Wallets, die Sie verfolgen möchten.
+      setup_description: Wähl die Coinbase-Wallets, die du verfolgen willst.
       setup_action: Wallets importieren
       import_wallets_menu: Wallets importieren
       more_wallets_available:
@@ -54,8 +54,8 @@ de:
     select_existing_account:
       title: Coinbase-Konto verknüpfen
       no_accounts_found: Keine Coinbase-Konten gefunden.
-      wait_for_sync: Warten Sie, bis Coinbase die Synchronisation abgeschlossen hat
-      check_provider_health: Prüfen Sie, ob Ihre Coinbase-API-Zugangsdaten gültig sind
+      wait_for_sync: Warte, bis Coinbase die Synchronisation abgeschlossen hat
+      check_provider_health: Prüf, ob deine Coinbase-API-Zugangsdaten gültig sind
       balance: Saldo
       currently_linked_to: "Aktuell verknüpft mit: %{account_name}"
       link: Verknüpfen

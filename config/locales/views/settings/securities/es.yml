@@ -6,6 +6,10 @@ es:
         disable_mfa: Deshabilitar 2FA
         disable_mfa_confirm: ¿Estás seguro de que deseas deshabilitar la autenticación de 2FA? Esto hará que tu cuenta sea menos segura.
         enable_mfa: Habilitar 2FA
+        mfa_enabled_status_html: La autenticación en dos pasos está <span class="font-medium text-green-600">activada</span>
+        mfa_enabled_description: Tu cuenta está protegida con una capa adicional de seguridad.
+        mfa_disabled_status_html: La autenticación en dos pasos está <span class="font-medium text-red-600">desactivada</span>
+        mfa_disabled_description: Activa la verificación en dos pasos (2FA) para añadir una capa extra de seguridad a tu cuenta.
         mfa_description: Agrega una capa adicional de seguridad a tu cuenta al requerir un código de tu aplicación de autenticación al iniciar sesión
         mfa_title: Autenticación de 2FA
         webauthn_add: Añadir passkey o llave de seguridad

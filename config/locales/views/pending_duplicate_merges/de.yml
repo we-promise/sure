@@ -2,7 +2,7 @@
 de:
   pending_duplicate_merges:
     create:
-      no_posted_selected: Bitte wählen Sie eine gebuchte Transaktion zum Zusammenführen aus
+      no_posted_selected: Wähl eine gebuchte Transaktion zum Zusammenführen aus
       invalid_transaction: Ungültige Transaktion zum Zusammenführen ausgewählt
       merge_success: Ausstehende Transaktion mit gebuchter Transaktion zusammengeführt
       merge_failed: Transaktionen konnten nicht zusammengeführt werden
@@ -11,7 +11,7 @@ de:
     new:
       title: Mit gebuchter Transaktion zusammenführen
       warning_title: Manuelles Zusammenführen von Duplikaten
-      warning_description: Verwenden Sie dies, um eine ausstehende Transaktion manuell mit ihrer gebuchten Version zusammenzuführen. Dadurch wird die ausstehende Transaktion gelöscht und nur die gebuchte beibehalten.
+      warning_description: Damit führst du eine offene Transaktion von Hand mit ihrer gebuchten Fassung zusammen. Die offene Transaktion wird gelöscht, nur die gebuchte bleibt.
       pending_transaction: Ausstehende Transaktion
       select_posted: Gebuchte Transaktion zum Zusammenführen auswählen
       showing_range: "%{start} - %{end} werden angezeigt"

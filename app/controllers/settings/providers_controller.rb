@@ -2,6 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
 
   def show
     @breadcrumbs = [
@@ -153,6 +154,11 @@ class Settings::ProvidersController < ApplicationController
       redirect_to root_path, alert: t("settings.providers.not_authorized")
     end
 
+    def set_encryption_warning_context
+      @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
+        !ActiveRecordEncryptionConfig.explicitly_configured?
+    end
+
     # Reload provider configurations after settings update
     def reload_provider_configs(updated_fields)
       # Build a set of provider keys that had fields updated
@@ -184,6 +190,7 @@ class Settings::ProvidersController < ApplicationController
     FAMILY_PANELS = [
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
+      { key: "monobank",       title: "monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
@@ -195,9 +202,11 @@ class Settings::ProvidersController < ApplicationController
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
+      { key: "onchain_wallet", title: "On-chain wallets", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
       { key: "trading212",     title: "Trading 212",     turbo_id: "trading212", partial: "trading212_panel" },
+      { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
       { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
@@ -209,6 +218,7 @@ class Settings::ProvidersController < ApplicationController
     PANEL_SYNCABLE_TYPES = {
       "akahu"          => "AkahuItem",
       "up"             => "UpItem",
+      "monobank"       => "MonobankItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
@@ -220,10 +230,12 @@ class Settings::ProvidersController < ApplicationController
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
+      "onchain_wallet" => "OnchainWalletItem",
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
       "ibkr"           => "IbkrItem",
       "trading212"     => "Trading212Item",
+      "trade_republic" => "TradeRepublicItem",
       "indexa_capital" => "IndexaCapitalItem",
       "sophtron"       => "SophtronItem"
     }.freeze
@@ -234,6 +246,8 @@ class Settings::ProvidersController < ApplicationController
         @akahu_items = Current.family.akahu_items.active.ordered
       when "up"
         @up_items = Current.family.up_items.active.ordered
+      when "monobank"
+        @monobank_items = Current.family.monobank_items.active.ordered
       when "simplefin"
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
@@ -256,12 +270,16 @@ class Settings::ProvidersController < ApplicationController
         @binance_items = Current.family.binance_items.active.ordered
       when "kraken"
         @kraken_items = Current.family.kraken_items.active.ordered
+      when "onchain_wallet"
+        @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       when "snaptrade"
         @snaptrade_items = Current.family.snaptrade_items.includes(:snaptrade_accounts).ordered
       when "ibkr"
         @ibkr_items = Current.family.ibkr_items.ordered
       when "trading212"
         @trading212_items = Current.family.trading212_items.ordered
+      when "trade_republic"
+        @trade_republic_items = Current.family.trade_republic_items.ordered
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -281,6 +299,7 @@ class Settings::ProvidersController < ApplicationController
 
       @akahu_items = Current.family.akahu_items.active.ordered
       @up_items = Current.family.up_items.active.ordered
+      @monobank_items = Current.family.monobank_items.active.ordered
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
@@ -295,10 +314,12 @@ class Settings::ProvidersController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
-      @trading212_items = Current.family.trading212_items.ordered.select(:id)
+      @trading212_items = Current.family.trading212_items.ordered
+      @trade_republic_items = Current.family.trade_republic_items.ordered.select(:id)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
+      @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
@@ -319,6 +340,7 @@ class Settings::ProvidersController < ApplicationController
       {
         "akahu"          => @akahu_items,
         "up"             => @up_items,
+        "monobank"       => @monobank_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,
@@ -330,10 +352,12 @@ class Settings::ProvidersController < ApplicationController
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
+        "onchain_wallet" => @onchain_wallet_items,
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,
         "ibkr"           => @ibkr_items,
         "trading212"     => @trading212_items,
+        "trade_republic" => @trade_republic_items,
         "indexa_capital" => @indexa_capital_items,
         "sophtron"       => @sophtron_items
       }

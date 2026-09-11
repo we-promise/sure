@@ -1,0 +1,107 @@
+<%= content_for :page_title, @series.display_name %>
+
+<%# DEEP DIVE. Show me everything, and let me configure it.
+
+    This used to be a drawer dialog floating over an empty settings layout,
+    which meant the app had three renderings of a bill's detail and no page.
+    It is a page now, so the chart, the history and the configuration have
+    somewhere to live that is not the row expansion. %>
+
+<div class="space-y-4 pb-6 lg:pb-12">
+  <header class="flex items-start justify-between gap-3">
+    <div class="min-w-0 space-y-1.5">
+      <% if @series.category %>
+        <%= render "categories/badge", category: @series.category %>
+      <% end %>
+      <h1 class="text-xl font-medium text-primary"><%= @series.display_name %></h1>
+      <p class="text-sm text-secondary">
+        <%= frequency_label(@series) %>
+        <% if (progress = @series.installment_progress) %>
+          &middot; <%= t("bills.installment_progress", done_plus_one: [ progress.first + 1, progress.last ].min, total: progress.last) %>
+        <% end %>
+        &middot; <%= t("recurring_transactions.status.#{@series.status}") %>
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <%= render "recurring_transactions/pay_action", recurring_transaction: @series %>
+
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(
+             variant: "link",
+             text: t("bills.show.edit"),
+             icon: "pencil",
+             href: edit_recurring_transaction_path(@series),
+             data: { turbo_frame: :modal }) %>
+        <% if bills_one_shot_ai_available? %>
+          <% menu.with_item(
+               variant: "link",
+               text: t("bills.smart_configurations.show.trigger"),
+               icon: "sparkles",
+               href: smart_configuration_bill_path(@series),
+               data: { turbo_frame: :modal }) %>
+        <% end %>
+        <% menu.with_item(
+             variant: "button",
+             text: @series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+             icon: @series.active? ? "pause" : "play",
+             href: toggle_status_recurring_transaction_path(@series),
+             method: :post) %>
+        <% menu.with_item(
+             variant: "button",
+             text: t("recurring_transactions.actions.delete"),
+             icon: "trash-2",
+             href: recurring_transaction_path(@series),
+             method: :delete,
+             destructive: true,
+             confirm: t(@series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: @series.display_name)) %>
+      <% end %>
+    </div>
+  </header>
+
+  <%# The current obligation, and the way to resolve it. Unconditional: a
+      settled cycle still needs a route to unlinking a payment or reopening it,
+      and the drawer is the only place in the app that offers either. %>
+  <% if @current_occurrence %>
+    <div class="bg-container rounded-xl shadow-border-xs p-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="min-w-0 space-y-0.5">
+        <p class="text-lg font-medium text-primary privacy-sensitive">
+          <% if @current_occurrence.paid? %>
+            <%= t("bills.summary.paid_headline", amount: format_money(@current_occurrence.confirmed_allocated_money)) %>
+          <% else %>
+            <%= t("bills.summary.remaining", amount: format_money(@current_occurrence.remaining_amount_money)) %>
+          <% end %>
+        </p>
+        <p class="text-xs <%= @current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
+          <span class="privacy-sensitive">
+            <%= t("bills.partial_progress",
+                  paid: format_money(@current_occurrence.confirmed_allocated_money),
+                  expected: format_money(@current_occurrence.resolved_expected_amount_money)) %>
+          </span>
+          &middot; <%= occurrence_due_label(@current_occurrence) %>
+        </p>
+      </div>
+
+      <%= render DS::Link.new(
+            text: @current_occurrence.scheduled? ? t("bills.resolve") : t("bills.manage_payments"),
+            variant: "primary",
+            href: recurring_occurrence_path(@current_occurrence),
+            frame: :drawer
+          ) %>
+    </div>
+  <% end %>
+
+  <div class="bg-container rounded-xl shadow-border-xs p-4">
+    <%= render "bills/detail",
+          series: @series,
+          current_occurrence: @current_occurrence,
+          history: @history,
+          upcoming: @upcoming,
+          analytics: @analytics,
+          payment_history: @payment_history,
+          yearly_metrics: @yearly_metrics,
+          last_account: @last_account,
+          recent_allocations: @recent_allocations,
+          dense: false %>
+  </div>
+</div>

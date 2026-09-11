@@ -18,6 +18,7 @@ module Authentication
     def authenticate_user!
       if session_record = find_session_by_cookie
         Current.session = session_record
+        end_impersonation_if_target_inactive!
       else
         if self_hosted_first_login?
           redirect_to new_registration_url
@@ -29,18 +30,41 @@ module Authentication
 
     def find_session_by_cookie
       cookie_value = cookies.signed[:session_token]
+      return if cookie_value.blank?
 
-      if cookie_value.present?
-        Session.find_by(id: cookie_value)
-      else
-        nil
-      end
+      session_record = Session.includes(:user).find_by(id: cookie_value)
+      return session_record if session_record&.user&.active?
+
+      session_record&.destroy!
+      cookies.delete(:session_token)
+      nil
     end
 
     def create_session_for(user)
-      session = user.sessions.create!
-      cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
-      session
+      return false unless user&.persisted?
+
+      user.with_active_lock! do
+        session = user.sessions.create!
+        cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
+        session
+      end
+    rescue User::InactiveError
+      false
+    end
+
+    # If a super admin is currently impersonating a user who gets deactivated
+    # mid-session, end the impersonation (same mechanism as
+    # ImpersonationSessionsController#leave) rather than logging the admin out
+    # entirely — their own session is still valid.
+    def end_impersonation_if_target_inactive!
+      impersonation = Current.session&.active_impersonator_session
+      return unless impersonation && !impersonation.impersonated.active?
+
+      Rails.logger.warn(
+        "[AUTH] Ending impersonation_session_id=#{impersonation.id}: " \
+        "impersonated user_id=#{impersonation.impersonated_id} is deactivated"
+      )
+      Current.session.update!(active_impersonator_session: nil)
     end
 
     def self_hosted_first_login?

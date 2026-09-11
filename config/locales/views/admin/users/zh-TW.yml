@@ -1,0 +1,53 @@
+---
+zh-TW:
+  admin:
+    users:
+      index:
+        title: 使用者管理
+        description: 管理這個執行個體的使用者角色。超級管理員可以存取 SSO 供應商設定與使用者管理。
+        section_title: 家庭／群組
+        you: （您）
+        trial_ends_at: 試用結束
+        not_available: 不適用
+        no_users: 找不到使用者。
+        unnamed_family: 未命名的家庭／群組
+        no_subscription: 沒有訂閱
+        family_summary: '%{members} 位成員 · %{accounts} 個帳戶 · %{transactions} 筆交易'
+        filters:
+          role: 角色
+          role_all: 所有角色
+          trial_status: 試用狀態
+          trial_all: 全部
+          trial_expiring_soon: 7 天內到期
+          trial_trialing: 試用中
+          submit: 篩選
+        summary:
+          trials_expiring_7_days: 未來 7 天內到期的試用
+        table:
+          user: 使用者
+          trial_ends_at: 試用結束
+          family_accounts: 家庭帳戶數
+          family_transactions: 家庭交易數
+          last_login: 上次登入
+          session_count: 工作階段數
+          never: 從未
+          role: 角色
+        role_descriptions_title: 角色說明
+        roles:
+          guest: 訪客
+          member: 成員
+          admin: 管理員
+          super_admin: 超級管理員
+        role_descriptions:
+          guest: 以助手為主的體驗，權限刻意限制在入門流程所需的範圍內。
+          member: 一般使用者權限。可以管理自己的帳戶、交易與設定。
+          admin: 家庭管理員。可以存取 API 金鑰、匯入與 AI 提示詞等進階設定。
+          super_admin: 執行個體管理員。可以管理 SSO 供應商、使用者角色，並為了支援而模擬登入使用者。
+        invitations:
+          pending_label: 已邀請（待接受）
+          expires: '%{date} 到期'
+          delete: 刪除
+          delete_all: 全部刪除
+      update:
+        success: 使用者角色更新成功。
+        failure: 使用者角色更新失敗。

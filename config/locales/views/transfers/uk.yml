@@ -1,0 +1,49 @@
+uk:
+  transfers:
+    create:
+      success: Переказ створено
+    destroy:
+      success: Переказ видалено
+    form:
+      amount: Сума
+      bank_charges: Банківські комісії
+      outgoing_fee: Комісія за вихідний переказ
+      incoming_fee: Комісія за вхідний переказ
+      date: Дата
+      destination_amount: Сума призначення
+      destination_amount_display: "Сума призначення: %{amount}"
+      exchange_rate_display: "Обмінний курс: %{rate}"
+      expense: Витрата
+      from: З
+      income: Дохід
+      select_account: Вибрати рахунок
+      source_amount: Сума джерела
+      submit: Створити переказ
+      to: До
+      transfer: Переказ
+    new:
+      title: Новий переказ
+    show:
+      delete: Видалити переказ
+      delete_subtitle: Це видаляє переказ. Це не видалить базові транзакції.
+      delete_title: Видалити переказ?
+      details: Деталі
+      mark_recurring: Позначити як повторюваний
+      mark_recurring_subtitle: Відстежуйте цей переказ як повторюваний шаблон у майбутній стрічці та на сторінці повторюваних.
+      mark_recurring_title: Позначити переказ як повторюваний
+      note_label: Нотатки
+      note_placeholder: Додайте нотатку до цього переказу
+      overview: Огляд
+      settings: Налаштування
+      from: З
+      to: До
+      date: Дата
+      transfer_amount: Сума переказу
+      total: Всього
+      bank_charges: Банківські комісії
+      source_fee: Комісія джерела
+      destination_fee: Комісія призначення
+      category: Категорія
+      uncategorized: Без категорії
+    update:
+      success: Переказ оновлено

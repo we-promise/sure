@@ -109,6 +109,44 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "span", text: /\+\$78\.90/
   end
 
+  test "preferences page derives currency from the onboarding country" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='CAD']"
+  end
+
+  test "preferences page keeps the saved currency after preferences have been set" do
+    @family.update!(country: "CA", currency: "USD")
+    @user.update!(set_onboarding_preferences_at: Time.current)
+
+    get preferences_onboarding_url
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='USD']"
+  end
+
+  test "preferences page preserves an explicit currency override" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url, params: { currency: "USD" }
+
+    assert_response :success
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='USD']"
+  end
+
+  test "preferences page ignores an unsupported currency override" do
+    @family.update!(country: "CA", currency: "USD")
+
+    get preferences_onboarding_url, params: { currency: "NOPE" }
+
+    assert_response :success
+    assert_select "[data-onboarding-currency-override-value='false']"
+    assert_select "select[name='user[family_attributes][currency]'] option[selected][value='CAD']"
+  end
+
   test "preferences page shows date formatting example" do
   get preferences_onboarding_url
   assert_response :success
@@ -172,8 +210,11 @@ end
     private
 
       def sign_out
-        @user.sessions.each do |session|
-          delete session_path(session)
-        end
+        # Deleting sessions through the controller de-authenticates the request the
+        # moment our own session dies, so every later delete in the loop is a
+        # silent no-op and whichever sessions sort after it survive. The order is
+        # unspecified, which made every suite that signs out this way flaky.
+        # Teardown hygiene is not the behavior under test, so destroy directly.
+        @user.sessions.destroy_all
       end
 end

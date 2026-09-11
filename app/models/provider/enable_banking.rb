@@ -6,6 +6,11 @@ class Provider::EnableBanking
 
   BASE_URL = "https://api.enablebanking.com".freeze
 
+  # Progressive fallback windows (days) for retrying a transactions fetch when
+  # an ASPSP rejects the requested period (WRONG_TRANSACTIONS_PERIOD) without
+  # suggesting a corrected date_from in the response payload.
+  FALLBACK_TRANSACTIONS_DATE_FROM_DAYS = [ 89, 60, 30 ].freeze
+
   headers "User-Agent" => "Sure Finance Enable Banking Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
@@ -164,7 +169,7 @@ class Provider::EnableBanking
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
   # @return [Hash] Transactions and continuation_key for pagination
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
-                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retried_date_from: false)
+                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retry_attempt: 0)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
     query_params[:transaction_status] = transaction_status if transaction_status.present?
@@ -180,17 +185,17 @@ class Provider::EnableBanking
 
     handle_response(response)
   rescue EnableBankingError => e
-    corrected_date_from = e.corrected_date_from
+    next_date_from = next_transactions_date_from(e, date_from, retry_attempt)
 
-    if !retried_date_from && e.wrong_transactions_period? && corrected_date_from.present? && corrected_date_from != date_from
+    if next_date_from
       get_account_transactions(
         account_id: account_id,
-        date_from: corrected_date_from,
+        date_from: next_date_from,
         date_to: date_to,
         continuation_key: continuation_key,
         transaction_status: transaction_status,
         psu_headers: psu_headers,
-        retried_date_from: true
+        retry_attempt: retry_attempt + 1
       )
     else
       raise
@@ -200,6 +205,35 @@ class Provider::EnableBanking
   end
 
   private
+
+    # Decides the next date_from to retry a transactions fetch with after an
+    # ASPSP rejects the requested window with WRONG_TRANSACTIONS_PERIOD.
+    #
+    # Some ASPSPs (e.g. certain PT banks) return this error WITHOUT a corrected
+    # date_from in the payload, which defeated the previous single-shot retry.
+    # In that case we step through progressively shorter windows so the sync can
+    # still succeed instead of surfacing a generic error. Returns nil when no
+    # further retry should be attempted.
+    def next_transactions_date_from(error, current_date_from, retry_attempt)
+      return nil unless error.wrong_transactions_period?
+      return nil if retry_attempt > FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length
+
+      current = current_date_from&.to_date
+
+      # Prefer the ASPSP-suggested date on the first retry (original behaviour),
+      # but only when it actually moves the window forward.
+      if retry_attempt.zero?
+        corrected = error.corrected_date_from
+        return corrected if corrected.present? && (current.nil? || corrected > current)
+      end
+
+      # Otherwise pick the first progressively-shorter window that advances the
+      # window forward, skipping any window that is not newer than the current
+      # date_from. Moving strictly forward guarantees progress and termination.
+      FALLBACK_TRANSACTIONS_DATE_FROM_DAYS
+        .map { |days| days.days.ago.to_date }
+        .find { |candidate| current.nil? || candidate > current }
+    end
 
     def safe_psu_headers(headers)
       headers.except("Authorization", :Authorization, "Accept", :Accept, "Content-Type", :"Content-Type")
@@ -294,12 +328,22 @@ class Provider::EnableBanking
         @response_data = response_data
       end
 
+      # Different ASPSPs signal the same "requested date range exceeds the
+      # allowed lookback" condition with different payload shapes. Most use
+      # `{"error": "WRONG_TRANSACTIONS_PERIOD"}` (422), but some (e.g. N26)
+      # instead return `{"code": "PERIOD_INVALID", "detail": "dateFrom=...,dateTo=..."}`
+      # with a plain string `detail`, not a hash. (Issue #1262)
       def wrong_transactions_period?
-        error_type == :validation_error && response_data.is_a?(Hash) && response_data[:error] == "WRONG_TRANSACTIONS_PERIOD"
+        return false unless response_data.is_a?(Hash)
+
+        response_data[:error] == "WRONG_TRANSACTIONS_PERIOD" || response_data[:code] == "PERIOD_INVALID"
       end
 
       def corrected_date_from
-        value = response_data&.dig(:detail, :date_from)
+        detail = response_data.is_a?(Hash) ? response_data[:detail] : nil
+        return nil unless detail.is_a?(Hash)
+
+        value = detail[:date_from]
 
         if value.is_a?(Date)
           value

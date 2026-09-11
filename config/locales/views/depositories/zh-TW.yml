@@ -7,4 +7,20 @@ zh-TW:
       none: 無
       subtype_prompt: 選擇帳戶類型
     new:
-      title: 請輸入帳戶餘額
+      title: 輸入帳戶餘額
+    subtypes:
+      cd:
+        long: 定期存款 (CD)
+        short: 定存
+      checking:
+        long: 支票帳戶 (Checking)
+        short: 支票
+      hsa:
+        long: 健康儲蓄帳戶 (HSA)
+        short: HSA
+      money_market:
+        long: 貨幣市場帳戶
+        short: 貨幣市場
+      savings:
+        long: 儲蓄帳戶 (Savings)
+        short: 儲蓄

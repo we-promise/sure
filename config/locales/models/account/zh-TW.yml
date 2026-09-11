@@ -1,12 +1,25 @@
 ---
 zh-TW:
+  account_order:
+    balance_asc:
+      label: 餘額（低到高）
+      label_short: 餘額 ↑
+    balance_desc:
+      label: 餘額（高到低）
+      label_short: 餘額 ↓
+    name_asc:
+      label: 名稱（A-Z）
+      label_short: 名稱 ↑
+    name_desc:
+      label: 名稱（Z-A）
+      label_short: 名稱 ↓
   activerecord:
     attributes:
       account:
         balance: 餘額
         currency: 幣別
-        family: 家庭
-        family_id: 家庭
+        family: '%{moniker}'
+        family_id: '%{moniker}'
         name: 名稱
         subtype: 次類型
     models:

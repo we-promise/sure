@@ -1,0 +1,5 @@
+nb:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: Gå til Settings → Connect and manage apps → Developer tools → API tokens

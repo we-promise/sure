@@ -42,7 +42,10 @@
       <div class="space-y-2">
         <% all_connections.each do |entry| %>
           <% auto_open = all_connections.size == 1 %>
-          <%= render "settings/providers/connection_row", entry: entry, open: auto_open %>
+          <%= render "settings/providers/connection_row",
+                     entry: entry,
+                     open: auto_open,
+                     provider_setup_encryption_warning: @provider_setup_encryption_warning %>
         <% end %>
       </div>
     <% end %>

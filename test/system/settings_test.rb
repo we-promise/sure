@@ -52,6 +52,8 @@ class SettingsTest < ApplicationSystemTestCase
   test "can update self hosting settings" do
     sign_in users(:sure_support_staff)
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:anthropic).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(nil)
     Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)

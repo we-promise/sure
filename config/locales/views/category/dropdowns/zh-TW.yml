@@ -7,6 +7,6 @@ zh-TW:
         edit: 編輯分類
       show:
         clear: 清空分類
-        no_categories: 暫無分類
+        no_categories: 找不到分類
         recent: 最近使用
         search_placeholder: 搜尋分類

@@ -14,6 +14,7 @@ de:
       empty: Noch keine Tags vorhanden
       new: Neuer Tag
       tags: Tags
+      delete_all: Alle löschen
     new:
       new: Neuer Tag
     tag:
@@ -21,3 +22,5 @@ de:
       edit: Bearbeiten
     update:
       updated: Tag aktualisiert
+    destroy_all:
+      all_deleted: Alle Tags gelöscht

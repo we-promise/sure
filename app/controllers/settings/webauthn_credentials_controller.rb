@@ -15,7 +15,13 @@ class Settings::WebauthnCredentialsController < ApplicationController
         display_name: Current.user.display_name
       },
       exclude: Current.user.webauthn_credentials.pluck(:credential_id),
-      authenticator_selection: { user_verification: "preferred" },
+      # `resident_key: "preferred"` asks for a discoverable credential so the
+      # key can also be used for passwordless sign-in. "preferred" rather than
+      # "required" so authenticators without free resident-key slots (older
+      # security keys) can still register as a second factor. User verification
+      # stays "preferred" here for the same reason and is enforced as
+      # "required" on the passwordless sign-in ceremony instead.
+      authenticator_selection: { resident_key: "preferred", user_verification: "preferred" },
       attestation: "none"
     )
 

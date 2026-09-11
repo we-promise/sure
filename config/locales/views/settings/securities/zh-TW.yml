@@ -6,5 +6,26 @@ zh-TW:
         disable_mfa: 停用雙重驗證 (2FA)
         disable_mfa_confirm: 您確定要停用雙重驗證嗎？這將會降低您帳號的安全性。
         enable_mfa: 啟用雙重驗證 (2FA)
+        mfa_enabled_status_html: 雙重驗證<span class="font-medium text-green-600">已啟用</span>
+        mfa_enabled_description: 您的帳號已受到額外一層安全防護。
+        mfa_disabled_status_html: 雙重驗證<span class="font-medium text-red-600">已停用</span>
+        mfa_disabled_description: 啟用 2FA 可為您的帳號增加額外一層安全防護。
         mfa_description: 透過在登入時要求輸入驗證應用程式產生的代碼，為您的帳號增加額外的安全防護。
         mfa_title: 雙重驗證
+        webauthn_add: 新增密碼金鑰或安全金鑰
+        webauthn_added: 於 %{date} 新增
+        webauthn_description: 登入時可以用密碼金鑰、Touch ID、Windows Hello 或硬體安全金鑰作為第二道驗證。
+        webauthn_empty: 尚未註冊任何密碼金鑰或安全金鑰。
+        webauthn_last_used: 上次使用於 %{time_ago}前
+        webauthn_name_label: 金鑰名稱
+        webauthn_name_placeholder: MacBook Touch ID、YubiKey 等
+        webauthn_remove: 移除
+        webauthn_remove_confirm: 確定要移除此密碼金鑰或安全金鑰嗎？
+        webauthn_remove_confirm_body: 之後要再用它做登入驗證，就必須重新註冊一次。
+        webauthn_title: 密碼金鑰與安全金鑰
+        webauthn_unsupported: 這個瀏覽器不支援密碼金鑰或安全金鑰。
+  webauthn_credentials:
+    default_name: 安全金鑰
+    failure: 無法儲存該密碼金鑰或安全金鑰，請再試一次。
+    mfa_required: 請先啟用雙重驗證，才能新增密碼金鑰或安全金鑰。
+    success: 密碼金鑰或安全金鑰已移除。

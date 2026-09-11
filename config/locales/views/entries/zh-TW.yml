@@ -2,13 +2,22 @@
 zh-TW:
   entries:
     create:
-      success: 記錄已建立
+      success: 紀錄已建立
     destroy:
-      success: 記錄已刪除
+      success: 紀錄已刪除
     empty:
-      description: 嘗試新增記錄、編輯篩選條件或最佳化搜尋詞
-      title: 未找到相關記錄
+      description: 試試新增紀錄、編輯篩選條件或調整搜尋字詞
+      title: 找不到任何紀錄
     loading:
-      loading: 正在載入記錄...
+      loading: 正在載入紀錄...
     update:
-      success: 記錄已更新
+      success: 紀錄已更新
+    unlock:
+      success: 紀錄已解鎖，下次同步時可能會被更新。
+    protection:
+      tooltip: 受同步保護
+      title: 受同步保護
+      description: 您對這筆紀錄所做的修改不會被供應商的同步覆蓋。
+      locked_fields_label: 已鎖定的欄位：
+      unlock_button: 允許同步更新
+      unlock_confirm: 要允許同步更新這筆紀錄嗎？您的修改可能會在下次同步時被覆蓋。

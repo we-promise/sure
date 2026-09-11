@@ -1,6 +1,6 @@
 <%# locals: (breadcrumbs:) %>
 
-<div class="py-2 flex items-center gap-2">
+<div data-breadcrumbs class="py-2 flex items-center gap-2">
   <% breadcrumbs.each_with_index do |(name, path), index| %>
     <% if index > 0 %>
       <%= icon("chevron-right", color: "gray", size: "sm") %>

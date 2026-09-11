@@ -10,6 +10,7 @@ en:
         if the problem persists check the server logs for details.
       link_token_with_message: "Plaid couldn't open the connection: %{message}"
     plaid_item:
+      add_accounts: Add accounts
       add_new: Add new connection
       confirm_accept: Delete institution
       confirm_body: This will permanently delete all the accounts in this group and

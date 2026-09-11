@@ -1,0 +1,59 @@
+uk:
+  valuations:
+    confirmation_contents:
+      this_will: "Це %{action_verb} вартість рахунку на"
+      to_colon: "до:"
+      total_account_value: Загальна вартість рахунку
+      holdings_value: Вартість активів
+      brokerage_cash: Брокерські готівкові кошти
+      account_balance: баланс рахунку
+      credit_card_balance: баланс кредитної картки
+      loan_balance: баланс позики
+      property_value: вартість нерухомості
+      vehicle_value: вартість транспортного засобу
+      crypto_balance: криптовалютний баланс
+      asset_value: вартість активу
+      liability_balance: баланс зобов'язань
+      balance: баланс
+      "on": "на"
+      to: "до"
+      recalculate_notice: "Усі майбутні транзакції та баланси будуть перераховані на основі цієї %{change_or_update}."
+      change: зміни
+      update: оновлення
+    create:
+      account_updated: Рахунок оновлено
+    update:
+      account_updated: Рахунок оновлено
+      entry_updated: Запис оновлено
+    errors:
+      amount_required: Сума є обов'язковою
+    form:
+      amount: Сума
+      submit: Додати оновлення балансу
+    header:
+      balance: Баланс
+    index:
+      change: змінити
+      date: дата
+      new_entry: Новий запис
+      no_valuations: Для цього рахунку ще немає оцінок
+      valuations: Вартість
+      value: вартість
+    new:
+      title: Новий баланс
+    show:
+      amount: Сума
+      amount_label: Вартість рахунку на дату
+      date_label: Дата
+      delete: Видалити
+      delete_subtitle: Цю дію неможливо скасувати
+      delete_title: Видалити запис
+      details: Деталі
+      name_label: Назва
+      name_placeholder: Введіть назву для цього запису
+      note_label: Нотатки
+      note_placeholder: Додайте будь-які додаткові відомості про цей запис
+      overview: Огляд
+      settings: Налаштування
+      opening_balance: "Початковий баланс"
+      update_value: Оновити вартість

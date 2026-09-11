@@ -99,6 +99,9 @@ en:
       trigger_label: More info
     link:
       opens_in_new_tab: (opens in new tab)
+    icon_picker:
+      no_matching_icons: No matching icons
+      search_placeholder: Search icons...
   provider_sync_summary:
     title: Sync summary
     last_sync: "Last sync: %{time_ago} ago"

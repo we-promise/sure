@@ -92,6 +92,10 @@ GEM
       cgi
       connection_pool
       standardwebhooks
+    apnotic (1.8.0)
+      base64
+      connection_pool (>= 2, < 4)
+      net-http2 (>= 0.18.3, < 2)
     ast (2.4.3)
     attr_required (1.0.2)
     auth-sanitizer (0.2.3)
@@ -302,6 +306,7 @@ GEM
       turbo-rails (>= 1.2)
     htmlbeautifier (1.4.3)
     htmlentities (4.3.4)
+    http-2 (1.2.1)
     httparty (0.24.0)
       csv
       mini_mime (>= 1.0.0)
@@ -339,7 +344,7 @@ GEM
       actionview (>= 5.0.0)
       activesupport (>= 5.0.0)
     jmespath (1.6.2)
-    json (2.21.1)
+    json (2.21.2)
     json-jwt (1.16.7)
       activesupport (>= 4.2)
       aes_key_wrap
@@ -397,7 +402,7 @@ GEM
       zeitwerk (~> 2.5)
     lucide-rails (0.7.3)
       railties (>= 4.1.0)
-    mail (2.9.0)
+    mail (2.9.1)
       logger
       mini_mime (>= 0.1.1)
       net-imap
@@ -422,12 +427,14 @@ GEM
     mutex_m (0.3.0)
     net-http (0.9.1)
       uri (>= 0.11.1)
-    net-imap (0.6.4.1)
+    net-http2 (0.19.0)
+      http-2 (>= 1.0)
+    net-imap (0.6.6)
       date
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.2)
+    net-protocol (0.3.0)
       timeout
     net-smtp (0.5.1)
       net-protocol
@@ -869,6 +876,7 @@ DEPENDENCIES
   activerecord-import
   after_commit_everywhere (~> 1.0)
   anthropic (~> 1.0)
+  apnotic (~> 1.8)
   aws-sdk-s3 (~> 1.208.0)
   bcrypt (~> 3.1)
   benchmark-ips
@@ -961,6 +969,7 @@ DEPENDENCIES
   web-console
   webauthn (~> 3.4)
   webmock
+  websocket-driver (~> 0.8)
 
 RUBY VERSION
    ruby 3.4.9p82

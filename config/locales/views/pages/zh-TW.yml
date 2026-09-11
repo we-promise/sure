@@ -1,37 +1,120 @@
 ---
 zh-TW:
   pages:
+    feedback:
+      title: 意見回饋
+      heading: 留下意見回饋
+      description: 如果您有任何具體的意見，歡迎告訴我們。附上影片或截圖的連結也沒問題。
+      feature_request: 提出功能建議
+      bug_report: 回報問題
+      discuss: 和其他人討論 %{product}
+    intro:
+      not_authorized: 簡介只開放給訪客使用者。
+      welcome: 歡迎！
+      coming_soon: 簡介體驗即將推出
+      description: 我們正在打造更完整的新手導覽流程，以了解您的目標、里程碑與日常需求。目前請先到聊天側邊欄和 Sure 開始對話，告訴我們您目前的理財狀況。
+      start_chatting: 開始對話
+    redis_configuration_error:
+      page_title: 需要設定 Redis - Sure
+      heading: 需要設定 Redis
+      subheading: 您自行代管的 Sure 需要正確設定 Redis 才能運作。
+      why_required_title: 為什麼需要 Redis？
+      why_required_body: Sure 使用 Redis 來驅動 Sidekiq 背景工作，例如同步帳戶資料、處理匯入，以及其他讓您財務資料保持最新的背景作業。
+      view_setup_guide: 查看設定指南
+      setup_guide_hint: 依照我們完整的 Docker 設定指南來設定 Redis
+      refresh_hint: 設定好 Redis 之後，請重新整理這個頁面以繼續。
+      refresh_page: 重新整理頁面
     changelog:
       title: 更新日誌
+    release_notes_unavailable:
+      name: 無法取得版本資訊
+      body_html: <p>目前無法取得最新的版本資訊。請稍後再回來看看，或直接前往我們的 <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases 頁面</a>。</p>
+    privacy:
+      title: 隱私權政策
+      heading: 隱私權政策
+      placeholder: 隱私權政策的內容會顯示在這裡。
+    terms:
+      title: 服務條款
+      heading: 服務條款
+      placeholder: 服務條款的內容會顯示在這裡。
     dashboard:
-      welcome: "歡迎回來，%{name}"
-      subtitle: "這是您目前的財務概況"
-      new: "最新"
-      drag_to_reorder: "拖曳以重新排列區塊"
-      toggle_section: "切換區塊顯示狀態"
+      welcome: 歡迎回來，%{name}
+      subtitle: 這是您目前的財務概況
+      new: 新增帳戶
+      sections_aria_label: 儀表板區塊
+      drag_to_reorder: 拖曳以重新排列區塊
+      toggle_section: 切換區塊顯示狀態
+      widget_size:
+        label: 調整大小
+        width_label: 寬度
+        half: 半寬
+        full: 全寬
+        height_label: 高度
+        compact: 精簡
+        auto: 自動
+        tall: 加高
       net_worth_chart:
         data_not_available: 所選時段內無資料
-        title: 淨值
+        title: 淨資產
       no_account_empty_state:
         new_account: 新增帳戶
         no_account_subtitle: 尚未新增任何帳戶，因此目前無資料可顯示。請新增您的第一個帳戶以開始查看儀表板內容。
         no_account_title: 尚無帳戶
       balance_sheet:
-        title: "資產負債表"
-        no_items: "尚無 %{name}"
-        add_accounts: "新增您的 %{name} 帳戶以查看詳細分析"
+        title: 資產負債表
+        no_items: 尚無 %{name}
+        add_accounts: 新增您的 %{name} 帳戶以查看詳細分析
+        no_asset: 還沒有任何資產
+        no_liability: 還沒有任何負債
+        add_asset_accounts: 新增您的資產帳戶就能看到完整的明細
+        add_liability_accounts: 新增您的負債帳戶就能看到完整的明細
+        name: 名稱
+        weight: 占比
+        value: 金額
+        classifications:
+          asset: 資產
+          liability: 負債
+      insights_feed:
+        title: 洞察
       cashflow_sankey:
-        title: "現金流"
-        no_data_title: "此時段內無現金流資料"
-        no_data_description: "新增交易紀錄以顯示現金流資料，或擴大時間範圍"
-        add_transaction: "新增交易"
+        title: 現金流
+        zoom_out: 回到完整現金流
+        no_data_title: 此時段內無現金流資料
+        no_data_description: 新增交易紀錄以顯示現金流資料，或擴大時間範圍
+        add_transaction: 新增交易
       no_accounts:
-        title: "尚無帳戶"
-        description: "新增帳戶以顯示淨值資料"
-        add_account: "新增帳戶"
+        title: 尚無帳戶
+        description: 新增帳戶以顯示淨資產資料
+        add_account: 新增帳戶
       outflows_donut:
-        title: "現金流出"
-        total_outflows: "總流出量"
-        categories: "類別"
-        value: "金額"
-        weight: "占比"
+        title: 現金流出
+        total_outflows: 流出總額
+        categories: 分類
+        value: 金額
+        weight: 占比
+      investment_summary:
+        title: 投資
+        total_return: 總報酬
+        holding: 持股
+        weight: 占比
+        value: 金額
+        return: 報酬
+        period_activity: '%{period}活動'
+        contributions: 投入
+        withdrawals: 提領
+        trades: 證券交易
+        no_investments: 沒有投資帳戶
+        add_investment: 新增一個投資帳戶來追蹤您的投資組合
+      money_flow:
+        title: 資金流入 / 流出
+        date_range: '%{start_date} 至 %{end_date}'
+        month_picker_aria_label: 選擇月份
+        filter_accounts: 篩選帳戶 (%{count})
+        filter_accounts_all: 所有帳戶
+        period_scope_hint: 顯示您在這裡選擇的月份，與上方儀表板的時間區間無關。
+        search_accounts: 搜尋帳戶
+        apply: 套用
+        balance: 交易餘額
+        chart_span: 最近 %{count} 個月
+        income: 收入
+        expenses: 支出

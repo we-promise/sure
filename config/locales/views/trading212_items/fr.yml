@@ -1,0 +1,102 @@
+---
+fr:
+  providers:
+    trading212:
+      connection_description: Connectez un compte d'investissement Trading 212 via une clé d'API
+      institution_name: Trading 212
+      name: Trading 212
+  trading212_items:
+    complete_account_setup:
+      none_created: Aucun compte n'a été créé.
+      none_selected: Aucun compte n'a été sélectionné.
+      success:
+        one: "%{count} compte Trading 212 créé avec succès."
+        other: "%{count} comptes Trading 212 créés avec succès."
+    create:
+      success: Trading 212 configuré avec succès.
+    defaults:
+      name: Trading 212
+    destroy:
+      success: Suppression de la connexion Trading 212 planifiée.
+    link_existing_account:
+      already_linked: Ce compte Trading 212 est déjà lié.
+      failed: Impossible de lier le compte Trading 212.
+      not_found: Compte ou configuration Trading 212 introuvable.
+      only_manual_investment: Seuls les comptes d'investissement manuels peuvent être liés à Trading 212.
+      success: Liaison au compte Trading 212 réussie.
+    select_accounts:
+      not_configured: Trading 212 n'est pas configuré.
+    select_existing_account:
+      balance: Solde
+      cancel: Annuler
+      link: Lier
+      no_accounts_available: Aucun compte Trading 212 non lié n'est disponible pour l'instant.
+      run_sync_hint: Lancez une synchronisation depuis Paramètres > Fournisseurs après avoir enregistré votre clé d'API.
+      title: Lier un compte Trading 212
+      wait_for_sync: Attendez la fin de la synchronisation de découverte des comptes.
+    setup_accounts:
+      available_accounts:
+        account_id: 'Identifiant du compte : %{account_id}'
+        account_summary: "%{account_type} • Solde : %{balance}"
+        account_type_investment: Investissement
+        title: Compte disponible
+      buttons:
+        back_to_settings: Retour aux paramètres
+        cancel: Annuler
+        create_selected_accounts: Créer les comptes sélectionnés
+        done: Terminé
+        link: Lier
+        refresh: Actualiser
+      dialog_title: Configurer votre compte Trading 212
+      info_box:
+        items:
+          item_1: Positions actuelles avec les cours et les quantités
+          item_2: Historique complet des ordres (achats et ventes)
+          item_3: Dividendes et opérations en espèces
+        title: Importation via l'API Trading 212
+      link_existing:
+        description: Ou liez le compte Trading 212 détecté à un compte d'investissement manuel existant.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Sélectionnez un compte...
+      linked_accounts:
+        linked_to_html: 'Lié à : %{account}'
+        title: Déjà lié
+      page_title: Configurer le compte Trading 212
+      status:
+        fetching_accounts: Récupération du compte depuis Trading 212...
+        no_accounts_found_description: Sure n'a trouvé aucun compte Trading 212. Vérifiez que votre clé d'API est valide.
+        no_accounts_found_title: Aucun compte trouvé.
+      subtitle: Liez votre compte d'investissement Trading 212.
+    sync:
+      status:
+        accounts_need_setup:
+          one: 1 compte Trading 212 à configurer...
+          other: "%{count} comptes Trading 212 à configurer..."
+        calculating_balances: Calcul des soldes...
+        checking_configuration: Vérification de la configuration des comptes...
+        checking_credentials: Vérification des identifiants Trading 212...
+        importing_account: Importation du compte Trading 212...
+        processing_activity: Traitement des positions et de l'activité...
+    sync_status:
+      all_linked:
+        one: 1 compte lié
+        other: "%{count} comptes liés"
+      no_accounts: Aucun compte Trading 212 détecté pour l'instant
+      partial: "%{linked} liés, %{unlinked} à configurer"
+    trading212_item:
+      accounts_need_setup: Compte à configurer
+      accounts_need_setup_description: Votre compte Trading 212 doit être lié à un compte Sure.
+      delete: Supprimer
+      deletion_in_progress: Suppression en cours
+      environment_label_demo: Compte de démonstration
+      environment_label_live: Compte réel
+      error: Erreur
+      never_synced: Jamais synchronisé.
+      no_accounts_discovered: Aucun compte Trading 212 détecté pour l'instant.
+      no_accounts_discovered_description: Lancez une synchronisation après avoir enregistré votre clé d'API pour détecter votre compte.
+      requires_update: La clé d'API requiert votre attention
+      setup_accounts: Configurer les comptes
+      synced: Synchronisé il y a %{time}. %{summary}.
+      syncing: Synchronisation
+    update:
+      success: Configuration Trading 212 mise à jour avec succès.

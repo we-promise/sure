@@ -1,0 +1,8 @@
+---
+zh-TW:
+  messages:
+    create:
+      chat_not_found: 此對話已不存在。
+    chat_form:
+      placeholder: 什麼都可以問...
+      disclaimer: AI 的回覆僅供參考，並非財務建議！

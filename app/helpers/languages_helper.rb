@@ -49,6 +49,7 @@ module LanguagesHelper
     nl: "Dutch",
     'no-NO': "Norwegian (Norway)",
     pl: "Polish",
+    'pt-PT': "Portuguese (Portugal)",
     'pt-BR': "Portuguese (Brazil)",
     pt: "Portuguese",
     sk: "Slovak",
@@ -166,12 +167,14 @@ module LanguagesHelper
     "ro",   # Romanian
     "ru",   # Russian
     "pl",   # Polish
+    "pt-PT", # Portuguese (Portugal)
     "pt-BR", # Brazilian Portuguese
     "zh-CN", # Chinese (Simplified)
     "zh-TW",  # Chinese (Traditional)
     "nl",   # Dutch
     "hu",   # Hungarian
-    "vi"    # Vietnamese
+    "vi",   # Vietnamese
+    "uk"    # Ukrainian
   ].freeze
 
   COUNTRY_MAPPING = {

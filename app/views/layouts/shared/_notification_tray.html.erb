@@ -6,4 +6,12 @@
 
   <div id="sync-toast"></div>
   <div id="cta"></div>
+
+  <%# Announces an action that changed the page without leaving anything on
+      screen to read — a turbo_stream can update this instead of rendering a
+      toast. It has to live here, outside every stream target, and be present
+      before the change: a live region that arrives with its own content is not
+      announced. Update it (don't append) so messages replace rather than pile
+      up. Empty and visually hidden, so it costs nothing when unused. %>
+  <div id="aria-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 </div>

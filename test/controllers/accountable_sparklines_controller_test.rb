@@ -10,6 +10,22 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders an empty series without a trend" do
+    empty_series = Series.new(
+      start_date: 1.day.ago.to_date,
+      end_date: Date.current,
+      interval: "1 day",
+      values: []
+    )
+    Rails.cache.clear
+    Balance::ChartSeriesBuilder.any_instance.expects(:balance_series).returns(empty_series)
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+    assert_select "p.font-mono", count: 0
+  end
+
   test "linked investment sparkline does not load full account records" do
     AccountProvider.create!(
       account: accounts(:investment),

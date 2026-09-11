@@ -1,6 +1,7 @@
 ---
 nl:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Bevestigen
       body_html: "<p>U kunt deze beslissing niet ongedaan maken</p>"
@@ -16,5 +17,10 @@ nl:
       exchange_rate_help: Kies hoe u het bedrag wilt invoeren.
     syncing_notice:
       syncing: Accountsgegevens synchroniseren...
+    family_moniker:
+      group_plural: Groepen
+      group_singular: Groep
+      plural: Families
+      singular: Familie
     trend_change:
       no_change: "geen verandering"

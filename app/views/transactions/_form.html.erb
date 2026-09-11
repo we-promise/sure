@@ -1,6 +1,6 @@
 <%# locals: (entry:, account_currencies:, manual_accounts:, categories:, merchants:, tags:) %>
 
-<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
+<%= styled_form_with model: entry, url: transactions_path, class: "space-y-4", data: { controller: "transaction-form", action: "turbo:before-cache@document->transaction-form#refreshIdempotencyKey pageshow@window->transaction-form#refreshIdempotencyKeyIfPersisted", transaction_form_exchange_rate_url_value: exchange_rate_path, transaction_form_account_currencies_value: account_currencies.to_json } do |f| %>
   <% if entry.errors.any? %>
     <%= render "shared/form_errors", model: entry %>
   <% end %>
@@ -10,6 +10,17 @@
 
     <%= f.hidden_field :nature, value: params[:nature] || "outflow", data: { "transaction-type-tabs-target": "natureField" } %>
     <%= f.hidden_field :entryable_type, value: "Transaction" %>
+    <%# Anti-double-submit token: a fresh UUID per page load, echoed back on
+        submit. TransactionsController#create uses it to recognize a repeat
+        submission (double-click, retry, or a genuine concurrent race) and
+        avoid creating a duplicate transaction.
+        transaction_form_controller#refreshIdempotencyKey replaces this value
+        on turbo:before-cache (Turbo's own snapshot cache) and on a
+        persisted pageshow (the browser's native bfcache), so a page
+        restored via either path - browser back, duplicated tab - can't
+        replay a token that already committed an entry and silently
+        redirect a distinct submission onto that old one. %>
+    <%= hidden_field_tag "entry[idempotency_key]", new_transaction_idempotency_key, data: { "transaction-form-target": "idempotencyKey" } %>
   </section>
 
   <section class="space-y-2">
@@ -18,7 +29,7 @@
     <% if @entry.account_id %>
       <%= f.hidden_field :account_id, data: { transaction_form_target: "account" } %>
     <% else %>
-      <%= f.collection_select :account_id, manual_accounts, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo }, required: true, class: "form-field__input text-ellipsis", data: { transaction_form_target: "account", action: "change->transaction-form#checkCurrencyDifference" } %>
+      <%= f.collection_select :account_id, manual_accounts, :id, :name, { prompt: t(".account_prompt"), label: t(".account"), selected: Current.user.default_account_for_transactions&.id, variant: :logo, searchable: true }, required: true, class: "form-field__input text-ellipsis", data: { transaction_form_target: "account", action: "change->transaction-form#checkCurrencyDifference" } %>
     <% end %>
 
     <%= f.money_field :amount,
@@ -29,7 +40,12 @@
       currency_data: { transaction_form_target: "currency", action: "change->transaction-form#onCurrencyChange" } %>
 
     <%= f.fields_for :entryable do |ef| %>
-      <%= ef.collection_select :category_id, categories, :id, :name, { prompt: t(".category_prompt"), label: t(".category"), variant: :badge, searchable: true } %>
+      <%= render DS::CategorySelect.new(
+      form: ef,
+      categories: categories,
+      selected_id: ef.object.category_id,
+      blank_label: t(".category_prompt")
+    ) %>
     <% end %>
 
     <%= f.date_field :date,
@@ -85,14 +101,14 @@
   <%= render DS::Disclosure.new(title: t(".details")) do %>
     <section class="space-y-2">
       <%= f.fields_for :entryable do |ef| %>
-        <%= ef.collection_select :merchant_id,
-                  merchants,
-                  :id, :name,
-                  { include_blank: t(".none"),
-                    label: t(".merchant_label"),
-                    variant: :logo,
-                    searchable: true,
-                    menu_placement: :auto } %>
+        <%= render DS::MerchantSelect.new(
+              form: ef,
+              method: :merchant_id,
+              merchants: merchants,
+              selected_id: ef.object.merchant_id,
+              include_blank: t(".none"),
+              label: t(".merchant_label")
+            ) %>
         <%= render DS::TagSelect.new(
               form: ef,
               tags: tags,

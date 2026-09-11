@@ -1,0 +1,5 @@
+ca:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: Ves a Settings → Connect and manage apps → Developer tools → API tokens

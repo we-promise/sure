@@ -19,7 +19,7 @@
                                  min: 0,
                                  step: 0.005 %>
         <%= loan_form.select :rate_type,
-                           [["Fixed", "fixed"], ["Variable", "variable"], ["Adjustable", "adjustable"]],
+                           [[t("loans.form.rate_type_fixed"), "fixed"], [t("loans.form.rate_type_variable"), "variable"], [t("loans.form.rate_type_adjustable"), "adjustable"]],
                            { label: t("loans.form.rate_type") } %>
       </div>
 

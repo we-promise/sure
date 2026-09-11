@@ -3,11 +3,16 @@ zh-TW:
   activerecord:
     attributes:
       import:
-        currency: 貨幣
+        col_sep: 欄位分隔符號
+        col_seps:
+          comma: 逗號 (,)
+          semicolon: 分號 (;)
+        currency: 幣別
         number_format: 數字格式
     errors:
       models:
         import:
+          duplicate_headers: CSV 標題正規化後出現重複的欄位：%{columns}
           attributes:
             raw_file_str:
               invalid_csv_format: 格式無效，不是合法的 CSV 格式

@@ -1,4 +1,4 @@
-<span data-controller="DS--tooltip" data-DS--tooltip-placement-value="<%= placement %>" data-DS--tooltip-offset-value="<%= offset %>" data-DS--tooltip-cross-axis-value="<%= cross_axis %>" class="inline-flex">
+<span data-controller="DS--tooltip" data-DS--tooltip-placement-value="<%= placement %>" data-DS--tooltip-offset-value="<%= offset %>" data-DS--tooltip-cross-axis-value="<%= cross_axis %>" class="<%= class_names("inline-flex", html_class) %>">
   <% if as == :button %>
     <%# Wrap the trigger icon in a focusable `<button>` so AT users (and
         keyboard-only users) can land on the tooltip anchor. The Lucide
@@ -13,14 +13,14 @@
     </button>
   <% else %>
     <%# `as: :span` — used when the tooltip is rendered inside an
-        already-focusable interactive ancestor (e.g. `<summary>`),
-        where the HTML spec forbids nested interactive content.
-        Keyboard reveal is wired in the controller, which (in addition
-        to listening on the outer span for the standalone case) also
-        binds `focusin/focusout/keydown` on the closest `<summary>`
+        already-focusable interactive ancestor (`<a>`, `<summary>`, …),
+        where nested interactive content is forbidden or undesirable.
+        Keyboard reveal is wired in the controller, which also binds
+        `focusin/focusout/keydown` on the closest `a`/`summary`
         ancestor — because `focusin` only bubbles UP, a listener on
         this descendant span would never fire when the ancestor
-        disclosure receives focus. %>
+        receives focus. Pass `html_class:` (e.g. size-full) when the
+        wrapper should fill an icon-only link's hit target. %>
     <span class="inline-flex items-center"
           aria-describedby="<%= tooltip_id %>">
       <%= helpers.icon icon_name, size: size, color: color %>

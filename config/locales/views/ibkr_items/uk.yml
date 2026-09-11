@@ -1,0 +1,92 @@
+---
+uk:
+  providers:
+    ibkr:
+      name: "Interactive Brokers"
+      connection_description: "Підключити звіт Interactive Brokers Flex Web Service"
+      institution_name: "Interactive Brokers"
+  ibkr_items:
+    defaults:
+      name: "Interactive Brokers"
+    ibkr_item:
+      deletion_in_progress: "Видалення в процесі"
+      flex_web_service: "Flex Web Service"
+      syncing: "Синхронізація"
+      requires_update: "Облікові дані потребують уваги"
+      error: "Помилка"
+      synced: "Синхронізовано %{time} тому. %{summary}."
+      never_synced: "Ніколи не синхронізовано."
+      setup_accounts: "Налаштувати рахунки"
+      delete: "Видалити"
+      accounts_need_setup: "Рахунки потребують налаштування"
+      accounts_need_setup_description: "Деякі рахунки з IBKR потрібно прив'язати до рахунків Sure."
+      no_accounts_discovered: "Рахунків IBKR ще не знайдено."
+      no_accounts_discovered_description: "Запустіть синхронізацію після налаштування вашого запиту Flex, щоб знайти рахунки."
+    setup_accounts:
+      page_title: "Налаштувати рахунки Interactive Brokers"
+      dialog_title: "Налаштуйте свої рахунки Interactive Brokers"
+      subtitle: "Виберіть, які брокерські рахунки IBKR прив'язати."
+      info_box:
+        title: "Імпорт запиту IBKR Flex"
+        items:
+          item_1: "Активи з поточними цінами та кількістю"
+          item_2: "Базова вартість за позицією"
+          item_3: "Угоди, дивіденди, комісії та готівкові депозити або зняття"
+        warning: "Історична активність обмежена вікном звіту запиту Flex"
+      status:
+        fetching_accounts: "Отримання рахунків з Interactive Brokers..."
+        no_accounts_found_title: "Рахунків не знайдено."
+        no_accounts_found_description: "Sure не зміг знайти жодного рахунку IBKR в останньому звіті Flex."
+      available_accounts:
+        title: "Доступні рахунки"
+        account_type_investment: "Інвестиції"
+        account_summary: "%{account_type} • Баланс: %{balance}"
+        account_id: "ID рахунку: %{account_id}"
+      link_existing:
+        description: "Або прив'яжіть знайдений рахунок IBKR до існуючого ручного інвестиційного рахунку."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Вибрати рахунок..."
+      linked_accounts:
+        title: "Вже прив'язано"
+        linked_to_html: "Прив'язано до: %{account}"
+      buttons:
+        refresh: "Оновити"
+        cancel: "Скасувати"
+        back_to_settings: "Назад до налаштувань"
+        create_selected_accounts: "Створити вибрані рахунки"
+        link: "Прив'язати"
+        done: "Готово"
+    sync_status:
+      no_accounts: "Рахунків IBKR ще не знайдено"
+      all_linked:
+        one: "1 рахунок прив'язано"
+        other: "%{count} рахунків прив'язано"
+      partial: "%{linked} прив'язано, %{unlinked} потребують налаштування"
+    select_existing_account:
+      title: "Прив'язати рахунок Interactive Brokers"
+      no_accounts_available: "Ще немає доступних неприв'язаних рахунків Interactive Brokers."
+      run_sync_hint: "Запустіть синхронізацію з Налаштування > Постачальники після оновлення вашого запиту Flex."
+      wait_for_sync: "Зачекайте, поки завершиться синхронізація для виявлення рахунків."
+      balance: "Баланс"
+      link: "Прив'язати"
+      cancel: "Скасувати"
+    create:
+      success: "Успішно налаштовано Interactive Brokers."
+    update:
+      success: "Успішно оновлено конфігурацію Interactive Brokers."
+    destroy:
+      success: "Заплановано видалення підключення Interactive Brokers."
+    select_accounts:
+      not_configured: "Interactive Brokers не налаштовано."
+    link_existing_account:
+      not_found: "Рахунок або конфігурацію Interactive Brokers не знайдено."
+      only_manual_investment: "Лише ручні інвестиційні рахунки можна прив'язати до Interactive Brokers."
+      already_linked: "Цей рахунок Interactive Brokers уже прив'язано."
+      success: "Успішно прив'язано до рахунку Interactive Brokers."
+      failed: "Не вдалося прив'язати рахунок Interactive Brokers."
+    complete_account_setup:
+      success:
+        one: "Успішно створено %{count} рахунок Interactive Brokers."
+        other: "Успішно створено %{count} рахунків Interactive Brokers."
+      none_selected: "Не вибрано жодного рахунку."
+      none_created: "Не створено жодного рахунку."

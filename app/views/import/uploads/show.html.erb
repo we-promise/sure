@@ -58,7 +58,7 @@
       <%= form.select :account_id,
             Current.user.accessible_accounts.visible.alphabetically.pluck(:name, :id),
             { label: t(".qif_account_label"), include_blank: t(".qif_account_placeholder"), selected: @import.account_id },
-            required: true %>
+            required: false %>
 
       <label for="import_import_file" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
         <div class="flex flex-col items-center justify-center pt-5 pb-6">

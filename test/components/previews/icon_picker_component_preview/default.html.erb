@@ -1,0 +1,5 @@
+<div data-controller="color-icon-picker">
+  <%= form_with model: Category.new, url: "#" do |f| %>
+    <%= render DS::IconPicker.new(form: f, method: :lucide_icon, icons: icons) %>
+  <% end %>
+</div>

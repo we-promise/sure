@@ -1,0 +1,238 @@
+uk:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Керуйте тим, як нові люди реєструються у вашому екземплярі %{product}.
+        email_confirmation_description: Коли ввімкнено, користувачі повинні підтверджувати свою адресу електронної пошти під час її зміни.
+        email_confirmation_title: Вимагати підтвердження електронної пошти
+        default_family_title: Сім'я за замовчуванням для нових користувачів
+        default_family_description: "Додавати нових користувачів до цієї сім'ї/групи, лише якщо у них немає запрошення."
+        default_family_none: Немає (створити нову сім'ю)
+        generate_tokens: Згенерувати новий код
+        generated_tokens: Згенеровані коди
+        title: Онбординг
+        states:
+          open: Відкрито
+          closed: Закрито
+          invite_only: Лише за запрошеннями
+      show:
+        general: Загальні налаштування
+        ai_assistant: AI-помічник
+        financial_data_providers: Постачальники фінансових даних
+        sync_settings: Налаштування синхронізації
+        invites: Коди запрошень
+        title: Самостійний хостинг
+        danger_zone: Небезпечна зона
+        clear_cache: Очистити кеш даних
+        clear_cache_warning: Очищення кешу даних видалить усі курси обміну, ціни на цінні папери, баланси рахунків та інші дані. Це не видалить облікові записи, транзакції, категорії та інші дані, що належать користувачеві.
+        confirm_clear_cache:
+          title: Очистити кеш даних?
+          body: Ви впевнені, що хочете очистити кеш даних? Це видалить усі курси обміну, ціни на цінні папери, баланси рахунків та інші дані. Цю дію неможливо скасувати.
+      provider_selection:
+        exchange_rate_title: Постачальник курсів обміну
+        exchange_rate_description: Виберіть одного постачальника для отримання курсів обміну валют.
+        exchange_rate_provider_label: Постачальник курсів обміну
+        securities_title: Постачальники цінних паперів
+        securities_description: Увімкніть одного або кількох постачальників для отримання цін на акції, ETF та взаємні фонди. Під час пошуку запитуються всі ввімкнені постачальники, а результати об'єднуються.
+        env_configured_message: Вибір постачальника вимкнено, оскільки встановлено змінні середовища. Щоб увімкнути вибір тут, видаліть ці змінні середовища з вашої конфігурації.
+        twelve_data_hint: потрібен ключ API, 800 кредитів/день
+        yahoo_finance_hint: безкоштовно, ключ API не потрібен
+        requires_api_key: потрібен ключ API
+        requires_api_key_eodhd: потрібен ключ API, ліміт 20 запитів/день
+        requires_api_key_alpha_vantage: потрібен ключ API, ліміт 25 запитів/день
+        mfapi_hint: безкоштовно, ключ API не потрібен -- лише індійські взаємні фонди
+        binance_public_hint: безкоштовно, ключ API не потрібен -- лише криптовалюта (BTC, ETH тощо)
+        moex_public_hint: безкоштовно, ключ API не потрібен -- російські акції, фонди та облігації (MOEX), вкл. RUB FX
+        tinkoff_invest_hint: потрібен токен лише для читання -- ціни на російські акції/фонди/облігації + логотипи брендів
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+      assistant_settings:
+        title: AI-помічник
+        description: Виберіть, як відповідатиме чат-помічник. Вбудований використовує безпосередньо налаштованого постачальника LLM. Зовнішній делегує віддаленому AI-агенту, який може звертатися до фінансових інструментів Sure через MCP.
+        type_label: Тип помічника
+        type_builtin: Вбудований (прямий LLM)
+        type_external: Зовнішній (віддалений агент)
+        external_status: Кінцева точка зовнішнього помічника
+        external_configured: Налаштовано
+        external_not_configured: Не налаштовано. Введіть URL-адресу та токен нижче або встановіть змінні середовища EXTERNAL_ASSISTANT_URL та EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: "Тип помічника заблоковано на '%{type}' через змінну середовища ASSISTANT_TYPE."
+        env_configured_external: Успішно налаштовано через змінні середовища.
+        url_label: URL-адреса кінцевої точки
+        url_placeholder: "https://your-agent-host/v1/chat"
+        url_help: Повна URL-адреса кінцевої точки API вашого агента. Ваш постачальник агента надасть вам це.
+        token_label: Токен API
+        token_placeholder: Введіть токен від вашого постачальника агента
+        token_help: Токен автентифікації, наданий вашим зовнішнім агентом. Він надсилається як токен Bearer з кожним запитом.
+        agent_id_label: ID агента (необов'язково)
+        agent_id_placeholder: "main (за замовчуванням)"
+        agent_id_help: Маршрутизує до певного агента, коли постачальник розміщує кілька. Залиште порожнім для значення за замовчуванням.
+        disconnect_title: Зовнішнє з'єднання
+        disconnect_description: Видаліть з'єднання із зовнішнім помічником і поверніться до вбудованого помічника.
+        disconnect_button: Відключити
+        confirm_disconnect:
+          title: Відключити зовнішнього помічника?
+          body: Це видалить збережену URL-адресу, токен та ID агента та переключиться на вбудованого помічника. Ви можете перепідключитися пізніше, ввівши нові облікові дані.
+      brand_fetch_settings:
+        description: Введіть ідентифікатор клієнта, наданий Brand Fetch
+        env_configured_message: Ви успішно налаштували свій ідентифікатор клієнта Brand Fetch за допомогою змінної середовища BRAND_FETCH_CLIENT_ID.
+        show_details: "(показати деталі)"
+        setup_step_1_html: 'Відвідайте <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> і створіть безкоштовний обліковий запис розробника Brand Fetch.'
+        setup_step_2_html: 'Перейдіть на сторінку <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        setup_step_3: 'Торкніться значка ока в розділі "Ваш ідентифікатор клієнта", щоб відкрити свій ідентифікатор клієнта, і вставте його нижче.'
+        label: Ідентифікатор клієнта
+        placeholder: Введіть свій ідентифікатор клієнта тут
+        title: Налаштування Brand Fetch
+        high_res_label: Увімкнути логотипи з високою роздільною здатністю
+        high_res_description: Коли ввімкнено, логотипи будуть отримуватися з роздільною здатністю 120x120 замість 40x40. Це забезпечує чіткіші зображення на дисплеях з високою щільністю пікселів.
+      llm_provider_selector:
+        title: Постачальник AI
+        description: Виберіть, який LLM живить AI-чат. Пакетні операції (категоризація транзакцій, виявлення продавців та обробка PDF) наразі завжди використовують OpenAI.
+        env_configured_message: Успішно налаштовано за допомогою змінної середовища LLM_PROVIDER.
+        provider_label: Активний постачальник LLM
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Зміна постачальників набуває чинності в наступному чаті. Налаштуйте облікові дані активного постачальника нижче.
+        not_configured_hint: "Додайте ключ API %{provider} нижче, щоб активувати його."
+        data_retention_heading: Обробка даних
+        data_retention: Вхідні дані API за замовчуванням не використовуються для навчання моделей; розміщені API постачальників зберігають дані протягом ~30 днів для довіри та безпеки. Користувацькі або самостійно розміщені кінцеві точки дотримуються вашої власної політики.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Введіть свій ключ API Anthropic. За бажанням вкажіть базову URL-адресу на AWS Bedrock або GCP Vertex.
+        env_configured_message: Успішно налаштовано за допомогою змінних середовища.
+        access_token_label: Ключ API
+        access_token_placeholder: Введіть свій ключ API Anthropic
+        base_url_label: Базова URL-адреса (необов'язково)
+        base_url_placeholder: "https://api.anthropic.com (за замовчуванням)"
+        model_label: Модель за замовчуванням (необов'язково)
+        model_placeholder: "claude-sonnet-4-6 (за замовчуванням)"
+        model_help: Використовується для чату та обробки PDF. Пакетні операції (категоризація, виявлення продавців) за замовчуванням використовують Haiku для економії.
+      openai_settings:
+        description: Введіть токен доступу та за бажанням налаштуйте власного постачальника, сумісного з OpenAI
+        env_configured_message: Успішно налаштовано за допомогою змінних середовища.
+        access_token_label: Токен доступу
+        access_token_placeholder: Введіть свій токен доступу тут
+        uri_base_label: Базова URL-адреса API (необов'язково)
+        uri_base_placeholder: "https://api.openai.com/v1 (за замовчуванням)"
+        model_label: Модель (необов'язково)
+        model_placeholder: "gpt-4.1 (за замовчуванням)"
+        json_mode_label: Режим JSON
+        json_mode_auto: Авто (рекомендовано)
+        json_mode_strict: Суворий (найкраще для моделей мислення)
+        json_mode_none: Немає (найкраще для стандартних моделей)
+        json_mode_json_object: Об'єкт JSON
+        json_mode_help: "Суворий режим найкраще працює з моделями мислення (qwen-thinking, deepseek-reasoner). Режим 'Немає' найкраще працює зі стандартними моделями (llama, mistral, gpt-oss)."
+        budget_heading: Бюджет токенів
+        budget_description: Застосовується до викликів, сумісних з OpenAI (чат, автокатегоризація, виявлення продавців та обробка PDF). Значення за замовчуванням є консервативними для локальних моделей з малим контекстом. Збільште для хмарних моделей з більшими вікнами контексту.
+        context_window_label: Вікно контексту (необов'язково)
+        context_window_help: "Загальна кількість токенів, яку прийме модель. За замовчуванням: 2048 — збільште до 8192+ для хмарних OpenAI або локальних моделей з великим контекстом."
+        max_response_tokens_label: Максимальна кількість токенів відповіді (необов'язково)
+        max_response_tokens_help: "Токени, зарезервовані для відповіді моделі. За замовчуванням: 512. Зменште, щоб звільнити місце для довшої історії."
+        max_items_per_call_label: Максимальна кількість елементів на пакет (необов'язково)
+        max_items_per_call_help: "Верхня межа для пакетів автокатегоризації / виявлення продавців. За замовчуванням: 25. Більші пакети автоматично розрізаються, щоб відповідати вікну контексту."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance надає безкоштовний доступ до цін на акції, курсів обміну та фінансових даних без необхідності ключа API.
+        status_healthy: Yahoo Finance активний і працює.
+        status_rate_limited: Yahoo Finance тимчасово обмежує кількість запитів.
+        rate_limited_title: Досягнуто ліміту запитів Yahoo Finance.
+        rate_limited_message: Жодних дій не потрібно. Sure уникатиме додаткових перевірок працездатності протягом 30 хвилин. Операції з цінами та курсами обміну продовжуються незалежно.
+        status_unavailable: Yahoo Finance наразі недоступний.
+        unavailable_title: Не вдалося перевірити Yahoo Finance.
+        unavailable_message: Не вдалося зв'язатися з Yahoo Finance або він повернув неочікувану відповідь. Перевірте своє інтернет-з'єднання та спробуйте ще раз пізніше.
+        status_unknown: Статус Yahoo Finance перевіряється.
+      tiingo_settings:
+        title: Tiingo
+        description: Введіть токен API, наданий Tiingo. Безкоштовний рівень підтримує 50 унікальних символів на годину з історичними даними за 30+ років.
+        env_configured_message: Успішно налаштовано за допомогою змінної середовища TIINGO_API_KEY.
+        label: Токен API
+        placeholder: Введіть свій токен API Tiingo тут
+        show_details: "(показати деталі)"
+        step_1_html: 'Відвідайте <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> і створіть безкоштовний обліковий запис.'
+        step_2_html: 'Перейдіть на сторінку <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.'
+        step_3: Скопіюйте свій токен API та вставте його нижче.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Введіть токен API T-Invest лише для читання. Використовується для отримання логотипів брендів для цінних паперів (вкл. фонди та облігації, навіть коли MOEX їх оцінює) та, коли ввімкнено вище, цін на російські інструменти.
+        env_configured_message: Успішно налаштовано за допомогою змінної середовища TINKOFF_INVEST_API_KEY.
+        label: Токен API
+        placeholder: Введіть свій токен API T-Invest тут
+        show_details: "(показати деталі)"
+        step_1: Відкрийте T-Bank інвестиції, потім Налаштування, потім Токени API (потрібен відкритий брокерський рахунок T-Bank).
+        step_2: Створіть токен з доступом лише для читання.
+        step_3: Скопіюйте токен і вставте його нижче.
+      eodhd_settings:
+        title: EODHD
+        description: Введіть токен API, наданий EODHD. Підтримує європейські ETF на LSE, XETRA та інших міжнародних біржах.
+        env_configured_message: Успішно налаштовано за допомогою змінної середовища EODHD_API_KEY.
+        label: Токен API
+        placeholder: Введіть свій токен API EODHD тут
+        show_details: "(показати деталі)"
+        step_1_html: 'Відвідайте <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> і створіть безкоштовний обліковий запис.'
+        step_2_html: 'Перейдіть на свою <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Панель керування</a>, щоб знайти свій токен API.'
+        step_3: Скопіюйте свій токен API та вставте його нижче.
+        rate_limit_warning: "Безкоштовний рівень EODHD обмежений 20 запитами API на день. Найкраще використовувати як додаткового постачальника для європейських ETF, недоступних від інших постачальників."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Введіть ключ API від Alpha Vantage. Підтримує європейські ETF на Лондонській фондовій біржі, XETRA та інших біржах.
+        env_configured_message: Успішно налаштовано за допомогою змінної середовища ALPHA_VANTAGE_API_KEY.
+        label: Ключ API
+        placeholder: Введіть свій ключ API Alpha Vantage тут
+        show_details: "(показати деталі)"
+        step_1_html: 'Відвідайте <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> і отримайте свій безкоштовний ключ API.'
+        step_2: Скопіюйте ключ API та вставте його нижче.
+        rate_limit_warning: "Безкоштовний рівень Alpha Vantage обмежений 25 запитами API на день. Найкраще використовувати як додаткового постачальника для європейських ETF, недоступних від інших постачальників."
+        no_health_check_note: "Перевірка працездатності з'єднання недоступна для цього постачальника через суворе обмеження швидкості."
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} щоденних запитів API використано (%{percentage})"
+        description: Введіть ключ API, наданий Twelve Data
+        env_configured_message: Успішно налаштовано за допомогою змінної середовища TWELVE_DATA_API_KEY.
+        label: Ключ API
+        placeholder: Введіть свій ключ API тут
+        show_details: "(показати деталі)"
+        step_1_html: 'Відвідайте <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> і створіть безкоштовний обліковий запис розробника Twelve Data.'
+        step_2_html: 'Перейдіть на сторінку <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step_3: Розкрийте свій секретний ключ і вставте його нижче.
+        plan: "план %{plan}"
+        plan_upgrade_warning_title: Деякі тикери вимагають платного плану
+        plan_upgrade_warning_description: Наступні тикери у вашому портфелі не можуть синхронізувати ціни з вашим поточним планом Twelve Data.
+        requires_plan: вимагає плану %{plan}
+        view_pricing: Переглянути ціни Twelve Data
+        title: Twelve Data
+      update:
+        failure: Недійсне значення налаштування
+        success: Налаштування оновлено
+        invalid_onboarding_state: Недійсний стан онбордингу
+        invalid_sync_time: Недійсний формат часу синхронізації. Будь ласка, використовуйте формат ГГ:ХХ (наприклад, 02:30).
+        invalid_llm_budget: "%{field} має бути цілим числом ≥ %{minimum}."
+        invalid_anthropic_base_url: Базова URL-адреса Anthropic має бути URL-адресою http(s).
+        anthropic_model_required_for_base_url: Модель Anthropic є обов'язковою, коли встановлено власну базову URL-адресу.
+        scheduler_sync_failed: Налаштування збережено, але не вдалося оновити розклад синхронізації. Будь ласка, спробуйте ще раз або перевірте журнали сервера.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Зовнішнього помічника відключено
+      clear_cache:
+        cache_cleared: Кеш даних очищено. Це може зайняти кілька хвилин.
+      not_authorized: Ви не авторизовані для виконання цієї дії
+      ensure_admin:
+        not_authorized: Ви не авторизовані для виконання цієї дії
+      ensure_super_admin_for_onboarding:
+        not_authorized: Ви не авторизовані для виконання цієї дії
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Налаштування збережено, але не вдалося оновити розклад синхронізації. Будь ласка, спробуйте ще раз або перевірте журнали сервера.
+      sync_settings:
+        auto_sync_label: Увімкнути автоматичну синхронізацію
+        auto_sync_description: Коли ввімкнено, усі облікові записи будуть автоматично синхронізуватися щодня у вказаний час.
+        auto_sync_time_label: Час синхронізації (ГГ:ХХ)
+        auto_sync_time_description: Вкажіть час доби, коли має відбуватися автоматична синхронізація.
+        include_pending_label: Включати очікувані транзакції
+        include_pending_description: Коли ввімкнено, очікувані (незавершені) транзакції будуть імпортуватися та автоматично звірятися, коли вони будуть опубліковані. Вимкніть, якщо ваш банк надає ненадійні дані про очікувані транзакції.
+        env_configured_message: Це налаштування вимкнено, оскільки встановлено змінну середовища постачальника (SIMPLEFIN_INCLUDE_PENDING або PLAID_INCLUDE_PENDING). Видаліть її, щоб увімкнути це налаштування.

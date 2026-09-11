@@ -8,6 +8,13 @@ default: &default
     # local login as an emergency override. Regular users remain SSO-only.
     admin_override_enabled: <%= ENV.fetch("AUTH_LOCAL_ADMIN_OVERRIDE_ENABLED", "false") == "true" %>
 
+  passkey_login:
+    # When true, users with a registered passkey can sign in without a password
+    # (and without the TOTP step). User verification is always required for this
+    # path, so the passkey alone is two factors. Set to false to keep passkeys
+    # as a second factor only.
+    enabled: <%= ENV.fetch("AUTH_PASSKEY_LOGIN_ENABLED", "true") == "true" %>
+
   jit:
     # Controls behavior when a user signs in via SSO and no OIDC identity exists.
     # - "create_and_link" (default): create a new user + family when no match exists

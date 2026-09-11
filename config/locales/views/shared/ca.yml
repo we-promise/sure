@@ -5,6 +5,7 @@ ca:
       redis_configured: Redis ja està configurat correctament! Ara pots configurar
         la teva aplicació Sure.
   shared:
+    dot_separator: "·"
     cancel: Cancel·la
     confirm_modal:
       accept: Confirma
@@ -15,6 +16,9 @@ ca:
       default_body: Aquesta acció no es pot desfer.
       default_btn_text: Confirma
       default_title: Segur que vols continuar?
+      resource_deletion_title: "Voleu eliminar %{resource}?"
+      resource_deletion_body: "Segur que voleu eliminar %{resource}? Aquesta acció no es pot desfer."
+      resource_deletion_btn_text: "Elimina %{resource}"
     exchange_rate_tabs:
       calculate_rate_tab: Calcular la taxa FX
       convert_tab: Convertir amb la taxa FX

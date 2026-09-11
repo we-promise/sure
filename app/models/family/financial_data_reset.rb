@@ -52,11 +52,13 @@ class Family::FinancialDataReset
     lunchflow_items
     redbark_items
     mercury_items
+    onchain_wallet_items
     plaid_items
     simplefin_items
     snaptrade_items
     sophtron_items
     up_items
+    monobank_items
   ].freeze
 
   Result = Struct.new(:user, :family, :dry_run, :before_counts, :deleted_counts, :after_counts, keyword_init: true)

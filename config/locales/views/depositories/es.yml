@@ -8,3 +8,19 @@ es:
       subtype_prompt: Seleccionar tipo de cuenta
     new:
       title: Introducir saldo de la cuenta
+    subtypes:
+      cd:
+        long: Certificado de depósito
+        short: CD
+      checking:
+        long: Cuenta corriente
+        short: Corriente
+      hsa:
+        long: Cuenta de ahorro sanitario
+        short: HSA
+      money_market:
+        long: Mercado monetario
+        short: MM
+      savings:
+        long: Cuenta de ahorro
+        short: Ahorro

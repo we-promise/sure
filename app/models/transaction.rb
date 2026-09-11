@@ -85,6 +85,23 @@ class Transaction < ApplicationRecord
   # they represent real cash outflow from a budgeting perspective.
   BUDGET_EXCLUDED_KINDS = %w[funds_movement one_time cc_payment].freeze
 
+  # Kinds that never belong in the "Uncategorized" bucket, whichever surface
+  # asks for it (the Transactions category filter, the uncategorized badge
+  # count, the Quick Categorize wizard). These are the paired legs of a
+  # Transfer between the user's own accounts, so they have nothing to
+  # categorize. Every other kind with a NULL category does.
+  #
+  # This is deliberately neither of the two lists above:
+  #   - vs TRANSFER_KINDS: loan_payment and investment_contribution are
+  #     budget-tracked outflows the dashboard counts under Uncategorized, so
+  #     hiding them left the dashboard figure unreproducible from the list
+  #     with no way to find the transactions (see #2592).
+  #   - vs BUDGET_EXCLUDED_KINDS: one_time is a real, categorizable
+  #     expense/income that is only excluded from budget *analytics* so it
+  #     doesn't skew medians. "Has no category" and "counts toward the
+  #     budget" are different questions; only the former belongs here.
+  UNCATEGORIZED_EXCLUDED_KINDS = %w[funds_movement cc_payment].freeze
+
   # All valid investment activity labels (for UI dropdown)
   ACTIVITY_LABELS = [
     "Buy", "Sell", "Sweep In", "Sweep Out", "Dividend", "Reinvestment",
@@ -95,7 +112,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up mercury redbark].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
@@ -186,6 +203,20 @@ class Transaction < ApplicationRecord
 
   def has_potential_duplicate?
     potential_posted_match_data.present? && !potential_duplicate_dismissed?
+  end
+
+  # Manual recurring transactions are unique per (family, account, merchant/name, amount, currency)
+  # — see the partial unique indexes on recurring_transactions. Used to guard "mark as recurring"
+  # so the UI can disable the action ahead of time instead of failing after a POST.
+  def existing_manual_recurring_transaction
+    entry.account.family.recurring_transactions.find_by(
+      account_id: entry.account_id,
+      merchant_id: merchant_id,
+      name: merchant_id.present? ? nil : entry.name,
+      amount: entry.amount,
+      currency: entry.currency,
+      manual: true
+    )
   end
 
   def potential_duplicate_entry

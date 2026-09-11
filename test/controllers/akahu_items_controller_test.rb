@@ -28,6 +28,11 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     get setup_accounts_akahu_item_url(@akahu_item)
     assert_response :success
 
+    select = css_select("select[name='account_types[#{@akahu_account.id}]']").first
+    assert select, "expected scoped account_types[#{@akahu_account.id}] select"
+    assert_equal 1, css_select("label[for='#{select['id']}']").size,
+                 "label for= should match the generated select id"
+
     selected_option = css_select("select[name='account_types[#{@akahu_account.id}]'] option[selected='selected']").first
     assert_equal "Depository", selected_option["value"]
 

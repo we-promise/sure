@@ -30,6 +30,17 @@ en:
 
     # Panel (settings view)
     panel:
+      eyebrow: "Setup · desktop only"
+      help_text: "Questrade API docs"
+      disconnect: "Disconnect"
+      disconnect_confirm: "Disconnect Questrade? This removes the connection and unlinks its synced accounts."
+      steps:
+        s1_html: 'Sign in to the <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade portal</a> on a desktop browser. The API settings are not available in the mobile app.'
+        s2: "Open Settings, and under General settings edit the IQ API settings."
+        s3_html: "In the API access modal, click <strong>Manage</strong> under <strong>My applications</strong>."
+        s4: "Register a personal app with a name and description, then save."
+        s5: "Add a new device and generate a token."
+        s6: "Paste the generated token below and save."
       setup_instructions: "Setup instructions:"
       step_1: "Visit your Questrade dashboard to get your credentials"
       step_2: "Enter your credentials below and click the Save button"
@@ -129,6 +140,13 @@ en:
 
     # Select existing account view
     select_existing_account:
+      page_title: "Link a Questrade account"
+      dialog_title: "Link to a Questrade account"
+      linking_label: "Linking"
+      none_available: "No unlinked Questrade accounts available."
+      buttons:
+        cancel: "Cancel"
+        link: "Link"
       account_already_linked: "This account is already linked to a provider"
       all_accounts_already_linked: "All Questrade accounts are already linked"
       api_error: "API error: %{message}"
@@ -149,7 +167,7 @@ en:
       no_credentials_configured: "Please configure your Questrade credentials first in Provider Settings."
       no_name_placeholder: "(No name)"
       settings_link: "Go to Provider Settings"
-      subtitle: "Choose a Questrade account"
+      subtitle: "Connect this account to one of your Questrade accounts"
       title: "Link %{account_name} with Questrade"
 
     # Link existing account
@@ -165,6 +183,18 @@ en:
 
     # Setup accounts wizard
     setup_accounts:
+      page_title: "Set up Questrade accounts"
+      dialog_title: "Set up your Questrade accounts"
+      all_linked: "All Questrade accounts are already linked."
+      import_as: "Import as"
+      buttons:
+        cancel: "Cancel"
+        create: "Create accounts"
+        done: "Done"
+      types:
+        investment: "Investment"
+        depository: "Cash / Depository"
+        skip: "Skip this account"
       account_type_label: "Account Type:"
       accounts_count:
         one: "%{count} account available"
@@ -230,7 +260,7 @@ en:
       create_accounts: "Create Accounts"
       creating_accounts: "Creating Accounts..."
       historical_data_range: "Historical Data Range:"
-      subtitle: "Choose the correct account types for your imported accounts"
+      subtitle: "Choose how to import each account"
       sync_start_date_help: "Select how far back you want to sync transaction history."
       sync_start_date_label: "Start syncing transactions from:"
       title: "Set Up Your Questrade Accounts"

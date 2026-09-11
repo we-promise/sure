@@ -1,0 +1,120 @@
+---
+uk:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Підключіть інвестиційний рахунок Trade Republic через безпечний веб-вхід"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Брокерський рахунок"
+      private_markets: "Приватні ринки"
+      interest_products: "Процентні продукти"
+      crypto_wallet: "Криптогаманець"
+    trade_republic_item:
+      syncing: "Синхронізація"
+      requires_update: "Потрібна повторна автентифікація"
+      error: "Помилка"
+      synced: "Синхронізовано %{time} тому. %{summary}."
+      setup_accounts: "Налаштувати рахунки"
+      delete: "Видалити"
+      accounts_need_setup: "Рахунок потребує налаштування"
+      accounts_need_setup_description: "Ваш рахунок Trade Republic потрібно пов’язати з рахунком Sure."
+      no_accounts_discovered: "Рахунок Trade Republic ще не знайдено."
+      no_accounts_discovered_description: "Завершіть вхід і запустіть синхронізацію, щоб знайти рахунок."
+      data_quality:
+        title: "Якість даних і відомості про синхронізацію"
+        repair: "Відновити імпортовані дані"
+        positions:
+          one: "%{count} позиція"
+          few: "%{count} позиції"
+          many: "%{count} позицій"
+          other: "%{count} позиції"
+        unpriced:
+          one: "%{count} позиція без поточної ціни"
+          few: "%{count} позиції без поточної ціни"
+          many: "%{count} позицій без поточної ціни"
+          other: "%{count} позиції без поточної ціни"
+        events:
+          one: "%{count} операція"
+          few: "%{count} операції"
+          many: "%{count} операцій"
+          other: "%{count} операції"
+        unknown:
+          one: "%{count} невідома операція"
+          few: "%{count} невідомі операції"
+          many: "%{count} невідомих операцій"
+          other: "%{count} невідомі операції"
+        expenses:
+          one: "%{count} витрата за останні 30 днів (%{amount})"
+          few: "%{count} витрати за останні 30 днів (%{amount})"
+          many: "%{count} витрат за останні 30 днів (%{amount})"
+          other: "%{count} витрати за останні 30 днів (%{amount})"
+        reconciliation: "%{matched}/%{total} балансів рахунків узгоджено"
+        sync_history: Останні синхронізації
+        sync_status:
+          completed: Завершено
+          failed: Помилка
+          pending: Очікує
+          syncing: Синхронізується
+          stale: Застаріло
+    setup_accounts:
+      page_title: "Налаштувати рахунок Trade Republic"
+      subtitle: "Пов’яжіть інвестиційний рахунок Trade Republic."
+      available_accounts:
+        account_type_investment: "Інвестиційний портфель"
+        account_type_cash: "Грошовий рахунок"
+      buttons:
+        refresh: "Оновити"
+        cancel: "Скасувати"
+        link: "Пов’язати"
+        done: "Готово"
+    sync:
+      errors:
+        phone_number_missing: "Відсутній номер телефону Trade Republic."
+        reauthentication_required: "Сеанс Trade Republic відсутній або завершився. Підключіться знову в Налаштування > Постачальники."
+      status:
+        checking_credentials: "Перевірка облікових даних Trade Republic..."
+        importing_account: "Імпорт рахунку Trade Republic..."
+        processing_activity: "Обробка позицій і операцій..."
+        calculating_balances: "Обчислення балансів..."
+    repair:
+      scheduled: "Відновлення даних Trade Republic заплановано."
+    select_existing_account:
+      title: "Пов’язати рахунок Trade Republic"
+      link: "Пов’язати"
+      cancel: "Скасувати"
+    initiate_login:
+      verification_required: "Вхід розпочато. Підтвердьте через %{method}, потім натисніть Підтвердити вхід."
+    complete_login:
+      approval_pending: "Ще не підтверджено. Схваліть вхід у застосунку Trade Republic і спробуйте ще раз."
+      success: "Trade Republic успішно підключено."
+      login_expired: "Запит на вхід завершився. Почніть знову."
+    link_existing_account:
+      not_found: "Рахунок або конфігурацію Trade Republic не знайдено."
+      success: "Рахунок успішно пов’язано з Trade Republic."
+    complete_account_setup:
+      success:
+        one: "Успішно створено %{count} рахунок Trade Republic."
+        few: "Успішно створено %{count} рахунки Trade Republic."
+        many: "Успішно створено %{count} рахунків Trade Republic."
+        other: "Успішно створено %{count} рахунку Trade Republic."
+      none_created: "Жодного рахунку не створено."
+      partial_failure:
+        one: "Не вдалося повністю налаштувати %{count} вибраний рахунок Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+        few: "Не вдалося повністю налаштувати %{count} вибрані рахунки Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+        many: "Не вдалося повністю налаштувати %{count} вибраних рахунків Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+        other: "Не вдалося повністю налаштувати %{count} вибраного рахунку Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+    activities:
+      labels:
+        contribution: Поповнення
+        withdrawal: Виведення коштів
+        interest: Відсотки
+        dividend: Дивіденд
+        card_payment: Оплата карткою
+        cash_withdrawal: Зняття готівки
+        card_fee: Комісія за картку
+        card_refund: Повернення на картку
+        tax_refund: Повернення податку
+        buy: Купівля
+        sell: Продаж

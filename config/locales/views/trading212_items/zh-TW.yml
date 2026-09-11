@@ -1,0 +1,102 @@
+---
+zh-TW:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: 透過 API 金鑰連接 Trading 212 投資帳戶
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: 正在刪除
+      environment_label_live: 正式帳戶
+      environment_label_demo: 模擬帳戶
+      syncing: 正在同步
+      requires_update: API 金鑰需要處理
+      error: 錯誤
+      synced: '%{time}前已同步。%{summary}。'
+      never_synced: 從未同步。
+      setup_accounts: 設定帳戶
+      delete: 刪除
+      accounts_need_setup: 帳戶需要設定
+      accounts_need_setup_description: 您的 Trading 212 帳戶需要連結到一個 Sure 帳戶。
+      no_accounts_discovered: 尚未偵測到任何 Trading 212 帳戶。
+      no_accounts_discovered_description: 儲存 API 金鑰後執行一次同步以偵測您的帳戶。
+    setup_accounts:
+      page_title: 設定 Trading 212 帳戶
+      dialog_title: 設定您的 Trading 212 帳戶
+      subtitle: 連結您的 Trading 212 投資帳戶。
+      info_box:
+        title: Trading 212 API 匯入
+        items:
+          item_1: 含價格與數量的目前持股
+          item_2: 完整的委託紀錄（買入與賣出）
+          item_3: 股息與現金交易
+      status:
+        fetching_accounts: 正在從 Trading 212 取得帳戶...
+        no_accounts_found_title: 找不到帳戶。
+        no_accounts_found_description: Sure 找不到 Trading 212 帳戶。請確認您的 API 金鑰有效。
+      available_accounts:
+        title: 可用的帳戶
+        account_type_investment: 投資帳戶
+        account_summary: '%{account_type} • 餘額：%{balance}'
+        account_id: 帳戶 ID：%{account_id}
+      link_existing:
+        description: 或將偵測到的 Trading 212 帳戶連結到現有的手動投資帳戶。
+        manual_account_option: '%{name}（%{balance}）'
+        select_prompt: 選擇一個帳戶...
+      linked_accounts:
+        title: 已連結
+        linked_to_html: 已連結到：%{account}
+      buttons:
+        refresh: 重新整理
+        cancel: 取消
+        back_to_settings: 返回設定
+        create_selected_accounts: 建立所選帳戶
+        link: 連結
+        done: 完成
+    sync:
+      status:
+        checking_credentials: 正在檢查 Trading 212 憑證...
+        importing_account: 正在匯入 Trading 212 帳戶...
+        checking_configuration: 正在檢查帳戶設定...
+        accounts_need_setup:
+          one: 1 個 Trading 212 帳戶需要設定...
+          other: '%{count} 個 Trading 212 帳戶需要設定...'
+        processing_activity: 正在處理持股與活動...
+        calculating_balances: 正在計算餘額...
+    sync_status:
+      no_accounts: 尚未偵測到任何 Trading 212 帳戶
+      all_linked:
+        one: 已連結 1 個帳戶
+        other: 已連結 %{count} 個帳戶
+      partial: 已連結 %{linked} 個，%{unlinked} 個需要設定
+    select_existing_account:
+      title: 連結 Trading 212 帳戶
+      no_accounts_available: 目前沒有可用的未連結 Trading 212 帳戶。
+      run_sync_hint: 儲存 API 金鑰後，請從「設定 > 供應商」執行一次同步。
+      wait_for_sync: 請等候帳戶偵測同步完成。
+      balance: 餘額
+      link: 連結
+      cancel: 取消
+    create:
+      success: 已成功設定 Trading 212。
+    update:
+      success: 已成功更新 Trading 212 設定。
+    destroy:
+      success: 已排程刪除 Trading 212 連線。
+    select_accounts:
+      not_configured: 尚未設定 Trading 212。
+    link_existing_account:
+      not_found: 找不到帳戶或 Trading 212 設定。
+      only_manual_investment: 只有手動投資帳戶可以連結到 Trading 212。
+      already_linked: 此 Trading 212 帳戶已連結。
+      success: 已成功連結到 Trading 212 帳戶。
+      failed: 無法連結 Trading 212 帳戶。
+    complete_account_setup:
+      success:
+        one: 已成功建立 %{count} 個 Trading 212 帳戶。
+        other: 已成功建立 %{count} 個 Trading 212 帳戶。
+      none_selected: 未選擇任何帳戶。
+      none_created: 未建立任何帳戶。

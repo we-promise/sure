@@ -5,9 +5,11 @@ fr:
       insights: Analyses
       nav:
         assistant: Assistant
+        bills: Factures
         budgets: Budgets
         goals: Objectifs
         home: Accueil
+        plan: Plan
         reports: Rapports
         transactions: Transactions
       privacy_mode: Activer/désactiver le mode confidentialité
@@ -21,7 +23,7 @@ fr:
       sign_up: Créer un compte
     shared:
       confirm_dialog:
-        are_you_sure: Êtes-vous sûr?
+        are_you_sure: Êtes-vous sûr ?
         cannot_be_undone: Cette action ne peut pas être annulée.
         confirm: Confirmer
       footer:

@@ -513,6 +513,116 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "DE", results_by_symbol.fetch("FALLBACK").country_code
   end
 
+  test "search_securities falls back to a direct chart lookup when the search index has no results" do
+    empty_search_response = mock
+    empty_search_response.stubs(:body).returns('{"quotes":[]}')
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(empty_search_response)
+
+    chart_response = mock
+    chart_response.stubs(:body).returns({
+      chart: {
+        result: [ {
+          meta: {
+            symbol: "VAN0111AU.AX",
+            exchangeName: "YHD",
+            currency: "AUD",
+            longName: "Vanguard High Growth Index"
+          }
+        } ]
+      }
+    }.to_json)
+    chart_client = mock
+    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/VAN0111AU\.AX$})).returns(chart_response)
+    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
+    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    response = @provider.search_securities("VAN0111AU.AX")
+
+    assert response.success?
+    security = response.data.sole
+    assert_equal "VAN0111AU.AX", security.symbol
+    assert_equal "Vanguard High Growth Index", security.name
+    assert_equal "AUD", security.currency
+    # "YHD" is Yahoo's generic placeholder exchange -- it must NOT be guessed
+    # as NASDAQ (map_exchange_mic's default for unrecognized US-style tickers)
+    # for a fallback result, since this path exists for non-US instruments.
+    assert_nil security.exchange_operating_mic
+    assert_nil security.country_code
+  end
+
+  test "search_securities direct chart fallback returns no results when the symbol doesn't exist" do
+    empty_search_response = mock
+    empty_search_response.stubs(:body).returns('{"quotes":[]}')
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(empty_search_response)
+
+    not_found_response = mock
+    not_found_response.stubs(:body).returns({ chart: { result: nil, error: { code: "Not Found" } } }.to_json)
+    chart_client = mock
+    chart_client.stubs(:get).returns(not_found_response)
+    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
+    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    response = @provider.search_securities("NOTAREAL.XX")
+
+    assert response.success?
+    assert_equal [], response.data
+  end
+
+  test "search_securities does not attempt a direct chart fallback for a bare (non-exchange-qualified) symbol" do
+    empty_search_response = mock
+    empty_search_response.stubs(:body).returns('{"quotes":[]}')
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(empty_search_response)
+
+    # "XYZ" is a real, unrelated NYSE ticker (Block, Inc.) that the chart
+    # endpoint would happily resolve -- but a bare symbol missing from Yahoo's
+    # own search index should not surface a surprising spurious match. If the
+    # fallback fired here, this would raise (unstubbed method call) rather
+    # than silently pass.
+    @provider.expects(:fetch_cookie_and_crumb).never
+
+    response = @provider.search_securities("XYZ")
+
+    assert response.success?
+    assert_equal [], response.data
+  end
+
+  test "search_securities does not attempt a direct chart fallback for multi-word queries" do
+    empty_search_response = mock
+    empty_search_response.stubs(:body).returns('{"quotes":[]}')
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(empty_search_response)
+
+    # No chart client stub at all -- if the fallback fired for a multi-word
+    # query, this would raise (unstubbed method call) rather than silently pass.
+    @provider.expects(:fetch_cookie_and_crumb).never
+
+    response = @provider.search_securities("Vanguard High Growth Index")
+
+    assert response.success?
+    assert_equal [], response.data
+  end
+
+  test "search_securities does not run the direct chart fallback when normal search already found results" do
+    search_response = mock
+    search_response.stubs(:body).returns({
+      quotes: [ { symbol: "AAPL", shortname: "Apple", exchange: "NMS", exchDisp: "NASDAQ" } ]
+    }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(search_response)
+
+    @provider.expects(:fetch_cookie_and_crumb).never
+
+    response = @provider.search_securities("AAPL")
+
+    assert response.success?
+    assert_equal [ "AAPL" ], response.data.map(&:symbol)
+  end
+
   # ================================
   #     Security Price Tests
   # ================================
@@ -745,6 +855,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_nil @provider.send(:map_exchange_mic, "")
   end
 
+  test "map_exchange_mic returns XIDX for JKT" do
+    assert_equal "XIDX", @provider.send(:map_exchange_mic, "JKT")
+    assert_equal "XIDX", @provider.send(:map_exchange_mic, "jkt")
+  end
+
   test "map_security_type returns correct types" do
     assert_equal "common stock", @provider.send(:map_security_type, "equity")
     assert_equal "etf", @provider.send(:map_security_type, "etf")
@@ -823,6 +938,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "IN", @provider.send(:map_country_code, "MUMBAI")
   end
 
+  test "map_country_code returns ID for Indonesian exchanges" do
+    assert_equal "ID", @provider.send(:map_country_code, "JAKARTA")
+    assert_equal "ID", @provider.send(:map_country_code, "IDX")
+  end
+
   # ================================
   #   normalize_symbol Tests
   # ================================
@@ -831,11 +951,13 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE", "XNSE")
     assert_equal "INFY.NS",     @provider.send(:normalize_symbol, "INFY", "XNSE")
     assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325", "XBOM")
+    assert_equal "BBCA.JK",     @provider.send(:normalize_symbol, "BBCA", "XIDX")
   end
 
   test "normalize_symbol does not double-suffix already suffixed symbols" do
     assert_equal "RELIANCE.NS", @provider.send(:normalize_symbol, "RELIANCE.NS", "XNSE")
     assert_equal "500325.BO",   @provider.send(:normalize_symbol, "500325.BO", "XBOM")
+    assert_equal "BBCA.JK",     @provider.send(:normalize_symbol, "BBCA.JK", "XIDX")
   end
 
   test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
@@ -856,6 +978,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "default_currency_for_exchange returns configured currency for known Yahoo exchange names" do
     assert_equal "INR", @provider.send(:default_currency_for_exchange, "NSE")
     assert_equal "INR", @provider.send(:default_currency_for_exchange, "BSE")
+    assert_equal "IDR", @provider.send(:default_currency_for_exchange, "JKT")
   end
 
   test "default_currency_for_exchange returns nil for unknown exchanges" do

@@ -1,0 +1,8 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: 缺少必要的欄位：%{columns}
+          duplicate_columns: 正規化之後出現重複的欄位名稱：%{columns}

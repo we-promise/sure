@@ -54,10 +54,10 @@ fr:
         last_6_months: "%{start} – %{end}"
         past_year: "%{year}"
         quarterly: Q%{quarter} %{year}
-        ytd: Cumul cumulatif %{year}
+        ytd: Depuis le début de l'année %{year}
       period_picker:
         quarter: Q%{quarter} %{year}
-        ytd: Cumul cumulatif %{year}
+        ytd: Depuis le début de l'année %{year}
       periods:
         custom: Plage personnalisée
         last_6_months: 6 derniers mois

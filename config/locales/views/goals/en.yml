@@ -57,6 +57,7 @@ en:
         empty_with_both: "No goals match \"%{query}\" with this filter."
         clear_search: Clear search
         show_all: Show all
+      chips_aria: Filter goals by status
       chips:
         all: All
         on_track: On track
@@ -76,7 +77,6 @@ en:
       success: Goal updated.
     destroy:
       success: Goal deleted.
-      archive_first: Archive the goal before deleting it.
     pause:
       success: Goal paused.
       invalid_transition: Goal can't be paused from its current state.
@@ -95,15 +95,44 @@ en:
     reopen:
       success: Goal reopened.
       invalid_transition: Goal can't be reopened from its current state.
+    consume:
+      title: Record a spend
+      subtitle: "%{goal}"
+      amount_label: How much did you use?
+      amount_hint: "%{saved} is currently backing this goal."
+      account_label: From which account?
+      earmark_note: The amount you record stops being reserved for this goal, so your other goals on that account get their share back.
+      cancel: Cancel
+      submit: Record it
+      success: "%{amount} recorded as used."
+      errors:
+        non_positive: Enter an amount greater than zero.
+        maintained: A reserve is drawn down and refilled, not spent — its shortfall already shows on the goal.
+        exceeds_target: That is more than this goal ever set out to save.
+        account_required: This goal is funded by several accounts — say which one the money came out of.
+        account_not_linked: That account does not fund this goal.
+        not_active: This goal is no longer active, so nothing can be recorded against it.
+        exceeds_earmark: That is more than the goal has earmarked on this account.
+        transaction_already_claimed: That outflow has already been attributed.
+        transaction_not_found: That outflow is no longer available to attribute.
+        no_linked_account: This goal has no funding account left.
+    unattributed_outflows:
+      heading: Money left these accounts
+      body: If any of this was spent on %{goal}, say so and it stops counting against the target.
+      attribute: This was it
     show:
       edit: Edit
+      consume: I used some of this money
       pause: Pause
       resume: Resume
       complete: Mark complete
       archive: Archive
       unarchive: Restore
       reopen: Reopen goal
-      delete: Delete permanently
+      delete: Delete
+      reserve_shortfall:
+        heading: Reserve below its target balance
+        body: "You are holding %{saved} of %{target}. Add %{missing} to bring it back to its target balance."
       record_pledge_cta: Record pledge
       pledge_just_transferred: Log a transfer you made
       pledge_just_saved: Log money you set aside
@@ -117,6 +146,7 @@ en:
       funding_last_30d: last 30d
       funding_last_90d: last 90d
       status_callout:
+        depleted: "%{amount} below its target balance — top it up to bring the reserve back"
         behind: "save %{amount}/mo more to catch up"
         behind_covered: "pending pledges close the gap"
         on_track: "reaches goal around %{date}"
@@ -139,17 +169,20 @@ en:
         target_by: "Target %{amount} by %{date}"
         target_by_past: "Target %{amount} · was due %{date}"
       ring:
+        including_used: "Including %{amount} already used"
         saved: Saved
         of: "of %{target}"
         to_go: "%{amount} to go"
         of_target: of target
         market_value: "Market value %{amount}"
         aria_label: "Goal %{percent}% complete. %{amount} of %{target} saved."
+        aria_label_with_used: "Goal %{percent}% complete. %{amount} of %{target}, including %{used} already used."
       projection:
         heading: Projection
         legend_saved: Saved
         legend_projection: Projection
         legend_required: Required
+        reserve: "A reserve holds a target balance, so there is no finish line to project."
         reached: You've hit the target. No projection needed.
         no_target_date: No target date set. Set one to project a finish line.
         no_pace: No deposits yet. Add money to a linked account to start a projection.
@@ -165,12 +198,15 @@ en:
         body: "Current pace %{avg}/mo · required %{required}/mo to hit your target."
         adjust_target_cta: Adjust target instead
       confirm_complete_title: Mark this goal complete?
-      confirm_complete_body: It leaves the Ongoing list. You can still archive or restore it later.
+      confirm_complete_body: The money earmarked for it is released for your other goals on the same account. It leaves the Ongoing list, and you can still archive or restore it later.
       confirm_complete_body_short: "You're at %{progress}%, %{saved} of %{target}. Marking complete records this as your achievement instead of the original target. Continue, or close this and adjust the target instead?"
       confirm_complete_cta: Mark complete
       confirm_archive_title: Archive this goal?
-      confirm_archive_body: Archived goals disappear from the main list. You can restore them later.
+      confirm_archive_body: Archived goals disappear from the main list. You can restore them later. Archiving does not record what you reached — mark the goal complete first if you want that kept.
       confirm_archive_cta: Archive
+      confirm_delete_title: Delete this goal?
+      confirm_delete_body: "%{name} and its pledge history are removed for good. Your linked accounts, balances and transactions are not affected. To keep it as a record instead, archive it."
+      confirm_delete_cta: Delete goal
       paused_banner:
         title: This goal is paused
         body: Resume it to keep tracking your progress.
@@ -180,7 +216,13 @@ en:
         body: Restore it to continue contributing, or leave it as a record.
         restore_cta: Restore goal
       celebration:
+        heading_reserve: Reserve intact
+        body_reserve: "Your reserve is at its target balance, %{saved} of %{target}. Nothing to do — it stays earmarked."
         heading: Goal reached. Nice work.
+        body_reached: "You've hit your target at %{saved} of %{target}. It is not closed yet — the money is still earmarked for it."
+        close_cta: Close this goal
+        close_hint: Closing releases the earmarked money for your other goals on the same account. Do this once you have actually spent it.
+        frozen: "Reached on %{date} · %{amount}"
         body: "Goal closed at %{saved} of %{target}. Keep it as a record, or archive it now."
         archive_cta: Archive goal
       inactive:
@@ -202,6 +244,8 @@ en:
       completed: Completed
       archived: Archived
     status:
+      funded: Reserve intact
+      depleted: Needs topping up
       on_track: On track
       behind: Behind
       reached: Reached
@@ -217,6 +261,7 @@ en:
       no_depository_accounts: You need at least one depository account (checking, savings, HSA, CD, money-market) before creating a goal.
       add_account: Add an account
     goal_card:
+      including_used: "Including %{amount} already used"
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
       left: left
@@ -234,6 +279,8 @@ en:
       pace_no_target: "%{avg}/mo avg"
       footer_paused: Paused
       footer_archived: Archived
+      footer_reserve_intact: Reserve intact
+      footer_reserve_short: "%{amount} to top up"
       footer_reached: Goal reached
       footer_catch_up: "Save %{amount}/mo to catch up"
       footer_no_deadline: Open
@@ -247,6 +294,16 @@ en:
         one: Last pledge matched 1 day ago
         other: "Last pledge matched %{count} days ago"
     form:
+      target_modes:
+        fixed: A fixed amount
+        months_of_expenses: A number of months of expenses
+      kinds:
+        one_off:
+          hint: Save toward something, then close it when you spend it.
+          label: One-off goal
+        maintained:
+          hint: A balance to keep, like an emergency fund. Never closed.
+          label: Reserve to maintain
       create: Create goal
       save: Save changes
       suggested_with_date: "Save {monthly}/mo across {accounts} to hit it on time."
@@ -255,10 +312,21 @@ en:
         name_required: Give your goal a name.
         amount_required: Set a target above zero.
         accounts_required: Pick at least one funding account.
+      earmark:
+        headroom: "{left} left to earmark on this account."
+        prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
+        whole_balance: This account will fund whatever is left after the other earmarks.
+        whole_balance_alone: "This goal will use this account's whole balance."
       fields:
+        target_mode: How the target balance is set
+        target_months: Months of expenses
+        target_months_hint: Recomputed on the 1st of each month from your median monthly spending.
         name: Name
         name_placeholder: Emergency fund, House down payment…
         target_amount: Target amount
+        target_balance: "Target balance"
+        target_balance_pending: "Worked out when you save"
+        target_balance_hint: "From your median monthly spending over the months above. Refreshed each month."
         target_date: Target date
         color: Color
         notes: Notes (optional)

@@ -46,6 +46,8 @@ permissions:
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
+    with:
+      require_js_dependency_audit: false
 
   build:
     name: Build Docker image
@@ -426,6 +428,8 @@ jobs:
     steps:
       - name: Determine source branch for tag
         id: source_branch
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           # Fetch all branches to find which one contains this tag's commit
           git init --quiet
@@ -436,14 +440,26 @@ jobs:
           BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -v HEAD | sed 's/origin\///' | xargs)
           echo "Branches containing commit: $BRANCHES"
 
-          # Prefer non-main branches (release branches) over main
+          # Prefer the matching release branch over main. Do not select arbitrary
+          # feature or PR branches that happen to contain the tagged commit.
           SOURCE_BRANCH="main"
+          RELEASE_BRANCH="$(printf '%s\n' "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+
           for branch in $BRANCHES; do
-            if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+            if [ "$branch" = "$RELEASE_BRANCH" ]; then
               SOURCE_BRANCH="$branch"
               break
             fi
           done
+
+          if [ "$SOURCE_BRANCH" = "main" ]; then
+            for branch in $BRANCHES; do
+              if [[ "$branch" =~ ^v[0-9]+\.[0-9]+-release-branch$ ]]; then
+                SOURCE_BRANCH="$branch"
+                break
+              fi
+            done
+          fi
 
           echo "Selected source branch: $SOURCE_BRANCH"
           echo "branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT

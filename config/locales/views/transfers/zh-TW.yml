@@ -3,15 +3,24 @@ zh-TW:
   transfers:
     create:
       success: 轉帳已建立
+      exchange_rate_unavailable: 所選幣別與日期沒有可用的匯率
+      date_invalid: 無效
     destroy:
       success: 轉帳已移除
     form:
       amount: 金額
+      bank_charges: 銀行費用
+      outgoing_fee: 轉出手續費
+      incoming_fee: 轉入手續費
       date: 日期
+      destination_amount: 目標金額
+      destination_amount_display: 目標金額：%{amount}
+      exchange_rate_display: 匯率：%{rate}
       expense: 支出
       from: 從
       income: 收入
       select_account: 選擇帳戶
+      source_amount: 來源金額
       submit: 建立轉帳
       to: 至
       transfer: 轉帳
@@ -22,9 +31,22 @@ zh-TW:
       delete_subtitle: 這將會移除轉帳連結，但不會刪除其對應的原始交易紀錄。
       delete_title: 確定要移除轉帳嗎？
       details: 詳情
+      mark_recurring: 標記為定期
+      mark_recurring_subtitle: 在「即將發生」動態與定期交易頁面中，以定期模式追蹤這筆轉帳。
+      mark_recurring_title: 把轉帳標記為定期
       note_label: 備註
       note_placeholder: 為此筆轉帳新增備註
       overview: 概覽
       settings: 設定
+      from: 從
+      to: 至
+      date: 日期
+      transfer_amount: 轉帳金額
+      total: 總計
+      bank_charges: 銀行費用
+      source_fee: 來源手續費
+      destination_fee: 目標手續費
+      category: 分類
+      uncategorized: 未分類
     update:
       success: 轉帳已更新

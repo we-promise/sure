@@ -7,11 +7,38 @@ module InsightsHelper
     "savings_rate_change" => "piggy-bank",
     "idle_cash" => "wallet",
     "budget_at_risk" => "alert-triangle",
-    "budget_on_track" => "circle-check"
+    "budget_on_track" => "circle-check",
+    # Same shield the reserve panel uses on the goal page, so the two read as
+    # the same object seen from two places.
+    "maintained_goal_depleted" => "shield-alert"
   }.freeze
 
   def insight_icon_key(insight)
     INSIGHT_ICONS.fetch(insight.insight_type, "lightbulb")
+  end
+
+  # Matches the numeric fragments inside insight prose: currency amounts
+  # ("€288.59", "1 234,56 €"), percentages ("142%"), and bare counts. Digit
+  # groups may be separated by ".", ",", or the (narrow) no-break spaces some
+  # locales format with, but must start and end on a digit so sentence
+  # punctuation stays outside the match.
+  INSIGHT_NUMERIC_FRAGMENT = /
+    (?:\p{Sc}[\s\u00A0\u202F]?)?          # currency symbol prefix
+    \d(?:[\d.,\s\u00A0\u202F]*\d)?        # digits with grouping separators
+    (?:[\s\u00A0\u202F]?(?:%|\p{Sc}))?    # percent or currency symbol suffix
+  /x
+
+  # Insight titles and bodies are stored as finished prose with the amounts
+  # already interpolated (by the i18n template or the LLM writer), so unlike
+  # the rest of the app the figures can't be tagged where they're formatted.
+  # This wraps each numeric fragment in a privacy-sensitive span at render
+  # time so privacy mode blurs the numbers but the sentence stays readable.
+  def insight_privacy_text(text)
+    safe_join(
+      text.to_s.split(/(#{INSIGHT_NUMERIC_FRAGMENT})/o).map.with_index do |part, index|
+        index.odd? ? tag.span(part, class: "privacy-sensitive") : part
+      end
+    )
   end
 
   # "Savings rate · June" / "Cash flow · Next 30 days" — the card's meta line.
@@ -87,6 +114,9 @@ module InsightsHelper
     when "budget_at_risk", "budget_on_track"
       return nil unless insight.period_start
       { text: t("insights.actions.budget"), href: budget_path(Budget.date_to_param(insight.period_start)) }
+    when "maintained_goal_depleted"
+      goal = insight.family.goals.find_by(id: metadata["goal_id"])
+      goal && { text: t("insights.actions.maintained_goal_depleted"), href: goal_path(goal) }
     end
   end
 
@@ -128,7 +158,9 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
-    when "budget_at_risk"
+    when "budget_at_risk", "maintained_goal_depleted"
+      # Warning, not negative: the reserve is short, not overdrawn, and red is
+      # reserved here for money actually going the wrong side of zero.
       :warning
     else
       :neutral

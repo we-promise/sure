@@ -13,6 +13,8 @@ de:
       expiration_date: Ablaufdatum
       minimum_payment: Mindestzahlung
       minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: Aktivier das, wenn deine Bank den Saldo dieser Karte als noch verfügbaren Kreditrahmen meldet statt als offenen Betrag. Die Schuld ergibt sich dann aus dem gemeldeten Kreditrahmen oder, falls deine Bank keinen liefert, aus dem Feld „Verfügbarer Kreditrahmen“.
+      treat_balance_as_available_credit_label: Saldo ist verfügbarer Kreditrahmen
     new:
       title: Kreditkartendaten eingeben
     overview:
@@ -23,3 +25,4 @@ de:
       expiration_date: Ablaufdatum
       minimum_payment: Mindestzahlung
       unknown: Unbekannt
+      edit_account_details: Kontodaten bearbeiten

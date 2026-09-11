@@ -8,6 +8,35 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
+
+  # The status pill beside this bar was already amber for a depleted reserve
+  # while the bar itself stayed neutral: the same goal reported as needing
+  # attention and not, an inch apart.
+  #
+  # Counted rather than matched: a fixture goal is already off its pace, so
+  # the markup is on the page either way and a presence check passes without
+  # the fix.
+  test "the goals card bars a depleted reserve in warning colour" do
+    bar = /h-full bg-warning rounded-full/
+
+    get plan_url
+    before = response.body.scan(bar).size
+
+    family = @user.family
+    account = Account.create!(family: family, accountable: Depository.new,
+                              name: "Reserve pot", currency: family.currency, balance: 1_000)
+    family.goals.create!(name: "Precaution", target_amount: 6_000,
+                         currency: family.currency, kind: "maintained") do |g|
+      g.goal_accounts.build(account: account, allocated_amount: 1_000)
+    end
+
+    get plan_url
+
+    assert_response :success
+    assert_equal before + 1, response.body.scan(bar).size,
+                 "the depleted reserve's bar stayed neutral"
+  end
+
   test "redirects users without preview access to budgets" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 
@@ -63,5 +92,36 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match I18n.t("plans.budget_card.empty_body"), response.body
     assert_select "a[href=?]", edit_budget_path(Budget.date_to_param(Date.current))
+  end
+end
+
+class PlansControllerHouseholdSwitchingTest < ActionDispatch::IntegrationTest
+  setup do
+    @family = families(:empty)
+    @family.update!(personal_budgets: true)
+    @owner = users(:josh)
+    @owner.update!(preferences: (@owner.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in @owner
+    ensure_tailwind_build
+  end
+
+  test "renders a household/mine switcher once personal_budgets is on, and switches to household" do
+    get plan_url
+
+    assert_response :success
+    assert_select "a[href=?]", plan_path(owner: "household")
+    assert_select "a[href=?]", plan_path(owner: @owner.id)
+
+    get plan_url, params: { owner: "household" }
+    assert_response :success
+  end
+
+  test "hides the household pill when household_budget_enabled is off" do
+    @family.update!(household_budget_enabled: false)
+
+    get plan_url
+
+    assert_response :success
+    assert_select "a[href=?]", plan_path(owner: "household"), count: 0
   end
 end

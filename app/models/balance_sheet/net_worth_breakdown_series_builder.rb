@@ -2,6 +2,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
   # Monthly interval regardless of period length so the reports chart always
   # shows one point per month in the selected range.
   INTERVAL = "1 month"
+  CACHE_VERSION = "v2"
 
   def initialize(family, user: nil)
     @family = family
@@ -41,18 +42,26 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         }
       end
 
+      # Built by hand rather than through `Series#as_json`, so it needs the same
+      # display rounding: the chart is drawn from the amount, and a sub-unit
+      # residue would plot as a visible move between two points that print the
+      # same value. The classification totals are left alone, since only their
+      # formatted string is rendered.
+      current = value.value.for_display
+      previous_value = (previous&.value || value.value).for_display
+
       {
         date: value.date,
         date_formatted: value.date_formatted,
-        value: value.value,
+        value: current,
         # Month-over-month change between chart points. The trend on the raw
         # series value compares the underlying balance row's own start/end,
         # which at a monthly interval reflects only the last balance update
         # before the sample date. The first point has no prior month, so it
         # gets a flat trend.
         trend: Trend.new(
-          current: value.value,
-          previous: previous&.value || value.value,
+          current: current,
+          previous: previous_value,
           favorable_direction: "up"
         ),
         assets: classification_total(point_groups, "asset"),
@@ -125,6 +134,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
       shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
       key = [
         "balance_sheet_net_worth_breakdown_series",
+        CACHE_VERSION,
         user&.id,
         shares_version,
         period.start_date,

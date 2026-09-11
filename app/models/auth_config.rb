@@ -12,6 +12,13 @@ class AuthConfig
       !!Rails.configuration.x.auth.local_admin_override_enabled
     end
 
+    # Whether a registered passkey may be used to sign in on its own, skipping
+    # both the password and the TOTP step. Defaults to true when unconfigured.
+    def passkey_login_enabled?
+      value = Rails.configuration.x.auth.passkey_login_enabled
+      value.nil? ? true : !!value
+    end
+
     # When the local login form should be visible on the login page.
     # - true when local login is enabled for everyone
     # - true when admin override is enabled (super-admin only backend guard)

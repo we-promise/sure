@@ -5,31 +5,100 @@ zh-TW:
       brokerage_cash: 經紀帳戶現金
     destroy:
       success: 持股已刪除
+      cannot_delete: 您無法刪除這筆持股
+    update:
+      success: 成本基礎已儲存。
+      error: 成本基礎的值無效。
+    unlock_cost_basis:
+      success: 成本基礎已解鎖，下次同步時可能會被更新。
+    remap_security:
+      success: 證券更新成功。
+      security_not_found: 找不到所選的證券。
+    reset_security:
+      success: 證券已重設為供應商提供的值。
+    sync_prices:
+      success: 市場資料同步成功。
+      unavailable: 離線證券無法同步市場資料。
+      provider_error: 無法取得最新價格，請幾分鐘後再試。
+    errors:
+      security_collision: 無法重新對應：您在 %{date} 已經有一筆 %{ticker} 的持股了。
+    cost_basis_sources:
+      manual: 使用者設定
+      calculated: 由交易計算
+      provider: 來自供應商
+    cost_basis_cell:
+      unknown: --
+      set: 設定
+      set_cost_basis_header: 設定 %{ticker} 的成本基礎（%{qty} 股）
+      total_cost_basis_label: 總成本基礎
+      or_per_share_label: 或輸入每股金額：
+      per_share: /股
+      cancel: 取消
+      save: 儲存
+      overwrite_confirm_title: 要覆蓋成本基礎嗎？
+      overwrite_confirm_body: 這會取代目前的成本基礎 %{current}。
     holding:
       per_share: 每股
-      shares: "%{qty} 股"
+      shares: '%{qty} 股'
+      unknown: --
+      no_cost_basis: 沒有成本基礎
     index:
+      positions:
+        one: "%{count} 個持倉"
+        other: "%{count} 個持倉"
       average_cost: 平均成本
       holdings: 持股
       name: 名稱
-      new_holding: 新建交易
-      no_holdings: 暫無持股記錄
-      return: 總收益
-      weight: 權重
+      new_holding: 新增活動
+      no_holdings: 沒有可顯示的持股。
+      return: 總報酬
+      weight: 占比
     missing_price_tooltip:
-      description: 此投資缺少價格資料，無法計算其收益或價值。
-      missing_data: 資料缺失
+      description: 此投資有缺漏的數值，無法計算其報酬或價值。
+      missing_data: 缺少資料
     show:
       avg_cost_label: 平均成本
       current_market_price_label: 目前市價
       delete: 刪除
-      delete_subtitle: 此操作將刪除該持股及相關所有交易記錄，且不可復原。
+      delete_subtitle: 此操作將刪除該持股，以及此帳戶中所有相關的交易紀錄。此動作無法復原。
       delete_title: 刪除持股
-      history: 歷史記錄
+      edit_security: 編輯證券
+      history: 歷史紀錄
+      no_trade_history: 這筆持股沒有可用的交易紀錄。
       overview: 概覽
-      portfolio_weight_label: 投資組合權重
+      portfolio_weight_label: 投資組合占比
       settings: 設定
-      ticker_label: 股票代碼
-      total_return_label: 總收益
-      trade_history_entry: "%{qty} 股 %{security} @ %{price}"
+      security_label: 證券
+      originally: 原為 %{ticker}
+      search_security: 搜尋證券
+      search_security_placeholder: 以代號或名稱搜尋
+      cancel: 取消
+      remap_security: 儲存
+      provider_disabled_warning: 價格更新已暫停 - %{provider} 供應商已停用。請在下方改用其他供應商，或到設定中重新啟用它。
+      truncated_history_warning: 價格歷史只有 %{date}之後的資料。更早的日期在所選供應商那裡沒有資料 - 可能是這檔資產在您的交易日之後才掛牌，也可能是該供應商目前的方案只提供有限的歷史區間。
+      switch_provider_label: 切換供應商
+      switch_provider_description: '%{provider} 已停用。請從另一個已啟用的供應商搜尋這檔證券。'
+      switch_provider_button: 切換
+      no_security_provider: 尚未設定證券資料供應商，無法搜尋證券。
+      security_remapped_label: 證券已重新對應
+      provider_sent: 供應商送來的是：%{ticker}
+      reset_to_provider: 重設為供應商的值
+      reset_confirm_title: 要把證券重設為供應商的值嗎？
+      reset_confirm_body: 這會把證券從 %{current} 改回 %{original}，並一併移動所有相關的交易。
+      ticker_label: 股票代號
+      trade_history_entry: '%{qty} 股 %{security} @ %{price}'
+      total_return_label: 總報酬
       unknown: 未知
+      cost_basis_locked_label: 成本基礎已鎖定
+      cost_basis_locked_description: 您手動設定的成本基礎不會被同步覆蓋。
+      unlock_cost_basis: 解鎖
+      unlock_confirm_title: 要解鎖成本基礎嗎？
+      unlock_confirm_body: 解鎖後，供應商同步或交易計算都可能覆蓋成本基礎。
+      shares_label: 股數
+      book_value_label: 帳面價值
+      market_value_label: 市場價值
+      market_data_label: 市場資料
+      market_data_sync_button: 重新整理
+      last_price_update: 上次價格更新
+      syncing: 同步中...
+      never: 從未更新

@@ -1,0 +1,32 @@
+uk:
+  layouts:
+    application:
+      insights: Аналітика
+      privacy_mode: Переключити режим конфіденційності
+      resize_left_sidebar: Змінити розмір лівої бічної панелі рахунків
+      resize_right_sidebar: Змінити розмір правої бічної панелі помічника
+      skip_to_main: Перейти до основного вмісту
+      nav:
+        assistant: Помічник
+        budgets: Бюджети
+        home: Головна
+        reports: Звіти
+        goals: Цілі
+        transactions: Транзакції
+    auth:
+      existing_account: Вже маєте обліковий запис?
+      no_account: Вперше на %{product_name}?
+      sign_in: Увійти
+      sign_up: Створити обліковий запис
+    shared:
+      footer:
+        privacy_policy: Політика конфіденційності
+        terms_of_service: Умови надання послуг
+      confirm_dialog:
+        are_you_sure: Ви впевнені?
+        cannot_be_undone: Цю дію неможливо скасувати.
+        confirm: Підтвердити
+    trial:
+      open_demo: Відкрити демо
+      data_deleted_in_days: Дані видалено через %{days} днів
+      contribute: Зробити внесок

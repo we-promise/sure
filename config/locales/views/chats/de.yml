@@ -2,5 +2,46 @@
 de:
   chats:
     demo_banner_title: "Demo-Modus aktiv"
-    demo_banner_message: "Sie nutzen ein Open-Weight Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können variieren, da die Codebasis hauptsächlich mit `gpt-4.1` getestet wurde – Ihre Tokens werden jedoch nicht anderswo zum Training verwendet! 🤖"
+    demo_banner_message: "Du nutzt ein Open-Weight-Qwen3-LLM mit Credits von Cloudflare Workers AI. Die Ergebnisse können abweichen, weil die Codebasis vor allem mit `gpt-4.1` getestet wurde. Deine Tokens werden nirgends zum Training verwendet. 🤖"
     thinking: "Wird verarbeitet ..."
+    ai_consent:
+      available_description: Der KI-Chat beantwortet Finanzfragen und wertet deine Daten aus. Du musst die Funktion ausdrücklich einschalten, bevor du sie nutzen kannst.
+      disable_note: Jederzeit abschaltbar. Alle Daten, die an unsere LLM-Anbieter gehen, sind anonymisiert.
+      enable_button: KI-Chats aktivieren
+      title: KI-Chats aktivieren
+      unavailable_description_html: Für den KI-Assistenten musst du die Umgebungsvariable <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> setzen oder ihn in den Self-Hosting-Einstellungen deiner Instanz einrichten.
+    ai_greeting:
+      commands_hint_html: Mit <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> kommst du an die Befehle
+      evaluate_portfolio: Depot bewerten
+      greeting: Hallo %{name}! Ich bin ein KI-Sprachmodell und helfe dir bei deinen Finanzen. Ich habe Zugriff aufs Web und auf deine Kontodaten.
+      questions_intro: 'Ein paar Fragen, die du stellen kannst:'
+      spending_insights: Ausgaben auswerten
+      there: du
+      unusual_patterns: Auffälligkeiten finden
+    chat:
+      delete_chat: Chat löschen
+      edit_chat_title: Chat-Titel bearbeiten
+    chat_nav:
+      all_chats: Alle Chats
+      delete_chat: Chat löschen
+      edit_chat_title: Chat-Titel bearbeiten
+      start_new_chat: Neuen Chat starten
+    destroy:
+      notice: Chat gelöscht
+    error:
+      retry: Erneut versuchen
+    index:
+      chats: Chats
+      new_chat: Neuer Chat
+    new:
+      default_title: "Neuer Chat %{timestamp}"
+    update:
+      success: Chat aktualisiert
+    worker_unhealthy_warning: KI-Antworten kommen gerade womöglich nicht an – der Hintergrundprozess scheint gestoppt oder überlastet. Prüf, ob dein Sidekiq-Worker läuft.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Überlegungen des Assistenten
+    tool_calls:
+      arguments: 'Argumente:'
+      function: 'Funktion:'
+      tool_calls: Werkzeugaufrufe

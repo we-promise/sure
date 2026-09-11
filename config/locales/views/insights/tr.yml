@@ -1,6 +1,9 @@
 ---
 tr:
   insights:
+    notification:
+      title: Yeni finansal içgörü
+      body: En son yapay zekâ içgörünüzü incelemek için Sure'ı açın.
     actions:
       budget: Bütçeyi görüntüle
       cash_flow_warning: Yinelenen işlemleri incele
@@ -10,10 +13,10 @@ tr:
       spending_anomaly: "%{category} işlemlerini görüntüle"
       subscription_audit: Yinelenen işlemleri incele
     card:
+      acknowledged: "İçgörü yoksayıldı"
       dismiss: Yoksay
       dismissed: İçgörü yoksayıldı
       new: Yeni
-      undo: Geri al
     feed:
       header: Son
       header_new: Yeni

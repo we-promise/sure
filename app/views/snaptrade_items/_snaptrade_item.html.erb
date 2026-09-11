@@ -3,9 +3,9 @@
 <%= tag.div id: dom_id(snaptrade_item) do %>
   <% unlinked_count = snaptrade_item.unlinked_accounts_count %>
   <% snaptrade_registered = snaptrade_item.oauth_configured? %>
-  <% brokerage_connect_href = snaptrade_registered ? connect_snaptrade_item_path(snaptrade_item) : oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) %>
-  <% brokerage_connect_frame = snaptrade_registered ? "_top" : :drawer %>
-  <% reconnect_href = oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) %>
+  <% brokerage_connect_href = snaptrade_registered ? connect_snaptrade_item_path(snaptrade_item) : snaptrade_authorize_path(item_id: snaptrade_item.id) %>
+  <% brokerage_connect_frame = snaptrade_registered ? "_top" : snaptrade_authorize_frame %>
+  <% reconnect_href = snaptrade_authorize_path(item_id: snaptrade_item.id) %>
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -70,7 +70,7 @@
                 icon: "link",
                 variant: "secondary",
                 href: reconnect_href,
-                frame: "_top"
+                frame: snaptrade_authorize_frame
               ) %>
             <% else %>
               <%= icon(

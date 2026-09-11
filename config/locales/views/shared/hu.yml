@@ -4,6 +4,7 @@ hu:
     self_hostable:
       redis_configured: "A Redis most megfelelően van konfigurálva! Mostantól beállíthatod a Sure alkalmazásodat."
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Megerősítés
       body_html: "<p>Ezt a döntést nem tudod visszavonni</p>"
@@ -24,7 +25,12 @@ hu:
       default_title: "Biztosan?"
       default_body: "Ez a művelet nem vonható vissza."
       default_btn_text: "Megerősítés"
+      resource_deletion_title: "Törli a következőt: %{resource}?"
+      resource_deletion_body: "Biztosan törli a következőt: %{resource}? Ez a művelet nem vonható vissza."
+      resource_deletion_btn_text: "%{resource} törlése"
     family_moniker:
+      group_plural: Csoportok
+      group_singular: Csoport
       singular: Háztartás
       plural: Háztartások
     trend_change:

@@ -1,0 +1,20 @@
+---
+uk:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: "Сума"
+        currency: "Валюта"
+        account: "Рахунок"
+        kind: "Тип"
+        status: "Статус"
+        expires_at: "Закінчується о"
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: "Виберіть один із прив'язаних до цілі рахунків."
+            currency:
+              must_match_goal: "Валюта зобов'язання повинна відповідати валюті цілі."
+          duplicate_open_pledge: "У вас уже є відкрите зобов'язання на цю суму на цьому рахунку. Скасуйте або продовжте існуюче, перш ніж записувати інше."

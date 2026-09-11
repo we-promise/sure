@@ -21,7 +21,7 @@ de:
       household_name: Haushaltsname
       household_name_placeholder: Haushaltsname
       moniker_prompt: "%{product_name} wird genutzt mit …"
-      moniker_family: Familienmitglieder (nur Sie selbst oder mit Partner, Kindern usw.)
+      moniker_family: Familienmitglieder (nur du selbst oder mit Partner, Kindern usw.)
       moniker_group: Personengruppe (Firma, Verein, Verband o. Ä.)
       country: Land
       submit: Weiter

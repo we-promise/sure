@@ -1,6 +1,7 @@
 ---
 ro:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Confirmă
       body_html: "<p>Nu vei putea anula această decizie</p>"
@@ -16,5 +17,10 @@ ro:
       exchange_rate_help: Alege cum dorești să introduci suma.
     syncing_notice:
       syncing: Se sincronizează datele conturilor...
+    family_moniker:
+      group_plural: Grupuri
+      group_singular: Grup
+      plural: Familii
+      singular: Familie
     trend_change:
       no_change: "fără schimbare"

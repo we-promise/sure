@@ -8,6 +8,29 @@ export default class extends Controller {
     this.inputTarget.focus();
     this.highlightedIndex = -1;
     this.updateAriaActiveDescendant();
+
+    this.hostDetails = this.element.closest("details");
+    if (this.hostDetails) {
+      this._onHostToggle = () => {
+        if (this.hostDetails.open) {
+          this.inputTarget.focus();
+        } else {
+          this.reset();
+        }
+      };
+      this.hostDetails.addEventListener("toggle", this._onHostToggle);
+    }
+  }
+
+  disconnect() {
+    if (this.hostDetails) {
+      this.hostDetails.removeEventListener("toggle", this._onHostToggle);
+    }
+  }
+
+  reset() {
+    this.inputTarget.value = "";
+    this.filter();
   }
 
   filter() {
@@ -118,7 +141,9 @@ export default class extends Controller {
   clearHighlights() {
     this.listTarget.querySelectorAll(".filterable-item").forEach((item) => {
       item.classList.remove("bg-container-inset-hover");
-      item.setAttribute("aria-selected", "false");
+      if (item.hasAttribute("aria-selected")) {
+        item.setAttribute("aria-selected", "false");
+      }
     });
   }
 

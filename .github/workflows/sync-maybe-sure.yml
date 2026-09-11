@@ -1,0 +1,38 @@
+name: Sync Maybe mirror
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-maybe-sure
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'we-promise/maybe-sure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out mirror
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Sync main from we-promise/sure
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git remote add sure https://github.com/we-promise/sure.git
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/we-promise/maybe-sure.git"
+
+          git fetch --no-tags sure main
+          git fetch --no-tags origin main
+
+          mirror_sha="$(git rev-parse refs/remotes/origin/main)"
+          git push origin refs/remotes/sure/main:refs/heads/main --force-with-lease=refs/heads/main:"$mirror_sha"

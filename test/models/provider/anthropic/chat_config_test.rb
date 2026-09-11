@@ -66,6 +66,56 @@ class Provider::Anthropic::ChatConfigTest < ActiveSupport::TestCase
     req[:tools].each { |t| assert_not t[:input_schema].key?(:strict) }
   end
 
+  test "maps tool_choice :none to the Anthropic tool_choice param when tools are present" do
+    config = Provider::Anthropic::ChatConfig.new(
+      prompt: "hi",
+      functions: [
+        {
+          name: "get_net_worth",
+          description: "Returns net worth",
+          params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+          strict: true
+        }
+      ],
+      tool_choice: :none
+    )
+
+    req = config.build_request(model: "claude-sonnet-4-6")
+
+    # Tool definitions must remain in the request — the API rejects messages
+    # containing tool blocks when no tools are defined.
+    assert_equal 1, req[:tools].size
+    assert_equal({ type: "none" }, req[:tool_choice])
+  end
+
+  test "omits tool_choice when no tools are present" do
+    config = Provider::Anthropic::ChatConfig.new(prompt: "hi", tool_choice: :none)
+
+    req = config.build_request(model: "claude-sonnet-4-6")
+
+    assert_nil req[:tools]
+    assert_nil req[:tool_choice]
+  end
+
+  test "omits tool_choice when tool_choice is nil" do
+    config = Provider::Anthropic::ChatConfig.new(
+      prompt: "hi",
+      functions: [
+        {
+          name: "get_net_worth",
+          description: "Returns net worth",
+          params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+          strict: true
+        }
+      ]
+    )
+
+    req = config.build_request(model: "claude-sonnet-4-6")
+
+    assert_equal 1, req[:tools].size
+    assert_nil req[:tool_choice]
+  end
+
   test "strips both symbol and string-keyed `strict` flags from input_schema" do
     config = Provider::Anthropic::ChatConfig.new(
       prompt: "hi",

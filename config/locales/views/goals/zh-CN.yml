@@ -76,7 +76,6 @@ zh-CN:
       success: 目标已更新。
     destroy:
       success: 目标已删除。
-      archive_first: 删除前请先归档该目标。
     pause:
       success: 目标已暂停。
       invalid_transition: 目标当前状态不能暂停。
@@ -103,7 +102,7 @@ zh-CN:
       archive: 归档
       unarchive: 恢复
       reopen: 重新开启目标
-      delete: 永久删除
+      delete: 删除
       record_pledge_cta: 记录承诺
       pledge_just_transferred: 记录你完成的转账
       pledge_just_saved: 记录你留出的资金
@@ -171,6 +170,9 @@ zh-CN:
       confirm_archive_title: 归档此目标？
       confirm_archive_body: 归档后的目标会从主列表隐藏。之后可以恢复。
       confirm_archive_cta: 归档
+      confirm_delete_title: "删除此目标？"
+      confirm_delete_body: "%{name} 及其存款记录将被永久删除。你的关联账户、余额和交易不受影响。如果想保留记录，请改为归档。"
+      confirm_delete_cta: "删除目标"
       paused_banner:
         title: 此目标已暂停
         body: 恢复它以继续跟踪进度。

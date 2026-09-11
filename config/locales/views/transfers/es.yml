@@ -7,10 +7,13 @@ es:
       success: Transferencia eliminada
     form:
       amount: Importe
+      bank_charges: Comisiones bancarias
+      outgoing_fee: Comisión de transferencia saliente
+      incoming_fee: Comisión de transferencia entrante
       date: Fecha
       destination_amount: Importe de destino
-      destination_amount_display: "Importe de destino: %{amount}"
-      exchange_rate_display: "Tasa de cambio: %{rate}"
+      destination_amount_display: 'Importe de destino: %{amount}'
+      exchange_rate_display: 'Tasa de cambio: %{rate}'
       expense: Gasto
       from: Desde
       income: Ingreso
@@ -26,11 +29,22 @@ es:
       delete_subtitle: Esto eliminará la transferencia. No se eliminarán las transacciones subyacentes.
       delete_title: ¿Eliminar transferencia?
       details: Detalles
+      mark_recurring: Marcar como recurrente
+      mark_recurring_subtitle: Haz seguimiento de esta transferencia como un patrón recurrente en el feed de próximos movimientos y en la página de recurrentes.
+      mark_recurring_title: Marcar transferencia como recurrente
       note_label: Notas
       note_placeholder: Añade una nota a esta transferencia
       overview: Resumen
       settings: Configuración
-      total: Total
+      from: Origen
+      to: Destino
+      date: Fecha
       transfer_amount: Importe de la transferencia
+      total: Total
+      bank_charges: Comisiones bancarias
+      source_fee: Comisión de origen
+      destination_fee: Comisión de destino
+      category: Categoría
+      uncategorized: Sin categorizar
     update:
       success: Transferencia actualizada

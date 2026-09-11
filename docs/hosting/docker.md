@@ -39,15 +39,21 @@ Make sure you are in the directory you just created and run the following comman
 
 ```bash
 # Download the sample compose.yml file from the GitHub repository
-curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+
+# (Optional) If you plan to use the automated database backups feature:
+mkdir -p bin
+curl --fail --location --silent --show-error --output bin/db-backup.sh https://raw.githubusercontent.com/we-promise/sure/main/bin/db-backup.sh
+chmod +x bin/db-backup.sh
 ```
 
 This command will do the following:
 
 1. Fetch the sample docker compose file from our public Github repository
 2. Creates a file in your current directory called `compose.yml` with the contents of the example file
+3. (Optionally) Fetches the backup script to `bin/db-backup.sh` and makes it executable.
 
-At this point, the only file in your current working directory should be `compose.yml`.
+At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
 ### Step 3 (optional): Configure your environment
 
@@ -63,7 +69,7 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl -o .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
 
 #### Generate the app secret key
@@ -185,7 +191,7 @@ The first time you run the app, you will need to register a new account by hitti
 After creating your initial admin account, you can control how other people join your self-hosted instance from **Settings > Self-Hosting > Onboarding**.
 
 - **Open**: Anyone can create an account from the registration page.
-- **Invite-only**: New account creation stays enabled, but signups require a valid invite code.
+- **Invite-only**: New account creation stays enabled. Signups require a valid invite code unless you configure a default family for invite-only onboarding.
 - **Closed**: The registration page is disabled for new signups.
 
 If you do not want additional self-service registrations, switch the instance to **Closed** after the initial setup.
@@ -214,22 +220,22 @@ If you find bugs or have a feature request, be sure to read through our [contrib
 
 Sure ships with a separate compose file for AI-related features: `compose.example.ai.yml`. It adds:
 
-- **Pipelock** (always on): AI agent security proxy that scans outbound LLM calls and inbound MCP traffic
-- **Ollama + Open WebUI** (optional `--profile ai`): local LLM inference
+- **Pipelock** (always on): AI agent security proxy for outbound tunnel controls and inbound MCP scanning
+- **Ollama + Open WebUI** (optional `--profile local-ai`): local LLM inference
 
 ### Using the AI compose file
 
 ```bash
 # Download both compose files
-curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
-curl -o compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
-curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
+curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
+curl --fail --location --silent --show-error --output compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
+curl --fail --location --silent --show-error --output pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
 
 # Run with Pipelock (no local LLM)
 docker compose -f compose.ai.yml up -d
 
 # Run with Pipelock + Ollama
-docker compose -f compose.ai.yml --profile ai up -d
+docker compose -f compose.ai.yml --profile local-ai up -d
 ```
 
 ### Setting up the external AI assistant
@@ -252,20 +258,64 @@ The external assistant delegates chat to a remote AI agent instead of calling LL
    - **Per-family (UI):** Go to Settings > Self-Hosting > AI Assistant, select "External"
    - **Global (env):** Set `ASSISTANT_TYPE=external` to force all families to use external
 
+To use the bundled OpenClaw service instead of a separately hosted agent, start the `external-assistant` profile. This profile starts OpenClaw without the local Ollama or Open WebUI services:
+
+```bash
+docker compose -f compose.ai.yml --profile external-assistant up -d
+```
+
 See [docs/hosting/ai.md](ai.md) for full configuration details including agent ID, session keys, and email allowlisting.
 
 ### Pipelock security proxy
 
-Pipelock sits between Sure and external services, scanning AI traffic for:
+Pipelock sits between Sure and external services. The default Compose file provides:
 
-- **Secret exfiltration** (DLP): catches API keys, tokens, or personal data leaking in prompts
-- **Prompt injection**: detects attempts to override system instructions
-- **Tool poisoning**: validates MCP tool calls against known-safe patterns
-- **Signed receipts**: optional hash-chained evidence of mediated decisions when `flight_recorder.dir` and `signing_key_path` are configured
+- MCP request and response scanning for DLP, prompt injection, and tool poisoning
+- HTTPS tunnel controls for destination, SSRF, rate, budget, CONNECT headers, and optional signed receipts
+
+The example doesn't enable TLS interception, so Pipelock can't read encrypted HTTPS request or response bodies. Docker Compose also doesn't prevent a client from bypassing the proxy.
 
 When using `compose.example.ai.yml`, Pipelock is always running. External AI agents should connect to port 8889 (MCP reverse proxy) instead of directly to Sure's `/mcp` on port 3000.
 
 For full Pipelock configuration, see [docs/hosting/pipelock.md](pipelock.md).
+
+## Running Sure on small (512 MB) hosts
+
+Sure runs comfortably on hosts or containers limited to 512 MB of RAM, which makes it a good fit for the smallest tiers on platforms like Render, Fly.io, or a cheap VPS. This section summarizes what fits, what does not, and how to handle the jobs that do not.
+
+### What fits in 512 MB
+
+Measured on a production deploy of the official image with the tuning below:
+
+- Boot, first-run onboarding, and everyday use (dashboard, transactions, budgets, reports)
+- Small bank syncs and CSV imports
+- Scheduled (cron) jobs such as exchange-rate refreshes
+
+Steady-state memory sits around **352 MB**, leaving comfortable headroom under a 512 MB limit.
+
+### What does not fit in 512 MB
+
+- **The demo-data generator** ("Load sample/demo data"): this is the one operation that deterministically exceeds 512 MB. On a 512 MB container it climbs to the limit and gets OOM-killed mid-generation (observed flat at ~680 MB on a 2 GB container, ~5 minutes). Because the generation runs in the worker, the symptom is a sample-data load that never completes, sometimes with all rows silently rolled back.
+- **Very large first-time imports or historical syncs** (tens of thousands of rows) can also exceed the limit. Import your history in smaller batches, or temporarily raise the memory limit for the initial import and lower it afterwards.
+- **AI features**: the assistant flavors need extra headroom. If you enable AI, run at least 1 GB.
+
+### Tuning already in the image
+
+The official image ships with the memory tuning that makes 512 MB viable, so no extra configuration is needed:
+
+- **jemalloc** preloaded to reduce memory fragmentation
+- **YJIT** (Ruby's JIT) enabled
+- **Puma constrained to 1 worker x 3 threads** (`WEB_CONCURRENCY=1`, `RAILS_MAX_THREADS=3`)
+
+If you run your own process supervisor instead of the official image, set those same values.
+
+### Operational note for the sample-data button
+
+If you want to load sample/demo data on a small host:
+
+1. Raise the **worker's** memory limit (the generator runs in the worker process, not the web process). On Render, bump the worker service's plan; on Docker Compose, raise the worker container's memory limit.
+2. Apply the change with a **fresh deploy/restart of the worker**. Note for Render specifically: plan changes only take effect on the next deploy - they do **not** apply on a plain restart.
+3. Load the sample data, then optionally drop the worker back to the small plan with another fresh deploy.
 
 ## How to update your app
 
@@ -336,3 +386,4 @@ For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings �
 
 - Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
 - Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.
+

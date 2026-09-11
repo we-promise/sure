@@ -1,0 +1,23 @@
+uk:
+  subscriptions:
+    self_hosted_alert: "%{product_name} недоступний у режимі самостійного хостингу."
+    upgrade:
+      already_contributing: Ви вже робите внесок. Дякую!
+      page_title: "Оновити"
+      account_settings: "Налаштування облікового запису"
+      sign_out: "Вийти"
+      contribute_and_support_sure: "Зробіть внесок і підтримайте Sure"
+      cta: "Продовжуйте підтримувати розробку цієї кодової бази!"
+      header:
+        support: "Підтримка"
+        sure: "Sure"
+        today: "сьогодні"
+      redirect_to_stripe: "На наступному кроці ви будете перенаправлені на Stripe, який обробляє для нас кредитні картки."
+      trialing: "Ваші дані будуть видалені через %{days} днів"
+      trial_over: "Ваш пробний період закінчився"
+    create:
+      welcome: "Ласкаво просимо до Sure!"
+      trial_already_used: "Ви вже розпочали або завершили пробний період. Будь ласка, оновіть, щоб продовжити."
+    success:
+      welcome_with_contribution: "Ласкаво просимо до Sure! Ваш внесок цінується."
+      contribution_failed: "Щось пішло не так під час обробки вашого внеску. Будь ласка, спробуйте ще раз."

@@ -1,0 +1,88 @@
+---
+uk:
+  coinbase_items:
+    create:
+      default_name: "Coinbase"
+      success: "Успішно підключено до Coinbase! Ваші рахунки синхронізуються."
+    update:
+      success: "Конфігурацію Coinbase успішно оновлено."
+    destroy:
+      success: "Заплановано видалення підключення Coinbase."
+    setup_accounts:
+      title: "Імпортувати гаманці Coinbase"
+      subtitle: "Виберіть, які гаманці відстежувати"
+      instructions: "Виберіть гаманці, які ви хочете імпортувати. Невибрані гаманці залишаться доступними, якщо ви захочете додати їх пізніше."
+      no_accounts: "Всі гаманці імпортовано."
+      accounts_count:
+        one: "%{count} гаманець доступний"
+        few: "%{count} гаманці доступні"
+        many: "%{count} гаманців доступні"
+        other: "%{count} гаманців доступні"
+      select_all: "Вибрати все"
+      import_selected: "Імпортувати вибране"
+      cancel: "Скасувати"
+      creating: "Імпортування..."
+    complete_account_setup:
+      success:
+        one: "Імпортовано %{count} гаманець"
+        few: "Імпортовано %{count} гаманці"
+        many: "Імпортовано %{count} гаманців"
+        other: "Імпортовано %{count} гаманців"
+      none_selected: "Не вибрано жодного гаманця"
+      no_accounts: "Немає гаманців для імпорту"
+    coinbase_item:
+      provider_name: "Coinbase"
+      syncing: "Синхронізація..."
+      reconnect: "Облікові дані потребують оновлення"
+      deletion_in_progress: "Видалення..."
+      sync_status:
+        no_accounts: "Рахунків не знайдено"
+        all_synced:
+          one: "%{count} рахунок синхронізовано"
+          few: "%{count} рахунки синхронізовано"
+          many: "%{count} рахунків синхронізовано"
+          other: "%{count} рахунків синхронізовано"
+        partial_sync: "%{linked_count} синхронізовано, %{unlinked_count} потребують налаштування"
+      status: "Остання синхронізація %{timestamp} тому"
+      status_with_summary: "Остання синхронізація %{timestamp} тому - %{summary}"
+      status_never: "Ніколи не синхронізовано"
+      update_credentials: "Оновити облікові дані"
+      delete: "Видалити"
+      no_accounts_title: "Рахунків не знайдено"
+      no_accounts_message: "Ваші гаманці Coinbase з'являться тут після синхронізації."
+      setup_needed: "Гаманці готові до імпорту"
+      setup_description: "Виберіть, які гаманці Coinbase ви хочете відстежувати."
+      setup_action: "Імпортувати гаманці"
+      import_wallets_menu: "Імпортувати гаманці"
+      more_wallets_available:
+        one: "%{count} ще гаманець доступний для імпорту"
+        few: "%{count} ще гаманці доступні для імпорту"
+        many: "%{count} ще гаманців доступні для імпорту"
+        other: "%{count} ще гаманців доступні для імпорту"
+    select_existing_account:
+      title: "Прив'язати рахунок Coinbase"
+      no_accounts_found: "Рахунків Coinbase не знайдено."
+      wait_for_sync: "Зачекайте, поки Coinbase завершить синхронізацію"
+      check_provider_health: "Перевірте, чи дійсні ваші облікові дані API Coinbase"
+      balance: "Баланс"
+      currently_linked_to: "Наразі прив'язано до: %{account_name}"
+      link: "Прив'язати"
+      cancel: "Скасувати"
+    link_existing_account:
+      success: "Успішно прив'язано до рахунку Coinbase"
+      errors:
+        only_manual: "Лише ручні рахунки можна прив'язати до Coinbase"
+        invalid_coinbase_account: "Недійсний рахунок Coinbase"
+  coinbase_item:
+    syncer:
+      checking_credentials: "Перевірка облікових даних..."
+      credentials_invalid: "Недійсні облікові дані API. Перевірте свій ключ API та секрет."
+      importing_accounts: "Імпортування рахунків з Coinbase..."
+      checking_configuration: "Перевірка конфігурації рахунку..."
+      accounts_need_setup:
+        one: "%{count} рахунок потребує налаштування"
+        few: "%{count} рахунки потребують налаштування"
+        many: "%{count} рахунків потребують налаштування"
+        other: "%{count} рахунків потребують налаштування"
+      processing_accounts: "Обробка даних рахунку..."
+      calculating_balances: "Розрахунок балансів..."

@@ -77,10 +77,78 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil session[:wise_pending_encrypted_token]
   end
 
+  test "link_profiles applies the pending import_all_history setting to created items" do
+    Provider::Wise.any_instance.stubs(:get_profiles).returns(@valid_profiles)
+    post wise_items_url, params: { wise_item: { token: "live_token_abc", import_all_history: "1" } }
+
+    assert_difference "WiseItem.count", 1 do
+      post link_profiles_wise_items_url, params: { profile_ids: [ "99999999" ] }
+    end
+
+    assert @family.wise_items.find_by!(profile_id: "99999999").import_all_history?
+    assert_nil session[:wise_pending_import_all_history]
+  end
+
+  test "link_profiles defaults import_all_history to false when not requested" do
+    Provider::Wise.any_instance.stubs(:get_profiles).returns(@valid_profiles)
+    post wise_items_url, params: { wise_item: { token: "live_token_abc" } }
+
+    post link_profiles_wise_items_url, params: { profile_ids: [ "99999999" ] }
+
+    assert_not @family.wise_items.find_by!(profile_id: "99999999").import_all_history?
+  end
+
+  test "link_profiles applies import_all_history to every created profile" do
+    profiles = [
+      { "id" => "99999999", "type" => "personal", "details" => { "firstName" => "Jane", "lastName" => "Doe" } },
+      { "id" => "88888888", "type" => "business", "details" => { "name" => "Acme" } }
+    ]
+    Provider::Wise.any_instance.stubs(:get_profiles).returns(profiles)
+    post wise_items_url, params: { wise_item: { token: "live_token_abc", import_all_history: "1" } }
+
+    assert_difference "WiseItem.count", 2 do
+      post link_profiles_wise_items_url, params: { profile_ids: [ "99999999", "88888888" ] }
+    end
+
+    assert @family.wise_items.find_by!(profile_id: "99999999").import_all_history?
+    assert @family.wise_items.find_by!(profile_id: "88888888").import_all_history?
+    assert_nil session[:wise_pending_import_all_history]
+  end
+
   test "link_profiles redirects to providers when there is no pending session" do
     post link_profiles_wise_items_url, params: { profile_ids: [ "99999999" ] }
 
     assert_redirected_to settings_providers_path
+  end
+
+  test "generate_sca_keypair stores a keypair on the item" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    assert_nil @wise_item.sca_private_key
+
+    post generate_sca_keypair_wise_item_url(@wise_item)
+
+    assert_redirected_to accounts_path
+    assert @wise_item.reload.sca_configured?
+  end
+
+  test "generate_sca_keypair replaces a previously generated keypair" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    @wise_item.generate_sca_keypair!
+    previous_key = @wise_item.sca_private_key
+
+    post generate_sca_keypair_wise_item_url(@wise_item)
+
+    assert_not_equal previous_key, @wise_item.reload.sca_private_key
+  end
+
+  test "generate_sca_keypair reports an error rather than storing a key in the clear" do
+    WiseItem.stubs(:encryption_ready?).returns(false)
+
+    post generate_sca_keypair_wise_item_url(@wise_item)
+
+    assert_nil @wise_item.reload.sca_private_key
   end
 
   test "link_profiles redirects to providers when the session token cannot be decrypted" do

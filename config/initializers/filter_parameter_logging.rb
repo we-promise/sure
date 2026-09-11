@@ -7,5 +7,8 @@ Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :openai_access_token,
   :client_id, :consumer_key, :snaptrade_user_id, :snaptrade_user_secret,
   :oauth_access_token, :oauth_refresh_token, :code_verifier, :code_challenge,
+  # A device code redeems into tokens on its own, so it is a bearer credential in
+  # transit; verification_uri_complete embeds the user code, hence all three.
+  :device_code, :user_code, :verification_uri_complete,
   :bank_username, :bank_password, :security_answers, :captcha_input
 ]

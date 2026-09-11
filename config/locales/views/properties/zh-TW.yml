@@ -7,7 +7,7 @@ zh-TW:
       address_line1: 街道地址
       address_line1_placeholder: 例如：忠孝東路一段 123 號
       area: 居住面積
-      area_placeholder: '30'
+      area_placeholder: '2000'
       area_unit: 面積單位
       country: 國家
       country_placeholder: TW
@@ -21,8 +21,53 @@ zh-TW:
       subtype_prompt: 選擇不動產類型
       year_built: 建築年份
       year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
     new:
-      title: 輸入不動產詳情
+      title: 手動輸入不動產資料
+      next: 下一步
+      avm_option: 透過 %{provider} 新增
+      avm_title: 透過 %{provider} 新增房產
+      avm_description: 輸入房產名稱與地址，%{provider} 會為您查詢房產細節與估計市值。
+      avm_us_only: '%{provider} 僅支援位於美國的房產。'
+      avm_submit: 查詢房產
+      avm_preview_title: 確認房產資訊
+      avm_preview_description: 以下是 %{provider} 查到的資料。新增前請先確認，目前尚未建立任何項目。
+      avm_preview_no_record: '%{provider} 在這個地址找不到房產紀錄，因此顯示的價值是根據周邊區域推估的。繼續前請再次確認地址。'
+      avm_preview_back: 返回
+      avm_preview_confirm: 新增房產
+    address:
+      title: 手動輸入不動產資料
+      address_line1_label: 地址列 1
+      address_line1_placeholder: 123 Main Street
+      city_label: 城市
+      city_placeholder: San Francisco
+      state_region_label: 州／地區
+      state_region_placeholder: CA
+      postal_code_label: 郵遞區號
+      postal_code_placeholder: '12345'
+      country_label: 國家
+      country_placeholder: USA
+      save: 儲存
+    balances:
+      title: 手動輸入不動產資料
+      market_value_label: 估計市值
+      market_value_tooltip: 您房地產的估計市值。這個數字通常可以在 Zillow 或 Redfin 之類的網站上查到，而且從來都不是精確的數字。
+      save: 儲存
+      next: 下一步
+    overview_fields:
+      name_label: 名稱
+      name_placeholder: 度假屋
+      subtype_prompt: 選擇類型
+      property_type_label: 不動產類型
+      year_built_label: 建築年份（選填）
+      year_built_placeholder: '1990'
+      area_label: 面積（選填）
+      area_placeholder: '1200'
+      square_feet: 平方英尺
+      square_meters: 平方公尺
+      area_unit_label: 面積單位
     overview:
       living_area: 居住面積
       market_value: 市場價值
@@ -30,3 +75,28 @@ zh-TW:
       trend: 趨勢
       unknown: 未知
       year_built: 建築年份
+    tabs:
+      overview:
+        living_area: 居住面積
+        market_value: 市場價值
+        purchase_price: 買入價格
+        trend: 趨勢
+        unknown: 未知
+        year_built: 建築年份
+        edit_account_details: 編輯帳戶詳細資料
+    subtypes:
+      apartment:
+        short: 公寓
+        long: 公寓
+      plot:
+        short: 土地
+        long: 建地／土地
+      commercial:
+        short: 商用
+        long: 商用不動產
+      rented:
+        short: 出租
+        long: 出租物件
+      agri_land:
+        short: 農地
+        long: 農業用地

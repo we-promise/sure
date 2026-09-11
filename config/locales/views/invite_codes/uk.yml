@@ -1,0 +1,9 @@
+uk:
+  invite_codes:
+    create:
+      success: "Код згенеровано"
+    destroy:
+      success: "Код видалено"
+    index:
+      invite_code_description: Згенеруйте новий код, щоб побачити його тут. Використані згенеровані коди більше не відображатимуться.
+      no_invite_codes: Немає кодів для відображення

@@ -86,7 +86,6 @@ pl:
       success: Cel zaktualizowany.
     destroy:
       success: Cel usunięty.
-      archive_first: Zarchiwizuj cel przed jego usunięciem.
     pause:
       success: Cel wstrzymany.
       invalid_transition: Cel nie może być wstrzymany z bieżącego stanu.
@@ -113,7 +112,7 @@ pl:
       archive: Archiwizuj
       unarchive: Przywróć
       reopen: Otwórz ponownie
-      delete: Usuń na stałe
+      delete: Usuń
       record_pledge_cta: Zapisz zobowiązanie
       pledge_just_transferred: Zarejestruj wykonany przelew
       pledge_just_saved: Zarejestruj odłożone pieniądze
@@ -183,6 +182,9 @@ pl:
       confirm_archive_title: Zarchiwizować ten cel?
       confirm_archive_body: Zarchiwizowane cele znikną z głównej listy. Możesz je później przywrócić.
       confirm_archive_cta: Archiwizuj
+      confirm_delete_title: "Usunąć ten cel?"
+      confirm_delete_body: "%{name} i jego historia wpłat zostaną trwale usunięte. Powiązane konta, salda i transakcje pozostaną bez zmian. Aby zachować go jako zapis, zarchiwizuj go zamiast usuwać."
+      confirm_delete_cta: "Usuń cel"
       paused_banner:
         title: Ten cel jest wstrzymany
         body: Wznów go, aby kontynuować śledzenie postępów.

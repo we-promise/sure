@@ -1,0 +1,37 @@
+---
+pt-PT:
+  sessions:
+    create:
+      invalid_credentials: E-mail ou palavra-passe inválidos.
+      local_login_disabled: O início de sessão com palavra-passe local está desativado. Utilize o início de sessão único.
+    destroy:
+      logout_successful: Terminou a sessão com sucesso.
+    post_logout:
+      logout_successful: Terminou a sessão com sucesso.
+    openid_connect:
+      account_linked: "Conta ligada com sucesso a %{provider}"
+      failed: Não foi possível autenticar através do OpenID Connect.
+    failure:
+      failed: Não foi possível autenticar.
+      sso_provider_unavailable: "O serviço SSO está atualmente indisponível. Tente novamente mais tarde ou contacte um administrador."
+      sso_invalid_response: "Foi recebida uma resposta inválida do serviço SSO. Tente novamente."
+      sso_failed: "A autenticação de início de sessão único falhou. Tente novamente."
+    mobile_sso_start:
+      redirecting_html: "A redirecionar para o início de sessão... <a href=\"%{url}\">Clique aqui</a> se não for redirecionado."
+    new:
+      email: Endereço de e-mail
+      email_placeholder: voce@exemplo.com
+      forgot_password: Esqueceu-se da sua palavra-passe?
+      password: Palavra-passe
+      submit: Iniciar sessão
+      title: Sure
+      password_placeholder: Introduza a sua palavra-passe
+      openid_connect: Iniciar sessão com OpenID Connect
+      oidc: Iniciar sessão com OpenID Connect
+      google_auth_connect: Iniciar sessão com Google
+      local_login_admin_only: O início de sessão local está restrito aos administradores.
+      passkey_button: Iniciar sessão com uma chave de acesso
+      passkey_unsupported: Este navegador não suporta chaves de acesso.
+      no_auth_methods_enabled: Não existem métodos de autenticação ativados de momento. Contacte um administrador.
+      demo_banner_title: "Modo de Demonstração Ativo"
+      demo_banner_message: "Este é um ambiente de demonstração. As credenciais de início de sessão foram pré-preenchidas para sua conveniência. Por favor, não introduza informações reais ou sensíveis."

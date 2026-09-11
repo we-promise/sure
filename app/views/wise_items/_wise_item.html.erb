@@ -14,9 +14,6 @@
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">
               <%= tag.p wise_item.name, class: "font-medium text-primary" %>
-              <span class="text-xs px-1.5 py-0.5 rounded bg-surface-inset text-secondary">
-                <%= t("wise_items.profile_types.#{wise_item.profile_type}") %>
-              </span>
               <% if wise_item.scheduled_for_deletion? %>
                 <%= tag.p t(".deletion_in_progress"), class: "text-destructive text-sm animate-pulse" %>
               <% end %>
@@ -45,6 +42,13 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_wise_item_path(wise_item),
+              disabled: wise_item.syncing?
+            ) %>
+
             <%= render DS::Menu.new do |menu| %>
               <% menu.with_item(
                 variant: "button",
