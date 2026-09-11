@@ -69,8 +69,17 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      if merchant_params[:name].present? && merchant_params[:name] != @merchant.name
-        # Name changed — convert ProviderMerchant to FamilyMerchant for this family only
+      name_changed = merchant_params[:name].present? && merchant_params[:name] != @merchant.name
+      # An IBAN edit must not mutate the shared ProviderMerchant row: unlike
+      # website_url (cosmetic, logo lookup only), iban drives cross-family
+      # merchant-identity matching (Account::ProviderImportAdapter looks
+      # merchants up globally by source+iban), so one family setting it would
+      # silently redirect another family's future transactions to this
+      # merchant. Route it through the same conversion path as a name change.
+      iban_changed = merchant_params.key?(:iban) && normalize_iban(merchant_params[:iban]) != @merchant.iban
+
+      if name_changed || iban_changed
+        # Convert ProviderMerchant to FamilyMerchant for this family only
         @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
@@ -166,7 +175,13 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url)
+      params.require(key).permit(:name, :color, :website_url, :iban)
+    end
+
+    # Mirrors Merchant#normalize_iban so a submitted value can be compared
+    # against the persisted (already-normalized) iban without saving first.
+    def normalize_iban(value)
+      value.to_s.gsub(/[[:space:]]+/, "").upcase.presence
     end
 
     def merchant_json(merchant)
