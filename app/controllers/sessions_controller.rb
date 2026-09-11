@@ -226,14 +226,6 @@ class SessionsController < ApplicationController
       return
     end
 
-    # Same reasoning as SessionsController#create: check before starting the
-    # MFA challenge, not just after, so a stale in-flight login can't finish
-    # once the user is reactivated.
-    unless user.active?
-      redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
-      return
-    end
-
     if user.otp_required?
       session[:mfa_user_id] = user.id
       redirect_to verify_mfa_path
@@ -420,8 +412,10 @@ class SessionsController < ApplicationController
       # openid_connect already checked user.active? before dispatching here,
       # but record_authentication!/sync_user_attributes!/audit logging run in
       # between — reload right before actually minting a token to narrow that
-      # window, same reasoning as Authentication#create_session_for.
-      unless user.reload.active?
+      # window, same reasoning as Authentication#create_session_for. Treats a
+      # concurrently purged user (reload raises RecordNotFound) the same as
+      # inactive instead of letting it fall through to a generic 404.
+      unless user_reloadable_and_active?(user)
         Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
         session.delete(:mobile_sso)
         mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
@@ -445,7 +439,7 @@ class SessionsController < ApplicationController
 
       begin
         token_response = device.issue_token!
-      rescue ActiveRecord::RecordInvalid
+      rescue User::InactiveError
         Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
         mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
         return
@@ -527,6 +521,16 @@ class SessionsController < ApplicationController
 
     def mobile_sso_redirect(params = {})
       redirect_to "sureapp://oauth/callback?#{params.to_query}", allow_other_host: true
+    end
+
+    # A concurrent purge between the initial check and this fast-path
+    # re-check raises RecordNotFound on reload; treat it the same as
+    # inactive instead of letting it fall through to StoreLocation's
+    # generic not-found handler.
+    def user_reloadable_and_active?(user)
+      user.reload.active?
+    rescue ActiveRecord::RecordNotFound
+      false
     end
 
     def set_session
