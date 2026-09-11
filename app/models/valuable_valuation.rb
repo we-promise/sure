@@ -51,14 +51,19 @@ class ValuableValuation
       cached = ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
       return price_from_rate(cached, symbol) if cached
 
-      price = fetch_twelve_data_price(symbol) { |error| log_twelve_data_fallback(symbol, error) } || fetch_gold_api_price(symbol)
-      raise Error, "No bullion price provider is configured for #{symbol}" unless price
-      unless price.date == date && price.currency == account.currency && price.price_per_troy_ounce.to_d > 0
-        raise Error, "The bullion provider returned an invalid or stale #{symbol} quote"
-      end
+      with_spot_rate_lock(symbol) do
+        cached = ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
+        return price_from_rate(cached, symbol) if cached
 
-      cached = ExchangeRate.create_or_find_by!(from_currency: symbol, to_currency: account.currency, date: date) { |rate| rate.rate = price.price_per_troy_ounce }
-      price_from_rate(cached, symbol)
+        price = fetch_twelve_data_price(symbol) { |error| log_twelve_data_fallback(symbol, error) } || fetch_gold_api_price(symbol)
+        raise Error, "No bullion price provider is configured for #{symbol}" unless price
+        unless price.date == date && price.currency == account.currency && price.price_per_troy_ounce.to_d > 0
+          raise Error, "The bullion provider returned an invalid or stale #{symbol} quote"
+        end
+
+        cached = ExchangeRate.create_or_find_by!(from_currency: symbol, to_currency: account.currency, date: date) { |rate| rate.rate = price.price_per_troy_ounce }
+        price_from_rate(cached, symbol)
+      end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       cached = ExchangeRate.find_by(from_currency: symbol, to_currency: account.currency, date: date)
       raise unless cached
@@ -68,6 +73,22 @@ class ValuableValuation
     def price_from_rate(rate, symbol)
       raise Error, "The cached #{symbol} quote is invalid" unless rate.rate.to_d > 0
       Provider::GoldApi::Price.new(date: rate.date, currency: account.currency, price_per_troy_ounce: rate.rate, symbol: symbol)
+    end
+
+    def with_spot_rate_lock(symbol)
+      key = "#{symbol}:#{account.currency}:#{date.iso8601}"
+      db_connection = ExchangeRate.connection
+      db_connection.execute(advisory_lock_sql("pg_advisory_lock", key))
+      locked = true
+      yield
+    ensure
+      db_connection.execute(advisory_lock_sql("pg_advisory_unlock", key)) if locked
+    end
+
+    def advisory_lock_sql(function, key)
+      ActiveRecord::Base.sanitize_sql_array(
+        [ "SELECT #{function}(hashtext(?), hashtext(?))", "valuable_spot_rate", key ]
+      )
     end
 
     def fetch_twelve_data_price(symbol)

@@ -252,4 +252,15 @@ class ValuableValuationTest < ActiveSupport::TestCase
     assert_in_delta 10_000, value, 0.01
     assert_in_delta 10_000, @account.reload.balance, 0.01
   end
+
+  test "rechecks the spot-rate cache after acquiring its lock" do
+    valuation = ValuableValuation.new(account: @account)
+    Provider::Registry.expects(:get_provider).never
+    valuation.define_singleton_method(:with_spot_rate_lock) do |_symbol, &block|
+      ExchangeRate.create!(from_currency: "XAU", to_currency: "USD", date: Date.current, rate: 3_110.34768)
+      block.call
+    end
+
+    assert_in_delta 10_000, valuation.refresh!, 0.01
+  end
 end
