@@ -679,4 +679,170 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
+
+  test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "History Test Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+
+    anchor_date = 30.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 100, date: anchor_date)
+    assert_equal anchor_date, account.history_start_date
+
+    earlier_entry_date = 45.days.ago.to_date
+    account.entries.create!(
+      name: "Past Entry",
+      date: earlier_entry_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    assert_equal earlier_entry_date, account.history_start_date
+  end
+
+  test "history_start_date returns nil when account has no opening anchor, entries, or balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Empty History Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+  end
+
+  test "history_start_date resolves to transaction date when there is no opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Transaction Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Old Trade",
+      date: trade_date,
+      amount: 500,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date resolves to balance date when there are no entries or opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Balance Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    balance_date = 1.year.ago.to_date
+    account.balances.create!(
+      date: balance_date,
+      balance: 1000,
+      currency: "USD"
+    )
+
+    assert_equal balance_date, account.history_start_date
+  end
+
+  test "history_start_date prefers earlier transaction when valuation is added much later" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Late Valuation Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Initial Buy",
+      date: trade_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    # Later reconciliation valuation added 6 months ago
+    account.set_opening_anchor_balance(balance: 500, date: 6.months.ago.to_date)
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date handles transaction from 10 years ago" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Decade Old Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    ten_years_ago = 10.years.ago.to_date
+    account.entries.create!(
+      name: "Decade Ago Trade",
+      date: ten_years_ago,
+      amount: 250,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal ten_years_ago, account.history_start_date
+  end
+
+  test "history_start_date ignores pending transactions" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Pending Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    posted_date = 5.days.ago.to_date
+    account.entries.create!(
+      name: "Posted Entry",
+      date: posted_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    account.entries.create!(
+      name: "Pending Entry",
+      date: 10.days.ago.to_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+
+    assert_equal posted_date, account.history_start_date
+  end
 end

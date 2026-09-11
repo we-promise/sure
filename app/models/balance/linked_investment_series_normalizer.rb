@@ -49,10 +49,16 @@ class Balance::LinkedInvestmentSeriesNormalizer
           .group(:account_id)
           .minimum(:date)
 
+        anchor_dates = Valuation.opening_anchor
+          .joins(:entry)
+          .where(entries: { account_id: account_ids })
+          .group("entries.account_id")
+          .minimum("entries.date")
+
         stable_holding_dates = stable_provider_holding_start_dates(account_ids)
 
         account_ids.filter_map do |account_id|
-          [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
+          [ anchor_dates[account_id], activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
         end.max
       end
 
@@ -88,14 +94,34 @@ class Balance::LinkedInvestmentSeriesNormalizer
     first_supported_history_date = supported_history_start_date
     return series unless first_supported_history_date.present?
 
-    trimmed_values = series.values.select { |value| value.date >= first_supported_history_date }
-    return series if trimmed_values.blank? || trimmed_values.length == series.values.length
+    active_points = series.values.select { |value| value.date >= first_supported_history_date }
+    return series if active_points.blank?
+
+    # If periodic sampling missed the exact opening date (e.g. coarse 1-month or 1-week intervals),
+    # prepend an anchor point on the exact opening date with the initial balance (e.g. $0)
+    if active_points.first.date > first_supported_history_date
+      currency = active_points.first.value.currency
+      opening_money = Money.new(account.opening_anchor_balance || 0, currency)
+      anchor_value = Series::Value.new(
+        date: first_supported_history_date,
+        date_formatted: I18n.l(first_supported_history_date, format: :long),
+        value: opening_money,
+        trend: Trend.new(
+          current: opening_money,
+          previous: nil,
+          favorable_direction: series.favorable_direction
+        )
+      )
+      active_points = [ anchor_value, *active_points ]
+    end
+
+    return series if active_points.first&.date == series.values.first&.date && active_points.length == series.values.length
 
     Series.new(
-      start_date: trimmed_values.first.date,
+      start_date: active_points.first.date,
       end_date: series.end_date,
       interval: series.interval,
-      values: trimmed_values,
+      values: active_points,
       favorable_direction: series.favorable_direction
     )
   end
@@ -103,7 +129,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
   private
 
     def supported_history_start_date
-      [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+      [ (account.opening_anchor_date if account.has_opening_anchor?), first_provider_activity_date, stable_provider_holding_start_date ].compact.min
     end
 
     def first_provider_activity_date

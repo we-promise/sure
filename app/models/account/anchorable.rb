@@ -27,6 +27,14 @@ module Account::Anchorable
     opening_balance_manager.has_opening_anchor?
   end
 
+  def history_start_date
+    [
+      (opening_anchor_date if has_opening_anchor?),
+      entries.excluding_pending.minimum(:date),
+      balances.minimum(:date)
+    ].compact.min
+  end
+
   def set_current_balance(balance)
     result = current_balance_manager.set_current_balance(balance)
     sync_later if result.success?
