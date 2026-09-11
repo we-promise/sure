@@ -57,6 +57,14 @@
                 href: edit_plaid_item_path(plaid_item),
                 frame: "modal"
               ) %>
+            <% elsif plaid_item.us? %>
+              <%= render DS::Link.new(
+                text: t(".add_accounts"),
+                icon: "circle-plus",
+                variant: "secondary",
+                href: edit_plaid_item_path(plaid_item, add_accounts: true),
+                frame: "modal"
+              ) %>
             <% elsif Rails.env.development? %>
               <%= icon(
                 "refresh-cw",

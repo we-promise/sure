@@ -1,0 +1,77 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: @recurring_transaction.is_income ? t(".income_title") : t(".title")) %>
+  <% dialog.with_body do %>
+    <% if @candidates.present? %>
+      <div class="space-y-2 mb-5">
+        <p class="text-sm font-medium text-primary">
+          <%= @recurring_transaction.is_income ? t(".start_from_income_title") : t(".start_from_title") %>
+        </p>
+        <div class="max-h-44 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-divider">
+          <% @candidates.each do |candidate| %>
+            <%= link_to new_recurring_transaction_path(entry_id: candidate[:entry_id], income: params[:income].presence),
+                  class: "flex items-center justify-between gap-3 px-3 py-2 hover:bg-surface-inset" do %>
+              <div class="min-w-0">
+                <p class="text-sm text-primary truncate"><%= candidate[:name] %></p>
+                <p class="text-xs text-secondary">
+                  <%= t(".candidate_meta", count: candidate[:count], date: l(candidate[:last_date], format: :short)) %>
+                </p>
+              </div>
+              <p class="text-sm text-primary privacy-sensitive shrink-0">
+                <%= format_money(Money.new(candidate[:amount], candidate[:currency])) %>
+              </p>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="text-xs text-secondary"><%= t(".start_from_hint") %></p>
+      </div>
+    <% end %>
+
+    <%# Reachable whether or not detection found anything, and before the form
+        so a search does not throw away typed fields. %>
+    <div class="mb-5 text-sm flex flex-wrap items-center gap-x-3 gap-y-1">
+      <% if params[:entry_id].present? %>
+        <%= render DS::Link.new(
+              text: t(".pick_different"),
+              variant: :default,
+              href: new_recurring_transaction_path(picker: 1, income: params[:income].presence)
+            ) %>
+        <%# Smart-fill needs the picked transaction as its evidence anchor, so
+            it only exists on this variant: with no anchor it would guess.
+            DS::Link translates method: into data-turbo-method, so this is a
+            real POST; the anchor rides the query string. %>
+        <% if bills_one_shot_ai_available? %>
+          <%= render DS::Link.new(
+                text: t(".smart_fill"),
+                icon: "sparkles",
+                variant: :default,
+                href: smart_fill_recurring_transactions_path(entry_id: params[:entry_id], income: params[:income].presence),
+                method: :post,
+                frame: :modal
+              ) %>
+        <% end %>
+      <% else %>
+        <span class="text-secondary"><%= t(".search_all_prompt") %></span>
+        <%= render DS::Link.new(
+              text: t(".search_all_cta"),
+              variant: :default,
+              href: new_recurring_transaction_path(picker: 1, income: params[:income].presence)
+            ) %>
+      <% end %>
+    </div>
+
+    <% if @smart_fill %>
+      <div class="mb-5 rounded-lg bg-container-inset px-3 py-2 text-sm">
+        <p class="text-primary"><%= t(".smart_fill_applied") %></p>
+        <% if @smart_fill.rationale.present? %>
+          <p class="text-xs text-secondary"><%= @smart_fill.rationale %></p>
+        <% end %>
+      </div>
+    <% elsif @smart_fill_error %>
+      <div class="mb-5 rounded-lg bg-container-inset px-3 py-2 text-sm text-secondary">
+        <%= @smart_fill_error %>
+      </div>
+    <% end %>
+
+    <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0 %>
+  <% end %>
+<% end %>

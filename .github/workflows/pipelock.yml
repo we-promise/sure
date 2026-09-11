@@ -16,21 +16,106 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Pipelock Scan
-        uses: luckyPipewrench/pipelock@818ca0a7af4dbcd56ada7fa57e2dc32f9e799e34 # v2.8.0
+      - name: Install Helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
         with:
-          version: '2.8.0'
+          version: v3.21.4
+
+      - name: Build chart dependencies
+        shell: bash
+        run: |
+          helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts
+          helm repo add ot-helm https://ot-container-kit.github.io/helm-charts
+          helm repo update
+          helm dependency build charts/sure
+
+      - name: Pipelock Scan
+        uses: luckyPipewrench/pipelock@4c748ab986d611138ce202ab800b16eca6fb589f # v3.4.0
+        with:
+          version: '3.4.0'
           scan-diff: 'true'
           fail-on-findings: 'true'
           test-vectors: 'false'
           exclude-paths: |
-            .env.example
-            compose.example.yml
-            compose.example.ai.yml
-            config/locales/views/reports/
-            docs/hosting/ai.md
-            app/models/provider/binance.rb
-            workers/preview/package-lock.json
-            # Preview Dockerfile uses local dev credentials (rails/rails) that are
-            # not real secrets; Dockerfile format does not support inline # pipelock:ignore
-            Dockerfile.preview
+            config/locales/views/reports/ca.yml
+            config/locales/views/reports/de.yml
+            config/locales/views/reports/en.yml
+            config/locales/views/reports/es.yml
+            config/locales/views/reports/fr.yml
+            config/locales/views/reports/hu.yml
+            config/locales/views/reports/it.yml
+            config/locales/views/reports/nl.yml
+            config/locales/views/reports/pl.yml
+            config/locales/views/reports/pt-BR.yml
+            config/locales/views/reports/ro.yml
+            config/locales/views/reports/ru.yml
+            config/locales/views/reports/tr.yml
+            config/locales/views/reports/uk.yml
+            config/locales/views/reports/vi.yml
+            config/locales/views/reports/zh-CN.yml
+            config/locales/views/reports/zh-TW.yml
+
+      - name: Validate Pipelock deployment contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          assert_no_blocklist() {
+            ruby -ryaml -e '
+              config = YAML.safe_load_file(ARGV.fetch(0), aliases: true)
+              abort "blocklist is configured but its vectors are not enabled" if config.key?("blocklist")
+            ' "$1"
+          }
+
+          pipelock check --config pipelock.example.yaml
+          assert_no_blocklist pipelock.example.yaml
+          vector_categories="dlp,entropy,scheme,response_injection,mcp_response,mcp_input,mcp_tools,clean"
+          pipelock test --fail-on-gap --category "${vector_categories}" --config pipelock.example.yaml
+          docker compose -f compose.example.ai.yml config --quiet
+
+          external_services="$(docker compose -f compose.example.ai.yml --profile external-assistant config --services)"
+          grep -qx 'openclaw' <<<"${external_services}"
+          if grep -Eqx 'ollama|ollama-webui' <<<"${external_services}"; then
+            echo "::error::External assistant profile exposes local AI services"
+            exit 1
+          fi
+
+          rendered_config="${RUNNER_TEMP}/sure-pipelock.yaml"
+          helm template sure charts/sure \
+            --kube-version 1.25.0 \
+            --set pipelock.enabled=true \
+            --show-only templates/pipelock-configmap.yaml \
+            | awk '/pipelock.yaml: \|/{copy=1; next} copy{sub(/^    /, ""); print}' \
+            > "${rendered_config}"
+          test -s "${rendered_config}"
+          pipelock check --config "${rendered_config}"
+          assert_no_blocklist "${rendered_config}"
+          pipelock test --fail-on-gap --category "${vector_categories}" --config "${rendered_config}"
+
+          helm template sure charts/sure \
+            --set rails.externalAssistant.enabled=true \
+            --set rails.externalAssistant.url=https://agent.vendor.example/v1/chat \
+            --set pipelock.enabled=true \
+            >/dev/null
+
+          if rejection_output="$(helm template sure charts/sure \
+            --set rails.externalAssistant.enabled=true \
+            --set rails.externalAssistant.url=https://agent.vendor.example/v1/chat \
+            --set pipelock.enabled=false \
+            2>&1)"; then
+            echo "::error::External assistant rendered without Pipelock"
+            exit 1
+          fi
+          expected_rejection="pipelock.requireForExternalAssistant is true but pipelock.enabled is false"
+          if ! grep -Fq "${expected_rejection}" <<<"${rejection_output}"; then
+            echo "::error::External assistant failed for an unexpected reason"
+            printf '%s\n' "${rejection_output}"
+            exit 1
+          fi
+
+          helm template sure charts/sure \
+            --set rails.externalAssistant.enabled=true \
+            --set rails.externalAssistant.url=https://agent.vendor.example/v1/chat \
+            --set pipelock.enabled=false \
+            --set pipelock.requireForExternalAssistant=false \
+            >/dev/null

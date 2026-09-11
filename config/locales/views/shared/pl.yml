@@ -1,6 +1,7 @@
 ---
 pl:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Potwierdź
       body_html: "<p>Nie będzie można cofnąć tej decyzji</p>"
@@ -11,5 +12,10 @@ pl:
     syncing_notice:
       syncing: Synchronizowanie danych kont...
     require_admin: "Tę akcję mogą wykonać tylko administratorzy"
+    family_moniker:
+      group_plural: Grupy
+      group_singular: Grupa
+      plural: Rodziny
+      singular: Rodzina
     trend_change:
       no_change: "bez zmian"

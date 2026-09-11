@@ -8,8 +8,7 @@ This guide aims to assist new users through:
 
 This guide also covers the differences between **asset** and **liability** accounts, a key concept for using and understanding balances in Sure!
 
-> [!IMPORTANT]
-> Sure is evolving quickly. If you find something inaccurate while following this guide, please:
+> **Important:** Sure is evolving quickly. If you find something inaccurate while following this guide, please:
 > 
 > - Ask in the [Discord](https://discord.gg/36ZGBsxYEK)
 > - Open an [issue](https://github.com/we-promise/sure/issues/new/choose)
@@ -18,30 +17,34 @@ This guide also covers the differences between **asset** and **liability** accou
 
 ## 1. Creating your Sure Account
 
-Once Sure is installed, open a browser and navigate to [localhost:3000](http://localhost:3000/sessions/new).<br />
-You will see the **login page** (pictured below). Since we do not have an account yet, click on **Sign Up** to begin. 
+Once Sure is installed, open a browser and navigate to [localhost:3000](http://localhost:3000).<br />
+On a fresh install you will land directly on the **Create account** page (pictured below) - there is no separate sign-up step.
 
-<img width="2508" height="1314" alt="Landing page on a fresh install." src="https://github.com/user-attachments/assets/2319dc87-5615-4473-bebc-8360dd983367" />
+<img width="1280" height="713" alt="Landing page on a fresh install." src="assets/guide-create-account.png" />
 <br />
 <br />
 
 You'll be guided through a short series of screens to set your **login details**, **personal information**, and **preferences**.<br />
 When you arrive at the main dashboard, showing **No accounts yet**, you're all set up!
 
-<img width="2508" height="1314" alt="Blank home screen of Sure, with no accounts yet." src="https://github.com/user-attachments/assets/f06ba8e2-f188-4bf9-98a7-fdef724e9b5a" />
+<img width="1280" height="713" alt="Blank home screen of Sure, with no accounts yet." src="assets/guide-empty-dashboard.png" />
 <br />
 <br />
 
-> [!Note]
-> The next sections of this guide cover how to **manually add accounts and transactions** in Sure.<br />
-> If you'd like to use an integration with a data provider instead, see:
-> 
-> - [**Lunch Flow**](https://www.lunchflow.app/)
-> - [**Plaid**](/docs/hosting/plaid.md)
-> - [**Redbark**](/docs/hosting/redbark.md) (Australian banks)
+> **Note:** The next sections of this guide cover how to **manually add accounts and transactions** in Sure.<br />
+> If you'd rather connect a data provider, Sure supports many of them, including:
+>
+> - [**Plaid**](https://github.com/we-promise/sure/blob/main/docs/hosting/plaid.md) (US and EU)
 > - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
+> - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Enable Banking**](https://enablebanking.com/) (beta)
-> - [**CoinStats**](https://coinstats.app/) (beta)
+> - [**monobank**](https://github.com/we-promise/sure/blob/main/docs/hosting/monobank.md) (Ukrainian cards and jars)
+> - [**Redbark**](https://github.com/we-promise/sure/blob/main/docs/hosting/redbark.md) (Australian banks)
+> - [**Up**](https://up.com.au/) (Australian bank)
+> - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)
+> - [**CoinStats**](https://coinstats.app/) (beta, crypto)
+>
+> See **Settings > Bank sync** in your instance for the full list of supported providers and their setup options. Only **admin** users can connect a provider.
 >
 > Even if you use an integration, we still recommend reading through this guide to understand **account types** and how they work in Sure.
 
@@ -96,8 +99,7 @@ Overpayment Example:
 1. Balance: -$44 (bank owes you $44)
 2. Spend $1 => Bank now owes you **$43** (balance shown as -$43, moving towards zero)
 
-> [!TIP]
-> Why does it work this way? This matches standard accounting and what your credit card provider shows online. Think of a liability balance as "**Amount Owed**", not "available cash."
+> **Tip:** Why does it work this way? This matches standard accounting and what your credit card provider shows online. Think of a liability balance as "**Amount Owed**", not "available cash."
 
 
 ## 5. Quick Reference: Assets vs. Liability Behavior
@@ -113,18 +115,19 @@ Overpayment Example:
 
 For this example we'll add a **Savings Account**.<br />
 
->[!TIP]
->If you're adding a **credit card**, **loan**, or any other **debt**, be sure to select a **Credit Card** or **Liability** account type instead of **Cash**. This will ensure balances update correctly and match what your bank shows.
+> **Tip:** If you're adding a **credit card**, **loan**, or any other **debt**, be sure to select a **Credit Card** or **Liability** account type instead of **Cash**. This will ensure balances update correctly and match what your bank shows.
 
 Most bank accounts (checking, savings, money market) are **Cash Accounts**
-1. Click **+ Add Account** → **Cash** → **Enter Account Balance**
-2. Fill in details such as:
-   - Account name
-   - Current Balance
-   - Account Subtype (This is where you specify checking, savings, or other)
-3. Click **Create Account** when you are ready to proceed.
+1. Click **Add account** (on the dashboard) or **New account** (on the Accounts page), then choose **Cash**
+2. Choose **Enter account balance** to add the account manually. (If bank sync is configured, admins also see **Link with ...** provider options here.)
+3. Fill in the details:
+   - **Account name**
+   - **Balance on date** (the balance as of the **Opening balance date** below - that date defaults to two years ago, so set it to today if you're entering your current balance)
+   - **Opening balance date**
+   - **Subtype** (this is where you specify checking, savings, or another type)
+4. Click **Create Account** when you are ready to proceed.
 
-<img width="500" height="303" alt="Cash Account creation menu" src="https://github.com/user-attachments/assets/e564a447-c85e-403e-979b-efe770ea2a61" />
+<img width="570" height="455" alt="Cash Account creation menu" src="assets/guide-account-modal.png" />
 <br />
 <br />
 
@@ -135,13 +138,13 @@ You'll now see:
 
 To get this bar moving let's add some transactions!
 
-<img width="2508" height="1314" alt="Home screen of Sure, showing one account and no transactions." src="https://github.com/user-attachments/assets/7766a0cd-6b20-48f0-9ba2-87dfddd77236" />
+<img width="1280" height="713" alt="Home screen of Sure, showing one account and no transactions." src="assets/guide-dashboard-one-account.png" />
 
 ## 7. Adding Transactions
 
 To add a transaction:
-1. Go to the **Transactions** page (left sidebar, under **Home**, above **Budgets**)
-2. Click **+ New Transaction** (top right)
+1. Go to the **Transactions** page (left sidebar, just under **Home**)
+2. Click **New transaction** (top right; a round **+** button on mobile)
 3. Choose the transaction type:
    - **Expense** → Spending money
    - **Income** → Receiving money
@@ -150,7 +153,7 @@ To add a transaction:
 
 You will now see the transaction you added in your **transaction history**, as well as the **net worth chart** updating accordingly.
 
-<img width="500" height="512" alt="Filled-out expense form" src="https://github.com/user-attachments/assets/7c1d38d1-edb8-4d12-8b3e-bbef4836cc92" />
+<img width="566" height="587" alt="Filled-out expense form" src="assets/guide-expense-form.png" />
 
 ## 8. Managing Investment Accounts
 
@@ -193,7 +196,7 @@ You can set cost basis in two ways:
 
 1. Navigate to your investment account
 2. Find the holding in your portfolio
-3. Click the pencil icon next to the average cost
+3. Click the average cost value (a pencil icon appears on hover)
 4. Enter either:
    - **Total cost basis**: The total amount you paid for all shares
    - **Per-share cost**: The average price per share
@@ -202,7 +205,7 @@ You can set cost basis in two ways:
 
 The system will show a confirmation if you're overwriting an existing cost basis.
 
-<img width="531" height="597" alt="image" src="https://github.com/user-attachments/assets/b5a6aafe-de9e-447e-95a6-6000e68fb695" />
+<img width="570" height="713" alt="Holding drawer with the cost basis editor for AAPL." src="assets/guide-cost-basis-editor.png" />
 
 
 **From the Holding Drawer:**
@@ -230,7 +233,7 @@ After unlocking:
 - Future syncs can update the cost basis
 - Calculated values (from trades) will replace the manual value
 
-<img width="529" height="231" alt="image" src="https://github.com/user-attachments/assets/89d4c64f-7151-4702-b79f-1e22d47a2bee" />
+<img width="570" height="713" alt="Holding settings showing the locked cost basis with the Unlock option." src="assets/guide-cost-basis-unlock.png" />
 
 #### Bidirectional Conversion
 
@@ -288,7 +291,7 @@ Create rules to automatically label transactions based on patterns:
 5. Choose the label (e.g., "Dividend")
 6. Save the rule
 
-<img width="577" height="666" alt="image" src="https://github.com/user-attachments/assets/6660a3cc-af78-4199-8edc-18c198bbaad3" />
+<img width="554" height="708" alt="New rule form that sets the investment activity label to Dividend when the transaction name contains DIVIDEND." src="assets/guide-rule-activity-label.png" />
 
 Example rules:
 - IF name contains "DIVIDEND" THEN set label to "Dividend"
@@ -312,6 +315,6 @@ Now that you have one account and your first transaction:
 - Explore the other account types that Sure offers, adding ones relevant to your finances.
 - **Categorize** and **Tag** transactions for better searching and reporting.
 - Experiment with **Budgets** to track your spending habits.
-- If you have many historical transactions, use **Bulk Import** to load them in.
+- If you have many historical transactions, use **Import** (the Import button on the Transactions page, or **Settings > Imports**) to load them in.
 
 More detailed user guides for these features are coming soon™.

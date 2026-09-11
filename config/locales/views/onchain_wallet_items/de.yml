@@ -1,0 +1,111 @@
+---
+de:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Aktivität gefunden
+      explanation: Dieses Adressformat wird von mehreren Netzwerken verwendet, deren Guthaben sich unterscheiden. Wähl das Netzwerk, das du verfolgen möchtest.
+      no_activity_found: Nichts gefunden
+      subtitle: "%{address}"
+      title: Welches Netzwerk?
+    destroy:
+      success: Die Verbindung zu selbstverwahrten Wallets wurde zum Löschen eingeplant.
+    disconnect_asset:
+      success: "%{symbol} wird nicht mehr verfolgt. Das Konto und der Verlauf bleiben erhalten."
+    disconnect_wallet:
+      success:
+        one: 1 Vermögenswert an dieser Adresse wird nicht mehr verfolgt.
+        other: "%{count} Vermögenswerte an dieser Adresse werden nicht mehr verfolgt."
+    enable_crypto_prices:
+      not_self_hosted: Marktdatenanbieter werden für diese Bereitstellung vom Betreiber der Instanz konfiguriert.
+      success: Kryptokurse sind aktiviert. Die Wallet-Werte werden nach dem nächsten Sync angezeigt.
+    errors:
+      address_required: Gib eine Wallet-Adresse ein.
+      already_linked: Diese Adresse wird in diesem Netzwerk bereits verfolgt. Welche Vermögenswerte verfolgt werden, kannst du in der Wallet-Verwaltung ändern.
+      chain_unreachable: Der öffentliche Explorer für dieses Netzwerk ist nicht erreichbar. Versuch es gleich noch einmal.
+      rate_limited: Der öffentliche Explorer begrenzt derzeit die Anzahl der Anfragen. Versuch es in ein paar Minuten erneut.
+      unexpected: Beim Lesen dieser Wallet ist etwas schiefgelaufen. Die Details wurden für den Support erfasst.
+      unrecognized_address: Diese Adresse scheint zu keinem unterstützten Netzwerk zu gehören.
+      wallet_not_found: Diese Wallet wird von dieser Verbindung nicht verfolgt.
+    link_wallet:
+      errors:
+        none_tracked: "Nichts wurde verfolgt. Folgende Vermögenswerte konnten nicht hinzugefügt werden: %{assets}. Versuch es gleich noch einmal."
+        nothing_selected: Wähl mindestens einen Vermögenswert zum Verfolgen aus.
+        some_failed: "Folgende Vermögenswerte konnten nicht verfolgt werden und wurden ausgelassen: %{assets}."
+      success:
+        one: 1 Vermögenswert dieser Wallet wird verfolgt.
+        other: "%{count} Vermögenswerte dieser Wallet werden verfolgt."
+    manage:
+      assets_truncated: Diese Adresse enthält mehr Token, als mit einer Abfrage geladen werden können. Daher werden nur die %{count} plausibelsten angezeigt. Bereits verfolgte Vermögenswerte werden weiterhin synchronisiert.
+      disconnect_asset: Nicht mehr verfolgen
+      disconnect_asset_confirm: "Möchtest du %{symbol} nicht mehr verfolgen? Das Konto und der Verlauf bleiben erhalten, werden aber nicht mehr aktualisiert."
+      disconnect_wallet: Wallet trennen
+      disconnect_wallet_confirm: Möchtest du alle Vermögenswerte an dieser Adresse nicht mehr verfolgen?
+      history_note: Beim Trennen bleiben die Konten und deren Verlauf erhalten; sie werden lediglich nicht mehr aktualisiert.
+      history_truncated: Es konnten nicht alle Übertragungen für diese Adresse gelesen werden – entweder enthält sie mehr Verlaufsdaten, als ein Sync abdeckt, oder der Explorer hat die Abfrage abgelehnt. Die Guthaben sind vollständig; einige Übertragungen fehlen.
+      native: Nativ
+      no_wallets: Noch keine Wallets verfolgt.
+      review_tokens: Vermögenswerte verwalten
+      subtitle: Alle Adressen, die diese Verbindung liest, und die jeweils verfolgten Vermögenswerte.
+      title: Selbstverwahrte Wallets verwalten
+    new_wallet:
+      address_label: Wallet-Adresse
+      address_placeholder: bc1..., 0x... oder eine Solana-Adresse
+      bitcoin_single_address_note: Bitcoin wird jeweils über eine einzelne Adresse verfolgt. Erweiterte Schlüssel (xpub/ypub/zpub) werden nicht unterstützt. Eine Wallet, die Guthaben auf abgeleitete Adressen verteilt, zeigt daher nur das Guthaben der eingegebenen Adresse.
+      chain_auto_detect: Automatisch erkennen
+      chain_label: Netzwerk
+      continue: Weiter
+      read_only_note: Es werden nur öffentliche Blockchain-Daten gelesen. Gib niemals eine Seed-Phrase oder einen Private Key ein.
+      subtitle: Verfolge eine Wallet, deren Schlüssel du besitzt, über ihre öffentliche Adresse.
+      title: Selbstverwahrte Wallet hinzufügen
+    onchain_wallet_item:
+      assets_tracked:
+        one: 1 Vermögenswert verfolgt
+        other: "%{count} Vermögenswerte verfolgt"
+      sync: Jetzt synchronisieren
+      syncing: Wird synchronisiert…
+    price_provider_warning:
+      body: Kein aktivierter Marktdatenanbieter kann Kurse für Krypto-Assets liefern. Diese Wallets verfolgen daher zwar die Mengen, zeigen aber einen Wert von null an.
+      enable: Kryptokurse aktivieren
+      exchange_rate_body: "Krypto wird in USD bewertet, aber es ist kein Wechselkursanbieter eingerichtet, um den Wert in %{currency} umzurechnen. Diese Wallets verfolgen daher zwar die Mengen, zeigen aber einen Wert von null an. Setz EXCHANGE_RATE_PROVIDER – für Frankfurter ist kein API-Schlüssel erforderlich."
+      exchange_rate_title: Kein Wechselkursanbieter eingerichtet
+      link: Marktdateneinstellungen öffnen
+      title: Kryptokurse sind nicht eingerichtet
+    provider_connection:
+      description: Verfolge eine Wallet, deren Schlüssel du besitzt, über ihre öffentliche Adresse.
+      name: Selbstverwahrte Wallet
+    review_tokens:
+      save: Verfolgte Vermögenswerte speichern
+      subtitle: "%{chain} · %{address}"
+      title: Verfolgte Vermögenswerte verwalten
+    token_review:
+      import_selected: Ausgewählte Vermögenswerte verfolgen
+      subtitle: "%{chain} · %{address}"
+      title: Vermögenswerte zum Verfolgen auswählen
+    token_review_form:
+      assets_truncated: Diese Adresse enthält mehr Token, als mit einer Abfrage geladen werden können. Daher werden nur die %{count} plausibelsten angezeigt.
+      cancel: Abbrechen
+      explanation: Vermögenswerte mit bekanntem Preis sind vorausgewählt. Alle anderen bleiben abgewählt – Wallets erhalten Spam-Airdrops, und bei deren Verfolgung wird kein Wert angezeigt.
+      native: Nativ
+      no_price: Kein Preis verfügbar; wird nur anhand der Menge verfolgt
+      nothing_found: Diese Adresse enthält in diesem Netzwerk nichts, was wir erkennen können.
+    update:
+      success: Die Verbindung zu selbstverwahrten Wallets wurde aktualisiert.
+    update_tokens:
+      errors:
+        no_changes: "Nichts geändert: Dieselben Vermögenswerte sind weiterhin ausgewählt."
+        none_tracked: "Nichts geändert: Folgende Vermögenswerte konnten nicht hinzugefügt werden: %{assets}. Versuch es gleich noch einmal."
+        some_failed: "Folgende Vermögenswerte konnten nicht verfolgt werden und wurden ausgelassen: %{assets}."
+      success: "Verfolgte Vermögenswerte aktualisiert (%{created} hinzugefügt, %{removed} entfernt)."
+    wallet_card:
+      addresses_tracked:
+        one: 1 Adresse verfolgt
+        other: "%{count} Adressen verfolgt"
+      deletion_in_progress: Wird entfernt…
+      delete: Verbindung entfernen
+      needs_attention: Erfordert Aufmerksamkeit
+      no_wallets_message: Verknüpfe in den Anbietereinstellungen eine Adresse, um sie hier anzuzeigen.
+      no_wallets_title: Noch keine Wallets verknüpft
+      status: Vor %{timestamp} synchronisiert
+      sync: Jetzt synchronisieren
+      status_never: Noch nie synchronisiert
+      syncing: Wird synchronisiert…

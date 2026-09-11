@@ -1,0 +1,17 @@
+---
+es:
+  providers:
+    property_valuation:
+      not_configured: Este proveedor de datos de propiedades no está configurado.
+      missing_fields: Proporciona un nombre y una dirección completa de EE. UU. (calle, ciudad, estado y código postal).
+      preview_expired: Esta vista previa de la propiedad ha caducado; vuelve a buscar la dirección.
+    rentcast:
+      errors:
+        no_valuation: RentCast no devolvió una estimación de valor para esta dirección.
+        not_found: RentCast no pudo encontrar una propiedad que coincida con esta dirección.
+    realie:
+      errors:
+        no_property: Realie no devolvió una propiedad para esta dirección.
+        no_valuation: Realie no devolvió una valoración para esta propiedad.
+        not_found: Realie no pudo encontrar una propiedad que coincida con esta dirección.
+        location_mismatch: Realie encontró una propiedad en otra ciudad o código postal. Revisa la dirección.

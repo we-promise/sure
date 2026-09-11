@@ -14,9 +14,22 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
   end
 
+  test "create rolls back registration when session creation fails" do
+    RegistrationsController.any_instance.stubs(:create_session_for).returns(false)
+
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: {
+        email: "session-failure@example.com",
+        password: "Password1!" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil User.find_by(email: "session-failure@example.com")
+  end
+
   test "first user of instance becomes super_admin" do
     # Clear all users to simulate fresh instance
-    User.destroy_all
+    User.connection.disable_referential_integrity { User.delete_all }
 
     assert_difference "User.count", +1 do
       post registration_url, params: { user: {

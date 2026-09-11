@@ -1,13 +1,15 @@
 class Settings::HostingsController < ApplicationController
   layout "settings"
 
-  # Minimum accepted value for each configurable LLM budget field. Mirrors the
+  # Minimum accepted value for each configurable numeric LLM field. Mirrors the
   # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
   # controller rejects what the browser-side validator would reject.
-  LLM_BUDGET_MINIMUMS = {
+  LLM_NUMERIC_MINIMUMS = {
     llm_context_window: 256,
     llm_max_response_tokens: 64,
-    llm_max_items_per_call: 1
+    llm_max_items_per_call: 1,
+    openai_request_timeout: Provider::Openai::MIN_REQUEST_TIMEOUT,
+    ai_response_timeout: Chat::MIN_RESPONSE_TIMEOUT.to_i
   }.freeze
 
   guard_feature unless: -> { self_hosted? }
@@ -31,10 +33,10 @@ class Settings::HostingsController < ApplicationController
     @show_tiingo_settings = enabled_securities.include?("tiingo")
     @show_eodhd_settings = enabled_securities.include?("eodhd")
     @show_alpha_vantage_settings = enabled_securities.include?("alpha_vantage")
-    # T-Invest doubles as a brand-logo source consulted regardless of the price
-    # provider, so its token is useful even when it's not enabled for prices.
-    # Always surface the token field, decoupled from the securities checklist.
-    @show_tinkoff_invest_settings = true
+    tinkoff_invest_checked = enabled_securities.include?("tinkoff_invest")
+    tinkoff_invest_configured = ENV["TINKOFF_INVEST_API_KEY"].present? || Setting.tinkoff_invest_api_key.present?
+    @show_tinkoff_invest_settings = tinkoff_invest_checked || enabled_securities.include?("moex_public") || tinkoff_invest_configured
+    @tinkoff_invest_moex_only = @show_tinkoff_invest_settings && !tinkoff_invest_checked
 
     # Only fetch provider data if we're showing the section
     if @show_twelve_data_settings
@@ -93,10 +95,7 @@ class Settings::HostingsController < ApplicationController
 
       Setting.securities_providers = new_providers.join(",")
 
-      # Clear the legacy singular setting so the fallback in
-      # enabled_securities_providers doesn't re-enable a provider
-      # the user just unchecked.
-      Setting.securities_provider = nil if new_providers.empty?
+      Setting.securities_provider = "" if new_providers.empty?
 
       # Mark securities linked to removed providers as offline so they aren't
       # silently queried against an incompatible fallback provider (e.g. MFAPI
@@ -211,7 +210,7 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
-    LLM_BUDGET_MINIMUMS.each do |key, minimum|
+    LLM_NUMERIC_MINIMUMS.each do |key, minimum|
       next unless hosting_params.key?(key)
       raw = hosting_params[key].to_s.strip
       if raw.blank?
@@ -269,9 +268,10 @@ class Settings::HostingsController < ApplicationController
   end
 
   private
+    # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
     end
 
     def update_assistant_type

@@ -46,7 +46,7 @@ class BudgetDonutViewTest < ActionView::TestCase
     budget = Budget.find(budget.id)
     uncategorized = budget.uncategorized_budget_category
 
-    html = render(partial: "budgets/budget_donut", locals: { budget: budget })
+    html = render(partial: "budgets/budget_donut", locals: { budget: budget, editable: true })
 
     assert_includes html, "segment_#{uncategorized.id}"
     assert_includes html, uncategorized.category.display_name

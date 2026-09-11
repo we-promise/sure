@@ -1,0 +1,248 @@
+uk:
+  reports:
+    index:
+      title: Звіти
+      subtitle: Комплексне уявлення про ваше фінансове здоров'я
+      export: Експорт CSV
+      print_report: Друк звіту
+      drag_to_reorder: "Перетягніть, щоб змінити порядок розділу"
+      toggle_section: "Переключити видимість розділу"
+      periods:
+        monthly: Щомісяця
+        quarterly: Щокварталу
+        ytd: З початку року
+        last_6_months: Останні 6 місяців
+        custom: Користувацький діапазон
+      date_range:
+        from: З
+        to: По
+      showing_period: "Показано дані з %{start} по %{end}"
+      previous_period: "Попередній період"
+      next_period: "Наступний період"
+      today: "Сьогодні"
+      period_label:
+        quarterly: "Q%{quarter} %{year}"
+        ytd: "З початку року %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "Q%{quarter} %{year}"
+        ytd: "З початку року %{year}"
+      previous_year: "Попередній рік"
+      next_year: "Наступний рік"
+      previous_decade: "Попереднє десятиліття"
+      next_decade: "Наступне десятиліття"
+    invalid_date_range: "Дата закінчення не може бути раніше дати початку. Дати було поміняно місцями."
+    summary:
+      total_income: Загальний дохід
+      total_expenses: Загальні витрати
+      net_savings: Чисті заощадження
+      budget_performance: Виконання бюджету
+      vs_previous: порівняно з попереднім періодом
+      income_minus_expenses: Дохід мінус витрати
+      of_budget_used: бюджету використано
+      no_budget_data: Немає даних про бюджет за цей період
+    budget_performance:
+      title: Виконання бюджету
+      spent: Витрачено
+      budgeted: Заплановано
+      remaining: Залишилося
+      over_by: Перевищено на
+      shared: спільний
+      suggested_daily: "%{amount} рекомендовано на день на %{days} днів, що залишилися"
+      no_budgets: Немає встановлених категорій бюджету на цей місяць
+      status:
+        good: За планом
+        warning: Близько до ліміту
+        over: Перевищено бюджет
+    trends:
+      title: Тенденції та аналітика
+      monthly_breakdown: Щомісячний розподіл
+      month: Місяць
+      income: Дохід
+      expenses: Витрати
+      net: Чистий
+      savings_rate: Рівень заощаджень
+      current: поточний
+      avg_monthly_income: Сер. щомісячний дохід
+      avg_monthly_expenses: Сер. щомісячні витрати
+      avg_monthly_savings: Сер. щомісячні заощадження
+      no_data: Немає даних про тенденції
+      spending_patterns: Схеми витрат
+      weekday_spending: Витрати в будні
+      weekend_spending: Витрати у вихідні
+      total: Усього
+      avg_per_transaction: Сер. за транзакцію
+      transactions: Транзакції
+      insight_title: Аналітика
+      insight_higher_weekend: "Ви витрачаєте на %{percent}% більше за транзакцію у вихідні, ніж у будні"
+      insight_higher_weekday: "Ви витрачаєте на %{percent}% більше за транзакцію в будні, ніж у вихідні"
+      insight_similar: "Ваші витрати за транзакцію схожі в будні та у вихідні"
+      no_spending_data: Немає даних про витрати за цей період
+    empty_state:
+      title: Немає доступних даних
+      description: Почніть відстежувати свої фінанси, додаючи транзакції або підключаючи свої рахунки, щоб бачити комплексні звіти
+      add_transaction: Додати транзакцію
+      add_account: Додати рахунок
+    transactions_breakdown:
+      title: Розподіл активності
+      no_transactions: Не знайдено активності за вибраний період та фільтри
+      filters:
+        title: Фільтри
+        category: Категорія
+        account: Рахунок
+        tag: Тег
+        amount_min: Мін. сума
+        amount_max: Макс. сума
+        date_range: Діапазон дат
+        all_categories: Усі категорії
+        all_accounts: Усі рахунки
+        all_tags: Усі теги
+        apply: Застосувати фільтри
+        clear: Очистити фільтри
+      sort:
+        label: Сортувати за
+        date_desc: Дата (найновіші)
+        amount_desc: Сума (від більшої до меншої)
+        amount_asc: Сума (від меншої до більшої)
+      export:
+        label: Експорт
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Відкрити в Google Sheets
+      table:
+        category: Категорія
+        amount: Сума
+        type: Тип
+        expense: Витрати
+        income: Дохід
+        uncategorized: Без категорії
+        entries:
+          one: "%{count} запис"
+          other: "%{count} записів"
+        percentage: "% від загальної суми"
+      pagination:
+        showing:
+          one: Показано %{count} запис
+          other: Показано %{count} записів
+        previous: Попередній
+        next: Наступний
+    net_worth:
+      title: Чиста вартість
+      current_net_worth: Поточна чиста вартість
+      period_change: Зміна за період
+      assets_vs_liabilities: Активи проти зобов'язань
+      total_assets: Активи
+      total_liabilities: Зобов'язання
+      no_assets: Немає активів
+      no_liabilities: Немає зобов'язань
+    investment_performance:
+      title: Ефективність інвестицій
+      portfolio_value: Вартість портфеля
+      total_return: Загальний дохід
+      period_return: Дохід за період
+      contributions: Внески за період
+      withdrawals: Зняття за період
+      top_holdings: Основні активи
+      holding: Актив
+      weight: Вага
+      value: Вартість
+      return: Дохід
+      accounts: Інвестиційні рахунки
+      gains_by_tax_treatment: Прибуток за податковим режимом
+      unrealized_gains: Нереалізований прибуток
+      realized_gains: Реалізований прибуток
+      total_gains: Загальний прибуток
+      taxable_realized_note: Цей прибуток може оподатковуватися
+      no_data: "-"
+      view_details: Переглянути деталі
+      holdings_count:
+        one: "%{count} актив"
+        other: "%{count} активів"
+      sells_count:
+        one: "%{count} продаж"
+        other: "%{count} продажів"
+      holdings: Активи
+      sell_trades: Продажі
+      and_more: "+%{count} ще"
+    investment_flows:
+      title: Інвестиційні потоки
+      description: Відстежуйте грошові потоки, що надходять та виходять з ваших інвестиційних рахунків через внески та зняття.
+      contributions: Внески
+      contributions_description: Гроші, додані до інвестицій
+      withdrawals: Зняття
+      withdrawals_description: Гроші, зняті з інвестицій
+      net_flow: Чистий потік
+      net_flow_description: Загальна чиста зміна
+    google_sheets_instructions:
+      title_with_key: "✅ Скопіюйте URL-адресу для Google Sheets"
+      title_no_key: "⚠️ Потрібен ключ API"
+      ready: Ваша URL-адреса CSV (з ключем API) готова.
+      steps: "Щоб імпортувати в Google Sheets:\n1. Створіть нову таблицю Google\n2. У клітинці A1 введіть формулу, показану нижче\n3. Натисніть Enter"
+      security_warning: "Ця URL-адреса містить ваш ключ API. Зберігайте її в безпеці!"
+      need_key: Щоб імпортувати дані в Google Sheets, вам потрібен ключ API.
+      step1: "Перейдіть до Налаштування → Ключі API"
+      step2: "Створіть новий ключ API з дозволом на читання"
+      step3: Скопіюйте ключ API
+      step4: "Додайте його до цієї URL-адреси як: ?api_key=ВАШ_КЛЮЧ"
+      example: Приклад
+      then_use: Потім використовуйте повну URL-адресу з =IMPORTDATA() в Google Sheets.
+      open_sheets: Відкрити Google Sheets
+      go_to_api_keys: Перейти до ключів API
+      close: Зрозуміло
+    print:
+      document_title: Фінансовий звіт
+      title: Фінансовий звіт
+      generated_on: "Згенеровано %{date}"
+      # Summary section
+      summary:
+        title: Зведення
+        income: Дохід
+        expenses: Витрати
+        net_savings: Чисті заощадження
+        budget: Бюджет
+        vs_prior: "%{percent}% порівняно з попереднім"
+        of_income: "%{percent}% від доходу"
+        used: використано
+      # Net Worth section
+      net_worth:
+        title: Чиста вартість
+        current_balance: Поточний баланс
+        this_period: за цей період
+        assets: Активи
+        liabilities: Зобов'язання
+        no_liabilities: Немає зобов'язань
+      # Monthly Trends section
+      trends:
+        title: Щомісячні тенденції
+        month: Місяць
+        income: Дохід
+        expenses: Витрати
+        net: Чистий
+        savings_rate: Рівень заощаджень
+        average: Середній
+        current_month_note: "* Поточний місяць (часткові дані)"
+      # Investments section
+      investments:
+        title: Інвестиції
+        portfolio_value: Вартість портфеля
+        total_return: Загальний дохід
+        period_return: Дохід за період
+        contributions: Внески
+        withdrawals: Зняття
+        this_period: за цей період
+        top_holdings: Основні активи
+        holding: Актив
+        weight: Вага
+        value: Вартість
+        return: Дохід
+      # Spending by Category section
+      spending:
+        title: Витрати за категоріями
+        income: Дохід
+        expenses: Витрати
+        category: Категорія
+        amount: Сума
+        percent: "%"
+        more_categories: "+ %{count} ще категорій"

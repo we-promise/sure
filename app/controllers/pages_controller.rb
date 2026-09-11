@@ -15,6 +15,7 @@ class PagesController < ApplicationController
     "insights_feed"      => { col_span: "full",   grow: false, min_height: 0, width_toggle: true },
     "cashflow_sankey"    => { col_span: "full",   grow: false, min_height: 384, width_toggle: true },
     "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
+    "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
@@ -56,9 +57,16 @@ class PagesController < ApplicationController
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
 
     @money_flow_accounts = income_statement.eligible_accounts
+    # TransactionsController's default (account_ids absent) scopes to this
+    # broader set, not @money_flow_accounts, so the view needs it to know
+    # when the drill-down links can safely omit account_ids.
+    @money_flow_accessible_account_ids = Current.user.accessible_accounts.pluck(:id).map(&:to_s)
     @money_flow_month = money_flow_month_param
     @money_flow_account_ids = money_flow_account_ids_param
     @money_flow_data = build_money_flow_data(income_statement, @money_flow_month, @money_flow_account_ids)
+
+    @spending_trend_month = spending_trend_month_param
+    @spending_trend_data = build_spending_trend_data(income_statement, @spending_trend_month)
 
     @dashboard_sections = build_dashboard_sections
 
@@ -157,7 +165,16 @@ class PagesController < ApplicationController
           title: "pages.dashboard.money_flow.title",
           partial: "pages/dashboard/money_flow",
           layout: section_layout("money_flow"),
-          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, col_span: section_layout("money_flow")[:col_span] },
+          locals: { money_flow_data: @money_flow_data, accounts: @money_flow_accounts, accessible_account_ids: @money_flow_accessible_account_ids, col_span: section_layout("money_flow")[:col_span] },
+          visible: @accounts.any?,
+          collapsible: true
+        },
+        {
+          key: "spending_trend",
+          title: "pages.dashboard.spending_trend.title",
+          partial: "pages/dashboard/spending_trend",
+          layout: section_layout("spending_trend"),
+          locals: { spending_trend_data: @spending_trend_data },
           visible: @accounts.any?,
           collapsible: true
         },
@@ -247,9 +264,9 @@ class PagesController < ApplicationController
       links = []
       node_indices = {}
 
-      add_node = ->(unique_key, display_name, value, percentage, color) {
+      add_node = ->(unique_key, display_name, value, percentage, color, filter_value = nil) {
         node_indices[unique_key] ||= begin
-          nodes << { id: unique_key, name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << { id: unique_key, name: display_name, filter_value: filter_value, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
           nodes.size - 1
         end
       }
@@ -358,7 +375,7 @@ class PagesController < ApplicationController
         opposite_subs = all_subs.select { |s| s[:net_direction] != matching_direction }
 
         if same_side_subs.any?
-          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color, ct.category.filter_value)
 
           if flow_direction == :inbound
             links << { source: parent_idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
@@ -371,7 +388,7 @@ class PagesController < ApplicationController
             sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
             sub_color = sub[:category].color.presence || color
             sub_key = "#{prefix}_sub_#{sub[:category].id}"
-            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
 
             if flow_direction == :inbound
               links << { source: sub_idx, target: parent_idx, value: sub_val, color: sub_color, percentage: sub_pct }
@@ -380,7 +397,7 @@ class PagesController < ApplicationController
             end
           end
         else
-          idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          idx = add_node.call(node_key, ct.category.name, val, percentage, color, ct.category.filter_value)
 
           if flow_direction == :inbound
             links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
@@ -398,7 +415,7 @@ class PagesController < ApplicationController
           sub_pct = total.zero? ? 0 : (sub_val / total * 100).round(1)
           sub_color = sub[:category].color.presence || color
           sub_key = "#{opposite_prefix}_sub_#{sub[:category].id}"
-          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
 
           # Opposite direction: if parent is outbound (expense), this sub is inbound (income)
           if flow_direction == :inbound
@@ -421,6 +438,7 @@ class PagesController < ApplicationController
           {
             id: ct.category.id,
             name: ct.category.name,
+            filter_value: ct.category.filter_value,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
             percentage: ct.weight.round(1),
@@ -450,6 +468,130 @@ class PagesController < ApplicationController
       eligible_ids = @money_flow_accounts.map { |a| a.id.to_s }
       ids &= eligible_ids
       ids.presence
+    end
+
+    def spending_trend_month_param
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[:spending_month], "%Y-%m-%d").beginning_of_month
+      # Same clamp as money_flow: a future month's period would end before it
+      # starts once capped at Date.current, which Period.custom rejects.
+      month > current_month ? current_month : month
+    rescue ArgumentError, TypeError
+      current_month
+    end
+
+    # Cumulative daily spending for the selected month (capped at today while
+    # the month is in progress) against the previous month's full curve, so
+    # the two lines share one day-of-month axis. The header totals compare the
+    # same number of elapsed days; only the chart draws the previous month out
+    # to its final day.
+    def build_spending_trend_data(income_statement, selected_month)
+      month_start = selected_month.beginning_of_month
+      month_end = month_start.end_of_month
+      current_period = Period.custom(start_date: month_start, end_date: [ month_end, Date.current ].min)
+
+      previous_month_start = (month_start - 1.month).beginning_of_month
+      previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+
+      current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
+      previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
+
+      # The selected month always owns the axis: when the previous month is
+      # longer, its extra days fold into the final visible point so the curve
+      # still ends at the full-month total without the axis rolling into
+      # previous-month dates (e.g. a September view ends at "Sep 30", not
+      # "Aug 31").
+      axis_days = month_end.day
+
+      current_series = cumulative_spending_series(current_period, current_daily)
+      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_series = fold_extra_days(previous_header_series, axis_days)
+
+      current_total = current_series.last&.fetch(:value) || 0
+      comparison_days = if month_start == Date.current.beginning_of_month
+        [ current_series.size, previous_header_series.size ].min
+      else
+        previous_header_series.size
+      end
+      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
+      currency = income_statement.family.currency
+
+
+      {
+        month: month_start,
+        current_period: current_period,
+        previous_period: previous_period,
+        days: axis_days,
+        current_days: month_end.day,
+        axis_labels: spending_trend_axis_labels(month_start, axis_days),
+        current: current_series,
+        previous: previous_series,
+        current_total: Money.new(current_total, currency),
+        previous_total: Money.new(previous_total, currency),
+        delta: Money.new(current_total - previous_total, currency),
+        previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        previous_comparison_day: previous_comparison_day,
+        date_range_short: spending_trend_compact_date_range(current_period)
+      }
+    end
+
+    # Compact range for narrow viewports ("Sep 01 - 6, 2026"). The period
+    # never spans months, so the end date only needs its day.
+    def spending_trend_compact_date_range(period)
+      date_range = period.date_range
+
+      if date_range.begin == date_range.end
+        t("pages.dashboard.spending_trend.date_range_short_single",
+          date: I18n.l(date_range.begin, format: :short),
+          year: date_range.end.year)
+      else
+        t("pages.dashboard.spending_trend.date_range_short",
+          start_date: I18n.l(date_range.begin, format: :short),
+          end_day: date_range.end.day,
+          year: date_range.end.year)
+      end
+    end
+
+    # Localized tick labels, one per axis day. The axis always spans exactly
+    # the selected month, so labels never roll into the previous month.
+    def spending_trend_axis_labels(month_start, days)
+      (1..days).map do |day|
+        I18n.l(month_start + (day - 1), format: :short)
+      end
+    end
+
+    # A longer previous month's curve is clipped to the axis, with the extra
+    # days' spend folded into the final visible point, so the curve still
+    # ends at the full-month total shown in the header. The folded point
+    # keeps its axis slot (day) for positioning but carries the true
+    # endpoint's date metadata, so the tooltip says what the value actually
+    # contains (e.g. "Jan 31" and the total through Jan 31).
+    def fold_extra_days(series, axis_days)
+      return series if series.size <= axis_days
+
+      series.first(axis_days).tap do |folded|
+        folded[-1] = folded[-1].merge(
+          value: series.last[:value],
+          date: series.last[:date],
+          date_formatted: series.last[:date_formatted]
+        )
+      end
+    end
+
+    # One point per day (spend-free days included) so flat stretches render
+    # flat instead of being interpolated away.
+    def cumulative_spending_series(period, daily_totals)
+      cumulative = 0.to_d
+      period.date_range.map do |date|
+        cumulative += daily_totals[date] ? daily_totals[date].total.to_d : 0
+        {
+          day: (date - period.start_date).to_i + 1,
+          value: cumulative.to_f.round(2),
+          date: date.iso8601,
+          date_formatted: I18n.l(date, format: :short)
+        }
+      end
     end
 
     def build_money_flow_data(income_statement, selected_month, account_ids)

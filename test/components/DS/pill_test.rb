@@ -123,4 +123,11 @@ class DS::PillTest < ViewComponent::TestCase
     # sm maps to w-4 h-4 in the icon helper's size table.
     assert_selector "svg.w-4.h-4"
   end
+
+  test "mono: true applies font-mono for technical labels" do
+    render_inline(DS::Pill.new(label: "default: 3 · 0.1s latency", tone: :neutral, marker: false, mono: true))
+
+    pill = page.find("span", text: "default: 3 · 0.1s latency")
+    assert_includes pill[:class], "font-mono"
+  end
 end

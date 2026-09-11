@@ -132,10 +132,47 @@ class Chat < ApplicationRecord
     assistant.respond_to(message, assistant_message: assistant_message)
   end
 
-  # Minimum age before the server will treat a still-pending response as
-  # undelivered. The browser watchdog waits longer (default 90s) before it even
-  # asks, but the client clock is untrusted, so the server enforces its own floor.
-  UNDELIVERED_RESPONSE_TIMEOUT = 60.seconds
+  # How long a pending "Thinking…" bubble may wait before the browser watchdog
+  # reports it as undelivered. Configurable because a local model on slow
+  # hardware can legitimately take minutes to produce its first token, and the
+  # custom OpenAI-compatible provider path is non-streaming — so nothing renders
+  # until the whole generation finishes.
+  DEFAULT_RESPONSE_TIMEOUT = 90.seconds
+
+  # Floor on the configured value. Below this the watchdog would fire during
+  # normal cloud-model latency and kill healthy responses.
+  MIN_RESPONSE_TIMEOUT = 30.seconds
+
+  # How far *below* the client timeout the server's own floor sits, so a client
+  # whose clock runs modestly ahead is not refused on its first report. This is
+  # only an optimisation to keep retries rare: correctness for arbitrary skew
+  # comes from `MessagesController#report_timeout` answering non-OK when it
+  # declines, which leaves the watchdog free to try again on its next tick.
+  SERVER_TIMEOUT_GRACE = 10.seconds
+
+  class << self
+    # Client-side watchdog timeout. Precedence: ENV > Setting > default, with
+    # non-positive values treated as unset (a 0-second timeout is never meant).
+    def response_timeout
+      configured = ENV["AI_RESPONSE_TIMEOUT"].to_s.strip.to_i
+      configured = Setting.ai_response_timeout.to_i unless configured.positive?
+      return DEFAULT_RESPONSE_TIMEOUT unless configured.positive?
+
+      [ configured.seconds, MIN_RESPONSE_TIMEOUT ].max
+    end
+
+    # Same value in milliseconds, for the Stimulus `responseTimeout` value.
+    def response_timeout_ms
+      response_timeout.to_i * 1000
+    end
+
+    # Minimum age before the server will treat a still-pending response as
+    # undelivered. The client clock is untrusted, so the server enforces its own
+    # floor — kept just under the client's so a genuine report is never refused.
+    def undelivered_response_timeout
+      response_timeout - SERVER_TIMEOUT_GRACE
+    end
+  end
 
   # Handles the case where an assistant response was never delivered — the
   # background worker never ran `AssistantResponseJob` (or it died before it
@@ -152,7 +189,7 @@ class Chat < ApplicationRecord
 
     resolved = assistant_message.with_lock do
       next false unless assistant_message.pending?
-      next false if assistant_message.created_at > UNDELIVERED_RESPONSE_TIMEOUT.ago
+      next false if assistant_message.created_at > self.class.undelivered_response_timeout.ago
 
       if assistant_message.content.blank?
         assistant_message.destroy!

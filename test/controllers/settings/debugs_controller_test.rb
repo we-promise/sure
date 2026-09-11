@@ -27,6 +27,31 @@ class Settings::DebugsControllerTest < ActionDispatch::IntegrationTest
     assert_match @entry.message, response.body
   end
 
+  test "the log table can be expanded into a larger dialog" do
+    sign_in users(:sure_support_staff)
+
+    get settings_debug_url
+
+    assert_response :success
+    assert_select "[data-controller=expandable]", 1
+    assert_select "button[data-action=?]", "click->expandable#open", count: 1
+
+    # The expanded copy is the same table, so both render every entry.
+    assert_select "table tbody tr", 2
+    assert_select "dialog[data-expandable-target=dialog] table tbody tr", 1
+  end
+
+  test "no expand trigger is rendered when there are no entries" do
+    sign_in users(:sure_support_staff)
+    DebugLogEntry.delete_all
+
+    get settings_debug_url
+
+    assert_response :success
+    assert_select "button[data-action=?]", "click->expandable#open", count: 0
+    assert_select "dialog[data-expandable-target=dialog]", 0
+  end
+
   test "non super admins are redirected" do
     sign_in users(:family_admin)
 

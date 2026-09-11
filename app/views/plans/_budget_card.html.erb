@@ -1,4 +1,4 @@
-<%# locals: (budget:, top_budget_categories:) %>
+<%# locals: (budget:, top_budget_categories:, editable:, switch_options:) %>
 
 <%= render DS::Card.new do %>
   <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -6,7 +6,9 @@
       <%= icon("layout-grid", size: "sm") %>
     </span>
     <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
-    <span class="text-xs text-subdued truncate">· <%= budget.name %></span>
+    <span class="text-xs text-subdued truncate">
+      · <%= budget.name %>
+    </span>
 
     <% if budget.initialized? %>
       <% if budget.available_to_spend.negative? %>
@@ -17,23 +19,31 @@
         <%= render DS::Pill.new(label: t("reports.budget_performance.status.good"), tone: :success, marker: false, icon: "check-circle") %>
       <% end %>
 
-      <div class="ml-auto shrink-0">
-        <%# The budget donut's trailing pencil (_budget_donut.html.erb) labels
-            the VALUE itself ("$12,850 ✎" — click the number to edit it).
-            This button's label is a static action ("Edit budget"), which
-            takes a leading icon everywhere else in the app: the categories
-            "Edit" on this same page (budgets/show.html.erb) and "Edit
-            split" (transactions/show.html.erb) both do. %>
-        <%= render DS::Link.new(
-          text: t(".edit_budget"),
-          variant: "secondary",
-          size: "sm",
-          icon: "pencil",
-          href: edit_budget_path(budget)
-        ) %>
-      </div>
+      <% if editable %>
+        <div class="ml-auto shrink-0">
+          <%# The budget donut's trailing pencil (_budget_donut.html.erb) labels
+              the VALUE itself ("$12,850 ✎" — click the number to edit it).
+              This button's label is a static action ("Edit budget"), which
+              takes a leading icon everywhere else in the app: the categories
+              "Edit" on this same page (budgets/show.html.erb) and "Edit
+              split" (transactions/show.html.erb) both do. %>
+          <%= render DS::Link.new(
+            text: t(".edit_budget"),
+            variant: "secondary",
+            size: "sm",
+            icon: "pencil",
+            href: edit_budget_path(budget, **budget_owner_query)
+          ) %>
+        </div>
+      <% end %>
     <% end %>
   </div>
+
+  <% if switch_options.size > 1 %>
+    <div class="mb-4">
+      <%= render "budgets/owner_switcher", switch_options: switch_options, switch_path: ->(owner_param) { plan_path(owner: owner_param) } %>
+    </div>
+  <% end %>
 
   <% if budget.initialized? %>
     <div class="flex items-baseline gap-2">
@@ -90,18 +100,20 @@
         <%= icon("map", size: "md") %>
       </span>
       <p class="text-sm text-secondary max-w-xs"><%= t(".empty_body") %></p>
-      <%= render DS::Link.new(
-        text: t(".set_up"),
-        variant: "primary",
-        href: edit_budget_path(budget)
-      ) %>
+      <% if editable %>
+        <%= render DS::Link.new(
+          text: t(".set_up"),
+          variant: "primary",
+          href: edit_budget_path(budget, **budget_owner_query)
+        ) %>
+      <% end %>
     </div>
   <% end %>
 
   <%= render DS::Link.new(
     text: t(".view_budget"),
     variant: "secondary",
-    href: budget_path(budget),
+    href: budget_path(budget, **budget_owner_query),
     icon: "chevron-right",
     icon_position: :right,
     full_width: true,

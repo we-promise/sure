@@ -1,0 +1,158 @@
+uk:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Назва'
+        redirect_uri: 'URI для перенаправлення'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'не може містити фрагмент.'
+              invalid_uri: 'має бути дійсним URI.'
+              unspecified_scheme: 'має вказувати схему.'
+              relative_uri: 'має бути абсолютним URI.'
+              secured_uri: 'має бути HTTPS/SSL URI.'
+              forbidden_uri: 'заборонено сервером.'
+            scopes:
+              not_match_configured: "не відповідає налаштуванням на сервері."
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Ви впевнені?'
+      buttons:
+        edit: 'Редагувати'
+        destroy: 'Видалити'
+        submit: 'Надіслати'
+        cancel: 'Скасувати'
+        authorize: 'Авторизувати'
+      form:
+        error: 'Ой! Перевірте форму на можливі помилки'
+      help:
+        confidential: 'Додаток буде використовуватися там, де секрет клієнта може зберігатися в таємниці. Нативні мобільні додатки та односторінкові додатки вважаються неконфіденційними.'
+        redirect_uri: 'Використовуйте один рядок на URI'
+        blank_redirect_uri: "Залиште порожнім, якщо ви налаштували свого провайдера на використання облікових даних клієнта, облікових даних власника ресурсу або будь-якого іншого типу надання, який не вимагає URI перенаправлення."
+        scopes: 'Розділіть області пробілами. Залиште порожнім, щоб використовувати області за замовчуванням.'
+      edit:
+        title: 'Редагувати додаток'
+      index:
+        title: 'Ваші додатки'
+        new: 'Новий додаток'
+        name: 'Назва'
+        callback_url: 'URL зворотного виклику'
+        confidential: 'Конфіденційно?'
+        actions: 'Дії'
+        confidentiality:
+          'yes': 'Так'
+          'no': 'Ні'
+      new:
+        title: 'Новий додаток'
+      show:
+        title: 'Додаток: %{name}'
+        application_id: 'UID'
+        secret: 'Секрет'
+        secret_hashed: 'Секрет хешований'
+        scopes: 'Області'
+        confidential: 'Конфіденційно'
+        callback_urls: 'URL-и зворотного виклику'
+        actions: 'Дії'
+        not_defined: 'Не визначено'
+
+    authorizations:
+      buttons:
+        authorize: 'Авторизувати'
+        deny: 'Відхилити'
+      error:
+        title: 'Сталася помилка'
+        go_back: 'Повернутися назад'
+      new:
+        title: 'Потрібна авторизація'
+        prompt: 'Авторизувати %{client_name} на використання вашого облікового запису?'
+        able_to: 'Цей додаток зможе'
+      show:
+        title: 'Код авторизації'
+        authorization_code_label: 'Код авторизації:'
+        copy_instructions: 'Скопіюйте цей код і вставте його в додаток.'
+      form_post:
+        title: 'Надіслати цю форму'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Ви впевнені?'
+      buttons:
+        revoke: 'Відкликати'
+      index:
+        title: 'Ваші авторизовані додатки'
+        application: 'Додаток'
+        created_at: 'Створено'
+        date_format: '%d-%m-%Y %H:%M:%S'
+
+    pre_authorization:
+      status: 'Попередня авторизація'
+
+    errors:
+      messages:
+        # Common error messages
+        invalid_request:
+          unknown: 'У запиті відсутній обов''язковий параметр, міститься непідтримуване значення параметра або він іншим чином неправильно сформований.'
+          missing_param: 'Відсутній обов''язковий параметр: %{value}.'
+          request_not_authorized: 'Запит потребує авторизації. Обов''язковий параметр для авторизації запиту відсутній або недійсний.'
+          invalid_code_challenge: 'Потрібен код виклику.'
+        invalid_redirect_uri: "Запитаний URI перенаправлення неправильно сформований або не відповідає URI перенаправлення клієнта."
+        unauthorized_client: 'Клієнт не авторизований для виконання цього запиту за допомогою цього методу.'
+        access_denied: 'Власник ресурсу або сервер авторизації відхилив запит.'
+        invalid_scope: 'Запитана область є недійсною, невідомою або неправильно сформованою.'
+        invalid_code_challenge_method:
+          zero: 'Сервер авторизації не підтримує PKCE, оскільки немає прийнятних значень code_challenge_method.'
+          one: 'code_challenge_method має бути %{challenge_methods}.'
+          other: 'code_challenge_method має бути одним з %{challenge_methods}.'
+        server_error: 'Сервер авторизації зіткнувся з неочікуваною умовою, яка завадила йому виконати запит.'
+        temporarily_unavailable: 'Сервер авторизації наразі не може обробити запит через тимчасове перевантаження або технічне обслуговування сервера.'
+
+        # Configuration error messages
+        credential_flow_not_configured: 'Потік облікових даних власника ресурсу не вдався через те, що Doorkeeper.configure.resource_owner_from_credentials не налаштовано.'
+        resource_owner_authenticator_not_configured: 'Пошук власника ресурсу не вдався через те, що Doorkeeper.configure.resource_owner_authenticator не налаштовано.'
+        admin_authenticator_not_configured: 'Доступ до панелі адміністратора заборонено через те, що Doorkeeper.configure.admin_authenticator не налаштовано.'
+
+        # Access grant errors
+        unsupported_response_type: 'Сервер авторизації не підтримує цей тип відповіді.'
+        unsupported_response_mode: 'Сервер авторизації не підтримує цей режим відповіді.'
+
+        # Access token errors
+        invalid_client: 'Автентифікація клієнта не вдалася через невідомого клієнта, відсутність автентифікації клієнта або непідтримуваний метод автентифікації.'
+        invalid_grant: 'Надане надання авторизації є недійсним, простроченим, відкликаним, не відповідає URI перенаправлення, використаному в запиті на авторизацію, або було видано іншому клієнту.'
+        unsupported_grant_type: 'Тип надання авторизації не підтримується сервером авторизації.'
+
+        invalid_token:
+          revoked: "Токен доступу було відкликано"
+          expired: "Термін дії токена доступу закінчився"
+          unknown: "Токен доступу недійсний"
+        revoke:
+          unauthorized: "Ви не авторизовані для відкликання цього токена"
+
+        forbidden_token:
+          missing_scope: 'Доступ до цього ресурсу вимагає області "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Додаток створено.'
+        destroy:
+          notice: 'Додаток видалено.'
+        update:
+          notice: 'Додаток оновлено.'
+      authorized_applications:
+        destroy:
+          notice: 'Додаток відкликано.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'Провайдер OAuth2'
+          applications: 'Додатки'
+          home: 'Головна'
+      application:
+        title: 'Потрібна авторизація OAuth'

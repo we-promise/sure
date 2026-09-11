@@ -110,6 +110,8 @@ fr:
       openai_settings:
         access_token_label: Jeton d'accès
         access_token_placeholder: Entrez votre jeton d'accès ici
+        ai_response_timeout_help: 'Valeur par défaut : 90. S''applique uniquement au chien de garde du tour complet dans le chat : dimensionnez-le comme une somme, soit (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × délai de requête, plus le temps d''exécution des outils et d''attente en file. AI_RESPONSE_TIMEOUT prime sur ce champ.'
+        ai_response_timeout_label: Délai de réponse en secondes (facultatif)
         budget_description: S'applique à chaque appel LLM — historique de discussion, auto-catégorisation, détection de marchand et traitement PDF. Les valeurs par défaut sont conservatrices pour les modèles locaux à petit contexte. Augmentez-les pour les modèles cloud avec des fenêtres de contexte plus grandes.
         budget_heading: Budget de tokens
         context_window_help: 'Nombre total de tokens que le modèle acceptera. Par défaut : 2048 — augmenter à 8192+ pour OpenAI cloud ou les modèles locaux à grand contexte.'
@@ -126,8 +128,14 @@ fr:
         max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
         max_response_tokens_help: 'Tokens réservés à la réponse du modèle. Par défaut : 512. Abaisser pour libérer de l''espace pour un historique plus long.'
         max_response_tokens_label: Tokens de réponse max (Optionnel)
+        model_function_calling_help: 'L''assistant IA lit vos données via des appels de fonctions : choisissez donc un modèle dont le fournisseur documente la prise en charge des outils. Les modèles qui en sont dépourvus font échouer le chat avec une erreur opaque du fournisseur.'
+        model_function_calling_link: Vérifier le modèle configuré
         model_label: Modèle (Optionnel)
         model_placeholder: gpt-4.1 (par défaut)
+        openai_request_timeout_help: 'Valeur par défaut : 60. S''applique à chaque requête HTTP compatible OpenAI, y compris la catégorisation automatique, la détection des marchands, le chat, le traitement des PDF et les appels au magasin de vecteurs. OPENAI_REQUEST_TIMEOUT prime sur ce champ.'
+        openai_request_timeout_label: Délai de requête en secondes (facultatif)
+        timeout_description: Détermine la durée maximale des appels aux modèles compatibles OpenAI avant que Sure n'abandonne. Augmentez ces valeurs si vous exécutez un modèle local sur du matériel lent.
+        timeout_heading: Délais d'expiration
         title: OpenAI
         uri_base_label: URL de base de l'API (Optionnel)
         uri_base_placeholder: https://api.openai.com/v1 (par défaut)
@@ -158,6 +166,20 @@ fr:
         tinkoff_invest_hint: requiert un jeton en lecture seule -- cours des actions/fonds/obligations russes + logos des marques
         twelve_data_hint: nécessite une clé API, 800 crédits/jour
         yahoo_finance_hint: gratuit, aucune clé API requise
+      realie_settings:
+        description: Saisissez votre clé d'API Realie pour consulter les caractéristiques et les estimations de valeur des biens immobiliers américains lors de l'ajout d'un bien. L'offre gratuite est limitée à 25 requêtes d'API par mois, partagées entre les recherches de biens et les actualisations quotidiennes de valorisation. Sur une offre payante, relevez le plafond avec la variable d'environnement REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configuré avec succès via la variable d'environnement REALIE_API_KEY.
+        label: Clé d'API
+        placeholder: Saisissez ici votre clé d'API Realie
+        title: Realie
+        usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
+      rentcast_settings:
+        description: Saisissez votre clé d'API RentCast pour consulter les caractéristiques et les estimations de valeur des biens immobiliers américains lors de l'ajout d'un bien. L'offre gratuite est limitée à 50 requêtes d'API par mois, partagées entre les recherches de biens et les actualisations quotidiennes de valorisation. Sur une offre payante, relevez le plafond avec la variable d'environnement RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configuré avec succès via la variable d'environnement RENTCAST_API_KEY.
+        label: Clé d'API
+        placeholder: Saisissez ici votre clé d'API RentCast
+        title: RentCast
+        usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
       show:
         ai_assistant: Assistant IA
         clear_cache: Effacer le cache de données
@@ -169,6 +191,7 @@ fr:
         financial_data_providers: Fournisseurs de données financières
         general: Paramètres généraux
         invites: Codes d'invitation
+        property_valuation_providers: Fournisseurs de valorisation immobilière
         sync_settings: Paramètres de synchronisation
         title: Auto-hébergement
       sync_auto_sync_scheduler!:
@@ -195,6 +218,7 @@ fr:
         description: Saisissez un jeton API T-Invest en lecture seule. Utilisé pour récupérer les logos de marque des titres (y compris les fonds et obligations, même lorsque MOEX les évalue) et, lorsqu'il est activé ci-dessus, les prix des instruments russes.
         env_configured_message: Configuré avec succès via la variable d'environnement TINKOFF_INVEST_API_KEY.
         label: Jeton API
+        moex_only_notice: Non activé pour les cours ci-dessus. T-Invest sert à récupérer les logos de marque de tous vos titres dès qu'un jeton est configuré, indépendamment de la case à cocher ci-dessus.
         placeholder: Saisissez votre jeton API T-Invest ici
         show_details: "(afficher les détails)"
         step_1: Ouvrez T-Bank investissements, puis Paramètres, puis jetons API (nécessite un compte de courtage T-Bank ouvert).
@@ -229,7 +253,15 @@ fr:
       yahoo_finance_settings:
         connection_failed: Impossible de se connecter à Yahoo Finance
         description: Yahoo Finance fournit un accès gratuit aux cours boursiers, taux de change et données financières sans nécessiter de clé API.
+        rate_limited_message: Aucune action n'est requise. Sure évitera toute vérification supplémentaire pendant 30 minutes. Les opérations sur les cours et les taux de change se poursuivent indépendamment.
+        rate_limited_title: Limite de débit Yahoo Finance atteinte.
         status_active: Yahoo Finance est actif et fonctionne
+        status_healthy: Yahoo Finance est actif et fonctionne.
         status_inactive: La connexion à Yahoo Finance a échoué
+        status_rate_limited: Yahoo Finance limite temporairement le débit des requêtes.
+        status_unavailable: Yahoo Finance est actuellement indisponible.
+        status_unknown: Le statut de Yahoo Finance est en cours de vérification.
         title: Yahoo Finance
         troubleshooting: Vérifiez votre connexion Internet et les paramètres de votre pare-feu. Yahoo Finance peut être temporairement indisponible.
+        unavailable_message: Yahoo Finance est injoignable ou a renvoyé une réponse inattendue. Vérifiez votre connexion Internet et réessayez plus tard.
+        unavailable_title: Impossible de vérifier Yahoo Finance.

@@ -1,0 +1,80 @@
+---
+pl:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Połącz rachunek inwestycyjny Trade Republic przez bezpieczne logowanie internetowe"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Rachunek maklerski"
+      private_markets: "Rynki prywatne"
+      interest_products: "Produkty oprocentowane"
+      crypto_wallet: "Portfel kryptowalut"
+    trade_republic_item:
+      syncing: "Synchronizowanie"
+      requires_update: "Wymagana ponowna autoryzacja"
+      error: "Błąd"
+      synced: "Zsynchronizowano %{time} temu. %{summary}."
+      setup_accounts: "Skonfiguruj rachunki"
+      delete: "Usuń"
+      accounts_need_setup: "Rachunek wymaga konfiguracji"
+      accounts_need_setup_description: "Twój rachunek Trade Republic musi zostać połączony z rachunkiem Sure."
+      no_accounts_discovered: "Nie wykryto jeszcze rachunku Trade Republic."
+      no_accounts_discovered_description: "Zakończ logowanie i uruchom synchronizację, aby wykryć rachunek."
+      data_quality:
+        title: "Jakość danych i szczegóły synchronizacji"
+        repair: "Napraw zaimportowane dane"
+    setup_accounts:
+      page_title: "Skonfiguruj rachunek Trade Republic"
+      subtitle: "Połącz swój rachunek inwestycyjny Trade Republic."
+      buttons:
+        refresh: "Odśwież"
+        cancel: "Anuluj"
+        link: "Połącz"
+        done: "Gotowe"
+    sync:
+      errors:
+        phone_number_missing: "Brakuje numeru telefonu Trade Republic."
+        reauthentication_required: "Sesja Trade Republic nie istnieje lub wygasła. Połącz ponownie w Ustawienia > Dostawcy."
+      status:
+        checking_credentials: "Sprawdzanie danych logowania Trade Republic..."
+        importing_account: "Importowanie rachunku Trade Republic..."
+        processing_activity: "Przetwarzanie pozycji i aktywności..."
+        calculating_balances: "Obliczanie sald..."
+    repair:
+      scheduled: "Zaplanowano naprawę danych Trade Republic."
+    select_existing_account:
+      title: "Połącz rachunek Trade Republic"
+      link: "Połącz"
+      cancel: "Anuluj"
+    initiate_login:
+      verification_required: "Logowanie rozpoczęte. Potwierdź je przez %{method}, a następnie kliknij Potwierdź logowanie."
+    complete_login:
+      approval_pending: "Jeszcze nie potwierdzono. Zatwierdź logowanie w aplikacji Trade Republic i spróbuj ponownie."
+      success: "Trade Republic połączono pomyślnie."
+      login_expired: "Żądanie logowania wygasło. Rozpocznij ponownie."
+    link_existing_account:
+      not_found: "Nie znaleziono rachunku ani konfiguracji Trade Republic."
+      success: "Pomyślnie połączono rachunek z Trade Republic."
+    complete_account_setup:
+      success:
+        one: "Pomyślnie utworzono %{count} konto Trade Republic."
+        other: "Pomyślnie utworzono %{count} kont Trade Republic."
+      none_created: "Nie utworzono żadnych kont."
+      partial_failure:
+        one: "Nie udało się w pełni skonfigurować jednego wybranego konta Trade Republic. Sprawdź dziennik debugowania i spróbuj ponownie."
+        other: "Nie udało się w pełni skonfigurować %{count} wybranych kont Trade Republic. Sprawdź dziennik debugowania i spróbuj ponownie."
+    activities:
+      labels:
+        contribution: Wpłata
+        withdrawal: Wypłata
+        interest: Odsetki
+        dividend: Dywidenda
+        card_payment: Płatność kartą
+        cash_withdrawal: Wypłata gotówki
+        card_fee: Opłata za kartę
+        card_refund: Zwrot na kartę
+        tax_refund: Zwrot podatku
+        buy: Kupno
+        sell: Sprzedaż

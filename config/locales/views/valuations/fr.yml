@@ -1,10 +1,18 @@
 ---
 fr:
   valuations:
+    confirm_create:
+      confirm: Confirmer
+      title: Confirmer le nouveau solde
+    confirm_update:
+      title: Mettre à jour le solde
+      update: Mettre à jour
     confirmation_contents:
       account_balance: solde du compte
+      action_set: définira
+      action_update: mettra à jour
       asset_value: valeur de l'actif
-      balance: équilibre
+      balance: solde
       brokerage_cash: Trésorerie de courtage
       change: changement
       credit_card_balance: solde de la carte de crédit

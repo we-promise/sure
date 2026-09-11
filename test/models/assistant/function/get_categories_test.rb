@@ -83,4 +83,20 @@ class Assistant::Function::GetCategoriesTest < ActiveSupport::TestCase
     assert_equal 2, page2[:page]
     assert_not_equal page1[:categories].map { |c| c[:name] }, page2[:categories].map { |c| c[:name] }
   end
+  test "is not in strict mode" do
+    refute @fn.to_definition[:strict]
+  end
+
+  test "honors and clamps page_size" do
+    10.times { |i| @family.categories.create!(name: "SizedCategory#{format('%02d', i)}", color: "#e99537", lucide_icon: "shapes") }
+
+    result = @fn.call({ "page_size" => 5 })
+
+    assert_equal 5, result[:page_size]
+    assert_equal 5, result[:categories].size
+
+    clamped = @fn.call({ "page_size" => 5000 })
+
+    assert_equal 100, clamped[:page_size]
+  end
 end

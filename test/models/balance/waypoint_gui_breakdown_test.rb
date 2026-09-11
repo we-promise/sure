@@ -11,7 +11,7 @@ class Balance::WaypointGuiBreakdownTest < ActiveSupport::TestCase
     calculated = Balance::ReverseCalculator.new(account).calculate
     account.balances.upsert_all(
       calculated.map { |b|
-        b.attributes.slice(
+        b.to_h.transform_keys(&:to_s).slice(
           "date", "balance", "cash_balance", "currency",
           "start_cash_balance", "start_non_cash_balance",
           "cash_inflows", "cash_outflows",

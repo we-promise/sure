@@ -42,6 +42,39 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert @chat.reload.error.present?
   end
 
+  # A client clock running ahead of the server's reports before the server floor
+  # has elapsed. The response must not be 2xx: the watchdog stops retrying a URL
+  # once it sees one, so an OK here would leave the bubble spinning forever.
+  test "report_timeout declines retryably when the message is still too young" do
+    Chat.stubs(:undelivered_response_timeout).returns(10.minutes)
+
+    pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    post report_timeout_chat_message_url(@chat, pending)
+
+    assert_response :conflict
+    assert pending.reload.pending?
+    assert_nil @chat.reload.error
+  end
+
+  # The same bubble must resolve once it genuinely ages past the floor, so an
+  # early report costs a retry rather than stranding the message.
+  test "report_timeout succeeds on a later retry once the message is old enough" do
+    BackgroundJobHealth.stubs(:snapshot).returns({})
+    BackgroundJobHealth.stubs(:summary).returns("")
+
+    pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    Chat.stubs(:undelivered_response_timeout).returns(10.minutes)
+    post report_timeout_chat_message_url(@chat, pending)
+    assert_response :conflict
+
+    Chat.stubs(:undelivered_response_timeout).returns(1.minute)
+    post report_timeout_chat_message_url(@chat, pending)
+    assert_response :ok
+    assert_not Message.exists?(pending.id)
+  end
+
   test "report_timeout cannot touch another user's chat" do
     other_chat = users(:family_member).chats.first
     pending = other_chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending)

@@ -1,10 +1,10 @@
-<% content_for :title, t(".page_title", default: "Set up Questrade accounts") %>
+<% content_for :title, t(".page_title") %>
 
 <%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
-  <% dialog.with_header(title: t(".dialog_title", default: "Set up your Questrade accounts")) do %>
+  <% dialog.with_header(title: t(".dialog_title")) do %>
     <div class="flex items-center gap-2">
       <%= icon "chart-line", class: "text-primary" %>
-      <span class="text-primary"><%= t(".subtitle", default: "Choose how to import each account") %></span>
+      <span class="text-primary"><%= t(".subtitle") %></span>
     </div>
   <% end %>
 
@@ -13,8 +13,8 @@
       <% if @unlinked_accounts.blank? %>
         <div class="flex flex-col items-center justify-center py-6 space-y-3">
           <%= icon "check-circle", size: "lg", class: "text-success" %>
-          <p class="text-primary text-center font-medium"><%= t(".all_linked", default: "All Questrade accounts are already linked.") %></p>
-          <%= render DS::Link.new(text: t(".buttons.done", default: "Done"), variant: "primary", href: accounts_path, frame: "_top") %>
+          <p class="text-primary text-center font-medium"><%= t(".all_linked") %></p>
+          <%= render DS::Link.new(text: t(".buttons.done"), variant: "primary", href: accounts_path, frame: "_top") %>
         </div>
       <% else %>
         <%= form_with url: complete_account_setup_questrade_item_path(@questrade_item), method: :post, data: { turbo_frame: "_top" }, class: "space-y-6" do %>
@@ -27,14 +27,14 @@
                 </p>
 
                 <label class="block text-sm text-secondary mb-1" for="account_type_<%= questrade_account.id %>">
-                  <%= t(".import_as", default: "Import as") %>
+                  <%= t(".import_as") %>
                 </label>
                 <select id="account_type_<%= questrade_account.id %>"
                         name="accounts[<%= questrade_account.id %>][account_type]"
                         class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary w-full">
-                  <option value="investment" selected><%= t(".types.investment", default: "Investment") %></option>
-                  <option value="depository"><%= t(".types.depository", default: "Cash / Depository") %></option>
-                  <option value="skip"><%= t(".types.skip", default: "Skip this account") %></option>
+                  <option value="investment" selected><%= t(".types.investment") %></option>
+                  <option value="depository"><%= t(".types.depository") %></option>
+                  <option value="skip"><%= t(".types.skip") %></option>
                 </select>
               </div>
             <% end %>
@@ -42,13 +42,13 @@
 
           <div class="flex gap-3">
             <%= render DS::Button.new(
-              text: t(".buttons.create", default: "Create accounts"),
+              text: t(".buttons.create"),
               variant: "primary",
               icon: "plus",
               type: "submit",
               class: "flex-1"
             ) %>
-            <%= render DS::Link.new(text: t(".buttons.cancel", default: "Cancel"), variant: "secondary", href: accounts_path, frame: "_top") %>
+            <%= render DS::Link.new(text: t(".buttons.cancel"), variant: "secondary", href: accounts_path, frame: "_top") %>
           </div>
         <% end %>
       <% end %>

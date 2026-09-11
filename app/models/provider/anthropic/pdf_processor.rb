@@ -53,7 +53,7 @@ class Provider::Anthropic::PdfProcessor
     span&.end(output: result.to_h, usage: usage_hash(response.usage))
     result
   rescue => e
-    span&.end(output: { error: e.message }, level: "ERROR")
+    span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
     record_usage_error(model, operation: "process_pdf", error: e, metadata: { pdf_size: pdf_content&.bytesize })
     raise
   end
@@ -83,6 +83,17 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def output_tool
+      extracted_data_properties = {
+        institution_name: { type: [ "string", "null" ] },
+        statement_period_start: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
+        statement_period_end: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
+        transaction_count: { type: [ "integer", "null" ] },
+        opening_balance: { type: [ "number", "null" ] },
+        closing_balance: { type: [ "number", "null" ] },
+        currency: { type: [ "string", "null" ] },
+        account_holder: { type: [ "string", "null" ] }
+      }
+
       {
         name: TOOL_NAME,
         description: "Return the structured analysis of the attached document.",
@@ -100,16 +111,7 @@ class Provider::Anthropic::PdfProcessor
             },
             extracted_data: {
               type: "object",
-              properties: {
-                institution_name: { type: [ "string", "null" ] },
-                statement_period_start: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
-                statement_period_end: { type: [ "string", "null" ], pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "YYYY-MM-DD or null" },
-                transaction_count: { type: [ "integer", "null" ] },
-                opening_balance: { type: [ "number", "null" ] },
-                closing_balance: { type: [ "number", "null" ] },
-                currency: { type: [ "string", "null" ] },
-                account_holder: { type: [ "string", "null" ] }
-              },
+              properties: extracted_data_properties,
               required: [],
               additionalProperties: false
             }

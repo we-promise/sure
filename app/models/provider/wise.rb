@@ -13,11 +13,18 @@ class Provider::Wise
   headers "User-Agent" => "Sure Finance Wise Client"
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
-  attr_reader :token, :base_url
+  # Wise header carrying the one-time-token challenge on a 403 that requires
+  # Strong Customer Authentication (SCA), and the header used to submit the
+  # signed response.
+  SCA_CHALLENGE_HEADER = "x-2fa-approval"
+  SCA_SIGNATURE_HEADER = "X-Signature"
 
-  def initialize(token, base_url: LIVE_BASE_URL)
+  attr_reader :token, :base_url, :sca_private_key
+
+  def initialize(token, base_url: LIVE_BASE_URL, sca_private_key: nil)
     @token = token
     @base_url = base_url
+    @sca_private_key = sca_private_key
   end
 
   def get_me
@@ -93,12 +100,17 @@ class Provider::Wise
 
   private
 
-    def get(path, query: {})
+    def get(path, query: {}, sca_headers: {})
       response = self.class.get(
         "#{base_url}#{path}",
-        headers: auth_headers,
+        headers: auth_headers.merge(sca_headers),
         query: query.presence
       )
+
+      if sca_retry?(response, already_retried: sca_headers.present?)
+        return get(path, query: query, sca_headers: sca_approval_headers(response))
+      end
+
       handle_response(response)
     rescue WiseError
       raise
@@ -106,6 +118,33 @@ class Provider::Wise
       raise WiseError.new("Connection failed: #{e.message}", :request_failed)
     rescue => e
       raise WiseError.new("Unexpected error: #{e.message}", :request_failed)
+    end
+
+    # Wise's balance-statement endpoint (and other sensitive endpoints) require
+    # Strong Customer Authentication: a 403 carrying a one-time-token challenge
+    # in SCA_CHALLENGE_HEADER, which must be signed with an RSA private key the
+    # user has registered with Wise and echoed back on a retry. Retries at most
+    # once per request to avoid looping if the key is missing or rejected.
+    def sca_retry?(response, already_retried:)
+      return false if already_retried
+      return false unless response.code == 403
+      sca_private_key.present? && sca_challenge_token(response).present?
+    end
+
+    def sca_challenge_token(response)
+      response.headers[SCA_CHALLENGE_HEADER]
+    end
+
+    def sca_approval_headers(response)
+      challenge = sca_challenge_token(response)
+      { SCA_CHALLENGE_HEADER => challenge, SCA_SIGNATURE_HEADER => sign_sca_challenge(challenge) }
+    end
+
+    def sign_sca_challenge(challenge)
+      key = OpenSSL::PKey::RSA.new(sca_private_key)
+      Base64.strict_encode64(key.sign(OpenSSL::Digest::SHA256.new, challenge))
+    rescue OpenSSL::PKey::RSAError => e
+      raise WiseError.new("Invalid SCA private key: #{e.message}", :sca_key_invalid)
     end
 
     def auth_headers

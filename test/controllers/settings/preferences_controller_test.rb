@@ -50,4 +50,33 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_preferences_url
     assert_not user.reload.preview_features_enabled?
   end
+
+  test "household budget toggle and sharing card only render once personal_budgets is on" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get settings_preferences_url
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
+    assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+
+    user.family.update!(personal_budgets: true)
+
+    get settings_preferences_url
+    assert_response :success
+    assert_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
+    assert_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+  end
+
+  test "hides the sharing card when personal_budgets is on but preview features are off" do
+    user = users(:family_admin)
+    user.family.update!(personal_budgets: true)
+    assert_not user.preview_features_enabled?
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
+    assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+  end
 end

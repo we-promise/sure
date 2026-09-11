@@ -1,0 +1,22 @@
+<%# locals: (switch_options:, switch_path:) %>
+
+<%# The shared .segmented-control track (bg-gray-50) is too close to both
+    the page background (bg-surface, also gray-50) and a white card
+    (bg-container) to read as its own control. Override it with
+    bg-surface-inset, the same track color DS::Tabs uses for Budgeted/Actual
+    on this same page — a utility class beats the component's own
+    `@apply bg-gray-50` in the cascade, so this doesn't touch the shared
+    CSS or affect other .segmented-control consumers (category filter). %>
+<%= render DS::SegmentedControl.new(full_width: true, aria_label: t("budgets.switcher.aria_label"), class: "bg-surface-inset") do |sc| %>
+  <% switch_options.each do |option| %>
+    <% segment_content = capture do %>
+      <% if option[:icon] %>
+        <%= icon(option[:icon], size: "xs", color: "current") %>
+      <% else %>
+        <%= render Goals::AvatarComponent.new(name: option[:label], size: "sm") %>
+      <% end %>
+      <span class="ml-1.5"><%= option[:label] %></span>
+    <% end %>
+    <% sc.with_segment segment_content, active: option[:active], href: switch_path.call(option[:owner_param]) %>
+  <% end %>
+<% end %>

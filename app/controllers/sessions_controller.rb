@@ -65,6 +65,16 @@ class SessionsController < ApplicationController
     end
 
     if user
+      # Check before starting the MFA challenge, not just after — otherwise a
+      # deactivated user's correct password still sets session[:mfa_user_id],
+      # and completing MFA later (e.g. after being reactivated) would finish
+      # a login whose first factor was accepted while inactive.
+      unless user.active?
+        flash.now[:alert] = t(".account_deactivated")
+        render :new, status: :unprocessable_entity
+        return
+      end
+
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
@@ -72,8 +82,13 @@ class SessionsController < ApplicationController
       else
         log_super_admin_override_login(user)
         @session = create_session_for(user)
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
-        redirect_to root_path
+
+        if @session
+          flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+          redirect_to root_path
+        else
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        end
       end
     else
       flash.now[:alert] = t(".invalid_credentials")
@@ -201,7 +216,12 @@ class SessionsController < ApplicationController
     end
 
     user = User.find_by(id: data[:user_id])
-    unless user
+    # This code is minted during the OIDC callback and redeemed up to two minutes
+    # later, so an administrator can permanently remove the user inside that
+    # window. User#revoke_all_credentials! cannot reach a session that does not
+    # exist yet, and this path never re-consults the SSO identity (the code
+    # carries only a user id), so re-check the account here before minting one.
+    unless user&.active?
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
       return
     end
@@ -211,6 +231,10 @@ class SessionsController < ApplicationController
       redirect_to verify_mfa_path
     else
       @session = create_session_for(user)
+      unless @session
+        redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+        return
+      end
       flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
       redirect_to root_path
     end
@@ -225,12 +249,36 @@ class SessionsController < ApplicationController
       return
     end
 
+    if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
+      reject_removed_sso_identity(auth.provider)
+      return
+    end
+
     # Security fix: Look up by provider + uid, not just email
     oidc_identity = OidcIdentity.find_by(provider: auth.provider, uid: auth.uid)
 
     if oidc_identity
       # Existing OIDC identity found - authenticate the user
       user = oidc_identity.user
+
+      # Check before recording authentication/audit success — a deactivated
+      # user's credentials being valid shouldn't show up in the audit trail
+      # as a successful login when access is actually being denied.
+      unless user.active?
+        Rails.logger.warn("[AUTH] Rejected OIDC login for deactivated user_id=#{user.id}")
+
+        if session[:mobile_sso].present?
+          session.delete(:mobile_sso)
+          mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        elsif session[:desktop_sso].present?
+          session.delete(:desktop_sso)
+          redirect_to "sure://sso/callback?error=account_deactivated", allow_other_host: true
+        else
+          redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+        end
+        return
+      end
+
       oidc_identity.record_authentication!
       oidc_identity.sync_user_attributes!(auth)
 
@@ -266,6 +314,10 @@ class SessionsController < ApplicationController
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)
+        unless @session
+          redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+          return
+        end
         flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end
@@ -315,7 +367,7 @@ class SessionsController < ApplicationController
     # Mobile SSO: redirect back to the app with error instead of web login page
     if session[:mobile_sso].present?
       session.delete(:mobile_sso)
-      mobile_sso_redirect(error: sanitized_reason, message: "SSO authentication failed")
+      mobile_sso_redirect(error: sanitized_reason, message: t("sessions.failure.sso_failed"))
       return
     end
 
@@ -340,7 +392,36 @@ class SessionsController < ApplicationController
   end
 
   private
+    def reject_removed_sso_identity(provider)
+      SsoAuditLog.log_login_failed!(
+        provider: provider,
+        request: request,
+        reason: "removed_identity"
+      )
+
+      if session.delete(:mobile_sso).present?
+        mobile_sso_redirect(error: "sso_failed", message: t("sessions.failure.sso_failed"))
+      elsif session.delete(:desktop_sso).present?
+        redirect_to "sure://sso/callback?error=sso_failed", allow_other_host: true
+      else
+        redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      end
+    end
+
     def handle_mobile_sso_callback(user)
+      # openid_connect already checked user.active? before dispatching here,
+      # but record_authentication!/sync_user_attributes!/audit logging run in
+      # between — reload right before actually minting a token to narrow that
+      # window, same reasoning as Authentication#create_session_for. Treats a
+      # concurrently purged user (reload raises RecordNotFound) the same as
+      # inactive instead of letting it fall through to a generic 404.
+      unless user_reloadable_and_active?(user)
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        session.delete(:mobile_sso)
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        return
+      end
+
       device_info = session.delete(:mobile_sso)
 
       unless device_info.present?
@@ -348,8 +429,21 @@ class SessionsController < ApplicationController
         return
       end
 
-      device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
-      token_response = device.issue_token!
+      begin
+        device = MobileDevice.upsert_device!(user, device_info.symbolize_keys)
+      rescue ActiveRecord::RecordInvalid => e
+        Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
+        mobile_sso_redirect(error: "device_error", message: "Unable to register device")
+        return
+      end
+
+      begin
+        token_response = device.issue_token!
+      rescue User::InactiveError
+        Rails.logger.warn("[AUTH] Rejected mobile SSO token issuance for deactivated user_id=#{user.id}")
+        mobile_sso_redirect(error: "account_deactivated", message: t("sessions.create.account_deactivated"))
+        return
+      end
 
       # Store tokens behind a one-time authorization code instead of passing in URL
       authorization_code = SecureRandom.urlsafe_base64(32)
@@ -367,9 +461,6 @@ class SessionsController < ApplicationController
       )
 
       mobile_sso_redirect(code: authorization_code)
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.warn("[Mobile SSO] Device save failed: #{e.record.errors.full_messages.join(', ')}")
-      mobile_sso_redirect(error: "device_error", message: "Unable to register device")
     end
 
     def handle_desktop_sso_callback(user)
@@ -430,6 +521,16 @@ class SessionsController < ApplicationController
 
     def mobile_sso_redirect(params = {})
       redirect_to "sureapp://oauth/callback?#{params.to_query}", allow_other_host: true
+    end
+
+    # A concurrent purge between the initial check and this fast-path
+    # re-check raises RecordNotFound on reload; treat it the same as
+    # inactive instead of letting it fall through to StoreLocation's
+    # generic not-found handler.
+    def user_reloadable_and_active?(user)
+      user.reload.active?
+    rescue ActiveRecord::RecordNotFound
+      false
     end
 
     def set_session

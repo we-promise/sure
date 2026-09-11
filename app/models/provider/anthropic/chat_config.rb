@@ -4,6 +4,7 @@ class Provider::Anthropic::ChatConfig
     instructions: nil,
     functions: [],
     function_results: [],
+    tool_choice: nil,
     conversation_history: [],
     default_max_tokens: 4096
   )
@@ -11,6 +12,7 @@ class Provider::Anthropic::ChatConfig
     @instructions = instructions
     @functions = functions
     @function_results = function_results
+    @tool_choice = tool_choice
     @conversation_history = conversation_history
     @default_max_tokens = default_max_tokens
   end
@@ -26,7 +28,13 @@ class Provider::Anthropic::ChatConfig
     params[:system_] = system_blocks if system_blocks.present?
 
     tool_blocks = build_tools
-    params[:tools] = tool_blocks if tool_blocks.present?
+    if tool_blocks.present?
+      params[:tools] = tool_blocks
+      # Forbidding further tool calls still requires sending the tool
+      # definitions — the API rejects messages containing tool_use/tool_result
+      # blocks when no tools are defined.
+      params[:tool_choice] = { type: "none" } if @tool_choice == :none
+    end
 
     params
   end

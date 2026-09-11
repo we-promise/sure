@@ -157,6 +157,122 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal existing_tag.id, action.value
   end
 
+  test "imports multi-tag actions, reusing existing tags and creating missing ones" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Multi tag rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"test\"}]","[{\"action_type\":\"set_transaction_tags\",\"value\":\"Existing Tag,New Tag\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    new_tag = Tag.find_by!(family: @family, name: "New Tag")
+
+    rule = Rule.find_by!(family: @family, name: "Multi tag rule")
+    action = rule.actions.first
+    assert_equal "set_transaction_tags", action.action_type
+    assert_equal [ existing_tag.id, new_tag.id ], action.value.split(",")
+  end
+
+  test "imports a multi-tag action preserving a tag name that contains a comma" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    actions_json = [
+      {
+        action_type: "set_transaction_tags",
+        value: CSV.generate_line([ "Existing Tag", "Food, Dining" ], row_sep: "")
+      }
+    ].to_json
+    conditions_json = [
+      { condition_type: "transaction_name", operator: "like", value: "test" }
+    ].to_json
+
+    csv = CSV.generate do |csv_out|
+      csv_out << %w[name resource_type active effective_date conditions actions]
+      csv_out << [ "Comma tag rule", "transaction", true, nil, conditions_json, actions_json ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    comma_tag = Tag.find_by!(family: @family, name: "Food, Dining")
+
+    rule = Rule.find_by!(family: @family, name: "Comma tag rule")
+    action = rule.actions.first
+    assert_equal "set_transaction_tags", action.action_type
+    assert_equal [ existing_tag.id, comma_tag.id ], action.value.split(",")
+  end
+
+  test "imports transaction_tag condition and maps tag name to id" do
+    existing_tag = @family.tags.create!(name: "Existing Tag")
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Tag condition rule","transaction",true,,"[{\"condition_type\":\"transaction_tag\",\"operator\":\"=\",\"value\":\"Existing Tag\"}]","[{\"action_type\":\"auto_categorize\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_no_difference -> { Tag.where(family: @family).count } do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Tag condition rule")
+    condition = rule.conditions.first
+    assert_equal "transaction_tag", condition.condition_type
+    assert_equal existing_tag.id, condition.value
+  end
+
+  test "creates a missing tag referenced by a transaction_tag condition" do
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "New tag condition rule","transaction",true,,"[{\"condition_type\":\"transaction_tag\",\"operator\":\"=\",\"value\":\"Brand New Tag\"}]","[{\"action_type\":\"auto_categorize\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Tag.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    new_tag = Tag.find_by!(family: @family, name: "Brand New Tag")
+    rule = Rule.find_by!(family: @family, name: "New tag condition rule")
+    assert_equal new_tag.id, rule.conditions.first.value
+  end
+
+  test "reuses a category created for an earlier row within the same import" do
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "First coffee rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"coffee\"}]","[{\"action_type\":\"set_transaction_category\",\"value\":\"Coffee Shops\"}]"
+      "Second coffee rule","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"latte\"}]","[{\"action_type\":\"set_transaction_category\",\"value\":\"Coffee Shops\"}]"
+    CSV
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { Category.where(family: @family).count }, 1 do
+      import.send(:import!)
+    end
+
+    category = Category.find_by!(family: @family, name: "Coffee Shops")
+    first_rule = Rule.find_by!(family: @family, name: "First coffee rule")
+    second_rule = Rule.find_by!(family: @family, name: "Second coffee rule")
+    assert_equal category.id, first_rule.actions.first.value
+    assert_equal category.id, second_rule.actions.first.value
+  end
+
   test "updates existing rule when re-importing with same name" do
     # First import
     import1 = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")

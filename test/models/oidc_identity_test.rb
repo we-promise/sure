@@ -201,4 +201,21 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_equal @user, identity.user
     assert_not_nil identity.last_authenticated_at
   end
+
+  test "refuses to create an identity after it is blocked" do
+    auth = OmniAuth::AuthHash.new({
+      provider: "google_oauth2",
+      uid: "blocked-google-subject",
+      info: { email: "blocked@example.com" }
+    })
+    existing = OidcIdentity.create_from_omniauth(auth, @user)
+    SsoIdentityBlock.block_all!(OidcIdentity.where(id: existing.id), identity_label: @user.email)
+    existing.destroy!
+
+    assert_no_difference "OidcIdentity.count" do
+      assert_raises(SsoIdentityBlock::BlockedIdentity) do
+        OidcIdentity.create_from_omniauth(auth, @user)
+      end
+    end
+  end
 end

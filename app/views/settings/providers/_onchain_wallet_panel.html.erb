@@ -1,0 +1,79 @@
+<div id="onchain_wallet-providers-panel" class="space-y-4">
+  <%# Every wallet hangs off one connection, and the actions below all act on
+      it. The rows were previously drawn from a separate list, so a family that
+      somehow held two would have been shown both and been able to manage only
+      one — silently, since nothing said which. %>
+  <% connection = Current.family.onchain_wallet_item %>
+
+  <%= render "onchain_wallet_items/price_provider_warning" %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% if connection.present? %>
+    <%= render "onchain_wallet_items/onchain_wallet_item", onchain_wallet_item: connection %>
+  <% end %>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <%= render DS::Link.new(
+          text: t("settings.providers.onchain_wallet_panel.add_wallet"),
+          icon: "plus",
+          variant: "primary",
+          href: new_wallet_onchain_wallet_items_path,
+          frame: :modal
+        ) %>
+
+    <% if connection.present? %>
+      <%= render DS::Link.new(
+            text: t("settings.providers.onchain_wallet_panel.manage_wallets"),
+            icon: "settings",
+            variant: "secondary",
+            href: manage_onchain_wallet_item_path(connection),
+            frame: :modal
+          ) %>
+    <% end %>
+  </div>
+
+  <% if connection.present? %>
+    <%= render DS::Disclosure.new(title: t("settings.providers.onchain_wallet_panel.advanced"), align: :right) do %>
+      <div class="pt-2 space-y-3">
+        <p class="text-sm text-secondary"><%= t("settings.providers.onchain_wallet_panel.etherscan_hint") %></p>
+
+        <%= styled_form_with model: connection,
+                             url: onchain_wallet_item_path(connection),
+                             scope: :onchain_wallet_item,
+                             method: :patch,
+                             data: { turbo: true },
+                             class: "space-y-3" do |form| %>
+          <%= form.text_field :etherscan_api_key,
+                              label: t("settings.providers.onchain_wallet_panel.etherscan_api_key_label"),
+                              placeholder: connection.etherscan_api_key.present? ? t("settings.providers.onchain_wallet_panel.keep_etherscan_api_key") : t("settings.providers.onchain_wallet_panel.etherscan_api_key_placeholder"),
+                              type: :password,
+                              value: nil %>
+
+          <%= form.date_field :sync_start_date,
+                              label: t("settings.providers.onchain_wallet_panel.sync_start_date_label"),
+                              value: connection.sync_start_date&.to_date %>
+
+          <p class="text-xs text-secondary"><%= t("settings.providers.onchain_wallet_panel.sync_start_date_hint") %></p>
+
+          <div class="flex justify-end">
+            <%= form.submit t("settings.providers.onchain_wallet_panel.save") %>
+          </div>
+        <% end %>
+
+        <%= render DS::Button.new(
+              text: t("settings.providers.onchain_wallet_panel.disconnect_all"),
+              icon: "trash-2",
+              variant: :outline_destructive,
+              size: :sm,
+              href: onchain_wallet_item_path(connection),
+              method: :delete,
+              confirm: t("settings.providers.onchain_wallet_panel.disconnect_all_confirm")
+            ) %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

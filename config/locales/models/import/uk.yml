@@ -1,0 +1,18 @@
+---
+uk:
+  activerecord:
+    attributes:
+      import:
+        col_sep: "Роздільник стовпців"
+        col_seps:
+          comma: "Кома (,)"
+          semicolon: "Крапка з комою (;)"
+        currency: "Валюта"
+        number_format: "Формат числа"
+    errors:
+      models:
+        import:
+          duplicate_headers: "Заголовки CSV нормалізуються до дублікатів стовпців: %{columns}"
+          attributes:
+            raw_file_str:
+              invalid_csv_format: "не є дійсним форматом CSV"

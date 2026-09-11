@@ -1,0 +1,7 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Повинен бути присутнім або продавець, або назва"

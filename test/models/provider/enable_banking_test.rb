@@ -118,6 +118,57 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert error.wrong_transactions_period?
   end
 
+  test "get_account_transactions retries a PERIOD_INVALID error with a string detail (N26 shape)" do
+    requested_queries = []
+
+    # N26 (via Enable Banking) rejects the period with a different payload
+    # shape than WRONG_TRANSACTIONS_PERIOD: no "error" key, and "detail" is a
+    # plain string instead of a hash, so no corrected date_from is available.
+    period_invalid_response = OpenStruct.new(
+      code: 400,
+      body: {
+        title: "Range is out of the last 90-day period",
+        code: "PERIOD_INVALID",
+        detail: "dateFrom=2025-12-11, dateTo=2026-03-23"
+      }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(period_invalid_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK"
+    )
+
+    assert_equal [], result[:transactions]
+    assert_equal 6.months.ago.to_date.iso8601, requested_queries.first[:date_from]
+    assert_equal 89.days.ago.to_date.iso8601, requested_queries.second[:date_from]
+  end
+
+  test "PERIOD_INVALID errors with a string detail expose a nil corrected_date_from instead of raising" do
+    response = OpenStruct.new(
+      code: 400,
+      body: {
+        title: "Range is out of the last 90-day period",
+        code: "PERIOD_INVALID",
+        detail: "dateFrom=2025-12-11, dateTo=2026-03-23"
+      }.to_json
+    )
+
+    error = assert_raises Provider::EnableBanking::EnableBankingError do
+      @provider.send(:handle_response, response)
+    end
+
+    assert_equal :bad_request, error.error_type
+    assert error.wrong_transactions_period?
+    assert_nil error.corrected_date_from
+  end
+
   test "start_authorization includes auth_method in the request body when provided" do
     captured_body = nil
     response = OpenStruct.new(

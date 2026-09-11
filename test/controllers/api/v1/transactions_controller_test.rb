@@ -356,6 +356,53 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal response_data["id"], entry.transaction.id
   end
 
+  test "should create transaction protected from provider sync when user_modified is true" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense",
+        user_modified: true
+      }
+    }
+
+    assert_difference("@account.entries.count", 1) do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal true, response_data["user_modified"]
+
+    entry = Transaction.find(response_data["id"]).entry
+    assert entry.user_modified?
+    assert entry.protected_from_sync?
+  end
+
+  test "should not mark transaction user_modified by default" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Imported Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    post api_v1_transactions_url, params: transaction_params, headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal false, response_data["user_modified"]
+  end
+
   test "should use default source when external_id provided without source" do
     transaction_params = {
       transaction: {
@@ -617,6 +664,38 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated Transaction Name", response_data["name"]
+  end
+
+  test "should protect transaction from provider sync when updated with user_modified true" do
+    update_params = {
+      transaction: {
+        name: "Client-owned Name",
+        user_modified: true
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal "Client-owned Name", response_data["name"]
+    assert_equal true, response_data["user_modified"]
+
+    entry = @transaction.entry.reload
+    assert entry.user_modified?
+    assert entry.protected_from_sync?
+  end
+
+  test "should not change user_modified on update by default" do
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Updated Name Only" } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal false, JSON.parse(response.body)["user_modified"]
+    assert_not @transaction.entry.reload.user_modified?
   end
 
   test "should reject update with read-only API key" do

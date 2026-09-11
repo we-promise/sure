@@ -10,10 +10,11 @@
 #
 #   Pipelock — agent security proxy
 #   (always runs)
-#     - Forward proxy (port 8888): scans outbound HTTPS from Faraday-based
-#       clients (e.g. ruby-openai). NOT covered: SimpleFin, Coinbase, or
-#       anything using Net::HTTP/HTTParty directly. HTTPS_PROXY is
-#       cooperative; Docker Compose has no egress network policy.
+#     - Forward proxy (port 8888): applies destination, SSRF, rate, budget,
+#       CONNECT-header DLP, and receipt controls to HTTPS tunnels from clients
+#       that honor HTTPS_PROXY. HTTPS bodies remain encrypted because this
+#       example does not configure TLS interception. HTTPS_PROXY is cooperative;
+#       Docker Compose has no egress network policy.
 #     - MCP reverse proxy (port 8889): scans inbound AI traffic (DLP,
 #       prompt injection, tool poisoning, tool call policy). External AI
 #       clients should connect to Pipelock on port 8889 rather than
@@ -25,9 +26,8 @@
 #   (optional, --profile local-ai)
 #     - Only starts when you run: docker compose --profile local-ai up
 #
-#   Ollama + Open WebUI + OpenClaw — external AI assistant
+#   OpenClaw — external AI assistant
 #   (optional, --profile external-assistant)
-#     - Local LLM inference available via Ollama + Open WebUI
 #     - Starts an OpenClaw locally for Sure's external assistant mode.
 #     - Set EXTERNAL_ASSISTANT_URL to http://openclaw:18789/v1/chat/completions
 #       for internal routing.
@@ -83,7 +83,8 @@ x-rails-env: &rails_env
   MCP_API_TOKEN: ${MCP_API_TOKEN:-}
   MCP_USER_EMAIL: ${MCP_USER_EMAIL:-}
   # Route outbound HTTPS through Pipelock for clients that respect HTTPS_PROXY.
-  # Covered: OpenAI API (ruby-openai/Faraday). NOT covered: SimpleFin, Coinbase (Net::HTTP).
+  # This applies tunnel-level controls; encrypted HTTPS bodies are not inspected
+  # unless you separately configure TLS interception and trust its CA.
   HTTPS_PROXY: "http://pipelock:8888"
   HTTP_PROXY: "http://pipelock:8888"
   # Skip proxy for internal Docker network services (including ollama for local LLM calls)
@@ -93,9 +94,34 @@ x-rails-env: &rails_env
   OPENAI_ACCESS_TOKEN: token-can-be-any-value-for-ollama
   OPENAI_MODEL: llama3.1:8b # Note: Use tool-enabled model
   OPENAI_URI_BASE: http://ollama:11434/v1
+  # Local models are not streamed, so the chat shows nothing until the whole reply
+  # is generated, and tool-call rounds display nothing at all. OPENAI_REQUEST_TIMEOUT
+  # bounds each call to the model on its own; AI_RESPONSE_TIMEOUT covers the whole
+  # turn, so it has to be sized as a sum rather than simply set higher:
+  #
+  #   (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) * OPENAI_REQUEST_TIMEOUT
+  #     + tool execution + queue wait
+  #
+  # Here that is (1 + 2) * 300 = 900s of model time, plus 300s of headroom for tool
+  # execution and queue wait, giving 1200.
+  #
+  # The cap is lowered to 2 rather than left at 5 so the bound is three model calls
+  # instead of six — at 300s each, leaving it at 5 would need a timeout beyond half
+  # an hour. The trade is that longer tool chains fail earlier, with an explicit
+  # tool-call limit error rather than a timeout.
+  OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-300}
+  # Health-check probes (System Health → AI Status → "Run checks") bound each
+  # probe call. Distinct from OPENAI_REQUEST_TIMEOUT, which bounds real LLM
+  # calls the app makes; the probe default is 5s. AI_HEALTH_PROBE_CACHE_TTL
+  # controls how long probe results are cached (default 60s).
+  AI_HEALTH_PROBE_TIMEOUT: ${AI_HEALTH_PROBE_TIMEOUT:-}
+  AI_HEALTH_PROBE_CACHE_TTL: ${AI_HEALTH_PROBE_CACHE_TTL:-}
+  ASSISTANT_MAX_TOOL_CALL_ITERATIONS: ${ASSISTANT_MAX_TOOL_CALL_ITERATIONS:-2}
+  AI_RESPONSE_TIMEOUT: ${AI_RESPONSE_TIMEOUT:-1200}
   # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)
   VECTOR_STORE_PROVIDER: pgvector
-  EMBEDDING_MODEL: nomic-embed-text
+  EMBEDDING_URI_BASE: http://ollama:11434/v1
+  EMBEDDING_MODEL: mxbai-embed-large
   EMBEDDING_DIMENSIONS: "1024"
   # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
   #  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
@@ -112,7 +138,7 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:2.8.0
+    image: ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c
     user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"
     container_name: pipelock
     hostname: pipelock
@@ -128,12 +154,12 @@ services:
       #   mkdir -p ./pipelock-evidence ./pipelock-keys
       # Generate the receipt-signing key via the image (no host binary needed;
       # --out must be an absolute path inside the container):
-      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # The key is written 0600 owned by uid 1000 (Pipelock's default user). If
       # your host user is not uid 1000, use this variant instead:
       #   export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
-      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:2.8.0 \
+      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # That makes the key and evidence directory readable/writable by the same
       # uid/gid the compose service uses.
@@ -163,11 +189,17 @@ services:
     networks:
       - sure_net
 
-  # Note: You still have to download models manually using the ollama CLI or via Open WebUI
+  # Ollama's OLLAMA_MODELS setting controls the model storage directory; it is
+  # not a preload list. Start Ollama, then pull each model once. The ollama
+  # volume below keeps the downloaded models across container restarts:
+  #
+  # docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull deepseek-r1:8b
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull llama3.1:8b
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull mxbai-embed-large
   ollama:
     profiles:
       - local-ai
-      - external-assistant
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
@@ -178,7 +210,12 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
-      - OLLAMA_MODELS=deepseek-r1:8b,llama3.1:8b,nomic-embed-text # Pre-load model on startup, you can change this to your preferred model
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
     networks:
       - sure_net
     # Recommended: Enable GPU support
@@ -193,7 +230,6 @@ services:
   ollama-webui:
     profiles:
       - local-ai
-      - external-assistant
     image: ghcr.io/open-webui/open-webui
     container_name: ollama-webui
     volumes:
@@ -321,7 +357,7 @@ services:
       - sure_net
 
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16-trixie
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -338,19 +374,32 @@ services:
   backup:
     profiles:
       - backup
-    image: prodrigestivill/postgres-backup-local
+    image: alpine:3.20
     restart: unless-stopped
     volumes:
-      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+      - ./bin/db-backup.sh:/usr/local/bin/db-backup.sh:ro
     environment:
       - POSTGRES_HOST=db
-      - POSTGRES_DB=${POSTGRES_DB:-sure_production}
-      - POSTGRES_USER=${POSTGRES_USER:-sure_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password} # pipelock:ignore
-      - SCHEDULE=@daily # Runs once a day at midnight
-      - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
-      - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
-      - BACKUP_KEEP_MONTHS=6 # Keeps 6 monthly backups
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD # pipelock:ignore
+      - BACKUP_SCHEDULE
+      - BACKUP_OVERWRITE
+      - BACKUP_KEEP_DAYS
+      - BACKUP_DESTINATION
+      - INSTANCE_ID
+      # Rclone Provider Config
+      # By default we map the S3 variables. If you use a different provider (e.g., gdrive), 
+      # replace these with the equivalent variables you added to your .env file.
+      - RCLONE_CONFIG_S3_TYPE
+      - RCLONE_CONFIG_S3_PROVIDER
+      - RCLONE_CONFIG_S3_ACCESS_KEY_ID
+      - RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
+      - RCLONE_CONFIG_S3_ENDPOINT
+    command: >
+      sh -c "apk add --no-cache postgresql16-client~=16 rclone~=1.66 gzip~=1 &&
+             echo \"$${BACKUP_SCHEDULE:-0 2 * * *} /usr/local/bin/db-backup.sh\" > /etc/crontabs/root &&
+             crond -f -d 8"
     depends_on:
       - db
     networks:

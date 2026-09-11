@@ -90,4 +90,15 @@ class Assistant::HistoryTrimmerTest < ActiveSupport::TestCase
 
     assert_equal messages, result
   end
+
+  test "keeps the newest group even when it alone exceeds the budget" do
+    messages = [
+      { role: "user", content: "old message" },
+      { role: "user", content: "the current question " * 200 }
+    ]
+
+    result = Assistant::HistoryTrimmer.new(messages, max_tokens: 50).call
+
+    assert_equal [ messages.last ], result
+  end
 end

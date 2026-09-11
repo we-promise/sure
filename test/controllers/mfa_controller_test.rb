@@ -8,9 +8,12 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
   end
 
   def sign_out
-    @user.sessions.each do |session|
-      delete session_path(session)
-    end
+    # Deleting sessions through the controller de-authenticates the request the
+    # moment our own session dies, so every later delete in the loop is a
+    # silent no-op and whichever sessions sort after it survive. The order is
+    # unspecified, which made every suite that signs out this way flaky.
+    # Teardown hygiene is not the behavior under test, so destroy directly.
+    @user.sessions.destroy_all
   end
 
   test "redirects to root if MFA already enabled" do
@@ -91,12 +94,33 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     sign_out
 
     post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+    assert_equal @user.id, session[:mfa_user_id]
+
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
     post verify_mfa_path, params: { code: totp.now }
 
     assert_redirected_to root_path
     assert Session.exists?(user_id: @user.id)
+  end
+
+  test "verify_code cannot create a session after the user is deactivated" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    assert_redirected_to verify_mfa_path
+    assert_equal @user.id, session[:mfa_user_id]
+
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    @user.update_column(:active, false)
+
+    assert_no_difference -> { Session.where(user_id: @user.id).count } do
+      post verify_mfa_path, params: { code: totp.now }
+    end
+    assert_redirected_to new_session_path
   end
 
   test "verify_code authenticates with valid backup code" do
@@ -159,6 +183,42 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert Session.exists?(user_id: @user.id)
     assert stored_credential.reload.last_used_at.present?
     assert_operator stored_credential.sign_count, :>, 0
+  end
+
+  test "verify_webauthn rejects a user deactivated after MFA verification started" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    client = register_webauthn_credential
+    stored_credential = @user.webauthn_credentials.first
+    sign_out
+
+    post sessions_path, params: { email: @user.email, password: user_password_test }
+    post webauthn_options_mfa_path, as: :json
+    assert_response :success
+
+    options = JSON.parse(response.body)
+    assertion = client.get(
+      challenge: options.fetch("challenge"),
+      rp_id: "www.example.com",
+      allow_credentials: [ stored_credential.credential_id ]
+    )
+
+    # Simulate deactivation happening after the challenge was issued but
+    # before the assertion is submitted.
+    @user.update_column(:active, false)
+
+    post verify_webauthn_mfa_path, params: { credential: assertion }, as: :json
+
+    assert_response :unauthorized
+    assert_equal "This account has been deactivated. Please contact an administrator.", JSON.parse(response.body)["error"]
+    assert_not Session.exists?(user_id: @user.id)
+    # The credential must not be consumed by a rejected login attempt.
+    assert_nil stored_credential.reload.last_used_at
+    assert_equal 0, stored_credential.sign_count
+    # The pending MFA state must not survive the rejection either — otherwise
+    # a later reactivation could let the user finish MFA without redoing the
+    # first factor.
+    assert_nil session[:mfa_user_id]
   end
 
   test "verify_webauthn authenticates with configured relying party id" do

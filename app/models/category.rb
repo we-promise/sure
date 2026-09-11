@@ -12,9 +12,19 @@ class Category < ApplicationRecord
          dependent: :nullify
   belongs_to :parent, class_name: "Category", optional: true
 
+  # Set by .uncategorized so #filter_value can identify the synthetic instance
+  # without a locale-sensitive name comparison. Not a DB column.
+  attr_writer :synthetic_uncategorized
+
+  # Stable, non-localized filter value for the synthetic "Uncategorized" option.
+  # Using an opaque sentinel (rather than the translated display name) means a real
+  # category can never collide with it, regardless of name or locale.
+  UNCATEGORIZED_FILTER_VALUE = "__uncategorized__"
+
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family_id }
+  validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
 
@@ -123,11 +133,35 @@ class Category < ApplicationRecord
 
     delegate :name, :color, to: :category
 
+    # NOTE: if `categories` is a filtered/partial collection, any child whose
+    # parent isn't included is silently dropped (it's grouped under its
+    # parent_id, but that parent never appears in `roots`). Every current
+    # call site passes the full family category list, so this is latent
+    # today — pass a filtered scope with care.
     def self.for(categories)
       categories_by_parent_id = categories.to_a.group_by(&:parent_id)
 
-      categories_by_parent_id[nil].to_a.map do |category|
-        new(category, categories_by_parent_id[category.id].to_a)
+      roots = categories_by_parent_id[nil].to_a.sort_by { |category| category.name.downcase }
+
+      roots.map do |category|
+        subcategories = categories_by_parent_id[category.id].to_a.sort_by { |sub| sub.name.downcase }
+        new(category, subcategories)
+      end
+    end
+
+    # Builds [label, id] pairs for plain HTML <select> elements, ordered
+    # parent-then-children with children visually indented. Native <select>
+    # options can't render icons, so we use a unicode arrow prefix (regular
+    # leading spaces collapse in <option> text).
+    #
+    # Pass indent: false when the result is used as a display-label lookup
+    # rather than rendered as actual <select> options (e.g. Rule::Action and
+    # Rule::Condition#value_display), so the cosmetic arrow doesn't leak into
+    # plain-text summaries.
+    def self.select_options(categories, indent: true)
+      self.for(categories).flat_map do |group|
+        [ [ group.category.name, group.category.id ] ] +
+          group.subcategories.map { |sub| [ indent ? "↳ #{sub.name}" : sub.name, sub.id ] }
       end
     end
 
@@ -204,7 +238,7 @@ class Category < ApplicationRecord
         name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
-      )
+      ).tap { |category| category.synthetic_uncategorized = true }
     end
 
     def other_investments
@@ -347,6 +381,18 @@ class Category < ApplicationRecord
   # Predicate: is this the synthetic "Uncategorized" category?
   def uncategorized?
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)
+  end
+
+  # The value the transactions-filter checkbox submits for this category: the
+  # persisted name for a real category, or the stable sentinel for the
+  # synthetic "Uncategorized" pseudo-category returned by .uncategorized.
+  #
+  # Uses the explicit synthetic_uncategorized marker set by .uncategorized, not
+  # uncategorized? -- that predicate compares name against I18n.t in the *current*
+  # locale, so it would give the wrong answer if the instance were built under one
+  # locale and read under another.
+  def filter_value
+    @synthetic_uncategorized ? UNCATEGORIZED_FILTER_VALUE : name
   end
 
   # Predicate: is this the synthetic "Other Investments" category?

@@ -1,0 +1,196 @@
+uk:
+  investments:
+    edit:
+      edit: Редагувати %{account}
+    form:
+      none: Немає
+      subtype_prompt: Виберіть тип інвестиції
+    new:
+      title: Введіть баланс рахунку
+    show:
+      chart_title: Загальна вартість
+    subtypes:
+      # United States
+      brokerage:
+        short: Брокерський
+        long: Брокерський
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: План заощаджень Thrift
+      ira:
+        short: IRA
+        long: Традиційний IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: План 529
+        long: План заощаджень на освіту 529
+      hsa:
+        short: HSA
+        long: Рахунок заощаджень на здоров'я
+      ugma:
+        short: UGMA
+        long: Опікунський рахунок UGMA
+      utma:
+        short: UTMA
+        long: Опікунський рахунок UTMA
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Індивідуальний ощадний рахунок
+      lisa:
+        short: LISA
+        long: Довічний ISA
+      sipp:
+        short: SIPP
+        long: Самостійно інвестована особиста пенсія
+      workplace_pension_uk:
+        short: Пенсія
+        long: Пенсія на робочому місці
+      # Canada
+      rrsp:
+        short: RRSP
+        long: Зареєстрований пенсійний ощадний план
+      tfsa:
+        short: TFSA
+        long: Безподатковий ощадний рахунок
+      resp:
+        short: RESP
+        long: Зареєстрований ощадний план на освіту
+      lira:
+        short: LIRA
+        long: Заблокований пенсійний рахунок
+      rrif:
+        short: RRIF
+        long: Зареєстрований пенсійний дохідний фонд
+      # Australia
+      super:
+        short: Super
+        long: Суперannuation
+      smsf:
+        short: SMSF
+        long: Самокерований суперфонд
+      # Europe
+      pea:
+        short: PEA
+        long: План заощаджень в акціях
+      pillar_3a:
+        short: Pillar 3a
+        long: Приватна пенсія (Pillar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # India
+      nps:
+        short: NPS
+        long: Національна пенсійна система
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Індійські акції
+        long: Індійські акції (Demat)
+      indian_equity:
+        short: Індійський капітал
+        long: Індійський капітал
+      indian_etf:
+        short: Індійський ETF
+        long: Індійський ETF
+      life_insurance:
+        short: Страхування життя
+        long: Страхування життя
+      ppf:
+        short: PPF
+        long: Публічний фонд заощаджень
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: Національний ощадний сертифікат
+      scss:
+        short: SCSS
+        long: Схема заощаджень для літніх громадян
+      fd:
+        short: FD
+        long: Фіксований депозит
+      rd:
+        short: RD
+        long: Повторюваний депозит
+      pomis:
+        short: POMIS
+        long: Схема щомісячного доходу поштового відділення
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: Золотий ETF
+        long: Золотий ETF
+      gold_mf:
+        short: Золотий MF
+        long: Золотий взаємний фонд
+      sgb:
+        short: SGB
+        long: Суверенна золота облігація
+      g_sec:
+        short: G-Sec
+        long: Державні цінні папери (G-Secs)
+      sdl:
+        short: SDL
+        long: Державні позики на розвиток (SDLs)
+      corporate_bond:
+        short: Корпоративна облігація
+        long: Корпоративна облігація
+      infrastructure_bond:
+        short: Інфраструктурна облігація
+        long: Інфраструктурна облігація
+      tax_free_bond:
+        short: Безподаткова облігація
+        long: Безподаткова облігація
+      # Generic
+      pension:
+        short: Пенсія
+        long: Пенсія
+      retirement:
+        short: Пенсія
+        long: Пенсійний рахунок
+      mutual_fund:
+        short: Взаємний фонд
+        long: Взаємний фонд
+      gold:
+        short: Золото
+        long: Золото (фізичне або цифрове)
+      angel:
+        short: Ангел
+        long: Ангельські інвестиції
+      trust:
+        short: Траст
+        long: Траст
+      other:
+        short: Інше
+        long: Інша інвестиція
+    value_tooltip:
+      cash: Готівка
+      holdings: Активи
+      total: Баланс портфеля
+      total_value_tooltip: Загальний баланс портфеля - це сума брокерських готівкових коштів
+        (доступних для торгівлі) та поточної ринкової вартості ваших активів.

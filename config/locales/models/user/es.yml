@@ -4,8 +4,8 @@ es:
     attributes:
       user:
         email: Correo electrónico
-        family: Familia
-        family_id: Familia
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: Nombre
         last_name: Apellidos
         password: Contraseña

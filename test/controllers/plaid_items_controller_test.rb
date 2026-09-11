@@ -58,6 +58,33 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/not enabled for the following products/, flash[:alert])
   end
 
+  test "edit enables account selection when adding accounts" do
+    plaid_item = plaid_items(:one)
+    PlaidItem.any_instance.expects(:get_update_link_token).with(
+      webhooks_url: webhooks_plaid_url,
+      redirect_url: accounts_url,
+      account_selection_enabled: true
+    ).returns("link-token")
+
+    get edit_plaid_item_url(plaid_item, add_accounts: true)
+
+    assert_response :success
+  end
+
+  test "edit does not enable account selection for EU items" do
+    plaid_item = plaid_items(:one)
+    plaid_item.update!(plaid_region: :eu)
+    PlaidItem.any_instance.expects(:get_update_link_token).with(
+      webhooks_url: webhooks_plaid_eu_url,
+      redirect_url: accounts_url,
+      account_selection_enabled: false
+    ).returns("link-token")
+
+    get edit_plaid_item_url(plaid_item, add_accounts: true)
+
+    assert_response :success
+  end
+
   test "create" do
     @plaid_provider = mock
     Provider::Registry.expects(:plaid_provider_for_region).with("us").returns(@plaid_provider)
@@ -92,7 +119,7 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "sync" do
     plaid_item = plaid_items(:one)
-    PlaidItem.any_instance.expects(:sync_later).once
+    PlaidItem.any_instance.expects(:sync_later_with_provider_refresh).once
 
     post sync_plaid_item_url(plaid_item)
 

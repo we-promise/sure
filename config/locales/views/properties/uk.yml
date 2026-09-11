@@ -1,0 +1,88 @@
+uk:
+  properties:
+    edit:
+      edit: Редагувати %{account}
+    form:
+      address_line1: Вулиця
+      address_line1_placeholder: вул. Головна, 123
+      area: Житлова площа
+      area_placeholder: '2000'
+      area_unit: Одиниця виміру
+      country: Країна
+      country_placeholder: США
+      locality: Місто
+      locality_placeholder: Сан-Франциско
+      none: Немає
+      postal_code: Поштовий індекс
+      postal_code_placeholder: '94105'
+      region: Штат/Провінція
+      region_placeholder: CA
+      subtype_prompt: Виберіть тип нерухомості
+      year_built: Рік побудови
+      year_built_placeholder: '2000'
+    new:
+      title: Введіть нерухомість вручну
+      next: "Далі"
+    address:
+      title: "Введіть нерухомість вручну"
+      address_line1_label: "Адреса, рядок 1"
+      address_line1_placeholder: "вул. Головна, 123"
+      city_label: "Місто"
+      city_placeholder: "Сан-Франциско"
+      state_region_label: "Штат/Регіон"
+      state_region_placeholder: "CA"
+      postal_code_label: "Поштовий індекс"
+      postal_code_placeholder: "12345"
+      country_label: "Країна"
+      country_placeholder: "США"
+      save: "Зберегти"
+    balances:
+      title: "Введіть нерухомість вручну"
+      market_value_label: "Орієнтовна ринкова вартість"
+      market_value_tooltip: "Орієнтовна ринкова вартість вашої нерухомості. Це число часто можна знайти на сайтах, таких як Zillow або Redfin, і воно ніколи не є точним."
+      save: "Зберегти"
+      next: "Далі"
+    overview_fields:
+      name_label: "Назва"
+      name_placeholder: "Будинок для відпочинку"
+      subtype_prompt: "Виберіть тип"
+      property_type_label: "Тип нерухомості"
+      year_built_label: "Рік побудови (необов'язково)"
+      year_built_placeholder: "1990"
+      area_label: "Площа (необов'язково)"
+      area_placeholder: "1200"
+      square_feet: "Квадратні фути"
+      square_meters: "Квадратні метри"
+      area_unit_label: "Одиниця площі"
+    overview:
+      living_area: Житлова площа
+      market_value: Ринкова вартість
+      purchase_price: Ціна покупки
+      trend: Тренд
+      unknown: Невідомо
+      year_built: Рік побудови
+    tabs:
+      overview:
+        living_area: Житлова площа
+        market_value: Ринкова вартість
+        purchase_price: Ціна покупки
+        trend: Тренд
+        unknown: Невідомо
+        year_built: Рік побудови
+        edit_account_details: "Редагувати дані облікового запису"
+    subtypes:
+      apartment:
+        short: Квартира
+        long: Квартира
+      plot:
+        short: Ділянка
+        long: Ділянка / Земля
+      commercial:
+        short: Комерційна
+        long: Комерційна нерухомість
+      rented:
+        short: Орендована
+        long: Орендована нерухомість
+      agri_land:
+        short: С/г земля
+        long: Сільськогосподарська земля

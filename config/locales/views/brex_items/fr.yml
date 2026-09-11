@@ -133,10 +133,10 @@ fr:
         title: Le chiffrement de la base de données n'est pas configuré
       instructions:
         copy_token_html: Copiez le jeton et ajoutez-le en tant que connexion nommée
-          ci-dessous. Bien sûr, stocke le jeton uniquement pour synchroniser cette
-          famille.
-        create_token: 'Créez un jeton API avec ces étendues en lecture seule : comptes.cash.readonly,
-          comptes.card.readonly, transactions.cash.readonly, transactions.card.readonly'
+          ci-dessous. Sure stocke le jeton uniquement pour synchroniser cette
+          entreprise.
+        create_token: 'Créez un jeton API avec ces étendues en lecture seule : accounts.cash.readonly,
+          accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly'
         open_tokens: Accédez aux paramètres du développeur Brex/du jeton API de l'entreprise
           que vous souhaitez connecter.
         sign_in_html: Visitez %{link} et connectez-vous au compte que vous souhaitez
@@ -238,9 +238,9 @@ fr:
           savings: Économies
         investment:
           401k: 401(k)
-          403b: 403b)
+          403b: 403(b)
           529_plan: Régime 529
-          angel: Ange
+          angel: Angel
           brokerage: Courtage
           hsa: Compte d'épargne santé
           ira: IRA traditionnel
@@ -249,7 +249,7 @@ fr:
           retirement: Retraite
           roth_401k: Roth 401(k)
           roth_ira: Roth IRA
-          tsp: Plan d'épargne-épargne
+          tsp: Plan d'épargne
         loan:
           auto: Prêt automobile
           mortgage: Hypothèque

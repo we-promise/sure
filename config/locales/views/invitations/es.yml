@@ -4,11 +4,12 @@ es:
     accept_choice:
       create_account: Crear cuenta nueva
       joined_household: Te has unido a la unidad familiar.
-      message: "%{inviter} te ha invitado a unirte como %{role}."
+      message: '%{inviter} te ha invitado a unirte como %{role}.'
       sign_in_existing: Ya tengo una cuenta
       title: Unirse a %{family}
     create:
       existing_user_added: El usuario ha sido añadido a tu unidad familiar.
+      existing_user_has_family_data: Ese usuario ya posee un hogar con cuentas. Debe quitar o transferir esas cuentas antes de unirse al tuyo.
       failure: No se pudo enviar la invitación
       success: Invitación enviada con éxito
     destroy:
@@ -23,5 +24,5 @@ es:
       role_label: Rol
       role_member: Miembro
       submit: Enviar invitación
-      subtitle: Envía una invitación para unirte a tu cuenta familiar en %{product_name}
+      subtitle: Envía una invitación para unirse a tu cuenta de %{moniker} en %{product_name}
       title: Invitar a alguien

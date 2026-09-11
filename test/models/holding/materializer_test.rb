@@ -19,6 +19,66 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     end
   end
 
+  # A position that takes in a transfer has no cost basis this app can know.
+  # A nil from the calculator alone left the previous calculated figure
+  # standing — the stale number reporting a transferred coin as if it had been
+  # bought on the day it arrived. `avg_cost` reads that stored value before it
+  # ever reaches the transfer guard, so the guard was only protecting holdings
+  # that had nothing stored at all.
+  #
+  # Materialised first and relabelled after, because that is the case that
+  # matters: a position already carrying a figure worked out before anyone
+  # knew the movement was a transfer.
+  test "a transfer clears a cost basis this app had worked out" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+    assert_equal 200, latest_holding.cost_basis.to_d, "nothing was stored to clear"
+
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis, "the stale calculated figure survived the transfer"
+    assert_nil latest_holding.cost_basis_source
+    assert_nil latest_holding.avg_cost
+  end
+
+  # A row carrying a figure with no `cost_basis_source` was invisible to
+  # `load_existing_holdings_map`, so the clearing above saw no existing holding
+  # and left the stale basis standing — the rows least able to justify the
+  # number they hold being the ones that kept it.
+  test "a transfer clears a stored basis that never recorded where it came from" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    @account.holdings.where(security: @aapl).update_all(cost_basis: 200, cost_basis_source: nil)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis, "a source-less figure outlived the transfer"
+  end
+  # Somebody asserted what this position cost them, which is exactly what the
+  # app cannot work out for a transfer. Theirs to keep.
+  test "a transfer leaves a provider cost basis alone" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    @account.holdings.where(security: @aapl).update_all(cost_basis: 150, cost_basis_source: "provider")
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_equal 150, latest_holding.cost_basis.to_d
+  end
+
+  # An ordinary purchase is untouched: the exclusion keys off the label, and
+  # most rows carry none at all.
+  test "an ordinary purchase still gets its calculated basis" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_equal 200, latest_holding.cost_basis.to_d
+  end
+
   test "purges stale holdings for unlinked accounts" do
     # Since the account has no entries, there should be no holdings
     Holding.create!(account: @account, security: @aapl, qty: 1, price: 100, amount: 100, currency: "USD", date: Date.current)
@@ -400,4 +460,10 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       today_holdings.pluck(:security_id, :currency).sort
     )
   end
+
+  private
+
+    def latest_holding
+      @account.holdings.where(security: @aapl).order(:date).last
+    end
 end

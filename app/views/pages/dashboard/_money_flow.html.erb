@@ -1,8 +1,14 @@
-<%# locals: (money_flow_data:, accounts:, col_span: "single") %>
+<%# locals: (money_flow_data:, accounts:, accessible_account_ids:, col_span: "single") %>
 <%
   pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
   selected_account_ids = money_flow_data[:account_ids] || accounts.map { |a| a.id.to_s }
   all_accounts_selected = selected_account_ids.size == accounts.size
+  # TransactionsController falls back to the user's full accessible-accounts
+  # set (broader than this widget's eligible accounts) when account_ids is
+  # absent, so we can only drop the param when that default matches this
+  # widget's selection exactly — otherwise the drill-down would silently show
+  # transactions outside what these totals represent.
+  drilldown_account_ids = selected_account_ids.sort == accessible_account_ids.sort ? nil : selected_account_ids
   period = money_flow_data[:period]
   # At full width the chart and summary sit side by side; at single/half width
   # they stack so the chart gets the full column and the month labels don't crowd.
@@ -107,7 +113,7 @@
         </span>
       </div>
 
-      <%= link_to transactions_path(q: { types: [ "income" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: selected_account_ids }.compact),
+      <%= link_to transactions_path(q: { types: [ "income" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: drilldown_account_ids }.compact),
             class: "flex items-center justify-between p-3 border border-secondary rounded-lg hover:bg-container-inset-hover transition-colors group",
             data: { turbo_frame: "_top" } do %>
         <span class="flex items-center gap-2 text-sm text-primary">
@@ -124,7 +130,7 @@
         </span>
       <% end %>
 
-      <%= link_to transactions_path(q: { types: [ "expense" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: selected_account_ids }.compact),
+      <%= link_to transactions_path(q: { types: [ "expense" ], status: [ "confirmed" ], start_date: period.date_range.begin, end_date: period.date_range.end, account_ids: drilldown_account_ids }.compact),
             class: "flex items-center justify-between p-3 border border-secondary rounded-lg hover:bg-container-inset-hover transition-colors group",
             data: { turbo_frame: "_top" } do %>
         <span class="flex items-center gap-2 text-sm text-primary">

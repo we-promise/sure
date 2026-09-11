@@ -1,0 +1,201 @@
+---
+uk:
+  account:
+    entries:
+      destroy:
+        success: "Запис успішно видалено."
+  accounts:
+    not_authorized: "У вас немає дозволу на керування цим обліковим записом"
+    account:
+      complete_setup: "Завершити налаштування"
+      edit: "Редагувати"
+      link_lunchflow: "Зв'язати з Lunch Flow"
+      link_provider: "Зв'язати з провайдером"
+      unlink_provider: "Відв'язати від провайдера"
+      change_simplefin_account: "Змінити обліковий запис SimpleFIN"
+      troubleshoot: "Вирішення проблем"
+      enable: "Увімкнути обліковий запис"
+      disable: "Вимкнути обліковий запис"
+      exclude_from_reports: "Виключити з усіх звітів"
+      include_in_reports: "Включити у звіти"
+      excluded_from_reports_indicator: "Виключено зі звітів"
+      set_default: "Встановити за замовчуванням"
+      remove_default: "Скасувати за замовчуванням"
+      default_label: "За замовчуванням"
+      delete: "Видалити обліковий запис"
+      sharing: "Спільний доступ"
+    chart:
+      data_not_available: "Дані за вибраний період недоступні"
+    create:
+      success: "Обліковий запис %{type} створено"
+    set_default:
+      depository_only: "Лише готівкові та кредитні картки можуть бути встановлені за замовчуванням."
+    destroy:
+      success: "Обліковий запис %{type} заплановано до видалення"
+      cannot_delete_linked: "Неможливо видалити пов'язаний обліковий запис. Будь ласка, спочатку відв'яжіть його."
+      failed: "Не вдалося видалити ресурс. Спробуйте пізніше."
+    empty:
+      empty_message: "Додайте обліковий запис через з'єднання, імпорт або введення вручну."
+      new_account: "Новий обліковий запис"
+      no_accounts: "Облікових записів ще немає"
+    form:
+      balance: "Баланс на дату:"
+      opening_balance_date_label: "Дата початкового балансу"
+      name_label: "Назва облікового запису"
+      name_placeholder: "Назва прикладу облікового запису"
+      additional_details: "Додаткові деталі"
+      institution_name_label: "Назва установи"
+      institution_name_placeholder: "напр., Chase Bank"
+      institution_domain_label: "Домен установи"
+      institution_domain_placeholder: "напр., chase.com"
+      notes_label: "Нотатки"
+      notes_placeholder: "Зберігайте додаткову інформацію, таку як номери рахунків, коди сортування, IBAN, номери маршрутизації тощо."
+      exclude_from_reports: "Виключити з усіх звітів"
+      enable_category_matcher_label: "Увімкнути зіставлення категорій"
+      enable_category_matcher_hint: "Якщо ввімкнено, запропонована провайдером категорія застосовується до імпортованих транзакцій. Вимкніть, щоб нові транзакції залишалися без категорії."
+    index:
+      accounts: "Облікові записи"
+      cancel_sync: "Скасувати синхронізацію"
+      manual_accounts:
+        other_accounts: "Інші облікові записи"
+      new_account: "Новий обліковий запис"
+      sync: "Синхронізувати все"
+    sync_all:
+      syncing: "Синхронізація облікових записів..."
+    new:
+      import_accounts: "Імпортувати облікові записи"
+      container:
+        select: "Вибрати"
+        navigate: "Перейти"
+        close: "Закрити"
+      method_selector:
+        connected_entry: "Прив'язати обліковий запис"
+        connected_entry_eu: "Прив'язати обліковий запис ЄС"
+        link_with_provider: "Зв'язати з %{provider}"
+        lunchflow_entry: "Прив'язати обліковий запис Lunch Flow"
+        manual_entry: "Ввести баланс рахунку"
+        title: "Як би ви хотіли його додати?"
+      title: "Що б ви хотіли додати?"
+    show:
+      limited_fx_history_warning: "Історія обмінних курсів доступна лише з %{date}. Транзакції до цієї дати використовують приблизні конвертації валют — це може статися, коли провайдер FX пропонує лише обмежене історичне вікно."
+      tabs:
+        activity: "Активність"
+        holdings: "Активи"
+        overview: "Огляд"
+        statements: "Виписки"
+      activity:
+        amount: "Сума"
+        balance: "Баланс"
+        confirmed: "Підтверджено"
+        date: "Дата"
+        entries: "записи"
+        entry: "запис"
+        filter: "Фільтр"
+        new: "Новий"
+        new_activity: "Нова активність"
+        new_balance: "Новий баланс"
+        new_trade: "Нова торгівля"
+        new_transaction: "Нова транзакція"
+        new_transfer: "Новий переказ"
+        no_entries: "Записів не знайдено"
+        pending: "Очікується"
+        search:
+          placeholder: "Шукати записи за назвою"
+        search_placeholder: "Шукати записи за назвою"
+        status: "Статус"
+        title: "Активність"
+      chart:
+        balance: "Баланс"
+        owed: "Сума боргу"
+      header:
+        complete_setup: "Завершити налаштування"
+      menu:
+        confirm_accept: "Видалити «%{name}»"
+        confirm_body_html: "<p>Видаляючи цей обліковий запис, ви стираєте його історію вартості, що впливає на різні аспекти вашого загального облікового запису. Ця дія безпосередньо вплине на розрахунки вашого чистого капіталу та графіки облікового запису.</p><br /> <p>Після видалення ви не зможете відновити інформацію про обліковий запис, оскільки вам потрібно буде додати його як новий обліковий запис.</p>"
+        confirm_title: "Видалити обліковий запис?"
+        delete_account: "Видалити обліковий запис"
+        edit: "Редагувати"
+        import: "Імпортувати транзакції"
+        import_trades: "Імпортувати угоди"
+        import_transactions: "Імпортувати транзакції"
+        manage: "Керувати обліковими записами"
+        sharing: "Спільний доступ"
+        statements: "Виписки"
+        exclude_from_reports: "Виключити з усіх звітів"
+        include_in_reports: "Включити у звіти"
+    update:
+      success: "Обліковий запис %{type} оновлено"
+    sidebar:
+      missing_data: "Відсутні історичні дані"
+      missing_data_description: "%{product} використовує сторонніх постачальників для отримання історичних курсів обміну, цін на цінні папери тощо. Ці дані необхідні для розрахунку точних історичних балансів рахунків."
+      configure_providers: "Налаштуйте своїх провайдерів тут."
+      tabs:
+        all: "Всі"
+        assets: "Активи"
+        debts: "Борги"
+      new_asset: "Новий актив"
+      new_debt: "Новий борг"
+      new_account: "Новий обліковий запис"
+      new_account_group: "Новий %{account_group}"
+    types:
+      depository: "Готівка"
+      investment: "Інвестиції"
+      crypto: "Крипто"
+      property: "Майно"
+      vehicle: "Транспортний засіб"
+      other_asset: "Інший актив"
+      credit_card: "Кредитна картка"
+      loan: "Позика"
+      other_liability: "Інше зобов'язання"
+    types_plural:
+      depository: "Готівка"
+      investment: "Інвестиції"
+      crypto: "Крипто"
+      property: "Майно"
+      vehicle: "Транспортні засоби"
+      other_asset: "Інші активи"
+      credit_card: "Кредитні картки"
+      loan: "Позики"
+      other_liability: "Інші зобов'язання"
+    tax_treatments:
+      taxable: "Оподатковуваний"
+      tax_deferred: "З відстрочкою сплати податків"
+      tax_exempt: "Звільнений від оподаткування"
+      tax_advantaged: "Пільговий"
+    tax_treatment_descriptions:
+      taxable: "Прибуток оподатковується при реалізації"
+      tax_deferred: "Внески, що віднімаються, оподатковуються при знятті"
+      tax_exempt: "Внески після сплати податків, прибуток не оподатковується"
+      tax_advantaged: "Спеціальні податкові пільги з умовами"
+    subtype_regions:
+      us: "Сполучені Штати"
+      uk: "Об'єднане Королівство"
+      ca: "Канада"
+      au: "Австралія"
+      eu: "Європа"
+      in: "Індія"
+      generic: "Загальний"
+    confirm_unlink:
+      title: "Відв'язати обліковий запис від провайдера?"
+      description_html: "Ви збираєтеся відв'язати <strong>%{account_name}</strong> від <strong>%{provider_name}</strong>. Це перетворить його на ручний обліковий запис."
+      warning_title: "Що це означає"
+      warning_no_sync: "Обліковий запис більше не буде автоматично синхронізуватися з вашим провайдером"
+      warning_manual_updates: "Вам потрібно буде додавати транзакції та оновлювати баланси вручну"
+      warning_transactions_kept: "Усі існуючі транзакції та баланси будуть збережені"
+      warning_can_delete: "Після відв'язки ви зможете видалити обліковий запис, якщо це буде потрібно"
+      confirm_button: "Підтвердити та відв'язати"
+    unlink:
+      success: "Обліковий запис успішно відв'язано. Тепер це ручний обліковий запис."
+      not_linked: "Обліковий запис не пов'язаний з провайдером"
+      error: "Не вдалося відв'язати обліковий запис: %{error}"
+      generic_error: "Сталася неочікувана помилка. Будь ласка спробуйте ще раз."
+    select_provider:
+      title: "Виберіть провайдера для підключення"
+      description: "Виберіть, якого провайдера ви хочете використовувати для підключення %{account_name}"
+      already_linked: "Обліковий запис уже пов'язаний з провайдером"
+      no_providers: "Наразі провайдери не налаштовані"
+
+  email_confirmations:
+    new:
+      invalid_token: "Недійсне або прострочене посилання для підтвердження."
+      success_login: "Вашу електронну пошту підтверджено. Будь ласка, увійдіть, використовуючи нову адресу електронної пошти."

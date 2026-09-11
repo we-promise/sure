@@ -6,13 +6,20 @@ class Session < ApplicationRecord
     encrypts :user_agent
   end
 
-  belongs_to :user
+  belongs_to :user, counter_cache: :sessions_count
   belongs_to :active_impersonator_session,
     -> { where(status: :in_progress) },
     class_name: "ImpersonationSession",
     optional: true
 
   before_create :capture_session_info
+
+  after_create :update_user_last_login
+
+  def prev_transaction_page_params
+    super || {}
+  end
+
 
   def get_preferred_tab(tab_key)
     data.dig("tab_preferences", tab_key)
@@ -31,5 +38,9 @@ class Session < ApplicationRecord
       raw_ip = Current.ip_address
       self.ip_address = raw_ip
       self.ip_address_digest = Digest::SHA256.hexdigest(raw_ip.to_s) if raw_ip.present?
+    end
+
+    def update_user_last_login
+      user.update_columns(last_login_at: created_at)
     end
 end

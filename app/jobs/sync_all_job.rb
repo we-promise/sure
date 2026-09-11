@@ -5,6 +5,7 @@ class SyncAllJob < ApplicationJob
   def perform
     Rails.logger.info("Starting sync for all families")
     Family.find_each do |family|
+      family.request_plaid_transactions_refreshes_later(source: self.class.name)
       family.sync_later
     rescue => e
       Rails.logger.error("Failed to sync family #{family.id}: #{e.message}")

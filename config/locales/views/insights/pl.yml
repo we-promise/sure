@@ -1,6 +1,9 @@
 ---
 pl:
   insights:
+    notification:
+      title: Nowa analiza finansowa
+      body: Otwórz Sure, aby przejrzeć najnowszą analizę AI.
     index:
       title: Analityka
       subtitle: Co dzieje się w twoich finansach, odświeżane codziennie.

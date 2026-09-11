@@ -1,0 +1,54 @@
+---
+uk:
+  period:
+    last_day:
+      label_short: "1Д"
+      label: "Останній день"
+      comparison_label: "проти вчора"
+    current_week:
+      label_short: "ПТ"
+      label: "Поточний тиждень"
+      comparison_label: "проти початку тижня"
+    last_7_days:
+      label_short: "7Д"
+      label: "Останні 7 днів"
+      comparison_label: "проти минулого тижня"
+    current_month:
+      label_short: "ПМ"
+      label: "Поточний місяць"
+      comparison_label: "проти початку місяця"
+    last_month:
+      label_short: "ММ"
+      label: "Минулий місяць"
+      comparison_label: "проти минулого місяця"
+    last_30_days:
+      label_short: "30Д"
+      label: "Останні 30 днів"
+      comparison_label: "проти останніх 30 днів"
+    last_90_days:
+      label_short: "90Д"
+      label: "Останні 90 днів"
+      comparison_label: "проти минулого кварталу"
+    current_year:
+      label_short: "ПР"
+      label: "Поточний рік"
+      comparison_label: "проти початку року"
+    last_365_days:
+      label_short: "365Д"
+      label: "Останні 365 днів"
+      comparison_label: "проти 1 року тому"
+    last_5_years:
+      label_short: "5Р"
+      label: "Останні 5 років"
+      comparison_label: "проти 5 років тому"
+    last_10_years:
+      label_short: "10Р"
+      label: "Останні 10 років"
+      comparison_label: "проти 10 років тому"
+    all_time:
+      label_short: "Все"
+      label: "Весь час"
+      comparison_label: "проти початку"
+    custom:
+      label_short: "Користувацький"
+      label: "Користувацький період"

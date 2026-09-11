@@ -30,9 +30,18 @@ class MfaController < ApplicationController
   def verify_code
     @user = User.find_by(id: session[:mfa_user_id])
 
-    if @user&.verify_otp?(params[:code])
-      complete_mfa_sign_in(@user)
-      redirect_to root_path
+    # Check before verify_otp? — a backup code is single-use and gets consumed
+    # by verification, so a deactivated user shouldn't be able to burn one on
+    # a login attempt that was always going to be rejected.
+    if @user && !@user.active?
+      session.delete(:mfa_user_id)
+      redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+    elsif @user&.verify_otp?(params[:code])
+      if complete_mfa_sign_in(@user)
+        redirect_to root_path
+      else
+        redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
+      end
     else
       flash.now[:alert] = t(".invalid_code")
       render :verify, status: :unprocessable_entity
@@ -63,6 +72,14 @@ class MfaController < ApplicationController
       return render json: { error: t(".invalid_credential") }, status: :unprocessable_entity
     end
 
+    # Check before verifying/consuming the credential (sign_count gets
+    # bumped below) — a deactivated user shouldn't be able to spend a
+    # WebAuthn assertion on a login that was always going to be rejected.
+    unless @user.active?
+      session.delete(:mfa_user_id)
+      return render json: { error: t("sessions.create.account_deactivated") }, status: :unauthorized
+    end
+
     credential = WebAuthn::Credential.from_get(
       webauthn_credential_payload,
       relying_party: webauthn_relying_party
@@ -86,7 +103,9 @@ class MfaController < ApplicationController
         last_used_at: Time.current
       )
     end
-    complete_mfa_sign_in(@user)
+    unless complete_mfa_sign_in(@user)
+      return render json: { error: t(".invalid_credential") }, status: :unprocessable_entity
+    end
 
     render json: { redirect_url: root_path }
   rescue WebAuthn::Error, ActionController::BadRequest, ActionController::ParameterMissing
@@ -113,6 +132,9 @@ class MfaController < ApplicationController
     def complete_mfa_sign_in(user)
       session.delete(:mfa_user_id)
       @session = create_session_for(user)
+      return false unless @session
+
       flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
+      true
     end
 end

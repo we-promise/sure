@@ -9,6 +9,7 @@ en:
       skip_to_main: Skip to main content
       nav:
         assistant: Assistant
+        bills: Bills
         budgets: Budgets
         home: Home
         plan: Plan

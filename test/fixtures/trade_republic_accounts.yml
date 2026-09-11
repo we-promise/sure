@@ -1,0 +1,32 @@
+# Minimal fixtures for Trade Republic accounts
+
+main_account:
+  trade_republic_item: configured_item
+  name: "Trade Republic (DE1234)"
+  trade_republic_account_id: "DE1234"
+  currency: EUR
+  current_balance: 12000.0000
+  cash_balance: 500.0000
+  raw_positions_payload: []
+  raw_timeline_payload: []
+
+pending_setup_account:
+  trade_republic_item: no_session_item
+  name: "Trade Republic (DE5678)"
+  trade_republic_account_id: "DE5678"
+  currency: EUR
+  current_balance: 3000.0000
+  cash_balance: 0.0000
+  raw_positions_payload: []
+  raw_timeline_payload: []
+
+cash_account:
+  trade_republic_item: configured_item
+  name: "Trade Republic Cash"
+  kind: cash
+  trade_republic_account_id: "CASH-DE1234"
+  currency: EUR
+  current_balance: 500.0000
+  cash_balance: 500.0000
+  raw_positions_payload: []
+  raw_timeline_payload: []

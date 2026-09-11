@@ -11,7 +11,7 @@
       <%= format_money(entry.amount_money.abs) %>
     </span>
     <%= select_tag "category_id",
-          options_from_collection_for_select(categories, :id, :name),
+          options_for_select(Category::Group.select_options(categories)),
           prompt: t("transactions.categorizes.show.assign_category_prompt"),
           aria: { label: t("transactions.categorizes.entry_row.assign_category_select", name: entry.name) },
           class: "w-full text-xs border border-primary rounded-lg px-1.5 py-0.5 bg-container text-secondary",

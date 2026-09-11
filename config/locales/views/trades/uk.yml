@@ -1,0 +1,57 @@
+uk:
+  trades:
+    form:
+      account: Рахунок для переказу (необов'язково)
+      account_prompt: Пошук рахунку
+      amount: Сума
+      fee: Комісія за транзакцію
+      holding: Символ тикера
+      holding_optional: Символ тикера (необов'язково)
+      price: Ціна за акцію
+      qty: Кількість
+      submit: Додати транзакцію
+      ticker_placeholder: AAPL
+      type: Тип
+      type_buy: Купівля
+      type_sell: Продаж
+      type_deposit: Депозит
+      type_withdrawal: Зняття
+      type_dividend: Дивіденди
+      type_interest: Відсотки
+      dividend_requires_security: Для дивідендів потрібен цінний папір
+      trade_requires_security: Для угод купівлі-продажу потрібен цінний папір (тикер)
+    header:
+      buy: Купівля
+      sell: Продаж
+      dividend: Дивіденди
+      interest: Відсотки
+      current_market_price_label: Поточна ринкова ціна
+      overview: Огляд
+      purchase_price_label: Ціна покупки
+      purchase_qty_label: Кількість покупки
+      symbol_label: Символ
+      total_return_label: Нереалізований прибуток/збиток
+    new:
+      title: Нова транзакція
+    show:
+      additional: Додатково
+      amount_label: Сума
+      buy: Купівля
+      category_label: Категорія
+      cost_per_share_label: Вартість за акцію
+      date_label: Дата
+      delete: Видалити
+      fee_label: Комісія за транзакцію
+      delete_subtitle: Цю дію неможливо скасувати
+      delete_title: Видалити угоду
+      details: Деталі
+      provider_disabled_warning: "Оновлення цін призупинено — постачальник %{provider} вимкнено. Увімкніть його в налаштуваннях або перепризначте актив іншому постачальнику."
+      exclude_subtitle: Ця угода не буде включена до звітів та розрахунків
+      exclude_title: Виключити з аналітики
+      no_category: Немає категорії
+      note_label: Нотатка
+      note_placeholder: Додайте будь-які додаткові нотатки тут...
+      quantity_label: Кількість
+      sell: Продаж
+      settings: Налаштування
+      type_label: Тип

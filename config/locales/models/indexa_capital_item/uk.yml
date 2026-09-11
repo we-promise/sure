@@ -1,0 +1,7 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: "Потрібна або змінна середовища INDEXA_API_TOKEN, або облікові дані ім'я користувача/документ/пароль"

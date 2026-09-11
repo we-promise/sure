@@ -48,8 +48,15 @@ module Sure
       end
     end
 
-    # Enable Rack::Attack middleware for API rate limiting
-    config.middleware.use Rack::Attack
+    # Rack::Attack's own Railtie (lib/rack/attack/railtie.rb in the gem)
+    # already inserts it into the middleware stack — this explicit `use` was
+    # a second, redundant insertion (confirmed via `bin/rails middleware`,
+    # which listed Rack::Attack twice). Since Rack::Attack's counters
+    # increment once per middleware pass, every throttle in
+    # config/initializers/rack_attack.rb was silently firing at half its
+    # documented limit. Removed rather than kept as a second layer, since
+    # nothing in the app relies on it running twice and the halved limits
+    # were undocumented/accidental, not a deliberate stricter policy.
 
     config.x.ui = ActiveSupport::OrderedOptions.new
     default_layout = ENV.fetch("DEFAULT_UI_LAYOUT", "dashboard")

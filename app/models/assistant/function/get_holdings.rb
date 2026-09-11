@@ -62,6 +62,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
       properties: {
         page: {
           type: "integer",
+          minimum: 1,
           description: "Page number"
         },
         accounts: {
@@ -86,7 +87,7 @@ class Assistant::Function::GetHoldings < Assistant::Function
     holdings_query = build_holdings_query(params)
 
     ordered_holdings = holdings_query.order(amount: :desc)
-    pagy = Pagy.new(count: ordered_holdings.count, page: params["page"] || 1, limit: default_page_size)
+    pagy = Pagy.new(count: ordered_holdings.count, page: resolved_page(params), limit: default_page_size)
     paginated_holdings = ordered_holdings.includes(:security, :account).offset(pagy.offset).limit(pagy.limit)
 
     total_value = holdings_query.sum(:amount)
