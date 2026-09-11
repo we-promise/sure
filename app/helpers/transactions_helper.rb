@@ -67,10 +67,18 @@ module TransactionsHelper
         raw: nil
       }
     else
+      display_extra = extra
+      # The dedicated counterparty-account row above already respects this
+      # preference; without stripping the same keys here, a user who turned
+      # it off could still see the IBAN by expanding Additional Details.
+      if display_extra.is_a?(Hash) && !Current.user.show_counterparty_account?
+        display_extra = display_extra.except("counterparty_iban", "counterparty_account_id")
+      end
+
       pretty = begin
-        JSON.pretty_generate(extra)
+        JSON.pretty_generate(display_extra)
       rescue StandardError
-        extra.to_s
+        display_extra.to_s
       end
       {
         kind: :raw,
