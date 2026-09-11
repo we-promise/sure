@@ -150,6 +150,22 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("150"), snaptrade_entry("sell_no_price_fee").entryable.price
   end
 
+  test "resyncing keeps the stored fee when SnapTrade omits it, but applies a reported zero" do
+    process_activities(
+      build_trade_activity(id: "buy_fee_omitted", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1504.95, fee: 4.95)
+    )
+
+    process_activities(
+      build_trade_activity(id: "buy_fee_omitted", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1504.95)
+    )
+    assert_equal BigDecimal("4.95"), snaptrade_entry("buy_fee_omitted").entryable.reload.fee
+
+    process_activities(
+      build_trade_activity(id: "buy_fee_omitted", type: "BUY", symbol: "AAPL", units: 10, price: 150.00, amount: -1500.00, fee: 0)
+    )
+    assert_equal BigDecimal("0"), snaptrade_entry("buy_fee_omitted").entryable.reload.fee
+  end
+
   test "resyncing corrects the amount of a previously imported trade" do
     process_activities(
       build_trade_activity(id: "buy_resync", type: "BUY", symbol: "AAPL", units: 3, price: 33.33)

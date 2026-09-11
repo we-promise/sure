@@ -145,7 +145,7 @@ class SnaptradeAccount::ActivitiesProcessor
       price = parse_decimal(data[:price]) || parse_decimal(data["price"])
       amount = parse_decimal(data[:amount]) || parse_decimal(data["amount"]) ||
                parse_decimal(data[:trade_value]) || parse_decimal(data["trade_value"])
-      fee = (parse_decimal(data[:fee]) || parse_decimal(data["fee"]))&.abs || 0
+      fee = (parse_decimal(data[:fee]) || parse_decimal(data["fee"]))&.abs
 
       if quantity.nil?
         Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without quantity: #{external_id}"
@@ -164,7 +164,7 @@ class SnaptradeAccount::ActivitiesProcessor
       elsif price
         # Same convention as a manually entered trade: the fee adds to a buy's
         # cost and comes out of a sell's proceeds.
-        quantity * price + fee
+        quantity * price + (fee || 0)
       end
 
       if amount.nil?
@@ -172,7 +172,7 @@ class SnaptradeAccount::ActivitiesProcessor
         return
       end
 
-      price ||= (amount - fee) / quantity unless quantity.zero?
+      price ||= (amount - (fee || 0)) / quantity unless quantity.zero?
 
       # Get the activity date
       activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
