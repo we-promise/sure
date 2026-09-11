@@ -75,6 +75,27 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal converted.id, transactions(:one).reload.merchant_id
   end
 
+  test "a failed iban conversion re-renders the form still targeting the original provider merchant" do
+    # Regression: the rescue used to replace @family_merchant with the failed
+    # conversion's unsaved (never persisted) FamilyMerchant. _form.html.erb
+    # picks its submit URL from `persisted?`, so that form silently posted
+    # to FamilyMerchant#create on the next attempt instead of back to this
+    # ProviderMerchant's #update -- losing the whole conversion (transaction
+    # reassignment, user_modified protection) without any visible error.
+    FamilyMerchant.create!(name: "Existing Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_no_difference "FamilyMerchant.count" do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action=?]", family_merchant_path(provider_merchant)
+    assert_match "has already been taken", response.body
+    assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must still be untouched"
+  end
+
   test "should destroy merchant" do
     assert_difference("FamilyMerchant.count", -1) do
       delete family_merchant_url(@merchant)

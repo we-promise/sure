@@ -103,7 +103,19 @@ class FamilyMerchantsController < ApplicationController
       render :edit, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordInvalid => e
-    @family_merchant = e.record
+    # e.record is the unsaved, never-persisted FamilyMerchant the failed
+    # conversion tried to create. Replacing @family_merchant with it (as a
+    # naive rescue would) breaks the re-rendered form: _form.html.erb picks
+    # its action URL from `family_merchant.persisted?`, so an unpersisted
+    # record posts to the FamilyMerchant#create route instead of back to
+    # this ProviderMerchant's #update -- silently dropping the whole
+    # conversion (transaction reassignment, user_modified protection) on
+    # the next submit. Keep @merchant/@family_merchant pointed at the
+    # original, persisted ProviderMerchant so the form still targets
+    # #update; copy over the failed attempt's errors and submitted values
+    # so the user sees what they typed and why it failed.
+    @merchant.assign_attributes(merchant_params.slice(:name, :website_url, :iban))
+    e.record.errors.each { |error| @merchant.errors.add(error.attribute, error.type, **error.options) }
     render :edit, status: :unprocessable_entity
   end
 
