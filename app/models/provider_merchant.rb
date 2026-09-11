@@ -3,6 +3,11 @@ class ProviderMerchant < Merchant
 
   validates :name, uniqueness: { scope: [ :source ] }
   validates :source, presence: true
+  # Mirrors the DB-level partial unique index (source, iban) added alongside
+  # merchants.iban — without this, a duplicate submitted via the manual edit
+  # form raises ActiveRecord::RecordNotUnique (a 500) instead of a normal
+  # validation error the controller already knows how to render.
+  validates :iban, uniqueness: { scope: :source }, allow_nil: true
 
   # Convert this ProviderMerchant to a FamilyMerchant for a specific family.
   # Only affects transactions belonging to that family.
@@ -13,7 +18,12 @@ class ProviderMerchant < Merchant
         name: attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
         website_url: attributes[:website_url].presence || website_url,
-        iban: attributes[:iban].presence || iban
+        # attributes.key?(:iban) distinguishes "the form submitted an empty
+        # iban field" (explicit clear -> nil) from "iban wasn't part of this
+        # submission at all" (fall back to the existing value) -- attributes[:iban].presence
+        # alone would treat both the same and make an intentionally-cleared
+        # IBAN silently come back.
+        iban: attributes.key?(:iban) ? attributes[:iban].presence : iban
       )
 
       scope = family.transactions.where(merchant_id: id)
