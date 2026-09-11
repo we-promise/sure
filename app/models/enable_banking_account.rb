@@ -145,9 +145,10 @@ class EnableBankingAccount < ApplicationRecord
     save!
   end
 
-  # Only fills a blank Account#iban — mirrors institution_name/institution_domain,
-  # which likewise only offer the provider value as a placeholder rather than
-  # overwriting a value the user may have entered manually.
+  # Only fills a blank Account#iban with the provider value, and never a
+  # blank the user set deliberately (see Enrichable) -- a plain
+  # target.iban.blank? check can't tell "never touched" apart from "user
+  # cleared it on purpose", and this must not undo the latter.
   #
   # Public (not called only from #upsert_enable_banking_snapshot!): account
   # discovery runs before the linking AccountProvider exists, so this is a
@@ -166,15 +167,15 @@ class EnableBankingAccount < ApplicationRecord
     # sync (a plain `target.iban.present?` check followed by `update` has
     # no such guarantee).
     target.with_lock do
-      target.update!(iban: iban) if target.iban.blank?
+      next if target.iban.present?
+
+      # enrich_attribute no-ops if `iban` is locked (the user explicitly set
+      # or cleared it via the account form -- lock_saved_attributes! locks
+      # either way), and uses `save` rather than `save!`, so another account
+      # in the family already holding this IBAN just fails to enrich instead
+      # of raising and aborting the link/sync this is piggybacking on.
+      target.enrich_attribute(:iban, iban, source: "enable_banking")
     end
-  rescue ActiveRecord::RecordInvalid => e
-    # Another account in the family already has this IBAN (e.g. the user
-    # created a manual account, then also linked the real one via Enable
-    # Banking) -- this is optional metadata, not something that should fail
-    # the link/sync it's piggybacking on. Account linking, balance and
-    # transaction sync all continue unaffected.
-    Rails.logger.warn("EnableBankingAccount#propagate_iban_to_account! - Failed to set iban on account #{target&.id}: #{e.message}")
   end
 
   private
