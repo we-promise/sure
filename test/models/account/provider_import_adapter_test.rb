@@ -291,7 +291,10 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     name_matched_merchant.stubs(:update!).with(iban: "DE89370400440532013000").raises( # pipelock:ignore IBAN
       ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
     )
-    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", iban: "DE89370400440532013000").returns(nil) # pipelock:ignore IBAN
+    # First call is the initial preferred-iban lookup (nil -- the merchant
+    # gets matched via provider_merchant_id instead); second call is the
+    # post-race re-query in the rescue, which now finds the winner.
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", iban: "DE89370400440532013000").returns(nil, concurrent_winner) # pipelock:ignore IBAN
     ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_1", source: "enable_banking").returns(name_matched_merchant)
 
     merchant = nil
@@ -304,9 +307,32 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       )
     end
 
-    assert_equal name_matched_merchant.id, merchant.id
+    assert_equal concurrent_winner.id, merchant.id,
+      "the transaction must be assigned to the merchant that actually holds this iban, not the stale losing merchant"
     assert_nil name_matched_merchant.reload.iban
     assert_equal "DE89370400440532013000", concurrent_winner.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "falls back to the stale merchant when the race winner can't be re-found" do
+    name_matched_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "hash_1",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+    name_matched_merchant.stubs(:update!).with(iban: "DE89370400440532013000").raises( # pipelock:ignore IBAN
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", iban: "DE89370400440532013000").returns(nil) # pipelock:ignore IBAN
+    ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_1", source: "enable_banking").returns(name_matched_merchant)
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "hash_1",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal name_matched_merchant.id, merchant.id
   end
 
   test "falls back to name-based lookup when no iban is provided" do
