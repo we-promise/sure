@@ -5,6 +5,15 @@ class RulesTest < ApplicationSystemTestCase
     sign_in @user = users(:family_admin)
   end
 
+  test "offers swap deposit and withdrawal as a then action" do
+    visit new_rule_path
+
+    click_on "Add action"
+
+    assert_selector "select[name*='[actions_attributes]'] option", text: "Swap deposit and withdrawal"
+    assert_text "FOR"
+  end
+
   test "shows queued processed modified and blocked counts for recent rule runs" do
     rule = @user.family.rules.create!(
       name: "Whole Foods Testing",

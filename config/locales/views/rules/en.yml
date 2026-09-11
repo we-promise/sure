@@ -53,6 +53,8 @@ en:
     actions:
       to_label: to
       value_placeholder: Enter a value
+    action_executors:
+      invert_transaction_amount: Swap deposit and withdrawal
     update:
       success: Rule updated
     destroy:

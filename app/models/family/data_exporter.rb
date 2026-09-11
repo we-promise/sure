@@ -392,6 +392,7 @@ class Family::DataExporter
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
+        add_amount_inversion_state(transaction_data, transaction)
         split_lines = serialize_split_lines_for_export(transaction.entry)
         transaction_data[:split_lines] = split_lines if split_lines.any?
 
@@ -543,7 +544,7 @@ class Family::DataExporter
 
       child_entries.map do |child_entry|
         transaction = child_entry.entryable
-        {
+        data = {
           id: transaction.id,
           entry_id: child_entry.id,
           amount: child_entry.amount,
@@ -558,7 +559,14 @@ class Family::DataExporter
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
+        add_amount_inversion_state(data, transaction)
+        data
       end
+    end
+
+    def add_amount_inversion_state(data, transaction)
+      state = transaction.amount_inversion_state
+      data[:amount_inversion_state] = state if state
     end
 
     def split_child_entries_for_export(parent_entry)

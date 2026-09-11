@@ -637,6 +637,52 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal false, restored_named.manual
   end
 
+  test "round trips an inverted transaction without applying the correction twice" do
+    source_family = Family.create!(name: "Inversion Source", currency: "USD")
+    source_account = source_family.accounts.create!(
+      name: "Fidelity",
+      accountable: Depository.new,
+      balance: 1000,
+      currency: "USD"
+    )
+    source_entry = source_account.entries.create!(
+      name: "FIDELITY DEPOSIT",
+      amount: -100,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new(extra: { "simplefin" => { "pending" => false } })
+    )
+    source_rule = source_family.rules.create!(
+      name: "Correct Fidelity direction",
+      resource_type: "transaction",
+      active: true,
+      effective_date: 1.day.ago.to_date,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "fidelity") ],
+      actions: [ Rule::Action.new(action_type: "invert_transaction_amount") ]
+    )
+    Account.any_instance.stubs(:sync_later)
+
+    assert_equal 1, source_rule.apply
+    assert_equal 100, source_entry.reload.amount
+
+    ndjson = nil
+    Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    restored_entry = @family.entries.find_by!(name: "FIDELITY DEPOSIT")
+    restored_rule = @family.rules.find_by!(name: "Correct Fidelity direction")
+    restored_state = restored_entry.transaction.amount_inversion_state
+
+    assert_equal 100, restored_entry.amount
+    assert_equal({ "source_amount" => "-100.0", "corrected_amount" => "100.0" }, restored_state)
+    assert_nil restored_entry.transaction.extra["simplefin"]
+    assert_equal 0, restored_rule.apply
+    assert_equal 100, restored_entry.reload.amount
+  end
+
   test "imports recurring transactions with unknown status fallback" do
     ndjson = build_ndjson([
       {

@@ -877,6 +877,10 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        if data.key?("amount_inversion_state")
+          restored = transaction.restore_amount_inversion_state(data["amount_inversion_state"])
+          log_rejected_amount_inversion_state(data["amount_inversion_state"], old_id) unless restored
+        end
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -942,7 +946,8 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          amount_inversion_state: row["amount_inversion_state"]
         }
       end
     end
@@ -965,6 +970,13 @@ class Family::DataImporter
           merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
           kind: row[:kind].presence || transaction.kind
         )
+        if row[:amount_inversion_state].present?
+          if transaction.restore_amount_inversion_state(row[:amount_inversion_state])
+            transaction.save!
+          else
+            log_rejected_amount_inversion_state(row[:amount_inversion_state], row[:old_id])
+          end
+        end
         child_entry.update!(notes: row[:notes]) if row[:notes].present?
 
         tag_ids = row[:tag_ids_provided] ? row[:tag_ids] : fallback_tag_ids
@@ -1236,6 +1248,21 @@ class Family::DataImporter
 
       max_allowed_date = @oldest_import_entry_dates_by_account[old_id]&.prev_day
       [ explicit_date, max_allowed_date ].compact.min
+    end
+
+    # A rejected watermark is silent but consequential: the transaction imports
+    # with the corrected amount and no record that it was corrected, so the next
+    # rule run inverts it again and flips the sign back. The import itself still
+    # reports success, so surface it where support can see it.
+    def log_rejected_amount_inversion_state(state, old_id)
+      DebugLogEntry.capture(
+        category: "data_import",
+        level: "warn",
+        message: "Rejected malformed amount inversion state during import",
+        source: self.class.name,
+        family: @family,
+        metadata: { source_transaction_id: old_id, state: state }
+      )
     end
 
     def log_failed_opening_balance_import(account, old_id, result)
