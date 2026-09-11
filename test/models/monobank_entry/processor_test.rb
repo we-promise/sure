@@ -74,14 +74,68 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, entry.entryable.extra.dig("monobank", "pending")
   end
 
-  # The operation currency is not reported by Monobank, so only the raw operation amount
-  # is recorded — fx_from/fx_amount are deliberately left unset.
-  test "records the operation amount for a foreign-currency purchase" do
-    entry = process(id: "tx_fx", time: MIDDAY_UNIX, description: "Steam", amount: -41_500, operationAmount: -1_000, currencyCode: 980, hold: false)
+  test "records the operation currency and amount for a foreign-currency purchase" do
+    # A UAH card paying in EUR: `amount` is the UAH charge, `operationAmount` the EUR
+    # figure, and `currencyCode` names the euro — not the account's hryvnia.
+    entry = process(id: "tx_fx", time: MIDDAY_UNIX, description: "Steam", amount: -41_500, operationAmount: -1_000, currencyCode: 978, hold: false)
+
+    assert_equal "UAH", entry.currency, "the entry stays in the account currency"
+    assert_equal BigDecimal("415"), entry.amount
 
     extra = entry.entryable.extra["monobank"]
     assert_equal(-1_000, extra["operation_amount"])
+    assert_equal "EUR", extra["fx_from"]
+    assert_equal "-10.0", extra["fx_amount"]
+  end
+
+  test "does not treat an account-currency operation as foreign" do
+    entry = process(id: "tx_local", time: MIDDAY_UNIX, description: "Silpo", amount: -41_500, operationAmount: -41_500, currencyCode: 980, hold: false)
+
+    extra = entry.entryable.extra["monobank"]
+    assert_equal "UAH", entry.currency
     assert_nil extra["fx_from"]
+    assert_nil extra["fx_amount"]
+    assert_nil extra["operation_amount"]
+  end
+
+  test "keeps the account currency when currencyCode names another one" do
+    # The regression this replaces: 500 UAH leaving a hryvnia card to fund a euro card
+    # was stored as 500 EUR, because `currencyCode` reports the operation currency.
+    entry = process(id: "tx_transfer", time: MIDDAY_UNIX, description: "Card transfer", amount: -50_000, operationAmount: -960, currencyCode: 978, hold: false)
+
+    assert_equal "UAH", entry.currency
+    assert_equal BigDecimal("500"), entry.amount
+    assert_equal "EUR", entry.entryable.extra.dig("monobank", "fx_from")
+    assert_equal "-9.6", entry.entryable.extra.dig("monobank", "fx_amount")
+  end
+
+  test "captures a diagnostic when a foreign operation amount will not parse" do
+    entry = nil
+
+    assert_difference "DebugLogEntry.count", 1 do
+      entry = process(id: "tx_bad_op", time: MIDDAY_UNIX, description: "Steam", amount: -41_500, operationAmount: "not-a-number", currencyCode: 978, hold: false)
+    end
+
+    extra = entry.entryable.extra["monobank"]
+    assert_equal "EUR", extra["fx_from"], "the currency is still known"
+    assert_nil extra["fx_amount"]
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "provider_sync_error", log.category
+    assert_equal "warn", log.level
+    assert_equal "monobank", log.provider_key
+    assert_equal "monobank_tx_bad_op", log.metadata["external_id"]
+    assert_equal "EUR", log.metadata["operation_currency"]
+  end
+
+  test "leaves fx metadata unset when currencyCode is unrecognized" do
+    entry = process(id: "tx_bad_cur", time: MIDDAY_UNIX, description: "Unknown", amount: -1_000, operationAmount: -500, currencyCode: 1, hold: false)
+
+    extra = entry.entryable.extra["monobank"]
+    assert_equal "UAH", entry.currency
+    assert_nil extra["fx_from"]
+    assert_nil extra["fx_amount"]
+    assert_equal(-500, extra["operation_amount"], "the raw figure is still kept for reference")
   end
 
   test "stores counterparty details for business account transfers" do
@@ -129,12 +183,58 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
     assert first.start_with?("monobank_pending_")
   end
 
+  test "applies the matched Sure category when a category_matcher is provided" do
+    @family.categories.bootstrap!
+
+    entry = process(
+      **grocery_transaction,
+      category_matcher: category_matcher
+    )
+
+    assert_equal "Groceries", entry.transaction.category&.name
+    # The raw MCC is still preserved in extra for reference.
+    assert_equal 5411, entry.transaction.extra.dig("monobank", "mcc")
+  end
+
+  test "skips category matching when the account has the matcher switched off" do
+    @family.categories.bootstrap!
+    @account.update!(enable_category_matcher: false)
+
+    entry = process(
+      **grocery_transaction,
+      category_matcher: category_matcher
+    )
+
+    assert_nil entry.transaction.category_id
+    # Still imported, still carries the MCC — only the auto-category is withheld.
+    assert_equal 5411, entry.transaction.extra.dig("monobank", "mcc")
+  end
+
   private
 
-    def process(**transaction_data)
+    def process(category_matcher: nil, **transaction_data)
       MonobankEntry::Processor.new(
         transaction_data.deep_stringify_keys,
-        monobank_account: @monobank_account
+        monobank_account: @monobank_account,
+        category_matcher: category_matcher
       ).process
+    end
+
+    def grocery_transaction
+      {
+        id: "tx_cat_1",
+        time: MIDDAY_UNIX,
+        description: "Silpo",
+        mcc: 5411,
+        originalMcc: 5411,
+        hold: false,
+        amount: -50_000,
+        operationAmount: -50_000,
+        currencyCode: 980
+      }
+    end
+
+    def category_matcher
+      MonobankAccount::Transactions::CategoryMatcher.new(@family.categories.to_a, locale: @family.locale)
     end
 end
