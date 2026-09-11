@@ -61,10 +61,10 @@ de:
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
       brand_fetch_settings:
-        description: Gib die von Brand Fetch bereitgestellte Client-ID ein.
+        description: Gib die von Brandfetch bereitgestellte Client-ID ein.
         label: Client-ID
         placeholder: Gib hier deine Client-ID ein
-        title: Brand Fetch Einstellungen
+        title: Brandfetch Einstellungen
         high_res_label: Hochauflösende Logos aktivieren
         high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40 abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
         env_configured_message: Deine Brand-Fetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
