@@ -722,7 +722,11 @@ class Account < ApplicationRecord
   private
 
     def normalize_iban
-      self.iban = iban.to_s.delete(" ").upcase.presence
+      # [[:space:]] rather than a literal " " -- a pasted IBAN can carry
+      # tabs, newlines, or NBSP (common when copying from a formatted PDF
+      # bank statement), which delete(" ") would leave in place and quietly
+      # break the uniqueness index and deterministic-encryption lookups.
+      self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
     end
 
     def assign_default_owner

@@ -50,6 +50,7 @@ class Merchant < ApplicationRecord
 
   private
     def normalize_iban
-      self.iban = iban.to_s.delete(" ").upcase.presence
+      # See Account#normalize_iban for why [[:space:]] rather than a literal " ".
+      self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
     end
 end

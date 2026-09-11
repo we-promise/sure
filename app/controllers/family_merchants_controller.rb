@@ -181,7 +181,7 @@ class FamilyMerchantsController < ApplicationController
     # Mirrors Merchant#normalize_iban so a submitted value can be compared
     # against the persisted (already-normalized) iban without saving first.
     def normalize_iban(value)
-      value.to_s.delete(" ").upcase.presence
+      value.to_s.gsub(/[[:space:]]+/, "").upcase.presence
     end
 
     def merchant_json(merchant)
