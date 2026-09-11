@@ -682,6 +682,24 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes result.error_message, 'invalid accountable_type "Kernel"'
   end
 
+  test "preflight requires valuable items to reference a valuable account" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "100", currency: "USD", accountable_type: "Depository"
+      } },
+      { type: "ValuableItem", data: {
+        id: "item-1", account_id: "account-1", description: "Gold coin", acquired_on: "2026-01-01",
+        weight: "1", weight_unit: "gram", cost_amount: "100", currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "invalid_reference"
+    assert_includes result.error_message, 'must have accountable_type "Valuable"'
+  end
+
   test "preflight catches duplicate taxonomy names inside ndjson" do
     attach_ndjson(build_ndjson([
       { type: "Category", data: { id: "category-1", name: "Groceries" } },

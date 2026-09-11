@@ -16,6 +16,16 @@ class ValuableItemTest < ActiveSupport::TestCase
     assert_includes lot.errors[:valuable], "must exist"
   end
 
+  test "preserves blank legacy karat as an unset purity" do
+    item = ValuableItem.new
+
+    item.karat = nil
+    assert_nil item.purity
+
+    item.karat = ""
+    assert_nil item.purity
+  end
+
   test "requires a description and purchase price" do
     account = accounts(:investment).family.accounts.create!(name: "Physical Gold", currency: "USD", balance: 0, accountable: Valuable.new)
     lot = account.valuable.lots.build(acquired_on: Date.current, weight: 1, weight_unit: "gram", karat: 24)

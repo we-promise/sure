@@ -59,7 +59,7 @@ class ValuableItem < ApplicationRecord
   # exports use percentage purity.
   def karat = (purity.to_d * 24 / 100).round(3)
   def karat=(value)
-    self.purity = value.to_d * 100 / 24
+    self.purity = value.present? ? value.to_d * 100 / 24 : nil
   end
 
   private

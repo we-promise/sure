@@ -268,6 +268,22 @@ class SureImport::Preflight
           validate_split_line_references(record) if type == "Transaction"
         end
       end
+
+      validate_valuable_item_account_types
+    end
+
+    def validate_valuable_item_account_types
+      account_types = @records["Account"].to_h { |record| [ record[:data]["id"].to_s, record[:data]["accountable_type"] ] }
+
+      @records["ValuableItem"].each do |record|
+        account_id = record[:data]["account_id"]
+        next if account_id.blank? || account_types[account_id.to_s].blank? || account_types[account_id.to_s] == "Valuable"
+
+        add_error(
+          :invalid_reference,
+          "Line #{record[:line_number]} ValuableItem references account_id #{account_id.inspect}, which must have accountable_type \"Valuable\"."
+        )
+      end
     end
 
     def validate_reference(record, type, mapping_key, field, value)
