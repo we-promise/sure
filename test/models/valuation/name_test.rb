@@ -99,6 +99,11 @@ class Valuation::NameTest < ActiveSupport::TestCase
     assert_equal "Manual value update", name.to_s
   end
 
+  test "generates recon name for Valuable" do
+    name = Valuation::Name.new("reconciliation", "Valuable")
+    assert_equal "Current valuation", name.to_s
+  end
+
   test "generates recon name for Loan" do
     name = Valuation::Name.new("reconciliation", "Loan")
     assert_equal "Manual principal update", name.to_s

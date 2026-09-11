@@ -6,6 +6,8 @@ class HoldingsController < ApplicationController
 
   def index
     @account = accessible_accounts.find(params[:account_id])
+    raise ActiveRecord::RecordNotFound unless @account.supports_holdings?
+
     @current_holdings = @account.current_holdings
     @trade_republic_categories = trade_republic_categories_for(@account)
   end

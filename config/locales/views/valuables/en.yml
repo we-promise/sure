@@ -1,0 +1,55 @@
+---
+en:
+  accounts:
+    types:
+      valuable: Gems and Bullion
+    types_plural:
+      valuable: Gems and Bullion
+  valuables:
+    new:
+      title: Add Gems and Bullion
+    edit:
+      title: Edit Gems and Bullion
+    form:
+      currency: Valuation currency
+      instructions: Track bullion, gems, and stones by purchase. Bullion is valued from its matching market quote when available. Gems and stones use manual or appraised values. Currency cannot change after purchases are recorded.
+    errors:
+      trades_unsupported: This account does not support securities trades.
+      currency_locked: cannot change while items exist
+      statements_unsupported: uses purchase receipts instead of account statements
+    refresh_valuation:
+      success: Valuation refreshed
+      failure: Purchases are saved, but valuation could not be refreshed. The previous balance is retained. Check pricing settings and try again.
+    activity:
+      purchase_added: "Added %{material} purchase: %{description}"
+      purchase_updated: "Updated %{material} purchase: %{description}"
+      purchase_removed: "Removed %{material} purchase: %{description}"
+      valuation_refreshed: Valuation refreshed
+    tabs:
+      overview:
+        last_valuation: "Last successful valuation: %{date}"
+        valuation_pending: Valuation is pending. The balance shows the last successful valuation.
+        bullion_summary: "%{material}"
+        gemstones_summary: Gems and stones
+        gross_weight: "%{amount} g gross"
+        fine_weight: "%{amount} g fine"
+        quote_date: "Quote: %{date}"
+        quote_unavailable: Market quote unavailable
+        appraised_value: "Appraised value: %{value}"
+        gemstone_weight: "%{amount} ct recorded"
+        items: Items
+        add_item: Add item
+        no_items: No items recorded yet.
+        material: "%{material}"
+        weight_value: "%{amount} %{unit}"
+        total_paid: "Total paid: %{value}"
+        not_available: Not available
+        refresh_valuation: Refresh valuation
+        edit_item: Edit item
+        delete_item: Delete item
+        delete_item_confirm: Remove this purchase record? Use deletion only to correct records, not to record a sale.
+        units:
+          gram: g
+          troy_ounce: troy oz
+          kilogram: kg
+          carat: ct

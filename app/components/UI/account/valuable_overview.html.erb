@@ -1,0 +1,71 @@
+<div class="space-y-6">
+  <%= render DS::Alert.new(message: t("valuables.tabs.overview.valuation_pending"), variant: :warning) if valuable.valuation_pending? %>
+  <p class="text-sm text-secondary"><%= t("valuables.tabs.overview.last_valuation", date: l(valuable.valued_at, format: :long)) if valuable.valued_at %></p>
+  <% if items.any? %>
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <% bullion_summaries.each do |summary| %>
+        <%= helpers.summary_card(title: t("valuables.tabs.overview.bullion_summary", material: t("valuable_items.materials.#{summary.material}"))) do %>
+          <span class="block"><%= t("valuables.tabs.overview.gross_weight", amount: helpers.number_with_precision(summary.gross_weight, precision: 3, strip_insignificant_zeros: true)) %></span>
+          <span class="block text-secondary text-xs"><%= t("valuables.tabs.overview.fine_weight", amount: helpers.number_with_precision(summary.fine_weight, precision: 3, strip_insignificant_zeros: true)) %></span>
+          <span class="block text-secondary text-xs"><%= summary.rate ? t("valuables.tabs.overview.quote_date", date: l(summary.rate.date, format: :short)) : t("valuables.tabs.overview.quote_unavailable") %></span>
+        <% end %>
+      <% end %>
+      <% if gemstones.any? %>
+        <%= helpers.summary_card(title: t("valuables.tabs.overview.gemstones_summary")) do %>
+          <span class="block"><%= t("valuables.tabs.overview.appraised_value", value: helpers.format_money(Money.new(gemstones_value, account.currency))) %></span>
+          <span class="block text-secondary text-xs"><%= t("valuables.tabs.overview.gemstone_weight", amount: helpers.number_with_precision(gemstones_weight, precision: 3, strip_insignificant_zeros: true)) %></span>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+      <h2 class="font-medium text-lg"><%= t("valuables.tabs.overview.items") %></h2>
+    </div>
+    <% if items.any? %>
+      <div class="divide-y divide-primary rounded-lg bg-container-inset">
+        <% items.each do |item| %>
+          <% value = item_value(item) %>
+          <div class="flex flex-wrap items-center gap-3 p-3 text-primary text-sm font-medium" data-testid="valuable-item">
+            <div class="flex min-w-0 flex-1 items-center gap-3">
+              <% if item.merchant.present? %>
+                <% if item.merchant.logo_url.present? %>
+                  <%= image_tag Setting.transform_brand_fetch_url(item.merchant.logo_url), class: "w-9 h-9 rounded-full", alt: item.merchant.name, loading: "lazy" %>
+                <% else %>
+                  <%= render DS::FilledIcon.new(variant: :text, text: item.merchant.name, size: "lg", rounded: true, description: item.merchant.name) %>
+                <% end %>
+              <% end %>
+              <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="truncate"><%= item.description %></span>
+                <%= render DS::Pill.new(label: t("valuables.tabs.overview.material", material: t("valuable_items.materials.#{item.material}")), tone: :neutral, marker: false) %>
+                <% if item.invoice.attached? %>
+                  <%= link_to valuable_item_invoice_path(item), target: "_blank", data: { turbo_frame: :_top }, aria: { label: t("valuable_items.form.view_invoice") } do %>
+                    <%= render DS::Pill.new(label: t("valuable_items.form.invoice_attached"), icon: "paperclip", tone: :neutral, marker: false) %>
+                  <% end %>
+                <% end %>
+              </div>
+              <p class="text-secondary text-xs font-normal">
+                <%= l(item.acquired_on, format: :long) %> ·
+                <%= t("valuables.tabs.overview.weight_value", amount: helpers.number_with_precision(item.weight, precision: 3, strip_insignificant_zeros: true), unit: t("valuables.tabs.overview.units.#{item.weight_unit}")) %>
+                <%= " · #{helpers.number_with_precision(item.purity, strip_insignificant_zeros: true)}%" if item.bullion? %>
+              </p>
+              </div>
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+              <div class="text-right">
+                <p class="privacy-sensitive"><%= value ? helpers.format_money(value) : t("valuables.tabs.overview.not_available") %></p>
+                <p class="text-xs text-secondary font-normal privacy-sensitive"><%= t("valuables.tabs.overview.total_paid", value: helpers.format_money(Money.new(item.total_cost_amount, account.currency))) %></p>
+              </div>
+              <% if editable? %>
+                <%= render DS::Link.new(variant: :icon, icon: "pencil-line", aria_label: t("valuables.tabs.overview.edit_item"), title: t("valuables.tabs.overview.edit_item"), href: edit_valuable_item_path(item), frame: :modal) %>
+                <%= render DS::Button.new(variant: :icon, icon: "trash-2", aria_label: t("valuables.tabs.overview.delete_item"), title: t("valuables.tabs.overview.delete_item"), href: valuable_item_path(item), method: :delete, data: { turbo_confirm: t("valuables.tabs.overview.delete_item_confirm"), turbo_frame: :_top }) %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %><p class="text-sm text-secondary"><%= t("valuables.tabs.overview.no_items") %></p><% end %>
+  </div>
+  <%= render DS::Button.new(text: t("valuables.tabs.overview.refresh_valuation"), href: refresh_valuation_valuable_path(account), method: :post, icon: "refresh-cw", variant: :outline, size: :sm, data: { turbo_frame: :_top }) if editable? %>
+</div>

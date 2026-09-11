@@ -108,6 +108,24 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     end
   end
 
+  test "GoldAPI requires its provider checkbox when configured through settings" do
+    ClimateControl.modify("GOLD_API_KEY" => nil) do
+      Setting.stubs(:gold_api_key).returns("gold-token")
+      Setting.stubs(:gold_api_enabled).returns(false)
+
+      assert_nil Provider::Registry.get_provider(:gold_api)
+    end
+  end
+
+  test "GoldAPI uses a configured setting after its provider checkbox is enabled" do
+    ClimateControl.modify("GOLD_API_KEY" => nil) do
+      Setting.stubs(:gold_api_key).returns("gold-token")
+      Setting.stubs(:gold_api_enabled).returns(true)
+
+      assert_instance_of Provider::GoldApi, Provider::Registry.get_provider(:gold_api)
+    end
+  end
+
   test "preferred_llm_provider returns openai by default" do
     openai = mock("openai")
     Provider::Registry.stubs(:openai).returns(openai)

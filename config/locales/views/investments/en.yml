@@ -179,7 +179,7 @@ en:
         long: Mutual Fund
       gold:
         short: Gold
-        long: Gold (physical or digital)
+        long: Gold (digital or brokered)
       angel:
         short: Angel
         long: Angel Investment

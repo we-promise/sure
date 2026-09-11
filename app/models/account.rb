@@ -9,6 +9,7 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validate :valuable_currency_unchanged
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -513,7 +514,7 @@ class Account < ApplicationRecord
     # Investment accounts never use manual_save: a positive valuation delta on a
     # brokerage is usually a market move, not a deposit, and would false-match a
     # pledge. They resolve on transfer (cash-inflow) entries only.
-    manual? && !investment? ? "manual_save" : "transfer"
+    manual? && !investment? && !valuable? ? "manual_save" : "transfer"
   end
 
   # Total fixed earmark this account currently has reserved across every goal
@@ -619,6 +620,14 @@ class Account < ApplicationRecord
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
+  def supports_holdings?
+    investment? || crypto?
+  end
+
+  def supports_statements?
+    !valuable?
+  end
+
   def supports_default?
     depository? || credit_card?
   end
@@ -652,7 +661,7 @@ class Account < ApplicationRecord
     case accountable_type
     when "Depository", "CreditCard"
       :cash
-    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+    when "Property", "Vehicle", "Valuable", "OtherAsset", "Loan", "OtherLiability"
       :non_cash
     when "Investment", "Crypto"
       :investment
@@ -707,6 +716,12 @@ class Account < ApplicationRecord
   end
 
   private
+
+    def valuable_currency_unchanged
+      if valuable? && persisted? && will_save_change_to_currency? && valuable.lots.exists?
+        errors.add(:currency, I18n.t("valuables.errors.currency_locked"))
+      end
+    end
 
     def assign_default_owner
       return if owner.present?

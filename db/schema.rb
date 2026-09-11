@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_090300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1074,8 +1074,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.check_constraint "btrim(source_id::text) <> ''::text", name: "chk_import_source_mappings_source_id_present"
     t.check_constraint "btrim(source_type::text) <> ''::text", name: "chk_import_source_mappings_source_type_present"
     t.check_constraint "btrim(target_type::text) <> ''::text", name: "chk_import_source_mappings_target_type_present"
-    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'RecurringOccurrence'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
-    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'RecurringOccurrence'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
+    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'RecurringOccurrence'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying, 'ValuableItem'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
+    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'RecurringOccurrence'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying, 'ValuableItem'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
   end
 
   create_table "imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2561,6 +2561,49 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["webauthn_id"], name: "index_users_on_webauthn_id", unique: true, where: "(webauthn_id IS NOT NULL)"
   end
 
+  create_table "valuable_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.date "acquired_on", null: false
+    t.decimal "cost_amount", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.string "description", null: false
+    t.string "item_type", default: "bullion", null: false
+    t.decimal "making_charge", precision: 19, scale: 4
+    t.decimal "manual_value", precision: 19, scale: 4
+    t.string "material", default: "gold", null: false
+    t.uuid "merchant_id"
+    t.text "notes"
+    t.decimal "purity", precision: 6, scale: 3
+    t.datetime "updated_at", null: false
+    t.uuid "valuable_id", null: false
+    t.decimal "weight", precision: 19, scale: 6, null: false
+    t.string "weight_unit", null: false
+    t.index ["merchant_id"], name: "index_valuable_items_on_merchant_id"
+    t.index ["valuable_id"], name: "index_valuable_items_on_valuable_id"
+    t.check_constraint "btrim(description::text) <> ''::text", name: "precious_metal_lots_description_present"
+    t.check_constraint "cost_amount >= 0::numeric", name: "precious_metal_lots_cost"
+    t.check_constraint "item_type::text = 'gemstone'::text OR purity IS NOT NULL", name: "valuable_items_bullion_purity_present"
+    t.check_constraint "item_type::text = ANY (ARRAY['bullion'::character varying, 'gemstone'::character varying]::text[])", name: "valuable_items_item_type"
+    t.check_constraint "making_charge >= 0::numeric", name: "precious_metal_lots_making_charge"
+    t.check_constraint "manual_value >= 0::numeric", name: "precious_metal_lots_manual_value"
+    t.check_constraint "purity > 0::numeric AND purity <= 100::numeric", name: "valuable_items_purity"
+    t.check_constraint "weight > 0::numeric", name: "precious_metal_lots_positive_weight"
+    t.check_constraint "weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying, 'carat'::character varying]::text[])", name: "valuable_items_weight_unit"
+  end
+
+  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (material::text = ANY (ARRAY['gold'::character varying, 'silver'::character varying, 'platinum'::character varying, 'palladium'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND (material::text = ANY (ARRAY['diamond'::character varying, 'ruby'::character varying, 'sapphire'::character varying, 'emerald'::character varying, 'other'::character varying]::text[]))", name: "valuable_items_material_matches_item_type", validate: false
+  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND weight_unit::text = 'carat'::text", name: "valuable_items_weight_unit_matches_item_type", validate: false
+  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text OR purity IS NULL", name: "valuable_items_gemstone_purity_absent", validate: false
+
+  create_table "valuables", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "locked_attributes", default: {}, null: false
+    t.string "subtype"
+    t.datetime "updated_at", null: false
+    t.boolean "valuation_pending", default: false, null: false
+    t.datetime "valued_at"
+  end
+
   create_table "valuations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "kind", default: "reconciliation", null: false
@@ -2787,6 +2830,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   add_foreign_key "users", "accounts", column: "default_account_id", on_delete: :nullify
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
+  add_foreign_key "valuable_items", "merchants", on_delete: :nullify
+  add_foreign_key "valuable_items", "valuables"
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"

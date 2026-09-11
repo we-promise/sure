@@ -637,6 +637,72 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal false, restored_named.manual
   end
 
+  test "resumes precious metal lot imports without duplicating purchases" do
+    session = ImportSession.create!(family: @family, import_type: "SureImport")
+    content = build_ndjson([
+      { type: "Account", data: { id: "metal-account", name: "Bullion", balance: "0", currency: "USD", accountable_type: "Valuable", accountable: { metal_type: "gold" } } },
+      { type: "ValuableItem", data: { id: "metal-lot", account_id: "metal-account", description: "Coin", acquired_on: Date.current.to_s, weight: "1", weight_unit: "troy_ounce", karat: "24", cost_amount: "100", currency: "USD", manual_value: "0" } }
+    ])
+    assert SureImport::Preflight.new(family: @family, content: content).call.valid?
+    Family::DataImporter.new(@family, content, import_session: session).import!
+    assert_no_difference "ValuableItem.count" do
+      Family::DataImporter.new(@family, content, import_session: session).import!
+    end
+    mapping = session.source_mappings.find_by!(source_type: "ValuableItem", source_id: "metal-lot")
+    assert_equal @family.id, mapping.target.family_id
+    assert_equal 0, mapping.target.manual_value
+  end
+
+  test "round trips precious metal details including a zero override" do
+    source_family = Family.create!(name: "Gold Source", currency: "USD")
+    merchant = source_family.merchants.create!(name: "Gold Dealer")
+    source_account = source_family.accounts.create!(
+      name: "Physical Gold",
+      accountable: Valuable.new,
+      balance: 12_000,
+      currency: "USD"
+    )
+    source_account.valuable.lots.create!(
+      description: "Wedding bracelet",
+      acquired_on: Date.parse("2026-01-15"),
+      weight: 25.5,
+      weight_unit: "gram",
+      karat: 22,
+      cost_amount: 2_000,
+      making_charge: 150,
+      manual_value: 0,
+      merchant: merchant,
+      notes: "Hallmarked"
+    )
+    source_account.valuable.lots.sole.invoice.attach(io: StringIO.new("receipt"), filename: "gold-receipt.pdf", content_type: "application/pdf")
+
+    ndjson = nil
+    Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+      manifest = JSON.parse(zip.read("attachments.json"))
+      assert_not manifest["attachments"].any? { |item| item["record_type"] == "ValuableItem" }
+      assert_not zip.entries.any? { |entry| entry.name.include?("gold-receipt") }
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    restored_account = @family.accounts.find_by!(name: "Physical Gold")
+    assert_instance_of Valuable, restored_account.valuable
+
+    lot = restored_account.valuable.lots.sole
+    assert_not lot.invoice.attached?
+    assert_equal "Wedding bracelet", lot.description
+    assert_equal Date.parse("2026-01-15"), lot.acquired_on
+    assert_equal 25.5, lot.weight.to_f
+    assert_equal "gram", lot.weight_unit
+    assert_equal 22.0, lot.karat.to_f
+    assert_equal 2_000.0, lot.cost_amount.to_f
+    assert_equal 150.0, lot.making_charge.to_f
+    assert_equal 0.0, lot.manual_value.to_f
+    assert_equal "Gold Dealer", lot.merchant.name
+    assert_equal "Hallmarked", lot.notes
+  end
+
   test "imports recurring transactions with unknown status fallback" do
     ndjson = build_ndjson([
       {

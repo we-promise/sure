@@ -7,9 +7,13 @@ class Provider::TwelveData < Provider
   InvalidExchangeRateError = Class.new(Error)
   InvalidSecurityPriceError = Class.new(Error)
   RateLimitError = Class.new(Error)
+  BullionPrice = Struct.new(:date, :currency, :price_per_troy_ounce, :symbol, keyword_init: true)
+  GoldPrice = BullionPrice
 
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
+  OPEN_TIMEOUT = 5
+  REQUEST_TIMEOUT = 20
 
   # Pattern to detect plan upgrade errors in API responses
   PLAN_UPGRADE_PATTERN = /available starting with (\w+)/i
@@ -130,6 +134,30 @@ class Provider::TwelveData < Provider
   # ================================
   #           Securities
   # ================================
+
+  # Bullion spot quotes are exposed as XAU/XAG/XPT/XPD against USD. Valuations
+  # convert USD through Sure's existing FX-rate path when needed.
+  def fetch_bullion_price(symbol:, date: Date.current)
+    with_provider_response do
+      throttle_request
+      response = client.get("#{base_url}/price") do |req|
+        req.params["symbol"] = "#{symbol}/USD"
+        req.options.open_timeout = OPEN_TIMEOUT
+        req.options.timeout = REQUEST_TIMEOUT
+      end
+
+      parsed = JSON.parse(response.body)
+      check_api_error!(parsed)
+      price = parsed["price"].to_d
+      raise InvalidSecurityPriceError, "Twelve Data returned no #{symbol} spot price" unless price.positive?
+
+      BullionPrice.new(date: date.to_date, currency: "USD", price_per_troy_ounce: price, symbol: symbol)
+    end
+  end
+
+  def fetch_gold_price(date: Date.current)
+    fetch_bullion_price(symbol: "XAU", date:)
+  end
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do

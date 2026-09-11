@@ -71,12 +71,14 @@ en:
           remaining_principal_balance: Remaining principal balance
           total_account_value: Total account value
           total_gains: Total gains
+          total_valuation: Total Valuation
         views:
           cash: Cash
           gains: Gains / ROI
           holdings: Holdings
           total_value: Total value
         vs_available_history: vs. available history
+        family_currency_equivalent: "%{currency} family-currency equivalent"
       activity_date:
         balance_tooltip: "The end of day balance, after all transactions and adjustments"
         no_balance_data: "No balance data available for this date"

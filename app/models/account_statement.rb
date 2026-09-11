@@ -54,6 +54,7 @@ class AccountStatement < ApplicationRecord
             uniqueness: { scope: :family_id, allow_nil: true, message: :duplicate_statement_file },
             allow_nil: true
   validates :parser_confidence, :match_confidence, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }, allow_nil: true
+  validate :account_supports_statements
   validate :account_belongs_to_family
   validate :suggested_account_belongs_to_family
   validate :period_order
@@ -401,6 +402,12 @@ class AccountStatement < ApplicationRecord
 
       self.review_status = "linked" if account.present? && !linked?
       self.review_status = "unmatched" if account.blank? && linked?
+    end
+
+    def account_supports_statements
+      if account && !account.supports_statements?
+        errors.add(:account, I18n.t("valuables.errors.statements_unsupported"))
+      end
     end
 
     def account_belongs_to_family

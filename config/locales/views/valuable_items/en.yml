@@ -1,0 +1,55 @@
+---
+en:
+  valuable_items:
+    materials:
+      gold: Gold
+      silver: Silver
+      platinum: Platinum
+      palladium: Palladium
+      diamond: Diamond
+      ruby: Ruby
+      sapphire: Sapphire
+      emerald: Emerald
+      other: Other gemstone
+    form:
+      description: Description
+      acquired_on: Purchase date
+      item_type: Category
+      bullion: Bullion
+      gemstone: Gemstone or stone
+      material: Material
+      weight: Weight
+      weight_unit: Weight unit
+      purity: Purity (%) for bullion
+      merchant: Merchant
+      no_merchant: No merchant selected
+      cost_amount: Purchase price
+      making_charge: Making charges (optional)
+      manual_value: Manual or appraised current value (optional for bullion; required for gemstones)
+      manual_value_hint: A manual value overrides a bullion spot-price estimate. Gems and stones use their appraised value.
+      notes: Notes (optional)
+      invoice: Invoice or receipt (optional)
+      invoice_hint: PDF or image, up to %{max_size} MB. Saved with this purchase.
+      invoice_attached: Invoice attached
+      view_invoice: View invoice
+      remove_invoice: Remove invoice
+      remove_invoice_confirm: Remove this invoice?
+      grams: Grams
+      troy_ounces: Troy ounces
+      kilograms: Kilograms
+      carats: Carats
+    new:
+      title: Add item
+      submit: Add item
+    edit:
+      title: Edit item
+      submit: Save item
+    create:
+      success: Item added
+    update:
+      success: Item updated
+    destroy:
+      deleted: Item deleted
+  valuable_item_invoices:
+    destroy:
+      deleted: Invoice removed

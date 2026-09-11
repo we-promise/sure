@@ -9,6 +9,7 @@ class Merchant < ApplicationRecord
   # merchant can never collide with it, regardless of name or locale.
   NO_MERCHANT_FILTER_VALUE = "__no_merchant__"
 
+  has_many :valuable_items, dependent: :nullify
   has_many :transactions, dependent: :nullify
   has_many :recurring_transactions, dependent: :destroy
 

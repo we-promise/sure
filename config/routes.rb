@@ -672,6 +672,13 @@ Rails.application.routes.draw do
   end
 
   resources :depositories, only: %i[new create edit update]
+  resources :valuables, only: %i[new create edit update] do
+    post :refresh_valuation, on: :member
+  end
+  resources :valuable_items, only: %i[new create edit update destroy] do
+    resource :invoice, only: %i[show destroy], controller: :valuable_item_invoices
+  end
+
   resources :investments, only: %i[new create edit update]
   resources :properties, only: %i[new create edit update] do
     member do

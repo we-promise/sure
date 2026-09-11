@@ -6,6 +6,8 @@ class Setting < RailsSettings::Base
 
   # Third-party API keys
   field :twelve_data_api_key, type: :string, default: ENV["TWELVE_DATA_API_KEY"]
+  field :gold_api_key, type: :string, default: ENV["GOLD_API_KEY"]
+  field :gold_api_enabled, type: :boolean, default: ENV["GOLD_API_KEY"].present?
   field :openai_access_token, type: :string, default: ENV["OPENAI_ACCESS_TOKEN"]
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
@@ -83,6 +85,7 @@ class Setting < RailsSettings::Base
   module EncryptedSettingFields
     ENCRYPTED_FIELDS = %i[
       twelve_data_api_key
+      gold_api_key
       tiingo_api_key
       eodhd_api_key
       alpha_vantage_api_key

@@ -312,6 +312,35 @@ class Family::DataExporter
         }.to_json
       end
 
+      # Export Gems and Bullion items after accounts and merchants so their
+      # ownership and optional merchant can be remapped on restore.
+      ValuableItem.joins(:account)
+                     .where(accounts: { family_id: @family.id })
+                     .find_each do |lot|
+        lines << {
+          type: "ValuableItem",
+          data: {
+            id: lot.id,
+            account_id: lot.account_id,
+            merchant_id: lot.merchant_id,
+            description: lot.description,
+            acquired_on: lot.acquired_on,
+            weight: lot.weight,
+            weight_unit: lot.weight_unit,
+            item_type: lot.item_type,
+            material: lot.material,
+            purity: lot.purity,
+            cost_amount: lot.cost_amount,
+            currency: lot.currency,
+            making_charge: lot.making_charge,
+            manual_value: lot.manual_value,
+            notes: lot.notes,
+            created_at: lot.created_at,
+            updated_at: lot.updated_at
+          }
+        }.to_json
+      end
+
       # Export recurring transactions after accounts and merchants so import can remap dependencies.
       @family.recurring_transactions.includes(:account, :merchant).find_each do |recurring_transaction|
         lines << {
