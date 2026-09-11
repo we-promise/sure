@@ -440,6 +440,7 @@ en:
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
         monobank: Sync Ukrainian monobank cards and jars with a personal API token.
+        fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
@@ -597,6 +598,10 @@ en:
         step_1_html: "Go to %{link}, sign in with the monobank app and generate a personal token."
         step_2: "Copy the token — it is shown only once."
         step_3: "Paste the token below, save, then link the cards and jars you want to track."
+      fio_panel:
+        step_1_html: "Sign in to %{link} internet banking and open Settings → API."
+        step_2: 'Create a token with read-only access ("Sledování účtu"). It needs strong authorization and is valid for up to 180 days.'
+        step_3: "Paste the token below and save. One token reaches one account, so add a connection per Fio account."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
