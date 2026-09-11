@@ -59,6 +59,17 @@ module AccountableResource
       set_link_options
       render :new, status: :unprocessable_entity
       return
+    rescue ActiveRecord::RecordNotUnique
+      # A raw DB-level race on the partial unique index: two concurrent
+      # requests both passed the Rails uniqueness validation before either
+      # committed, so it surfaces from the adapter instead of being caught
+      # above. Same user-facing outcome, just a different failure point.
+      @account = Current.family.accounts.build(account_params.except(:return_to, :opening_balance_date))
+      @account.errors.add(:iban, :taken)
+      @error_message = @account.errors.full_messages.join(", ")
+      set_link_options
+      render :new, status: :unprocessable_entity
+      return
     end
 
     # Prefer the form-carried return_to, then the session value StoreLocation
@@ -86,7 +97,16 @@ module AccountableResource
     # here so all account types (depositories, credit cards, loans, etc.) can
     # have their currency changed via this shared update path.
     update_params = account_params.except(:return_to, :balance, :opening_balance_date)
-    unless @account.update(update_params)
+    begin
+      unless @account.update(update_params)
+        @error_message = @account.errors.full_messages.join(", ")
+        render :edit, status: :unprocessable_entity
+        return
+      end
+    rescue ActiveRecord::RecordNotUnique
+      # Same raw DB-level race as #create: another request's iban committed
+      # between our validation check and this update's own commit.
+      @account.errors.add(:iban, :taken)
       @error_message = @account.errors.full_messages.join(", ")
       render :edit, status: :unprocessable_entity
       return
