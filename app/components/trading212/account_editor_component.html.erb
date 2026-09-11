@@ -8,7 +8,7 @@
             <% if item.syncing? %>
               <%= translation("syncing") %>
             <% else %>
-              <%= item.sync_status_summary %>
+              <%= sync_status_summary_for(item) %>
             <% end %>
           </p>
         </div>
