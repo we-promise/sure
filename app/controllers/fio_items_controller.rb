@@ -326,7 +326,12 @@ class FioItemsController < ApplicationController
       # Linking clears any prior skip so a future unlink re-prompts for setup.
       fio_account.update!(ignored: false) if fio_account.ignored?
 
+      # Same normalization FioAccount::Processor applies: Fio reports a drawn loan or
+      # overdraft negative, Sure holds a liability positive. Without it the new account
+      # shows a negative debt until a sync corrects it, and the next sync may well be
+      # throttled — discovery just used the token.
       balance = fio_account.current_balance || 0
+      balance = balance.abs if account_type == "Loan"
       subtype = fio_account.suggested_subtype if account_type == fio_account.suggested_account_type
 
       Account.create_and_sync(

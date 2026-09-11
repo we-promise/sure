@@ -101,13 +101,18 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @fio_account.current_balance, account.balance
   end
 
-  test "link_accounts honours a user-chosen account type" do
+  # Fio reports a drawn loan negative; the account must not be born showing a negative
+  # debt and waiting for a sync that Fio may throttle.
+  test "link_accounts honours a user-chosen account type and stores a loan positively" do
+    @fio_account.update!(current_balance: -1_250_000)
+
     post link_accounts_fio_items_url, params: {
       fio_item_id: @fio_item.id, accountable_type: "Loan"
     }
 
     account = @fio_account.reload.current_account
     assert_equal "Loan", account.accountable_type
+    assert_equal 1_250_000, account.balance
   end
 
   test "link_accounts refuses an unsupported account type" do
