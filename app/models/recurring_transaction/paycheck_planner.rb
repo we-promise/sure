@@ -261,7 +261,7 @@ class RecurringTransaction
         return @cash_on_hand if defined?(@cash_on_hand)
 
         accounts = family.accounts.visible
-                         .where(accountable_type: [ "Depository", "PhysicalCash" ])
+                         .where(accountable_type: Account::CASH_ACCOUNTABLE_TYPES)
                          .merge(Account.accessible_by(user))
 
         excluded = family.tax_advantaged_account_ids

@@ -75,7 +75,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
   private
     def cash_accounts
-      family.accounts.visible.where(accountable_type: [ "Depository", "PhysicalCash" ], currency: family.currency)
+      family.accounts.visible.where(accountable_type: Account::CASH_ACCOUNTABLE_TYPES, currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.

@@ -43,6 +43,8 @@ class Account < ApplicationRecord
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
+  # Accountable types whose balance is liquid cash (subset of balance_type == :cash, excludes CreditCard).
+  CASH_ACCOUNTABLE_TYPES = %w[Depository PhysicalCash].freeze
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }

@@ -90,7 +90,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
       return error(
         "no_linked_accounts",
         "Please specify at least one Depository or Physical Cash account to link to this goal.",
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -101,7 +101,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         "unknown_accounts",
         "Some account names didn't match the user's Depository or Physical Cash accounts.",
         unknown_names: missing,
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -115,7 +115,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         "ambiguous_accounts",
         "Multiple accounts share a name. Ask the user which one to use.",
         ambiguous_names: ambiguous_names,
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -140,7 +140,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         "Another goal already claims #{over_claimed.map(&:name).to_sentence} in full. " \
         "Ask the user how much to reserve from #{'it'.pluralize(over_claimed.size)}, then pass it in `earmarks`.",
         claimed_account_names: over_claimed.map(&:name),
-        available_accounts: depository_account_payload
+        available_accounts: fundable_account_payload
       )
     end
 
@@ -205,7 +205,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
     # full is exclusive, so an account already claimed can only be joined with
     # an explicit earmark — and the assistant has no way to know that unless
     # the list says so.
-    def depository_account_payload
+    def fundable_account_payload
       claimed = whole_account_claimed_ids
 
       family.accounts.where(accountable_type: FUNDABLE_TYPES).visible.map do |account|
