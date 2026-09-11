@@ -182,7 +182,7 @@ class EnableBankingEntry::Processor
       parts << data[:note] if data[:note].present?
 
       bank_name = counterparty_account_info[:bank_name]
-      parts << "Bank: #{bank_name}" if bank_name.present?
+      parts << I18n.t("enable_banking_items.entry.bank_note", name: bank_name) if bank_name.present?
 
       parts.join("\n\n").presence
     end
@@ -210,9 +210,15 @@ class EnableBankingEntry::Processor
       # same key, so consumers (rules, search, transfer matching) never need
       # to know which provider populated it. See issue #3306 for the
       # opposite, hardcoded-provider-list anti-pattern this avoids.
+      # Always assigned (even to nil), not just when present: Account::ProviderImportAdapter
+      # deep-merges this hash into the persisted extra, which only overwrites keys that are
+      # actually present in the incoming hash. Omitting these keys when the current payload
+      # lacks counterparty data (e.g. a booked re-delivery of a transaction whose earlier
+      # pending version had it) would leave the old, now-stale value in place instead of
+      # clearing it.
       cp = counterparty_account_info
-      result[:counterparty_iban] = cp[:iban] if cp[:iban].present?
-      result[:counterparty_account_id] = cp[:other_id] if cp[:iban].blank? && cp[:other_id].present?
+      result[:counterparty_iban] = cp[:iban]
+      result[:counterparty_account_id] = cp[:iban].blank? ? cp[:other_id] : nil
 
       result.presence
     end
@@ -237,7 +243,7 @@ class EnableBankingEntry::Processor
           # equality lookups/comparisons elsewhere (transfer matching, rule
           # conditions) to actually line up, regardless of whether an ASPSP
           # happens to include spaces in its IBAN formatting.
-          iban: data.dig(account_key, :iban).to_s.delete(" ").upcase.presence,
+          iban: data.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence,
           other_id: data.dig(additional_key, :identification).presence,
           bank_name: data.dig(agent_key, :name).presence
         }
