@@ -17,6 +17,7 @@ class SimplefinEntry::Processor
     check_paid: { direction: :expense, pattern: /\ACHECK\s+PAID\b/i },
     wire_out: { direction: :expense, pattern: /\AWIRE\s+TRANSFER\s+TO\s+BANK\b/i },
     cash_advance: { direction: :expense, pattern: /\ACASH\s+ADVANCE\b/i },
+    fee_rebate: { direction: :income, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\s+ATM\s+FEE\s+REBATE\b/i },
     fee: { direction: :expense, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\b/i },
     core_purchase: { direction: :expense, pattern: /\APURCHASE\s+INTO\s+CORE\s+ACCOUNT\b/i },
     core_redemption: { direction: :income, pattern: /\AREDEMPTION\s+FROM\s+CORE\s+ACCOUNT\b/i },

@@ -404,6 +404,22 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalizes Fidelity ATM fee rebates to negative Sure inflows" do
+    tx = {
+      id: "tx_atm_fee_rebate_1",
+      amount: "-2.95",
+      currency: "USD",
+      description: "ADJUST FEE CHARGED ATM FEE REBATE (CASH)",
+      posted: Date.current.to_s
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_atm_fee_rebate_1", source: "simplefin")
+    assert_equal BigDecimal("-2.95"), entry.amount
+    assert_equal "fee_rebate", entry.transaction.extra.dig("simplefin", "amount_normalization")
+  end
+
   test "marks Fidelity security dividends as negative Sure income" do
     tx = {
       id: "tx_security_dividend_1",
@@ -425,7 +441,7 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
       [ "check_paid", "CHECK PAID # 1234 (CASH)", "44.63", BigDecimal("44.63") ],
       [ "wire_out", "WIRE TRANSFER TO BANK (CASH)", "500.00", BigDecimal("500.00") ],
       [ "cash_advance", "CASH ADVANCE ATM (CASH)", "202.95", BigDecimal("202.95") ],
-      [ "fee", "ADJUST FEE CHARGED ATM FEE REBATE (CASH)", "2.95", BigDecimal("2.95") ],
+      [ "fee", "ADJUST FEE CHARGED ATM SURCHARGE (CASH)", "-2.95", BigDecimal("2.95") ],
       [ "interest", "INTEREST FULLY PAID (CASH)", "-18.16", BigDecimal("-18.16") ],
       [ "reinvestment", "REINVESTMENT PROSHARES BITCOIN ETF (BITO) (MARGIN)", "4.30", BigDecimal("4.30") ],
       [ "cash_in_lieu", "IN LIEU OF FRX SHARE LEU PAYOUT SECURITY (CASH)", "-3.11", BigDecimal("-3.11") ]
