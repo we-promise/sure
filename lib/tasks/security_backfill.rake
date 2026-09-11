@@ -118,6 +118,12 @@ namespace :security do
           # validations/callbacks that might read other encrypted fields)
           encryptor = model_class.new
           plaintext_values.each do |field, value|
+            # EnableBankingAccount#iban is the one legacy-plaintext IBAN column
+            # here; Account/Merchant#iban are new columns with no legacy rows.
+            # Normalizing on write, bypassing validations/callbacks as above,
+            # matches the normalize_iban callback so find_by(iban:) with a
+            # canonical value still matches a formatted/lowercase legacy row.
+            value = value.to_s.gsub(/[[:space:]]+/, "").upcase.presence if field == :iban
             encryptor.send("#{field}=", value)
           end
 

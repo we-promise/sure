@@ -11,6 +11,12 @@ class EnableBankingAccount < ApplicationRecord
     encrypts :iban, deterministic: true
   end
 
+  # Same normalization as Account#normalize_iban, applied here too: a
+  # formatted/lowercase provider IBAN must canonicalize to the same
+  # deterministic ciphertext as one written elsewhere, or find_by(iban:)
+  # lookups against this column silently miss.
+  before_validation :normalize_iban
+
   belongs_to :enable_banking_item
 
   # New association through account_providers
@@ -146,6 +152,10 @@ class EnableBankingAccount < ApplicationRecord
   end
 
   private
+
+    def normalize_iban
+      self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+    end
 
     # Only fills a blank Account#iban — mirrors institution_name/institution_domain,
     # which likewise only offer the provider value as a placeholder rather than

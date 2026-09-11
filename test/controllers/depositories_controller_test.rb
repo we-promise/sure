@@ -45,17 +45,17 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     }
 
     created = Account.order(:created_at).last
-    assert_equal "DE89370400440532013000", created.iban
+    assert_equal "DE89370400440532013000", created.iban # pipelock:ignore IBAN
   end
 
   test "update persists a manually entered iban through the shared update action" do
     linked_account = accounts(:connected)
 
     patch depository_path(linked_account), params: {
-      account: { iban: "AT611904300234573201" }
+      account: { iban: "AT611904300234573201" } # pipelock:ignore IBAN
     }
 
-    assert_equal "AT611904300234573201", linked_account.reload.iban
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
   test "update persists enable_category_matcher through the shared update action" do
