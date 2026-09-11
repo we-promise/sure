@@ -141,6 +141,7 @@ class CoinstatsItem::Importer
 
         { address: address, blockchain: blockchain }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
+         .sort_by { |w| "#{w[:blockchain].downcase}:#{w[:address].downcase}" }
 
       return [] if wallets.empty?
 
@@ -193,6 +194,7 @@ class CoinstatsItem::Importer
 
         { address: address, blockchain: blockchain }
       end.uniq { |w| [ w[:address].downcase, w[:blockchain].downcase ] }
+         .sort_by { |w| "#{w[:blockchain].downcase}:#{w[:address].downcase}" }
 
       return [] if wallets.empty?
 
