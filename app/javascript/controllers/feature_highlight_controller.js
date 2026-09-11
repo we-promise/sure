@@ -35,8 +35,9 @@ export default class extends Controller {
     this.handleReleaseSettled = this.handleReleaseSettled.bind(this);
 
     if (this.releaseHighlightSettled()) {
-      // The release popup already settled before this mount connected (e.g.
-      // a Turbo-cached page restored after dismissal): follow it directly.
+      // The pending release popup already settled before this mount
+      // connected (e.g. a Turbo-cached page restored after dismissal):
+      // follow it directly.
       this.handleReleaseSettled();
     } else if (this.releaseHighlightMounted()) {
       window.addEventListener(
@@ -159,8 +160,19 @@ export default class extends Controller {
     );
   }
 
+  // Settled only counts when it belongs to the release currently mounted:
+  // the window flag survives Turbo visits, so a previous release's dismissal
+  // must not wave this highlight past a new release's popup.
   releaseHighlightSettled() {
-    return window.__releaseHighlightSettled === true;
+    const mount = document.querySelector(
+      "[data-controller~='release-highlight']",
+    );
+
+    return (
+      Boolean(mount) &&
+      window.__releaseHighlightSettledTag ===
+        mount.dataset.releaseHighlightTagValue
+    );
   }
 
   armInteractionListeners() {
