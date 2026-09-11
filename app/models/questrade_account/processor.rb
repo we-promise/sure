@@ -15,9 +15,9 @@ class QuestradeAccount::Processor
 
     Rails.logger.info "QuestradeAccount::Processor - Processing account #{questrade_account.id} -> Sure account #{account.id}"
 
-    # Anchor the account at its reported total (cash + holdings) and store the
-    # primary-currency cash. Non-primary cash is surfaced as holdings below.
-    update_account_balance(account)
+    # Store the reported total (cash + holdings) and the primary-currency cash.
+    # Non-primary cash is surfaced as holdings below.
+    anchor_balance = update_account_balance(account)
 
     if questrade_account.raw_holdings_payload.present? || questrade_account.non_primary_cash_entries.any?
       QuestradeAccount::HoldingsProcessor.new(questrade_account).process
@@ -26,6 +26,10 @@ class QuestradeAccount::Processor
     if questrade_account.raw_activities_payload.present?
       QuestradeAccount::ActivitiesProcessor.new(questrade_account).process
     end
+
+    # Anchor the reported balance AFTER importing, so the previous reading can be judged
+    # against a complete ledger. See Account::CurrentBalanceManager.
+    account.set_current_balance(anchor_balance) if anchor_balance
 
     account.broadcast_sync_complete
     Rails.logger.info "QuestradeAccount::Processor - Broadcast sync complete for account #{account.id}"
@@ -50,8 +54,8 @@ class QuestradeAccount::Processor
       )
       account.save!
 
-      # Current-balance anchor = the reported total (cash + holdings). The value
-      # is composed from the holdings + per-currency cash, not a made-up figure.
-      account.set_current_balance(total)
+      # Returned to `process`, which anchors it once holdings and activities are in.
+      # The value is composed from the holdings + per-currency cash, not a made-up figure.
+      total
     end
 end

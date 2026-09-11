@@ -16,8 +16,10 @@ class EnableBankingAccount::Processor
 
     Rails.logger.info "EnableBankingAccount::Processor - Processing enable_banking_account #{enable_banking_account.id} (uid #{enable_banking_account.uid})"
 
+    anchor_balance = nil
+
     begin
-      process_account!
+      anchor_balance = process_account!
     rescue StandardError => e
       Rails.logger.error "EnableBankingAccount::Processor - Failed to process account #{enable_banking_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
@@ -26,6 +28,16 @@ class EnableBankingAccount::Processor
     end
 
     process_transactions
+
+    if anchor_balance
+      begin
+        result = enable_banking_account.current_account.set_current_balance(anchor_balance)
+        raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
+      rescue StandardError => e
+        report_exception(e, "account")
+        raise
+      end
+    end
   end
 
   private
@@ -81,17 +93,14 @@ class EnableBankingAccount::Processor
           account.update!(currency: currency)
         else
           account.update!(currency: currency, cash_balance: balance)
-
-          # Use set_current_balance to create a current_anchor valuation entry.
-          # This enables Balance::ReverseCalculator, which works backward from the
-          # bank-reported balance — eliminating spurious cash adjustment spikes.
-          result = account.set_current_balance(balance)
-          raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
         end
       end
 
-      # TODO: pass explicit window_start_date to sync_later to avoid full history recalculation on every sync
-      # Currently relies on set_current_balance's implicit sync trigger; window params would require refactor
+      # Anchor the reported balance AFTER importing, so the previous reading can be judged
+      # against a complete ledger. This enables Balance::ReverseCalculator, which works
+      # backward from the bank-reported balance — eliminating spurious cash adjustment
+      # spikes. Returned to `process`, which anchors it once transactions are in.
+      balance unless skip_balance_update
     end
 
     # Interprets the reported credit card balance based on the

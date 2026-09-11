@@ -91,21 +91,34 @@ class Account::CurrentBalanceManager
 
     # Linked accounts manage "current balance" via the special `current_anchor` valuation.
     # This is NOT a user-facing feature, and is primarily used in "processors" while syncing
-    # linked account data (e.g. via Plaid)
+    # linked account data (e.g. via Plaid).
     #
-    # Before overwriting a stale (previous-day) current_anchor, we convert it to a
-    # reconciliation valuation. This preserves the API-reported balance as a historical
-    # waypoint that the ReverseCalculator uses for more accurate balance history.
+    # There is exactly one `current_anchor` per linked account, and it is written AFTER
+    # that sync's transactions have been imported (see each processor's `process`). That
+    # ordering is what makes this safe: by the time we're about to overwrite a standing
+    # anchor with today's reading, the ledger for the gap between them is complete, so we
+    # can judge it right now instead of waiting for a later sync.
+    #
+    #   * the imported ledger explains the move to today's reading -> the old anchor
+    #     carries nothing the transactions don't already carry, so it just moves forward
+    #     in place (date AND amount) exactly like a same-day update
+    #   * it doesn't -> the provider knew something the ledger doesn't, so the old anchor
+    #     is preserved as a reconciliation waypoint (#1492, #1484) and a fresh anchor is
+    #     created for today
     def set_current_balance_for_linked_account(balance)
       changes_made = false
 
       ActiveRecord::Base.transaction do
-        # If an anchor exists from a previous day, preserve it as a reconciliation
-        # before replacing it with today's fresh anchor.
-        preserve_anchor_as_reconciliation_if_stale if current_anchor_valuation
+        anchor = current_anchor_valuation
 
-        # Re-check: the memoized value was cleared if the anchor was converted
-        if current_anchor_valuation
+        if anchor && anchor.entry.date < Date.current && !ledger_explains?(anchor.entry, balance)
+          anchor.update!(kind: "reconciliation")
+          anchor.entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
+          Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{anchor.entry.date}, entry_id=#{anchor.entry.id}")
+          anchor = nil
+        end
+
+        if anchor
           changes_made = update_current_anchor(balance)
         else
           create_current_anchor(balance)
@@ -116,27 +129,51 @@ class Account::CurrentBalanceManager
       Result.new(success?: true, changes_made?: changes_made, error: nil)
     end
 
+    # Deterministic even if legacy data (from a version that kept two anchors around)
+    # still carries more than one row: the newest one is always the live anchor.
     def current_anchor_valuation
-      @current_anchor_valuation ||= account.valuations.current_anchor.includes(:entry).first
+      @current_anchor_valuation ||=
+        account.valuations.current_anchor.includes(:entry).max_by { |v| v.entry.date }
     end
 
-    # If the existing current_anchor is from a previous day, convert it to a
-    # reconciliation before overwriting. This accumulates a chain of API-reported
-    # balance waypoints over time without creating extra entries per sync.
+    # True when imported transactions and trades account for the entire move between the
+    # standing anchor and the reading we're about to write.
     #
-    # Same-day updates are left in place (no extra reconciliations on repeated syncs).
-    def preserve_anchor_as_reconciliation_if_stale
-      entry = current_anchor_valuation.entry
-      return if entry.date == Date.current # Same-day update — nothing to preserve
+    # Sign convention is Balance::ForwardCalculator#signed_entry_flows: a positive entry
+    # amount decreases an asset and increases a liability, so
+    #   expected = older + (asset? ? -net : net)
+    # One sum covers any gap length, because that recurrence is additive across days.
+    #
+    # Both endpoints are inclusive. The lower one is load-bearing: the reading is mid-day,
+    # so entries dated on the older anchor's own date posted after it was taken. The upper
+    # one is right because it is the reading being written now, which by construction is
+    # the last one for today.
+    #
+    # Restricted to :cash accounts. For :investment the reported total moves with market
+    # prices and trades only shift cash <-> holdings, so the identity means nothing.
+    # :non_cash accounts are left out until someone measures a real feed: Property and
+    # friends are valuation-driven, and Loan is entry-driven but has no linked provider
+    # whose readings we have checked.
+    def ledger_explains?(older_entry, new_balance)
+      return false unless account.balance_type == :cash
 
-      current_anchor_valuation.update!(kind: "reconciliation")
-      entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
-      Rails.logger.info("[AnchorRotation] Converted current_anchor to reconciliation for account #{account.id}, date=#{entry.date}, entry_id=#{entry.id}")
+      # Same set the balance calculators see (Balance::SyncCache#converted_entries and
+      # #get_entries): transactions and trades only, pending and split parents out,
+      # `excluded` entries still counted.
+      flows = account.entries
+        .excluding_pending
+        .excluding_split_parents
+        .where(date: older_entry.date..Date.current)
+        .where.not(entryable_type: "Valuation")
+        .pluck(:currency, :amount)
 
-      # Clear memoized value so the next check creates a fresh current_anchor.
-      # The chained scope (.current_anchor.first) always issues a fresh SQL query,
-      # so we don't need to reload the full association.
-      @current_anchor_valuation = nil
+      # A plain sum would silently add EUR to USD; bail rather than guess an FX rate.
+      return false unless flows.all? { |currency, _| currency == account.currency }
+
+      net = flows.sum { |_, amount| amount }
+      expected = older_entry.amount + (account.asset? ? -net : net)
+
+      (expected - new_balance).abs <= BigDecimal("0.01")
     end
 
     def create_current_anchor(balance)

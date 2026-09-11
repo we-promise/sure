@@ -9,9 +9,13 @@ class TradeRepublicAccount::Processor
     return unless account.present?
 
     ActiveRecord::Base.transaction do
-      update_account_balance!
+      total_balance = update_account_balance!
       TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account).process
       TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account).process
+
+      # Anchor the reported balance AFTER importing, so the previous reading can be judged
+      # against a complete ledger. See Account::CurrentBalanceManager.
+      account.set_current_balance(total_balance)
     end
 
     account.broadcast_sync_complete
@@ -33,6 +37,8 @@ class TradeRepublicAccount::Processor
         currency: trade_republic_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance)
+
+      # Returned to `process`, which anchors it once holdings and activities are in.
+      total_balance
     end
 end

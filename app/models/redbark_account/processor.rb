@@ -15,8 +15,7 @@ class RedbarkAccount::Processor
 
     Rails.logger.info "RedbarkAccount::Processor - Processing account #{redbark_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing transactions/holdings/activities)
-    update_account_balance(account)
+    anchor_balance = update_account_balance(account)
 
     # Process transactions
     transactions_count = redbark_account.raw_transactions_payload&.size || 0
@@ -28,6 +27,10 @@ class RedbarkAccount::Processor
     else
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
+
+    # Anchor the reported balance AFTER importing, so the previous reading can be judged
+    # against a complete ledger. See Account::CurrentBalanceManager.
+    account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete
@@ -66,8 +69,7 @@ class RedbarkAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(balance)
+      # Returned to `process`, which anchors it once transactions are in.
+      balance
     end
 end
