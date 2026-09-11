@@ -448,7 +448,19 @@ class Account::ProviderImportAdapter
     end
     merchant
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
-    Rails.logger.warn("Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}")
+    # This race can change which merchant a transaction lands on (see the
+    # caller), so it's worth more than a Rails log line -- captured with
+    # family/account context for the support debug UI, per AGENTS.md.
+    DebugLogEntry.capture(
+      category: "provider_sync_warning",
+      level: "warn",
+      message: "Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}",
+      source: self.class.name,
+      provider_key: merchant.source,
+      family: account.family,
+      account: account,
+      metadata: { merchant_id: merchant.id, normalized_iban: normalized_iban }
+    )
     ProviderMerchant.find_by(source: merchant.source, iban: normalized_iban)
   end
 
