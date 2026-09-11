@@ -50,7 +50,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "shows the counterparty account when the setting is on and data is present" do
-    @entry.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    @entry.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
 
@@ -59,7 +59,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # the pre-existing raw-extra debug dump further down the page (which
     # would also contain the IBAN string regardless of this feature).
     assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
-    assert_match "DE89370400440532013000", response.body
+    assert_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
   end
 
   test "hides the counterparty account line when there is no counterparty data" do
@@ -70,7 +70,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "hides the counterparty account when the user has disabled the setting" do
-    @entry.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    @entry.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
     @user.update!(preferences: { "show_counterparty_account" => false })
 
     get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
