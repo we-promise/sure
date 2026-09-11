@@ -129,7 +129,14 @@ module Family::AutoTransferMatchable
   # answer "should the transfer-match dialog for THIS entry pre-fill a
   # target account", not enumerate every missing counterpart across the
   # family (no UI surfaces that broader list yet).
-  def missing_transfer_suggestion_for(entry)
+  # user: required so the suggested account is restricted to the same
+  # writable+visible set TransferMatchesController#new offers in its
+  # target_account_id dropdown. Without it, a match on a disabled account or
+  # one the current user has no access to (family sharing permissions) would
+  # get preselected in the UI despite never appearing among the selectable
+  # options -- and would leak that account's name/existence to a user who
+  # can't otherwise see it.
+  def missing_transfer_suggestion_for(entry, user:)
     return nil unless entry.amount.positive?
 
     transaction = entry.entryable
@@ -140,7 +147,7 @@ module Family::AutoTransferMatchable
     counterparty_iban = transaction.extra&.dig("counterparty_iban")
     return nil if counterparty_iban.blank?
 
-    accounts.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
+    accounts.writable_by(user).visible.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
   end
 
   private
