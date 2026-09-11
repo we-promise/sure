@@ -145,26 +145,32 @@ class EnableBankingAccount < ApplicationRecord
     save!
   end
 
-  private
+  # Only fills a blank Account#iban — mirrors institution_name/institution_domain,
+  # which likewise only offer the provider value as a placeholder rather than
+  # overwriting a value the user may have entered manually.
+  #
+  # Public (not called only from #upsert_enable_banking_snapshot!): account
+  # discovery runs before the linking AccountProvider exists, so this is a
+  # no-op at that point (current_account is nil). EnableBankingItemsController
+  # calls this again right after creating the AccountProvider, once there is
+  # actually a target to propagate to.
+  def propagate_iban_to_account!
+    return if iban.blank?
 
-    # Only fills a blank Account#iban — mirrors institution_name/institution_domain,
-    # which likewise only offer the provider value as a placeholder rather than
-    # overwriting a value the user may have entered manually.
-    def propagate_iban_to_account!
-      return if iban.blank?
+    target = current_account
+    return if target.nil?
 
-      target = current_account
-      return if target.nil?
-
-      # #with_lock reloads target under SELECT FOR UPDATE before the block
-      # runs, so a concurrent manual edit that lands between our earlier
-      # load of `target` and this write can't be silently clobbered by the
-      # sync (a plain `target.iban.present?` check followed by `update` has
-      # no such guarantee).
-      target.with_lock do
-        target.update!(iban: iban) if target.iban.blank?
-      end
+    # #with_lock reloads target under SELECT FOR UPDATE before the block
+    # runs, so a concurrent manual edit that lands between our earlier
+    # load of `target` and this write can't be silently clobbered by the
+    # sync (a plain `target.iban.present?` check followed by `update` has
+    # no such guarantee).
+    target.with_lock do
+      target.update!(iban: iban) if target.iban.blank?
     end
+  end
+
+  private
 
     def build_account_name(snapshot)
       # Try to build a meaningful name from the account data
@@ -186,7 +192,7 @@ class EnableBankingAccount < ApplicationRecord
       else
         "Enable Banking Account"
       end
-    end
+  end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for EnableBanking account #{id}, defaulting to EUR")
