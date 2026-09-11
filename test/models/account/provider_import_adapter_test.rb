@@ -335,6 +335,47 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal name_matched_merchant.id, merchant.id
   end
 
+  test "recovers from a RecordInvalid uniqueness race when creating a new iban merchant" do
+    # No merchant matches by iban, provider_merchant_id, or name yet, so
+    # find_or_create_merchant reaches ProviderMerchant.create! -- simulates
+    # a concurrent insert winning the (source, iban) unique index between
+    # our find and this create!, surfaced as a Rails-level validation
+    # failure (RecordInvalid) rather than the raw DB constraint
+    # (RecordNotUnique), which the rescue must also recover from.
+    concurrent_winner = ProviderMerchant.create!(
+      provider_merchant_id: "hash_other",
+      name: "Concurrent Winner",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    invalid = ProviderMerchant.new(source: "enable_banking", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    invalid.errors.add(:iban, :taken)
+    ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "hash_new",
+      name: "New Payee",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal concurrent_winner.id, merchant.id
+  end
+
+  test "re-raises a non-uniqueness RecordInvalid instead of swallowing it" do
+    invalid = ProviderMerchant.new
+    invalid.errors.add(:name, :blank)
+    ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      @adapter.find_or_create_merchant(
+        provider_merchant_id: "hash_new",
+        name: "New Payee",
+        source: "enable_banking"
+      )
+    end
+  end
+
   test "falls back to name-based lookup when no iban is provided" do
     existing_merchant = ProviderMerchant.create!(
       provider_merchant_id: "enable_banking_merchant_2",
