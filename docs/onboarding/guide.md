@@ -38,7 +38,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > - [**SimpleFIN**](https://beta-bridge.simplefin.org/)
 > - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Enable Banking**](https://enablebanking.com/) (beta)
-> - [**monobank**](https://github.com/we-promise/sure/blob/main/docs/hosting/monobank.md) (Ukrainian cards and jars)
+> - [**Monobank**](https://github.com/we-promise/sure/blob/main/docs/hosting/monobank.md) (Ukrainian cards and jars)
 > - [**Redbark**](https://github.com/we-promise/sure/blob/main/docs/hosting/redbark.md) (Australian banks)
 > - [**Up**](https://up.com.au/) (Australian bank)
 > - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)
