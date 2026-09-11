@@ -58,4 +58,31 @@ class MerchantTest < ActiveSupport::TestCase
 
     assert other_source.valid?
   end
+
+  test "enforces uniqueness of iban per family for family merchants at the model level" do
+    family = families(:dylan_family)
+    FamilyMerchant.create!(name: "Landlord", family: family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    duplicate = FamilyMerchant.new(name: "Different Name", family: family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:iban], "has already been taken"
+  end
+
+  test "enforces uniqueness of iban per family for family merchants at the database level" do
+    family = families(:dylan_family)
+    FamilyMerchant.create!(name: "Landlord", family: family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    duplicate = FamilyMerchant.new(name: "Different Name", family: family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save!(validate: false) }
+  end
+
+  test "allows the same iban across different families for family merchants" do
+    FamilyMerchant.create!(name: "Landlord", family: families(:dylan_family), iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    other_family = FamilyMerchant.new(name: "Landlord", family: families(:empty), iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert other_family.valid?
+  end
 end
