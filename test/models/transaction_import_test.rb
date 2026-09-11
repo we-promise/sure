@@ -478,4 +478,65 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "Transaction 1", rows.first.name
     assert_equal "100", rows.first.amount
   end
+
+  test "import! moves opening anchor back when transactions predate it" do
+    account = accounts(:depository)
+    account.entries.create!(
+      date: 2.years.ago.to_date,
+      name: "Opening balance",
+      amount: 0,
+      currency: account.currency,
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    @import.update!(
+      account: account,
+      raw_file_str: <<~CSV,
+        date,name,amount
+        01/15/2020,Old grocery,50
+        01/20/2020,Old coffee,10
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    @import.generate_rows_from_csv
+    @import.import!
+
+    manager = Account::OpeningBalanceManager.new(account.reload)
+    assert_equal Date.new(2020, 1, 14), manager.opening_date
+    assert_equal 0, manager.opening_balance
+  end
+
+  test "import! does not move opening anchor when transactions do not predate it" do
+    account = accounts(:depository)
+    anchor_date = Date.new(2020, 1, 1)
+    account.entries.create!(
+      date: anchor_date,
+      name: "Opening balance",
+      amount: 0,
+      currency: account.currency,
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    @import.update!(
+      account: account,
+      raw_file_str: <<~CSV,
+        date,name,amount
+        06/04/2020,Later grocery,50
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    @import.generate_rows_from_csv
+    @import.import!
+
+    manager = Account::OpeningBalanceManager.new(account.reload)
+    assert_equal anchor_date, manager.opening_date
+  end
 end
