@@ -114,15 +114,12 @@ class OnchainWalletItem < ApplicationRecord
   # cover. An item is surfaced on the accounts page as soon as ONE of its
   # accounts is accessible, so a card rendering them all would show a
   # partially-authorised member the names and balances of accounts nobody
-  # shared with them. Passing nil means "no restriction", which is what an
-  # admin gets.
+  # shared with them.
   #
   # Both read the preloaded associations rather than opening new relations: the
   # accounts page renders one card per item, and a scope here would cost a
   # query per row.
   def accounts_visible_to(allowed_account_ids)
-    return accounts.to_a if allowed_account_ids.nil?
-
     accounts.select { |account| allowed_account_ids.include?(account.id) }
   end
 

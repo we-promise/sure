@@ -1,5 +1,41 @@
 <%# locals: (accounts:) %>
 
+<%# A provider card is surfaced as soon as ONE of its accounts is accessible,
+    and every card hands its whole item to this partial — so this is the single
+    place that can hold all of them to the accounts the viewer may actually
+    see. Filtering here also keeps the group counts and totals honest. %>
+<%# A background broadcast has no viewer: `Current.user` is nil in a job, so
+    "the accounts this viewer may see" is not a question with an answer there.
+    Filtering anyway would answer "none" and replace a populated card with an
+    empty one — the accounts looking deleted rather than merely unrendered.
+    Rendering them all instead would hand every family member the private
+    accounts this partial exists to withhold.
+
+    So it says what is true: the card is waiting on a refresh. The sync toast
+    broadcast right after this drives that refresh on each client's own
+    authenticated request, and defers while a modal or form is open — which is
+    exactly the case where a silently empty card would have persisted. %>
+<% if viewer_present_for_account_scoping? %>
+  <% accounts = accounts_visible_to_viewer(accounts) %>
+<% else %>
+  <%# Fetched back rather than merely deferred to the sync toast. The toast
+      waits while a modal or a form is open — which is exactly when a card that
+      had gone blank stayed blank — and this frame does not: the reader's own
+      browser asks for the rows on its own authenticated request, so the server
+      answers with `Current.user` in hand and the filtering above applies
+      normally. %>
+  <% requested_ids = accounts.map(&:id) %>
+  <%= turbo_frame_tag account_groups_frame_id(requested_ids),
+                      src: groups_accounts_path(ids: requested_ids.join(",")),
+                      loading: "eager",
+                      data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+    <div class="px-4 py-3 text-sm text-secondary" data-testid="account-groups-awaiting-refresh">
+      <%= t("accounts.index.account_groups.awaiting_refresh") %>
+    </div>
+  <% end %>
+  <% accounts = [] %>
+<% end %>
+
 <% if accounts.any? %>
   <% ActiveRecord::Associations::Preloader.new(
        records: accounts,

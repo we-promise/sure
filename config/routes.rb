@@ -652,6 +652,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :groups
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"

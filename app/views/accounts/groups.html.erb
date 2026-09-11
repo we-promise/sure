@@ -1,0 +1,6 @@
+<%# Fills the frame a background broadcast left in a provider card. Rendered on
+    the reader's own authenticated request, so `_account_groups` scopes to what
+    they may see exactly as it does on the index. %>
+<%= turbo_frame_tag account_groups_frame_id(@requested_account_ids) do %>
+  <%= render "accounts/index/account_groups", accounts: @groups_accounts %>
+<% end %>

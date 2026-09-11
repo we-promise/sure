@@ -60,6 +60,8 @@ fr:
       notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
       opening_balance_date_label: Date du solde d'ouverture
     index:
+      account_groups:
+        awaiting_refresh: "Mise à jour…"
       accounts: Comptes
       cancel_sync: Annuler la synchronisation
       manual_accounts:
