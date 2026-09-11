@@ -31,7 +31,12 @@ class Rule::ConditionFilter::TransactionCounterpartyIban < Rule::ConditionFilter
   def apply(scope, operator, value)
     sanitize_operator(operator)
 
-    field = "(transactions.extra ->> 'counterparty_iban')"
+    # Monobank stores its counterparty IBAN nested under its own provider key
+    # instead of the shared top-level counterparty_iban field (it predates
+    # that convention and hasn't been migrated onto it), so this filter falls
+    # back to it -- otherwise a Monobank user could never match this
+    # condition even though the data exists on their transactions.
+    field = "COALESCE(transactions.extra ->> 'counterparty_iban', transactions.extra -> 'monobank' ->> 'counter_iban')"
 
     if operator == "is_null"
       scope.where("#{field} IS NULL")

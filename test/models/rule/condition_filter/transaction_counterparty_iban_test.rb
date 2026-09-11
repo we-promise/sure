@@ -16,6 +16,9 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
 
     @without_iban = create_transaction(date: Date.current, account: @account, amount: 25, name: "Groceries")
 
+    @with_monobank_iban = create_transaction(date: Date.current, account: @account, amount: 75, name: "Landlord")
+    @with_monobank_iban.transaction.update!(extra: { "monobank" => { "counter_iban" => "NL91ABNA0417164300" } }) # pipelock:ignore IBAN
+
     @rule_scope = @account.transactions
   end
 
@@ -92,7 +95,7 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
 
     filtered = condition.apply(condition.prepare(@rule_scope))
 
-    assert_equal [ @with_iban.transaction.id, @with_other_iban.transaction.id ].sort, filtered.pluck(:id).sort
+    assert_equal [ @with_iban.transaction.id, @with_other_iban.transaction.id, @with_monobank_iban.transaction.id ].sort, filtered.pluck(:id).sort
   end
 
   test "not_equal_to matches transactions with a different or missing iban" do
@@ -105,6 +108,19 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
 
     filtered = condition.apply(condition.prepare(@rule_scope))
 
-    assert_equal [ @with_other_iban.transaction.id, @without_iban.transaction.id ].sort, filtered.pluck(:id).sort
+    assert_equal [ @with_other_iban.transaction.id, @without_iban.transaction.id, @with_monobank_iban.transaction.id ].sort, filtered.pluck(:id).sort
+  end
+
+  test "equal_to falls back to monobank's nested counter_iban when the top-level field is absent" do
+    condition = Rule::Condition.new(
+      rule: @rule,
+      condition_type: "transaction_counterparty_iban",
+      operator: "=",
+      value: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    )
+
+    filtered = condition.apply(condition.prepare(@rule_scope))
+
+    assert_equal [ @with_monobank_iban.transaction.id ], filtered.pluck(:id)
   end
 end
