@@ -227,4 +227,131 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series)
     assert_same raw_series, normalizer.normalize
   end
+
+  test "normalizer does not prepend anchor when account inception predates series start_date" do
+    account = families(:empty).accounts.create!(
+      name: "Established Linked Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    two_years_ago = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: two_years_ago)
+    account.entries.create!(
+      name: "Old Trade",
+      date: two_years_ago,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    # 30-day series
+    thirty_days_ago = 30.days.ago.to_date
+    raw_series = Series.new(
+      start_date: thirty_days_ago,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: thirty_days_ago, date_formatted: "", value: Money.new(500, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(550, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series)
+    normalized = normalizer.normalize
+
+    assert_equal thirty_days_ago, normalized.start_date
+    assert_equal [ thirty_days_ago, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(500, "USD"), normalized.values.first.value
+  end
+
+  test "normalizer synthesizes 0 gains for gains view even if opening anchor balance is positive" do
+    account = families(:empty).accounts.create!(
+      name: "Gains View Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    opening_date = 8.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 5000, date: opening_date)
+    account.entries.create!(
+      name: "Trade",
+      date: opening_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: 10.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 10.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 3.days.ago.to_date, date_formatted: "", value: Money.new(200, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(250, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series, view: :gains)
+    normalized = normalizer.normalize
+
+    assert_equal opening_date, normalized.start_date
+    assert_equal [ opening_date, 3.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(0, "USD"), normalized.values.first.value
+  end
+
+  test "normalizer synthesizes 0 holdings for holdings_balance view even if opening anchor balance is positive" do
+    account = families(:empty).accounts.create!(
+      name: "Holdings View Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    opening_date = 8.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 5000, date: opening_date)
+    account.entries.create!(
+      name: "Trade",
+      date: opening_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_series = Series.new(
+      start_date: 10.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 10.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 3.days.ago.to_date, date_formatted: "", value: Money.new(4500, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(4800, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalizer = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series, view: :holdings_balance)
+    normalized = normalizer.normalize
+
+    assert_equal opening_date, normalized.start_date
+    assert_equal [ opening_date, 3.days.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(0, "USD"), normalized.values.first.value
+  end
 end

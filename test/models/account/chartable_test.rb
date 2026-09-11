@@ -315,4 +315,90 @@ class Account::ChartableTest < ActiveSupport::TestCase
     assert_equal [ trade_date, 3.days.ago.to_date, Date.current ], series.values.map(&:date)
     assert_equal Money.new(0, "USD"), series.values.first.value
   end
+
+  test "balance_series with view :gains synthesizes 0 gains for prepended anchor point" do
+    account = accounts(:investment)
+    account.entries.destroy_all
+    account.holdings.destroy_all
+
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    opening_date = 8.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 5000, date: opening_date)
+    account.entries.create!(
+      name: "Opening Trade",
+      date: opening_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    raw_gains_series = Series.new(
+      start_date: 10.days.ago.to_date,
+      end_date: Date.current,
+      interval: "1 week",
+      values: [
+        Series::Value.new(date: 10.days.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: 3.days.ago.to_date, date_formatted: "", value: Money.new(200, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(250, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    builder = mock
+    Balance::ChartSeriesBuilder.expects(:new).returns(builder)
+    builder.expects(:gains_series).returns(raw_gains_series)
+
+    series = account.balance_series(view: :gains)
+
+    assert_equal opening_date, series.start_date
+    assert_equal [ opening_date, 3.days.ago.to_date, Date.current ], series.values.map(&:date)
+    assert_equal Money.new(0, "USD"), series.values.first.value
+  end
+
+  test "balance_series does not prepend anchor outside requested period for older linked account" do
+    account = accounts(:investment)
+    account.entries.destroy_all
+    account.holdings.destroy_all
+
+    coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account.account_providers.create!(provider: coinstats_account)
+
+    opening_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: opening_date)
+    account.entries.create!(
+      name: "Old Trade",
+      date: opening_date,
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+
+    thirty_days_ago = 30.days.ago.to_date
+    raw_series = Series.new(
+      start_date: thirty_days_ago,
+      end_date: Date.current,
+      interval: "1 day",
+      values: [
+        Series::Value.new(date: thirty_days_ago, date_formatted: "", value: Money.new(500, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(550, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    builder = mock
+    Balance::ChartSeriesBuilder.expects(:new).returns(builder)
+    builder.expects(:balance_series).returns(raw_series)
+
+    series = account.balance_series(period: Period.last_30_days)
+
+    assert_equal thirty_days_ago, series.start_date
+    assert_equal [ thirty_days_ago, Date.current ], series.values.map(&:date)
+    assert_equal Money.new(500, "USD"), series.values.first.value
+  end
 end

@@ -1,5 +1,5 @@
 class Balance::LinkedInvestmentSeriesNormalizer
-  attr_reader :account, :series
+  attr_reader :account, :series, :view
 
   class << self
     def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day")
@@ -83,11 +83,16 @@ class Balance::LinkedInvestmentSeriesNormalizer
       end
   end
 
-  def initialize(account:, series:)
+  # Normalizes chart series for linked investment accounts by trimming unsupported
+  # history and aligning the inception boundary.
+  def initialize(account:, series:, view: :balance)
     @account = account
     @series = series
+    @view = view
   end
 
+  # Trims points before supported provider history and prepends an anchor point at inception
+  # if coarse sampling missed the opening date within the requested period.
   def normalize
     return series unless account.linked? && account.balance_type == :investment
 
@@ -99,9 +104,18 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
     # If periodic sampling missed the exact opening date (e.g. coarse 1-month or 1-week intervals),
     # prepend an anchor point on the exact opening date with the initial balance (e.g. $0)
-    if active_points.first.date > first_supported_history_date
+    # only when the inception date falls within the requested series date range.
+    if first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
       currency = active_points.first.value.currency
-      opening_money = Money.new(account.opening_anchor_balance || 0, currency)
+      initial_amount = case view.to_sym
+      when :gains, :holdings_balance
+        0
+      when :cash_balance, :balance
+        account.opening_anchor_balance || 0
+      else
+        0
+      end
+      opening_money = Money.new(initial_amount, currency)
       anchor_value = Series::Value.new(
         date: first_supported_history_date,
         date_formatted: I18n.l(first_supported_history_date, format: :long),
