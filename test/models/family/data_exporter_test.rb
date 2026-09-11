@@ -326,6 +326,31 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports the split parent's counterparty iban on split child rows" do
+    split_parent = @account.entries.create!(
+      name: "CSV Split Parent",
+      amount: 100,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+    )
+    split_children = split_parent.split!([
+      { name: "CSV Split Child A", amount: 60, category_id: @category.id },
+      { name: "CSV Split Child B", amount: 40, category_id: @category.id }
+    ])
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("transactions.csv"), headers: true)
+
+      split_children.each do |child|
+        row = rows.find { |csv_row| csv_row["name"] == child.name }
+        assert_equal "DE89370400440532013000", row["counterparty_iban"] # pipelock:ignore IBAN
+      end
+    end
+  end
+
   test "exported CSV files can generate matching import rows" do
     create_csv_export_trade!
     @account.entries.create!(

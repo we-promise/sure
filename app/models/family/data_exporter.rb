@@ -91,7 +91,7 @@ class Family::DataExporter
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
         exportable_transactions
-          .includes(:category, :tags, entry: :account)
+          .includes(:category, :tags, entry: [ :account, parent_entry: :entryable ])
           .find_each do |transaction|
             csv << [
               transaction.entry.date&.iso8601,
@@ -102,10 +102,24 @@ class Family::DataExporter
               transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
               transaction.entry.currency,
-              transaction.extra&.dig("counterparty_iban")
+              transaction_counterparty_iban(transaction)
             ]
           end
       end
+    end
+
+    # Split children don't inherit the parent transaction's extra metadata
+    # (Entry#split! never copies it), so a split-off row would otherwise
+    # export blank even though the original synced transaction had a
+    # counterparty IBAN. Falls back to the parent's value in that case.
+    def transaction_counterparty_iban(transaction)
+      transaction.extra&.dig("counterparty_iban") ||
+        parent_transaction(transaction)&.extra&.dig("counterparty_iban")
+    end
+
+    def parent_transaction(transaction)
+      parent = transaction.entry.parent_entry&.entryable
+      parent if parent.is_a?(Transaction)
     end
 
     def escape_legacy_tag_name(name)
