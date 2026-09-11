@@ -154,9 +154,16 @@ class EnableBankingAccount < ApplicationRecord
       return if iban.blank?
 
       target = current_account
-      return if target.nil? || target.iban.present?
+      return if target.nil?
 
-      target.update(iban: iban)
+      # #with_lock reloads target under SELECT FOR UPDATE before the block
+      # runs, so a concurrent manual edit that lands between our earlier
+      # load of `target` and this write can't be silently clobbered by the
+      # sync (a plain `target.iban.present?` check followed by `update` has
+      # no such guarantee).
+      target.with_lock do
+        target.update!(iban: iban) if target.iban.blank?
+      end
     end
 
     def build_account_name(snapshot)
