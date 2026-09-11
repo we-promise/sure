@@ -54,7 +54,8 @@ instead.
 ### Income imported before it was a trade
 
 `import_trade` raises on an entryable-type mismatch, with one narrow exception:
-an income trade landing on an `external_id` that already holds a `Transaction`.
+an income trade landing on an `external_id` that already holds a `Transaction`
+labelled `Dividend` or `Interest`.
 Provider syncs used to import dividends and interest that way, and accounts
 connected back then still hold those rows. That case leaves the existing row
 untouched, records a skip and writes a rate-limited `DebugLogEntry`. Every other
