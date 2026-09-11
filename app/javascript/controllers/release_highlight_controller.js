@@ -16,6 +16,11 @@ import { driver } from "driver.js";
 // quietly and the next page offers it again. A window-level flag keyed to the
 // tag prevents double-shows across Turbo reconnects, cached page restores,
 // and duplicate mounts.
+//
+// When the highlight settles - the user dismissed it, or there was nothing
+// to show - a "release-highlight:settled" event is dispatched on window so
+// queued popovers (e.g. an anchored feature highlight on the dashboard) can
+// follow without competing for the overlay.
 export default class extends Controller {
   static values = {
     contentUrl: String,
@@ -76,6 +81,7 @@ export default class extends Controller {
     // No notes (or gone again): release the flag so a later page can retry.
     if (!notesHtml) {
       this.releaseShownFlag();
+      this.notifySettled();
       return;
     }
 
@@ -101,6 +107,7 @@ export default class extends Controller {
 
         if (this.dismissed) {
           this.markSeen();
+          this.notifySettled();
         }
       },
     });
@@ -160,6 +167,10 @@ export default class extends Controller {
     }
   }
 
+  notifySettled() {
+    window.dispatchEvent(new CustomEvent("release-highlight:settled"));
+  }
+
   async markSeen() {
     if (this.markedSeen) return;
     this.markedSeen = true;
@@ -170,10 +181,8 @@ export default class extends Controller {
       const response = await fetch(this.dismissUrlValue, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
           ...(csrfToken ? { "X-CSRF-Token": csrfToken.content } : {}),
         },
-        body: JSON.stringify({ tag: this.tagValue }),
       });
 
       if (!response.ok) {

@@ -95,13 +95,16 @@ module ApplicationHelper
   def bills_nav_item
     return nil if Current.family.nil? || Current.family.recurring_transactions_disabled?
 
+    # The highlight hook lets an anchored feature popover spotlight this
+    # entry; both nav copies (desktop rail + mobile bar) carry it.
     preview_gated_nav_item(
       {
         name: t("layouts.application.nav.bills"),
         path: bills_path,
         icon: "receipt",
         icon_custom: false,
-        active: page_active?(bills_path)
+        active: page_active?(bills_path),
+        highlight: "bills"
       }
     )
   end
