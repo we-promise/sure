@@ -104,8 +104,29 @@ class Loan::AmortizationScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2245.22"), Loan::AmortizationSchedule.for(loan).periodic_payment.amount
   end
 
-  test "is not buildable for a variable rate loan" do
+  # Reversed by #104. A variable loan was excluded while a schedule could only
+  # be built off one rate; it now re-amortises at each recorded change, so the
+  # reason for the exclusion is gone.
+  test "is buildable for a variable rate loan" do
     loan = loan_account(interest_rate: 3.5, term_months: 360, rate_type: "variable").loan
+
+    assert_not_nil Loan::AmortizationSchedule.for(loan)
+  end
+
+  # A rate type outside the form's vocabulary is still a rate type (#100
+  # decision 8). PlaidAccount::Liabilities::MortgageProcessor writes Plaid's
+  # raw `interest_rate.type` straight through, so this is reachable from a
+  # sync, not only from the form, and such a loan is variable rather than
+  # unknown.
+  test "is buildable for a provider's own rate type" do
+    loan = loan_account(interest_rate: 3.5, term_months: 360, rate_type: "teaser").loan
+
+    assert_not_nil Loan::AmortizationSchedule.for(loan)
+  end
+
+  # What is still not buildable: no rate type at all.
+  test "is not buildable for a blank rate type" do
+    loan = loan_account(interest_rate: 3.5, term_months: 360, rate_type: "").loan
 
     assert_nil Loan::AmortizationSchedule.for(loan)
   end

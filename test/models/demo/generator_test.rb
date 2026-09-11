@@ -55,6 +55,32 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # The demo family's loans were bare Loan.new records -- no rate, no term, and
+  # the mortgage's principal a transaction rather than an opening valuation --
+  # so none of them had a schedule to show. The mortgage is adjustable with
+  # recorded changes, so the demo shows a schedule re-amortising; the other two
+  # are fixed.
+  test "demo loans carry the terms and principal a schedule is built from" do
+    @family.update!(currency: "USD")
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    generator.send(:create_realistic_accounts!, @family)
+    generator.send(:generate_major_purchases!)
+
+    mortgage = @family.accounts.find_by!(name: "Home Mortgage").loan
+    assert mortgage.variable_rate_type?, "the demo mortgage should be adjustable"
+    assert_equal BigDecimal("320000"), mortgage.original_balance.amount
+    assert_equal mortgage.start_date, mortgage.origination_date
+    assert mortgage.amortization_schedule.re_amortising?,
+      "a recorded rate change must move the demo mortgage's repayment"
+
+    [ "Car Loan", "Student Loan" ].each do |name|
+      loan = @family.accounts.find_by!(name: name).loan
+      assert_not loan.variable_rate_type?, "#{name} should be fixed"
+      assert loan.amortization_schedule&.payments&.any?, "#{name} should have a schedule"
+    end
+  end
+
   private
     def create_user!(family, email)
       family.users.create!(

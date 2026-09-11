@@ -1,0 +1,7 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Jede Zinsänderung braucht einen Stichtag und einen Zinssatz.

@@ -290,10 +290,35 @@ class Demo::Generator
       # Crypto (USD)
       @coinbase_usdc = family.accounts.create!(accountable: Crypto.new, name: "Coinbase USDC", balance: 0, currency: "USD")
 
-      # Loans / Liabilities (USD)
-      @mortgage      = family.accounts.create!(accountable: Loan.new, name: "Home Mortgage", balance: 0, currency: "USD")
-      @car_loan      = family.accounts.create!(accountable: Loan.new, name: "Car Loan", balance: 0, currency: "USD")
-      @student_loan  = family.accounts.create!(accountable: Loan.new, name: "Student Loan", balance: 0, currency: "USD")
+      # Loans / Liabilities (USD). Each carries the terms its amortisation
+      # schedule is built from; its principal is the opening valuation written
+      # by open_demo_loan!. The mortgage is adjustable with two recorded rate
+      # changes -- a cut two years in, a rise two years later -- so the demo
+      # shows a schedule re-amortising. The car and student loans start the
+      # month before generate_loan_payments! makes their first payment.
+      mortgage_start = 5.years.ago.to_date
+      loans_start = 37.months.ago.beginning_of_month.to_date
+      @mortgage = family.accounts.create!(
+        accountable: Loan.new(
+          subtype: "mortgage", rate_type: "adjustable", interest_rate: 6.25, term_months: 360,
+          start_date: mortgage_start, initial_balance: 320_000,
+          rate_changes: [
+            { effective_date: (mortgage_start >> 24).iso8601, rate: "5.5" },
+            { effective_date: (mortgage_start >> 48).iso8601, rate: "6.75" }
+          ]
+        ),
+        name: "Home Mortgage", balance: 0, currency: "USD"
+      )
+      @car_loan = family.accounts.create!(
+        accountable: Loan.new(subtype: "auto", rate_type: "fixed", interest_rate: 6.9, term_months: 60,
+                              start_date: loans_start, initial_balance: 24_000),
+        name: "Car Loan", balance: 0, currency: "USD"
+      )
+      @student_loan = family.accounts.create!(
+        accountable: Loan.new(subtype: "student", rate_type: "fixed", interest_rate: 5.5, term_months: 120,
+                              start_date: loans_start, initial_balance: 42_000),
+        name: "Student Loan", balance: 0, currency: "USD"
+      )
 
       @personal_loc  = family.accounts.create!(accountable: OtherLiability.new, name: "Personal Line of Credit", balance: 0, currency: "USD")
 
@@ -721,9 +746,14 @@ class Demo::Generator
     def generate_major_purchases!
       # Home purchase (5 years ago) - only record the down payment, not full value
       # Property value will be set by valuation in reconcile_balances!
-      home_date = 5.years.ago.to_date
+      home_date = @mortgage.loan.start_date
       create_transaction!(@chase_checking, 70_000, "Home Down Payment", @housing_cat, home_date)
-      create_transaction!(@mortgage, 320_000, "Mortgage Principal", nil, home_date) # Initial mortgage debt
+
+      # Each loan opens at its principal on its start date -- the mortgage's
+      # 320,000 among them. A valuation rather than a transaction, because
+      # Loan#original_balance reads the first valuation: recorded as a
+      # transaction, the debt left the schedule with no principal to amortise.
+      [ @mortgage, @car_loan, @student_loan ].each { |loan_account| open_demo_loan!(loan_account) }
 
       # Initial account funding (realistic amounts)
       create_transaction!(@chase_checking, -5_000, "Initial Deposit", @salary_cat, 12.years.ago.to_date)
@@ -741,6 +771,19 @@ class Demo::Generator
       create_transaction!(@chase_checking, 12_000, "Roof Replacement", @utilities_cat, 3.years.ago.to_date)
       create_transaction!(@chase_checking, 8_000, "Family Emergency", @healthcare_cat, 4.years.ago.to_date)
       create_transaction!(@chase_checking, 15_000, "Wedding Expenses", @entertainment_cat, 9.years.ago.to_date)
+    end
+
+    # The opening anchor valuation a loan account created through the form
+    # would carry: the loan's principal on its start date.
+    def open_demo_loan!(account)
+      loan = account.loan
+      account.entries.create!(
+        entryable: Valuation.new(kind: "opening_anchor"),
+        amount: loan.initial_balance,
+        name: Valuation.build_opening_anchor_name(account.accountable_type),
+        currency: account.currency,
+        date: loan.start_date
+      )
     end
 
     def generate_transfers_and_payments!

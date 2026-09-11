@@ -13,6 +13,15 @@ de:
       rate_type_adjustable: Anpassbar
       rate_type_fixed: Fest
       rate_type_variable: Variabel
+      rate_changes: Zinsänderungen
+      rate_changes_hint: Jede Zeile legt den Zinssatz fest, der ab ihrem Stichtag bis zum nächsten gilt. Ein erneut eingegebener Stichtag ersetzt diese Zeile, statt eine zweite anzulegen.
+      rate_changes_empty: Keine Zinsänderungen erfasst. Der Kredit läuft mit dem oben angegebenen Zinssatz.
+      rate_change_effective_date: Stichtag
+      rate_change_rate: Zinssatz
+      rate_change_add: Zinsänderung hinzufügen
+      rate_change_remove: Entfernen
+      start_date: Auszahlungsdatum
+      start_date_hint: Wann der Kredit ausgezahlt wurde. Leer lassen, um das Eröffnungsdatum des Kontos zu verwenden.
       none: Keine
       subtype_none: Keine
       subtype_prompt: Kreditart wählen
@@ -30,7 +39,9 @@ de:
     tabs:
       schedule:
         date: Datum
-        description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen und Zinsänderungen sind nicht berücksichtigt.
+        description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
+        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich im Laufe der Zeit. Der Tilgungsplan wird bei jeder erfassten Änderung neu berechnet; das ursprüngliche Ablösedatum bleibt, die Rate passt sich an. Eine noch nicht erfasste Änderung verschiebt diese Zahlen.
+        opening_payment: Anfangsrate
         interest: Zinsen
         monthly_payment: Monatsrate
         number: "Nr."
