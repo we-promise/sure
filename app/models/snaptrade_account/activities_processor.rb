@@ -185,15 +185,7 @@ class SnaptradeAccount::ActivitiesProcessor
       activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
                       parse_date(data[:trade_date]) || parse_date(data["trade_date"]) || Date.current
 
-      # Extract currency - handle both nested object and string
-      currency_data = data[:currency] || data["currency"] || symbol_data[:currency] || symbol_data["currency"]
-      currency = if currency_data.is_a?(Hash)
-        currency_data.with_indifferent_access[:code]
-      elsif currency_data.is_a?(String)
-        currency_data
-      else
-        account.currency
-      end
+      currency = extract_currency(data, symbol_data, account.currency)
 
       description = data[:description] || data["description"] || "#{activity_type} #{ticker}"
 
@@ -233,14 +225,7 @@ class SnaptradeAccount::ActivitiesProcessor
       label = label_from_type(activity_type)
       description = data[:description] || data["description"] || build_trade_income_name(label, security&.ticker || ticker)
 
-      currency_data = data[:currency] || data["currency"]
-      currency = if currency_data.is_a?(Hash)
-        currency_data.with_indifferent_access[:code]
-      elsif currency_data.is_a?(String)
-        currency_data
-      else
-        account.currency
-      end
+      currency = extract_currency(data, {}, account.currency)
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing #{label.downcase}: amount=#{amount} date=#{activity_date}"
 
@@ -285,15 +270,7 @@ class SnaptradeAccount::ActivitiesProcessor
       # Normalize amount sign for certain activity types
       amount = normalize_cash_amount(amount, activity_type)
 
-      # Extract currency - handle both nested object and string
-      currency_data = data[:currency] || data["currency"]
-      currency = if currency_data.is_a?(Hash)
-        currency_data.with_indifferent_access[:code]
-      elsif currency_data.is_a?(String)
-        currency_data
-      else
-        account.currency
-      end
+      currency = extract_currency(data, {}, account.currency)
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing cash activity: type=#{activity_type} amount=#{amount} date=#{activity_date}"
 
