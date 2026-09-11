@@ -7,7 +7,9 @@ export default class extends Controller {
     entryableId: String,
     currentLabel: String,
     entryableType: String,
-    convertUrl: String
+    convertUrl: String,
+    viewCtx: { type: String, default: "global" },
+    isFiltered: { type: Boolean, default: false }
   }
 
   connect() {
@@ -79,6 +81,8 @@ export default class extends Controller {
           "Accept": "text/vnd.turbo-stream.html"
         },
         body: JSON.stringify({
+          view_ctx: this.viewCtxValue,
+          is_filtered: this.isFilteredValue,
           entry: {
             entryable_attributes: {
               id: this.entryableIdValue,

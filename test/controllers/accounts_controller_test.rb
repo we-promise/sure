@@ -172,7 +172,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     drawer_link = row.at_css("a[data-clickable-row-target='link']")
 
     assert_equal "click->clickable-row#open", row["data-action"]
-    assert_equal entry_path(entry), drawer_link["href"]
+    assert_equal entry_path(entry, view_ctx: "account", is_filtered: false), drawer_link["href"]
   end
 
   test "show avoids N+1 split-parent queries across paginated entries" do

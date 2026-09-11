@@ -65,18 +65,18 @@
               <% group_split_entries(entries, @split_parents).each do |item| %>
                 <% if item.is_a?(EntriesHelper::SplitGroup) %>
                   <div class="split-group">
-                    <%= render "transactions/split_parent_row", entry: item.parent %>
+                    <%= render "transactions/split_parent_row", entry: item.parent, view_ctx: "global", is_filtered: q.present? %>
                     <% item.children.each do |child_entry| %>
-                      <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "global", in_split_group: true, running_balance: @running_balances[child_entry.id] %>
+                      <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "global", in_split_group: true, is_filtered: q.present?, running_balance: @running_balances[child_entry.id] %>
                     <% end %>
                   </div>
                 <% else %>
-                  <%= render "transactions/compact_transaction", entry: item, view_ctx: "global", in_split_group: false, running_balance: @running_balances[item.id] %>
+                  <%= render "transactions/compact_transaction", entry: item, view_ctx: "global", in_split_group: false, is_filtered: q.present?, running_balance: @running_balances[item.id] %>
                 <% end %>
               <% end %>
             <% else %>
               <% entries.each do |entry| %>
-                <%= render "transactions/compact_transaction", entry: entry, view_ctx: "global", in_split_group: false, running_balance: @running_balances[entry.id] %>
+                <%= render "transactions/compact_transaction", entry: entry, view_ctx: "global", in_split_group: false, is_filtered: q.present?, running_balance: @running_balances[entry.id] %>
               <% end %>
             <% end %>
           </div>
@@ -88,18 +88,18 @@
               <% group_split_entries(entries, @split_parents).each do |item| %>
                 <% if item.is_a?(EntriesHelper::SplitGroup) %>
                   <div class="split-group">
-                    <%= render "transactions/split_parent_row", entry: item.parent %>
+                    <%= render "transactions/split_parent_row", entry: item.parent, view_ctx: "global", is_filtered: q.present? %>
                     <% item.children.each do |child_entry| %>
-                      <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "global", in_split_group: true %>
+                      <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "global", in_split_group: true, is_filtered: q.present? %>
                     <% end %>
                   </div>
                 <% else %>
-                  <%= render "transactions/compact_transaction", entry: item, view_ctx: "global", in_split_group: false %>
+                  <%= render "transactions/compact_transaction", entry: item, view_ctx: "global", in_split_group: false, is_filtered: q.present? %>
                 <% end %>
               <% end %>
             <% else %>
               <% entries.each do |entry| %>
-                <%= render "transactions/compact_transaction", entry: entry, view_ctx: "global", in_split_group: false %>
+                <%= render "transactions/compact_transaction", entry: entry, view_ctx: "global", in_split_group: false, is_filtered: q.present? %>
               <% end %>
             <% end %>
           <% end %>

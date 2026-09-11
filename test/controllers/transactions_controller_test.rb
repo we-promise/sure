@@ -390,6 +390,121 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
+  test "turbo_stream update renders balance from explicit view_ctx/is_filtered params without referer" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    entry_row_html = turbo_stream_row_html(@entry)
+    assert_match(/justify-end px-2/, entry_row_html, "unfiltered account context should render the running balance")
+  end
+
+  test "turbo_stream update hides balance for explicit filtered account context" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "1",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+  end
+
+  test "turbo_stream update hides balance for explicit global context" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+  end
+
+  test "explicit view_ctx params win over referer" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "explicit global context must win over an account referer")
+  end
+
+  test "turbo_stream update falls back to referer when explicit params are absent" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "unfiltered account referer fallback should render the running balance")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: "Updated again",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, headers: { "Referer" => "#{account_url(@entry.account)}?search=foo" }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "filtered account referer fallback should hide the running balance")
+  end
+
+  test "show drawer renders explicit view_ctx/is_filtered hidden fields" do
+    get transaction_url(@entry, view_ctx: "account", is_filtered: "1")
+
+    assert_response :success
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
+    assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
+  end
+
+  test "failed update re-render keeps explicit view_ctx/is_filtered hidden fields" do
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "1",
+      entry: {
+        name: "",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
+    assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)
@@ -518,7 +633,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     drawer_link = row.at_css("a[data-clickable-row-target='link']")
 
     assert_equal "click->clickable-row#open", row["data-action"]
-    assert_equal entry_path(@entry), drawer_link["href"]
+    assert_equal entry_path(@entry, view_ctx: "global", is_filtered: false), drawer_link["href"]
   end
 
   test "split parent row delegates whole-row clicks to the drawer link" do
@@ -537,7 +652,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     drawer_link = row.at_css("a[data-clickable-row-target='link']")
 
     assert_equal "click->clickable-row#open", row["data-action"]
-    assert_equal entry_path(entry), drawer_link["href"]
+    assert_equal entry_path(entry, view_ctx: "global", is_filtered: false), drawer_link["href"]
   end
 
   test "can paginate" do
@@ -1743,6 +1858,15 @@ end
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+    end
+
+    # Extracts the entry-row turbo-stream's inner HTML from an update response,
+    # so compact-row rendering (e.g. the running-balance column) can be asserted.
+    def turbo_stream_row_html(entry)
+      doc = Nokogiri::HTML::Document.parse(response.body)
+      stream = doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(entry) }
+      assert stream.present?, "Expected a turbo-stream replacing the entry row"
+      stream.to_html
     end
 
     def normalize_sql_query(sql)

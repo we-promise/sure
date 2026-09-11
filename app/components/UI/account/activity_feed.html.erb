@@ -213,41 +213,41 @@
                   <% helpers.group_split_entries(flat_entries, feed_data.split_parents).each do |item| %>
                     <% if item.is_a?(EntriesHelper::SplitGroup) %>
                       <div class="split-group">
-                        <%= render "transactions/split_parent_row", entry: item.parent %>
+                        <%= render "transactions/split_parent_row", entry: item.parent, view_ctx: "account", is_filtered: filtered? %>
                         <% item.children.each do |child_entry| %>
                           <% if child_entry.entryable_type == "Transaction" %>
-                            <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "account", in_split_group: true, running_balance: running_balances[child_entry.id], hide_balance: filtered? %>
+                            <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "account", in_split_group: true, running_balance: running_balances[child_entry.id], hide_balance: filtered?, is_filtered: filtered? %>
                           <% elsif child_entry.entryable_type == "Trade" %>
-                            <%= render "trades/compact_trade", entry: child_entry, view_ctx: "account", in_split_group: false, running_balance: running_balances[child_entry.id], hide_balance: filtered? %>
+                            <%= render "trades/compact_trade", entry: child_entry, view_ctx: "account", in_split_group: false, running_balance: running_balances[child_entry.id], hide_balance: filtered?, is_filtered: filtered? %>
                           <% elsif child_entry.entryable_type == "Valuation" %>
                             <%= render "valuations/compact_valuation", entry: child_entry, running_balance: running_balances[child_entry.id], hide_balance: filtered? %>
                           <% else %>
-                            <%= render child_entry, view_ctx: "account" %>
+                            <%= render child_entry, view_ctx: "account", is_filtered: filtered? %>
                           <% end %>
                         <% end %>
                       </div>
                     <% else %>
                       <% if item.entryable_type == "Transaction" %>
-                        <%= render "transactions/compact_transaction", entry: item, view_ctx: "account", in_split_group: false, running_balance: running_balances[item.id], hide_balance: filtered? %>
+                        <%= render "transactions/compact_transaction", entry: item, view_ctx: "account", in_split_group: false, running_balance: running_balances[item.id], hide_balance: filtered?, is_filtered: filtered? %>
                       <% elsif item.entryable_type == "Trade" %>
-                        <%= render "trades/compact_trade", entry: item, view_ctx: "account", in_split_group: false, running_balance: running_balances[item.id], hide_balance: filtered? %>
+                        <%= render "trades/compact_trade", entry: item, view_ctx: "account", in_split_group: false, running_balance: running_balances[item.id], hide_balance: filtered?, is_filtered: filtered? %>
                       <% elsif item.entryable_type == "Valuation" %>
                         <%= render "valuations/compact_valuation", entry: item, running_balance: running_balances[item.id], hide_balance: filtered? %>
                       <% else %>
-                        <%= render item, view_ctx: "account" %>
+                        <%= render item, view_ctx: "account", is_filtered: filtered? %>
                       <% end %>
                     <% end %>
                   <% end %>
                 <% else %>
                   <% flat_entries.each do |entry| %>
                     <% if entry.entryable_type == "Transaction" %>
-                      <%= render "transactions/compact_transaction", entry: entry, view_ctx: "account", in_split_group: false, running_balance: running_balances[entry.id], hide_balance: filtered? %>
+                      <%= render "transactions/compact_transaction", entry: entry, view_ctx: "account", in_split_group: false, running_balance: running_balances[entry.id], hide_balance: filtered?, is_filtered: filtered? %>
                     <% elsif entry.entryable_type == "Trade" %>
-                      <%= render "trades/compact_trade", entry: entry, view_ctx: "account", in_split_group: false, running_balance: running_balances[entry.id], hide_balance: filtered? %>
+                      <%= render "trades/compact_trade", entry: entry, view_ctx: "account", in_split_group: false, running_balance: running_balances[entry.id], hide_balance: filtered?, is_filtered: filtered? %>
                     <% elsif entry.entryable_type == "Valuation" %>
                       <%= render "valuations/compact_valuation", entry: entry, running_balance: running_balances[entry.id], hide_balance: filtered? %>
                     <% else %>
-                      <%= render entry, view_ctx: "account" %>
+                      <%= render entry, view_ctx: "account", is_filtered: filtered? %>
                     <% end %>
                   <% end %>
                 <% end %>
@@ -260,7 +260,8 @@
                       account: account,
                       data: activity_date_data,
                       compact: compact?,
-                      group_by_date: group_by_date
+                      group_by_date: group_by_date,
+                      filtered: filtered?
                     ) %>
               <% end %>
             </div>

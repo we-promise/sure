@@ -55,16 +55,13 @@ class TradesController < ApplicationController
         format.turbo_stream do
           is_compact = Current.user.preview_features_enabled? && Current.user.transactions_compact?
           is_flat_compact = is_compact && !Current.user.transactions_group_by_date?
-          view_ctx = request.referer&.include?("/accounts/") ? "account" : "global" if is_compact
+          assign_compact_row_context
+          view_ctx, is_filtered = @view_ctx, @is_filtered
           running_balance = nil
           hide_balance = true
           if is_flat_compact
             running_balance = Balance.find_by(account_id: @entry.account_id, date: @entry.date)&.end_balance_money || Money.new(0, @entry.currency)
-            hide_balance = if view_ctx == "global"
-              true
-            else
-              request.referer&.match?(/q\[|search=|categories|merchants|tags|types|amount|status|start_date|end_date/) ? true : false
-            end
+            hide_balance = view_ctx != "account" || is_filtered ? true : false
           end
           entry_row_stream = if is_compact
             turbo_stream.replace(
@@ -92,6 +89,7 @@ class TradesController < ApplicationController
         end
       end
     else
+      assign_compact_row_context
       render :show, status: :unprocessable_entity, formats: [ :html ]
     end
   end

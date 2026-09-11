@@ -530,4 +530,80 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert entry_row_stream.present?, "Expected a turbo-stream replacing the entry row"
     assert_match(/grid-cols-12/, entry_row_stream.to_html)
   end
+
+  test "turbo_stream update renders balance from explicit view_ctx/is_filtered params without referer" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch trade_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "0",
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "unfiltered account context should render the running balance")
+  end
+
+  test "turbo_stream update hides balance for explicit filtered or global context" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch trade_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "1",
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 50,
+          price: 25
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+
+    patch trade_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        currency: "USD",
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          qty: 60,
+          price: 25
+        }
+      }
+    }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "explicit global context must win over an account referer")
+  end
+
+  test "trade show drawer renders explicit view_ctx/is_filtered hidden fields" do
+    get trade_url(@entry, view_ctx: "account", is_filtered: "1")
+
+    assert_response :success
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
+    assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
+  end
+
+  private
+    # Extracts the entry-row turbo-stream's inner HTML from an update response,
+    # so compact-row rendering (e.g. the running-balance column) can be asserted.
+    def turbo_stream_row_html(entry)
+      doc = Nokogiri::HTML::Document.parse(response.body)
+      stream = doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(entry) }
+      assert stream.present?, "Expected a turbo-stream replacing the entry row"
+      stream.to_html
+    end
 end
