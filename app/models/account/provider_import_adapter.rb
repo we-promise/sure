@@ -1051,10 +1051,12 @@ class Account::ProviderImportAdapter
     # Recognizes legacy income transactions that were imported as Transactions instead of Trades.
     #
     # @param entry [Entry] The entry to check
-    # @param activity_label [String] The investment activity label of the entry
+    # @param activity_label [String] The activity label of the incoming trade
     # @return [Boolean] True if the entry is a legacy income transaction, false otherwise
     def legacy_trade_income_transaction?(entry, activity_label)
-      Trade::INCOME_LABELS.include?(activity_label) && entry.entryable.is_a?(Transaction)
+      Trade::INCOME_LABELS.include?(activity_label) &&
+        entry.entryable.is_a?(Transaction) &&
+        Trade::INCOME_LABELS.include?(entry.entryable.investment_activity_label)
     end
 
     # How often to record the same account's legacy-trade-income skips.

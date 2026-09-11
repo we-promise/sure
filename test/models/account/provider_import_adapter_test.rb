@@ -722,6 +722,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "still raises when an income trade collides with a transaction that is not income" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+
+    adapter.import_transaction(
+      external_id: "fee_collision",
+      amount: 1.50,
+      currency: "USD",
+      date: Date.today,
+      name: "Account fee",
+      source: "plaid",
+      investment_activity_label: "Fee"
+    )
+
+    assert_raises(ArgumentError) do
+      adapter.import_trade(
+        external_id: "fee_collision",
+        security: securities(:aapl),
+        quantity: 0,
+        price: 0,
+        amount: -25.00,
+        currency: "USD",
+        date: Date.today,
+        source: "plaid",
+        activity_label: "Dividend"
+      )
+    end
+  end
+
   test "records a debug log entry when a legacy trade income transaction is skipped" do
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)
@@ -732,7 +761,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       currency: "USD",
       date: Date.today,
       name: "Test Transaction",
-      source: "plaid"
+      source: "plaid",
+      investment_activity_label: "Dividend"
     )
 
     assert_difference "DebugLogEntry.count", 1 do
@@ -772,7 +802,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         currency: "USD",
         date: Date.today,
         name: "Test Transaction #{i}",
-        source: "plaid"
+        source: "plaid",
+        investment_activity_label: "Dividend"
       )
     end
 
