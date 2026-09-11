@@ -168,6 +168,13 @@ class EnableBankingAccount < ApplicationRecord
     target.with_lock do
       target.update!(iban: iban) if target.iban.blank?
     end
+  rescue ActiveRecord::RecordInvalid => e
+    # Another account in the family already has this IBAN (e.g. the user
+    # created a manual account, then also linked the real one via Enable
+    # Banking) -- this is optional metadata, not something that should fail
+    # the link/sync it's piggybacking on. Account linking, balance and
+    # transaction sync all continue unaffected.
+    Rails.logger.warn("EnableBankingAccount#propagate_iban_to_account! - Failed to set iban on account #{target&.id}: #{e.message}")
   end
 
   private
