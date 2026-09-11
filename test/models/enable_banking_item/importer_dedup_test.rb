@@ -179,6 +179,38 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 1, result.count
   end
 
+  test "prefers an iban-bearing pending row over a booked row that lost its iban" do
+    # Some ASPSPs drop counterparty account data once a transaction settles
+    # (the booked delivery has less detail than the earlier pending one).
+    # IBAN presence must outrank BOOK/PDNG status when picking the group's
+    # representative, or dedup would silently discard real IBAN data by
+    # keeping the thinner booked row just because it settled.
+    transactions = [
+      {
+        entry_reference: "ref_pending_with_iban",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_booked_without_iban",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_pending_with_iban", result.first[:entry_reference]
+  end
+
   test "keeps transactions with different creditors" do
     transactions = [
       {

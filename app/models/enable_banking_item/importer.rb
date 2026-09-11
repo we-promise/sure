@@ -597,20 +597,24 @@ class EnableBankingItem::Importer
 
       duplicates_removed = 0
 
-      # Within each duplicate group, keep the richest representative --
-      # BOOK over PDNG, then a present counterparty IBAN -- rather than
-      # whichever row the API happened to return first. Array order isn't a
-      # reliability signal, and picking the first row arbitrarily could
-      # discard a settled/IBAN-bearing row in favor of a thinner one (or, in
-      # a bucket a blank-IBAN row aliases into, discard the row that
+      # Within each duplicate group, keep the richest representative -- a
+      # present counterparty IBAN first, then BOOK over PDNG -- rather than
+      # whichever row the API happened to return first. IBAN ranks above
+      # status: a BOOK row that lost its IBAN in a later delivery (some
+      # ASPSPs drop counterparty data once a transaction settles) must not
+      # win over a PDNG row from the same group that still carries it, or the
+      # dedup pass would silently discard real IBAN data. Array order isn't a
+      # reliability signal either, and picking the first row arbitrarily
+      # could discard a settled/IBAN-bearing row in favor of a thinner one
+      # (or, in a bucket a blank-IBAN row aliases into, discard the row that
       # actually owns that IBAN).
       result = keyed_with_index.values.map do |group|
         duplicates_removed += group.size - 1 if group.size > 1
 
         group.min_by do |tx, index|
           [
-            tx[:status].to_s == "BOOK" ? 0 : 1,
             counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present? ? 0 : 1,
+            tx[:status].to_s == "BOOK" ? 0 : 1,
             index
           ]
         end
