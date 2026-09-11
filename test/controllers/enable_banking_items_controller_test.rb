@@ -51,9 +51,23 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[name=sync_start_date][type=date][required]" do |fields|
+      assert_includes fields.first["class"].to_s, "form-field__input"
       assert_equal EnableBankingItem.minimum_sync_start_date.to_s, fields.first["min"]
       assert_equal Date.current.to_s, fields.first["max"]
     end
+  end
+
+  test "complete account setup rejects a sync date outside the provider limit" do
+    invalid_date = (EnableBankingItem.minimum_sync_start_date - 1.day).iso8601
+
+    post complete_account_setup_enable_banking_item_url(@item), params: {
+      sync_start_date: invalid_date,
+      account_types: {}
+    }
+
+    assert_response :see_other
+    assert_redirected_to setup_accounts_enable_banking_item_path(@item)
+    assert_equal I18n.t("enable_banking_items.complete_account_setup.invalid_sync_start_date"), flash[:alert]
   end
 
   test "link existing account persists sync date and starts historical sync" do

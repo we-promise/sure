@@ -94,21 +94,31 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
 
     @account.sync_start_date = EnableBankingItem.minimum_sync_start_date
     assert @account.valid?
+
+    @account.sync_start_date = Date.current
+    assert @account.valid?
   end
 
-  test "does not invalidate an older persisted sync start date on snapshot updates" do
-    @account.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+  test "does not invalidate an older persisted sync start date on saves and imports" do
+    aged_date = 2.years.ago.to_date - 1.day
+    @account.update_column(:sync_start_date, aged_date)
     @account.reload
 
     assert_nothing_raised do
+      @account.update!(current_balance: 123.45)
       @account.upsert_enable_banking_snapshot!({
         uid: @account.uid,
         identification_hash: @account.uid,
         currency: "EUR",
         cash_account_type: "CACC"
       })
+      @account.upsert_enable_banking_transactions_snapshot!([
+        { "booking_date" => Date.current.to_s, "transaction_amount" => { "amount" => "1.00", "currency" => "EUR" } }
+      ])
     end
 
+    reloaded_account = @account.reload
+    assert_equal aged_date, reloaded_account.sync_start_date
     assert_equal(
       {
         "uid" => @account.uid,
@@ -116,8 +126,9 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
         "currency" => "EUR",
         "cash_account_type" => "CACC"
       },
-      @account.reload.raw_payload
+      reloaded_account.raw_payload
     )
+    assert_equal 1, reloaded_account.raw_transactions_payload.size
   end
 
   test "is case insensitive for account type mapping" do
