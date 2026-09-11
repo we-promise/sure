@@ -2,154 +2,297 @@
 pl:
   settings:
     hostings:
+      alpha_vantage_settings:
+        description: Wprowadź klucz API z Alpha Vantage. Obsługuje europejskie ETF-y na London Stock Exchange, XETRA i innych giełdach.
+        env_configured_message: Skonfigurowano przez zmienną środowiskową ALPHA_VANTAGE_API_KEY.
+        label: Klucz API
+        no_health_check_note: Sprawdzenie stanu połączenia jest niedostępne dla tego dostawcy ze względu na ścisły limit zapytań.
+        placeholder: Wprowadź tutaj swój klucz API Alpha Vantage
+        rate_limit_warning: Darmowy plan Alpha Vantage jest ograniczony do 25 zapytań API dziennie. Najlepiej sprawdza się jako dodatkowy dostawca dla europejskich ETF-ów niedostępnych u innych dostawców.
+        show_details: (pokaż szczegóły)
+        step_1_html: Wejdź na <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> i odbierz darmowy klucz API.
+        step_2: Skopiuj klucz API i wklej go poniżej.
+        title: Alpha Vantage
+      anthropic_settings:
+        access_token_label: Klucz API
+        access_token_placeholder: Wprowadź swój klucz API Anthropic
+        base_url_label: Bazowy URL (opcjonalnie)
+        base_url_placeholder: https://api.anthropic.com (domyślnie)
+        description: Wprowadź swój klucz API Anthropic. Opcjonalnie wskaż bazowy URL na AWS Bedrock lub GCP Vertex.
+        env_configured_message: Skonfigurowano przez zmienne środowiskowe.
+        model_help: Używany do czatu i przetwarzania PDF. Operacje wsadowe (kategoryzacja, wykrywanie kontrahenta) domyślnie korzystają z Haiku ze względu na koszt.
+        model_label: Domyślny model (opcjonalnie)
+        model_placeholder: claude-sonnet-4-6 (domyślnie)
+        title: Anthropic (Claude)
+      assistant_settings:
+        agent_id_help: Kieruje do konkretnego agenta, gdy dostawca hostuje ich wiele. Pozostaw puste, aby użyć domyślnego.
+        agent_id_label: ID agenta (opcjonalne)
+        agent_id_placeholder: main (domyślnie)
+        confirm_disconnect:
+          body: To usunie zapisany URL, token i ID agenta oraz przełączy na asystenta wbudowanego. Możesz połączyć ponownie później, podając nowe dane.
+          title: Rozłączyć zewnętrznego asystenta?
+        description: Wybierz, jak odpowiada asystent czatu. Wbudowany asystent korzysta bezpośrednio ze skonfigurowanego dostawcy LLM. Zewnętrzny deleguje zapytania do zdalnego agenta AI, który może korzystać z narzędzi finansowych Sure przez MCP.
+        disconnect_button: Rozłącz
+        disconnect_description: Usuń połączenie z zewnętrznym asystentem i przełącz z powrotem na asystenta wbudowanego.
+        disconnect_title: Połączenie zewnętrzne
+        env_configured_external: Pomyślnie skonfigurowano przez zmienne środowiskowe.
+        env_notice: Typ asystenta jest zablokowany na '%{type}' przez zmienną środowiskową ASSISTANT_TYPE.
+        external_configured: Skonfigurowany
+        external_not_configured: Nieskonfigurowany. Wprowadź poniżej URL i token albo ustaw zmienne środowiskowe EXTERNAL_ASSISTANT_URL i EXTERNAL_ASSISTANT_TOKEN.
+        external_status: Endpoint zewnętrznego asystenta
+        title: Asystent AI
+        token_help: Token uwierzytelniający dostarczony przez zewnętrznego agenta. Jest wysyłany jako token Bearer z każdym żądaniem.
+        token_label: Token API
+        token_placeholder: Wprowadź token od dostawcy agenta
+        type_builtin: Wbudowany (bezpośredni LLM)
+        type_external: Zewnętrzny (zdalny agent)
+        type_label: Typ asystenta
+        url_help: Pełny URL endpointu API Twojego agenta. Otrzymasz go od dostawcy agenta.
+        url_label: URL endpointu
+        url_placeholder: https://your-agent-host/v1/chat
+      brand_fetch_settings:
+        description: Wprowadź Client ID otrzymany od Brandfetch
+        env_configured_message: Skonfigurowano identyfikator klienta Brandfetch przez zmienną środowiskową BRAND_FETCH_CLIENT_ID.
+        high_res_description: Gdy włączone, logotypy będą pobierane w rozdzielczości 120x120 zamiast 40x40. Zapewnia to ostrzejsze obrazy na ekranach o wysokim DPI.
+        high_res_label: Włącz logotypy o wysokiej rozdzielczości
+        label: Client ID
+        placeholder: Wprowadź tutaj swój Client ID
+        setup_step_1_html: Wejdź na <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> i załóż darmowe konto Brandfetch Developer.
+        setup_step_2_html: Przejdź do strony <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        setup_step_3: Kliknij ikonę oka w sekcji "Your Client ID", aby odsłonić identyfikator klienta, i wklej go poniżej.
+        show_details: (pokaż szczegóły)
+        title: Ustawienia Brandfetch
+      clear_cache:
+        cache_cleared: Pamięć podręczna danych została wyczyszczona. Zakończenie operacji może zająć chwilę.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Zewnętrzny asystent został rozłączony
+      ensure_admin:
+        not_authorized: Nie masz uprawnień do wykonania tej akcji
+      ensure_super_admin_for_onboarding:
+        not_authorized: Nie masz uprawnień do wykonania tej akcji
+      eodhd_settings:
+        description: Wprowadź token API otrzymany od EODHD. Obsługuje europejskie ETF-y na LSE, XETRA i innych międzynarodowych giełdach.
+        env_configured_message: Skonfigurowano przez zmienną środowiskową EODHD_API_KEY.
+        label: Token API
+        placeholder: Wprowadź tutaj swój token API EODHD
+        rate_limit_warning: Darmowy plan EODHD jest ograniczony do 20 zapytań API dziennie. Najlepiej sprawdza się jako dodatkowy dostawca dla europejskich ETF-ów niedostępnych u innych dostawców.
+        show_details: (pokaż szczegóły)
+        step_1_html: Wejdź na <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> i załóż darmowe konto.
+        step_2_html: Przejdź do <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a>, aby znaleźć token API.
+        step_3: Skopiuj token API i wklej go poniżej.
+        title: EODHD
+      gus_sdp_settings:
+        clear_api_key: Wyczyść zapisany klucz API
+        clear_api_key_confirm: Usunąć zapisany klucz API GUS?
+        configured_in_settings_message: Klucz API skonfigurowany w ustawieniach.
+        configured_via_env: Klucz API jest skonfigurowany przez zmienną środowiskową GUS_SDP_API_KEY.
+        description: Opcjonalny klucz API do danych inflacyjnych GUS SDP. Pozostaw puste, aby korzystać z bezpłatnego poziomu anonimowego.
+        end_year: Rok końcowy
+        env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową GUS_SDP_API_KEY.
+        free_default_message: Brak skonfigurowanego klucza API. Domyślnie używany jest bezpłatny dostęp anonimowy.
+        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową GUS_INFLATION_IMPORT_ENABLED.
+        import_enabled_help: Domyślnie wyłączone. Włącz tylko, jeśli chcesz automatycznie importować stawki CPI do obliczeń EOD/ROD.
+        import_enabled_label: Włącz automatyczny import CPI GUS
+        import_now: Importuj historię CPI teraz
+        label: Klucz API
+        last_count: Zaimportowane rekordy
+        last_error: Ostatni błąd
+        last_import: Ostatni import
+        last_range: Ostatni zakres
+        never: Nigdy
+        placeholder: Wprowadź klucz API GUS SDP
+        start_year: Rok początkowy
+        stored_range: Zapisany zakres
+        stored_records: Zapisane rekordy
+        title: GUS SDP (Inflacja)
+      import_gus_inflation_rates:
+        import_disabled: Import CPI jest wyłączony. Najpierw włącz go w ustawieniach.
+        import_enqueued: Import CPI został dodany do kolejki.
+        invalid_import_range: Nieprawidłowy zakres lat dla importu CPI.
       invite_code_settings:
+        default_family_description: Dodaj nowych użytkowników do tej rodziny/grupy tylko wtedy, gdy nie mają zaproszenia.
+        default_family_none: Brak (utwórz nową rodzinę)
+        default_family_title: Domyślna rodzina dla nowych użytkowników
         description: Kontroluj, jak nowe osoby rejestrują się w Twojej instancji %{product}.
         email_confirmation_description: Gdy opcja jest włączona, użytkownicy muszą potwierdzić adres e-mail przy jego zmianie.
         email_confirmation_title: Wymagaj potwierdzenia e-mail
-        default_family_title: Domyślna rodzina dla nowych użytkowników
-        default_family_description: Dodaj nowych użytkowników do tej rodziny/grupy tylko wtedy, gdy nie mają zaproszenia.
-        default_family_none: Brak (utwórz nową rodzinę)
         generate_tokens: Wygeneruj nowy kod
         generated_tokens: Wygenerowane kody
-        title: Onboarding
         states:
-          open: Otwarty
           closed: Zamknięty
           invite_only: Tylko na zaproszenie
+          open: Otwarty
+        title: Onboarding
+      llm_provider_selector:
+        data_retention: Dane wejściowe API domyślnie nie są używane do trenowania modeli. Hostowane API dostawców przechowują dane przez około 30 dni w celach bezpieczeństwa. Własne lub samodzielnie hostowane endpointy podlegają Twojej własnej polityce.
+        data_retention_heading: Obsługa danych
+        description: Wybierz, który LLM napędza czat AI. Operacje wsadowe (kategoryzacja transakcji, wykrywanie kontrahenta i przetwarzanie PDF) obecnie zawsze korzystają z OpenAI.
+        env_configured_message: Skonfigurowano przez zmienną środowiskową LLM_PROVIDER.
+        not_configured_hint: Dodaj poniżej klucz API %{provider}, aby go aktywować.
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Zmiana dostawcy zacznie obowiązywać przy następnym czacie. Skonfiguruj poniżej dane uwierzytelniające aktywnego dostawcy.
+        provider_label: Aktywny dostawca LLM
+        provider_openai: OpenAI
+        title: Dostawca AI
+      not_authorized: Nie masz uprawnień do wykonania tej akcji
+      openai_settings:
+        access_token_label: Token dostępu
+        access_token_placeholder: Wprowadź tutaj token dostępu
+        ai_response_timeout_help: 'Domyślnie: 90. Obejmuje całą turę, więc licz to jako sumę: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, plus czas wykonania narzędzi i czas w kolejce. Obniżenie ASSISTANT_MAX_TOOL_CALL_ITERATIONS zmniejsza potrzebną wartość i często jest lepszą dźwignią na wolnym sprzęcie.'
+        ai_response_timeout_label: Limit czasu odpowiedzi w sekundach (opcjonalnie)
+        budget_description: Dotyczy wywołań kompatybilnych z OpenAI (czat, auto-kategoryzacja, wykrywanie kontrahenta i przetwarzanie PDF). Wartości domyślne są ostrożne dla lokalnych modeli z małym oknem kontekstu. Zwiększ dla modeli chmurowych z większym oknem kontekstu.
+        budget_heading: Budżet tokenów
+        context_window_help: 'Łączna liczba tokenów akceptowana przez model. Domyślnie: 2048, zwiększ do 8192 lub więcej dla chmurowego OpenAI albo lokalnych modeli z dużym kontekstem.'
+        context_window_label: Okno kontekstu (opcjonalnie)
+        description: Wprowadź token dostępu i opcjonalnie skonfiguruj niestandardowego dostawcę zgodnego z OpenAI
+        env_configured_message: Pomyślnie skonfigurowano przez zmienne środowiskowe.
+        json_mode_auto: Auto (zalecane)
+        json_mode_help: Tryb ścisły najlepiej działa z modelami rozumującymi (qwen-thinking, deepseek-reasoner). Tryb brak najlepiej działa z modelami standardowymi (llama, mistral, gpt-oss).
+        json_mode_json_object: Obiekt JSON
+        json_mode_label: Tryb JSON
+        json_mode_none: Brak (najlepszy dla modeli standardowych)
+        json_mode_strict: Ścisły (najlepszy dla modeli rozumujących)
+        max_items_per_call_help: 'Górny limit dla wsadów auto-kategoryzacji / wykrywania kontrahenta. Domyślnie: 25. Większe wsady są automatycznie dzielone, aby zmieścić się w oknie kontekstu.'
+        max_items_per_call_label: Maks. elementów na wsad (opcjonalnie)
+        max_response_tokens_help: 'Tokeny zarezerwowane na odpowiedź modelu. Domyślnie: 512. Zmniejsz, aby zwolnić miejsce na dłuższą historię.'
+        max_response_tokens_label: Maks. tokenów odpowiedzi (opcjonalnie)
+        model_function_calling_help: Asystent AI odczytuje Twoje dane przez wywołania funkcji, więc wybierz model, który Twój dostawca dokumentuje jako obsługujący narzędzia/wywoływanie funkcji. Modele bez tej funkcji powodują niejasny błąd dostawcy w czacie.
+        model_function_calling_link: Sprawdź skonfigurowany model
+        model_label: Model (opcjonalne)
+        model_placeholder: gpt-4.1 (domyślnie)
+        openai_request_timeout_help: 'Domyślnie: 60. Dotyczy każdego żądania HTTP zgodnego z OpenAI, w tym automatycznej kategoryzacji, wykrywania sprzedawcy, czatu, przetwarzania PDF oraz wywołań magazynu wektorów. OPENAI_REQUEST_TIMEOUT nadpisuje to pole.'
+        openai_request_timeout_label: Limit czasu żądania w sekundach (opcjonalnie)
+        timeout_description: Określa, jak długo mogą trwać wywołania modeli zgodnych z OpenAI, zanim Sure zrezygnuje. Zwiększ te wartości, jeśli uruchamiasz lokalny model na wolnym sprzęcie.
+        timeout_heading: Limity czasu
+        title: OpenAI
+        uri_base_label: Bazowy URL API (opcjonalne)
+        uri_base_placeholder: https://api.openai.com/v1 (domyślnie)
+      provider_selection:
+        binance_public_hint: za darmo, bez klucza API - tylko kryptowaluty (BTC, ETH itd.)
+        description: Wybierz usługę do pobierania kursów walut i cen papierów wartościowych. Yahoo Finance jest darmowe i nie wymaga klucza API. Twelve Data wymaga darmowego klucza API, ale może oferować szersze pokrycie danych.
+        env_configured_message: Wybór dostawcy jest wyłączony, ponieważ ustawiono zmienne środowiskowe (EXCHANGE_RATE_PROVIDER lub SECURITIES_PROVIDER). Aby włączyć wybór tutaj, usuń te zmienne z konfiguracji.
+        exchange_rate_description: Wybierz jednego dostawcę do pobierania kursów walut.
+        exchange_rate_provider_label: Dostawca kursów walut
+        exchange_rate_title: Dostawca kursów walut
+        mfapi_hint: za darmo, bez klucza API - tylko indyjskie fundusze inwestycyjne
+        moex_public_hint: za darmo, bez klucza API - rosyjskie akcje, fundusze i obligacje (MOEX), łącznie z kursem RUB
+        providers:
+          alpha_vantage: Alpha Vantage
+          binance_public: Binance
+          eodhd: EODHD
+          frankfurter: Frankfurter
+          mfapi: MFAPI.in
+          moex_public: MOEX
+          tiingo: Tiingo
+          tinkoff_invest: T-Invest (T-Bank)
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+        requires_api_key: wymaga klucza API
+        requires_api_key_alpha_vantage: wymaga klucza API, limit 25 zapytań dziennie
+        requires_api_key_eodhd: wymaga klucza API, limit 20 zapytań dziennie
+        securities_description: Włącz jednego lub więcej dostawców do pobierania cen akcji, ETF-ów i funduszy inwestycyjnych. Podczas wyszukiwania odpytywani są wszyscy włączeni dostawcy, a wyniki są łączone.
+        securities_provider_label: Dostawca papierów wartościowych (cen akcji)
+        securities_title: Dostawcy papierów wartościowych
+        tinkoff_invest_hint: wymaga tokenu tylko do odczytu - ceny rosyjskich akcji/funduszy/obligacji + logotypy marek
+        title: Wybór dostawcy
+        twelve_data_hint: wymaga klucza API, 800 jednostek dziennie
+        yahoo_finance_hint: za darmo, bez klucza API
+      realie_settings:
+        description: Wprowadź klucz API Realie, aby przy dodawaniu nieruchomości pobierać szczegóły i szacunkową wartość nieruchomości w USA. Darmowy plan jest ograniczony do 25 zapytań API miesięcznie, wspólnych dla wyszukiwania nieruchomości i codziennego odświeżania wyceny. W płatnym planie zwiększ limit zmienną środowiskową REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Skonfigurowano przez zmienną środowiskową REALIE_API_KEY.
+        label: Klucz API
+        placeholder: Wprowadź tutaj swój klucz API Realie
+        title: Realie
+        usage: Wykorzystano %{used} z %{limit} miesięcznych zapytań
+      rentcast_settings:
+        description: Wprowadź klucz API RentCast, aby przy dodawaniu nieruchomości pobierać szczegóły i szacunkową wartość nieruchomości w USA. Darmowy plan jest ograniczony do 50 zapytań API miesięcznie, wspólnych dla wyszukiwania nieruchomości i codziennego odświeżania wyceny. W płatnym planie zwiększ limit zmienną środowiskową RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Skonfigurowano przez zmienną środowiskową RENTCAST_API_KEY.
+        label: Klucz API
+        placeholder: Wprowadź tutaj swój klucz API RentCast
+        title: RentCast
+        usage: Wykorzystano %{used} z %{limit} miesięcznych zapytań
       show:
-        general: Ustawienia ogólne
         ai_assistant: Asystent AI
-        financial_data_providers: Dostawcy danych finansowych
-        sync_settings: Ustawienia synchronizacji
-        invites: Kody zaproszeń
-        title: Self-Hosting
-        danger_zone: Strefa ryzyka
         clear_cache: Wyczyść pamięć podręczną danych
         clear_cache_warning: Wyczyszczenie pamięci podręcznej danych usunie wszystkie kursy walut, ceny papierów wartościowych, salda kont i inne dane. Nie usunie to kont, transakcji, kategorii ani innych danych należących do użytkownika.
         confirm_clear_cache:
-          title: Wyczyścić pamięć podręczną danych?
           body: Czy na pewno chcesz wyczyścić pamięć podręczną danych? Spowoduje to usunięcie wszystkich kursów walut, cen papierów wartościowych, sald kont i innych danych. Tej akcji nie można cofnąć.
-      provider_selection:
-        title: Wybór dostawcy
-        description: Wybierz usługę do pobierania kursów walut i cen papierów wartościowych. Yahoo Finance jest darmowe i nie wymaga klucza API. Twelve Data wymaga darmowego klucza API, ale może oferować szersze pokrycie danych.
-        exchange_rate_provider_label: Dostawca kursów walut
-        securities_provider_label: Dostawca papierów wartościowych (cen akcji)
-        env_configured_message: Wybór dostawcy jest wyłączony, ponieważ ustawiono zmienne środowiskowe (EXCHANGE_RATE_PROVIDER lub SECURITIES_PROVIDER). Aby włączyć wybór tutaj, usuń te zmienne z konfiguracji.
-        providers:
-          twelve_data: Twelve Data
-          yahoo_finance: Yahoo Finance
-      assistant_settings:
-        title: Asystent AI
-        description: Wybierz, jak odpowiada asystent czatu. Wbudowany asystent korzysta bezpośrednio ze skonfigurowanego dostawcy LLM. Zewnętrzny deleguje zapytania do zdalnego agenta AI, który może korzystać z narzędzi finansowych Sure przez MCP.
-        type_label: Typ asystenta
-        type_builtin: Wbudowany (bezpośredni LLM)
-        type_external: Zewnętrzny (zdalny agent)
-        external_status: Endpoint zewnętrznego asystenta
-        external_configured: Skonfigurowany
-        external_not_configured: Nieskonfigurowany. Wprowadź poniżej URL i token albo ustaw zmienne środowiskowe EXTERNAL_ASSISTANT_URL i EXTERNAL_ASSISTANT_TOKEN.
-        env_notice: Typ asystenta jest zablokowany na '%{type}' przez zmienną środowiskową ASSISTANT_TYPE.
-        env_configured_external: Pomyślnie skonfigurowano przez zmienne środowiskowe.
-        url_label: URL endpointu
-        url_placeholder: https://your-agent-host/v1/chat
-        url_help: Pełny URL endpointu API Twojego agenta. Otrzymasz go od dostawcy agenta.
-        token_label: Token API
-        token_placeholder: Wprowadź token od dostawcy agenta
-        token_help: Token uwierzytelniający dostarczony przez zewnętrznego agenta. Jest wysyłany jako token Bearer z każdym żądaniem.
-        agent_id_label: ID agenta (opcjonalne)
-        agent_id_placeholder: main (domyślnie)
-        agent_id_help: Kieruje do konkretnego agenta, gdy dostawca hostuje ich wiele. Pozostaw puste, aby użyć domyślnego.
-        disconnect_title: Połączenie zewnętrzne
-        disconnect_description: Usuń połączenie z zewnętrznym asystentem i przełącz z powrotem na asystenta wbudowanego.
-        disconnect_button: Rozłącz
-        confirm_disconnect:
-          title: Rozłączyć zewnętrznego asystenta?
-          body: To usunie zapisany URL, token i ID agenta oraz przełączy na asystenta wbudowanego. Możesz połączyć ponownie później, podając nowe dane.
-      brand_fetch_settings:
-        description: Wprowadź Client ID otrzymany od Brandfetch
-        label: Client ID
-        placeholder: Wprowadź tutaj swój Client ID
-        title: Ustawienia Brandfetch
-        high_res_label: Włącz logotypy o wysokiej rozdzielczości
-        high_res_description: Gdy włączone, logotypy będą pobierane w rozdzielczości 120x120 zamiast 40x40. Zapewnia to ostrzejsze obrazy na ekranach o wysokim DPI.
-      openai_settings:
-        description: Wprowadź token dostępu i opcjonalnie skonfiguruj niestandardowego dostawcę zgodnego z OpenAI
-        env_configured_message: Pomyślnie skonfigurowano przez zmienne środowiskowe.
-        access_token_label: Token dostępu
-        access_token_placeholder: Wprowadź tutaj token dostępu
-        uri_base_label: Bazowy URL API (opcjonalne)
-        uri_base_placeholder: https://api.openai.com/v1 (domyślnie)
-        model_label: Model (opcjonalne)
-        model_placeholder: gpt-4.1 (domyślnie)
-        json_mode_label: Tryb JSON
-        json_mode_auto: Auto (zalecane)
-        json_mode_strict: Ścisły (najlepszy dla modeli rozumujących)
-        json_mode_none: Brak (najlepszy dla modeli standardowych)
-        json_mode_json_object: Obiekt JSON
-        json_mode_help: Tryb ścisły najlepiej działa z modelami rozumującymi (qwen-thinking, deepseek-reasoner). Tryb brak najlepiej działa z modelami standardowymi (llama, mistral, gpt-oss).
-        title: OpenAI
-      yahoo_finance_settings:
-        title: Yahoo Finance
-        description: Yahoo Finance zapewnia bezpłatny dostęp do cen akcji, kursów walut i danych finansowych bez potrzeby klucza API.
-        status_active: Yahoo Finance jest aktywne i działa
-        status_inactive: Połączenie z Yahoo Finance nie powiodło się
-        connection_failed: Nie można połączyć z Yahoo Finance
-        troubleshooting: Sprawdź połączenie internetowe i ustawienia zapory. Yahoo Finance może być tymczasowo niedostępne.
+          title: Wyczyścić pamięć podręczną danych?
+        danger_zone: Strefa ryzyka
+        financial_data_providers: Dostawcy danych finansowych
+        general: Ustawienia ogólne
+        invites: Kody zaproszeń
+        property_valuation_providers: Dostawcy wyceny nieruchomości
+        sync_settings: Ustawienia synchronizacji
+        title: Self-Hosting
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Zapisano ustawienia, ale nie udało się zaktualizować harmonogramu synchronizacji. Spróbuj ponownie albo sprawdź logi serwera.
+      sync_settings:
+        auto_sync_description: Gdy włączone, wszystkie konta będą automatycznie synchronizowane codziennie o wskazanej godzinie.
+        auto_sync_label: Włącz automatyczną synchronizację
+        auto_sync_time_description: Określ godzinę dnia, o której ma odbywać się automatyczna synchronizacja.
+        auto_sync_time_label: Czas synchronizacji (HH:MM)
+        env_configured_message: To ustawienie jest wyłączone, ponieważ ustawiono zmienną środowiskową dostawcy (SIMPLEFIN_INCLUDE_PENDING lub PLAID_INCLUDE_PENDING). Usuń ją, aby włączyć to ustawienie.
+        include_pending_description: Gdy włączone, transakcje oczekujące (niezaksięgowane) będą importowane i automatycznie uzgadniane po zaksięgowaniu. Wyłącz, jeśli Twój bank dostarcza niewiarygodne dane oczekujące.
+        include_pending_label: Uwzględniaj transakcje oczekujące
+      tiingo_settings:
+        description: Wprowadź token API otrzymany od Tiingo. Darmowy plan obsługuje 50 unikalnych symboli na godzinę i ponad 30 lat danych historycznych.
+        env_configured_message: Skonfigurowano pomyślnie przez zmienną środowiskową TIINGO_API_KEY.
+        label: Token API
+        placeholder: Wpisz tutaj swój token API Tiingo
+        show_details: (pokaż szczegóły)
+        step_1_html: Odwiedź <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> i załóż darmowe konto.
+        step_2_html: Przejdź na stronę <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">Token API</a>.
+        step_3: Skopiuj swój token API i wklej go poniżej.
+        title: Tiingo
+      tinkoff_invest_settings:
+        description: Wprowadź token API T-Invest tylko do odczytu. Służy do pobierania logo marek dla papierów wartościowych (w tym funduszy i obligacji, nawet gdy ich ceny podaje MOEX) oraz, jeśli włączone powyżej, cen instrumentów rosyjskich.
+        env_configured_message: Skonfigurowano pomyślnie przez zmienną środowiskową TINKOFF_INVEST_API_KEY.
+        label: Token API
+        moex_only_notice: Nie dotyczy cen powyżej — T-Invest jest używane do pobierania logo marek dla wszystkich Twoich papierów wartościowych, gdy tylko skonfigurowano token, niezależnie od pola wyboru powyżej.
+        placeholder: Wpisz tutaj swój token API T-Invest
+        show_details: (pokaż szczegóły)
+        step_1: Otwórz T-Bank Investments, następnie Ustawienia, następnie Tokeny API (wymaga otwartego rachunku maklerskiego T-Bank).
+        step_2: Utwórz token z dostępem tylko do odczytu.
+        step_3: Skopiuj token i wklej go poniżej.
+        title: T-Invest (T-Bank)
       twelve_data_settings:
-        api_calls_used: "%{used} / %{limit} wykorzystanych dziennych wywołań API (%{percentage})"
+        api_calls_used: '%{used} / %{limit} wykorzystanych dziennych wywołań API (%{percentage})'
         description: Wprowadź klucz API otrzymany od Twelve Data
         env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową TWELVE_DATA_API_KEY.
         label: Klucz API
         placeholder: Wprowadź tutaj klucz API
-        plan: "plan %{plan}"
-        plan_upgrade_warning_title: Niektóre tickery wymagają płatnego planu
+        plan: plan %{plan}
         plan_upgrade_warning_description: Poniższych tickerów w Twoim portfelu nie można synchronizować przy Twoim aktualnym planie Twelve Data.
+        plan_upgrade_warning_title: Niektóre tickery wymagają płatnego planu
         requires_plan: wymaga planu %{plan}
-        view_pricing: Zobacz cennik Twelve Data
+        show_details: (pokaż szczegóły)
+        step_1_html: Odwiedź <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> i załóż darmowe konto Twelve Data Developer.
+        step_2_html: Przejdź na stronę <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">Klucze API</a>.
+        step_3: Odkryj swój klucz tajny i wklej go poniżej.
         title: Twelve Data
-      gus_sdp_settings:
-        title: GUS SDP (Inflacja)
-        description: Opcjonalny klucz API do danych inflacyjnych GUS SDP. Pozostaw puste, aby korzystać z bezpłatnego poziomu anonimowego.
-        env_configured_message: Pomyślnie skonfigurowano przez zmienną środowiskową GUS_SDP_API_KEY.
-        configured_in_settings_message: Klucz API skonfigurowany w ustawieniach.
-        configured_via_env: Klucz API jest skonfigurowany przez zmienną środowiskową GUS_SDP_API_KEY.
-        free_default_message: Brak skonfigurowanego klucza API. Domyślnie używany jest bezpłatny dostęp anonimowy.
-        clear_api_key: Wyczyść zapisany klucz API
-        clear_api_key_confirm: Usunąć zapisany klucz API GUS?
-        label: Klucz API
-        placeholder: Wprowadź klucz API GUS SDP
-        import_enabled_label: Włącz automatyczny import CPI GUS
-        import_enabled_help: Domyślnie wyłączone. Włącz tylko, jeśli chcesz automatycznie importować stawki CPI do obliczeń EOD/ROD.
-        import_enabled_env_locked: To ustawienie jest zablokowane przez zmienną środowiskową GUS_INFLATION_IMPORT_ENABLED.
-        start_year: Rok początkowy
-        end_year: Rok końcowy
-        import_now: Importuj historię CPI teraz
-        last_import: Ostatni import
-        last_range: Ostatni zakres
-        last_count: Zaimportowane rekordy
-        last_error: Ostatni błąd
-        stored_records: Zapisane rekordy
-        stored_range: Zapisany zakres
-        never: Nigdy
-      import_gus_inflation_rates:
-        import_enqueued: Import CPI został dodany do kolejki.
-        import_disabled: Import CPI jest wyłączony. Najpierw włącz go w ustawieniach.
-        invalid_import_range: Nieprawidłowy zakres lat dla importu CPI.
+        view_pricing: Zobacz cennik Twelve Data
       update:
+        anthropic_model_required_for_base_url: Model Anthropic jest wymagany, gdy ustawiono niestandardowy URL bazowy.
         failure: Nieprawidłowa wartość ustawienia
-        success: Ustawienia zostały zaktualizowane
+        invalid_anthropic_base_url: URL bazowy Anthropic musi być adresem http(s).
+        invalid_llm_budget: '%{field} musi być liczbą całkowitą ≥ %{minimum}.'
         invalid_onboarding_state: Nieprawidłowy stan onboardingu
         invalid_sync_time: Nieprawidłowy format czasu synchronizacji. Użyj formatu HH:MM (np. 02:30).
         scheduler_sync_failed: Ustawienia zapisano, ale nie udało się zaktualizować harmonogramu synchronizacji. Spróbuj ponownie lub sprawdź logi serwera.
-      disconnect_external_assistant:
-        external_assistant_disconnected: Zewnętrzny asystent został rozłączony
-      clear_cache:
-        cache_cleared: Pamięć podręczna danych została wyczyszczona. Zakończenie operacji może zająć chwilę.
-      not_authorized: Nie masz uprawnień do wykonania tej akcji
-      sync_settings:
-        auto_sync_label: Włącz automatyczną synchronizację
-        auto_sync_description: Gdy włączone, wszystkie konta będą automatycznie synchronizowane codziennie o wskazanej godzinie.
-        auto_sync_time_label: Czas synchronizacji (HH:MM)
-        auto_sync_time_description: Określ godzinę dnia, o której ma odbywać się automatyczna synchronizacja.
-        include_pending_label: Uwzględniaj transakcje oczekujące
-        include_pending_description: Gdy włączone, transakcje oczekujące (niezaksięgowane) będą importowane i automatycznie uzgadniane po zaksięgowaniu. Wyłącz, jeśli Twój bank dostarcza niewiarygodne dane oczekujące.
-        env_configured_message: To ustawienie jest wyłączone, ponieważ ustawiono zmienną środowiskową dostawcy (SIMPLEFIN_INCLUDE_PENDING lub PLAID_INCLUDE_PENDING). Usuń ją, aby włączyć to ustawienie.
+        success: Ustawienia zostały zaktualizowane
+      yahoo_finance_settings:
+        connection_failed: Nie można połączyć z Yahoo Finance
+        description: Yahoo Finance zapewnia bezpłatny dostęp do cen akcji, kursów walut i danych finansowych bez potrzeby klucza API.
+        rate_limited_message: Nie jest wymagane żadne działanie. Sure wstrzyma dodatkowe kontrole stanu na 30 minut. Operacje na cenach i kursach wymiany działają niezależnie.
+        rate_limited_title: Osiągnięto limit zapytań Yahoo Finance.
+        status_active: Yahoo Finance jest aktywne i działa
+        status_healthy: Yahoo Finance działa poprawnie.
+        status_inactive: Połączenie z Yahoo Finance nie powiodło się
+        status_rate_limited: Yahoo Finance tymczasowo ogranicza liczbę zapytań.
+        status_unavailable: Yahoo Finance jest obecnie niedostępne.
+        status_unknown: Trwa sprawdzanie stanu Yahoo Finance.
+        title: Yahoo Finance
+        troubleshooting: Sprawdź połączenie internetowe i ustawienia zapory. Yahoo Finance może być tymczasowo niedostępne.
+        unavailable_message: Nie udało się połączyć z Yahoo Finance albo otrzymano nieoczekiwaną odpowiedź. Sprawdź połączenie internetowe i spróbuj ponownie później.
+        unavailable_title: Nie udało się zweryfikować Yahoo Finance.

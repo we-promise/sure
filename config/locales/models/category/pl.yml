@@ -2,6 +2,28 @@
 pl:
   models:
     category:
-      uncategorized: Bez kategorii
-      other_investments: Inne inwestycje
+      defaults:
+        entertainment: Rozrywka
+        fees: Opłaty
+        food_and_drink: Jedzenie i napoje
+        gifts_and_donations: Prezenty i darowizny
+        groceries: Zakupy spożywcze
+        healthcare: Zdrowie
+        home_improvement: Remont i wyposażenie domu
+        income: Przychody
+        insurance: Ubezpieczenia
+        loan_payments: Spłaty pożyczek
+        mortgage_rent: Kredyt hipoteczny / czynsz
+        personal_care: Pielęgnacja i uroda
+        savings_and_investments: Oszczędności i inwestycje
+        services: Usługi
+        shopping: Zakupy
+        sports_and_fitness: Sport i fitness
+        subscriptions: Subskrypcje
+        taxes: Podatki
+        transportation: Transport
+        travel: Podróże
+        utilities: Media
       investment_contributions: Wpłaty inwestycyjne
+      other_investments: Inne inwestycje
+      uncategorized: Bez kategorii

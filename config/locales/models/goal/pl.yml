@@ -3,23 +3,44 @@ pl:
   activerecord:
     attributes:
       goal:
-        name: Nazwa
-        target_amount: Kwota docelowa
-        currency: Waluta
-        target_date: Data docelowa
         color: Kolor
+        currency: Waluta
+        linked_accounts: Połączone konta
+        name: Nazwa
         notes: Notatki
         state: Stan
-        linked_accounts: Połączone konta
+        target_amount: Kwota docelowa
+        target_date: Data docelowa
     errors:
       models:
         goal:
           attributes:
             base:
-              at_least_one_linked_account_required: Wybierz co najmniej jedno konto do finansowania tego celu.
-            linked_accounts:
-              must_be_fundable: Wszystkie połączone konta muszą być kontami gotówkowymi lub inwestycyjnymi.
-              currency_mismatch: Wszystkie połączone konta muszą mieć tę samą walutę.
-              must_belong_to_family: Połączone konta muszą należeć do tej samej rodziny co cel.
+              at_least_one_linked_account_required: Wybierz co najmniej jedno konto
+                do finansowania tego celu.
+              whole_account_conflict_on_restore: 'Nie można przywrócić tego celu:
+                konto "%{account_name}" jest już w całości przypisane do celu "%{goal_name}".
+                Najpierw wpisz kwotę dla jednego z nich.'
             currency:
               locked_after_linked: Nie można zmienić waluty po połączeniu celu z kontami.
+            kind:
+              locked_once_consumed: Ten cel ma już zapisane wydane środki, więc nie
+                może stać się rezerwą.
+              locked_while_released: Otwórz ponownie ten cel, zanim zmienisz go w
+                rezerwę.
+            linked_accounts:
+              currency_mismatch: Wszystkie połączone konta muszą mieć tę samą walutę.
+              must_be_fundable: Wszystkie połączone konta muszą być kontami gotówkowymi
+                lub inwestycyjnymi.
+              must_belong_to_family: Połączone konta muszą należeć do tej samej rodziny
+                co cel.
+            target_amount:
+              below_consumed: Nie można ustawić celu poniżej kwoty już zapisanej jako
+                wydana.
+            target_mode:
+              months_requires_maintained: Tylko utrzymywana rezerwa może mieć cel
+                ustawiony w miesiącach wydatków.
+            target_months:
+              blank: Podaj, ile miesięcy wydatków ma pokrywać ta rezerwa.
+              only_with_months_mode: Miesiące wydatków mają zastosowanie tylko wtedy,
+                gdy cel jest tak ustawiony.

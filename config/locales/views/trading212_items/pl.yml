@@ -1,0 +1,115 @@
+---
+pl:
+  providers:
+    trading212:
+      connection_description: Połącz konto inwestycyjne Trading 212 za pomocą klucza
+        API
+      institution_name: Trading 212
+      name: Trading 212
+  trading212_items:
+    complete_account_setup:
+      none_created: Nie utworzono żadnych kont.
+      none_selected: Nie wybrano żadnych kont.
+      success:
+        few: Pomyślnie utworzono %{count} konta Trading 212.
+        many: Pomyślnie utworzono %{count} kont Trading 212.
+        one: Pomyślnie utworzono %{count} konto Trading 212.
+        other: Pomyślnie utworzono %{count} kont Trading 212.
+    create:
+      success: Pomyślnie skonfigurowano Trading 212.
+    defaults:
+      name: Trading 212
+    destroy:
+      success: Zaplanowano usunięcie połączenia z Trading 212.
+    link_existing_account:
+      already_linked: To konto Trading 212 jest już połączone.
+      failed: Nie udało się połączyć konta Trading 212.
+      not_found: Nie znaleziono konta ani konfiguracji Trading 212.
+      only_manual_investment: Do Trading 212 można połączyć tylko ręczne konta inwestycyjne.
+      success: Pomyślnie połączono z kontem Trading 212.
+    select_accounts:
+      not_configured: Trading 212 nie jest skonfigurowany.
+    select_existing_account:
+      balance: Saldo
+      cancel: Anuluj
+      link: Połącz
+      no_accounts_available: Nie ma jeszcze dostępnych niepołączonych kont Trading
+        212.
+      run_sync_hint: Uruchom synchronizację w Ustawienia > Dostawcy po zapisaniu klucza
+        API.
+      title: Połącz konto Trading 212
+      wait_for_sync: Poczekaj na zakończenie synchronizacji wykrywania kont.
+    setup_accounts:
+      available_accounts:
+        account_id: 'ID konta: %{account_id}'
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_type_investment: Inwestycyjne
+        title: Dostępne konto
+      buttons:
+        back_to_settings: Wróć do ustawień
+        cancel: Anuluj
+        create_selected_accounts: Utwórz wybrane konta
+        done: Gotowe
+        link: Połącz
+        refresh: Odśwież
+      dialog_title: Skonfiguruj swoje konto Trading 212
+      info_box:
+        items:
+          item_1: Bieżące pozycje z cenami i ilościami
+          item_2: Pełna historia zleceń (kupno i sprzedaż)
+          item_3: Dywidendy i transakcje gotówkowe
+        title: Import przez API Trading 212
+      link_existing:
+        description: Albo połącz wykryte konto Trading 212 z istniejącym ręcznym kontem
+          inwestycyjnym.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Wybierz konto...
+      linked_accounts:
+        linked_to_html: 'Połączone z: %{account}'
+        title: Już połączone
+      page_title: Konfiguracja konta Trading 212
+      status:
+        fetching_accounts: Pobieranie konta z Trading 212...
+        no_accounts_found_description: Sure nie znalazł konta Trading 212. Sprawdź,
+          czy klucz API jest prawidłowy.
+        no_accounts_found_title: Nie znaleziono konta.
+      subtitle: Połącz swoje konto inwestycyjne Trading 212.
+    sync:
+      status:
+        accounts_need_setup:
+          few: "%{count} konta Trading 212 wymagają konfiguracji..."
+          many: "%{count} kont Trading 212 wymaga konfiguracji..."
+          one: 1 konto Trading 212 wymaga konfiguracji...
+          other: "%{count} kont Trading 212 wymaga konfiguracji..."
+        calculating_balances: Obliczanie sald...
+        checking_configuration: Sprawdzanie konfiguracji konta...
+        checking_credentials: Sprawdzanie danych uwierzytelniających Trading 212...
+        importing_account: Importowanie konta Trading 212...
+        processing_activity: Przetwarzanie pozycji i aktywności...
+    sync_status:
+      all_linked:
+        few: "%{count} konta połączone"
+        many: "%{count} kont połączonych"
+        one: 1 konto połączone
+        other: "%{count} kont połączonych"
+      no_accounts: Nie wykryto jeszcze konta Trading 212
+      partial: "%{linked} połączonych, %{unlinked} wymaga konfiguracji"
+    trading212_item:
+      accounts_need_setup: Konto wymaga konfiguracji
+      accounts_need_setup_description: Twoje konto Trading 212 musi zostać połączone
+        z kontem Sure.
+      delete: Usuń
+      deletion_in_progress: Usuwanie w toku
+      environment_label_demo: Konto demo
+      environment_label_live: Konto rzeczywiste
+      error: Błąd
+      never_synced: Nigdy nie synchronizowano.
+      no_accounts_discovered: Nie wykryto jeszcze konta Trading 212.
+      no_accounts_discovered_description: Uruchom synchronizację po zapisaniu klucza
+        API, aby wykryć konto.
+      requires_update: Klucz API wymaga uwagi
+      setup_accounts: Skonfiguruj konta
+      synced: Zsynchronizowano %{time} temu. %{summary}.
+      syncing: Synchronizacja
+    update:
+      success: Pomyślnie zaktualizowano konfigurację Trading 212.

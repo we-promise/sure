@@ -1,54 +1,234 @@
 ---
 pl:
   recurring_transactions:
-    title: Transakcje cykliczne
-    upcoming: Nadchodzące transakcje cykliczne
-    projected: Prognozowane
-    recurring: Cykliczne
-    expected_today: Oczekiwane dziś
+    actions:
+      delete: Usuń
+      edit_payment_link: Edytuj link do płatności
+      pause: Wstrzymaj
+      resume: Wznów
+    already_exists: Dla tego wzorca istnieje już ręcznie utworzona transakcja cykliczna
+    amount_range: 'Zakres: %{min} do %{max}'
+    badges:
+      manual: Ręczna
+    cleaned_up: 'Wyczyszczone nieaktualne transakcje cykliczne: %{count}'
+    cleanup_stale: Wyczyść nieaktualne
+    confirm_delete: Czy na pewno chcesz usunąć tę transakcję cykliczną?
+    confirm_delete_income: Usunąć %{name} jako przychód? Twoje transakcje pozostaną
+      bez zmian. To usuwa tylko przychód i jego harmonogram.
+    confirmed: Rachunek dodany do Twoich transakcji cyklicznych
+    create:
+      account_invalid: Wybierz konto, do którego możesz dodawać rachunki, albo zostaw
+        puste
+      already_exists: Ten rachunek już istnieje
+      amount_invalid: Wpisz kwotę jako zwykłą liczbę
+      due_date_required: Wpisz następny termin płatności rachunku
+      success: Rachunek dodany
+      success_income: Przychód dodany
+    creation_failed: Nie udało się utworzyć transakcji cyklicznej. Sprawdź szczegóły
+      transakcji i spróbuj ponownie.
+    day_of_month: Dzień %{day} miesiąca
+    deleted: Transakcja cykliczna została usunięta
+    deleted_income: Przychód usunięty. Twoje transakcje nie zostały naruszone.
+    dismissed: Odrzucono. Ten wzorzec nie będzie już sugerowany.
+    edit:
+      income_title: Edytuj przychód · %{name}
+      title: Edytuj %{name}
+      trigger_label: Edytuj rachunek
+    empty:
+      description: Kliknij „Wykryj wzorce”, aby automatycznie wykryć transakcje cykliczne
+        na podstawie historii transakcji.
+      title: Nie znaleziono transakcji cyklicznych
     expected_in:
-      one: Oczekiwane za %{count} dzień
       few: Oczekiwane za %{count} dni
       many: Oczekiwane za %{count} dni
+      one: Oczekiwane za %{count} dzień
       other: Oczekiwane za %{count} dni
-    day_of_month: Dzień %{day} miesiąca
+    expected_today: Oczekiwane dziś
+    form:
+      account_blank: Dowolne konto
+      account_label: Płatne z
+      amount_edit_hint: Dotyczy rachunków z terminem od teraz. Te już wymagalne zachowują
+        dotychczasową kwotę.
+      amount_label: Kwota
+      apply_to_siblings:
+        few: Użyj tego linku też dla pozostałych %{count} rachunków %{name}
+        many: Użyj tego linku też dla pozostałych %{count} rachunków %{name}
+        one: Użyj tego linku też dla drugiego rachunku %{name}
+        other: Użyj tego linku też dla pozostałych %{count} rachunków %{name}
+      autopay_hint: Zostaw na liście rachunków, ale przestań traktować jako coś do
+        zrobienia.
+      autopay_label: Płatne automatycznie
+      bill_type_label: Rodzaj
+      cancelled_on_hint: Zapisanie daty służy tylko Tobie jako notatka. Wstrzymaj
+        rachunek, aby przyszłe wystąpienia przestały się pojawiać.
+      cancelled_on_label: Anulowano
+      category_blank: Brak kategorii
+      category_label: Kategoria
+      first_due_on_label: Następny termin
+      frequency_day_label: W dniu
+      frequency_hint: Jak często ten rachunek jest wymagalny. Dobierz szczegóły dnia
+        zgodnie ze swoim wyciągiem.
+      frequency_label: Jak często
+      frequency_month_label: W
+      frequency_new_hint: Szczegóły dnia pochodzą z terminu płatności podanego wyżej.
+        Harmonogram możesz doprecyzować po zapisaniu.
+      frequency_second_day_label: Oraz dnia
+      frequency_weekday_label: W
+      income_account_label: Wpływa na
+      income_amount_edit_hint: Dotyczy wypłat od teraz. Te już wymagalne zachowują
+        dotychczasową kwotę.
+      income_amount_label: Kwota na wypłatę
+      income_due_on_label: Następna wypłata
+      income_frequency_hint: Jak często otrzymujesz wypłatę. Dobierz szczegóły dnia
+        zgodnie z terminem wypłaty.
+      income_frequency_label: Jak często otrzymujesz wypłatę
+      income_frequency_new_hint: Szczegóły wypłaty pochodzą z daty podanej wyżej.
+        Harmonogram możesz doprecyzować po zapisaniu.
+      income_name_label: Źródło
+      income_name_placeholder: Pracodawca, klient, dodatkowa praca
+      income_notes_hint: Wszystko, co warto zapamiętać o tym przychodzie.
+      income_notes_placeholder: Przelew bezpośredni, dzielony na dwa konta
+      installment_count_hint: Plan kończy się po tylu płatnościach i do tego czasu
+        pokazuje swój postęp.
+      installment_count_label: Liczba płatności
+      more_options: Więcej opcji
+      name_label: Nazwa
+      name_placeholder: Czynsz, prąd, Netflix
+      notes_hint: Wszystko, co chcesz mieć przed oczami podczas płacenia. Widoczne
+        na rachunku.
+      notes_label: Notatki
+      notes_placeholder: Konto 4821, obciążenie karty Amex
+      payment_url_hint: Gdzie płacisz ten rachunek. Otwiera się w nowej karcie z list
+        cyklicznych i nadchodzących.
+      payment_url_label: Link do płatności
+      payment_url_placeholder: bank.example.com/pay
+      renews_on_label: Odnawia się
+      submit: Zapisz rachunek
+      submit_income: Zapisz przychód
+      trial_ends_on_label: Koniec okresu próbnego
+    frequency:
+      annual: Rocznie, %{day} %{month}
+      biweekly: Co 2 tygodnie, w %{weekday}
+      custom: Niestandardowy harmonogram
+      last_day: ostatni dzień
+      monthly: Miesięcznie, %{day} dnia
+      quarterly: Kwartalnie, %{day} dnia
+      semiannual: Co 6 miesięcy, %{day} dnia
+      semimonthly: Dwa razy w miesiącu, %{first} i %{second} dnia
+      weekly: Co tydzień, w %{weekday}
+    frequency_presets:
+      annual: Rocznie
+      biweekly: Co 2 tygodnie
+      custom: Niestandardowy harmonogram
+      monthly: Miesięcznie
+      quarterly: Kwartalnie
+      semiannual: Co 6 miesięcy
+      semimonthly: Dwa razy w miesiącu
+      weekly: Co tydzień
+    identified: 'Wykryte wzorce transakcji cyklicznych: %{count}'
+    identify_already_running: Wykrywanie już trwa. Sprawdź ponownie za chwilę.
     identify_patterns: Wykryj wzorce
-    cleanup_stale: Wyczyść nieaktualne
-    settings:
-      enable_label: Włącz transakcje cykliczne
-      enable_description: Automatycznie wykrywaj wzorce transakcji cyklicznych i pokazuj nadchodzące prognozowane transakcje.
-    settings_updated: Ustawienia transakcji cyklicznych zostały zaktualizowane
     info:
-      title: Automatyczne wykrywanie wzorców
-      manual_description: Możesz ręcznie wykryć wzorce lub wyczyścić nieaktualne transakcje cykliczne przy użyciu przycisków powyżej.
       automatic_description: 'Automatyczne wykrywanie uruchamia się także po:'
+      manual_description: Możesz ręcznie wykryć wzorce lub wyczyścić nieaktualne transakcje
+        cykliczne przy użyciu przycisków powyżej.
+      title: Automatyczne wykrywanie wzorców
       triggers:
       - zakończeniu importu CSV (transakcje, transakcje giełdowe, konta itd.)
       - zakończeniu synchronizacji dowolnego dostawcy (Plaid, SimpleFIN itd.)
-    identified: Wykryto %{count} wzorców transakcji cyklicznych
-    cleaned_up: Wyczyszczono %{count} nieaktualnych transakcji cyklicznych
-    marked_inactive: Transakcję cykliczną oznaczono jako nieaktywną
+    manage:
+      cta: Otwórz wszystkie rachunki
+      description: Stamtąd zgłaszaj, edytuj, wstrzymuj i płać wszystko. Ta strona
+        steruje wykrywaniem.
+      title: Twoje rachunki znajdziesz na stronie Rachunki
     marked_active: Transakcję cykliczną oznaczono jako aktywną
-    deleted: Transakcja cykliczna została usunięta
-    confirm_delete: Czy na pewno chcesz usunąć tę transakcję cykliczną?
     marked_as_recurring: Transakcja została oznaczona jako cykliczna
-    already_exists: Dla tego wzorca istnieje już ręcznie utworzona transakcja cykliczna
-    creation_failed: Nie udało się utworzyć transakcji cyklicznej. Sprawdź szczegóły transakcji i spróbuj ponownie.
-    unexpected_error: Wystąpił nieoczekiwany błąd podczas tworzenia transakcji cyklicznej
-    amount_range: 'Zakres: %{min} do %{max}'
-    empty:
-      title: Nie znaleziono transakcji cyklicznych
-      description: Kliknij „Wykryj wzorce”, aby automatycznie wykryć transakcje cykliczne na podstawie historii transakcji.
-    table:
-      merchant: Nazwa
-      amount: Kwota
-      expected_day: Oczekiwany dzień
-      next_date: Następna data
-      last_occurrence: Ostatnie wystąpienie
-      status: Status
-      actions: Akcje
+    marked_inactive: Transakcję cykliczną oznaczono jako nieaktywną
+    new:
+      candidate_meta: "%{count}× · ostatnio %{date}"
+      income_title: Dodaj przychód
+      pick_different: Zacznij od innej transakcji
+      search_all_cta: Przeszukaj wszystkie swoje transakcje
+      search_all_prompt: Nie widzisz tego, czego szukasz?
+      smart_fill: Inteligentne wypełnianie z AI
+      smart_fill_applied: AI zasugerowało te wartości na podstawie historii obciążeń.
+        Sprawdź przed zapisaniem.
+      start_from_hint: Opcjonalne. Wybranie jednej tylko wypełnia formularz; nadal
+        możesz wszystko zmienić.
+      start_from_income_title: Zacznij od wykrytego cyklicznego wpływu
+      start_from_title: Zacznij od wykrytego cyklicznego obciążenia
+      title: Dodaj rachunek
+    pay_action:
+      add_link: Dodaj link
+      add_link_aria: Dodaj link do płatności dla %{name}
+      autopay: Autopłatność
+      autopay_aria: "%{name} płatne automatycznie, otwórz portal w nowej karcie"
+      open_site: Otwórz stronę rachunku
+      pay: Zapłać
+      pay_aria: Zapłać %{name} (otwiera się w nowej karcie)
+    pick_entry:
+      back: Wróć do formularza
+      hint: Wybranie jednej tylko wypełnia formularz; nadal możesz wszystko zmienić.
+      income_title: Znajdź wpływ, od którego zaczniesz
+      no_results: Nic nie pasuje do „%{query}”. Spróbuj mniej słów albo wróć i wypełnij
+        formularz samodzielnie.
+      search_placeholder: Szukaj po nazwie, notatkach lub sprzedawcy
+      showing_recent: Pokazano %{count} najnowszych. Wyszukaj, aby zawęzić.
+      title: Znajdź transakcję, od której zaczniesz
+    picker_row:
+      claimed: Część %{name}
+    projected: Prognozowane
+    recurring: Cykliczne
+    settings:
+      enable_description: Automatycznie wykrywaj wzorce transakcji cyklicznych i pokazuj
+        nadchodzące prognozowane transakcje.
+      enable_label: Włącz transakcje cykliczne
+    settings_updated: Ustawienia transakcji cyklicznych zostały zaktualizowane
+    smart_fills:
+      create:
+        failed: Nie udało się teraz przeanalizować historii obciążeń. Formularz zachował
+          własne wartości transakcji.
     status:
       active: Aktywna
+      ended: Zakończona
       inactive: Nieaktywna
-    badges:
-      manual: Ręczna
+      paused: Wstrzymany
+      suggested: Możliwy rachunek
+    suggested:
+      collapsed_hint: Dotknij, aby sprawdzić
+      confirm: Dodaj rachunek
+      dismiss: To nie rachunek
+      seen_count:
+        few: widziano %{count} razy
+        many: widziano %{count} razy
+        one: widziano raz
+        other: widziano %{count} razy
+      title: Możliwe nowe rachunki
+    table:
+      actions: Akcje
+      amount: Kwota
+      expected_day: Oczekiwany dzień
+      frequency: Częstotliwość
+      last_occurrence: Ostatnie wystąpienie
+      merchant: Nazwa
+      next_date: Następna data
+      status: Status
+    title: Transakcje cykliczne
+    transfer_already_exists: Dla tej pary kont istnieje już przelew cykliczny
+    transfer_creation_failed: Nie udało się utworzyć przelewu cyklicznego. Sprawdź
+      szczegóły przelewu i spróbuj ponownie.
+    transfer_feature_disabled: Transakcje cykliczne są wyłączone dla tego gospodarstwa
+      domowego
+    transfer_marked_as_recurring: Przelew oznaczony jako cykliczny
+    unexpected_error: Wystąpił nieoczekiwany błąd podczas tworzenia transakcji cyklicznej
+    upcoming: Nadchodzące transakcje cykliczne
+    update:
+      success: Rachunek zaktualizowany
+      success_with_siblings:
+        few: Rachunek zaktualizowany, a link do płatności skopiowano do %{count} innych
+          rachunków
+        many: Rachunek zaktualizowany, a link do płatności skopiowano do %{count}
+          innych rachunków
+        one: Rachunek zaktualizowany, a link do płatności skopiowano do 1 innego rachunku
+        other: Rachunek zaktualizowany, a link do płatności skopiowano do %{count}
+          innych rachunków

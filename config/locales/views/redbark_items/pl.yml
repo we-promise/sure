@@ -1,0 +1,216 @@
+---
+pl:
+  redbark_items:
+    complete_account_setup:
+      all_skipped: Wszystkie konta zostały pominięte. Nie utworzono żadnych kont.
+      creation_failed: 'Nie udało się utworzyć kont: %{error}'
+      creation_failed_generic: Nie udało się utworzyć kont.
+      no_accounts: Brak kont do skonfigurowania.
+      setup_failed: 'Nie udało się utworzyć kont (liczba: %{count}). Nic więcej nie
+        zostało zmienione - napraw problem i spróbuj ponownie.'
+      success: 'Utworzone konta: %{count}.'
+    create:
+      success: Połączenie Redbark zostało pomyślnie utworzone
+    default_name: Połączenie Redbark
+    destroy:
+      success: Połączenie Redbark zostało usunięte
+      unlink_failed:
+        few: Nie udało się odłączyć %{count} kont. Spróbuj ponownie.
+        many: Nie udało się odłączyć %{count} kont. Spróbuj ponownie.
+        one: Nie udało się odłączyć %{count} konta. Spróbuj ponownie.
+        other: Nie udało się odłączyć %{count} kont. Spróbuj ponownie.
+    errors:
+      provider_not_configured: Dostawca Redbark nie jest skonfigurowany
+    index:
+      title: Połączenia Redbark
+    institution_summary:
+      count:
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
+        one: "%{count} instytucja"
+        other: "%{count} instytucji"
+      none: Brak połączonych instytucji
+    link_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą
+      api_error: 'Błąd API: %{message}'
+      invalid_account_name: Nie można połączyć konta bez nazwy
+      missing_parameters: Brak wymaganych parametrów
+      no_api_key: Nie znaleziono klucza API Redbark. Skonfiguruj go w Ustawieniach
+        dostawcy.
+      provider_account_already_linked: To konto Redbark jest już połączone z innym
+        kontem
+      provider_account_not_found: Nie znaleziono konta Redbark
+      success: Pomyślnie połączono %{account_name} z Redbark
+    loading:
+      loading_message: Ładowanie kont Redbark...
+      loading_title: Ładowanie
+    panel:
+      field_descriptions: 'Opisy pól:'
+      fields:
+        api_key:
+          description: Twój klucz API Redbark (zaczyna się od rbk_live_)
+          label: Klucz API
+          placeholder_new: rbk_live_...
+          placeholder_update: Wpisz nowy klucz API, aby zaktualizować
+      optional: "(Opcjonalne)"
+      optional_with_default: "(opcjonalne, domyślnie %{default_value})"
+      required: "(wymagane)"
+      save_button: Zapisz konfigurację
+      setup_instructions: 'Instrukcje konfiguracji:'
+      status_configured_html: Skonfigurowano i gotowe do użycia. Przejdź do zakładki
+        <a href="%{accounts_path}" class="link">Konta</a>, aby zarządzać kontami i
+        je skonfigurować.
+      status_not_configured: Nie skonfigurowano
+      step_1: Utwórz klucz API na app.redbark.com w Ustawieniach
+      step_2: Wpisz swój klucz API poniżej i kliknij przycisk Zapisz
+      step_3: Po pomyślnym połączeniu przejdź do zakładki Konta, aby skonfigurować
+        nowe konta
+      update_button: Zaktualizuj konfigurację
+    redbark_item:
+      accounts_need_setup: Konta wymagają konfiguracji
+      delete: Usuń połączenie
+      deletion_in_progress: usuwanie w toku...
+      error: Błąd
+      more_accounts_available:
+        few: Jeszcze %{count} dostępne konta
+        many: Jeszcze %{count} dostępnych kont
+        one: Jeszcze %{count} dostępne konto
+        other: Jeszcze %{count} dostępnych kont
+      no_accounts_description: To połączenie nie ma jeszcze żadnych połączonych kont.
+      no_accounts_title: Brak kont
+      provider_name: Redbark
+      requires_update: Połączenie wymaga aktualizacji
+      setup_action: Skonfiguruj nowe konta
+      setup_description: "%{linked} z %{total} kont połączonych. Wybierz typy kont
+        dla nowo zaimportowanych kont Redbark."
+      setup_needed: Nowe konta gotowe do konfiguracji
+      status: Zsynchronizowano %{timestamp} temu
+      status_never: Nigdy nie synchronizowano
+      status_with_summary: Ostatnia synchronizacja %{timestamp} temu - %{summary}
+      syncing: Synchronizacja...
+      total: Łącznie
+      unlinked: Niepodłączone
+      update_credentials: Zaktualizuj dane uwierzytelniające
+    select_accounts:
+      accounts_selected: wybranych kont
+      api_error: 'Błąd API: %{message}'
+      cancel: Anuluj
+      configure_name_in_provider: Nie można zaimportować - skonfiguruj nazwę konta
+        w Redbark
+      description: Wybierz konta, które chcesz połączyć z kontem %{product_name}.
+      link_accounts: Połącz wybrane konta
+      no_accounts_found: Nie znaleziono kont. Sprawdź konfigurację klucza API.
+      no_api_key: Klucz API Redbark nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
+      no_credentials_configured: Skonfiguruj najpierw dane logowania Redbark w Ustawieniach
+        dostawcy.
+      no_name_placeholder: "(Brak nazwy)"
+      title: Wybierz konta Redbark
+    select_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą
+      all_accounts_already_linked: Wszystkie konta Redbark są już połączone
+      api_error: 'Błąd API: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Anuluj
+      cancel_button: Anuluj
+      configure_name_in_provider: Nie można zaimportować - skonfiguruj nazwę konta
+        w Redbark
+      connect_hint: Połącz konto Redbark, aby włączyć automatyczną synchronizację.
+      description: Wybierz konto Redbark do połączenia z tym kontem. Transakcje będą
+        synchronizowane i deduplikowane automatycznie.
+      header: Połącz z Redbark
+      link_account: Połącz konto
+      link_button: Połącz to konto
+      linking_to: 'Łączenie z:'
+      no_account_specified: Nie podano konta
+      no_accounts: Nie znaleziono niepodłączonych kont Redbark.
+      no_accounts_found: Nie znaleziono kont Redbark. Sprawdź konfigurację klucza
+        API.
+      no_api_key: Klucz API Redbark nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
+      no_credentials_configured: Skonfiguruj najpierw dane logowania Redbark w Ustawieniach
+        dostawcy.
+      no_name_placeholder: "(Brak nazwy)"
+      settings_link: Przejdź do Ustawień dostawcy
+      subtitle: Wybierz konto Redbark
+      title: Połącz %{account_name} z Redbark
+    setup_accounts:
+      account_type_label: 'Typ konta:'
+      account_types:
+        credit_card: Karta kredytowa
+        depository: Konto bieżące lub oszczędnościowe
+        loan: Pożyczka lub kredyt hipoteczny
+        other_asset: Inne aktywa
+        skip: Pomiń to konto
+      accounts_count:
+        few: "%{count} dostępne konta"
+        many: "%{count} dostępnych kont"
+        one: "%{count} dostępne konto"
+        other: "%{count} dostępnych kont"
+      all_accounts_linked: Wszystkie Twoje konta Redbark są już skonfigurowane.
+      api_error: 'Błąd API: %{message}'
+      balance: Saldo
+      cancel: Anuluj
+      choose_account_type: 'Wybierz poprawny typ dla każdego konta Redbark:'
+      create_accounts: Utwórz konta
+      creating: Tworzenie kont...
+      creating_accounts: Tworzenie kont...
+      done: Gotowe
+      fetch_failed: Nie udało się pobrać kont
+      historical_data_range: 'Zakres danych historycznych:'
+      import_selected: Importuj wybrane konta
+      instructions: Wybierz konta, które chcesz zaimportować z Redbark. Możesz wybrać
+        wiele kont.
+      no_accounts: Nie znaleziono niepodłączonych kont dla tego połączenia Redbark.
+      no_accounts_to_setup: Brak kont do konfiguracji
+      no_api_key: Klucz API Redbark nie jest skonfigurowany. Sprawdź ustawienia połączenia.
+      select_all: Zaznacz wszystkie
+      subtitle: Wybierz poprawne typy dla importowanych kont
+      subtype_labels:
+        credit_card: ''
+        depository: 'Podtyp konta:'
+        loan: 'Typ pożyczki:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Karty kredytowe zostaną automatycznie skonfigurowane jako konta
+          kart kredytowych.
+        other_asset: Dla innych aktywów nie są potrzebne dodatkowe opcje.
+      subtypes:
+        depository:
+          cd: Lokata terminowa
+          checking: Konto bieżące
+          hsa: Konto oszczędnościowe na cele zdrowotne
+          money_market: Rynek pieniężny
+          savings: Oszczędnościowe
+        loan:
+          auto: Pożyczka na samochód
+          mortgage: Kredyt hipoteczny
+          other: Inna pożyczka
+          student: Pożyczka studencka
+      sync_start_date_help: Wybierz, jak daleko wstecz chcesz synchronizować historię
+        transakcji.
+      sync_start_date_label: 'Synchronizuj transakcje od:'
+      title: Skonfiguruj swoje konta Redbark
+    setup_required:
+      go_to_provider_settings: Przejdź do ustawień dostawcy
+      not_configured_description: Dodaj swój klucz API Redbark w Ustawieniach dostawcy,
+        a następnie wróć tutaj, aby połączyć konta.
+      not_configured_title: Redbark nie jest jeszcze połączony
+      title: Najpierw połącz Redbark
+    sync:
+      status:
+        calculating: Obliczanie sald...
+        checking_setup: Sprawdzanie konfiguracji konta...
+        importing: Importowanie kont z Redbark...
+        importing_data: Importowanie danych konta...
+        needs_setup: 'Konta wymagające konfiguracji: %{count}...'
+        processing: Przetwarzanie transakcji...
+      success: Rozpoczęto synchronizację
+    sync_status:
+      no_accounts: Nie znaleziono kont
+      synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
+        one: "%{count} konto zsynchronizowane"
+        other: "%{count} kont zsynchronizowanych"
+      synced_with_setup: "%{linked} zsynchronizowanych, %{unlinked} wymaga konfiguracji"
+    update:
+      success: Połączenie Redbark zostało zaktualizowane
