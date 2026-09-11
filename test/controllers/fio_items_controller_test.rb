@@ -133,6 +133,20 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account, @fio_account.reload.current_account
   end
 
+  test "link_existing_account refuses an account type Fio cannot describe" do
+    account = Account.create!(
+      family: @family, name: "Wallet", accountable: Crypto.new, balance: 1, currency: "CZK"
+    )
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_fio_items_url, params: {
+        fio_item_id: @fio_item.id, account_id: account.id, fio_account_id: @fio_account.id
+      }
+    end
+
+    assert_redirected_to accounts_path
+  end
+
   test "complete_account_setup skips the account so it stops asking" do
     assert_no_difference "Account.count" do
       post complete_account_setup_fio_item_url(@fio_item), params: { account_type: "skip" }

@@ -208,6 +208,14 @@ class FioItemsController < ApplicationController
       return
     end
 
+    # Fio can only describe the account types the adapter claims to support, so linking
+    # its statement to, say, a Crypto account would feed it balances it cannot represent.
+    # link_accounts and complete_account_setup already refuse this for new accounts.
+    unless Provider::FioAdapter.supported_account_types.include?(account.accountable_type)
+      redirect_to accounts_path, alert: t(".unsupported_account_type")
+      return
+    end
+
     begin
       AccountProvider.create!(account: account, provider: fio_account)
     rescue ActiveRecord::RecordNotUnique

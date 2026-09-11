@@ -99,6 +99,7 @@ en:
       account_already_linked: This account is already linked to a provider.
       fio_account_already_linked: This Fio account is already linked.
       no_account_selected: No Fio account was available to link.
+      unsupported_account_type: Fio can only sync cash and loan accounts.
     setup_accounts:
       title: Link your Fio account
       subtitle: Choose how the account this token reaches should appear in Sure.
