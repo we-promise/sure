@@ -1647,6 +1647,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.string "website_url"
+    t.index ["family_id", "iban"], name: "index_merchants_on_family_id_and_iban", unique: true, where: "((iban IS NOT NULL) AND ((type)::text = 'FamilyMerchant'::text))"
     t.index ["family_id", "name"], name: "index_merchants_on_family_id_and_name", unique: true, where: "((type)::text = 'FamilyMerchant'::text)"
     t.index ["family_id"], name: "index_merchants_on_family_id"
     t.index ["provider_merchant_id", "source"], name: "index_merchants_on_provider_merchant_id_and_source", unique: true, where: "((provider_merchant_id IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
