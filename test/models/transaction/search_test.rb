@@ -644,6 +644,25 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes result_ids, iban_match.entryable.id
   end
 
+  test "search matches a counterparty iban pasted with tabs and newlines" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "de89\t3704\n0044 0532 0130 00" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+  end
+
   test "search does not match unrelated data elsewhere in the extra jsonb blob" do
     pending_match = create_transaction(
       account: @checking_account,
