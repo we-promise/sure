@@ -42,6 +42,9 @@ class FioItemsController < ApplicationController
     attributes = update_params
     # A rotated token is the fix for the failed authorization that set requires_update.
     attributes[:status] = :good if attributes[:token].present? && @fio_item.requires_update?
+    # Changing the token or the start date is a fresh attempt at the history: let the
+    # next sync reach for the whole range again instead of the clamped one.
+    attributes[:history_unlock_required_at] = nil
 
     if @fio_item.update(attributes)
       render_provider_panel(:notice, t(".success"))
@@ -84,7 +87,12 @@ class FioItemsController < ApplicationController
   end
 
   # Trigger a manual sync unless one is already running.
+  #
+  # Pressing Sync is also how a user says "I have just unlocked my full history in
+  # internet banking": the unlock only lasts ten minutes, so the clamp is dropped here
+  # and this sync reaches for the whole range again.
   def sync
+    @fio_item.update!(history_unlock_required_at: nil) if @fio_item.history_unlock_required_at.present?
     @fio_item.sync_later unless @fio_item.syncing?
 
     respond_to do |format|

@@ -117,26 +117,6 @@ class FioItem::ImporterTest < ActiveSupport::TestCase
     )
   end
 
-  # A backfill Fio refused for want of an unlock must be retried, not silently
-  # abandoned: the user unlocks their history and syncs again.
-  test "asks for the full range again after a clamped backfill" do
-    @fio_item.update!(sync_start_date: Date.current - 2.years)
-    provider = FakeFioProvider.new(
-      statement: statement(movements: [ movement(id: 1) ]),
-      error: Provider::Fio::HistoryLockedError.new("422", failure_code: :history_locked),
-      failing_calls: 1
-    )
-
-    FioItem::Importer.new(@fio_item, fio_provider: provider).import
-    account = @fio_item.reload.fio_accounts.sole
-    assert_equal Date.current - (Provider::Fio::UNAUTHORIZED_HISTORY_DAYS - 1).days,
-                 account.history_synced_from
-
-    FioItem::Importer.new(@fio_item, fio_provider: provider).import
-
-    assert_equal Date.current - 2.years, provider.calls.last[:from]
-  end
-
   test "merges fetched movements with the ones already stored" do
     account = fio_account(raw_transactions_payload: [ movement(id: 1) ])
     provider = FakeFioProvider.new(statement: statement(movements: [ movement(id: 2) ]))
@@ -172,33 +152,44 @@ class FioItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "good", @fio_item.reload.status
   end
 
-  # Fio serves 90 days without a temporary unlock in internet banking. Rather than
-  # failing, take the part it will serve — the user can unlock and re-sync for the rest.
-  test "clamps a window Fio refuses to the 90 days it serves unauthorized" do
+  # Fio serves 90 days without a temporary unlock in internet banking. Retrying clamped
+  # within the same sync would be a second use of the token inside its 30-second
+  # interval, which the real API answers with 409 — so the clamp is persisted and spent
+  # on the next sync instead.
+  test "spends only one request when Fio refuses the period" do
     @fio_item.update!(sync_start_date: Date.current - 2.years)
-    provider = FakeFioProvider.new(
-      statement: statement(movements: [ movement(id: 1) ]),
-      error: Provider::Fio::HistoryLockedError.new("422", failure_code: :history_locked),
-      failing_calls: 1
-    )
-
-    result = FioItem::Importer.new(@fio_item, fio_provider: provider).import
-
-    assert result[:success]
-    assert_equal 1, result[:transactions_imported]
-    assert_equal 2, provider.calls.size
-    assert_equal Date.current - (Provider::Fio::UNAUTHORIZED_HISTORY_DAYS - 1).days, provider.calls.last[:from]
-  end
-
-  # The same refusal for a window already inside 90 days has no narrower retry to make.
-  test "fails when Fio refuses a window it should have served" do
-    fio_account(transactions_synced_through: Date.current - 1.day)
     provider = FakeFioProvider.new(error: Provider::Fio::HistoryLockedError.new("422", failure_code: :history_locked))
 
     result = FioItem::Importer.new(@fio_item, fio_provider: provider).import
 
     refute result[:success]
     assert_equal 1, provider.calls.size
+    assert @fio_item.reload.history_unlock_required_at.present?
+  end
+
+  test "the next sync after a refusal asks for the window Fio does serve" do
+    @fio_item.update!(sync_start_date: Date.current - 2.years)
+    refusing = FakeFioProvider.new(error: Provider::Fio::HistoryLockedError.new("422", failure_code: :history_locked))
+    FioItem::Importer.new(@fio_item, fio_provider: refusing).import
+
+    serving = FakeFioProvider.new(statement: statement(movements: [ movement(id: 1) ]))
+    result = FioItem::Importer.new(@fio_item.reload, fio_provider: serving).import
+
+    assert result[:success]
+    assert_equal 1, result[:transactions_imported]
+    assert_equal Date.current - (Provider::Fio::UNAUTHORIZED_HISTORY_DAYS - 1).days, serving.calls.sole[:from]
+  end
+
+  # Unlocking the history in internet banking lasts ten minutes, so it is the user's
+  # explicit Sync (which clears the flag) that reaches for the whole range again.
+  test "clearing the unlock flag reaches for the full range again" do
+    @fio_item.update!(sync_start_date: Date.current - 2.years, history_unlock_required_at: Time.current)
+    provider = FakeFioProvider.new(statement: statement)
+
+    @fio_item.update!(history_unlock_required_at: nil)
+    FioItem::Importer.new(@fio_item, fio_provider: provider).import
+
+    assert_equal Date.current - 2.years, provider.calls.sole[:from]
   end
 
   test "flags the connection for a new token when Fio rejects it" do

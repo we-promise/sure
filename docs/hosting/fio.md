@@ -61,11 +61,15 @@ Fio serves 90 days without further authorization. Older movements need the accou
 full history unlocked: in internet banking under **Nastavení > API**, click the padlock
 on the token and authorize. That opens a **10-minute** window.
 
-Set the connection's start date to how far back you want to go. A window Fio refuses is
-retried clamped to the 90 days it will serve, so a sync never fails over this — you just
-get less history until you unlock. Until the full range comes through, every sync asks
-for it again, so you can unlock the history and let the next sync collect the rest
-rather than racing the ten minutes by hand.
+Set the connection's start date to how far back you want to go. If that reaches past 90
+days and the history is still locked, Fio refuses the period: the sync reports it and
+every sync from then on stays inside the 90 days Fio does serve, so you keep getting
+recent movements. A sync only ever makes one request — retrying a refused period
+immediately would breach the 30-second rule and get a 409 instead.
+
+To collect the rest: unlock the history in internet banking, then press **Sync** on the
+connection. That is what tells Sure the unlock happened, and the sync reaches for the
+whole range again. Changing the token or the start date does the same.
 
 ### Categories and merchants
 

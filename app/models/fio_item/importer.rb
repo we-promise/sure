@@ -84,12 +84,22 @@ class FioItem::Importer
       @fio_account ||= fio_item.fio_accounts.first
     end
 
-    # The day the connection is meant to reach back to: the user's start date, or the
-    # configured default when they have not chosen one.
+    # The day the connection reaches back to: the user's start date, or the configured
+    # default when they have not chosen one.
+    #
+    # Once Fio has refused that range for want of a full-history unlock, the target stays
+    # inside the window it serves unauthorized. A sync has exactly one request to spend,
+    # and spending it on a period known to be refused would import nothing at all — the
+    # user unlocks and syncs deliberately, which clears the flag and reaches for the
+    # whole range again.
     def target_start_date
-      fio_account&.sync_start_date ||
+      requested = fio_account&.sync_start_date ||
         fio_item.sync_start_date ||
         (Date.current - self.class.initial_history_days.days)
+
+      return requested if fio_item.history_unlock_required_at.blank?
+
+      [ requested, Date.current - (Provider::Fio::UNAUTHORIZED_HISTORY_DAYS - 1).days ].max
     end
 
     # The window to request, ending today.
@@ -124,8 +134,8 @@ class FioItem::Importer
 
     # Performs the request, classifying the failures Fio documents. Returns nil when the
     # sync could not fetch anything, having set @deferred_result. `@served_from` records
-    # the start of the window Fio actually answered, which is not the requested one when
-    # the range had to be clamped.
+    # the start of the window Fio answered, which is what the history cursor is allowed
+    # to claim as covered.
     def fetch_statement(from:, to:)
       statement = fio_provider.get_statement(from: from, to: to)
       @served_from = from
@@ -138,7 +148,19 @@ class FioItem::Importer
       @deferred_result = empty_result
       nil
     rescue Provider::Fio::HistoryLockedError => e
-      retry_clamped_to_unlocked_history(from: from, to: to, error: e)
+      # The range reaches past the 90 days Fio serves without a temporary full-history
+      # unlock. Retrying clamped right here would be a second use of the same token
+      # inside its 30-second interval, which Fio answers with 409 — so the clamp is
+      # persisted and the next sync spends its request on a window that will be served.
+      fio_item.update!(history_unlock_required_at: Time.current)
+      capture_sync_error(
+        "Fio refused the statement period pending a full-history unlock",
+        e,
+        error_type: e.failure_code,
+        extra_metadata: { requested_from: from.iso8601 }
+      )
+      @deferred_result = failed_result(I18n.t("fio_item.errors.history_locked"))
+      nil
     rescue Provider::Fio::TooManyItemsError => e
       capture_sync_error("Fio statement exceeded the per-request movement limit", e, error_type: e.failure_code)
       @deferred_result = failed_result(I18n.t("fio_item.errors.statement_too_large"))
@@ -146,36 +168,6 @@ class FioItem::Importer
     rescue Provider::Fio::Error => e
       mark_requires_update! if e.failure_code == :unauthorized
       capture_sync_error("Failed to fetch Fio statement", e, error_type: e.failure_code)
-      @deferred_result = failed_result(I18n.t("fio_item.errors.statement_fetch_failed"))
-      nil
-    end
-
-    # Fio refuses a window reaching past 90 days unless the account's full history was
-    # unlocked in internet banking minutes earlier. Rather than failing the whole sync,
-    # retry once for the part it will serve; the user can unlock and re-sync to get the
-    # rest. A range already inside 90 days that is refused is a real failure.
-    def retry_clamped_to_unlocked_history(from:, to:, error:)
-      clamped_from = to - (Provider::Fio::UNAUTHORIZED_HISTORY_DAYS - 1).days
-
-      if from >= clamped_from
-        capture_sync_error("Fio refused the statement period", error, error_type: error.failure_code)
-        @deferred_result = failed_result(I18n.t("fio_item.errors.history_locked"))
-        return nil
-      end
-
-      capture_sync_error(
-        "Fio statement clamped to unlocked history",
-        error,
-        level: "warn",
-        error_type: error.failure_code,
-        extra_metadata: { requested_from: from.iso8601, clamped_from: clamped_from.iso8601 }
-      )
-
-      statement = fio_provider.get_statement(from: clamped_from, to: to)
-      @served_from = clamped_from
-      statement
-    rescue Provider::Fio::Error => e
-      capture_sync_error("Failed to fetch Fio statement after clamping", e, error_type: e.failure_code)
       @deferred_result = failed_result(I18n.t("fio_item.errors.statement_fetch_failed"))
       nil
     end
