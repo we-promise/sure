@@ -168,6 +168,9 @@ export default class extends Controller {
   }
 
   notifySettled() {
+    // Window-level flag so mounts that connect after the event (Turbo cache
+    // restores, late mounts) can still tell the popup already settled.
+    window.__releaseHighlightSettled = true;
     window.dispatchEvent(new CustomEvent("release-highlight:settled"));
   }
 
@@ -178,7 +181,10 @@ export default class extends Controller {
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
 
     try {
-      const response = await fetch(this.dismissUrlValue, {
+      const url = new URL(this.dismissUrlValue, window.location.origin);
+      url.searchParams.set("tag", this.tagValue);
+
+      const response = await fetch(url, {
         method: "PATCH",
         headers: {
           ...(csrfToken ? { "X-CSRF-Token": csrfToken.content } : {}),

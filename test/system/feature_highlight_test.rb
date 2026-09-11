@@ -29,7 +29,7 @@ class FeatureHighlightTest < ApplicationSystemTestCase
     click_on "Got it"
 
     assert_no_selector ".driver-popover"
-    assert_equal "v0.7.5-alpha.1", @user.reload.seen_feature_highlights["bills"]
+    assert_equal "v0.7.5-alpha.1", wait_for_feature_seen("bills")
 
     visit root_path
     find("main h1").click
@@ -67,8 +67,8 @@ class FeatureHighlightTest < ApplicationSystemTestCase
     click_on "Got it"
     assert_no_selector ".driver-popover"
 
-    assert_equal Sure.version.to_release_tag, @user.reload.last_seen_release_tag
-    assert_equal "v0.7.5-alpha.1", @user.reload.seen_feature_highlights["bills"]
+    assert_equal Sure.version.to_release_tag, wait_for_release_seen
+    assert_equal "v0.7.5-alpha.1", wait_for_feature_seen("bills")
   end
 
   test "users without preview features never see the Bills spotlight" do
@@ -81,4 +81,25 @@ class FeatureHighlightTest < ApplicationSystemTestCase
 
     assert_no_selector ".driver-popover"
   end
+
+  private
+
+    # Dismissal persists via an async PATCH; poll briefly instead of racing it.
+    def wait_for_feature_seen(key)
+      wait_for_value { @user.reload.seen_feature_highlights[key] }
+    end
+
+    def wait_for_release_seen
+      wait_for_value { @user.reload.last_seen_release_tag }
+    end
+
+    def wait_for_value
+      Timeout.timeout(Capybara.default_max_wait_time) do
+        loop do
+          value = yield
+          return value if value.present?
+          sleep 0.1
+        end
+      end
+    end
 end
