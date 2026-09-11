@@ -23,6 +23,13 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", @account.iban
   end
 
+  test "normalizes iban by stripping tabs, newlines, and non-breaking spaces" do
+    @account.iban = "de89\t3704\n0044 0532 0130 00"
+    @account.valid?
+
+    assert_equal "DE89370400440532013000", @account.iban
+  end
+
   test "leaves a blank iban as nil" do
     @account.iban = ""
     @account.valid?

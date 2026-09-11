@@ -20,6 +20,13 @@ class MerchantTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", merchant.iban
   end
 
+  test "normalizes iban by stripping tabs and newlines" do
+    merchant = FamilyMerchant.new(name: "Landlord", family: families(:dylan_family), iban: "de89\t3704\n0044 0532 0130 00")
+    merchant.valid?
+
+    assert_equal "DE89370400440532013000", merchant.iban
+  end
+
   test "leaves a blank iban as nil" do
     merchant = FamilyMerchant.new(name: "Landlord", family: families(:dylan_family), iban: "")
     merchant.valid?
