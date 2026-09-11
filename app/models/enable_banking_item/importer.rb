@@ -563,12 +563,28 @@ class EnableBankingItem::Importer
     # legitimately distinct transactions with identical content but different
     # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
     def deduplicate_api_transactions(transactions)
+      normalized = transactions.map(&:with_indifferent_access)
+
+      # Two-pass: IBAN only splits a base-content group into distinct
+      # transactions when at least two DIFFERENT non-blank IBANs actually
+      # appear in that group. A group where the IBAN is simply absent on
+      # some rows (e.g. a pending row settling into a booked row that
+      # gained account data later) must still collapse to one -- otherwise
+      # the same real transaction's pending/booked duplicate representations
+      # would both survive just because one side happened to lack IBAN data.
+      distinct_ibans_by_base_key = normalized.group_by { |tx| build_transaction_base_key(tx) }
+        .transform_values { |group| group.filter_map { |tx| counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) }.uniq }
+
       seen = {}
       duplicates_removed = 0
 
-      result = transactions.select do |tx|
-        tx = tx.with_indifferent_access
-        key = build_transaction_content_key(tx)
+      result = normalized.select do |tx|
+        base_key = build_transaction_base_key(tx)
+        key = if distinct_ibans_by_base_key[base_key].size >= 2
+          "#{base_key}\x1F#{counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator])}"
+        else
+          base_key
+        end
 
         if seen[key]
           duplicates_removed += 1
@@ -589,23 +605,27 @@ class EnableBankingItem::Importer
       result
     end
 
-    # Build a composite key for deduplication. Two transactions with different
-    # entry_reference values but identical content fields (including
-    # transaction_id and credit_debit_indicator) are considered duplicates.
-    # transaction_id is included as one component — not a standalone key —
-    # because the Enable Banking API docs state it is not guaranteed to be
-    # unique. credit_debit_indicator (CRDT/DBIT) is included because
-    # transaction_amount.amount is always positive — without it, a payment
-    # and a same-day refund of the same amount would produce identical keys.
-    # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
-    # may appear as PDNG then BOOK across imports and must not create duplicates.
+    # Base composite key for deduplication, deliberately WITHOUT counterparty
+    # IBAN -- see #deduplicate_api_transactions for why IBAN is applied as a
+    # conditional second pass instead of being folded in here directly.
+    #
+    # Two transactions with different entry_reference values but identical
+    # content fields (including transaction_id and credit_debit_indicator)
+    # are considered duplicates. transaction_id is included as one
+    # component — not a standalone key — because the Enable Banking API docs
+    # state it is not guaranteed to be unique. credit_debit_indicator
+    # (CRDT/DBIT) is included because transaction_amount.amount is always
+    # positive — without it, a payment and a same-day refund of the same
+    # amount would produce identical keys. status (BOOK/PDNG) is
+    # intentionally excluded: the same logical transaction may appear as
+    # PDNG then BOOK across imports and must not create duplicates.
     # Known limitation: when transaction_id is nil for both, pure content
     # comparison applies. This means two genuinely distinct transactions
     # with identical content (same date, amount, direction, creditor, etc.)
     # and no transaction_id would collapse to one. In practice, banks that
     # omit transaction_id rarely produce such exact duplicates in the same
     # API response; timestamps or remittance info usually differ. (Issue #954)
-    def build_transaction_content_key(tx)
+    def build_transaction_base_key(tx)
       date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
       currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
@@ -615,13 +635,8 @@ class EnableBankingItem::Importer
       remittance_key = remittance.is_a?(Array) ? remittance.compact.map(&:to_s).sort.join("|") : remittance.to_s
       tid = tx[:transaction_id]
       direction = tx[:credit_debit_indicator]
-      # Two transactions with otherwise-identical content (same name/amount/date,
-      # e.g. two different landlords named "Miete") but a different counterparty
-      # IBAN are guaranteed to be different real transactions — folds this into
-      # the key when present to reduce false-positive dedup (see issue #2720).
-      iban = counterparty_iban_for_content_key(tx, direction)
 
-      [ date, amount, currency, creditor, debtor, remittance_key, tid, direction, iban ].map(&:to_s).join("\x1F")
+      [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
     end
 
     def counterparty_iban_for_content_key(tx, direction)
