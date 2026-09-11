@@ -159,15 +159,15 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
       identification_hash: "hash_abc123",
       currency: "EUR",
       cash_account_type: "CACC",
-      iban: "NL91ABNA0417164300"
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
     })
 
-    assert_equal "NL91ABNA0417164300", linked_account.reload.iban
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
   test "does not overwrite an already-present account iban on sync" do
     linked_account = accounts(:depository)
-    linked_account.update!(iban: "AT611904300234573201")
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
     AccountProvider.create!(provider: @account, account: linked_account)
 
     @account.upsert_enable_banking_snapshot!({
@@ -175,10 +175,10 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
       identification_hash: "hash_abc123",
       currency: "EUR",
       cash_account_type: "CACC",
-      iban: "NL91ABNA0417164300"
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
     })
 
-    assert_equal "AT611904300234573201", linked_account.reload.iban
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
   test "does not touch linked account when snapshot has no iban" do
