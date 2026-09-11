@@ -63,4 +63,42 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
     assert_equal "DECOUPLED", @item.reload.aspsp_auth_approach
   end
+
+  test "link_accounts propagates the discovered iban to the newly linked account" do
+    @item.update!(session_id: "test_session")
+    enable_banking_account = @item.enable_banking_accounts.create!(
+      uid: "acct_uid_1",
+      name: "Checking",
+      currency: "EUR",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    post link_accounts_enable_banking_items_url,
+         params: { account_uids: [ "acct_uid_1" ], accountable_type: "Depository" }
+
+    assert_redirected_to accounts_path
+    linked_account = enable_banking_account.reload.account
+    assert_not_nil linked_account
+    assert_equal "DE89370400440532013000", linked_account.iban # pipelock:ignore IBAN
+  end
+
+  test "complete_account_setup propagates the discovered iban to the newly linked account" do
+    @item.update!(session_id: "test_session", pending_account_setup: true)
+    enable_banking_account = @item.enable_banking_accounts.create!(
+      uid: "acct_uid_2",
+      name: "Savings",
+      currency: "EUR",
+      iban: "AT611904300234573201" # pipelock:ignore IBAN
+    )
+
+    post complete_account_setup_enable_banking_item_url(@item),
+         params: {
+           account_types: { enable_banking_account.id.to_s => "Depository" },
+           account_subtypes: { enable_banking_account.id.to_s => "checking" }
+         }
+
+    linked_account = enable_banking_account.reload.account
+    assert_not_nil linked_account
+    assert_equal "AT611904300234573201", linked_account.iban # pipelock:ignore IBAN
+  end
 end
