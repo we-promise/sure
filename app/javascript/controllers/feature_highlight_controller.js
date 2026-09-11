@@ -123,12 +123,13 @@ export default class extends Controller {
           },
         },
       ],
+      // See the release controller: button clicks are the reliable
+      // dismissal signal; onDestroyed is only a fallback.
+      onDoneClick: () => this.dismissFromUser(),
+      onCloseClick: () => this.dismissFromUser(),
       onDestroyed: () => {
-        this.dismissed = !this.tearingDown;
-
-        if (this.dismissed) {
-          this.markSeen();
-        }
+        if (this.tearingDown) return;
+        this.dismissFromUser(false);
       },
     });
 
@@ -210,6 +211,15 @@ export default class extends Controller {
     if (this.ownsCurrentShownFlag()) {
       window.__featureHighlightShown = undefined;
     }
+  }
+
+  dismissFromUser(destroy = true) {
+    if (this.dismissed) return;
+    this.dismissed = true;
+
+    this.markSeen();
+
+    if (destroy) this.driverObj?.destroy();
   }
 
   async markSeen() {

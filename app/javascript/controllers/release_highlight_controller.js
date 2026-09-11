@@ -102,13 +102,15 @@ export default class extends Controller {
           },
         },
       ],
+      // Dismissal is hooked on the button clicks directly: onDestroyed only
+      // fires after driver.js's transition bookkeeping completes, which is
+      // not guaranteed (fast dismissals, headless browsers), and it is the
+      // only signal that marks the release seen and settles the chain.
+      onDoneClick: () => this.dismissFromUser(),
+      onCloseClick: () => this.dismissFromUser(),
       onDestroyed: () => {
-        this.dismissed = !this.tearingDown;
-
-        if (this.dismissed) {
-          this.markSeen();
-          this.notifySettled();
-        }
+        if (this.tearingDown) return;
+        this.dismissFromUser(false);
       },
     });
 
@@ -165,6 +167,16 @@ export default class extends Controller {
     if (this.ownsCurrentShownFlag()) {
       window.__releaseHighlightShownTag = undefined;
     }
+  }
+
+  dismissFromUser(destroy = true) {
+    if (this.dismissed) return;
+    this.dismissed = true;
+
+    this.markSeen();
+    this.notifySettled();
+
+    if (destroy) this.driverObj?.destroy();
   }
 
   notifySettled() {
