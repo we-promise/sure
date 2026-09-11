@@ -337,7 +337,7 @@ class Account::ProviderImportAdapter
   def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil, iban: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
-    normalized_iban = iban.to_s.delete(" ").upcase.presence
+    normalized_iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
 
     # IBAN is the most reliable signal when available (stable across
     # different remittance text for the same real-world payee), but it isn't
@@ -354,11 +354,7 @@ class Account::ProviderImportAdapter
 
     if merchant
       if normalized_iban.present? && merchant.iban.blank?
-        begin
-          merchant.update!(iban: normalized_iban)
-        rescue ActiveRecord::RecordInvalid => e
-          Rails.logger.warn("Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}")
-        end
+        backfill_merchant_iban!(merchant, normalized_iban)
       end
       # Update logo if provided and merchant doesn't have one (or has a different one)
       # Best-effort: don't fail transaction import if logo update fails
@@ -393,6 +389,21 @@ class Account::ProviderImportAdapter
     end
 
     merchant
+  end
+
+  # Backfills iban onto a merchant found by provider_merchant_id/name that
+  # doesn't have one yet. Isolated in its own savepoint (see the identical
+  # pattern in #find_or_create_merchant's create! path just above, and
+  # #import_holding below): a concurrent import could insert the same
+  # (source, iban) between our earlier find and this update, and on
+  # PostgreSQL a failed statement aborts the whole surrounding transaction
+  # unless it's isolated like this.
+  def backfill_merchant_iban!(merchant, normalized_iban)
+    ProviderMerchant.transaction(requires_new: true) do
+      merchant.update!(iban: normalized_iban)
+    end
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+    Rails.logger.warn("Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}")
   end
 
   # Updates account balance from provider data
