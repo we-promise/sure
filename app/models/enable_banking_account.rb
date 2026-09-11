@@ -190,8 +190,21 @@ class EnableBankingAccount < ApplicationRecord
         ActiveRecord::Base.transaction(requires_new: true) do
           target.enrich_attribute(:iban, iban, source: "enable_banking")
         end
+
+        # enrich_attribute's own "was it modified" return value can't be
+        # trusted to reflect a failed save (a Rails quirk in how it derives
+        # that from previous_changes), so check the record's errors
+        # directly instead. Empty errors covers both a successful write and
+        # a locked attribute (an intentional, silent skip -- see the method
+        # comment above); errors present means the internal `save` actually
+        # attempted and failed (e.g. another account in the family already
+        # has this IBAN), which is worth surfacing in the support debug log
+        # rather than only a Rails log line.
+        if target.errors.any?
+          capture_propagation_failure(target, target.errors.full_messages.join(", "))
+        end
       rescue ActiveRecord::RecordNotUnique => e
-        Rails.logger.warn("EnableBankingAccount#propagate_iban_to_account! - Concurrent iban conflict on account #{target.id}: #{e.message}")
+        capture_propagation_failure(target, "Concurrent iban conflict: #{e.message}")
       end
     end
   end
@@ -200,6 +213,20 @@ class EnableBankingAccount < ApplicationRecord
 
     def normalize_iban
       self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+    end
+
+    def capture_propagation_failure(target, message)
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Could not propagate IBAN to account: #{message}",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item&.family,
+        account: target,
+        account_provider: account_provider,
+        metadata: { enable_banking_account_id: id, account_id: target.id }
+      )
     end
 
     def build_account_name(snapshot)
