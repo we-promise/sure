@@ -351,6 +351,16 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     invalid = ProviderMerchant.new(source: "enable_banking", iban: "DE89370400440532013000") # pipelock:ignore IBAN
     invalid.errors.add(:iban, :taken)
     ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(invalid))
+    # First call is the initial preferred-iban lookup (nil -- nothing
+    # matches yet, so find_or_create_merchant reaches create!); second call
+    # is the post-race re-query in the rescue, which finds the winner.
+    ProviderMerchant.stubs(:find_by)
+      .with(source: "enable_banking", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+      .returns(nil, concurrent_winner)
+    # Neither the provider_merchant_id nor name fallback matches an existing
+    # row either -- that's what actually reaches create! below.
+    ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_new", source: "enable_banking").returns(nil)
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", name: "New Payee").returns(nil)
 
     merchant = @adapter.find_or_create_merchant(
       provider_merchant_id: "hash_new",
