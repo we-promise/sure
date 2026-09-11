@@ -181,6 +181,24 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "does not resurrect an iban the user deliberately cleared" do
+    linked_account = accounts(:depository)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    linked_account.update!(iban: nil) # simulates the account form clearing it, which locks the attribute
+    linked_account.lock_saved_attributes!
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    @account.upsert_enable_banking_snapshot!({
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "EUR",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    })
+
+    assert_nil linked_account.reload.iban
+  end
+
   test "does not raise or fail the sync when another family account already has this iban" do
     other_account = @family.accounts.create!(name: "Other account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
     linked_account = accounts(:depository)
