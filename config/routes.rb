@@ -333,6 +333,7 @@ Rails.application.routes.draw do
   get "changelog", to: "pages#changelog"
   get "release_highlight", to: "release_highlights#show"
   patch "release_highlight/dismiss", to: "release_highlights#dismiss"
+  patch "feature_highlight/:key/dismiss", to: "release_highlights#dismiss_feature", as: :feature_highlight_dismiss, constraints: { key: /[a-z0-9_]+/ }
   get "feedback", to: "pages#feedback"
   patch "dashboard/preferences", to: "pages#update_preferences"
 

@@ -163,3 +163,9 @@
   <% end %>
   </div>
 <% end %>
+
+<%# Anchored feature highlight (e.g. Bills): one popover per feature per
+    account, sequenced after the release popup by the Stimulus controller. %>
+<% if (pending_feature = pending_feature_highlight) %>
+  <%= render "layouts/shared/feature_highlight", pending: pending_feature %>
+<% end %>

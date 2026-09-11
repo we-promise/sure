@@ -559,6 +559,31 @@ class User < ApplicationRecord
     end
   end
 
+  # Feature highlight (e.g. the anchored "Meet Bills" popover) tracking.
+  # Stored per feature key with the tag that introduced it, so a revamped
+  # feature can be offered again later by bumping its registry min_tag.
+  def seen_feature_highlights
+    preferences&.[]("seen_feature_highlights") || {}
+  end
+
+  def mark_feature_highlight_seen!(key, tag)
+    tag_version = parsed_release_tag_version!(tag)
+
+    with_lock do
+      seen = seen_feature_highlights
+      current = seen[key]
+
+      # Never regress a feature's marker, same rule as the release marker: a
+      # stale tab must not make an acknowledged highlight look unseen again.
+      if current
+        current_version = parsed_release_tag_version(current)
+        next if current_version && tag_version < current_version
+      end
+
+      update!(preferences: (preferences || {}).merge("seen_feature_highlights" => seen.merge(key => tag)))
+    end
+  end
+
   def parsed_release_tag_version!(tag)
     raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
 
