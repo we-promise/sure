@@ -125,8 +125,22 @@ module Family::AutoTransferMatchable
       destination_iban = inflow.entry.account.iban
       counterparty_iban = outflow.extra&.dig("counterparty_iban")
       return false if destination_iban.blank? || counterparty_iban.blank?
+      return false unless normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
 
-      normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
+      # The inflow side's own recorded counterparty IBAN (who the destination
+      # account's bank says paid it) is a second, independent signal from the
+      # same provider sync. When it's present, it must agree with the source
+      # account's IBAN too -- a contradiction here (matching amount/date, but
+      # the destination account's bank recorded a DIFFERENT payer) means this
+      # is very likely two distinct transactions that merely coincide, not a
+      # confirmed transfer. Blank is not a contradiction: not every provider
+      # supplies this on the inflow side, so its absence is uninformative.
+      source_iban = outflow.entry.account.iban
+      inflow_counterparty_iban = inflow.extra&.dig("counterparty_iban")
+      return false if source_iban.present? && inflow_counterparty_iban.present? &&
+        normalize_iban(source_iban) != normalize_iban(inflow_counterparty_iban)
+
+      true
     end
 
     def normalize_iban(value)

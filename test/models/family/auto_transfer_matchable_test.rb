@@ -298,6 +298,42 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not confirm a match when the inflow side's own counterparty iban contradicts the outflow account" do
+    # The destination (credit_card) iban matches the outflow's recorded
+    # counterparty_iban, which alone would confirm the match. But the inflow
+    # transaction itself recorded a DIFFERENT counterparty_iban than the
+    # outflow account's own iban -- the destination bank says this money came
+    # from somewhere else, so this is likely two coincidentally-similar
+    # transactions, not a real transfer, and must not be confirmed.
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow.transaction.update!(extra: { "counterparty_iban" => "FR1420041010050500013M02606" }) # pipelock:ignore IBAN
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "confirms a match when the inflow side's own counterparty iban agrees with the outflow account" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow.transaction.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "transfer candidate options require valid numeric input" do
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
