@@ -40,12 +40,25 @@ module AccountableResource
     rescue Date::Error
       nil
     end || (Time.zone.today - 2.years)
-    Account.transaction do
-      @account = Current.family.accounts.create_and_sync(
-        account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
-        opening_balance_date: opening_balance_date
-      )
-      @account.lock_saved_attributes!
+    begin
+      Account.transaction do
+        @account = Current.family.accounts.create_and_sync(
+          account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+          opening_balance_date: opening_balance_date
+        )
+        @account.lock_saved_attributes!
+      end
+    rescue ActiveRecord::RecordInvalid => e
+      # create_and_sync uses save! internally, so a validation failure (e.g.
+      # an IBAN already used by another account in the family) raises
+      # instead of returning a normal invalid record -- without this, the
+      # request would 500 instead of re-rendering the form with the error,
+      # like #update already does for its own validation failures.
+      @account = e.record
+      @error_message = @account.errors.full_messages.join(", ")
+      set_link_options
+      render :new, status: :unprocessable_entity
+      return
     end
 
     # Prefer the form-carried return_to, then the session value StoreLocation
