@@ -17,14 +17,14 @@ class MerchantTest < ActiveSupport::TestCase
     merchant = FamilyMerchant.new(name: "Landlord", family: families(:dylan_family), iban: "de89 3704 0044 0532 0130 00")
     merchant.valid?
 
-    assert_equal "DE89370400440532013000", merchant.iban
+    assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
   end
 
   test "normalizes iban by stripping tabs and newlines" do
     merchant = FamilyMerchant.new(name: "Landlord", family: families(:dylan_family), iban: "de89\t3704\n0044 0532 0130 00")
     merchant.valid?
 
-    assert_equal "DE89370400440532013000", merchant.iban
+    assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
   end
 
   test "leaves a blank iban as nil" do
@@ -35,26 +35,26 @@ class MerchantTest < ActiveSupport::TestCase
   end
 
   test "enforces uniqueness of iban per source for provider merchants at the model level" do
-    ProviderMerchant.create!(name: "Existing Payee", source: "enable_banking", provider_merchant_id: "pm_1", iban: "AT611904300234573201")
+    ProviderMerchant.create!(name: "Existing Payee", source: "enable_banking", provider_merchant_id: "pm_1", iban: "AT611904300234573201") # pipelock:ignore IBAN
 
-    duplicate = ProviderMerchant.new(name: "Different Name", source: "enable_banking", provider_merchant_id: "pm_2", iban: "AT611904300234573201")
+    duplicate = ProviderMerchant.new(name: "Different Name", source: "enable_banking", provider_merchant_id: "pm_2", iban: "AT611904300234573201") # pipelock:ignore IBAN
 
     assert_not duplicate.valid?
     assert_includes duplicate.errors[:iban], "has already been taken"
   end
 
   test "enforces uniqueness of iban per source for provider merchants at the database level" do
-    ProviderMerchant.create!(name: "Existing Payee", source: "enable_banking", provider_merchant_id: "pm_1", iban: "AT611904300234573201")
+    ProviderMerchant.create!(name: "Existing Payee", source: "enable_banking", provider_merchant_id: "pm_1", iban: "AT611904300234573201") # pipelock:ignore IBAN
 
-    duplicate = ProviderMerchant.new(name: "Different Name", source: "enable_banking", provider_merchant_id: "pm_2", iban: "AT611904300234573201")
+    duplicate = ProviderMerchant.new(name: "Different Name", source: "enable_banking", provider_merchant_id: "pm_2", iban: "AT611904300234573201") # pipelock:ignore IBAN
 
     assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save!(validate: false) }
   end
 
   test "allows the same iban across different sources for provider merchants" do
-    ProviderMerchant.create!(name: "Existing Payee", source: "enable_banking", provider_merchant_id: "pm_1", iban: "AT611904300234573201")
+    ProviderMerchant.create!(name: "Existing Payee", source: "enable_banking", provider_merchant_id: "pm_1", iban: "AT611904300234573201") # pipelock:ignore IBAN
 
-    other_source = ProviderMerchant.new(name: "Other Source Payee", source: "plaid", provider_merchant_id: "pm_2", iban: "AT611904300234573201")
+    other_source = ProviderMerchant.new(name: "Other Source Payee", source: "plaid", provider_merchant_id: "pm_2", iban: "AT611904300234573201") # pipelock:ignore IBAN
 
     assert other_source.valid?
   end
