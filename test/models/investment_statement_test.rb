@@ -288,6 +288,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.withdrawals
   end
 
+  test "totals net a dividend reversal against the dividend it reverses" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    investment_account = create_investment_account(balance: 500)
+
+    create_income_trade(account: investment_account, label: "Dividend", amount: -25, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Dividend", amount: 25, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Interest", amount: -4, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Interest", amount: 1, date: period.start_date)
+
+    totals = InvestmentStatement.new(@family, user: nil).totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.dividends
+    assert_equal Money.new(3, "USD"), totals.interest
+  end
+
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
     account = create_investment_account(balance: 2100, currency: "USD")
     security = Security.create!(ticker: "AAPL", name: "Apple")

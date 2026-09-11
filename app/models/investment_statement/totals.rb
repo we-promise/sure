@@ -55,8 +55,8 @@ class InvestmentStatement::Totals
         SELECT
           COALESCE(SUM(CASE WHEN trades.qty > 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
           COALESCE(SUM(CASE WHEN trades.qty < 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
-          COALESCE(SUM(CASE WHEN trades.qty = 0 AND trades.investment_activity_label = 'Dividend' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
-          COALESCE(SUM(CASE WHEN trades.qty = 0 AND trades.investment_activity_label = 'Interest' THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
+          COALESCE(SUM(CASE WHEN trades.qty = 0 AND trades.investment_activity_label = 'Dividend' THEN -(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
+          COALESCE(SUM(CASE WHEN trades.qty = 0 AND trades.investment_activity_label = 'Interest' THEN -(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
           COUNT(trades.id) FILTER (
             WHERE NOT (trades.qty = 0 AND COALESCE(trades.investment_activity_label, '') IN ('Dividend', 'Interest'))
           ) as trades_count
