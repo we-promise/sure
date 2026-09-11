@@ -66,6 +66,7 @@ class ValuableItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, @account.valuable.lots.count
     assert_equal 100, @account.reload.balance
     assert flash[:alert].present?
+    assert_nil flash[:notice]
     assert @account.valuable.valuation_pending?
   end
 

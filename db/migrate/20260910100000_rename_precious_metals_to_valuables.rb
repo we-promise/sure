@@ -22,9 +22,15 @@ class RenamePreciousMetalsToValuables < ActiveRecord::Migration[8.1]
   end
 
   def down
-    if connection.select_value("SELECT 1 FROM valuable_items WHERE item_type = 'gemstone' LIMIT 1")
+    if connection.select_value(<<~SQL.squish)
+      SELECT 1
+      FROM valuable_items
+      WHERE item_type != 'bullion'
+         OR material != 'gold'
+      LIMIT 1
+    SQL
       raise ActiveRecord::IrreversibleMigration,
-        "Cannot revert Gems and Bullion while gemstone purchases exist. Remove or export those purchases before rolling back."
+        "Cannot revert while purchases unsupported by the previous schema exist."
     end
 
     execute "UPDATE active_storage_attachments SET record_type = 'PreciousMetalLot' WHERE record_type = 'ValuableItem'"

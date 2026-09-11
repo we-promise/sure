@@ -1,5 +1,5 @@
 class UI::Account::ValuableOverview < ApplicationComponent
-  BullionSummary = Data.define(:material, :gross_weight, :fine_weight, :rate)
+  BullionSummary = Data.define(:material, :gross_weight, :fine_weight, :purity, :rate)
 
   attr_reader :account
 
@@ -15,7 +15,16 @@ class UI::Account::ValuableOverview < ApplicationComponent
 
   def bullion_summaries
     @bullion_summaries ||= bullion_items.group_by(&:material).map do |material, material_items|
-      BullionSummary.new(material:, gross_weight: material_items.sum(&:weight_in_grams), fine_weight: material_items.sum(&:fine_weight_in_grams), rate: rate_for_symbol(ValuableItem::BULLION_MATERIALS.fetch(material)))
+      gross_weight = material_items.sum(&:weight_in_grams)
+      fine_weight = material_items.sum(&:fine_weight_in_grams)
+
+      BullionSummary.new(
+        material:,
+        gross_weight:,
+        fine_weight:,
+        purity: fine_weight / gross_weight * 100,
+        rate: rate_for_symbol(ValuableItem::BULLION_MATERIALS.fetch(material))
+      )
     end
   end
 
@@ -29,6 +38,19 @@ class UI::Account::ValuableOverview < ApplicationComponent
   def item_value(item)
     rate = rate_for(item)
     Money.new(item.value_for(rate&.rate), account.currency) if item.manual_value? || rate
+  end
+
+  def item_gain(item)
+    value = item_value(item)
+    return unless value
+
+    value - Money.new(item.total_cost_amount, account.currency)
+  end
+
+  def item_return_percentage(item)
+    return if item.total_cost_amount.zero? || item_gain(item).zero?
+
+    item_gain(item).amount / item.total_cost_amount * 100
   end
 
   def editable? = account.permission_for(Current.user).in?([ :owner, :full_control ])

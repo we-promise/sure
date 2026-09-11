@@ -6,6 +6,11 @@ class AllowPreciousMetalLotImportMappings < ActiveRecord::Migration[8.1]
   end
 
   def down
+    execute <<~SQL.squish
+      DELETE FROM import_source_mappings
+      WHERE source_type = 'PreciousMetalLot'
+         OR target_type = 'PreciousMetalLot'
+    SQL
     replace_constraints(TYPES, validate: true)
   end
 

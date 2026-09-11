@@ -21,6 +21,16 @@ class UI::Account::ValuableOverviewTest < ViewComponent::TestCase
     end
   end
 
+  test "shows an item's return and explains its pure-metal weight" do
+    @gold_item.update!(weight: 10, weight_unit: "gram", purity: 92.6, cost_amount: 500, manual_value: 1_296.73)
+
+    render_inline UI::Account::ValuableOverview.new(account: @account)
+
+    assert_text "10 g gross"
+    assert_text "9.26 g pure gold (92.6% purity)"
+    assert_text "Gain: +$796.73 (159%)"
+  end
+
   private
     def create_bullion_item(material:)
       @account.valuable.items.create!(

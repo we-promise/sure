@@ -7,7 +7,7 @@ class ValuablesTest < ApplicationSystemTestCase
     fill_in "account[name]", with: "Family gold"
     find("form[action='#{valuables_path}'] [type='submit']").click
     assert_text "Family gold"
-    click_link "Add item"
+    click_link "New", href: new_valuable_item_path(account_id: Account.find_by!(name: "Family gold").id)
     fill_in "valuable_item[description]", with: "Wedding bracelet"
     fill_in "valuable_item[acquired_on]", with: Date.current
     select "Bullion", from: "valuable_item[item_type]"
@@ -25,11 +25,14 @@ class ValuablesTest < ApplicationSystemTestCase
     assert_no_link "Holdings"
     assert_no_lot_overflow
     page.save_screenshot(Rails.root.join("tmp/screenshots/gems-and-bullion-desktop.png"))
+    original_size = page.current_window.size
     page.current_window.resize_to(390, 844)
     assert_text "Wedding bracelet"
     page.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'instant'})", find("[data-testid='valuable-item']"))
     assert_no_lot_overflow
     page.save_screenshot(Rails.root.join("tmp/screenshots/gems-and-bullion-mobile.png"))
+  ensure
+    page.current_window.resize_to(*original_size) if original_size
   end
 
   private

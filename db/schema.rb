@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_11_090300) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_090400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2591,9 +2591,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_11_090300) do
     t.check_constraint "weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying, 'carat'::character varying]::text[])", name: "valuable_items_weight_unit"
   end
 
-  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (material::text = ANY (ARRAY['gold'::character varying, 'silver'::character varying, 'platinum'::character varying, 'palladium'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND (material::text = ANY (ARRAY['diamond'::character varying, 'ruby'::character varying, 'sapphire'::character varying, 'emerald'::character varying, 'other'::character varying]::text[]))", name: "valuable_items_material_matches_item_type", validate: false
-  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND weight_unit::text = 'carat'::text", name: "valuable_items_weight_unit_matches_item_type", validate: false
-  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text OR purity IS NULL", name: "valuable_items_gemstone_purity_absent", validate: false
+  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (material::text = ANY (ARRAY['gold'::character varying, 'silver'::character varying, 'platinum'::character varying, 'palladium'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND (material::text = ANY (ARRAY['diamond'::character varying, 'ruby'::character varying, 'sapphire'::character varying, 'emerald'::character varying, 'other'::character varying]::text[]))", name: "valuable_items_material_matches_item_type"
+  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text AND (weight_unit::text = ANY (ARRAY['gram'::character varying, 'troy_ounce'::character varying, 'kilogram'::character varying]::text[])) OR item_type::text = 'gemstone'::text AND weight_unit::text = 'carat'::text", name: "valuable_items_weight_unit_matches_item_type"
+  add_check_constraint "valuable_items", "item_type::text = 'bullion'::text OR purity IS NULL", name: "valuable_items_gemstone_purity_absent"
 
   create_table "valuables", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false

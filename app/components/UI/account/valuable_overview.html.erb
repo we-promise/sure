@@ -6,7 +6,7 @@
       <% bullion_summaries.each do |summary| %>
         <%= helpers.summary_card(title: t("valuables.tabs.overview.bullion_summary", material: t("valuable_items.materials.#{summary.material}"))) do %>
           <span class="block"><%= t("valuables.tabs.overview.gross_weight", amount: helpers.number_with_precision(summary.gross_weight, precision: 3, strip_insignificant_zeros: true)) %></span>
-          <span class="block text-secondary text-xs"><%= t("valuables.tabs.overview.fine_weight", amount: helpers.number_with_precision(summary.fine_weight, precision: 3, strip_insignificant_zeros: true)) %></span>
+          <span class="block text-secondary text-xs"><%= t("valuables.tabs.overview.pure_weight", amount: helpers.number_with_precision(summary.fine_weight, precision: 3, strip_insignificant_zeros: true), material: t("valuable_items.materials.#{summary.material}").downcase, purity: helpers.number_with_precision(summary.purity, precision: 3, strip_insignificant_zeros: true)) %></span>
           <span class="block text-secondary text-xs"><%= summary.rate ? t("valuables.tabs.overview.quote_date", date: l(summary.rate.date, format: :short)) : t("valuables.tabs.overview.quote_unavailable") %></span>
         <% end %>
       <% end %>
@@ -47,8 +47,11 @@
               </div>
               <p class="text-secondary text-xs font-normal">
                 <%= l(item.acquired_on, format: :long) %> ·
-                <%= t("valuables.tabs.overview.weight_value", amount: helpers.number_with_precision(item.weight, precision: 3, strip_insignificant_zeros: true), unit: t("valuables.tabs.overview.units.#{item.weight_unit}")) %>
-                <%= " · #{helpers.number_with_precision(item.purity, strip_insignificant_zeros: true)}%" if item.bullion? %>
+                <% if item.bullion? %>
+                  <%= t("valuables.tabs.overview.bullion_weight_detail", gross_weight: helpers.number_with_precision(item.weight_in_grams, precision: 3, strip_insignificant_zeros: true), fine_weight: helpers.number_with_precision(item.fine_weight_in_grams, precision: 3, strip_insignificant_zeros: true), material: t("valuable_items.materials.#{item.material}").downcase, purity: helpers.number_with_precision(item.purity, precision: 3, strip_insignificant_zeros: true)) %>
+                <% else %>
+                  <%= t("valuables.tabs.overview.weight_value", amount: helpers.number_with_precision(item.weight, precision: 3, strip_insignificant_zeros: true), unit: t("valuables.tabs.overview.units.#{item.weight_unit}")) %>
+                <% end %>
               </p>
               </div>
             </div>
@@ -56,6 +59,11 @@
               <div class="text-right">
                 <p class="privacy-sensitive"><%= value ? helpers.format_money(value) : t("valuables.tabs.overview.not_available") %></p>
                 <p class="text-xs text-secondary font-normal privacy-sensitive"><%= t("valuables.tabs.overview.total_paid", value: helpers.format_money(Money.new(item.total_cost_amount, account.currency))) %></p>
+                <% if (gain = item_gain(item)) %>
+                  <p class="text-xs font-normal privacy-sensitive <%= gain.positive? ? "text-positive" : gain.negative? ? "text-destructive" : "text-secondary" %>">
+                    <%= t("valuables.tabs.overview.#{gain.positive? ? "gain" : gain.negative? ? "loss" : "no_change"}", value: helpers.format_money(gain.abs), percentage: item_return_percentage(item) && " (#{helpers.number_to_percentage(item_return_percentage(item).abs, precision: 0, strip_insignificant_zeros: true)})") %>
+                  </p>
+                <% end %>
               </div>
               <% if editable? %>
                 <%= render DS::Link.new(variant: :icon, icon: "pencil-line", aria_label: t("valuables.tabs.overview.edit_item"), title: t("valuables.tabs.overview.edit_item"), href: edit_valuable_item_path(item), frame: :modal) %>

@@ -11,11 +11,14 @@ class ValuableValuation
 
   def refresh!
     validate_account!
+    valuation_currency = account.currency
     rates = spot_symbols.index_with { |symbol| rate_for(symbol) }
 
     account.with_lock do
       account.reload
       validate_account!
+      raise Error, "Account currency changed during valuation; refresh again" if account.currency != valuation_currency
+
       items = account.valuable.items.reload
       missing = items.select(&:spot_valued?).map(&:quote_symbol).uniq - rates.keys
       raise Error, "Purchases changed during valuation; refresh again" if missing.any?

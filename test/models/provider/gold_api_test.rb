@@ -22,11 +22,25 @@ class Provider::GoldApiTest < ActiveSupport::TestCase
 
   test "rejects an invalid quote currency without making a request" do
     provider = Provider::GoldApi.new("test-key")
+    provider.expects(:client).never
 
     result = provider.fetch_gold_price(currency: "US/../D")
 
     assert_not result.success?
     assert_instance_of Provider::GoldApi::Error, result.error
+  end
+
+  test "rejects an undated price response" do
+    provider = Provider::GoldApi.new("test-key")
+    response = Struct.new(:body).new({ "price" => 3_110.34768 }.to_json)
+    client = mock
+    client.expects(:get).with("/api/price/XAU/USD").yields(Struct.new(:headers).new({})).returns(response)
+    provider.stubs(:client).returns(client)
+
+    result = provider.fetch_gold_price(currency: "USD")
+
+    assert_not result.success?
+    assert_equal "GoldAPI returned no XAU timestamp", result.error.message
   end
 
   test "requests the matching bullion symbol" do

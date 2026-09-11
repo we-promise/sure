@@ -58,6 +58,19 @@ class ValuableValuationTest < ActiveSupport::TestCase
     assert_equal 5_000, valuation.refresh!
   end
 
+  test "refuses a valuation when its account currency changes while fetching a quote" do
+    valuation = ValuableValuation.new(account: @account)
+    account = @account
+    valuation.define_singleton_method(:rate_for) do |_symbol|
+      account.update_columns(currency: "INR")
+      Provider::GoldApi::Price.new(date: Date.current, currency: "USD", price_per_troy_ounce: 3_110.34768, symbol: "XAU")
+    end
+
+    error = assert_raises(ValuableValuation::Error) { valuation.refresh! }
+
+    assert_equal "Account currency changed during valuation; refresh again", error.message
+  end
+
   test "falls back to a local quote if USD conversion is unavailable" do
     @account.update_columns(currency: "INR")
     @account.valuable.lots.update_all(currency: "INR")

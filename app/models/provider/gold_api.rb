@@ -22,7 +22,9 @@ class Provider::GoldApi < Provider
       raise Error, "GoldAPI returned no #{symbol} price" unless price.positive?
 
       timestamp = body["timestamp"].presence
-      date = timestamp ? Time.zone.at(timestamp.to_i).to_date : Date.current
+      raise Error, "GoldAPI returned no #{symbol} timestamp" unless timestamp
+
+      date = Time.zone.at(timestamp.to_i).to_date
       Price.new(date:, currency:, price_per_troy_ounce: price, symbol: symbol)
     end
   end

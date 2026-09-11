@@ -10,8 +10,7 @@ class ValuableItemsController < ApplicationController
     @lot = @account.valuable.lots.build(lot_params.merge(currency: @account.currency))
     @lot.skip_queued_valuation_refresh = true
     if @lot.save
-      refresh_valuation(@account, valuation_activity_name(:purchase_added, @lot))
-      redirect_to account_path(@account, tab: "overview"), notice: t(".success")
+      redirect_after_valuation(@account, t(".success"), valuation_activity_name(:purchase_added, @lot))
     else
       render :new, status: :unprocessable_entity
     end
@@ -24,8 +23,7 @@ class ValuableItemsController < ApplicationController
   def update
     @lot.skip_queued_valuation_refresh = true
     if @lot.update(lot_params.merge(currency: @lot.account.currency))
-      refresh_valuation(@lot.account, valuation_activity_name(:purchase_updated, @lot))
-      redirect_to account_path(@lot.account, tab: "overview"), notice: t(".success")
+      redirect_after_valuation(@lot.account, t(".success"), valuation_activity_name(:purchase_updated, @lot))
     else
       @account = @lot.account
       render :edit, status: :unprocessable_entity
@@ -37,21 +35,29 @@ class ValuableItemsController < ApplicationController
     @lot.skip_queued_valuation_refresh = true
     activity_name = valuation_activity_name(:purchase_removed, @lot)
     @lot.destroy!
-    refresh_valuation(account, activity_name)
-    redirect_to account_path(account, tab: "overview"), notice: t(".deleted")
+    redirect_after_valuation(account, t(".deleted"), activity_name)
   end
 
   private
     def refresh_valuation(account, reconciliation_name)
       ValuableValuation.new(account:, reconciliation_name:).refresh!
+      true
     rescue ValuableValuation::Error, ActiveRecord::RecordInvalid => error
       RefreshValuableValuationJob.perform_later(account.id)
-      flash[:alert] = t("valuables.refresh_valuation.failure")
       DebugLogEntry.capture(
         category: "valuable_valuation", level: "warn", message: error.message,
         source: "ValuableItemsController#refresh_valuation",
         family: account.family, account: account, metadata: { account_id: account.id }
       )
+      false
+    end
+
+    def redirect_after_valuation(account, success_message, reconciliation_name)
+      if refresh_valuation(account, reconciliation_name)
+        redirect_to account_path(account, tab: "overview"), notice: success_message
+      else
+        redirect_to account_path(account, tab: "overview"), alert: t("valuables.refresh_valuation.failure")
+      end
     end
 
     def valuation_activity_name(action, item)

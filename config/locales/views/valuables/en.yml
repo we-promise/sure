@@ -32,7 +32,7 @@ en:
         bullion_summary: "%{material}"
         gemstones_summary: Gems and stones
         gross_weight: "%{amount} g gross"
-        fine_weight: "%{amount} g fine"
+        pure_weight: "%{amount} g pure %{material} (%{purity}%% purity)"
         quote_date: "Quote: %{date}"
         quote_unavailable: Market quote unavailable
         appraised_value: "Appraised value: %{value}"
@@ -42,7 +42,11 @@ en:
         no_items: No items recorded yet.
         material: "%{material}"
         weight_value: "%{amount} %{unit}"
+        bullion_weight_detail: "%{gross_weight} g gross · %{fine_weight} g pure %{material} (%{purity}%% purity)"
         total_paid: "Total paid: %{value}"
+        gain: "Gain: +%{value}%{percentage}"
+        loss: "Loss: −%{value}%{percentage}"
+        no_change: "No gain or loss"
         not_available: Not available
         refresh_valuation: Refresh valuation
         edit_item: Edit item
