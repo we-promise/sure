@@ -110,11 +110,13 @@ class MonobankEntry::Processor
     end
 
     # The id of the Sure category the transaction's MCC maps to, or nil when no matcher
-    # was injected, the MCC is missing, or it has no confident equivalent among the
-    # family's categories. The import adapter applies this via enrich_attribute, so it
-    # never overwrites a category the user has set or locked.
+    # was injected, the account has category matching switched off, the MCC is missing,
+    # or it has no confident equivalent among the family's categories. The import
+    # adapter applies this via enrich_attribute, so it never overwrites a category the
+    # user has set or locked.
     def matched_category_id
       return nil unless @category_matcher
+      return nil unless account&.enable_category_matcher?
 
       @category_matcher.match(data[:mcc])&.id
     end
@@ -148,13 +150,16 @@ class MonobankEntry::Processor
       -(minor_units(data[:amount]) / account_minor_unit_divisor)
     end
 
-    # Entries are recorded in the account currency, which is what `amount` is expressed
-    # in. Monobank's `currencyCode` on a statement item is documented as the *account*
-    # currency ("Код валюти рахунку"), so it is preferred here and the stored account
-    # currency is the fallback.
+    # Entries are recorded in the account currency, which is what `amount` is expressed in.
+    #
+    # `currencyCode` is NOT the account currency: it varies between items on a single
+    # account, and the account's own currency cannot. Transferring UAH from a hryvnia card
+    # to fund a euro one reports 978 on the hryvnia card's item, while `amount` on that
+    # same item stays in UAH. Pairing the two labelled an account-currency figure with a
+    # foreign code, so 500 UAH was stored as 500 EUR. The operation currency is recorded
+    # as `fx_from` instead.
     def currency
-      parse_currency(alpha_currency_code(data[:currencyCode])) ||
-        parse_currency(monobank_account.currency) ||
+      parse_currency(monobank_account.currency) ||
         account&.currency ||
         "UAH"
     end
@@ -205,6 +210,8 @@ class MonobankEntry::Processor
           "commission_amount" => major_amount(data[:commissionRate]),
           "balance_after" => major_amount(data[:balance]),
           "operation_amount" => foreign_operation_amount,
+          "fx_from" => fx_from,
+          "fx_amount" => fx_amount,
           "counter_name" => data[:counterName],
           "counter_iban" => data[:counterIban],
           "counter_edrpou" => data[:counterEdrpou],
@@ -219,18 +226,76 @@ class MonobankEntry::Processor
       self.class.pending?(data)
     end
 
-    # Monobank's `operationAmount` is the amount in the currency the transaction was
-    # actually made in, but the statement never reports *which* currency that was — only
-    # the account currency is given. So an FX purchase can be detected (the two amounts
-    # differ) without being described: the raw operation amount is recorded for
-    # reference and Sure's fx_from/fx_amount convention is deliberately left unset
-    # rather than filled in with a guessed currency.
+    # `operationAmount` is the amount in the currency the operation was actually made in,
+    # which `currencyCode` names. Kept in raw minor units for reference — `fx_amount`
+    # carries the same figure in major units once the currency resolves.
     def foreign_operation_amount
       operation_amount = data[:operationAmount]
       return nil if operation_amount.blank?
       return nil if operation_amount.to_s == data[:amount].to_s
 
       operation_amount
+    end
+
+    # The currency the operation was made in, per `currencyCode`.
+    def operation_currency
+      return @operation_currency if defined?(@operation_currency)
+
+      @operation_currency = parse_currency(alpha_currency_code(data[:currencyCode]))
+    end
+
+    # True for an operation in a currency other than the account's, which is what makes
+    # `operationAmount` worth recording separately from `amount`.
+    def foreign_operation?
+      operation_currency.present? && operation_currency != currency
+    end
+
+    # fx_from/fx_amount follow the convention UpEntry::Processor uses: the currency the
+    # operation was made in, and the amount expressed in that currency.
+    #
+    # Both are set only for a *recognized foreign* operation — one whose `currencyCode`
+    # maps to a known currency that differs from the account's. `fx_amount` additionally
+    # needs an `operationAmount` that is present and parseable. An operation in the
+    # account's own currency, or one whose code Sure does not know, leaves both unset while
+    # `operation_amount` still carries the raw figure whenever it differs from `amount`.
+    def fx_from
+      operation_currency if foreign_operation?
+    end
+
+    def fx_amount
+      return nil unless foreign_operation?
+
+      value = data[:operationAmount]
+      return nil if value.blank?
+
+      divisor = BigDecimal(minor_unit_divisor(operation_currency).to_s)
+      (minor_units(value) / divisor).to_s("F")
+    rescue ArgumentError
+      report_unparseable_operation_amount(value)
+      nil
+    end
+
+    # A foreign operation whose amount will not parse leaves partial FX metadata behind:
+    # `fx_from` names a currency that no `fx_amount` accompanies. `minor_units` only writes
+    # to the Rails log, which support cannot see, so record the incident where provider
+    # diagnostics are surfaced.
+    def report_unparseable_operation_amount(value)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Monobank operationAmount could not be parsed; fx_amount left unset",
+        source: self.class.name,
+        provider_key: "monobank",
+        family: account&.family,
+        account: account,
+        account_provider: monobank_account.account_provider,
+        metadata: {
+          external_id: external_id,
+          operation_currency: operation_currency,
+          operation_amount: value.to_s,
+          monobank_account_id: monobank_account.id
+        }
+      )
     end
 
     # Minor units of the account currency per major unit (100 for UAH).
