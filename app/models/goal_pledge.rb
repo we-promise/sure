@@ -21,6 +21,7 @@ class GoalPledge < ApplicationRecord
   validates :currency, presence: true
   validates :expires_at, presence: true
   validate :account_must_be_linked_to_goal
+  validate :account_can_receive_pledges
   validate :currency_matches_goal
   validate :no_duplicate_open_pledge, on: :create
 
@@ -155,6 +156,10 @@ class GoalPledge < ApplicationRecord
       return if goal.goal_accounts.where(account_id: account_id).exists?
 
       errors.add(:account, :must_be_linked_to_goal)
+    end
+
+    def account_can_receive_pledges
+      errors.add(:account, :cannot_receive_pledges) if account&.valuable?
     end
 
     def currency_matches_goal

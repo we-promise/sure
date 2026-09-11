@@ -675,6 +675,17 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       notes: "Hallmarked"
     )
     source_account.valuable.lots.sole.invoice.attach(io: StringIO.new("receipt"), filename: "gold-receipt.pdf", content_type: "application/pdf")
+    source_account.valuable.items.create!(
+      description: "Sapphire ring",
+      acquired_on: Date.parse("2026-01-16"),
+      item_type: "gemstone",
+      material: "sapphire",
+      weight: 1.5,
+      weight_unit: "carat",
+      cost_amount: 300,
+      manual_value: 500,
+      notes: "Appraised"
+    )
 
     ndjson = nil
     Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
@@ -689,7 +700,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     restored_account = @family.accounts.find_by!(name: "Physical Gold")
     assert_instance_of Valuable, restored_account.valuable
 
-    lot = restored_account.valuable.lots.sole
+    lot = restored_account.valuable.items.find_by!(description: "Wedding bracelet")
     assert_not lot.invoice.attached?
     assert_equal "Wedding bracelet", lot.description
     assert_equal Date.parse("2026-01-15"), lot.acquired_on
@@ -701,6 +712,16 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 0.0, lot.manual_value.to_f
     assert_equal "Gold Dealer", lot.merchant.name
     assert_equal "Hallmarked", lot.notes
+
+    gemstone = restored_account.valuable.items.find_by!(description: "Sapphire ring")
+    assert_predicate gemstone, :gemstone?
+    assert_equal "sapphire", gemstone.material
+    assert_equal "carat", gemstone.weight_unit
+    assert_equal 1.5, gemstone.weight.to_f
+    assert_nil gemstone.purity
+    assert_equal 300, gemstone.cost_amount.to_f
+    assert_equal 500, gemstone.manual_value.to_f
+    assert_equal "Appraised", gemstone.notes
   end
 
   test "imports a gemstone without assigning bullion purity" do
