@@ -94,11 +94,16 @@ class Provider::FioAdapter < Provider::Base
     item&.institution_color
   end
 
-  # Resolve the target Fio item: the requested one, else the first configured.
+  # Resolve the target Fio item.
+  #
+  # A requested id is authoritative: unlike an aggregator, where one item covers every
+  # account, a Fio item is one token for one account, so a family routinely has several.
+  # Falling back to another connection would silently build a client for the wrong
+  # account. Only an absent id picks the first configured connection.
   def self.resolve_fio_item(family, fio_item_id)
     if fio_item_id.present?
       item = family.fio_items.active.find_by(id: fio_item_id)
-      return item if item&.credentials_configured?
+      return item&.credentials_configured? ? item : nil
     end
 
     family.fio_items.active.ordered.find(&:credentials_configured?)
