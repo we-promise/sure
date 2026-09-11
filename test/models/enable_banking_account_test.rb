@@ -181,6 +181,26 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "does not raise or fail the sync when another family account already has this iban" do
+    other_account = @family.accounts.create!(name: "Other account", balance: 0, currency: "EUR", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    assert_nothing_raised do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "EUR",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+
+    assert_nil linked_account.reload.iban
+    assert_equal "NL91ABNA0417164300", other_account.reload.iban # pipelock:ignore IBAN
+    assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
+  end
+
   test "does not touch linked account when snapshot has no iban" do
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
