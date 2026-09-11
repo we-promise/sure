@@ -12,10 +12,14 @@ class PlaidAccount::Processor
   # Processing the account is the first step and if it fails, we halt the entire processor
   # Each subsequent step can fail independently, but we continue processing the rest of the steps
   def process
-    process_account!
+    account = process_account!
     process_transactions
     process_investments
     process_liabilities
+
+    # Anchor the reported balance AFTER importing, so the previous reading can be judged
+    # against a complete ledger. See Account::CurrentBalanceManager.
+    account&.set_current_balance(balance_calculator.balance)
   end
 
   private
@@ -88,12 +92,14 @@ class PlaidAccount::Processor
           )
         end
 
-        # Create or update the current balance anchor valuation for event-sourced ledger
+        # Returned to `process`, which creates or updates the current balance anchor
+        # valuation once transactions are in.
+        #
         # Note: This is a partial implementation. In the future, we'll introduce HoldingValuation
         # to properly track the holdings vs. cash breakdown, but for now we're only tracking
         # the total balance in the current anchor. The cash_balance field on the account model
         # is still being used for the breakdown.
-        account.set_current_balance(balance_calculator.balance)
+        account
       end
     end
 

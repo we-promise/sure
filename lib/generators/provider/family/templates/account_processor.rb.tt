@@ -15,8 +15,7 @@ class <%= class_name %>Account::Processor
 
     Rails.logger.info "<%= class_name %>Account::Processor - Processing account #{<%= file_name %>_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing transactions/holdings/activities)
-    update_account_balance(account)
+    anchor_balance = update_account_balance(account)
 <% if investment_provider? -%>
 
     # Process holdings
@@ -53,6 +52,11 @@ class <%= class_name %>Account::Processor
       Rails.logger.warn "<%= class_name %>Account::Processor - No transactions payload to process"
     end
 <% end -%>
+
+    # Anchor the reported balance AFTER importing, never before. The anchor is judged
+    # against the imported ledger, so the transactions for this sync must already be
+    # persisted when it is written. See Account::CurrentBalanceManager.
+    account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete
@@ -103,9 +107,8 @@ class <%= class_name %>Account::Processor
       account.save!
 <% end -%>
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(<%= investment_provider? ? "total_balance" : "balance" %>)
+      # Returned to `process`, which anchors it once the import is done.
+      <%= investment_provider? ? "total_balance" : "balance" %>
     end
 <% if investment_provider? -%>
 

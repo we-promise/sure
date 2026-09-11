@@ -13,9 +13,7 @@ class SnaptradeAccount::Processor
 
     Rails.logger.info "SnaptradeAccount::Processor - Processing account #{snaptrade_account.id} -> Sure account #{account.id}"
 
-    # Update account balance FIRST (before processing holdings/activities)
-    # This creates the current_anchor valuation needed for reverse sync
-    update_account_balance(account)
+    anchor_balance = update_account_balance(account)
 
     # Process holdings
     holdings_count = snaptrade_account.raw_holdings_payload&.size || 0
@@ -40,6 +38,10 @@ class SnaptradeAccount::Processor
     else
       Rails.logger.warn "SnaptradeAccount::Processor - No activities payload to process"
     end
+
+    # Anchor the reported balance AFTER importing, so the previous reading can be judged
+    # against a complete ledger. See Account::CurrentBalanceManager.
+    account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     # This is critical for fresh account links where the sync complete broadcast
@@ -67,9 +69,8 @@ class SnaptradeAccount::Processor
       )
       account.save!
 
-      # Create or update the current balance anchor valuation for linked accounts
-      # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance)
+      # Returned to `process`, which anchors it once holdings and activities are in.
+      total_balance
     end
 
     def calculate_total_balance

@@ -50,6 +50,53 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
 
     assert_equal BigDecimal("250"), acct.reload.cash_balance
   end
+  test "anchors the current balance only after transactions have been imported" do
+    eb_acct = @item.enable_banking_accounts.create!(
+      name: "Checking",
+      uid: "eb_4",
+      currency: "GBP",
+      current_balance: BigDecimal("250")
+    )
+
+    acct = accounts(:depository)
+    acct.update!(balance: 500, cash_balance: 500, currency: "GBP")
+    AccountProvider.create!(account: acct, provider: eb_acct)
+
+    baseline_transaction_count = acct.entries.transactions.count
+
+    # Stand-in transaction importer: creates one entry, the way a real provider batch
+    # would, so we can observe whether it landed before the anchor was written. Mocha
+    # evaluates a `.with` block as a parameter matcher, which can run more than once per
+    # invocation, so the side effect is guarded to fire only the first time.
+    imported = false
+    EnableBankingAccount::Transactions::Processor.any_instance.stubs(:process).with do
+      unless imported
+        imported = true
+        acct.entries.create!(
+          date: Date.current,
+          name: "Imported transaction",
+          amount: 10,
+          currency: "GBP",
+          entryable: Transaction.new
+        )
+      end
+      true
+    end
+
+    observed_transaction_count = nil
+
+    Account.any_instance.stubs(:set_current_balance).with do
+      observed_transaction_count ||= acct.entries.transactions.count
+      true
+    end.returns(Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: true, error: nil))
+
+    EnableBankingAccount::Processor.new(eb_acct).process
+
+    assert_equal baseline_transaction_count + 1, observed_transaction_count,
+      "set_current_balance must be called AFTER the sync's transactions are persisted, " \
+      "so a stale anchor can be judged against a complete ledger"
+  end
+
   test "snapshot upsert preserves an established currency when the payload omits it" do
     eb_acct = @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_3", currency: "GBP")
 
