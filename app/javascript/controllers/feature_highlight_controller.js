@@ -44,6 +44,15 @@ export default class extends Controller {
         this.handleReleaseSettled,
         { once: true },
       );
+      // Fallback: if the event is missed (controller connected late, cached
+      // mount that never re-dispatches), poll the window-level flag.
+      this.settledPoll = window.setInterval(() => {
+        if (this.releaseHighlightSettled()) {
+          window.clearInterval(this.settledPoll);
+          this.settledPoll = undefined;
+          this.handleReleaseSettled();
+        }
+      }, 250);
     } else {
       this.armInteractionListeners();
     }
@@ -55,6 +64,7 @@ export default class extends Controller {
       "release-highlight:settled",
       this.handleReleaseSettled,
     );
+    window.clearInterval(this.settledPoll);
     window.clearTimeout(this.showTimeout);
 
     if (this.driverObj) {

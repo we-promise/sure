@@ -29,6 +29,8 @@ class FeatureHighlightTest < ApplicationSystemTestCase
     click_on "Got it"
 
     assert_no_selector ".driver-popover"
+    sleep 1
+    dump_browser_console
     assert_equal "v0.7.5-alpha.1", wait_for_feature_seen("bills")
 
     visit root_path
@@ -83,6 +85,13 @@ class FeatureHighlightTest < ApplicationSystemTestCase
   end
 
   private
+
+    def dump_browser_console
+      logs = page.driver.browser.logs.get(:browser)
+      puts "BROWSER CONSOLE: #{logs.map { |l| "#{l.level}: #{l.message}" }.join(" | ")}"
+    rescue => e
+      puts "BROWSER CONSOLE unavailable: #{e.class}"
+    end
 
     # Dismissal persists via an async PATCH; poll briefly instead of racing it.
     def wait_for_feature_seen(key)
