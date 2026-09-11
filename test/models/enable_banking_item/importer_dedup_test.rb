@@ -98,7 +98,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
-        creditor_account: { iban: "DE89370400440532013000" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
         status: "BOOK"
       },
@@ -107,7 +107,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
-        creditor_account: { iban: "AT611904300234573201" },
+        creditor_account: { iban: "AT611904300234573201" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
         status: "BOOK"
       }
@@ -139,7 +139,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
-        creditor_account: { iban: "DE89370400440532013000" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
         status: "BOOK"
       }
@@ -158,7 +158,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
-        creditor_account: { iban: "DE89370400440532013000" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
         status: "BOOK"
       },
@@ -167,7 +167,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
-        creditor_account: { iban: "DE89370400440532013000" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
         status: "BOOK"
       }
