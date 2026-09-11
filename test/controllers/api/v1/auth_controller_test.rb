@@ -685,14 +685,18 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     }, expires_in: 10.minutes)
 
     # Simulate deactivation landing after the initial active? check but
-    # before issue_mobile_tokens actually mints a token — SsoAuditLog.log_link!
+    # before issue_token! actually mints a token — SsoAuditLog.log_link!
     # runs in that window in the real flow, so hook the deactivation there.
     SsoAuditLog.stubs(:log_link!).with do |**kwargs|
       kwargs[:user].update_column(:active, false)
       true
     end
 
-    assert_difference("OidcIdentity.count", 1) do
+    # The identity, the device, and the token mint all run in the same
+    # transaction as the locked active? recheck, so a deactivation landing
+    # in that window must roll all of it back — nothing may survive a
+    # rejected request.
+    assert_no_difference [ "OidcIdentity.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ] do
       post "/api/v1/auth/sso_link", params: {
         linking_code: linking_code,
         email: user.email,
@@ -700,6 +704,58 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+
+    # The code was already consumed before the rejected transaction; it
+    # must be restored so the user can retry instead of restarting the
+    # whole SSO flow from the IdP.
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to be restored after a rejected request"
+  end
+
+  test "should restore the linking code when device registration fails during sso_link" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    invalid_device_info = @device_info.merge(device_type: "invalid-type")
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-device-failure",
+      email: "google-device-failure@example.com",
+      device_info: invalid_device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference [ "OidcIdentity.count", "MobileDevice.count" ] do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "Failed to register device", response_data["error"]
+
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to be restored after a rejected request"
+  end
+
+  test "login rejects a user purged between authentication and the reload fast-path" do
+    user = users(:family_admin)
+    User.stubs(:find_by).with(email: user.email).returns(user)
+    user.stubs(:reload).raises(ActiveRecord::RecordNotFound)
+
+    post "/api/v1/auth/login", params: {
+      email: user.email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    # Must fall through to the same "deactivated" response every other
+    # rejection on this endpoint uses, not BaseController's generic
+    # record_not_found handler.
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
     assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]

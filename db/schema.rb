@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2758,7 +2758,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_201444) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "security_prices", "securities"
-  add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
+  add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
   add_foreign_key "simplefin_accounts", "simplefin_items"
   add_foreign_key "simplefin_items", "families"
