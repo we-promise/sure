@@ -572,8 +572,11 @@ class EnableBankingItem::Importer
       # gained account data later) must still collapse to one -- otherwise
       # the same real transaction's pending/booked duplicate representations
       # would both survive just because one side happened to lack IBAN data.
+      #
+      # Sorted so a blank-IBAN row in an already-split group (below) aliases
+      # to a stable bucket regardless of array order.
       distinct_ibans_by_base_key = normalized.group_by { |tx| build_transaction_base_key(tx) }
-        .transform_values { |group| group.filter_map { |tx| counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) }.uniq }
+        .transform_values { |group| group.filter_map { |tx| counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) }.uniq.sort }
 
       seen = {}
       duplicates_removed = 0
@@ -581,7 +584,13 @@ class EnableBankingItem::Importer
       result = normalized.select do |tx|
         base_key = build_transaction_base_key(tx)
         key = if distinct_ibans_by_base_key[base_key].size >= 2
-          "#{base_key}\x1F#{counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator])}"
+          # A blank-IBAN row (e.g. a pending duplicate that hasn't gained
+          # account data yet) can't be attributed to any one of the split
+          # transactions, but it must still collapse into ONE of them
+          # rather than forming a third, phantom transaction -- so it
+          # aliases to the first (sorted) IBAN bucket in the group.
+          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) || distinct_ibans_by_base_key[base_key].first
+          "#{base_key}\x1F#{iban}"
         else
           base_key
         end
