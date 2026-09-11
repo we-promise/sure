@@ -628,6 +628,12 @@ class Account < ApplicationRecord
     !valuable?
   end
 
+  # Gems and Bullion balances are derived from their recorded items. They must
+  # not be changed by generic transactions, transfers, or reconciliations.
+  def supports_manual_entries?
+    !valuable?
+  end
+
   def supports_default?
     depository? || credit_card?
   end
