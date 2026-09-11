@@ -50,6 +50,14 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     assert_equal 500, daily_series.first.total
   end
 
+  test "excludes investment contributions when the family treats them as transfers" do
+    @family.update!(treat_investment_contributions_as_transfers: true)
+    create_transaction(account: @checking, amount: 300, date: Date.current, kind: "investment_contribution")
+    create_transaction(account: @checking, amount: 25, date: Date.current)
+
+    assert_equal 25, daily_series.first.total
+  end
+
   test "converts foreign currency amounts at the day's exchange rate" do
     eur_account = @family.accounts.create! name: "EUR Checking", currency: "EUR", balance: 1000, accountable: Depository.new
     ExchangeRate.create! from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 2

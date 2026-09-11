@@ -47,6 +47,18 @@ class IncomeStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "daily_expense_series cache busts when transfer treatment changes" do
+    statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::DailyExpenseTotals.expects(:new).twice.returns(stub(call: []))
+
+    statement.daily_expense_series(period: period)
+    @family.update!(treat_investment_contributions_as_transfers: true)
+    statement.daily_expense_series(period: period)
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)

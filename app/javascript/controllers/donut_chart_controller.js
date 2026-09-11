@@ -258,11 +258,11 @@ export default class extends Controller {
       return;
     }
 
-    if (!segment.name) return;
+    if (!segment.filter_value) return;
 
     Turbo.visit(
       buildCategoryTransactionsUrl({
-        name: segment.name,
+        filterValue: segment.filter_value,
         startDate: this.startDateValue,
         endDate: this.endDateValue,
       }),

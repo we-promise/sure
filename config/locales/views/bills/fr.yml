@@ -1,0 +1,313 @@
+---
+fr:
+  bills:
+    add_bill: Ajouter une facture
+    add_payment: Ajouter un paiement
+    ai_prompts:
+      due_before_paycheck: Qu'est-ce qui est à payer avant ma prochaine paie ?
+      monthly_subscriptions: Combien est-ce que je paie chaque mois en abonnements ?
+      safe_to_spend: Combien puis-je dépenser sans risque cette période ?
+      subscriptions_up: Quels abonnements ont augmenté cette année ?
+    all:
+      any_status: Tous les statuts
+      any_type: Tous les types
+      col_actions: Actions
+      col_amount: Montant
+      col_frequency: Fréquence
+      col_name: Nom
+      col_next: Prochaine échéance
+      col_status: Statut
+      col_type: Type
+      monthly_equivalent: "%{amount}/mois"
+      next_short: prochaine le %{date}
+      no_matches_description: Essayez de retirer un filtre ou de modifier la recherche.
+      no_matches_title: Aucun résultat
+      search_placeholder: Rechercher une facture
+      sort_amount: Par montant
+      sort_due: Par prochaine échéance
+      sort_name: Par nom
+      status_filters:
+        due: Bientôt due
+        ended: Terminée
+        overdue: En retard
+        paid: Payée
+        partial: Partiellement payée
+        paused: En pause
+      subscription_active: Actif
+      subscription_annual: Par an
+      subscription_monthly: Par mois
+      subscription_price_change_line: "%{from} → %{to} (%{percent} %)"
+      subscription_price_changes: Changements de prix cette année
+      types:
+        bill: Facture
+        income: Revenu
+        installment: Paiement échelonné
+        other: Autre
+        subscription: Abonnement
+        transfer: Virement
+    amount_range: varie de %{min} à %{max}
+    attention:
+      amount_changed: Montant modifié
+      needs_review: Correspondance à vérifier
+      overdue:
+        one: 1 jour de retard
+        other: "%{count} jours de retard"
+      partial: Partiel · %{amount} restant
+    calendar:
+      empty_month: Aucune facture à payer ce mois-ci.
+      month_totals: "%{expected} prévu · %{paid} payé"
+      next_month: Mois suivant
+      previous_month: Mois précédent
+      reset_feed: Réinitialiser le lien
+      subscribe_ical: S'abonner (iCal)
+      today: Aujourd'hui
+    cancelled_still_scheduled: "Vous l'avez marquée comme annulée le %{date}, mais elle reste programmée : de nouvelles factures continueront donc d'apparaître."
+    debt_payment: "· remboursement de dette"
+    detail:
+      annualized: Par an
+      around: vers le %{date}
+      average: Moyenne payée
+      avg_payment: Paiement moyen
+      cancelled_chip: Annulée le %{date}
+      current: Actuel
+      history: Historique
+      history_aria: Paiements des douze derniers mois
+      history_title: 12 derniers mois
+      key_metrics: Indicateurs clés
+      last_account: Dernier compte utilisé
+      manual_payment: Paiement manuel
+      next_payment: Prochain paiement
+      notes: Remarques
+      payment_count:
+        one: 1 paiement
+        other: "%{count} paiements"
+      price_change_line: "%{from} → %{to}"
+      price_changes: Changements de prix
+      range: de %{min} à %{max}
+      recent_payments: Paiements récents
+      renews_chip: Renouvellement le %{date}
+      rule_aliases: Correspond aussi à %{names}
+      rule_amount_range: de %{min} à %{max}
+      rule_learned_tolerance: Les montants situés à %{percent} près du montant habituel correspondent à cette facture
+      rule_named: "%{name}"
+      rules: Comment cette facture est reconnue
+      spent_per_year: Dépensé
+      trial_chip: Fin de l'essai le %{date}
+      upcoming: À venir
+      year: Année
+      ytd: Payé cette année
+    detect:
+      already_running: La détection est déjà en cours. Revenez dans un instant.
+      found:
+        one: 1 facture possible trouvée. Vérifiez-la ci-dessous.
+        other: "%{count} factures possibles trouvées. Vérifiez-les ci-dessous."
+      none_found: Aucun nouveau motif récurrent trouvé. Vous pouvez ajouter des factures manuellement.
+    due_label:
+      due_since: À payer le %{date}
+      overdue:
+        one: 1 jour de retard, échéance le %{date}
+        other: "%{count} jours de retard, échéance le %{date}"
+      settled: Échéance le %{date}
+      snoozed: Reportée au %{date}
+      today: À payer aujourd'hui
+      upcoming:
+        one: À payer demain, %{date}
+        other: À payer dans %{count} jours, %{date}
+    feed:
+      calendar_name: Factures Sure
+    find_payment: Trouver le paiement
+    index:
+      accept: Appliquer
+      add_bill: Ajouter une facture
+      add_income: Ajouter un revenu
+      all_automatic: toutes en prélèvement automatique
+      attention_overdue_total: "%{amount} en retard"
+      confidence: "%{percent} % de correspondance"
+      detected_review:
+        one: Nous avons trouvé 1 paiement récurrent dans vos transactions. Vérifiez-le pour que les totaux affichés ici correspondent à ce que vous payez réellement.
+        other: Nous avons trouvé %{count} paiements récurrents dans vos transactions. Vérifiez-les pour que les totaux affichés ici correspondent à ce que vous payez réellement.
+      detected_review_action: Les vérifier
+      dormant: Inactive
+      empty:
+        action: Trouver les transactions récurrentes
+        description: Les factures sont vos dépenses récurrentes. Sure les détecte automatiquement dans votre historique de transactions, et vous pouvez ajouter un lien de paiement à chacune pour régler directement depuis ici.
+        no_history_description: Aucune transaction pour l'instant. Connectez un compte ou importez un historique et Sure trouvera vos factures automatiquement, ou ajoutez-en une manuellement.
+        title: Aucune facture pour l'instant
+      hero_next_seven: "%{amount} à payer dans les 7 prochains jours"
+      hero_past_due: "%{amount} en retard"
+      kpi_next_seven: À payer sous 7 jours
+      kpi_paid: Payé ce mois-ci
+      kpi_past_due: En retard
+      kpi_remaining: Restant ce mois-ci
+      later: Après ce mois-ci
+      left_to_pay: restant à payer
+      needs_action_count:
+        one: 1 requiert votre attention
+        other: "%{count} requièrent votre attention"
+      needs_attention: Requiert votre attention
+      needs_review: À vérifier
+      notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent} %)"
+      notice_renewal: "%{name} se renouvelle le %{date}"
+      notice_trial: L'essai de %{name} se termine le %{date}
+      notices_routine:
+        one: 1 changement mineur
+        other: "%{count} changements mineurs"
+      overdue: En retard
+      paid_count:
+        one: 1 facture réglée
+        other: "%{count} factures réglées"
+      paid_so_far: Payé jusqu'ici
+      paid_this_month: Payé ce mois-ci
+      recurring_annual: "%{amount} par an"
+      recurring_label: Engagement récurrent
+      recurring_monthly: "%{amount} par mois"
+      reject: Pas cette facture
+      review_with_ai: Vérifier avec l'IA
+      suggestion_line: "%{entry} ressemble à un paiement de %{bill}"
+      suggestion_unknown_entry: Une transaction
+      summary_count:
+        one: 1 facture à payer
+        other: "%{count} factures à payer"
+      summary_label: À payer ce mois-ci
+      summary_needs_action:
+        one: 1 requiert votre attention
+        other: "%{count} requièrent votre attention"
+      this_month: Ce mois-ci
+      title: Factures
+      unconvertible:
+        one: 1 facture n'est pas incluse, aucun taux de change disponible
+        other: "%{count} factures ne sont pas incluses, aucun taux de change disponible"
+    installment_progress: Paiement %{done_plus_one} sur %{total}
+    manage: Gérer
+    manage_payments: Gérer les paiements
+    match:
+      amount_off: "%{amount} d'écart"
+      days_after:
+        one: 1 jour après l'échéance
+        other: "%{count} jours après l'échéance"
+      days_before:
+        one: 1 jour avant l'échéance
+        other: "%{count} jours avant l'échéance"
+      due_date: Correspondance de date d'échéance
+      exact_amount: Montant exact
+      name_matches: Le nom correspond
+      same_merchant: Même marchand
+    month_pulse:
+      bill_count:
+        one: 1 facture
+        other: "%{count} factures"
+      date_today: Aujourd'hui
+      date_tomorrow: Demain
+      left_to_pay: restant à payer
+      next_up: Prochaine
+      pulse_bar_aria: "%{percent} % des factures de ce mois sont payées"
+      pulse_next_seven: 7 prochains jours
+      pulse_overdue: en retard
+      pulse_paid: payé
+      unconvertible:
+        one: 1 facture n'est pas incluse, aucun taux de change disponible
+        other: "%{count} factures ne sont pas incluses, aucun taux de change disponible"
+      view_upcoming: Voir les prochaines
+    paid_from: depuis %{account}
+    paid_label: Payé
+    paid_over: Payé %{paid}, plus que prévu
+    paid_over_short: Payé, dépassement
+    pane:
+      close: Réduire les détails
+    partial_progress: "%{paid} sur %{expected} payés"
+    pay_period:
+      before_next_paycheck: Avant votre prochaine paie
+      due_before_date: "%{amount} à payer avant le %{date}"
+      paycheck_on: Paie le %{date}
+    paycheck:
+      add_income: Ajouter un revenu
+      all_clear:
+        description: Aucune facture n'arrive à échéance d'ici le %{date}, rien n'est donc engagé sur cette période.
+        title: Rien à couvrir
+      allocation_aria: Sur %{income} de revenus, %{due} est à payer maintenant, %{reserved} est réservé pour plus tard et %{safe} peut être dépensé sans risque.
+      allocation_aria_short: "%{income} de revenus couvrent les engagements listés ici, et il manque encore %{short}."
+      before_next_paycheck: Avant le %{date}
+      bills_before_payday:
+        one: Factures avant votre prochaine paie · 1
+        other: Factures avant votre prochaine paie · %{count}
+      bills_this_period:
+        one: Factures de cette période · 1
+        other: Factures de cette période · %{count}
+      bridge_amount: "· %{amount} à payer"
+      bridge_label: Avant votre prochaine paie
+      bridge_split: À payer avant le %{date}, couvert par les %{cash} présents sur vos comptes.
+      due_this_period: À payer cette période
+      empty:
+        action: Ajouter un revenu
+        description: Ajoutez vos revenus pour voir ce que chaque paie doit couvrir. Les entrées détectées ne définissent jamais vos jours de paie toutes seules (c'est vous qui décidez).
+        title: Déclarez votre calendrier de revenus
+      income_amount: "%{amount} de revenus"
+      income_detected: Détecté automatiquement, ne définit pas les jours de paie
+      income_next_payday: prochain le %{date}
+      income_paused: En pause, non planifié
+      income_section_title: Calendrier de revenus
+      income_source_count:
+        one: "%{count} source de revenus"
+        other: "%{count} sources de revenus"
+      manage: Gérer
+      next_on: Prochaine le %{date}
+      no_income_arriving: Aucun revenu attendu
+      no_upcoming_income: Aucun revenu planifié à partir d'ici.
+      of_total: sur %{amount}
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} sources de revenus"
+      reserved_ahead: Réservé à l'avance
+      reserved_footer:
+        one: Réservé à l'avance pour 1 facture ultérieure
+        other: Réservé à l'avance pour %{count} factures ultérieures
+      review_plan: Revoir le plan
+      safe_after_bills: Disponible après factures
+      safe_short: Disponible
+      short_after_bills: Déficit après factures
+      short_short: Déficit
+      shortfall_amount: "· %{amount}"
+      shortfall_label: Déficit avant votre prochaine paie
+      shortfall_largest: "Plus gros engagement à venir :"
+      shortfall_split: "%{obligations} sont à payer avant le %{date} et vos comptes contiennent %{cash}."
+      unconvertible:
+        one: 1 engagement n'est pas inclus, aucun taux de change disponible
+        other: "%{count} engagements ne sont pas inclus, aucun taux de change disponible"
+    possible_duplicate: Doublon possible
+    remaining_label: restant
+    reset_feed_token:
+      confirm: Réinitialiser le lien du flux de calendrier ? Tous les liens partagés jusqu'ici cesseront de fonctionner.
+      done: Lien du flux réinitialisé. Les applications de calendrier qui utilisent l'ancien lien ne se mettront plus à jour ; réabonnez-vous avec le nouveau.
+    resolve: Résoudre
+    review_match: Vérifier la correspondance
+    row_overdue: En retard
+    row_today: Aujourd'hui
+    show:
+      edit: Modifier la facture
+    smart_configurations:
+      show:
+        apply: Appliquer la sélection
+        autopay_off: Désactivé
+        autopay_on: Activé
+        failed: Impossible d'analyser cette facture pour le moment. Sa configuration reste inchangée.
+        field_amount: Montant
+        field_autopay: Prélèvement automatique
+        field_category: Catégorie
+        field_kind: Type
+        field_name: Nom
+        field_schedule: Échéancier
+        intro: Vérifiez les changements à appliquer. Ceux qui ne sont pas cochés restent exactement en l'état.
+        no_changes: Cette facture correspond déjà à son historique de paiements. Rien à changer.
+        title: Suggestions de l'IA pour %{name}
+        trigger: Laisser l'IA configurer
+        uncategorized: Sans catégorie
+    summary:
+      cost_line: En moyenne %{average} par paiement, soit environ %{annualized} par an
+      paid_headline: "%{amount} payés"
+      remaining: "%{amount} restants"
+    view_full_bill: Voir la facture complète
+    views:
+      all: Toutes les factures
+      aria_label: Vues des factures
+      calendar: Calendrier
+      overview: Vue d'ensemble
+      paycheck: Plan de revenus

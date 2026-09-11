@@ -126,11 +126,30 @@ class FamilyTest < ActiveSupport::TestCase
       color: "#0d9488",
       lucide_icon: "trending-up"
     )
+    contribution = create_transaction(account: family.accounts.first, amount: 100, category: renamed_category, kind: "investment_contribution")
+    destination = family.accounts.create!(name: "Investment destination", currency: family.currency, balance: 0, accountable: Investment.new)
+    inflow = create_transaction(account: destination, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: contribution.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
 
     result = family.investment_contributions_category
 
     assert_equal renamed_category.id, result.id
     assert_equal Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY, result.default_key
+  end
+
+  test "investment_contributions_category does not claim an unrelated matching category" do
+    family = families(:dylan_family)
+    family.categories.where(name: Category.all_investment_contributions_names).destroy_all
+    unrelated_category = family.categories.create!(
+      name: "Growth",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    result = family.investment_contributions_category
+
+    assert_not_equal unrelated_category.id, result.id
+    assert_nil unrelated_category.reload.default_key
   end
 
   test "investment_contributions_category merges multiple locale variants" do

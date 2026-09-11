@@ -86,7 +86,9 @@ class BrexEntry::Processor
     end
 
     def transaction_kind
-      "cc_payment" if brex_account.account_kind == "card" && data[:type] == "COLLECTION" && amount.negative?
+      return unless data[:type] == "COLLECTION" && amount.negative?
+
+      brex_account.account_kind == "card" ? "cc_payment" : "standard"
     end
 
     def merchant

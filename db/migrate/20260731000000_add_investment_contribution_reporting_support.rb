@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddInvestmentContributionReportingSupport < ActiveRecord::Migration[7.2]
+class AddInvestmentContributionReportingSupport < ActiveRecord::Migration[8.1]
   INVESTMENT_CONTRIBUTION_CATEGORY_NAMES = [
     "Investment Contributions",
     "Contributions aux investissements",
@@ -17,7 +17,8 @@ class AddInvestmentContributionReportingSupport < ActiveRecord::Migration[7.2]
     "Befektetési befizetések",
     "Đóng góp đầu tư",
     "Інвестиційні внески",
-    "Внески в інвестиції"
+    "Внески в інвестиції",
+    "Contribuições para Investimentos"
   ].freeze
 
   def up
@@ -49,6 +50,19 @@ class AddInvestmentContributionReportingSupport < ActiveRecord::Migration[7.2]
           AND color = '#0d9488'
           AND lucide_icon = 'trending-up'
           AND parent_id IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM categories keyed
+            WHERE keyed.family_id = categories.family_id
+              AND keyed.default_key = 'investment_contributions'
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM transactions
+            JOIN transfers ON transfers.outflow_transaction_id = transactions.id
+              AND transfers.status = 'confirmed'
+            WHERE transactions.category_id = categories.id
+              AND transactions.kind = 'investment_contribution'
+          )
         GROUP BY family_id
         HAVING COUNT(*) = 1
       )

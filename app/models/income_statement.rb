@@ -123,7 +123,9 @@ class IncomeStatement
     Rails.cache.fetch([
       "income_statement", "daily_expense_series", family.id, user&.id,
       included_account_ids_hash, period.start_date, period.end_date,
-      family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
+      family.entries_cache_version, family.transfers_cache_version,
+      family.treat_investment_contributions_as_transfers?,
+      family.accounts.maximum(:updated_at)&.to_i,
       # Rates change via ExchangeRate::Importer's upsert_all and the target
       # currency via settings; neither touches entries/accounts, so both must
       # be part of the key to keep the chart from going stale.
@@ -133,7 +135,8 @@ class IncomeStatement
         family,
         transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
         date_range: period.date_range,
-        included_account_ids: included_account_ids
+        included_account_ids: included_account_ids,
+        include_investment_contributions: include_investment_contributions?
       ).call
     end
   end

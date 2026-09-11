@@ -4,11 +4,13 @@ class Family < ApplicationRecord
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
+  include MonobankConnectable
   include Trading212Connectable
   include TradeRepublicConnectable
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include AiPromptable
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
@@ -370,7 +372,29 @@ class Family < ApplicationRecord
   end
 
   def auto_categorize_transactions(transaction_ids)
-    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+    bayes_result = Family::BayesCategorizer.new(self).classify_and_apply(transaction_ids)
+    remaining_ids = Array(transaction_ids) - bayes_result.categorized_ids
+
+    # Bayes handled everything with sufficient confidence — skip the LLM
+    # categorizer entirely (including its no-provider error contract).
+    if bayes_result.categorized_ids.any? && remaining_ids.empty?
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "Bayesian categorization handled all transactions; skipped LLM categorization",
+        source: self.class.name,
+        family: self,
+        metadata: {
+          requested_transaction_ids: Array(transaction_ids),
+          categorized_transaction_ids: bayes_result.categorized_ids,
+          modified_count: bayes_result.modified_count
+        }
+      )
+      return bayes_result.modified_count
+    end
+
+    llm_modified_count = AutoCategorizer.new(self, transaction_ids: remaining_ids).auto_categorize
+    bayes_result.modified_count + llm_modified_count
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
@@ -408,9 +432,13 @@ class Family < ApplicationRecord
 
     # A renamed legacy default category has no key to identify it. The default
     # color/icon are retained by the category editor, so use them only when
-    # they identify one unambiguous root category in this family.
+    # they identify one unambiguous root category with a confirmed contribution.
     if legacy.empty?
-      candidates = categories.where(color: "#0d9488", lucide_icon: "trending-up", parent_id: nil)
+      candidates = categories
+        .where(color: "#0d9488", lucide_icon: "trending-up", parent_id: nil)
+        .where(id: Transaction.joins(:transfer_as_outflow)
+          .where(kind: "investment_contribution", transfers: { status: "confirmed" })
+          .select(:category_id))
       legacy = [ candidates.first ] if candidates.one?
     end
 

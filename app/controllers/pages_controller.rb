@@ -49,6 +49,7 @@ class PagesController < ApplicationController
     income_totals = income_statement.income_totals(period: @period)
     expense_totals = income_statement.expense_totals(period: @period)
     net_totals = income_statement.net_category_totals(period: @period)
+    @money_flow_accounts = income_statement.eligible_accounts
 
     @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
     @outflows_data = build_outflows_donut_data(net_totals)
@@ -56,7 +57,6 @@ class PagesController < ApplicationController
     # section won't be built from.
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
 
-    @money_flow_accounts = income_statement.eligible_accounts
     # TransactionsController's default (account_ids absent) scopes to this
     # broader set, not @money_flow_accounts, so the view needs it to know
     # when the drill-down links can safely omit account_ids.
@@ -269,6 +269,7 @@ class PagesController < ApplicationController
           nodes << {
             id: unique_key,
             name: display_name,
+            filter_value: category&.filter_value,
             value: value.to_f.round(2),
             percentage: percentage.to_f.round(1),
             color: color,
@@ -445,6 +446,7 @@ class PagesController < ApplicationController
           {
             id: dashboard_category_id(ct.category),
             name: ct.category.name,
+            filter_value: ct.category.filter_value,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
             percentage: 0,
@@ -471,7 +473,8 @@ class PagesController < ApplicationController
         start_date: @period.date_range.first,
         end_date: @period.date_range.last
       }
-      filters[:kinds] = [ "investment_contribution" ] if Category.all_investment_contributions_names.include?(category.name)
+      filters[:kinds] = [ "investment_contribution" ] if category.default_key == Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY
+      filters[:account_ids] = @money_flow_accounts.map(&:id)
 
       transactions_path(q: filters)
     end
@@ -520,7 +523,9 @@ class PagesController < ApplicationController
 
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
-    # the two lines share one day-of-month axis.
+    # the two lines share one day-of-month axis. The header totals compare the
+    # same number of elapsed days; only the chart draws the previous month out
+    # to its final day.
     def build_spending_trend_data(income_statement, selected_month)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
@@ -532,15 +537,27 @@ class PagesController < ApplicationController
       current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
       previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
 
+      # The selected month always owns the axis: when the previous month is
+      # longer, its extra days fold into the final visible point so the curve
+      # still ends at the full-month total without the axis rolling into
+      # previous-month dates (e.g. a September view ends at "Sep 30", not
+      # "Aug 31").
+      axis_days = month_end.day
+
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_series = fold_extra_days(previous_header_series, axis_days)
 
       current_total = current_series.last&.fetch(:value) || 0
-      previous_total = previous_series.last&.fetch(:value) || 0
+      comparison_days = if month_start == Date.current.beginning_of_month
+        [ current_series.size, previous_header_series.size ].min
+      else
+        previous_header_series.size
+      end
+      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
       currency = income_statement.family.currency
 
-      # The axis spans the longer of the two months so both curves share it.
-      axis_days = [ month_end.day, previous_period.end_date.day ].max
 
       {
         month: month_start,
@@ -548,13 +565,14 @@ class PagesController < ApplicationController
         previous_period: previous_period,
         days: axis_days,
         current_days: month_end.day,
-        axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
+        axis_labels: spending_trend_axis_labels(month_start, axis_days),
         current: current_series,
         previous: previous_series,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
         previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        previous_comparison_day: previous_comparison_day,
         date_range_short: spending_trend_compact_date_range(current_period)
       }
     end
@@ -576,16 +594,29 @@ class PagesController < ApplicationController
       end
     end
 
-    # Localized tick labels, one per axis day. The selected month owns the
-    # axis up to its length; when the previous month is longer, its dates
-    # label the tail so a tick never rolls past month-end into the next month
-    # (e.g. day 31 of a February view is "Jan 31", not "Mar 3").
-    def spending_trend_axis_labels(month_start, previous_month_start, days)
-      month_length = month_start.end_of_month.day
-
+    # Localized tick labels, one per axis day. The axis always spans exactly
+    # the selected month, so labels never roll into the previous month.
+    def spending_trend_axis_labels(month_start, days)
       (1..days).map do |day|
-        date = day <= month_length ? month_start + (day - 1) : previous_month_start + (day - 1)
-        I18n.l(date, format: :short)
+        I18n.l(month_start + (day - 1), format: :short)
+      end
+    end
+
+    # A longer previous month's curve is clipped to the axis, with the extra
+    # days' spend folded into the final visible point, so the curve still
+    # ends at the full-month total shown in the header. The folded point
+    # keeps its axis slot (day) for positioning but carries the true
+    # endpoint's date metadata, so the tooltip says what the value actually
+    # contains (e.g. "Jan 31" and the total through Jan 31).
+    def fold_extra_days(series, axis_days)
+      return series if series.size <= axis_days
+
+      series.first(axis_days).tap do |folded|
+        folded[-1] = folded[-1].merge(
+          value: series.last[:value],
+          date: series.last[:date],
+          date_formatted: series.last[:date_formatted]
+        )
       end
     end
 
