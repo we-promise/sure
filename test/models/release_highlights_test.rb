@@ -46,6 +46,22 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
     assert_equal "v0.7.5-alpha.7", @user.reload.last_seen_release_tag
   end
 
+  test "mark_release_seen! rejects malformed tags" do
+    assert_raises(ArgumentError) do
+      @user.mark_release_seen!("not-a-release")
+    end
+
+    assert_nil @user.reload.last_seen_release_tag
+  end
+
+  test "mark_release_seen! recovers from a previously stored malformed tag" do
+    @user.update!(preferences: { "last_seen_release_tag" => "not-a-release" })
+
+    @user.mark_release_seen!("v0.7.5-alpha.7")
+
+    assert_equal "v0.7.5-alpha.7", @user.reload.last_seen_release_tag
+  end
+
   test "every release is eligible while the rollout is being tested" do
     assert ReleaseHighlights.eligible?(Semver.new("0.7.5-alpha.7"))
     assert ReleaseHighlights.eligible?(Semver.new("0.7.4"))

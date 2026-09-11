@@ -21,5 +21,7 @@ class ReleaseHighlightsController < ApplicationController
     Current.user.mark_release_seen!(tag)
 
     head :ok
+  rescue ArgumentError
+    head :unprocessable_entity
   end
 end

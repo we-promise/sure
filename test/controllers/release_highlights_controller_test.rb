@@ -54,6 +54,13 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "v1.2.3", @user.reload.last_seen_release_tag
   end
 
+  test "dismiss rejects malformed tags" do
+    patch release_highlight_dismiss_path, params: { tag: "not-a-release" }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_nil @user.reload.last_seen_release_tag
+  end
+
   test "dismiss without a tag marks the deployed release as seen" do
     patch release_highlight_dismiss_path, as: :json
 

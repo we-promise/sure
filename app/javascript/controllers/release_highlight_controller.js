@@ -26,7 +26,7 @@ export default class extends Controller {
   };
 
   connect() {
-    if (window.__releaseHighlightShownTag === this.tagValue) return;
+    if (this.shownTag() === this.tagValue) return;
 
     this.handleFirstInteraction = this.handleFirstInteraction.bind(this);
     window.addEventListener("pointerdown", this.handleFirstInteraction, {
@@ -51,17 +51,18 @@ export default class extends Controller {
       this.driverObj = null;
     }
 
-    if (this.ownsShownFlag && !this.dismissed) {
-      window.__releaseHighlightShownTag = undefined;
-    }
+    if (!this.dismissed) this.releaseShownFlag();
   }
 
   handleFirstInteraction() {
     // Another mount already claimed this tag (Turbo reconnect, duplicate).
-    if (window.__releaseHighlightShownTag === this.tagValue) return;
+    if (this.shownTag() === this.tagValue) return;
 
-    window.__releaseHighlightShownTag = this.tagValue;
-    this.ownsShownFlag = true;
+    this.shownFlagToken = Symbol(this.tagValue);
+    window.__releaseHighlightShownTag = {
+      tag: this.tagValue,
+      token: this.shownFlagToken,
+    };
     this.removeInteractionListeners();
 
     // Let the triggering interaction land before the popover takes over; if
@@ -74,8 +75,7 @@ export default class extends Controller {
 
     // No notes (or gone again): release the flag so a later page can retry.
     if (!notesHtml) {
-      if (this.ownsShownFlag) window.__releaseHighlightShownTag = undefined;
-      this.ownsShownFlag = false;
+      this.releaseShownFlag();
       return;
     }
 
@@ -137,6 +137,27 @@ export default class extends Controller {
     window.removeEventListener("keydown", this.handleFirstInteraction, {
       capture: true,
     });
+  }
+
+  shownTag() {
+    const flag = window.__releaseHighlightShownTag;
+    return typeof flag === "object" && flag !== null ? flag.tag : flag;
+  }
+
+  ownsCurrentShownFlag() {
+    const flag = window.__releaseHighlightShownTag;
+    return (
+      typeof flag === "object" &&
+      flag !== null &&
+      flag.tag === this.tagValue &&
+      flag.token === this.shownFlagToken
+    );
+  }
+
+  releaseShownFlag() {
+    if (this.ownsCurrentShownFlag()) {
+      window.__releaseHighlightShownTag = undefined;
+    }
   }
 
   async markSeen() {
