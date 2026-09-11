@@ -362,7 +362,11 @@ class Account::ProviderImportAdapter
 
     if merchant
       if normalized_iban.present? && merchant.iban.blank?
-        backfill_merchant_iban!(merchant, normalized_iban)
+        # A concurrent import can win the (source, iban) unique index between
+        # our find above and this backfill -- when that happens, the winner
+        # (not our stale, still-blank-iban `merchant`) is the one now
+        # authoritative for this iban, so use it instead.
+        merchant = backfill_merchant_iban!(merchant, normalized_iban) || merchant
       end
       # Update logo if provided and merchant doesn't have one (or has a different one)
       # Best-effort: don't fail transaction import if logo update fails
@@ -406,12 +410,16 @@ class Account::ProviderImportAdapter
   # (source, iban) between our earlier find and this update, and on
   # PostgreSQL a failed statement aborts the whole surrounding transaction
   # unless it's isolated like this.
+  # @return [ProviderMerchant] the merchant that now holds normalized_iban --
+  #   `merchant` itself on success, or the concurrent winner on a race.
   def backfill_merchant_iban!(merchant, normalized_iban)
     ProviderMerchant.transaction(requires_new: true) do
       merchant.update!(iban: normalized_iban)
     end
+    merchant
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
     Rails.logger.warn("Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}")
+    ProviderMerchant.find_by(source: merchant.source, iban: normalized_iban)
   end
 
   # Updates account balance from provider data
