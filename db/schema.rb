@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_09_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -777,6 +777,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_010000) do
   end
 
   create_table "families", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
@@ -1445,6 +1446,54 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_010000) do
     t.uuid "user_id", null: false
     t.index ["user_id", "device_id"], name: "index_mobile_devices_on_user_id_and_device_id", unique: true
     t.index ["user_id"], name: "index_mobile_devices_on_user_id"
+  end
+
+  create_table "monobank_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_id"
+    t.string "account_kind"
+    t.string "account_status"
+    t.string "account_type"
+    t.datetime "created_at", null: false
+    t.decimal "credit_limit", precision: 19, scale: 4
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.datetime "history_synced_from"
+    t.string "iban"
+    t.boolean "ignored", default: false, null: false
+    t.jsonb "institution_metadata"
+    t.string "masked_pan"
+    t.uuid "monobank_item_id", null: false
+    t.string "name", null: false
+    t.string "provider"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "statement_synced_through"
+    t.date "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_monobank_accounts_on_account_id"
+    t.index ["monobank_item_id", "account_id"], name: "index_monobank_accounts_on_item_and_account_id", unique: true, where: "(account_id IS NOT NULL)"
+    t.index ["monobank_item_id"], name: "index_monobank_accounts_on_monobank_item_id"
+  end
+
+  create_table "monobank_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "access_token"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.date "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_monobank_items_on_family_id"
+    t.index ["status"], name: "index_monobank_items_on_status"
   end
 
   create_table "notification_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2670,6 +2719,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_010000) do
   add_foreign_key "mercury_items", "families"
   add_foreign_key "messages", "chats"
   add_foreign_key "mobile_devices", "users"
+  add_foreign_key "monobank_accounts", "monobank_items"
+  add_foreign_key "monobank_items", "families"
   add_foreign_key "notification_deliveries", "rules", on_delete: :cascade
   add_foreign_key "notification_deliveries", "transactions", on_delete: :cascade
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
@@ -2708,7 +2759,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_010000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "security_prices", "securities"
-  add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
+  add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify
   add_foreign_key "sessions", "users"
   add_foreign_key "simplefin_accounts", "simplefin_items"
   add_foreign_key "simplefin_items", "families"

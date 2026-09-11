@@ -4,6 +4,7 @@ de:
     create:
       invalid_credentials: Ungültige E-Mail-Adresse oder falsches Passwort.
       local_login_disabled: Anmeldung mit Passwort ist deaktiviert. Bitte nutze Single Sign-On.
+      account_deactivated: Dieses Konto wurde deaktiviert. Bitte wende dich an einen Administrator.
     destroy:
       logout_successful: Du hast dich erfolgreich abgemeldet.
     post_logout:
