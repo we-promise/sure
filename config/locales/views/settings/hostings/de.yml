@@ -261,6 +261,7 @@ de:
         description: Trag einen T-Invest-API-Token mit Lesezugriff ein. Er holt Logos zu Wertpapieren – auch für Fonds und Anleihen, deren Kurse von MOEX kommen – und, wenn oben aktiviert, Kurse russischer Papiere.
         env_configured_message: Über die Umgebungsvariable TINKOFF_INVEST_API_KEY eingerichtet.
         label: API-Token
+        moex_only_notice: Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab.
         placeholder: T-Invest-API-Token hier eintragen
         show_details: "(Details anzeigen)"
         step_1: Öffne bei T-Bank den Bereich Investments, dann Einstellungen, dann API-Tokens (setzt ein eröffnetes Depot bei T-Bank voraus).
