@@ -568,6 +568,31 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert extra.blank? || extra["counterparty_iban"].blank?
   end
 
+  test "clears a stale counterparty iban when a re-imported version of the same transaction no longer has one" do
+    with_iban = {
+      entry_reference: "ref_stale_iban",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Landlord GmbH" },
+      creditor_account: { iban: "DE89370400440532013000" },
+      status: "PDNG",
+      _pending: true
+    }
+    EnableBankingEntry::Processor.new(with_iban, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_stale_iban")
+    assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"]
+
+    # The booked re-delivery of the same transaction (same external_id) omits
+    # the account data this time -- a real PSD2 pattern where the pending
+    # leg carries more detail than the booked one.
+    without_iban = with_iban.merge(status: "BOOK", _pending: false).except(:creditor_account)
+    EnableBankingEntry::Processor.new(without_iban, enable_banking_account: @enable_banking_account).process
+
+    assert_nil entry.reload.transaction.extra["counterparty_iban"]
+  end
+
   def build_processor(data)
     # A minimal stand-in that responds to current_account (real EnableBankingAccount
     # always does) so `account`/`known_merchant_names` resolve safely to nil/[] instead

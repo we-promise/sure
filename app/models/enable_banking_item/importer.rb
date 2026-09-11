@@ -626,7 +626,11 @@ class EnableBankingItem::Importer
 
     def counterparty_iban_for_content_key(tx, direction)
       account_key = direction == "CRDT" ? :debtor_account : :creditor_account
-      tx.dig(account_key, :iban).presence
+      # Normalized the same way EnableBankingEntry::Processor stores it:
+      # without this, two representations of the same duplicate transaction
+      # with differently-formatted IBANs (spaces vs none) would produce
+      # different content keys and defeat the dedup this key exists for.
+      tx.dig(account_key, :iban).to_s.delete(" ").upcase.presence
     end
 
     class PaginationTruncatedError < StandardError; end
