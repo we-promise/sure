@@ -604,7 +604,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard",
       name: "Landlord GmbH"
     )
-    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     no_match = create_transaction(
       account: @checking_account,
@@ -612,11 +612,11 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard",
       name: "Other Payment"
     )
-    no_match.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" })
+    no_match.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
 
     search = Transaction::Search.new(
       @family,
-      filters: { search: "DE89370400440532013000" }
+      filters: { search: "DE89370400440532013000" } # pipelock:ignore IBAN
     )
 
     result_ids = search.transactions_scope.pluck(:id)
@@ -632,7 +632,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       kind: "standard",
       name: "Landlord GmbH"
     )
-    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" })
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
 
     search = Transaction::Search.new(
       @family,
