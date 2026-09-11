@@ -46,6 +46,14 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_nil family_merchant.iban
   end
 
+  test "convert_to_family_merchant_for preserves an explicitly cleared website_url" do
+    @provider_merchant.update!(website_url: "https://example.com")
+
+    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "")
+
+    assert_nil family_merchant.website_url
+  end
+
   # Regression: issue #1977. Unlinking a synced merchant nulls merchant_id;
   # without the flag the next sync re-links it.
   test "unlink_from_family flags affected transactions as user_modified" do
