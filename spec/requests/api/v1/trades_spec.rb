@@ -160,10 +160,21 @@ RSpec.describe 'API V1 Trades', type: :request do
             properties: {
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               date: { type: :string, format: :date, description: 'Trade date (required)' },
-              qty: { type: :number, description: 'Quantity (required for buy/sell)' },
-              price: { type: :number, description: 'Price (required for buy/sell)' },
-              amount: { type: :number, description: 'Amount (required for dividend, deposit, withdrawal, interest)' },
-              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest], description: 'Trade type (required)' },
+              qty: { type: :number, description: 'Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)' },
+              price: { type: :number, description: 'Price (required for buy/sell/sweep_in/sweep_out/reinvestment)' },
+              amount: {
+                type: :number,
+                description: 'Amount (required for dividend, deposit, withdrawal, interest, fee)'
+              },
+              fee: {
+                type: :number,
+                description: 'Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)'
+              },
+              type: {
+                type: :string,
+                enum: %w[buy sell sweep_in sweep_out dividend reinvestment interest fee deposit withdrawal],
+                description: 'Trade type (required)'
+              },
               security_id: { type: :string, format: :uuid, description: 'Security ID (one of security_id, ticker, manual_ticker required)' },
               ticker: { type: :string, description: 'Ticker symbol' },
               manual_ticker: { type: :string, description: 'Manual ticker for offline securities' },
@@ -430,7 +441,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '201', 'interest created' do
+      response '201', 'trade created' do
         schema '$ref' => '#/components/schemas/TransactionResponse'
 
         let(:body) do
@@ -448,7 +459,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '422', 'deposit without amount returns error' do
+      response '422', 'invalid trade request' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -515,7 +526,7 @@ RSpec.describe 'API V1 Trades', type: :request do
               date: { type: :string, format: :date },
               qty: { type: :number },
               price: { type: :number },
-              type: { type: :string, enum: %w[buy sell dividend deposit withdrawal interest] },
+              type: { type: :string, enum: %w[buy sell sweep_in sweep_out reinvestment] },
               nature: { type: :string, enum: %w[inflow outflow] },
               name: { type: :string },
               notes: { type: :string },
