@@ -36,7 +36,16 @@ class Rule::ConditionFilter::TransactionCounterpartyIban < Rule::ConditionFilter
     # that convention and hasn't been migrated onto it), so this filter falls
     # back to it -- otherwise a Monobank user could never match this
     # condition even though the data exists on their transactions.
-    field = "COALESCE(transactions.extra ->> 'counterparty_iban', transactions.extra -> 'monobank' ->> 'counter_iban')"
+    #
+    # The Monobank side is wrapped in the same normalization applied to
+    # `normalized_value` below (strip whitespace, upcase): unlike
+    # EnableBankingEntry::Processor, MonobankEntry::Processor stores
+    # counter_iban as-is from the provider payload with no normalization
+    # step, so comparing it unnormalized against a normalized user-entered
+    # value would silently stop matching the moment Monobank's API ever
+    # returns a differently-cased or spaced IBAN.
+    field = "COALESCE(transactions.extra ->> 'counterparty_iban', " \
+            "UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '\\s+', '', 'g')))"
 
     if operator == "is_null"
       scope.where("#{field} IS NULL")

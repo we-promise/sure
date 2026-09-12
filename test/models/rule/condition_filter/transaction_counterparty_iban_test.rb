@@ -123,4 +123,28 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
 
     assert_equal [ @with_monobank_iban.transaction.id ], filtered.pluck(:id)
   end
+
+  test "equal_to matches a monobank counter_iban stored with spaces and lowercase" do
+    # MonobankEntry::Processor stores counter_iban as-is from the provider
+    # payload with no normalization (unlike Enable Banking's
+    # counterparty_iban), so the stored side needs its own normalization in
+    # this filter's SQL -- normalizing only the user-entered value isn't
+    # enough if Monobank ever returns something other than clean uppercase.
+    unnormalized = create_transaction(date: Date.current, account: @account, amount: 60, name: "Utility")
+    unnormalized.transaction.update!(extra: { "monobank" => { "counter_iban" => "nl91 abna 0417 1643 00" } }) # pipelock:ignore IBAN
+
+    condition = Rule::Condition.new(
+      rule: @rule,
+      condition_type: "transaction_counterparty_iban",
+      operator: "=",
+      value: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    )
+
+    filtered = condition.apply(condition.prepare(@rule_scope))
+
+    # @with_monobank_iban already stores this same IBAN in its clean,
+    # canonical form, so it matches too -- the point of this test is that
+    # the un-normalized row now matches as well, not that it matches alone.
+    assert_equal [ @with_monobank_iban.transaction.id, unnormalized.transaction.id ].sort, filtered.pluck(:id).sort
+  end
 end
