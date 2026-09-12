@@ -451,15 +451,19 @@ class Account::ProviderImportAdapter
     # This race can change which merchant a transaction lands on (see the
     # caller), so it's worth more than a Rails log line -- captured with
     # family/account context for the support debug UI, per AGENTS.md.
+    # Deliberately excludes normalized_iban from message/metadata: both are
+    # persisted as plain jsonb/text and rendered on the admin debug page,
+    # and merchant_id is enough to look the merchant (and its encrypted
+    # iban) up directly if an admin needs to investigate.
     DebugLogEntry.capture(
       category: "provider_sync_warning",
       level: "warn",
-      message: "Failed to backfill merchant iban: merchant_id=#{merchant.id} error=#{e.message}",
+      message: "Failed to backfill merchant iban: merchant_id=#{merchant.id} error_class=#{e.class}",
       source: self.class.name,
       provider_key: merchant.source,
       family: account.family,
       account: account,
-      metadata: { merchant_id: merchant.id, normalized_iban: normalized_iban }
+      metadata: { merchant_id: merchant.id }
     )
     ProviderMerchant.find_by(source: merchant.source, iban: normalized_iban)
   end
