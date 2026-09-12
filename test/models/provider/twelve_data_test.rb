@@ -57,15 +57,26 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     @provider.stubs(:throttle_request)
     @provider.stubs(:client).returns(mock_client)
 
-    result = @provider.fetch_gold_price(date: Date.new(2026, 9, 4))
+    result = @provider.fetch_gold_price
 
     assert result.success?
     assert_equal "XAU/USD", request.params["symbol"]
     assert_equal Provider::TwelveData::OPEN_TIMEOUT, request.options.open_timeout
     assert_equal Provider::TwelveData::REQUEST_TIMEOUT, request.options.timeout
     assert_equal "USD", result.data.currency
-    assert_equal Date.new(2026, 9, 4), result.data.date
+    assert_equal Date.current, result.data.date
     assert_in_delta 3110.34768, result.data.price_per_troy_ounce, 0.00001
+  end
+
+  test "rejects historical bullion price requests without contacting Twelve Data" do
+    @provider.expects(:throttle_request).never
+    @provider.expects(:client).never
+
+    result = @provider.fetch_bullion_price(symbol: "XAU", date: Date.current - 1.day)
+
+    assert_not result.success?
+    assert_instance_of Provider::TwelveData::Error, result.error
+    assert_equal "Twelve Data only provides current bullion prices", result.error.message
   end
 
   test "does not fall through to cross API when rate limited" do

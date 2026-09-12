@@ -139,6 +139,9 @@ class Provider::TwelveData < Provider
   # convert USD through Sure's existing FX-rate path when needed.
   def fetch_bullion_price(symbol:, date: Date.current)
     with_provider_response do
+      date = date.to_date
+      raise InvalidSecurityPriceError, "Twelve Data only provides current bullion prices" unless date == Date.current
+
       throttle_request
       response = client.get("#{base_url}/price") do |req|
         req.params["symbol"] = "#{symbol}/USD"
@@ -151,7 +154,7 @@ class Provider::TwelveData < Provider
       price = parsed["price"].to_d
       raise InvalidSecurityPriceError, "Twelve Data returned no #{symbol} spot price" unless price.positive?
 
-      BullionPrice.new(date: date.to_date, currency: "USD", price_per_troy_ounce: price, symbol: symbol)
+      BullionPrice.new(date:, currency: "USD", price_per_troy_ounce: price, symbol: symbol)
     end
   end
 
