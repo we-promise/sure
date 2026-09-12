@@ -124,13 +124,20 @@ class Budget < ApplicationRecord
     # Create missing categories
     inherited_rollover = inherited_rollover_flags(categories_to_add)
 
-    categories_to_add.each do |category_id|
-      budget_categories.create!(
-        category: current_categories_by_id.fetch(category_id),
-        budgeted_spending: 0,
-        currency: family.currency,
-        rollover_enabled: inherited_rollover.fetch(category_id, false)
-      )
+    unless categories_to_add.empty?
+      now = Time.current
+      rows = categories_to_add.map do |category_id|
+        {
+          budget_id: id,
+          category_id: category_id,
+          budgeted_spending: 0,
+          currency: family.currency,
+          rollover_enabled: inherited_rollover.fetch(category_id, false),
+          created_at: now,
+          updated_at: now
+        }
+      end
+      budget_categories.insert_all!(rows)
     end
 
     # Remove old categories
