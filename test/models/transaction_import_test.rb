@@ -444,6 +444,46 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal 1, credit_card.entries.where(import: @import).count
   end
 
+  test "publish auto-matches historical transfers imported from CSV before family sync" do
+    family = Family.create!(name: "CSV Backfill", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+    checking = family.accounts.create!(name: "Backfill Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    credit_card = family.accounts.create!(name: "Backfill Card", balance: 0, currency: "USD", accountable: CreditCard.new)
+    import = family.imports.create!(type: "TransactionImport")
+    historical_date = 120.days.ago.to_date
+
+    import.update!(
+      account: nil,
+      raw_file_str: <<~CSV,
+        date,name,amount,account
+        #{historical_date.iso8601},Payment,500.00,Backfill Checking
+        #{historical_date.iso8601},Payment,-500.00,Backfill Card
+      CSV
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      account_col_label: "account",
+      date_format: "%Y-%m-%d",
+      amount_type_strategy: "signed_amount"
+    )
+    import.generate_rows_from_csv
+    import.mappings.create!(key: "Backfill Checking", mappable: checking, type: "Import::AccountMapping")
+    import.mappings.create!(key: "Backfill Card", mappable: credit_card, type: "Import::AccountMapping")
+    import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::CategoryMapping")
+    import.mappings.create!(key: "", mappable: nil, create_when_empty: false, type: "Import::TagMapping")
+
+    assert_difference -> { Transfer.count }, 1 do
+      import.publish
+    end
+
+    imported_transaction_ids = [
+      checking.entries.find_by!(import: import).entryable_id,
+      credit_card.entries.find_by!(import: import).entryable_id
+    ].sort
+    transfer = Transfer.order(created_at: :desc).first
+
+    assert_equal imported_transaction_ids, [ transfer.outflow_transaction_id, transfer.inflow_transaction_id ].sort
+  end
+
   test "skips specified number of rows" do
     account = accounts(:depository)
     import_csv = <<~CSV
