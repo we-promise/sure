@@ -30,7 +30,18 @@ class RulesController < ApplicationController
       resource_type: params[:resource_type] || "transaction",
     )
 
-    if params[:name].present?
+    prefill_merchant = if params[:merchant_id].present? && UuidFormat.valid?(params[:merchant_id])
+      Current.family.available_merchants_for(Current.user).find_by(id: params[:merchant_id])
+    end
+
+    if (merchant = prefill_merchant)
+      @rule.name = params[:name] if params[:name].present?
+      @rule.conditions.build(
+        condition_type: "transaction_merchant",
+        operator: "=",
+        value: merchant.id
+      )
+    elsif params[:name].present?
       @rule.name = params[:name]
       @rule.conditions.build(
         condition_type: "transaction_name",
