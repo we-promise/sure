@@ -128,7 +128,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-1495.05"), snaptrade_entry("sell_no_amount").amount
   end
 
-  test "trade without a price is imported with a price derived from amount and units" do
+  test "imports the trade with a price derived from amount and units, and creates debug log, when price is missing" do
     process_activities(
       build_trade_activity(id: "buy_no_price", type: "BUY", symbol: "AAPL", units: 4, price: nil, amount: -100.00)
     )
@@ -138,6 +138,20 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("25"), entry.entryable.price
     assert_equal BigDecimal("4"), entry.entryable.qty
     assert_equal BigDecimal("100"), entry.amount
+
+    log = snaptrade_debug_log("buy_no_price", level: "info")
+    assert_equal "derived_price", log&.metadata&.dig("reason")
+    assert_equal "25.0", log&.metadata&.dig("derived_price")
+  end
+
+  test "imports a fully reported trade without creating debug log" do
+    process_activities(
+      build_trade_activity(id: "buy_complete", type: "BUY", symbol: "AAPL", units: 3, price: 33.33, amount: -101.00, fee: 1.00)
+    )
+
+    assert_not_nil snaptrade_entry("buy_complete")
+    assert DebugLogEntry.where(provider_key: "snaptrade").none? { |log| log.metadata["activity_id"] == "buy_complete" },
+           "routine trades must not flood /settings/debug"
   end
 
   test "a price derived from amount and units excludes the fee for buys and sells" do

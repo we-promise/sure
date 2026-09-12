@@ -209,7 +209,23 @@ class SnaptradeAccount::ActivitiesProcessor
         return
       end
 
-      price ||= (amount - (fee || 0)) / quantity unless quantity.zero?
+      if price.nil? && !quantity.zero?
+        price = (amount - (fee || 0)) / quantity
+        capture_debug_log(
+          level: "info",
+          message: "Derived missing price for trade #{external_id} from its amount and quantity",
+          metadata: {
+            activity_id: external_id,
+            activity_type: activity_type,
+            ticker: ticker,
+            reason: "derived_price",
+            quantity: quantity.to_s("F"),
+            amount: amount.to_s("F"),
+            fee: fee&.to_s("F"),
+            derived_price: price.to_s("F")
+          }.compact
+        )
+      end
 
       # Get the activity date
       activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
