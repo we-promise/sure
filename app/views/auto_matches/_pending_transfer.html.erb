@@ -1,0 +1,36 @@
+<%# locals: (transfer:) %>
+
+<tr id="<%= dom_id(transfer) %>" class="border-b border-subdued hover:bg-surface-hover">
+  <td class="py-3 px-2 text-sm">
+    <div class="font-medium text-primary"><%= transfer.from_account&.name %></div>
+    <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.outflow_transaction.entry.amount_money) %></div>
+  </td>
+  <td class="py-3 px-2 text-sm">
+    <div class="font-medium text-primary"><%= transfer.to_account&.name %></div>
+    <div class="text-xs text-secondary privacy-sensitive"><%= format_money(transfer.inflow_transaction.entry.amount_money.abs) %></div>
+  </td>
+  <td class="py-3 px-2 text-sm text-secondary">
+    <%= l(transfer.date, format: :short) %>
+  </td>
+  <td class="py-3 px-2 text-sm text-right">
+    <div class="flex items-center justify-end gap-2">
+      <%= render DS::Button.new(
+        variant: :icon,
+        icon: "check",
+        href: transfer_path(transfer, transfer: { status: "confirmed" }),
+        method: :patch,
+        data: { turbo: false },
+        aria: { label: t("transactions.transfer_match.confirm_match") }
+      ) %>
+
+      <%= render DS::Button.new(
+        variant: :icon,
+        icon: "x",
+        href: transfer_path(transfer, transfer: { status: "rejected" }),
+        method: :patch,
+        data: { turbo: false },
+        aria: { label: t("transactions.transfer_match.reject_match") }
+      ) %>
+    </div>
+  </td>
+</tr>
