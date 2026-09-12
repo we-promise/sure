@@ -28,8 +28,8 @@ class RedbarkAccount::Processor
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
 
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
+    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+    # complete ledger. See Account::CurrentBalanceManager.
     account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed

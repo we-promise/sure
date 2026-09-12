@@ -27,8 +27,8 @@ class QuestradeAccount::Processor
       QuestradeAccount::ActivitiesProcessor.new(questrade_account).process
     end
 
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
+    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+    # complete ledger. See Account::CurrentBalanceManager.
     account.set_current_balance(anchor_balance) if anchor_balance
 
     account.broadcast_sync_complete
@@ -55,7 +55,6 @@ class QuestradeAccount::Processor
       account.save!
 
       # Returned to `process`, which anchors it once holdings and activities are in.
-      # The value is composed from the holdings + per-currency cash, not a made-up figure.
       total
     end
 end

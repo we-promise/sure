@@ -13,8 +13,8 @@ class TradeRepublicAccount::Processor
       TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account).process
       TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account).process
 
-      # Anchor the reported balance AFTER importing, so the previous reading can be judged
-      # against a complete ledger. See Account::CurrentBalanceManager.
+      # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+      # complete ledger. See Account::CurrentBalanceManager.
       account.set_current_balance(total_balance)
     end
 

@@ -12,8 +12,8 @@ class IbkrAccount::Processor
     IbkrAccount::HoldingsProcessor.new(ibkr_account).process
     IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
 
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
+    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+    # complete ledger. See Account::CurrentBalanceManager.
     account.set_current_balance(total_balance)
 
     repair_default_opening_anchor!

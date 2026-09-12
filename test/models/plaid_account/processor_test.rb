@@ -229,6 +229,60 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_not_equal original_balance, original_anchor.entry.amount
   end
 
+  # PlaidAccount::Transactions::Processor has no per-row rescue, so a malformed row aborts the
+  # batch mid-loop and #process_transactions swallows the exception, leaving a half-imported
+  # ledger that the standing anchor must not be judged against.
+  test "a partially imported, swallowed transaction batch must not freeze the standing anchor as a reconciliation" do
+    PlaidAccount::Investments::TransactionsProcessor.any_instance.stubs(:process)
+    PlaidAccount::Investments::HoldingsProcessor.any_instance.stubs(:process)
+
+    account = @plaid_account.current_account
+    account.entries.destroy_all
+    account.update!(balance: 1000, cash_balance: 1000, currency: "USD")
+
+    anchor_date = 2.days.ago.to_date
+    account.entries.create!(
+      date: anchor_date,
+      name: Valuation.build_current_anchor_name("Depository"),
+      amount: 1000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+
+    # 30 + 20 + 10 of spend is exactly what explains the drop from 1000 to 940, but the
+    # second row has no transaction_id, so Account::ProviderImportAdapter#import_transaction
+    # raises on it: row 1 is already persisted and row 3 never runs.
+    posted_on = 1.day.ago.to_date.to_s
+
+    @plaid_account.update!(
+      current_balance: 940,
+      available_balance: 940,
+      raw_transactions_payload: {
+        "added" => [
+          { "transaction_id" => "f4_row_1", "amount" => 30, "iso_currency_code" => "USD",
+            "date" => posted_on, "original_description" => "Row 1" },
+          { "amount" => 20, "iso_currency_code" => "USD",
+            "date" => posted_on, "original_description" => "Row 2 (no transaction_id)" },
+          { "transaction_id" => "f4_row_3", "amount" => 10, "iso_currency_code" => "USD",
+            "date" => posted_on, "original_description" => "Row 3" }
+        ],
+        "modified" => [],
+        "removed" => []
+      }
+    )
+
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    account.reload
+
+    assert_equal 1, account.entries.transactions.count,
+      "sanity: the batch must have aborted after its first row, leaving a partial ledger"
+    assert_equal 0, account.valuations.reconciliation.count,
+      "a swallowed, partially applied import must not freeze the standing anchor as a reconciliation waypoint"
+    assert_equal anchor_date, account.valuations.current_anchor.sole.entry.date,
+      "the standing anchor must be left alone until a sync with a complete ledger can judge it"
+  end
+
   private
     def expect_investment_product_processor_calls
       PlaidAccount::Investments::TransactionsProcessor.any_instance.expects(:process).once
