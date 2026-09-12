@@ -124,4 +124,72 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 0, result[:total]
   end
+
+  # Pins the other side of the gate below: a clean import must still anchor. A standing anchor
+  # is required for the assertion to mean anything: without one `ledger_explains?` is never
+  # consulted and the anchor lands on Date.current whichever order the two steps run in.
+  test "processor anchors the reported balance after a successful transaction import" do
+    anchor_date = 2.days.ago.to_date
+    @account.entries.create!(
+      date: anchor_date,
+      name: Valuation.build_current_anchor_name("Depository"),
+      amount: 1000,
+      currency: "AUD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+
+    # CDR pre-signed: negative is a debit, so this is the 60 of spending that explains the
+    # drop from 1000 to 940. Import it first and the anchor moves forward in place; anchor
+    # first and the ledger cannot explain the gap, so it freezes as a reconciliation.
+    @redbark_account.update!(
+      current_balance: 940,
+      raw_transactions_payload: [
+        { "id" => "txn_1", "amount" => "-60.00", "date" => Date.current.to_s }
+      ]
+    )
+
+    RedbarkAccount::Processor.new(@redbark_account).process
+
+    @account.reload
+
+    assert_equal 0, @account.valuations.reconciliation.count,
+      "an import that explains the balance move must let the anchor slide forward, not leave a waypoint"
+    assert_equal Date.current, @account.valuations.current_anchor.sole.entry.date
+  end
+
+  # The transactions processor reports partial failure by returning `success: false` rather
+  # than raising, so anchoring must honour that flag. Depository-backed because
+  # Account::CurrentBalanceManager#ledger_explains? only does real work for :cash accounts.
+  test "a discarded failed transaction import must not freeze the standing anchor as a reconciliation" do
+    anchor_date = 2.days.ago.to_date
+    @account.entries.create!(
+      date: anchor_date,
+      name: Valuation.build_current_anchor_name("Depository"),
+      amount: 1000,
+      currency: "AUD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+
+    @redbark_account.update!(
+      current_balance: 940,
+      raw_transactions_payload: [
+        { "id" => "txn_1", "amount" => "-60.00", "date" => Date.current.to_s }
+      ]
+    )
+
+    # The 60.00 of activity that explains the drop from 1000 to 940 never lands: every row
+    # failed, and the importer says so in its return value rather than by raising.
+    RedbarkAccount::Transactions::Processor.any_instance.stubs(:process).returns(
+      { success: false, total: 1, imported: 0, skipped: 0, failed: 1, errors: [] }
+    )
+
+    RedbarkAccount::Processor.new(@redbark_account).process
+
+    @account.reload
+
+    assert_equal 0, @account.valuations.reconciliation.count,
+      "an import that reported success: false must not freeze the standing anchor as a reconciliation waypoint"
+    assert_equal anchor_date, @account.valuations.current_anchor.sole.entry.date,
+      "the standing anchor must be left alone until a sync with a complete ledger can judge it"
+  end
 end

@@ -146,6 +146,52 @@ class CoinstatsAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "GBP", @account.currency
   end
 
+  # The transactions processor reports partial failure by returning `success: false` rather
+  # than raising, so anchoring must honour that flag. Depository-backed because
+  # Account::CurrentBalanceManager#ledger_explains? only does real work for :cash accounts.
+  test "a discarded failed transaction import must not freeze the standing anchor as a reconciliation" do
+    cash_account = @family.accounts.create!(
+      accountable: Depository.new,
+      name: "CoinStats-linked Checking",
+      balance: 1000,
+      cash_balance: 1000,
+      currency: "USD"
+    )
+
+    cs_account = @coinstats_item.coinstats_accounts.create!(
+      name: "Checking",
+      currency: "USD",
+      current_balance: 940
+    )
+    AccountProvider.create!(account: cash_account, provider: cs_account)
+
+    anchor_date = 2.days.ago.to_date
+    cash_account.entries.create!(
+      date: anchor_date,
+      name: Valuation.build_current_anchor_name("Depository"),
+      amount: 1000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "current_anchor")
+    )
+
+    CoinstatsAccount::HoldingsProcessor.any_instance.stubs(:process)
+
+    # The 60.00 of activity that explains the drop from 1000 to 940 never lands: every
+    # row failed, and the importer says so in its return value rather than by raising.
+    CoinstatsAccount::Transactions::Processor.any_instance.stubs(:process).returns(
+      { success: false, total: 3, imported: 0, failed: 3, errors: [] }
+    )
+
+    CoinstatsAccount::Processor.new(cs_account).process
+
+    cash_account.reload
+
+    assert_equal 0, cash_account.valuations.reconciliation.count,
+      "an import that reported success: false must not freeze the standing anchor as a reconciliation waypoint"
+    assert_equal anchor_date, cash_account.valuations.current_anchor.sole.entry.date,
+      "the standing anchor must be left alone until a sync with a complete ledger can judge it"
+  end
+
   test "raises error when account update fails" do
     # Make the account invalid by directly modifying a validation constraint
     Account.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(@account))
