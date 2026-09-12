@@ -69,8 +69,12 @@ de:
       left_to_allocate: noch zu verteilen
       over_set: "> 100 % verplant"
       percent_set: "%{percent} verplant"
+    budget_category:
+      rolled_over: "+%{amount} übertragen"
     budget_category_form:
       monthly_average: "%{amount}/M Ø"
+      rollover_label: Übertrag
+      rollover_title: Nicht ausgegebenes Geld dieser Kategorie in den nächsten Monat übertragen
       shared_placeholder: Geteilt
       shared_title: Leer lassen, um das Budget der Oberkategorie zu teilen
     confirm_button:
@@ -93,6 +97,7 @@ de:
       overspent: überzogen
       overview: Übersicht
       recent_transactions: Letzte Transaktionen
+      rolled_over: Übertragen
       spending: Ausgaben %{date}
       status: Status
       view_all_transactions: Alle Transaktionen der Kategorie

@@ -1,5 +1,5 @@
 class ImportSourceMapping < ApplicationRecord
-  SOURCE_TYPES = %w[Account Category Tag Merchant RecurringTransaction Transaction Budget Security Rule].freeze
+  SOURCE_TYPES = %w[Account Category Tag Merchant RecurringTransaction RecurringOccurrence Transaction Budget Security Rule].freeze
 
   belongs_to :family
   belongs_to :import_session

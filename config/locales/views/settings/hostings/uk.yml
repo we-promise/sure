@@ -82,15 +82,15 @@ uk:
           title: Відключити зовнішнього помічника?
           body: Це видалить збережену URL-адресу, токен та ID агента та переключиться на вбудованого помічника. Ви можете перепідключитися пізніше, ввівши нові облікові дані.
       brand_fetch_settings:
-        description: Введіть ідентифікатор клієнта, наданий Brand Fetch
-        env_configured_message: Ви успішно налаштували свій ідентифікатор клієнта Brand Fetch за допомогою змінної середовища BRAND_FETCH_CLIENT_ID.
+        description: Введіть ідентифікатор клієнта, наданий Brandfetch
+        env_configured_message: Ви успішно налаштували свій ідентифікатор клієнта Brandfetch за допомогою змінної середовища BRAND_FETCH_CLIENT_ID.
         show_details: "(показати деталі)"
-        setup_step_1_html: 'Відвідайте <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> і створіть безкоштовний обліковий запис розробника Brand Fetch.'
+        setup_step_1_html: 'Відвідайте <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> і створіть безкоштовний обліковий запис розробника Brandfetch.'
         setup_step_2_html: 'Перейдіть на сторінку <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
         setup_step_3: 'Торкніться значка ока в розділі "Ваш ідентифікатор клієнта", щоб відкрити свій ідентифікатор клієнта, і вставте його нижче.'
         label: Ідентифікатор клієнта
         placeholder: Введіть свій ідентифікатор клієнта тут
-        title: Налаштування Brand Fetch
+        title: Налаштування Brandfetch
         high_res_label: Увімкнути логотипи з високою роздільною здатністю
         high_res_description: Коли ввімкнено, логотипи будуть отримуватися з роздільною здатністю 120x120 замість 40x40. Це забезпечує чіткіші зображення на дисплеях з високою щільністю пікселів.
       llm_provider_selector:

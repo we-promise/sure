@@ -1,0 +1,51 @@
+---
+de:
+  recurring_occurrences:
+    history_status:
+      paid: Bezahlt
+      skipped: Übersprungen
+      missed: Verpasst
+      scheduled: Offen
+    show:
+      paid_of: "%{paid} von %{expected} bezahlt"
+      paid_headline: "%{amount} bezahlt"
+      remaining: "%{amount} ausstehend"
+      overpaid: mehr als erwartet
+      skipped: Übersprungen
+      missed: Als verpasst markiert
+      payments: Zahlungen
+      manual_payment: Manuelle Zahlung
+      unlink: Verknüpfung aufheben
+      review_heading: Zahlung prüfen
+      find_heading: Zahlung finden
+      add_heading: Weitere Zahlung hinzufügen
+      other_matches: Weitere mögliche Treffer
+      no_ranked_candidates: Derzeit sieht hier keine Transaktion nach einer Zahlung für diese Rechnung aus.
+      search_all: Alle Transaktionen durchsuchen
+      search_placeholder: Transaktionen suchen
+      no_candidates: Keine passenden Transaktionen in zeitlicher Nähe gefunden.
+      no_search_results: "Keine Treffer für „%{query}“."
+      link_payment: Zahlung verknüpfen
+      not_this_one: Nicht diese Transaktion
+      cant_find: Transaktion nicht gefunden?
+      manual_explainer: Erfasse eine tatsächlich erfolgte Zahlung, wenn hier keine passende Transaktion dabei ist.
+      manual_amount_label: Betrag
+      manual_date_label: Datum
+      record_payment: Zahlung erfassen
+      mark_paid: Als bezahlt markieren
+      mark_paid_hint: Markiert den Restbetrag als bezahlt, ohne eine Transaktion zu erfassen.
+      skip: Überspringen
+      snooze_week: Um eine Woche verschieben
+      reopen: Wieder öffnen
+      view_bill: Vollständige Rechnung anzeigen
+    mark_paid:
+      success: Rechnung als bezahlt markiert
+    skip:
+      success: Rechnung übersprungen
+    reopen:
+      success: Rechnung wieder geöffnet
+    snooze:
+      success: "Bis %{date} verschoben"
+      invalid_date: Das Datum konnte nicht erkannt werden
+    override_amount:
+      success: Erwarteter Betrag aktualisiert

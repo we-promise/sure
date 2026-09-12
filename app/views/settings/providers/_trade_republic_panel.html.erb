@@ -1,0 +1,223 @@
+<%
+  trade_republic_item = local_assigns.fetch(:trade_republic_item) { Current.family.trade_republic_items.first_or_initialize }
+  is_new_record = trade_republic_item.new_record?
+  session_configured = trade_republic_item.persisted? && trade_republic_item.session_configured?
+  qr_login_pending = trade_republic_item.persisted? && trade_republic_item.login_stage == "qr_pending"
+  qr_login_active = local_assigns[:qr_login_auto_poll] || qr_login_pending
+%>
+
+<div id="trade-republic-providers-panel" class="space-y-4"
+     <% if trade_republic_item.persisted? && trade_republic_item.login_stage == "waiting_for_approval" %>
+       data-controller="trade-republic-login"
+       data-trade-republic-login-url-value="<%= poll_login_trade_republic_item_path(trade_republic_item) %>"
+     <% end %>>
+  <% unless TradeRepublicItem.encryption_ready? %>
+    <div class="p-3 rounded-md bg-warning/10 text-warning text-sm">
+      <div class="flex items-start gap-2">
+        <%= icon "shield-alert", size: "sm", class: "mt-0.5 shrink-0" %>
+        <div>
+          <p class="font-medium"><%= t(".encryption_warning.title") %></p>
+          <p class="mt-1"><%= t(".encryption_warning.message") %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3")
+             ] %>
+
+  <% if trade_republic_item.persisted? %>
+    <% if trade_republic_item.pending_login_state.blank? %>
+      <% if session_configured %>
+        <div class="flex flex-wrap justify-end gap-2">
+        <%= render DS::Button.new(
+              text: t(".connect"),
+              variant: :outline,
+              size: :sm,
+              icon: "log-in",
+              href: initiate_login_trade_republic_item_path(trade_republic_item),
+              method: :post
+            ) %>
+
+        <%= render DS::Button.new(
+              text: t(".sync"),
+              variant: :outline,
+              size: :sm,
+              icon: "refresh-cw",
+              href: sync_trade_republic_item_path(trade_republic_item),
+              method: :post,
+              disabled: trade_republic_item.syncing?
+            ) %>
+
+        <%= render DS::Button.new(
+              variant: :outline_destructive,
+              size: :sm,
+              icon: "trash-2",
+              aria_label: t(".disconnect"),
+              title: t(".disconnect"),
+              href: trade_republic_item_path(trade_republic_item),
+              method: :delete,
+              confirm: t(".disconnect_confirm")
+            ) %>
+        </div>
+      <% end %>
+
+    <% end %>
+
+    <% if trade_republic_item.pending_login_state.blank? || qr_login_pending %>
+      <div class="space-y-3" data-controller="trade-republic-qr"
+         data-trade-republic-qr-auto-poll-value="<%= qr_login_active %>"
+         data-trade-republic-qr-initiate-url-value="<%= initiate_qr_login_trade_republic_item_path(trade_republic_item) %>"
+         data-trade-republic-qr-poll-url-value="<%= poll_qr_login_trade_republic_item_path(trade_republic_item) %>"
+         data-trade-republic-qr-cancel-url-value="<%= cancel_qr_login_trade_republic_item_path(trade_republic_item) %>"
+         data-trade-republic-qr-return-url-value="<%= settings_providers_path(anchor: "trade-republic") %>"
+         data-trade-republic-qr-loading-text-value="<%= t(".qr_loading") %>"
+         data-trade-republic-qr-instruction-text-value="<%= t(".qr_instruction") %>"
+         data-trade-republic-qr-success-text-value="<%= t(".qr_success") %>"
+         data-trade-republic-qr-error-text-value="<%= t(".qr_error") %>"
+         data-trade-republic-qr-login-text-value="<%= t(".qr_login") %>"
+         data-trade-republic-qr-cancel-text-value="<%= t(".qr_cancel") %>">
+      <%= render DS::Button.new(
+            text: qr_login_active ? t(".qr_cancel") : t(".qr_login"),
+            variant: :outline,
+            size: :sm,
+            icon: "qr-code",
+            type: "button",
+            data: {
+              action: "trade-republic-qr#toggle",
+              trade_republic_qr_target: "button"
+            }
+          ) %>
+
+      <div data-trade-republic-qr-target="panel" <%= "hidden" unless qr_login_active %> class="rounded-lg border border-secondary bg-container-inset p-4 space-y-3">
+        <p data-trade-republic-qr-target="status" class="text-sm text-secondary"></p>
+        <div data-trade-republic-qr-target="code" class="qrcode flex justify-center min-h-48"><%= local_assigns[:qr_code_svg] %></div>
+      </div>
+      </div>
+    <% end %>
+
+    <% if trade_republic_item.login_stage == "authenticator_code" %>
+      <%= render DS::Alert.new(
+            message: t(".authenticator_code_notice"),
+            variant: :info
+          ) %>
+
+      <%= styled_form_with url: complete_login_trade_republic_item_path(trade_republic_item),
+                           method: :post,
+                           scope: :trade_republic_login,
+                           class: "space-y-3" do |form| %>
+        <%= form.text_field :code,
+                            label: t(".authenticator_code_label"),
+                            placeholder: t(".authenticator_code_placeholder"),
+                            value: nil,
+                            required: true %>
+        <div class="flex flex-wrap justify-end gap-2">
+          <%= form.submit(t(".complete_login")) %>
+        </div>
+      <% end %>
+    <% elsif trade_republic_item.login_stage == "waiting_for_approval" %>
+      <%= render DS::Alert.new(message: t(".push_login_notice"), variant: :info) %>
+      <div class="flex flex-wrap justify-end gap-2">
+        <%= render DS::Button.new(
+              text: t(".check_login_status"),
+              variant: :outline,
+              size: :sm,
+              icon: "refresh-cw",
+              href: poll_login_trade_republic_item_path(trade_republic_item),
+              method: :post
+            ) %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <% if trade_republic_item.new_record? || trade_republic_item.pending_login_state.blank? %>
+    <%= styled_form_with model: trade_republic_item,
+                         url: is_new_record ? trade_republic_items_path : trade_republic_item_path(trade_republic_item),
+                         scope: :trade_republic_item,
+                         method: is_new_record ? :post : :patch,
+                         data: { turbo: true },
+                         class: "space-y-3" do |form| %>
+    <%= form.text_field :phone_number,
+                        label: t(".phone_number_label"),
+                        placeholder: is_new_record ? t(".phone_number_placeholder_new") : t(".phone_number_placeholder_existing"),
+                        type: :tel,
+                        value: nil %>
+
+    <%= form.text_field :pin,
+                        label: t(".pin_label"),
+                        placeholder: is_new_record ? t(".pin_placeholder_new") : t(".pin_placeholder_existing"),
+                        type: :password,
+                        value: nil %>
+
+    <div class="flex flex-wrap justify-end gap-2">
+      <%= form.submit(trade_republic_item.session_configured? ? t(".update_configuration") : t(".save_configuration")) %>
+      <% if is_new_record %>
+        <%= render DS::Button.new(
+              text: t(".qr_login"),
+              variant: :outline,
+              size: :sm,
+              icon: "qr-code",
+              type: "submit",
+              name: "login_method",
+              value: "qr"
+            ) %>
+      <% end %>
+    </div>
+    <% end %>
+  <% end %>
+
+  <div class="flex items-center gap-2">
+    <% if trade_republic_item.persisted? && trade_republic_item.pending_login_state.present? %>
+      <% if trade_republic_item.login_stage == "expired" %>
+        <div class="w-2 h-2 bg-destructive rounded-full"></div>
+        <p class="text-sm text-secondary"><%= t(".login_expired") %></p>
+        <%= render DS::Button.new(
+              text: t(".restart_login"),
+              variant: :outline,
+              size: :sm,
+              icon: "rotate-cw",
+              href: initiate_login_trade_republic_item_path(trade_republic_item),
+              method: :post,
+              form: { class: "ml-auto" }
+            ) %>
+      <% else %>
+        <div class="w-2 h-2 bg-warning rounded-full"></div>
+        <p class="text-sm text-secondary">
+          <%= trade_republic_item.login_stage == "authenticator_code" ? t(".awaiting_authenticator_code") : t(".awaiting_confirmation") %>
+        </p>
+      <% end %>
+    <% elsif trade_republic_item.persisted? && trade_republic_item.status == "good" && trade_republic_item.session_configured? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary">
+        <% if trade_republic_item.unlinked_accounts_count.positive? %>
+          <%= t(".accounts_discovered", count: trade_republic_item.unlinked_accounts_count) %>
+          <%= render DS::Link.new(
+                text: t(".setup_accounts"),
+                icon: "plus",
+                variant: "primary",
+                href: setup_accounts_trade_republic_item_path(trade_republic_item),
+                frame: :modal
+              ) %>
+        <% else %>
+          <%= t(".status_configured_prefix", summary: trade_republic_item.sync_status_summary) %>
+          <%= link_to t(".accounts_tab"), accounts_path, class: "link" %>
+          <%= t(".status_configured_suffix") %>
+        <% end %>
+      </p>
+    <% elsif trade_republic_item.persisted? && trade_republic_item.status == "requires_update" %>
+      <div class="w-2 h-2 bg-warning rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t(".requires_update") %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t(".not_configured") %></p>
+    <% end %>
+  </div>
+</div>

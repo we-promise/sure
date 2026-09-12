@@ -38,8 +38,18 @@
   </details>
 
   <div class="bg-container shadow-border-xs rounded-lg">
-    <% entries.each do |entry| %>
-      <%= render entry, view_ctx: "account" %>
+    <% if Current.user.show_split_grouped? %>
+      <% helpers.group_split_entries(entries, split_parents).each do |item| %>
+        <% if item.is_a?(EntriesHelper::SplitGroup) %>
+          <%= render "entries/split_group", split_group: item, view_ctx: "account" %>
+        <% else %>
+          <%= render item, view_ctx: "account" %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <% entries.each do |entry| %>
+        <%= render entry, view_ctx: "account" %>
+      <% end %>
     <% end %>
   </div>
 <% end %>

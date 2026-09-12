@@ -1,0 +1,16 @@
+---
+fr:
+  rule_notification_mailer:
+    digest:
+      account: Compte
+      amount: Montant
+      cta: Voir les transactions
+      date: Date
+      heading:
+        one: 1 nouvelle transaction correspond à votre règle
+        other: "%{count} nouvelles transactions correspondent à votre règle"
+      intro: 'Ces transactions correspondent à la règle « %{rule} » :'
+      name: Nom
+      subject:
+        one: 1 nouvelle transaction correspond à votre règle sur %{product_name}
+        other: "%{count} nouvelles transactions correspondent à votre règle sur %{product_name}"

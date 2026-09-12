@@ -7,16 +7,11 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 bg-container-inset rounded-full">
-            <p class="text-primary text-xs font-bold">WI</p>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :wise) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">
               <%= tag.p wise_item.name, class: "font-medium text-primary" %>
-              <span class="text-xs px-1.5 py-0.5 rounded bg-surface-inset text-secondary">
-                <%= t("wise_items.profile_types.#{wise_item.profile_type}") %>
-              </span>
               <% if wise_item.scheduled_for_deletion? %>
                 <%= tag.p t(".deletion_in_progress"), class: "text-destructive text-sm animate-pulse" %>
               <% end %>

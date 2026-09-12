@@ -337,7 +337,12 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
-  test "unknown foreign holding values do not become derived cash or market flows" do
+  # An unconvertible holding is valued at 1:1 and reported (#3493) rather than
+  # dropped, so cash still derives — off only by the FX gap, not by the whole
+  # position. The opening day carries a flow because the position appears
+  # without a trade, which is not FX-specific; what a missing rate must not do
+  # is keep generating moves once the amount stops changing.
+  test "an unconvertible foreign holding settles without ongoing phantom flows" do
     start_date = 2.days.ago.to_date
     end_date = Date.current
     account = create_account_with_ledger(
@@ -356,10 +361,16 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     calculated = Balance::ForwardCalculator.new(account).calculate
 
     calculated.each do |balance|
-      assert_equal 0, balance.cash_balance,
-        "An unconvertible holding must not be reclassified as derived cash on #{balance.date}"
+      assert_equal 900, balance.cash_balance,
+        "Cash derives from the 1:1 valuation (1000 total - 100 holdings) on #{balance.date}"
+      assert_equal 1000, balance.balance,
+        "The reconciled total must hold on #{balance.date}"
+    end
+
+    after_opening = calculated.reject { |b| b.date == start_date }
+    after_opening.each do |balance|
       assert_equal 0, balance.net_market_flows,
-        "Missing FX coverage must not create a phantom market move on #{balance.date}"
+        "A missing rate must not keep generating market moves on #{balance.date}"
     end
   end
 

@@ -1,0 +1,4 @@
+---
+fr:
+  passkey_sessions:
+    invalid_credential: Impossible de se connecter avec cette clé d'accès. Réessayez ou utilisez votre mot de passe.

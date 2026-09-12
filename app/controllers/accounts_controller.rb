@@ -19,6 +19,7 @@ class AccountsController < ApplicationController
     @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
+    @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
@@ -33,8 +34,12 @@ class AccountsController < ApplicationController
     )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
+    @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
+    @trade_republic_items = visible_provider_items(
+      family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
+    )
 
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
@@ -63,7 +68,7 @@ class AccountsController < ApplicationController
   end
 
   def sync_all
-    family.plaid_items.syncable.each(&:request_transactions_refresh_later)
+    family.request_plaid_transactions_refreshes_later(source: "AccountsController#sync_all")
     family.sync_later
     redirect_to accounts_path, notice: t("accounts.sync_all.syncing")
   end
@@ -126,7 +131,21 @@ class AccountsController < ApplicationController
       Set.new
     end
 
-    @activity_feed_data = Account::ActivityFeedData.new(@account, @entries)
+    # Load split parent entries for grouped display (only when grouping is enabled)
+    @split_parents = if Current.user.show_split_grouped?
+      split_parent_ids = @entries.filter_map(&:parent_entry_id).uniq
+      if split_parent_ids.any?
+        Entry.where(id: split_parent_ids)
+             .includes(:account, entryable: [ :category, :merchant ])
+             .index_by(&:id)
+      else
+        {}
+      end
+    else
+      {}
+    end
+
+    @activity_feed_data = Account::ActivityFeedData.new(@account, @entries, split_parents: @split_parents)
   end
 
   def sync
@@ -340,6 +359,7 @@ class AccountsController < ApplicationController
         @redbark_items,
         @akahu_items,
         @up_items,
+        @monobank_items,
         @enable_banking_items,
         @coinstats_items,
         @mercury_items,
@@ -351,8 +371,10 @@ class AccountsController < ApplicationController
         @sophtron_items,
         @binance_items,
         @kraken_items,
+        @trading212_items,
         @questrade_items,
         @wise_items,
+        @trade_republic_items,
         @onchain_wallet_items
       ].flatten.compact
 
@@ -483,6 +505,13 @@ class AccountsController < ApplicationController
       @up_items.each do |item|
         latest_sync = item.latest_sync_record
         @up_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Monobank sync stats
+      @monobank_sync_stats_map = {}
+      @monobank_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @monobank_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Enable Banking sync stats

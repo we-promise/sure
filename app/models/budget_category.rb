@@ -1,4 +1,21 @@
+# Bills subsystem: exposes what this category's bills have already committed
+# inside the budget period, as a read-side hook only.
 class BudgetCategory < ApplicationRecord
+  # Money this category's bills still expect inside the budget period --
+  # committed but not yet spent. Read-side only: budgets stay derived from
+  # posted entries, and debt-payment transfers never reach here because
+  # transfer series carry no category.
+  def bills_reserved
+    bills_reservation.first
+  end
+
+  # Obligations in this period with no rate into the budget currency. Counted
+  # and reported rather than dropped: a reservation that silently omits money
+  # reads as money the user still has free to spend.
+  def bills_reserved_unconvertible_count
+    bills_reservation.last
+  end
+
   include Monetizable
 
   belongs_to :budget
@@ -213,7 +230,7 @@ class BudgetCategory < ApplicationRecord
   end
 
   def rolled_over?
-    rolled_over_amount.positive?
+    display_rolled_over_amount.positive?
   end
 
   # Returns true if this subcategory has no individual budget limit and should use parent's budget
@@ -241,37 +258,30 @@ class BudgetCategory < ApplicationRecord
 
   def available_to_spend
     if inherits_parent_budget?
-      # Subcategories using parent budget share the parent's available_to_spend
       parent = parent_budget_category
       return 0 unless parent
-      parent.available_to_spend
+
+      # Shared children can use only the portion of the parent allocation that
+      # is not reserved for ring-fenced siblings. Their spending is the parent
+      # aggregate less those siblings' spending.
+      ring_fenced_children = parent.subcategories.reject(&:inherits_parent_budget?)
+      shared_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount -
+                      ring_fenced_children.sum { |child| child[:budgeted_spending] || 0 }
+      shared_spending = parent.actual_spending - ring_fenced_children.sum(&:actual_spending)
+
+      [ shared_budget - shared_spending, 0 ].max
     elsif subcategory?
       # Subcategory with individual limit
       (self[:budgeted_spending] || 0) + rolled_over_amount - actual_spending
     else
-      # Parent category
-      parent_budget = (self[:budgeted_spending] || 0) + rolled_over_amount
+      # A parent card displays its full allocation and total spending (including
+      # all children), so the available amount must reconcile with those same
+      # figures. Child allocations are already included in the parent's stored
+      # budget, while ring-fenced children carry their rollover separately from
+      # the parent. Include that carry without counting child allocations twice.
+      child_rollover = subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
 
-      # Get subcategories with and without individual limits
-      subcategories_with_limits = subcategories.reject(&:inherits_parent_budget?)
-
-      # Ring-fenced budgets for subcategories with individual limits
-      subcategories_individual_budgets = subcategories_with_limits.sum { |sc| sc[:budgeted_spending] || 0 }
-
-      # Shared pool = parent budget - ring-fenced budgets
-      shared_pool = parent_budget - subcategories_individual_budgets
-
-      # Get actual spending from income statement (includes all subcategories)
-      total_spending = actual_spending
-
-      # Subtract spending from subcategories with individual budgets (they use their ring-fenced money)
-      subcategories_with_limits_spending = subcategories_with_limits.sum(&:actual_spending)
-
-      # Spending from shared pool = total spending - ring-fenced spending
-      shared_pool_spending = total_spending - subcategories_with_limits_spending
-
-      # Available in shared pool
-      shared_pool - shared_pool_spending
+      (self[:budgeted_spending] || 0) + rolled_over_amount + child_rollover - actual_spending
     end
   end
 
@@ -283,16 +293,20 @@ class BudgetCategory < ApplicationRecord
   # allocation alone: a category funded only by rollover has money to spend.
   def percent_of_budget_spent
     if inherits_parent_budget?
-      # For subcategories using parent budget, show their spending as percentage of parent's budget
       parent = parent_budget_category
       return 0 unless parent
 
-      parent_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount
-      return 0 if parent_budget == 0 && actual_spending == 0
-      return 100 if parent_budget == 0 && actual_spending > 0
-      (actual_spending.to_f / parent_budget) * 100
+      ring_fenced_children = parent.subcategories.reject(&:inherits_parent_budget?)
+      shared_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount -
+                      ring_fenced_children.sum { |child| child[:budgeted_spending] || 0 }
+      shared_budget = [ shared_budget, 0 ].max
+
+      return 0 if shared_budget == 0 && actual_spending == 0
+      return 100 if shared_budget == 0 && actual_spending > 0
+      (actual_spending.to_f / shared_budget) * 100
     else
-      budget_amount = (self[:budgeted_spending] || 0) + rolled_over_amount
+      child_rollover = subcategory? ? 0 : subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
+      budget_amount = (self[:budgeted_spending] || 0) + rolled_over_amount + child_rollover
       return 0 if budget_amount == 0 && actual_spending == 0
       return 0 if budget_amount > 0 && actual_spending == 0
       return 100 if budget_amount == 0 && actual_spending > 0
@@ -318,12 +332,14 @@ class BudgetCategory < ApplicationRecord
     (display_budgeted_spending.to_d + display_rolled_over_amount.to_d).positive?
   end
 
-  # Sibling of `display_budgeted_spending`: a subcategory sharing its
-  # parent's budget shares its parent's carry as well.
+  # Sibling of `display_budgeted_spending`: shared children show the parent's
+  # shared carry, while parents aggregate carry held by ring-fenced children so
+  # their displayed budget, rollover, spending, and availability reconcile.
   def display_rolled_over_amount
-    return rolled_over_amount unless inherits_parent_budget?
+    return parent_budget_category&.rolled_over_amount || 0 if inherits_parent_budget?
+    return rolled_over_amount if subcategory?
 
-    parent_budget_category&.rolled_over_amount || 0
+    rolled_over_amount + subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
   end
 
   def unbudgeted_with_spending?
@@ -400,6 +416,50 @@ class BudgetCategory < ApplicationRecord
   end
 
   private
+    # A foreign-currency obligation is converted, not skipped: it is still owed
+    # out of this category. Only one with no rate at all falls out, and that one
+    # is counted.
+    def bills_reservation
+      @bills_reservation ||= begin
+        occurrences = RecurringOccurrence
+                        .open_status
+                        .joins(:recurring_transaction)
+                        .where(recurring_transactions: {
+                                 family_id: budget.family_id,
+                                 category_id: category_id,
+                                 status: :active,
+                                 destination_account_id: nil
+                               })
+                        .where("recurring_transactions.amount > 0")
+                        .where(due_on: budget.start_date..budget.end_date)
+                        .includes(:recurring_transaction)
+                        .to_a
+
+        # One grouped sum for the whole set. Reading remaining_amount straight
+        # off each row issues a SUM per occurrence, which is a query count that
+        # grows with the number of bills the user has.
+        sums = RecurringAllocation.confirmed
+                                  .where(recurring_occurrence_id: occurrences.map(&:id))
+                                  .group(:recurring_occurrence_id)
+                                  .sum(:allocated_amount)
+
+        unconvertible = 0
+
+        total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
+          occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+
+          begin
+            sum + occurrence.remaining_amount_money.exchange_to(currency)
+          rescue Money::ConversionError
+            unconvertible += 1
+            sum
+          end
+        end
+
+        [ total, unconvertible ]
+      end
+    end
+
     def sync_parent_budgeted_spending!(previous_budgeted_spending:)
       parent_budget_category = budget.budget_categories.where(category_id: category.parent_id).lock.first
       return unless parent_budget_category
