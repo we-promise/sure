@@ -609,6 +609,46 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/The configured model was not returned by the provider/, response.body)
   end
 
+  test "German AI failure reasons are present without fallback and render in worker results" do
+    reasons = {
+      model_not_available: "Das konfigurierte Modell wurde vom Anbieter nicht zurückgegeben",
+      no_tool_call: "Das Modell hat geantwortet, ohne das Prüfwerkzeug aufzurufen",
+      tools_refused: "Der Dienst hat dieselbe Anfrage ohne Werkzeuge beantwortet, sie mit Werkzeugen jedoch abgelehnt",
+      invalid_response: "Der Dienst hat eine unerwartete Antwort zurückgegeben",
+      dimensions_mismatch: "Die Dimensionen des Embedding-Vektors stimmen nicht mit den konfigurierten Dimensionen überein",
+      extension_not_enabled: "Die PostgreSQL-Erweiterung vector ist nicht aktiviert",
+      table_not_found: "Die Tabelle vector_store_chunks wurde nicht gefunden",
+      render_missing_binary: "Der Renderer pdftoppm (poppler-utils) ist in diesem Container nicht verfügbar",
+      timeout: "Der Dienst hat nicht innerhalb des Zeitlimits für die Prüfung geantwortet",
+      request_failed: "Die Anfrage an den Dienst ist fehlgeschlagen",
+      unsupported_provider: "Der Anbieter unterstützt diese Prüfung nicht"
+    }
+    reasons.each do |code, text|
+      assert_equal text, I18n.t("admin.system_health.show.ai.failure_codes.#{code}", locale: :de, fallback: false, raise: true)
+    end
+    {
+      failure_reason: "Fehlerursache",
+      function_calling_failure_reason: "Fehlerursache beim Funktionsaufruf",
+      pdf_text_extraction_failure_reason: "Fehlerursache bei der Textextraktion",
+      pdf_vision_processing_failure_reason: "Fehlerursache bei der Bildverarbeitung oder nativen Dokumentverarbeitung"
+    }.each do |key, text|
+      assert_equal text, I18n.t("admin.system_health.show.ai.labels.#{key}", locale: :de, fallback: false, raise: true)
+    end
+
+    sign_in users(:sure_support_staff)
+    stub_healthy_sidekiq
+    with_memory_cache do
+      with_ai_environment do
+        WorkerAiHealth.record!(worker_snapshot(llm_status: :failing, failure_codes: reasons.keys))
+        get admin_system_health_url(tab: "ai", locale: :de)
+      end
+    end
+
+    assert_response :success
+    assert_select "dt", text: "Fehlerursache"
+    reasons.each_value { |text| assert_select "dd", text: /#{Regexp.escape(text)}/ }
+  end
+
   test "AI status shows a stale worker result as stale rather than passing" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
