@@ -52,7 +52,7 @@ class RecurringTransaction
         .where(entryable_type: "Transaction")
         .where("entries.date >= ?", lookback.ago.to_date)
         .where("entries.amount < 0")
-        .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+        .where.not("transactions.kind": Transaction::TRANSFER_KINDS + [ "refund" ])
         .includes(:entryable)
         .to_a
 
@@ -200,7 +200,7 @@ class RecurringTransaction
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
           .where(entryable_type: "Transaction")
           .where("entries.date >= ?", three_months_ago)
-          .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
+          .where.not("transactions.kind": Transaction::TRANSFER_KINDS + [ "refund" ])
           .includes(:entryable)
           .to_a
 
@@ -406,6 +406,7 @@ class RecurringTransaction
         entries = family.entries
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
           .where(entries: { entryable_type: "Transaction", currency: currencies })
+          .where.not(transactions: { kind: "refund" })
           .where("entries.date >= ?", lookback_date)
           .select("entries.*, transactions.merchant_id AS transaction_merchant_id")
           .order(date: :desc)

@@ -115,6 +115,7 @@ class RecurringOccurrencesController < ApplicationController
         .where.not(id: @occurrence.allocations.where.not(entry_id: nil).select(:entry_id))
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
 
+      scope = scope.where.not(transactions: { kind: "refund" })
       return scope if series.transfer?
 
       scope.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })

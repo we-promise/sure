@@ -78,6 +78,8 @@ class SplitsController < ApplicationController
     @entry.sync_account_later
 
     redirect_to transactions_path, notice: t("splits.destroy.success")
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to transactions_path, alert: error.record.errors.full_messages.to_sentence
   end
 
   private

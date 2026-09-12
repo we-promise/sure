@@ -50,7 +50,7 @@ class PagesController < ApplicationController
     expense_totals = income_statement.expense_totals(period: @period)
     net_totals = income_statement.net_category_totals(period: @period)
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
+    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency, refunds_present: income_statement.refund_totals(period: @period).total.positive?)
     @outflows_data = build_outflows_donut_data(net_totals)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
@@ -259,7 +259,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, refunds_present: false)
       nodes = []
       links = []
       node_indices = {}
@@ -275,10 +275,13 @@ class PagesController < ApplicationController
       total_expense = net_totals.total_net_expense.to_f.round(2)
 
       # Central Cash Flow node
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income, 100.0, "var(--color-success)")
+      refund_credit = net_totals.net_expense_categories.sum { |ct| ct.total.negative? ? -ct.total : 0 }.to_f
+      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income + refund_credit, 100.0, "var(--color-success)")
 
       # Build netted subcategory data from raw totals
-      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
+      # Refund periods use net parent categories. Gross child flows can exceed
+      # a net parent and imply fictitious income when a child has a refund.
+      net_subcategories_by_parent = refunds_present ? {} : build_net_subcategories(expense_totals, income_totals)
 
       # Process net income categories (flow: subcategory -> parent -> cash_flow)
       process_net_category_nodes(
@@ -295,7 +298,7 @@ class PagesController < ApplicationController
       # Process net expense categories (flow: cash_flow -> parent -> subcategory)
       process_net_category_nodes(
         categories: net_totals.net_expense_categories,
-        total: total_expense,
+        total: net_totals.net_expense_categories.sum { |ct| [ ct.total, 0 ].max },
         prefix: "expense",
         net_subcategories_by_parent: net_subcategories_by_parent,
         add_node: add_node,
@@ -361,6 +364,13 @@ class PagesController < ApplicationController
       categories.each do |ct|
         val = ct.total.to_f.round(2)
         next if val.zero?
+
+        if val.negative?
+          color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
+          idx = add_node.call("refund_#{ct.category.id || ct.category.name}", t("refunds.category_credit", category: ct.category.name), -val, 0, color)
+          links << { source: idx, target: cash_flow_idx, value: -val, color: color, percentage: 0 }
+          next
+        end
 
         percentage = total.zero? ? 0 : (val / total * 100).round(1)
         color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR

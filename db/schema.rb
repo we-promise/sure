@@ -2486,6 +2486,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "kind", default: "standard", null: false
     t.jsonb "locked_attributes", default: {}
     t.uuid "merchant_id"
+    t.uuid "refund_of_id"
     t.uuid "transfer_id"
     t.datetime "updated_at", null: false
     t.index "(((extra -> 'goal'::text) ->> 'pledge_id'::text))", name: "ix_transactions_extra_goal_pledge_id", unique: true, where: "(((extra -> 'goal'::text) ->> 'pledge_id'::text) IS NOT NULL)"
@@ -2495,6 +2496,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["investment_activity_label"], name: "index_transactions_on_investment_activity_label"
     t.index ["kind"], name: "index_transactions_on_kind"
     t.index ["merchant_id"], name: "index_transactions_on_merchant_id"
+    t.index ["refund_of_id"], name: "index_transactions_on_refund_of_id"
     t.index ["transfer_id"], name: "index_transactions_on_transfer_id"
   end
 
@@ -2820,6 +2822,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   add_foreign_key "trading212_items", "families"
   add_foreign_key "transactions", "categories", on_delete: :nullify
   add_foreign_key "transactions", "merchants"
+  add_foreign_key "transactions", "transactions", column: "refund_of_id", on_delete: :nullify
   add_foreign_key "transactions", "transfers"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade

@@ -49,6 +49,18 @@ class IncomeStatement
     @income_totals_by_period[key] = build_period_total(classification: "income", period: period)
   end
 
+  def refund_totals(period: Period.current_month)
+    key = period_cache_key(period)
+    @refund_totals_by_period ||= {}
+    return @refund_totals_by_period[key] if @refund_totals_by_period.key?(key)
+
+    rows = totals_query(
+      transactions_scope: family.transactions.refund.visible.excluding_pending.in_period(period),
+      date_range: period.date_range
+    ).map { |row| row.with(total: -row.total) }
+    @refund_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
+  end
+
   def net_category_totals(period: Period.current_month)
     key = period_cache_key(period)
     @net_category_totals_by_period ||= {}
@@ -70,6 +82,7 @@ class IncomeStatement
 
     expense_by_cat = expense.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
     income_by_cat = income.category_totals.reject { |ct| ct.category.subcategory? }.index_by { |ct| cat_key.call(ct) }
+    refunds_by_cat = refund_totals(period: period).category_totals.index_by { |ct| cat_key.call(ct) }
 
     all_keys = (expense_by_cat.keys + income_by_cat.keys).uniq
     raw_expense_categories = []
@@ -80,21 +93,21 @@ class IncomeStatement
       inc_ct = income_by_cat[cat]
       exp_total = exp_ct&.total || 0
       inc_total = inc_ct&.total || 0
-      net = exp_total - inc_total
+      refund = refunds_by_cat[cat]&.total || 0
+      legacy_net = exp_total + refund - inc_total
+      net_expense = [ legacy_net, 0 ].max - refund
       category = exp_ct&.category || inc_ct&.category
 
-      if net > 0
-        raw_expense_categories << { category: category, total: net }
-      elsif net < 0
-        raw_income_categories << { category: category, total: net.abs }
-      end
+      raw_expense_categories << { category: category, total: net_expense } unless net_expense.zero?
+      raw_income_categories << { category: category, total: -legacy_net } if legacy_net.negative?
     end
 
     total_net_expense = raw_expense_categories.sum { |r| r[:total] }
     total_net_income = raw_income_categories.sum { |r| r[:total] }
 
+    positive_expense = raw_expense_categories.sum { |r| [ r[:total], 0 ].max }
     net_expense_categories = raw_expense_categories.map do |r|
-      weight = total_net_expense.zero? ? 0 : (r[:total].to_f / total_net_expense) * 100
+      weight = positive_expense.zero? ? 0 : ([ r[:total], 0 ].max.to_f / positive_expense) * 100
       CategoryTotal.new(category: r[:category], total: r[:total], currency: family.currency, weight: weight)
     end
 
@@ -121,7 +134,7 @@ class IncomeStatement
   # dashboard's cumulative spending chart. Same scoping as `expense_totals`.
   def daily_expense_series(period:)
     Rails.cache.fetch([
-      "income_statement", "daily_expense_series", family.id, user&.id,
+      "income_statement", "daily_expense_series", "v2", family.id, user&.id,
       included_account_ids_hash, period.start_date, period.end_date,
       family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
       # Rates change via ExchangeRate::Importer's upsert_all and the target
@@ -196,9 +209,9 @@ class IncomeStatement
       [ period.start_date, period.end_date ]
     end
 
-    def build_period_total(classification:, period:)
+    def build_period_total(classification:, period:, rows: nil)
       # Exclude pending transactions from budget calculations
-      totals = totals_for_period(period).select { |t| t.classification == classification }
+      totals = (rows || totals_for_period(period)).select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -223,7 +236,7 @@ class IncomeStatement
 
         category_total = parent_category_total + children_totals
 
-        weight = (category_total.zero? ? 0 : category_total.to_f / classification_total) * 100
+        weight = (category_total.zero? || classification_total.zero? ? 0 : category_total.to_f / classification_total) * 100
 
         CategoryTotal.new(
           category: category,
@@ -253,14 +266,14 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "family_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "category_stats", "v2", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
@@ -280,7 +293,7 @@ class IncomeStatement
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+        "income_statement", "totals_query", "v3", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 

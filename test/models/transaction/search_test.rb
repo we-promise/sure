@@ -169,7 +169,8 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     # Transaction::UNCATEGORIZED_EXCLUDED_KINDS; this pins them together.
     made = Transaction.kinds.keys.index_with do |kind|
       account = kind == "loan_payment" ? @loan_account : @checking_account
-      create_transaction(account: account, amount: 100, kind: kind).entryable.id
+      amount = kind == "refund" ? -100 : 100
+      create_transaction(account: account, amount: amount, kind: kind).entryable.id
     end
 
     filter_ids = Transaction::Search.new(@family, filters: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] })

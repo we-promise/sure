@@ -13,6 +13,18 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
   # How often is one of the four things anyone needs to add a bill, and it used
   # to render below the payment link and the autopay toggle: the fourth
   # essential field sat under two most people never set.
+  test "refunds cannot be picked or directly used to prefill income" do
+    entry = picker_entry(name: "Returned shirts", amount: -300)
+    entry.transaction.reload.mark_as_refund!
+
+    get new_recurring_transaction_url(picker: 1, income: 1)
+    assert_response :success
+    assert_no_match "Returned shirts", response.body
+
+    get new_recurring_transaction_url(entry_id: entry.id, income: 1)
+    assert_response :not_found
+  end
+
   test "the add form leads with the essentials and tucks the rest away" do
     get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
 

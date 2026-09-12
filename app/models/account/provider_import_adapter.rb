@@ -243,7 +243,7 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
         end
 
-        if auto_kind.present?
+        if auto_kind.present? && !entry.transaction.locked?(:kind)
           entry.transaction.assign_attributes(kind: auto_kind)
         end
 

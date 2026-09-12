@@ -43,7 +43,7 @@ class IncomeStatement::DailyExpenseTotals
           SELECT
             ae.date as day,
             #{classification_sql("at")} as classification,
-            ABS(SUM(#{converted_amount_sql("at")})) as total
+            SUM(#{reported_amount_sql("at")}) as total
           FROM (#{@transactions_scope.to_sql}) at
           #{entries_join_sql("at")}
           #{accounts_join_sql}

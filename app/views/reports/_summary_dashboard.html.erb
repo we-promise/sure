@@ -51,6 +51,9 @@
       <p class="text-2xl font-semibold text-primary privacy-sensitive">
         <%= metrics[:current_expenses].format %>
       </p>
+      <% if @current_refund_totals.total.positive? %>
+        <p class="text-sm text-secondary privacy-sensitive"><%= t("transactions.summary.refunds") %>: <%= format_money(Money.new(@current_refund_totals.total, Current.family.currency)) %></p>
+      <% end %>
 
       <% if metrics[:expense_change] %>
         <div class="flex items-center gap-1.5 privacy-sensitive">

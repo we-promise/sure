@@ -1,0 +1,42 @@
+en:
+  refunds:
+    title: Purchase refund
+    manage: Manage refund
+    preview: Preview
+    description: Refunds reduce spending in their category and do not count as income. Optionally link the original purchase to track its final cost.
+    search: Search purchases
+    purchase: Original purchase
+    unlinked: No linked purchase
+    split_hint: Showing up to 100 purchases. Search by name for older purchases. For a refund covering several purchases, split it first and link each portion separately.
+    save: Save refund
+    saved: Refund saved
+    cleared: Refund classification removed
+    mark: Mark as refund
+    edit: Link or change purchase
+    clear: Remove refund classification
+    category_credit: "%{category} refunds"
+    net_cost: Net purchase cost
+    net_cost_hint: Original payment less linked refunds visible to you, including refunds received in later months. Shipping or exchange differences remain in the net cost.
+    missing_rate: Unavailable — exchange rate missing
+    explanation: This credit reduces spending, including when it arrives in a later month. It is excluded from income.
+  activerecord:
+    errors:
+      messages:
+        refund_not_allowed: "cannot be a purchase refund"
+        invalid_refund: Only posted incoming purchase credits can be marked as refunds
+        refund_links_present: Remove refund links or refund classification before changing this transaction
+  transactions:
+    searches:
+      filters:
+        type_filter:
+          refund: Refund
+        badge:
+          refund: Refund
+    summary:
+      refunds: Refunds
+    transaction:
+      refund: Refund
+  rules:
+    condition_filters:
+      transaction_type:
+        refund: Refund

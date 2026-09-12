@@ -15,6 +15,13 @@ class Transfer < ApplicationRecord
   validate :transfer_has_opposite_amounts
   validate :transfer_within_date_range
   validate :transfer_has_same_family
+  validate :transfer_has_no_refunds
+
+  def transfer_has_no_refunds
+    if [ inflow_transaction, outflow_transaction ].compact.any? { |transaction| transaction.refund? || transaction.refund_linked? }
+      errors.add(:base, :refund_links_present)
+    end
+  end
 
   class << self
     def kind_for_account(account)
