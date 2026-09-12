@@ -4,6 +4,21 @@ class Account < ApplicationRecord
   # deterministic: true preserves equality lookups (e.g. find_by(iban:)) and
   # the family_id+iban uniqueness index, since the same plaintext always
   # produces the same ciphertext.
+  #
+  # Deliberate tradeoff, not an oversight: unlike MonobankAccount#iban
+  # (encrypted non-deterministically, since it's never looked up by value),
+  # this column's whole purpose requires DB-level equality -- the uniqueness
+  # index and find_by(iban:) lookups can't work without a value-preserving
+  # transform. Splitting into a deterministic lookup column plus a separate
+  # non-deterministic display column (the pattern this codebase uses
+  # elsewhere, e.g. SnaptradeItem's client_id/consumer_key vs
+  # snaptrade_user_secret) wouldn't remove the ciphertext-correlation
+  # property being traded off here either, since IT'S the SAME value in both
+  # roles -- the deterministic column would still leak equality. Accepted
+  # for the user's own account/merchant IBAN; deliberately NOT applied to a
+  # transaction's counterparty_iban (see EnableBankingEntry::Processor),
+  # which has no uniqueness requirement and stays in the existing
+  # unencrypted `extra` jsonb column rather than inheriting this tradeoff.
   if encryption_ready?
     encrypts :iban, deterministic: true
   end
