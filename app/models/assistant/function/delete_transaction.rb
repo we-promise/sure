@@ -12,7 +12,7 @@
 # record the native controller destroys — which cascades to the Transaction
 # child via `delegated_type :entryable, dependent: :destroy`.
 #
-# Authorization: the /mcp endpoint enforces a single `read_write` OAuth scope
+# Authorization: the *** endpoint enforces a single `read_write` OAuth scope
 # for every tool, so this tool enforces the *write* gate itself by resolving
 # only through accounts the user can write to (owner or full_control share),
 # consistent with CreateTransaction. A read-only shared account, a cross-family
@@ -21,10 +21,12 @@
 
 class Assistant::Function::DeleteTransaction < Assistant::Function
   class << self
+    # The tool's stable name; this is the MCP function identifier callers use.
     def name
       "delete_transaction"
     end
 
+    # Human/LLM-facing description of what the tool does and how to call it.
     def description
       <<~INSTRUCTIONS
         Permanently deletes a transaction from the ledger. This is destructive
@@ -42,10 +44,13 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     end
   end
 
+  # This tool is not strict: it validates its own inputs and returns structured
+  # error hashes rather than raising, so a bad call is reported to the model.
   def strict_mode?
     false
   end
 
+  # JSON schema of the parameters this tool accepts, exposed to the model.
   def params_schema
     build_schema(
       required: %w[id],
@@ -62,6 +67,12 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     )
   end
 
+  # Tool entry point. Resolves a writable transaction, snapshots it, destroys
+  # its root ledger entry (cascading to the transaction), enqueues the
+  # post-delete account sync (best-effort), and returns a result hash. Returns
+  # { success: true, deleted: true, transaction: } on success (with an optional
+  # :warning if the sync could not be enqueued), or an error hash for
+  # not_found / split_child / delete_aborted.
   def call(params = {})
     transaction = find_transaction(params["id"], params["account_id"])
     return error("not_found", "No transaction with id '#{params["id"]}' in an account you can write to.") unless transaction
@@ -113,7 +124,9 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
     # (owner or full_control share) — the same write gate CreateTransaction
     # uses. `merge(Account.writable_by(user))` is the native set_transaction
     # pattern (which uses accessible_by) tightened to the write set, so a
-    # read-only shared account simply yields nil -> not_found.
+    # read-only shared account simply yields nil -> not_found. An optional
+    # account_id narrows the query so a mismatched id cannot delete the wrong
+    # record. Returns nil if the id is not a valid UUID or is not found.
     def find_transaction(id, account_id)
       return nil unless valid_uuid?(id)
 
@@ -130,6 +143,9 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       query.find_by(id: id)
     end
 
+    # Shape a Transaction (and its root entry) into the result hash returned to
+    # the caller. Called BEFORE destruction so the response carries a complete
+    # snapshot of what was deleted.
     def serialize(transaction, entry)
       {
         id: transaction.id,
@@ -144,12 +160,15 @@ class Assistant::Function::DeleteTransaction < Assistant::Function
       }
     end
 
+    # Human-formatted money string for the entry's amount and currency, with a
+    # plain "amount currency" fallback if formatting fails.
     def format_money(entry)
       entry.amount_money.format
     rescue StandardError
       "#{entry.amount} #{entry.currency}"
     end
 
+    # Build a standard error result hash: { success: false, error:, message: }.
     def error(key, message)
       { success: false, error: key, message: message }
     end

@@ -13,10 +13,12 @@
 # already carries the equally-mutating UpdateTransaction.
 class Assistant::Function::CreateTransaction < Assistant::Function
   class << self
+    # The tool's stable name; this is the MCP function identifier callers use.
     def name
       "create_transaction"
     end
 
+    # Human/LLM-facing description of what the tool does and how to call it.
     def description
       <<~INSTRUCTIONS
         Creates a new transaction on one of the user's accounts.
@@ -60,10 +62,13 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     end
   end
 
+  # This tool is not strict: it validates its own inputs and returns structured
+  # error hashes rather than raising, so a bad call is reported to the model.
   def strict_mode?
     false
   end
 
+  # JSON schema of the parameters this tool accepts, exposed to the model.
   def params_schema
     build_schema(
       required: %w[account_id date amount name],
@@ -126,6 +131,13 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     )
   end
 
+  # Tool entry point. Validates the params, builds and persists the Entry
+  # through the same path as the native create endpoint, enqueues the
+  # post-commit account sync (best-effort), and returns a result hash. Returns
+  # { success: true, created: true, transaction: } on success (with an optional
+  # :warning if the sync could not be enqueued), an error hash on validation
+  # failure, or { success: true, created: false } when an idempotency key
+  # matches an existing record.
   def call(params = {})
     account = resolve_account(params["account_id"])
     return error("account_not_found", "No account found with that ID that this user can write to.") unless account
@@ -215,6 +227,9 @@ class Assistant::Function::CreateTransaction < Assistant::Function
   end
 
   private
+    # Find a writable account by UUID, scoped to accounts the user can write to
+    # (owner or full-control share). Returns nil if the id is not a valid UUID
+    # or the account is not writable — callers treat that as not_found.
     def resolve_account(account_id)
       return nil unless valid_uuid?(account_id)
 
@@ -223,7 +238,8 @@ class Assistant::Function::CreateTransaction < Assistant::Function
 
     # Always seed category/merchant/tag keys (nil / empty) so the nested
     # entryable builds exactly as the API's create endpoint does, then override
-    # with any caller-supplied, family-validated values.
+    # with any caller-supplied, family-validated values. Returns the attribute
+    # hash, or an error hash if a supplied id does not belong to the family.
     def resolve_entryable_attributes(params)
       attrs = { category_id: nil, merchant_id: nil, tag_ids: [] }
 
@@ -253,6 +269,9 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       attrs
     end
 
+    # Apply the amount sign convention: income/inflow -> negative (money in),
+    # expense/outflow -> positive (money out). With no type, the amount is
+    # returned exactly as given.
     def signed_amount(amount, type)
       case type&.to_s&.downcase
       when "income", "inflow" then -amount.abs
@@ -261,10 +280,14 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       end
     end
 
+    # Whether the caller asked to mark the transaction user-modified (so a
+    # later provider sync will not overwrite it). Coerces the param to a boolean.
     def user_modified?(params)
       ActiveModel::Type::Boolean.new.cast(params["user_modified"])
     end
 
+    # Coerce a nullable UUID parameter: returns nil for blank input, the value
+    # if it is a valid UUID, or an error hash otherwise.
     def optional_uuid(value)
       return nil if value.nil? || value == ""
       return value.to_s if valid_uuid?(value)
@@ -272,16 +295,23 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       error("invalid_uuid", "Expected a valid UUID.")
     end
 
+    # True if every supplied tag id belongs to the user's family (an empty list
+    # is trivially valid).
     def valid_tag_ids?(tag_ids)
       return true if tag_ids.empty?
 
       family.tags.where(id: tag_ids).count == tag_ids.uniq.size
     end
 
+    # The set of merchants available to this user's family, used to validate
+    # a supplied merchant_id.
     def available_merchants
       family.available_merchants_for(user)
     end
 
+    # Validate a currency code using the app's own Money currency table (rather
+    # than a bare 3-letter regex), so an explicit unknown code is rejected the
+    # same way the API rejects it.
     def valid_currency?(code)
       # Use the app's own currency validator (Money) rather than a bare
       # 3-letter regex, so an explicit "ABC" is rejected like the API does.
@@ -291,6 +321,8 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       false
     end
 
+    # Look up an existing entry matching the (external_id, source) idempotency
+    # key on the given account; nil if there is no external_id or no match.
     def existing_idempotent_entry(account, entry_params)
       return nil unless entry_params[:external_id].present?
 
@@ -300,6 +332,9 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       )
     end
 
+    # Build the response for an idempotency hit. If the existing entry is a
+    # transaction, return it with created: false; if it is some other entry
+    # type, return an idempotency_conflict error.
     def existing_response(existing)
       return error("idempotency_conflict", "external_id already belongs to a non-transaction entry.") unless existing&.entryable&.is_a?(Transaction)
 
@@ -314,6 +349,7 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       }
     end
 
+    # Parse an ISO 8601 date string; returns nil if blank or not a valid date.
     def parse_date(value)
       return nil if value.blank?
 
@@ -322,6 +358,9 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       nil
     end
 
+    # Parse a finite decimal from a value; returns nil if blank, non-numeric,
+    # or a non-finite value (BigDecimal accepts "Infinity"/"NaN", which we
+    # reject so a malformed amount can never reach the ledger).
     def parse_decimal(value)
       return nil if value.nil? || value.to_s.strip.empty?
 
@@ -335,12 +374,17 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       nil
     end
 
+    # Human-formatted money string for the entry's amount and currency, with a
+    # plain "amount currency" fallback if formatting fails.
     def format_money(entry)
       entry.amount_money.format
     rescue StandardError
       "#{entry.amount} #{entry.currency}"
     end
 
+    # Shape a Transaction into the result hash returned to the caller (id,
+    # name, date, amount, currency, type, notes, and nested category/merchant/
+    # tags).
     def serialize(transaction)
       entry = transaction.entry
       {
@@ -359,10 +403,13 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       }
     end
 
+    # True if a helper returned an error hash (a Hash with success == false),
+    # used to short-circuit on validation failures from other helpers.
     def error_response?(value)
       value.is_a?(Hash) && value[:success] == false
     end
 
+    # Build a standard error result hash: { success: false, error:, message: }.
     def error(key, message)
       { success: false, error: key, message: message }
     end
