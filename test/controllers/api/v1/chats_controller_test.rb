@@ -52,6 +52,15 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert response_body["pagination"].present?
   end
 
+  test "index pagination per_page reflects configured limit" do
+    api_key = create_read_api_key # pipelock:ignore
+    get "/api/v1/chats", headers: api_headers(api_key)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal 20, response_body["pagination"]["per_page"]
+  end
+
   test "should show chat with messages" do
     get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
     assert_response :success
@@ -59,6 +68,19 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal @chat.id, response_body["id"]
     assert response_body["messages"].is_a?(Array)
+  end
+
+  test "show returns all messages when count exceeds default pagy page size" do
+    api_key = create_read_api_key # pipelock:ignore
+    initial_count = @chat.messages.count
+    21.times { |i| AssistantMessage.create!(chat: @chat, content: "msg #{i}", ai_model: "test") }
+
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(api_key)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal initial_count + 21, response_body["messages"].length
+    assert_equal "msg 20", response_body["messages"].last["content"]
   end
 
   test "should create chat with write scope" do
@@ -191,5 +213,13 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }
+    end
+
+    def create_read_api_key
+      plain_key = ApiKey.generate_secure_key
+      api_key = @user.api_keys.build(name: "Test Read Key", scopes: [ "read" ])
+      api_key.key = plain_key
+      api_key.save!
+      api_key
     end
 end
