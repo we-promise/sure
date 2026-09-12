@@ -70,8 +70,8 @@ ru:
         url_label: URL конечной точки
         url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
-        description: Введите Client ID, предоставленный Brand Fetch
-        env_configured_message: Вы успешно настроили ваш Brand Fetch Client ID через
+        description: Введите Client ID, предоставленный Brandfetch
+        env_configured_message: Вы успешно настроили ваш Brandfetch Client ID через
           переменную окружения BRAND_FETCH_CLIENT_ID.
         high_res_description: Если включено, логотипы будут получены в разрешении
           120x120 вместо 40x40. Это обеспечивает более четкие изображения на дисплеях
@@ -81,13 +81,13 @@ ru:
         placeholder: Введите ваш Client ID здесь
         setup_step_1_html: Посетите <a href="https://brandfetch.com/developers" target="_blank"
           rel="noopener noreferrer" class="underline">brandfetch.com</a> и создайте
-          бесплатный аккаунт разработчика Brand Fetch.
+          бесплатный аккаунт разработчика Brandfetch.
         setup_step_2_html: Перейдите на страницу <a href="https://developers.brandfetch.com/dashboard/logo-api"
           target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Нажмите на значок глаза в разделе "Ваш Client ID", чтобы показать
           ваш Client ID и вставьте его ниже.
         show_details: "(показать детали)"
-        title: Настройки Brand Fetch
+        title: Настройки Brandfetch
       clear_cache:
         cache_cleared: Кэш данных очищен. Это может занять несколько минут.
       disconnect_external_assistant:
