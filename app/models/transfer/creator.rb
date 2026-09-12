@@ -5,7 +5,13 @@ class Transfer::Creator
   # than a genuine double-submit. See #find_existing_transfer.
   StaleIdempotencyKeyError = Class.new(StandardError)
 
-  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, idempotency_key: nil)
+  # Sentinel default so we can tell "caller didn't pass category_id" (keep the
+  # investment-contribution fallback) apart from "caller explicitly passed a
+  # blank category_id" (user picked Uncategorized; honor it).
+  CATEGORY_ID_NOT_PROVIDED = Object.new
+  private_constant :CATEGORY_ID_NOT_PROVIDED
+
+  def initialize(family:, source_account_id:, destination_account_id:, date:, amount:, exchange_rate: nil, source_fee_amount: nil, destination_fee_amount: nil, tag_ids: nil, category_id: CATEGORY_ID_NOT_PROVIDED, idempotency_key: nil)
     @family = family
     @source_account = family.accounts.find(source_account_id) # early throw if not found
     @destination_account = family.accounts.find(destination_account_id) # early throw if not found
@@ -14,6 +20,8 @@ class Transfer::Creator
     @source_fee_amount = source_fee_amount.to_d
     @destination_fee_amount = destination_fee_amount.to_d
     @tag_ids = Array(tag_ids).reject(&:blank?)
+    @category_provided = category_id != CATEGORY_ID_NOT_PROVIDED
+    @category_id = @category_provided ? family.categories.find_by(id: category_id.presence)&.id : nil
     @idempotency_key = idempotency_key
 
     if exchange_rate.present?
@@ -89,7 +97,7 @@ class Transfer::Creator
   end
 
   private
-    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :idempotency_key
+    attr_reader :family, :source_account, :destination_account, :date, :amount, :exchange_rate, :source_fee_amount, :destination_fee_amount, :tag_ids, :category_id, :idempotency_key
 
     # Scoped to source_account + idempotency_key so it only ever finds a
     # transfer this same key could plausibly refer to, but the key alone
@@ -151,6 +159,10 @@ class Transfer::Creator
       { idempotency_key: key }
     end
 
+    def category_provided?
+      @category_provided
+    end
+
     def apply_tags!(transfer)
       resolved_ids = family.tags.where(id: tag_ids).pluck(:id)
       return if resolved_ids.empty?
@@ -166,7 +178,7 @@ class Transfer::Creator
 
       Transaction.new(
         kind: kind,
-        category: (investment_contributions_category if kind == "investment_contribution"),
+        category_id: outflow_category_id(kind),
         entry: source_account.entries.build(
           amount: amount,
           currency: source_account.currency,
@@ -176,6 +188,12 @@ class Transfer::Creator
           **entry_idempotency_attrs(leg: :outflow)
         )
       )
+    end
+
+    def outflow_category_id(kind)
+      return category_id if category_provided?
+
+      investment_contributions_category.id if kind == "investment_contribution"
     end
 
     def investment_contributions_category
