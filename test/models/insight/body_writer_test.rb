@@ -23,6 +23,19 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
     assert_equal "Narrated body.", body
   end
 
+  test "tells the LLM to write in the family's locale" do
+    @family.update!(locale: "pl")
+    provider = FakeLlmProvider.new("Narrated body.")
+    captured = nil
+    provider.stubs(:chat_response).with { |*, **kwargs| captured = kwargs[:instructions]; true }
+      .returns(OpenStruct.new(success?: true, data: OpenStruct.new(messages: [ OpenStruct.new(id: "1", output_text: "Narrated body.") ])))
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+
+    Insight::BodyWriter.new(@family).write(generated_insight)
+
+    assert_includes captured, "ISO 639-1 code: pl"
+  end
+
   test "falls back to the template and captures a debug log when the LLM call fails" do
     provider = FakeLlmProvider.new("unused")
     provider.stubs(:chat_response).raises(StandardError.new("boom"))
