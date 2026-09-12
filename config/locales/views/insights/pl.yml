@@ -84,12 +84,13 @@ pl:
       net_worth_milestone: Twoja wartość netto przekroczyła %{milestone} i wynosi
         teraz %{net_worth}.
       savings_rate_change:
-        down: Zaoszczędziłeś %{current_rate}% swojego dochodu w %{month}, spadek o
-          %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
-        down_negative: 'Wydałeś więcej niż zarobiłeś w %{month}: Twoja stopa oszczędności
-          spadła do %{current_rate}% z %{previous_rate}% w poprzednim miesiącu.'
-        up: Zaoszczędziłeś %{current_rate}% swojego dochodu w %{month}, wzrost o %{change_pp}
-          punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
+        down: Zaoszczędziłeś %{current_rate}% swojego dochodu w ciągu %{month}, spadek
+          o %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
+        down_negative: 'Wydałeś więcej niż zarobiłeś w ciągu %{month}: Twoja stopa
+          oszczędności spadła do %{current_rate}% z %{previous_rate}% w poprzednim
+          miesiącu.'
+        up: Zaoszczędziłeś %{current_rate}% swojego dochodu w ciągu %{month}, wzrost
+          o %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
       spending_anomaly:
         above: Jesteś na dobrej drodze, aby wydać %{projected_spend} na %{category}
           w tym miesiącu, około %{deviation_pct}% więcej niż Twoja średnia miesięczna
@@ -113,8 +114,8 @@ pl:
       maintained_goal_depleted: "%{goal} spadł poniżej swojego poziomu"
       net_worth_milestone: 'Kamień milowy wartości netto: %{milestone}'
       savings_rate_change:
-        down: Twoja stopa oszczędności spadła w %{month}
-        up: Twoja stopa oszczędności poprawiła się w %{month}
+        down: Twoja stopa oszczędności spadła w ciągu %{month}
+        up: Twoja stopa oszczędności poprawiła się w ciągu %{month}
       spending_anomaly:
         above: Wydatki w kategorii %{category} rosną
         below: Wydatki w kategorii %{category} spadają
