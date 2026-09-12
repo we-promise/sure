@@ -365,6 +365,39 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
+      response '409', 'an account with this email already exists' do
+        schema type: :object,
+               properties: {
+                 error: { type: :string },
+                 account_exists: { type: :boolean }
+               }
+
+        let(:existing_email) { users(:family_admin).email }
+        let(:linking_code) { 'rswag-duplicate-account' }
+        let(:body) do
+          { linking_code: linking_code }
+        end
+
+        around do |example|
+          original_cache = Rails.cache
+          Rails.cache = ActiveSupport::Cache::MemoryStore.new
+          example.run
+        ensure
+          Rails.cache = original_cache
+        end
+
+        before do
+          Rails.cache.write("mobile_sso_link:#{linking_code}", {
+            provider: 'openid_connect',
+            uid: 'rswag-duplicate-subject',
+            email: existing_email,
+            allow_account_creation: true
+          })
+        end
+
+        run_test!
+      end
+
       response '422', 'user validation error' do
         schema type: :object,
                properties: {

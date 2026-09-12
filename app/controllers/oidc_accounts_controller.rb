@@ -14,7 +14,12 @@ class OidcAccountsController < ApplicationController
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.exists?(email: @email) if @email.present?
+    # Compatibility lookup, not a plain `exists?(email:)` - a
+    # not-yet-backfilled legacy plaintext row silently misses the
+    # deterministic encrypted query (see User.find_by_email), which would
+    # send an existing user down the "create account" branch instead of
+    # "link account".
+    @user_exists = User.find_by_email(@email).present? if @email.present?
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -33,7 +38,7 @@ class OidcAccountsController < ApplicationController
     end
 
     # Verify user's password to confirm identity
-    user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
     if user&.active?
       linked = user.transaction do
@@ -77,7 +82,7 @@ class OidcAccountsController < ApplicationController
       end
     else
       @email = params[:email]
-      @user_exists = User.exists?(email: @email) if @email.present?
+      @user_exists = User.find_by_email(@email).present? if @email.present?
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end
@@ -109,6 +114,19 @@ class OidcAccountsController < ApplicationController
     end
 
     email = @pending_auth["email"]
+
+    # Server-side duplicate guard: this endpoint must never create a second
+    # account for an email that already has one. The DB unique index and
+    # AR uniqueness validation both compare against the *encrypted* column
+    # value, so they don't catch a collision with an existing legacy
+    # plaintext row - only the compatibility lookup does. Without this, a
+    # user who reaches this action directly (bypassing the `link` page,
+    # whose own "should we offer creation" branch could be stale/replayed)
+    # could get a second, unlinked account for an email that already has one.
+    if User.find_by_email(email).present?
+      redirect_to link_oidc_account_path, alert: t(".account_already_exists")
+      return
+    end
 
     # Check for a pending invitation for this email
     invitation = Invitation.pending.find_by(email: email)
