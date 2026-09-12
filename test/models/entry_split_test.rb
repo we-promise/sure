@@ -27,6 +27,37 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.split_parent?
   end
 
+  test "split! supports a per-split merchant override, falling back to the parent's merchant" do
+    parent_merchant = @entry.account.family.merchants.create!(name: "Parent merchant", type: "FamilyMerchant")
+    split_merchant = @entry.account.family.merchants.create!(name: "Split merchant", type: "FamilyMerchant")
+    @entry.transaction.update!(merchant: parent_merchant)
+
+    splits = [
+      { name: "Groceries", amount: 70, merchant_id: split_merchant.id },
+      { name: "Household", amount: 30 }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal split_merchant.id, children.first.transaction.merchant_id
+    assert_equal parent_merchant.id, children.last.transaction.merchant_id
+  end
+
+  test "split! supports per-split tags" do
+    tag_one = @entry.account.family.tags.create!(name: "Tag one")
+    tag_two = @entry.account.family.tags.create!(name: "Tag two")
+
+    splits = [
+      { name: "Groceries", amount: 70, tag_ids: [ tag_one.id, tag_two.id ] },
+      { name: "Household", amount: 30 }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal [ tag_one, tag_two ].sort_by(&:id), children.first.transaction.tags.sort_by(&:id)
+    assert_equal [], children.last.transaction.tags
+  end
+
   test "split! rejects when amounts don't sum to parent" do
     splits = [
       { name: "Part 1", amount: 60, category_id: nil },

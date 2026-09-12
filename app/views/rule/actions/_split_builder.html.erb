@@ -1,0 +1,46 @@
+<%# locals: (form:, action:, blank: false) %>
+
+<%
+  config = blank ? nil : Rule::ActionExecutor::SplitTransaction.parse_config(action.value)
+  config ||= { "splits" => [ { "type" => "percentage" }, { "type" => "percentage" } ] }
+  split_executor = action.rule.registry.get_executor!("split_transaction")
+  categories = split_executor.category_options
+  merchants = split_executor.merchant_options
+  tags = split_executor.tag_options
+%>
+
+<div class="flex flex-col gap-2 w-full min-w-0"
+     data-controller="rule--split-action"
+     data-rule--split-action-fixed-label-value="<%= t("rules.actions.split.fixed_summary_label") %>">
+  <p class="text-xs text-secondary">
+    <%= t("rules.actions.split.hint") %>
+  </p>
+
+  <div data-rule--split-action-target="rowsContainer" class="flex flex-col gap-1.5">
+    <% config["splits"].each_with_index do |split, idx| %>
+      <%= render "rule/actions/split_row", form: form, idx: idx, split: split, categories: categories, merchants: merchants, tags: tags %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between gap-2">
+    <%= render DS::Button.new(
+      text: t("rules.actions.split.add_split"),
+      icon: "plus",
+      variant: "ghost",
+      size: :sm,
+      type: "button",
+      data: { action: "click->rule--split-action#addRow" }
+    ) %>
+
+    <span class="text-xs" data-rule--split-action-target="summary"></span>
+  </div>
+
+  <template data-rule--split-action-target="rowTemplate">
+    <%# Deliberately NOT "ROW_IDX_PLACEHOLDER": this template lives inside the action template
+        that rules_controller.js#addAction() clones for a new action, replacing every
+        occurrence of "IDX_PLACEHOLDER" with the new action's index — including inside the
+        substring "ROW_IDX_PLACEHOLDER", which corrupted this row placeholder into a
+        non-numeric key that Rails silently strips from split_rows params. %>
+    <%= render "rule/actions/split_row", form: form, idx: "SPLIT_ROW_PLACEHOLDER", split: { "type" => "percentage" }, categories: categories, merchants: merchants, tags: tags %>
+  </template>
+</div>
