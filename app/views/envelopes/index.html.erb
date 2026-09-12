@@ -1,0 +1,40 @@
+<div class="space-y-8 pb-6 lg:pb-12">
+  <header>
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+      <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+    </div>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+  </header>
+
+  <% if @envelopes.empty? %>
+    <%= render "empty_state" %>
+  <% else %>
+    <div class="flex items-center justify-end">
+      <%= render DS::Link.new(
+        text: t(".new_envelope"),
+        variant: "primary",
+        href: new_envelope_path,
+        icon: "plus",
+        frame: :modal
+      ) %>
+    </div>
+
+    <% if @negative_count.positive? %>
+      <%= render DS::Alert.new(variant: "warning", message: t(".negative_callout", count: @negative_count), live: :polite) %>
+    <% end %>
+
+    <section>
+      <div class="flex items-center gap-1.5 mb-4 text-[11px] font-medium uppercase tracking-wide text-secondary">
+        <span><%= t(".heading") %></span>
+        <span class="text-subdued">·</span>
+        <span class="tabular-nums"><%= @envelopes.size %></span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <% @envelopes.each do |envelope| %>
+          <%= render Envelopes::CardComponent.new(envelope: envelope) %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+</div>
