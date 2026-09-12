@@ -108,10 +108,10 @@ All clients should connect to a Sure server the user controls or trusts. Native,
 mobile, API, and MCP clients do not replace the server; they are different ways
 to access it.
 
-## FinanceKit device uploads (draft)
+## FinanceKit foreground sync (draft)
 
-The native Apple client must discover the optional FinanceKit provider and use its
-scoped device upload protocol; it must not emulate provider ingestion with generic
+The native Apple client can discover the optional FinanceKit provider and use its
+scoped foreground sync API; it must not emulate provider ingestion with generic
 transaction writes. See [the draft contract](api/financekit.md) and
-[rollout/native-readiness gates](hosting/financekit.md). This backend draft is not
-yet a merged contract revision for native adoption.
+[rollout/native-readiness gates](hosting/financekit.md). This backend draft is
+not yet a merged contract revision for native adoption.

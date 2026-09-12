@@ -906,7 +906,6 @@ DEPENDENCIES
   importmap-rails
   inline_svg
   jbuilder
-  json-jwt (~> 1.16)
   jwt
   langfuse-ruby (~> 0.1.4)
   letter_opener

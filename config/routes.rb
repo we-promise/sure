@@ -706,9 +706,7 @@ Rails.application.routes.draw do
         get "capabilities", to: "connections#capabilities"
         resources :connections, only: [ :create, :show, :destroy ] do
           put "account_mappings/:source_id", to: "connections#mapping"
-          post "device_replacement", to: "connections#device_replacement"
-          post "batches", to: "batches#create"
-          get "batches/:batch_id", to: "connections#receipt"
+          post "syncs", to: "syncs#create"
         end
       end
       # Authentication endpoints

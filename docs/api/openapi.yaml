@@ -3409,27 +3409,6 @@ components:
           enum:
           - credit
           - debit
-    FinancekitDeviceKey:
-      type: object
-      additionalProperties: false
-      required:
-      - kty
-      - crv
-      - x
-      - "y"
-      properties:
-        kty:
-          type: string
-          enum:
-          - EC
-        crv:
-          type: string
-          enum:
-          - P-256
-        x:
-          type: string
-        "y":
-          type: string
     FinancekitConsent:
       type: object
       additionalProperties: false
@@ -3466,7 +3445,6 @@ components:
       required:
       - protocol
       - enrollment_id
-      - device_public_key
       - consent
       properties:
         protocol:
@@ -3477,31 +3455,8 @@ components:
           type: string
           format: uuid
           pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        device_public_key:
-          "$ref": "#/components/schemas/FinancekitDeviceKey"
         consent:
           "$ref": "#/components/schemas/FinancekitConsent"
-    FinancekitReplacement:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_generation
-      - device_public_key
-      - consent
-      - continuity
-      properties:
-        expected_generation:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        device_public_key:
-          "$ref": "#/components/schemas/FinancekitDeviceKey"
-        consent:
-          "$ref": "#/components/schemas/FinancekitConsent"
-        continuity:
-          type: string
-          enum:
-          - same_source_and_transaction_ids
     FinancekitAccountMapping:
       type: object
       additionalProperties: false
@@ -3770,190 +3725,57 @@ components:
           items:
             "$ref": "#/components/schemas/FinancekitTombstone"
           maxItems: 500
-      description: Decrypted JWE plaintext. transactions + tombstones <= 500. Whole
-        batch validates before durable acceptance.
-    FinancekitEnvelopeClaims:
-      type: object
-      additionalProperties: false
-      required:
-      - aud
-      - protocol
-      - connection_id
-      - generation
-      - batch_id
-      - sequence
-      - previous_digest
-      - digest
-      - ciphertext
-      properties:
-        aud:
-          type: string
-        protocol:
-          type: integer
-          enum:
-          - 1
-        connection_id:
-          type: string
-          format: uuid
-          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        generation:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        batch_id:
-          type: string
-          format: uuid
-          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        sequence:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        previous_digest:
-          type: string
-          pattern: "^[0-9a-f]{64}$"
-          nullable: true
-        digest:
-          type: string
-          pattern: "^[0-9a-f]{64}$"
-        ciphertext:
-          type: string
-          description: 'JWE compact serialization: RSA-OAEP + A256GCM'
-    FinancekitReceiptClaims:
-      type: object
-      additionalProperties: false
-      required:
-      - aud
-      - iss
-      - protocol
-      - batch_id
-      - generation
-      - sequence
-      - digest
-      - status
-      - error_code
-      - counts
-      - accepted_at
-      - applied_at
-      - issued_at
-      properties:
-        aud:
-          type: string
-          format: uuid
-          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        iss:
-          type: string
-        protocol:
-          type: integer
-          enum:
-          - 1
-        batch_id:
-          type: string
-          format: uuid
-          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        generation:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        sequence:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        digest:
-          type: string
-          pattern: "^[0-9a-f]{64}$"
-        status:
-          type: string
-          enum:
-          - accepted
-          - processing
-          - applied
-          - failed
-          - revoked
-        error_code:
-          type: string
-          nullable: true
-        counts:
-          type: object
-          additionalProperties:
-            type: integer
-            minimum: 0
-        accepted_at:
-          type: string
-          format: date-time
-        applied_at:
-          type: string
-          format: date-time
-          nullable: true
-        issued_at:
-          type: string
-          format: date-time
-    FinancekitReceipt:
-      type: object
-      additionalProperties: false
-      required:
-      - receipt
-      properties:
-        receipt:
-          type: string
-          description: ES256 compact JWS; decode against FinancekitReceiptClaims and
-            verify the pinned receipt key and batch digest before trusting it.
-    FinancekitKeys:
-      type: object
-      additionalProperties: false
-      required:
-      - server_id
-      - encryption
-      - receipt
-      properties:
-        server_id:
-          type: string
-        encryption:
-          type: object
-          description: RFC 7517 RSA public JWK; minimum 3072 bits; no private parameters
-        receipt:
-          type: object
-          description: RFC 7517 P-256 public JWK; no private parameters
-    FinancekitConnection:
+      description: Foreground sync request body. transactions + tombstones <= 500.
+        The whole request validates before canonical import commits.
+    FinancekitSyncResult:
       type: object
       additionalProperties: false
       required:
       - id
-      - generation
       - status
-      - next_sequence
-      - previous_digest
-      - last_device_contact_at
-      - last_accepted_at
-      - last_imported_at
-      - last_captured_at
-      - device_key_thumbprint
+      - captured_at
+      - applied_at
+      - counts
       properties:
         id:
           type: string
           format: uuid
           pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        generation:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
+        status:
+          type: string
+          enum:
+          - applied
+        captured_at:
+          type: string
+          format: date-time
+        applied_at:
+          type: string
+          format: date-time
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+    FinancekitConnection:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - last_device_contact_at
+      - last_imported_at
+      - last_captured_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         status:
           type: string
           enum:
           - active
           - revoked
-        next_sequence:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        previous_digest:
-          type: string
-          pattern: "^[0-9a-f]{64}$"
-          nullable: true
         last_device_contact_at:
-          type: string
-          format: date-time
-          nullable: true
-        last_accepted_at:
           type: string
           format: date-time
           nullable: true
@@ -3965,10 +3787,6 @@ components:
           type: string
           format: date-time
           nullable: true
-        device_key_thumbprint:
-          type: string
-        keys:
-          "$ref": "#/components/schemas/FinancekitKeys"
         accounts:
           type: array
           items:
@@ -3981,19 +3799,13 @@ components:
       required:
       - available
       - protocol_versions
-      - envelope_versions
       - delivery
-      - max_envelope_bytes
+      - max_payload_bytes
       - max_records
       - max_accounts
-      - max_queued_batches
       - transaction_statuses
       - amount_precision
       - amount_scale
-      - jwe_alg
-      - jwe_enc
-      - jws_alg
-      - keys
       properties:
         available:
           type: boolean
@@ -4003,17 +3815,11 @@ components:
             type: integer
             minimum: 1
             maximum: 9007199254740991
-        envelope_versions:
-          type: array
-          items:
-            type: integer
-            minimum: 1
-            maximum: 9007199254740991
         delivery:
           type: string
           enum:
-          - device_push
-        max_envelope_bytes:
+          - foreground_sync
+        max_payload_bytes:
           type: integer
           minimum: 1
           maximum: 9007199254740991
@@ -4022,10 +3828,6 @@ components:
           minimum: 1
           maximum: 9007199254740991
         max_accounts:
-          type: integer
-          minimum: 1
-          maximum: 9007199254740991
-        max_queued_batches:
           type: integer
           minimum: 1
           maximum: 9007199254740991
@@ -4040,22 +3842,6 @@ components:
         amount_scale:
           type: integer
           minimum: 0
-        jwe_alg:
-          type: string
-          enum:
-          - RSA-OAEP
-        jwe_enc:
-          type: string
-          enum:
-          - A256GCM
-        jws_alg:
-          type: string
-          enum:
-          - ES256
-        keys:
-          allOf:
-          - "$ref": "#/components/schemas/FinancekitKeys"
-          nullable: true
     FinancekitError:
       type: object
       additionalProperties: false
@@ -5556,14 +5342,14 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/financekit/capabilities":
     get:
-      summary: Discover device upload support
+      summary: Discover foreground FinanceKit sync support
       tags:
       - FinanceKit
       security:
       - apiKeyAuth: []
       responses:
         '200':
-          description: Discover device upload support
+          description: Discover foreground FinanceKit sync support
           content:
             application/json:
               schema:
@@ -5593,13 +5379,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '409':
-          description: Identity generation mapping or sequence conflict
+          description: Enrollment, mapping, stale capture or source identity conflict
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '413':
-          description: Upload limit exceeded
+          description: Payload or record limit exceeded
           content:
             application/json:
               schema:
@@ -5634,7 +5420,7 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections":
     post:
-      summary: Enroll a device with explicit upload consent
+      summary: Enroll a FinanceKit foreground sync connection
       tags:
       - FinanceKit
       security:
@@ -5642,7 +5428,7 @@ paths:
       parameters: []
       responses:
         '201':
-          description: Enroll a device with explicit upload consent
+          description: Enroll a FinanceKit foreground sync connection
           content:
             application/json:
               schema:
@@ -5672,13 +5458,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '409':
-          description: Identity generation mapping or sequence conflict
+          description: Enrollment, mapping, stale capture or source identity conflict
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '413':
-          description: Upload limit exceeded
+          description: Payload or record limit exceeded
           content:
             application/json:
               schema:
@@ -5771,13 +5557,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '409':
-          description: Identity generation mapping or sequence conflict
+          description: Enrollment, mapping, stale capture or source identity conflict
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '413':
-          description: Upload limit exceeded
+          description: Payload or record limit exceeded
           content:
             application/json:
               schema:
@@ -5811,14 +5597,15 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
     delete:
-      summary: Revoke uploads and retain existing financial history
+      summary: Revoke foreground sync access and retain existing financial history
       tags:
       - FinanceKit
       security:
       - apiKeyAuth: []
       responses:
         '204':
-          description: Revoke uploads and retain existing financial history
+          description: Revoke foreground sync access and retain existing financial
+            history
         '400':
           description: Malformed or unsupported protocol
           content:
@@ -5844,13 +5631,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '409':
-          description: Identity generation mapping or sequence conflict
+          description: Enrollment, mapping, stale capture or source identity conflict
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '413':
-          description: Upload limit exceeded
+          description: Payload or record limit exceeded
           content:
             application/json:
               schema:
@@ -5934,13 +5721,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '409':
-          description: Identity generation mapping or sequence conflict
+          description: Enrollment, mapping, stale capture or source identity conflict
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '413':
-          description: Upload limit exceeded
+          description: Payload or record limit exceeded
           content:
             application/json:
               schema:
@@ -5979,7 +5766,7 @@ paths:
             schema:
               "$ref": "#/components/schemas/FinancekitMappingRequest"
         required: true
-  "/api/v1/financekit/connections/{connection_id}/device_replacement":
+  "/api/v1/financekit/connections/{connection_id}/syncs":
     parameters:
     - name: connection_id
       in: path
@@ -5987,19 +5774,19 @@ paths:
       schema:
         type: string
     post:
-      summary: Fence previous generation and confirm publisher or selection
+      summary: Import a foreground FinanceKit sync payload
       tags:
       - FinanceKit
       security:
       - apiKeyAuth: []
       parameters: []
       responses:
-        '200':
-          description: Fence previous generation and confirm publisher or selection
+        '201':
+          description: Import a foreground FinanceKit sync payload
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/FinancekitConnection"
+                "$ref": "#/components/schemas/FinancekitSyncResult"
         '400':
           description: Malformed or unsupported protocol
           content:
@@ -6025,13 +5812,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '409':
-          description: Identity generation mapping or sequence conflict
+          description: Enrollment, mapping, stale capture or source identity conflict
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
         '413':
-          description: Upload limit exceeded
+          description: Payload or record limit exceeded
           content:
             application/json:
               schema:
@@ -6068,196 +5855,8 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/FinancekitReplacement"
+              "$ref": "#/components/schemas/FinancekitPayload"
         required: true
-  "/api/v1/financekit/connections/{connection_id}/batches":
-    parameters:
-    - name: connection_id
-      in: path
-      required: true
-      schema:
-        type: string
-    post:
-      summary: Durably accept an encrypted device-signed batch
-      tags:
-      - FinanceKit
-      security: []
-      parameters: []
-      responses:
-        '202':
-          description: Durably accept an encrypted device-signed batch
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitReceipt"
-        '400':
-          description: Malformed or unsupported protocol
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '401':
-          description: Invalid or missing authentication
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '403':
-          description: Insufficient permissions or revoked publisher
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '404':
-          description: Resource not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '409':
-          description: Identity generation mapping or sequence conflict
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '413':
-          description: Upload limit exceeded
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '422':
-          description: Invalid records or consent
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '429':
-          description: Rate limited
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Minimum retry delay in seconds
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Minimum retry delay in seconds
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-      requestBody:
-        content:
-          application/jose:
-            schema:
-              type: string
-              maxLength: 1048576
-              description: ES256 compact JWS containing FinancekitEnvelopeClaims;
-                never send general API credentials.
-        required: true
-  "/api/v1/financekit/connections/{connection_id}/batches/{batch_id}":
-    parameters:
-    - name: connection_id
-      in: path
-      required: true
-      schema:
-        type: string
-    - name: batch_id
-      in: path
-      required: true
-      schema:
-        type: string
-    get:
-      summary: Read an authenticated batch receipt
-      tags:
-      - FinanceKit
-      security:
-      - apiKeyAuth: []
-      parameters:
-      - name: generation
-        in: query
-        required: true
-        schema:
-          type: integer
-      responses:
-        '200':
-          description: Read an authenticated batch receipt
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitReceipt"
-        '400':
-          description: Malformed or unsupported protocol
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '401':
-          description: Invalid or missing authentication
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '403':
-          description: Insufficient permissions or revoked publisher
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '404':
-          description: Resource not found
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '409':
-          description: Identity generation mapping or sequence conflict
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '413':
-          description: Upload limit exceeded
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '422':
-          description: Invalid records or consent
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '429':
-          description: Rate limited
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Minimum retry delay in seconds
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-              description: Minimum retry delay in seconds
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/holdings":
     get:
       summary: List holdings

@@ -863,46 +863,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
 
   create_table "financekit_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "applied_at"
-    t.integer "attempts", default: 0, null: false
     t.uuid "batch_id", null: false
     t.datetime "captured_at", null: false
     t.jsonb "counts", default: {}, null: false
     t.datetime "created_at", null: false
-    t.string "digest", null: false
-    t.datetime "downstream_completed_at"
-    t.datetime "downstream_retry_at"
-    t.text "envelope"
     t.string "error_code"
     t.uuid "financekit_item_id", null: false
-    t.integer "generation", null: false
-    t.string "previous_digest"
-    t.datetime "retry_at"
-    t.bigint "sequence", null: false
-    t.string "status", default: "accepted", null: false
+    t.string "status", default: "applied", null: false
     t.uuid "sync_id"
     t.datetime "updated_at", null: false
-    t.index ["financekit_item_id", "generation", "batch_id"], name: "financekit_batch_identity", unique: true
-    t.index ["financekit_item_id", "generation", "sequence"], name: "financekit_stream_sequence", unique: true
+    t.index ["financekit_item_id", "batch_id"], name: "financekit_batch_identity", unique: true
     t.index ["financekit_item_id"], name: "index_financekit_batches_on_financekit_item_id"
-    t.index ["status", "retry_at"], name: "index_financekit_batches_on_status_and_retry_at"
     t.index ["sync_id"], name: "index_financekit_batches_on_sync_id"
-    t.check_constraint "sequence > 0 AND generation > 0", name: "financekit_positive_sequence"
   end
 
   create_table "financekit_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "consent", null: false
     t.datetime "created_at", null: false
-    t.jsonb "device_public_key", null: false
     t.string "enrollment_digest", null: false
     t.uuid "enrollment_id", null: false
     t.uuid "family_id", null: false
-    t.integer "generation", default: 1, null: false
-    t.datetime "last_accepted_at"
     t.datetime "last_captured_at"
     t.datetime "last_device_contact_at"
     t.datetime "last_imported_at"
-    t.bigint "next_sequence", default: 1, null: false
-    t.string "previous_digest"
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
@@ -915,11 +898,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.datetime "created_at", null: false
     t.uuid "entry_id"
     t.uuid "financekit_account_id", null: false
-    t.integer "generation", null: false
     t.boolean "ledger_imported", default: false, null: false
     t.jsonb "raw_payload"
     t.boolean "review_required", default: false, null: false
-    t.bigint "sequence", null: false
     t.uuid "source_id", null: false
     t.string "status", null: false
     t.datetime "tombstoned_at"

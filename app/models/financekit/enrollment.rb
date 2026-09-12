@@ -8,10 +8,9 @@ class Financekit::Enrollment
   end
 
   def self.create!(user, input)
-    Financekit::Payload.shape!(input, %w[enrollment_id device_public_key consent protocol])
+    Financekit::Payload.shape!(input, %w[enrollment_id consent protocol])
     Financekit.require!(input["protocol"] == Financekit::VERSION, "unsupported_protocol", 400)
     Financekit::Payload.uuid!(input["enrollment_id"])
-    Financekit::Crypto.public_device_key(input["device_public_key"])
     validate_consent!(input["consent"])
     # Hash canonical key ordering, but preserve array ordering and scalar types.
     digest = Digest::SHA256.hexdigest(canonical(input))
@@ -23,7 +22,7 @@ class Financekit::Enrollment
       end
       Financekit.require!(user.family.financekit_items.where(status: "active").count < 20, "connection_limit", 429)
       user.family.financekit_items.create!(user: user, enrollment_id: input["enrollment_id"], enrollment_digest: digest,
-        device_public_key: input["device_public_key"], consent: input["consent"].merge("recorded_at" => Time.current.iso8601))
+        consent: input["consent"].merge("recorded_at" => Time.current.iso8601))
     end
   end
 

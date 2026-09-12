@@ -3,8 +3,6 @@ module Financekit
   MAX_BYTES = 1_048_576
   MAX_RECORDS = 500
   MAX_ACCOUNTS = 20
-  MAX_QUEUED = 100
-  MAX_ATTEMPTS = 5
 
   class Error < StandardError
     attr_reader :code, :status
@@ -22,8 +20,6 @@ module Financekit
 
   def self.enabled?(family)
     ENV["FINANCEKIT_ENABLED"] == "true" &&
-      ENV.fetch("FINANCEKIT_FAMILY_IDS", "").split(",").include?(family.id) &&
-      ENV["FINANCEKIT_SERVER_ID"].present? && ENV["FINANCEKIT_ENCRYPTION_KEY"].present? &&
-      ENV["FINANCEKIT_RECEIPT_KEY"].present?
+      ENV.fetch("FINANCEKIT_FAMILY_IDS", "").split(",").include?(family.id)
   end
 end

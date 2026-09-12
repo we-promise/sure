@@ -12,6 +12,3 @@ Rails.application.config.filter_parameters += [
   :device_code, :user_code, :verification_uri_complete,
   :bank_username, :bank_password, :security_answers, :captcha_input
 ]
-
-# Immutable device uploads may contain a JWS/JWE and must not appear in logs.
-Rails.application.config.filter_parameters += [ :envelope, :device_public_key, :ciphertext ]

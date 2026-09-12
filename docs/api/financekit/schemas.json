@@ -2,11 +2,7 @@
   "FinancekitMoney": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "amount",
-      "currency",
-      "credit_debit"
-    ],
+    "required": ["amount", "currency", "credit_debit"],
     "properties": {
       "amount": {
         "type": "string",
@@ -18,70 +14,26 @@
       },
       "credit_debit": {
         "type": "string",
-        "enum": [
-          "credit",
-          "debit"
-        ]
-      }
-    }
-  },
-  "FinancekitDeviceKey": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "kty",
-      "crv",
-      "x",
-      "y"
-    ],
-    "properties": {
-      "kty": {
-        "type": "string",
-        "enum": [
-          "EC"
-        ]
-      },
-      "crv": {
-        "type": "string",
-        "enum": [
-          "P-256"
-        ]
-      },
-      "x": {
-        "type": "string"
-      },
-      "y": {
-        "type": "string"
+        "enum": ["credit", "debit"]
       }
     }
   },
   "FinancekitConsent": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "version",
-      "upload_authorized",
-      "enrichment_acknowledged",
-      "source_ids"
-    ],
+    "required": ["version", "upload_authorized", "enrichment_acknowledged", "source_ids"],
     "properties": {
       "version": {
         "type": "integer",
-        "enum": [
-          1
-        ]
+        "enum": [1]
       },
       "upload_authorized": {
         "type": "boolean",
-        "enum": [
-          true
-        ]
+        "enum": [true]
       },
       "enrichment_acknowledged": {
         "type": "boolean",
-        "enum": [
-          true
-        ]
+        "enum": [true]
       },
       "source_ids": {
         "type": "array",
@@ -99,74 +51,26 @@
   "FinancekitEnrollment": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "protocol",
-      "enrollment_id",
-      "device_public_key",
-      "consent"
-    ],
+    "required": ["protocol", "enrollment_id", "consent"],
     "properties": {
       "protocol": {
         "type": "integer",
-        "enum": [
-          1
-        ]
+        "enum": [1]
       },
       "enrollment_id": {
         "type": "string",
         "format": "uuid",
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
       },
-      "device_public_key": {
-        "$ref": "#/components/schemas/FinancekitDeviceKey"
-      },
       "consent": {
         "$ref": "#/components/schemas/FinancekitConsent"
-      }
-    }
-  },
-  "FinancekitReplacement": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "expected_generation",
-      "device_public_key",
-      "consent",
-      "continuity"
-    ],
-    "properties": {
-      "expected_generation": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "device_public_key": {
-        "$ref": "#/components/schemas/FinancekitDeviceKey"
-      },
-      "consent": {
-        "$ref": "#/components/schemas/FinancekitConsent"
-      },
-      "continuity": {
-        "type": "string",
-        "enum": [
-          "same_source_and_transaction_ids"
-        ]
       }
     }
   },
   "FinancekitAccountMapping": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "source_id",
-      "mapping_version",
-      "name",
-      "currency",
-      "accountable_type",
-      "subtype",
-      "ledger_timezone",
-      "account_id"
-    ],
+    "required": ["source_id", "mapping_version", "name", "currency", "accountable_type", "subtype", "ledger_timezone", "account_id"],
     "properties": {
       "source_id": {
         "type": "string",
@@ -187,21 +91,11 @@
       },
       "accountable_type": {
         "type": "string",
-        "enum": [
-          "Depository",
-          "CreditCard"
-        ]
+        "enum": ["Depository", "CreditCard"]
       },
       "subtype": {
         "type": "string",
-        "enum": [
-          "checking",
-          "savings",
-          "hsa",
-          "cd",
-          "money_market",
-          "credit_card"
-        ]
+        "enum": ["checking", "savings", "hsa", "cd", "money_market", "credit_card"]
       },
       "ledger_timezone": {
         "type": "string",
@@ -218,15 +112,7 @@
   "FinancekitMappingRequest": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "expected_version",
-      "action",
-      "name",
-      "currency",
-      "accountable_type",
-      "subtype",
-      "ledger_timezone"
-    ],
+    "required": ["expected_version", "action", "name", "currency", "accountable_type", "subtype", "ledger_timezone"],
     "properties": {
       "name": {
         "type": "string",
@@ -237,21 +123,11 @@
       },
       "accountable_type": {
         "type": "string",
-        "enum": [
-          "Depository",
-          "CreditCard"
-        ]
+        "enum": ["Depository", "CreditCard"]
       },
       "subtype": {
         "type": "string",
-        "enum": [
-          "checking",
-          "savings",
-          "hsa",
-          "cd",
-          "money_market",
-          "credit_card"
-        ]
+        "enum": ["checking", "savings", "hsa", "cd", "money_market", "credit_card"]
       },
       "ledger_timezone": {
         "type": "string",
@@ -269,10 +145,7 @@
       },
       "action": {
         "type": "string",
-        "enum": [
-          "create",
-          "link"
-        ]
+        "enum": ["create", "link"]
       },
       "booked_balance": {
         "$ref": "#/components/schemas/FinancekitMoney"
@@ -287,11 +160,7 @@
   "FinancekitAccountUpsert": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "source_id",
-      "mapping_version",
-      "observed_at"
-    ],
+    "required": ["source_id", "mapping_version", "observed_at"],
     "properties": {
       "source_id": {
         "type": "string",
@@ -318,17 +187,7 @@
   "FinancekitTransactionUpsert": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "source_id",
-      "account_id",
-      "mapping_version",
-      "amount",
-      "currency",
-      "credit_debit",
-      "transacted_at",
-      "status",
-      "type"
-    ],
+    "required": ["source_id", "account_id", "mapping_version", "amount", "currency", "credit_debit", "transacted_at", "status", "type"],
     "properties": {
       "source_id": {
         "type": "string",
@@ -355,10 +214,7 @@
       },
       "credit_debit": {
         "type": "string",
-        "enum": [
-          "credit",
-          "debit"
-        ]
+        "enum": ["credit", "debit"]
       },
       "transacted_at": {
         "type": "string",
@@ -370,13 +226,7 @@
       },
       "status": {
         "type": "string",
-        "enum": [
-          "authorized",
-          "pending",
-          "booked",
-          "rejected",
-          "memo"
-        ]
+        "enum": ["authorized", "pending", "booked", "rejected", "memo"]
       },
       "type": {
         "type": "string",
@@ -396,11 +246,7 @@
   "FinancekitTombstone": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "source_id",
-      "account_id",
-      "mapping_version"
-    ],
+    "required": ["source_id", "account_id", "mapping_version"],
     "properties": {
       "source_id": {
         "type": "string",
@@ -422,20 +268,11 @@
   "FinancekitHistory": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "kind",
-      "snapshot_id",
-      "start_at",
-      "end_at",
-      "complete"
-    ],
+    "required": ["kind", "snapshot_id", "start_at", "end_at", "complete"],
     "properties": {
       "kind": {
         "type": "string",
-        "enum": [
-          "delta",
-          "snapshot"
-        ]
+        "enum": ["delta", "snapshot"]
       },
       "snapshot_id": {
         "type": "string",
@@ -459,13 +296,7 @@
   "FinancekitPayload": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "captured_at",
-      "history",
-      "accounts",
-      "transactions",
-      "tombstones"
-    ],
+    "required": ["captured_at", "history", "accounts", "transactions", "tombstones"],
     "properties": {
       "captured_at": {
         "type": "string",
@@ -496,132 +327,29 @@
         "maxItems": 500
       }
     },
-    "description": "Decrypted JWE plaintext. transactions + tombstones <= 500. Whole batch validates before durable acceptance."
+    "description": "Foreground sync request body. transactions + tombstones <= 500. The whole request validates before canonical import commits."
   },
-  "FinancekitEnvelopeClaims": {
+  "FinancekitSyncResult": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "aud",
-      "protocol",
-      "connection_id",
-      "generation",
-      "batch_id",
-      "sequence",
-      "previous_digest",
-      "digest",
-      "ciphertext"
-    ],
+    "required": ["id", "status", "captured_at", "applied_at", "counts"],
     "properties": {
-      "aud": {
-        "type": "string"
-      },
-      "protocol": {
-        "type": "integer",
-        "enum": [
-          1
-        ]
-      },
-      "connection_id": {
+      "id": {
         "type": "string",
         "format": "uuid",
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-      },
-      "generation": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "batch_id": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-      },
-      "sequence": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "previous_digest": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$",
-        "nullable": true
-      },
-      "digest": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$"
-      },
-      "ciphertext": {
-        "type": "string",
-        "description": "JWE compact serialization: RSA-OAEP + A256GCM"
-      }
-    }
-  },
-  "FinancekitReceiptClaims": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "aud",
-      "iss",
-      "protocol",
-      "batch_id",
-      "generation",
-      "sequence",
-      "digest",
-      "status",
-      "error_code",
-      "counts",
-      "accepted_at",
-      "applied_at",
-      "issued_at"
-    ],
-    "properties": {
-      "aud": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-      },
-      "iss": {
-        "type": "string"
-      },
-      "protocol": {
-        "type": "integer",
-        "enum": [
-          1
-        ]
-      },
-      "batch_id": {
-        "type": "string",
-        "format": "uuid",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-      },
-      "generation": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "sequence": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "digest": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$"
       },
       "status": {
         "type": "string",
-        "enum": [
-          "accepted",
-          "processing",
-          "applied",
-          "failed",
-          "revoked"
-        ]
+        "enum": ["applied"]
       },
-      "error_code": {
+      "captured_at": {
         "type": "string",
-        "nullable": true
+        "format": "date-time"
+      },
+      "applied_at": {
+        "type": "string",
+        "format": "date-time"
       },
       "counts": {
         "type": "object",
@@ -629,106 +357,24 @@
           "type": "integer",
           "minimum": 0
         }
-      },
-      "accepted_at": {
-        "type": "string",
-        "format": "date-time"
-      },
-      "applied_at": {
-        "type": "string",
-        "format": "date-time",
-        "nullable": true
-      },
-      "issued_at": {
-        "type": "string",
-        "format": "date-time"
-      }
-    }
-  },
-  "FinancekitReceipt": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "receipt"
-    ],
-    "properties": {
-      "receipt": {
-        "type": "string",
-        "description": "ES256 compact JWS; decode against FinancekitReceiptClaims and verify the pinned receipt key and batch digest before trusting it."
-      }
-    }
-  },
-  "FinancekitKeys": {
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "server_id",
-      "encryption",
-      "receipt"
-    ],
-    "properties": {
-      "server_id": {
-        "type": "string"
-      },
-      "encryption": {
-        "type": "object",
-        "description": "RFC 7517 RSA public JWK; minimum 3072 bits; no private parameters"
-      },
-      "receipt": {
-        "type": "object",
-        "description": "RFC 7517 P-256 public JWK; no private parameters"
       }
     }
   },
   "FinancekitConnection": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "id",
-      "generation",
-      "status",
-      "next_sequence",
-      "previous_digest",
-      "last_device_contact_at",
-      "last_accepted_at",
-      "last_imported_at",
-      "last_captured_at",
-      "device_key_thumbprint"
-    ],
+    "required": ["id", "status", "last_device_contact_at", "last_imported_at", "last_captured_at"],
     "properties": {
       "id": {
         "type": "string",
         "format": "uuid",
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
       },
-      "generation": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
       "status": {
         "type": "string",
-        "enum": [
-          "active",
-          "revoked"
-        ]
-      },
-      "next_sequence": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "previous_digest": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{64}$",
-        "nullable": true
+        "enum": ["active", "revoked"]
       },
       "last_device_contact_at": {
-        "type": "string",
-        "format": "date-time",
-        "nullable": true
-      },
-      "last_accepted_at": {
         "type": "string",
         "format": "date-time",
         "nullable": true
@@ -742,12 +388,6 @@
         "type": "string",
         "format": "date-time",
         "nullable": true
-      },
-      "device_key_thumbprint": {
-        "type": "string"
-      },
-      "keys": {
-        "$ref": "#/components/schemas/FinancekitKeys"
       },
       "accounts": {
         "type": "array",
@@ -763,23 +403,7 @@
   "FinancekitCapabilities": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "available",
-      "protocol_versions",
-      "envelope_versions",
-      "delivery",
-      "max_envelope_bytes",
-      "max_records",
-      "max_accounts",
-      "max_queued_batches",
-      "transaction_statuses",
-      "amount_precision",
-      "amount_scale",
-      "jwe_alg",
-      "jwe_enc",
-      "jws_alg",
-      "keys"
-    ],
+    "required": ["available", "protocol_versions", "delivery", "max_payload_bytes", "max_records", "max_accounts", "transaction_statuses", "amount_precision", "amount_scale"],
     "properties": {
       "available": {
         "type": "boolean"
@@ -792,21 +416,11 @@
           "maximum": 9007199254740991
         }
       },
-      "envelope_versions": {
-        "type": "array",
-        "items": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        }
-      },
       "delivery": {
         "type": "string",
-        "enum": [
-          "device_push"
-        ]
+        "enum": ["foreground_sync"]
       },
-      "max_envelope_bytes": {
+      "max_payload_bytes": {
         "type": "integer",
         "minimum": 1,
         "maximum": 9007199254740991
@@ -817,11 +431,6 @@
         "maximum": 9007199254740991
       },
       "max_accounts": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
-      },
-      "max_queued_batches": {
         "type": "integer",
         "minimum": 1,
         "maximum": 9007199254740991
@@ -840,41 +449,13 @@
       "amount_scale": {
         "type": "integer",
         "minimum": 0
-      },
-      "jwe_alg": {
-        "type": "string",
-        "enum": [
-          "RSA-OAEP"
-        ]
-      },
-      "jwe_enc": {
-        "type": "string",
-        "enum": [
-          "A256GCM"
-        ]
-      },
-      "jws_alg": {
-        "type": "string",
-        "enum": [
-          "ES256"
-        ]
-      },
-      "keys": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/FinancekitKeys"
-          }
-        ],
-        "nullable": true
       }
     }
   },
   "FinancekitError": {
     "type": "object",
     "additionalProperties": false,
-    "required": [
-      "error"
-    ],
+    "required": ["error"],
     "properties": {
       "error": {
         "type": "string"

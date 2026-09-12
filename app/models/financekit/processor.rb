@@ -3,37 +3,34 @@ class Financekit::Processor
     @item = item
   end
 
-  def apply_next!
-    batch = nil
-    @item.with_lock do
+  def apply!(input)
+    batch = @item.with_lock do
       @item.require_writer!
-      batch = @item.financekit_batches.find_by(generation: @item.generation, sequence: @item.next_sequence)
-      return false unless batch && batch.status == "accepted" && (!batch.retry_at || batch.retry_at <= Time.current)
-      Financekit.require!(batch.previous_digest == @item.previous_digest, "predecessor_conflict", 409)
-      Financekit.require!(!@item.last_captured_at || batch.captured_at >= @item.last_captured_at, "stale_capture", 409)
-      claims = Financekit::Crypto.verify(batch.envelope, @item)
-      payload = Financekit::Payload.validate!(Financekit::Crypto.decrypt(claims["ciphertext"]), @item)
-      batch.update!(status: "processing")
+      payload = Financekit::Payload.validate!(input, @item)
+      captured_at = Financekit::Payload.timestamp!(payload["captured_at"])
+      Financekit.require!(!@item.last_captured_at || captured_at >= @item.last_captured_at, "stale_capture", 409)
+
+      batch = @item.financekit_batches.create!(batch_id: SecureRandom.uuid, captured_at: captured_at, status: "processing")
       counts = { "upserted" => 0, "retracted" => 0, "review_required" => 0, "source_only" => 0 }
       mappings = @item.selected_accounts.includes(:account).index_by(&:source_id)
+
       payload["accounts"].each { |record| import_balance!(mappings.fetch(record["source_id"]), record) }
       payload["transactions"].each { |record| import_transaction!(mappings.fetch(record["account_id"]), record, batch, counts) }
       payload["tombstones"].each { |record| retract!(mappings.fetch(record["account_id"]), record, batch, counts) }
+
       sync = @item.syncs.create!(status: "completed", completed_at: Time.current,
         sync_stats: { "financekit" => counts, "total_accounts" => mappings.size, "linked_accounts" => mappings.size })
       batch.update!(status: "applied", applied_at: Time.current, counts: counts, sync: sync, error_code: nil)
-      @item.update!(next_sequence: batch.sequence + 1, previous_digest: batch.digest,
-        last_imported_at: batch.applied_at, last_captured_at: batch.captured_at)
+      @item.update!(last_device_contact_at: Time.current, last_imported_at: batch.applied_at, last_captured_at: batch.captured_at)
+
+      batch
     end
-    true
-  rescue Financekit::Error, ActiveRecord::RecordInvalid => error
-    fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true)
-    false
-  rescue StandardError
-    # Never include exception messages: validation/SQL errors can contain money,
-    # merchant names and decrypted input. The same bounded code is used in health.
-    fail_batch!(batch, "processing_error", permanent: false)
-    false
+    schedule_downstream
+    batch
+  rescue Financekit::Error
+    raise
+  rescue ActiveRecord::RecordInvalid
+    raise Financekit::Error.new("import_validation")
   end
 
   private
@@ -54,7 +51,7 @@ class Financekit::Processor
     def import_transaction!(source, record, batch, counts)
       identity = source.financekit_transactions.find_or_initialize_by(source_id: record["source_id"])
       existed = identity.persisted?
-      identity.assign_attributes(generation: batch.generation, sequence: batch.sequence, status: record["status"], raw_payload: record)
+      identity.assign_attributes(status: record["status"], raw_payload: record)
       # An explicit removal (or a user deleting the ledger entry) is durable. A
       # subsequent upsert cannot resurrect it without human reconciliation.
       if identity.tombstoned_at || (existed && identity.entry_id.nil? && identity.ledger_imported)
@@ -84,8 +81,7 @@ class Financekit::Processor
 
     def retract!(source, record, batch, counts)
       identity = source.financekit_transactions.find_or_initialize_by(source_id: record["source_id"])
-      identity.assign_attributes(generation: batch.generation, sequence: batch.sequence,
-        status: "deleted", tombstoned_at: Time.current, raw_payload: nil)
+      identity.assign_attributes(status: "deleted", tombstoned_at: Time.current, raw_payload: nil)
       entry = identity.entry
       if entry
         # Entry#transaction is the delegated transaction record, so its instance
@@ -110,17 +106,12 @@ class Financekit::Processor
         metadata: { batch_id: batch.batch_id, source_identity_id: identity.id, review_required: identity.review_required })
     end
 
-    def fail_batch!(batch, code, permanent:)
-      return unless batch
-      @item.with_lock do
-        batch.reload
-        return unless batch.status == "accepted" && batch.generation == @item.generation && @item.status == "active"
-        attempts = batch.attempts + 1
-        batch.update!(attempts: attempts, status: permanent || attempts >= Financekit::MAX_ATTEMPTS ? "failed" : "accepted",
-          error_code: code, retry_at: Time.current + (2**attempts).minutes)
-      end
-      DebugLogEntry.capture(category: "provider_sync", level: "error", message: "FinanceKit import requires attention",
-        source: self.class.name, provider_key: "financekit", family: @item.family,
-        metadata: { batch_id: batch.batch_id, error_code: code })
+    def schedule_downstream
+      @item.family.auto_match_transfers!
+      @item.family.rules.where(active: true).find_each(&:apply_later)
+    rescue StandardError
+      DebugLogEntry.capture(category: "provider_sync", level: "error",
+        message: "FinanceKit foreground sync downstream scheduling failed",
+        source: self.class.name, provider_key: "financekit", family: @item.family)
     end
 end

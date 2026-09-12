@@ -8,110 +8,78 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
   let(:'X-Api-Key') { api_key.plain_key }
 
+  shared_examples "financekit errors" do
+    response "400", "Malformed or unsupported protocol" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "401", "Invalid or missing authentication" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "403", "Insufficient permissions or revoked publisher" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "404", "Resource not found" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "409", "Enrollment, mapping, stale capture or source identity conflict" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "413", "Payload or record limit exceeded" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "422", "Invalid records or consent" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test!
+    end
+    response "429", "Rate limited" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
+      run_test!
+    end
+    response "503", "Feature unavailable" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
+      run_test!
+    end
+  end
+
   path "/api/v1/financekit/capabilities" do
-    get "Discover device upload support" do
+    get "Discover foreground FinanceKit sync support" do
       tags "FinanceKit"
       produces "application/json"
       security [ { apiKeyAuth: [] } ]
-      response "200", "Discover device upload support" do
+      response "200", "Discover foreground FinanceKit sync support" do
         schema "$ref" => "#/components/schemas/FinancekitCapabilities"
         run_test!
       end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
+      include_examples "financekit errors"
     end
   end
 
   path "/api/v1/financekit/connections" do
-    post "Enroll a device with explicit upload consent" do
+    post "Enroll a FinanceKit foreground sync connection" do
       tags "FinanceKit"
       produces "application/json"
       security [ { apiKeyAuth: [] } ]
       consumes "application/json"
       parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitEnrollment" }
-      response "201", "Enroll a device with explicit upload consent" do
+      response "201", "Enroll a FinanceKit foreground sync connection" do
         schema "$ref" => "#/components/schemas/FinancekitConnection"
         run_test!
       end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
+      include_examples "financekit errors"
     end
   end
 
   path "/api/v1/financekit/connections/{id}" do
     parameter name: :id, in: :path, type: :string, required: true
+
     get "Read connection health and paginated mappings" do
       tags "FinanceKit"
       produces "application/json"
@@ -122,100 +90,24 @@ RSpec.describe "Api::V1::Financekit", type: :request do
         schema "$ref" => "#/components/schemas/FinancekitConnection"
         run_test!
       end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
+      include_examples "financekit errors"
     end
-  end
 
-  path "/api/v1/financekit/connections/{id}" do
-    parameter name: :id, in: :path, type: :string, required: true
-    delete "Revoke uploads and retain existing financial history" do
+    delete "Revoke foreground sync access and retain existing financial history" do
       tags "FinanceKit"
       produces "application/json"
       security [ { apiKeyAuth: [] } ]
-      response "204", "Revoke uploads and retain existing financial history" do
+      response "204", "Revoke foreground sync access and retain existing financial history" do
         run_test!
       end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
+      include_examples "financekit errors"
     end
   end
 
   path "/api/v1/financekit/connections/{connection_id}/account_mappings/{source_id}" do
     parameter name: :connection_id, in: :path, type: :string, required: true
     parameter name: :source_id, in: :path, type: :string, required: true
+
     put "Explicitly link or create a canonical account" do
       tags "FinanceKit"
       produces "application/json"
@@ -226,203 +118,24 @@ RSpec.describe "Api::V1::Financekit", type: :request do
         schema "$ref" => "#/components/schemas/FinancekitAccountMapping"
         run_test!
       end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
+      include_examples "financekit errors"
     end
   end
 
-  path "/api/v1/financekit/connections/{connection_id}/device_replacement" do
+  path "/api/v1/financekit/connections/{connection_id}/syncs" do
     parameter name: :connection_id, in: :path, type: :string, required: true
-    post "Fence previous generation and confirm publisher or selection" do
+
+    post "Import a foreground FinanceKit sync payload" do
       tags "FinanceKit"
       produces "application/json"
       security [ { apiKeyAuth: [] } ]
       consumes "application/json"
-      parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitReplacement" }
-      response "200", "Fence previous generation and confirm publisher or selection" do
-        schema "$ref" => "#/components/schemas/FinancekitConnection"
+      parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitPayload" }
+      response "201", "Import a foreground FinanceKit sync payload" do
+        schema "$ref" => "#/components/schemas/FinancekitSyncResult"
         run_test!
       end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-    end
-  end
-
-  path "/api/v1/financekit/connections/{connection_id}/batches" do
-    parameter name: :connection_id, in: :path, type: :string, required: true
-    post "Durably accept an encrypted device-signed batch" do
-      tags "FinanceKit"
-      produces "application/json"
-      security []
-      consumes "application/jose"
-      parameter name: :body, in: :body, required: true, schema: { type: :string, maxLength: 1048576, description: "ES256 compact JWS containing FinancekitEnvelopeClaims; never send general API credentials." }
-      response "202", "Durably accept an encrypted device-signed batch" do
-        schema "$ref" => "#/components/schemas/FinancekitReceipt"
-        run_test!
-      end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-    end
-  end
-
-  path "/api/v1/financekit/connections/{connection_id}/batches/{batch_id}" do
-    parameter name: :connection_id, in: :path, type: :string, required: true
-    parameter name: :batch_id, in: :path, type: :string, required: true
-    get "Read an authenticated batch receipt" do
-      tags "FinanceKit"
-      produces "application/json"
-      security [ { apiKeyAuth: [] } ]
-      parameter name: :generation, in: :query, type: :integer, required: true
-      response "200", "Read an authenticated batch receipt" do
-        schema "$ref" => "#/components/schemas/FinancekitReceipt"
-        run_test!
-      end
-      response "400", "Malformed or unsupported protocol" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "401", "Invalid or missing authentication" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "403", "Insufficient permissions or revoked publisher" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "404", "Resource not found" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "409", "Identity generation mapping or sequence conflict" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "413", "Upload limit exceeded" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "422", "Invalid records or consent" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        run_test!
-      end
-      response "429", "Rate limited" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
-      response "503", "Feature unavailable" do
-        schema "$ref" => "#/components/schemas/FinancekitError"
-        header "Retry-After", schema: { type: :integer }, description: "Minimum retry delay in seconds"
-        run_test!
-      end
+      include_examples "financekit errors"
     end
   end
 end

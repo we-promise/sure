@@ -4,18 +4,11 @@ module FinancekitTestHelper
     @user = user
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     @family = @user.family
-    @device_key = OpenSSL::PKey::EC.generate("prime256v1")
-    @server_key = OpenSSL::PKey::RSA.generate(3072)
-    @receipt_key = OpenSSL::PKey::EC.generate("prime256v1")
     Financekit.stubs(:enabled?).returns(true)
-    Financekit::Crypto.stubs(:encryption_key).returns(@server_key)
-    Financekit::Crypto.stubs(:receipt_key).returns(@receipt_key)
-    Financekit::Crypto.stubs(:server_id).returns("sure-test-server")
     @source_id = "11111111-1111-4111-8111-111111111111"
     @transaction_id = "22222222-2222-4222-8222-222222222222"
-    @device_jwk = JWT::JWK.new(@device_key).export.slice(:kty, :crv, :x, :y).stringify_keys
-    @enrollment = { "enrollment_id" => SecureRandom.uuid, "device_public_key" => @device_jwk,
-      "protocol" => 1, "consent" => { "version" => 1, "upload_authorized" => true,
+    @enrollment = { "enrollment_id" => SecureRandom.uuid, "protocol" => 1,
+      "consent" => { "version" => 1, "upload_authorized" => true,
         "enrichment_acknowledged" => true, "source_ids" => [ @source_id ] } }
     @item = Financekit::Enrollment.create!(@user, @enrollment)
     @mapping_input = { "expected_version" => 0, "action" => "create", "name" => "Test Wallet",
@@ -38,16 +31,5 @@ module FinancekitTestHelper
       "transactions" => [ money.merge("source_id" => @transaction_id, "account_id" => @source_id,
         "mapping_version" => 1, "transacted_at" => "2026-09-01T06:00:00Z", "posted_at" => "2026-09-01T07:00:00Z",
         "status" => "booked", "type" => "purchase", "merchant" => "Synthetic shop") ], "tombstones" => [] }
-  end
-
-  def financekit_envelope(payload = financekit_payload, sequence: 1, previous: nil, batch_id: SecureRandom.uuid, generation: @item.generation)
-    jwe = JSON::JWE.new(JSON.generate(payload))
-    jwe.alg = :"RSA-OAEP"
-    jwe.enc = :A256GCM
-    ciphertext = jwe.encrypt!(@server_key.public_key).to_s
-    claims = { "aud" => "sure-test-server", "protocol" => 1, "connection_id" => @item.id,
-      "generation" => generation, "batch_id" => batch_id, "sequence" => sequence,
-      "previous_digest" => previous, "ciphertext" => ciphertext, "digest" => Digest::SHA256.hexdigest(ciphertext) }
-    JWT.encode(claims, @device_key, "ES256", { typ: "sure-financekit+jwt" })
   end
 end

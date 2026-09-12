@@ -19,6 +19,7 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     get "/api/v1/financekit/capabilities", headers: @headers
     assert_response :success
     assert_equal true, response.parsed_body["available"]
+    assert_equal "foreground_sync", response.parsed_body["delivery"]
     post "/api/v1/financekit/connections", params: @enrollment, headers: @headers, as: :json
     assert_response :created
     assert_equal @item.id, response.parsed_body["id"]
@@ -39,13 +40,12 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_equal "60", response.headers["Retry-After"]
   end
 
-  test "connection mappings paginate and do not expose device keys or upload data" do
+  test "connection mappings paginate and do not expose source payloads" do
     get "/api/v1/financekit/connections/#{@item.id}", headers: @headers, params: { page: 2, per_page: 1 }
     assert_response :success
     assert_empty response.parsed_body["accounts"]
     assert_equal 1, response.parsed_body["pagination"]["total_count"]
-    assert_not_includes response.body, "device_public_key"
-    assert_not_includes response.body, "envelope"
+    assert_not_includes response.body, "raw_payload"
     get "/api/v1/financekit/connections/#{SecureRandom.uuid}", headers: @headers
     assert_response :not_found
   end
@@ -57,50 +57,34 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :conflict
   end
 
-  test "general financial credentials do not authenticate the device endpoint" do
-    post "/api/v1/financekit/connections/#{@item.id}/batches", params: "not-a-signature", headers: @headers.merge("CONTENT_TYPE" => "application/jose")
-    assert_response :unauthorized
-  end
-
-  test "synthetic device can stop immediately after upload and read normal Sure data later" do
+  test "foreground sync imports immediately and normal Sure APIs see the result" do
     @family.rules.update_all(active: false)
     category = @family.categories.create!(name: "Wallet test purchases")
     @family.rules.create!(resource_type: "transaction", active: true, effective_date: Date.new(2026, 1, 1),
       conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: "0") ],
       actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ])
-    envelope = financekit_envelope
-    upload_url = "/api/v1/financekit/connections/#{@item.id}/batches"
-    post upload_url, params: envelope, headers: { "CONTENT_TYPE" => "application/jose" }
-    assert_response :accepted
-    batch = @item.financekit_batches.sole
-    perform_enqueued_jobs(only: SyncJob) { FinancekitInboxJob.perform_now }
-    perform_enqueued_jobs(only: RuleJob) { FinancekitInboxJob.perform_now }
-    travel 6.minutes
-    FinancekitInboxJob.perform_now
-    assert_not_nil batch.reload.downstream_completed_at
+    perform_enqueued_jobs(only: RuleJob) do
+      post "/api/v1/financekit/connections/#{@item.id}/syncs", params: financekit_payload, headers: @headers, as: :json
+    end
+    assert_response :created
+    assert_equal "applied", response.parsed_body["status"]
+    assert_equal 1, response.parsed_body.dig("counts", "upserted")
     assert_equal category, @source.account.entries.sole.transaction.category
-    assert @source.account.balances.exists?
     assert_equal BigDecimal("112.66"), @source.account.reload.balance
     get "/api/v1/transactions", headers: @headers
     assert_response :success
     assert_includes response.body, "Synthetic shop"
-    get "#{upload_url}/#{batch.batch_id}", params: { generation: 1 }, headers: @headers
-    assert_response :success
-    receipt, = JWT.decode(response.parsed_body["receipt"], @receipt_key, true, algorithms: [ "ES256" ])
-    assert_equal "applied", receipt["status"]
-    post upload_url, params: envelope, headers: { "CONTENT_TYPE" => "application/jose" }
-    assert_response :accepted
+    post "/api/v1/financekit/connections/#{@item.id}/syncs", params: financekit_payload, headers: @headers, as: :json
+    assert_response :created
     assert_equal 1, @source.account.entries.count
   end
 
-  test "replacement and disconnect fence background imports" do
-    post "/api/v1/financekit/connections/#{@item.id}/device_replacement", headers: @headers, as: :json,
-      params: { expected_generation: 1, device_public_key: @device_jwk, consent: @enrollment["consent"], continuity: "same_source_and_transaction_ids" }
-    assert_response :success
-    assert_equal 2, response.parsed_body["generation"]
+  test "disconnect rejects future syncs" do
     delete "/api/v1/financekit/connections/#{@item.id}", headers: @headers
     assert_response :no_content
     assert_equal "revoked", @item.reload.status
+    post "/api/v1/financekit/connections/#{@item.id}/syncs", params: financekit_payload, headers: @headers, as: :json
+    assert_response :forbidden
   end
 
   test "foreign family and invalid money cannot be mapped" do
@@ -113,17 +97,15 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :unprocessable_entity
   end
 
-  test "read only credentials cannot map replace or disconnect" do
+  test "read only credentials cannot map sync or disconnect" do
     @key.update!(scopes: [ "read" ])
     put "/api/v1/financekit/connections/#{@item.id}/account_mappings/#{@source_id}",
       params: @mapping_input, headers: @headers, as: :json
     assert_response :forbidden
-    post "/api/v1/financekit/connections/#{@item.id}/device_replacement", headers: @headers, as: :json,
-      params: { expected_generation: 1, device_public_key: @device_jwk, consent: @enrollment["consent"], continuity: "same_source_and_transaction_ids" }
+    post "/api/v1/financekit/connections/#{@item.id}/syncs", params: financekit_payload, headers: @headers, as: :json
     assert_response :forbidden
     delete "/api/v1/financekit/connections/#{@item.id}", headers: @headers
     assert_response :forbidden
     assert_equal "active", @item.reload.status
-    assert_equal 1, @item.generation
   end
 end

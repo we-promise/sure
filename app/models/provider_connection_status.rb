@@ -197,7 +197,7 @@ class ProviderConnectionStatus
 
     def sync_status_summary
       if provider[:key] == "financekit"
-        return item.last_imported_at ? "Device upload imported" : "Waiting for a device upload"
+        return item.last_imported_at ? "Foreground sync imported" : "Waiting for foreground sync"
       end
 
       stats = latest_completed_sync_stats

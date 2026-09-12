@@ -1,18 +1,13 @@
-class CreateFinancekitInbox < ActiveRecord::Migration[8.1]
+class CreateFinancekitForegroundSync < ActiveRecord::Migration[8.1]
   def change
     create_table :financekit_items, id: :uuid do |t|
       t.references :family, type: :uuid, null: false, foreign_key: true
       t.references :user, type: :uuid, null: false, foreign_key: true
       t.uuid :enrollment_id, null: false
       t.string :enrollment_digest, null: false
-      t.jsonb :device_public_key, null: false
       t.jsonb :consent, null: false
-      t.integer :generation, null: false, default: 1
-      t.bigint :next_sequence, null: false, default: 1
-      t.string :previous_digest
       t.string :status, null: false, default: "active"
       t.datetime :last_device_contact_at
-      t.datetime :last_accepted_at
       t.datetime :last_captured_at
       t.datetime :last_imported_at
       t.timestamps
@@ -39,35 +34,20 @@ class CreateFinancekitInbox < ActiveRecord::Migration[8.1]
     create_table :financekit_batches, id: :uuid do |t|
       t.references :financekit_item, type: :uuid, null: false, foreign_key: true
       t.uuid :batch_id, null: false
-      t.integer :generation, null: false
-      t.bigint :sequence, null: false
-      t.string :digest, null: false
-      t.string :previous_digest
-      # Retain the original encrypted bytes, never a decrypted financial upload.
-      t.text :envelope
-      t.string :status, null: false, default: "accepted"
+      t.string :status, null: false, default: "applied"
       t.string :error_code
       t.jsonb :counts, null: false, default: {}
-      t.integer :attempts, null: false, default: 0
-      t.datetime :retry_at
       t.datetime :captured_at, null: false
       t.datetime :applied_at
-      t.datetime :downstream_completed_at
-      t.datetime :downstream_retry_at
       t.references :sync, type: :uuid, foreign_key: { on_delete: :nullify }
       t.timestamps
     end
-    add_index :financekit_batches, [ :financekit_item_id, :generation, :batch_id ], unique: true, name: "financekit_batch_identity"
-    add_index :financekit_batches, [ :financekit_item_id, :generation, :sequence ], unique: true, name: "financekit_stream_sequence"
-    add_index :financekit_batches, [ :status, :retry_at ]
-    add_check_constraint :financekit_batches, "sequence > 0 AND generation > 0", name: "financekit_positive_sequence"
+    add_index :financekit_batches, [ :financekit_item_id, :batch_id ], unique: true, name: "financekit_batch_identity"
 
     create_table :financekit_transactions, id: :uuid do |t|
       t.references :financekit_account, type: :uuid, null: false, foreign_key: { on_delete: :cascade }
       t.references :entry, type: :uuid, foreign_key: { on_delete: :nullify }
       t.uuid :source_id, null: false
-      t.integer :generation, null: false
-      t.bigint :sequence, null: false
       t.string :status, null: false
       t.jsonb :raw_payload
       t.boolean :ledger_imported, null: false, default: false

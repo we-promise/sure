@@ -5,10 +5,6 @@ class Rack::Attack
   enabled = Rails.env.production? || Rails.env.staging?
   self.enabled = enabled
 
-  throttle("financekit/uploads/ip", limit: 30, period: 1.minute) do |request|
-    request.ip if request.post? && request.path.match?(%r{\A/api/v1/financekit/connections/[^/]+/batches(?:\.[^/]+)?\z})
-  end
-
   # Throttle requests to the OAuth token endpoint
   throttle("oauth/token", limit: 10, period: 1.minute) do |request|
     request.ip if request.path == "/oauth/token"

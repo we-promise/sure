@@ -37,8 +37,7 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     account = @source.account
     manual = account.entries.create!(amount: "12.34", currency: "USD", date: Date.new(2026, 9, 1),
       name: "Manual purchase", entryable: Transaction.new)
-    FinancekitBatch.accept!(@item, financekit_envelope)
-    assert Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(financekit_payload)
     assert_equal 2, account.entries.count
     assert_nil manual.reload.external_id
   end
@@ -46,13 +45,11 @@ class Financekit::MappingTest < ActiveSupport::TestCase
   test "same ID pending to booked preserves user edits while clearing pending" do
     data = financekit_payload
     data["transactions"].first["status"] = "pending"
-    first = FinancekitBatch.accept!(@item, financekit_envelope(data))
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(data)
     entry = @source.account.entries.sole
     entry.update!(name: "My edited purchase", user_modified: true)
     assert entry.transaction.pending?
-    FinancekitBatch.accept!(@item, financekit_envelope(sequence: 2, previous: first.digest))
-    assert Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(financekit_payload)
     assert_equal "My edited purchase", entry.reload.name
     assert_not entry.transaction.reload.pending?
     assert_equal 1, @source.account.entries.count
@@ -61,45 +58,37 @@ class Financekit::MappingTest < ActiveSupport::TestCase
   test "changed pending ID creates separate identity without automatic merge" do
     data = financekit_payload
     data["transactions"].first["status"] = "pending"
-    first = FinancekitBatch.accept!(@item, financekit_envelope(data))
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(data)
     data = financekit_payload
     data["transactions"].first["source_id"] = SecureRandom.uuid
-    FinancekitBatch.accept!(@item, financekit_envelope(data, sequence: 2, previous: first.digest))
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(data)
     assert_equal 2, @source.account.entries.count
   end
 
   test "tombstones retract only unprotected provider owned entries and cannot resurrect" do
-    first = FinancekitBatch.accept!(@item, financekit_envelope)
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(financekit_payload)
     tombstone = financekit_payload
     tombstone["transactions"] = []
     tombstone["tombstones"] = [ { "source_id" => @transaction_id, "account_id" => @source_id, "mapping_version" => 1 } ]
-    second = FinancekitBatch.accept!(@item, financekit_envelope(tombstone, sequence: 2, previous: first.digest))
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(tombstone)
     assert_equal 0, @source.account.entries.count
     assert_not_nil @source.financekit_transactions.sole.tombstoned_at
-    third = FinancekitBatch.accept!(@item, financekit_envelope(sequence: 3, previous: second.digest))
-    Financekit::Processor.new(@item).apply_next!
+    third = Financekit::Processor.new(@item).apply!(financekit_payload)
     assert_equal 0, @source.account.entries.count
     assert_equal 1, third.reload.counts["review_required"]
   end
 
   test "protected tombstone becomes review and missing snapshot records never delete" do
-    first = FinancekitBatch.accept!(@item, financekit_envelope)
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(financekit_payload)
     @source.account.entries.sole.update!(import_locked: true)
     data = financekit_payload
     data["transactions"] = []
     data["tombstones"] = [ { "source_id" => @transaction_id, "account_id" => @source_id, "mapping_version" => 1 } ]
-    second = FinancekitBatch.accept!(@item, financekit_envelope(data, sequence: 2, previous: first.digest))
-    Financekit::Processor.new(@item).apply_next!
+    second = Financekit::Processor.new(@item).apply!(data)
     assert_equal 1, @source.account.entries.count
     assert_equal 1, second.reload.counts["review_required"]
     data["tombstones"] = []
-    FinancekitBatch.accept!(@item, financekit_envelope(data, sequence: 3, previous: second.digest))
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(data)
     assert_equal 1, @source.account.entries.count
   end
 
@@ -107,8 +96,7 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     data = financekit_payload
     data["accounts"].first.delete("booked_balance")
     data["transactions"] = []
-    FinancekitBatch.accept!(@item, financekit_envelope(data))
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(data)
     assert_equal BigDecimal("125.00"), @source.account.reload.balance
     assert_equal "100.32", @source.reload.available_balance["amount"]
   end
@@ -117,9 +105,8 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal "125.00", @source.booked_balance.fetch("amount")
     data = financekit_payload
     data["accounts"].first["observed_at"] = 1.day.ago.iso8601
-    batch = FinancekitBatch.accept!(@item, financekit_envelope(data))
-    assert_not Financekit::Processor.new(@item).apply_next!
-    assert_equal "stale_balance", batch.reload.error_code
+    error = assert_raises(Financekit::Error) { Financekit::Processor.new(@item).apply!(data) }
+    assert_equal "stale_balance", error.code
     assert_equal BigDecimal("125.00"), @source.account.reload.balance
   end
 
@@ -135,11 +122,12 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal "account_already_supplied", error.code
   end
 
-  test "new identity after reinstall requires explicit reconciliation" do
-    assert_equal "identity_reconciliation_required", assert_raises(Financekit::Error) {
-      @item.replace_device!({ "expected_generation" => 1, "device_public_key" => @device_jwk,
-        "consent" => @enrollment["consent"], "continuity" => "unknown" })
-    }.code
-    assert_equal 1, @item.reload.generation
+  test "whole malformed sync is rejected without importing valid records" do
+    data = financekit_payload
+    data["transactions"] << data["transactions"].first.merge("source_id" => SecureRandom.uuid, "amount" => 12.34)
+    assert_no_difference "FinancekitBatch.count" do
+      assert_raises(Financekit::Error) { Financekit::Processor.new(@item).apply!(data) }
+    end
+    assert_empty @source.account.entries
   end
 end

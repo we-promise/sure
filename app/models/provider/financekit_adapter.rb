@@ -15,7 +15,7 @@ class Provider::FinancekitAdapter < Provider::Base
   end
 
   def metadata
-    super.merge(delivery: "device_push", last_device_contact_at: item.last_device_contact_at,
-      last_accepted_at: item.last_accepted_at, last_imported_at: item.last_imported_at)
+    super.merge(delivery: "foreground_sync", last_device_contact_at: item.last_device_contact_at,
+      last_imported_at: item.last_imported_at)
   end
 end

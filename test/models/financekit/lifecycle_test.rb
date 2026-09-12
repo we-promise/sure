@@ -23,32 +23,9 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
     end
   end
 
-  test "selection changes fence queued work and reject removed accounts" do
-    envelope = financekit_envelope
-    batch = FinancekitBatch.accept!(@item, envelope)
-    @item.replace_device!({ "expected_generation" => 1, "device_public_key" => @device_jwk,
-      "consent" => @enrollment["consent"].merge("source_ids" => [ SecureRandom.uuid ]),
-      "continuity" => "same_source_and_transaction_ids" })
-    assert_equal "revoked", batch.reload.status
-    assert_equal 1, @item.financekit_accounts.count
-    assert_equal 409, assert_raises(Financekit::Error) { FinancekitBatch.accept!(@item, financekit_envelope) }.status
-  end
-
-  test "export retains source identity without encryption or device credentials" do
-    FinancekitBatch.accept!(@item, financekit_envelope)
-    Financekit::Processor.new(@item).apply_next!
-    data = Financekit::Export.for_family(@family)
-    assert_equal @source_id, data.first.fetch("accounts").first.fetch("source_id")
-    json = JSON.generate(data)
-    assert_not_includes json, "device_public_key"
-    assert_not_includes json, "envelope"
-    assert_not_includes json, "PRIVATE KEY"
-  end
-
-  test "family reset removes source tombstones and inbox but no foreign enrollment" do
+  test "family reset removes source tombstones and import records but no foreign enrollment" do
     Provider::Plaid.any_instance.stubs(:remove_item)
-    FinancekitBatch.accept!(@item, financekit_envelope)
-    Financekit::Processor.new(@item).apply_next!
+    Financekit::Processor.new(@item).apply!(financekit_payload)
     Family::FinancialDataReset.new(family: @family, dry_run: false, confirmed: true).call
     assert_not FinancekitItem.exists?(@item.id)
     assert_not FinancekitTransaction.where(financekit_account_id: @source.id).exists?
