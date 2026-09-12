@@ -91,9 +91,11 @@ class SimplefinAccount::Investments::HoldingsProcessor
           qty: 0.to_d,
           amount: 0.to_d,
           # cost_basis is stored PER SHARE, so lots combine into a
-          # share-weighted average rather than a sum.
+          # share-weighted average rather than a sum. That average is only
+          # meaningful if EVERY lot reported one -- see basis_complete.
           basis_value: 0.to_d,
           basis_qty: 0.to_d,
+          basis_complete: true,
           fallback_price: nil,
           external_ids: []
         }
@@ -103,9 +105,17 @@ class SimplefinAccount::Investments::HoldingsProcessor
         position[:external_ids] << "simplefin_#{holding_id}"
         position[:fallback_price] ||= price if price.to_d.positive?
 
-        if cost_basis.present? && qty.to_d.positive?
-          position[:basis_value] += cost_basis.to_d * qty.to_d
-          position[:basis_qty] += qty.to_d
+        if qty.to_d.positive?
+          if cost_basis.present?
+            position[:basis_value] += cost_basis.to_d * qty.to_d
+            position[:basis_qty] += qty.to_d
+          else
+            # Averaging over only the lots that reported a basis would apply
+            # that figure to shares whose cost is genuinely unknown, inventing
+            # cost and therefore inventing gain/loss. Unknown has to stay
+            # unknown for the whole position.
+            position[:basis_complete] = false
+          end
         end
       rescue => e
         ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
@@ -123,7 +133,9 @@ class SimplefinAccount::Investments::HoldingsProcessor
         position[:fallback_price] || 0
       end
 
-      cost_basis = position[:basis_qty].positive? ? position[:basis_value] / position[:basis_qty] : nil
+      cost_basis = if position[:basis_complete] && position[:basis_qty].positive?
+        position[:basis_value] / position[:basis_qty]
+      end
 
       # Sorted so the identifier stays stable across syncs when a provider
       # reorders lots. If the chosen lot later disappears, import_holding falls
