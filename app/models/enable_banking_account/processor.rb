@@ -27,15 +27,19 @@ class EnableBankingAccount::Processor
       raise
     end
 
-    process_transactions
+    transactions_ok = process_transactions
 
-    if anchor_balance
-      begin
-        result = enable_banking_account.current_account.set_current_balance(anchor_balance)
-        raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
-      rescue StandardError => e
-        report_exception(e, "account")
-        raise
+    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+    # complete ledger. See Account::CurrentBalanceManager.
+    # A failed import leaves the ledger incomplete, so skip anchoring and let the next
+    # successful sync judge the wider gap.
+    if anchor_balance && transactions_ok
+      result = enable_banking_account.current_account.set_current_balance(anchor_balance)
+
+      unless result.success?
+        error = ProcessingError.new("Failed to set current balance: #{result.error}")
+        report_exception(error, "account")
+        raise error
       end
     end
   end
@@ -96,10 +100,9 @@ class EnableBankingAccount::Processor
         end
       end
 
-      # Anchor the reported balance AFTER importing, so the previous reading can be judged
-      # against a complete ledger. This enables Balance::ReverseCalculator, which works
-      # backward from the bank-reported balance — eliminating spurious cash adjustment
-      # spikes. Returned to `process`, which anchors it once transactions are in.
+      # Returned to `process`, which anchors it once transactions are in. That anchor drives
+      # Balance::ReverseCalculator, which works backward from the bank-reported balance -
+      # eliminating spurious cash adjustment spikes.
       balance unless skip_balance_update
     end
 
@@ -172,10 +175,12 @@ class EnableBankingAccount::Processor
       )
     end
 
+    # Returns whether every transaction was imported, which gates the anchor in `process`.
     def process_transactions
-      EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process
+      EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process[:success]
     rescue => e
       report_exception(e, "transactions")
+      false
     end
 
     def report_exception(error, context)

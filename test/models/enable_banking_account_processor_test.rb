@@ -81,7 +81,7 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
         )
       end
       true
-    end
+    end.returns({ success: true, total: 1, imported: 1, skipped: 0, failed: 0, errors: [] })
 
     observed_transaction_count = nil
 
@@ -97,6 +97,34 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
       "so a stale anchor can be judged against a complete ledger"
   end
 
+  # Anchoring now happens AFTER the import and permanently decides whether the standing anchor
+  # moves forward or is frozen as a waypoint, so it must not run on a ledger the import left
+  # incomplete. #process_transactions can fail two ways: by raising, or by reporting
+  # `success: false` from its per-row rescues. The bank reads 940 either way because the
+  # customer spent 60.00 since the anchor was taken, and that spend never lands.
+  test "a swallowed transaction import exception must not freeze the standing anchor as a reconciliation" do
+    eb_acct, acct, anchor_date = link_account_with_standing_anchor(uid: "eb_f4_raise")
+
+    EnableBankingAccount::Transactions::Processor.any_instance
+      .stubs(:process).raises(StandardError, "provider 500")
+
+    EnableBankingAccount::Processor.new(eb_acct).process
+
+    assert_standing_anchor_untouched(acct, anchor_date)
+  end
+
+  test "a transaction import that reports success false must not freeze the standing anchor as a reconciliation" do
+    eb_acct, acct, anchor_date = link_account_with_standing_anchor(uid: "eb_f4_result")
+
+    EnableBankingAccount::Transactions::Processor.any_instance.stubs(:process).returns(
+      { success: false, total: 3, imported: 0, skipped: 0, failed: 3, errors: [] }
+    )
+
+    EnableBankingAccount::Processor.new(eb_acct).process
+
+    assert_standing_anchor_untouched(acct, anchor_date)
+  end
+
   test "snapshot upsert preserves an established currency when the payload omits it" do
     eb_acct = @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_3", currency: "GBP")
 
@@ -105,4 +133,41 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "GBP", eb_acct.reload.currency,
       "an omitted payload currency must not reset an established account to EUR"
   end
+
+  private
+    # A linked EUR account standing at 1000 on an anchor two days old, with the provider now
+    # reporting 940. Returns [enable_banking_account, account, anchor_date].
+    def link_account_with_standing_anchor(uid:)
+      eb_acct = @item.enable_banking_accounts.create!(
+        name: "Checking",
+        uid: uid,
+        currency: "EUR",
+        current_balance: BigDecimal("940")
+      )
+
+      acct = accounts(:depository)
+      acct.entries.destroy_all
+      acct.update!(balance: 1000, cash_balance: 1000, currency: "EUR")
+      AccountProvider.create!(account: acct, provider: eb_acct)
+
+      anchor_date = 2.days.ago.to_date
+      acct.entries.create!(
+        date: anchor_date,
+        name: Valuation.build_current_anchor_name("Depository"),
+        amount: 1000,
+        currency: "EUR",
+        entryable: Valuation.new(kind: "current_anchor")
+      )
+
+      [ eb_acct, acct, anchor_date ]
+    end
+
+    def assert_standing_anchor_untouched(acct, anchor_date)
+      acct.reload
+
+      assert_equal 0, acct.valuations.reconciliation.count,
+        "an incomplete import must not freeze the standing anchor as a reconciliation waypoint"
+      assert_equal anchor_date, acct.valuations.current_anchor.sole.entry.date,
+        "the standing anchor must be left alone until a sync with a complete ledger can judge it"
+    end
 end

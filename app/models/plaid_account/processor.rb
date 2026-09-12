@@ -13,13 +13,16 @@ class PlaidAccount::Processor
   # Each subsequent step can fail independently, but we continue processing the rest of the steps
   def process
     account = process_account!
-    process_transactions
-    process_investments
+    transactions_ok = process_transactions
+    investments_ok = process_investments
     process_liabilities
 
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
-    account&.set_current_balance(balance_calculator.balance)
+    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+    # complete ledger. See Account::CurrentBalanceManager.
+    # A failed import leaves the ledger incomplete, so skip anchoring and let the next
+    # successful sync judge the wider gap.
+    # Liabilities write no entries, so they cannot affect that judgement.
+    account.set_current_balance(balance_calculator.balance) if transactions_ok && investments_ok
   end
 
   private
@@ -92,8 +95,7 @@ class PlaidAccount::Processor
           )
         end
 
-        # Returned to `process`, which creates or updates the current balance anchor
-        # valuation once transactions are in.
+        # Returned to `process`, which anchors it once transactions are in.
         #
         # Note: This is a partial implementation. In the future, we'll introduce HoldingValuation
         # to properly track the holdings vs. cash breakdown, but for now we're only tracking
@@ -103,17 +105,23 @@ class PlaidAccount::Processor
       end
     end
 
+    # Returns whether every transaction was imported, which gates the anchor in `process`.
     def process_transactions
       PlaidAccount::Transactions::Processor.new(plaid_account).process
+      true
     rescue => e
       report_exception(e)
+      false
     end
 
+    # Returns whether every investment record was imported, which gates the anchor in `process`.
     def process_investments
       PlaidAccount::Investments::TransactionsProcessor.new(plaid_account, security_resolver: security_resolver).process
       PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver).process
+      true
     rescue => e
       report_exception(e)
+      false
     end
 
     def process_liabilities
