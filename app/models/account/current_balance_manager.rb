@@ -93,18 +93,12 @@ class Account::CurrentBalanceManager
     # This is NOT a user-facing feature, and is primarily used in "processors" while syncing
     # linked account data (e.g. via Plaid).
     #
-    # There is exactly one `current_anchor` per linked account, and it is written AFTER
-    # that sync's transactions have been imported (see each processor's `process`). That
-    # ordering is what makes this safe: by the time we're about to overwrite a standing
-    # anchor with today's reading, the ledger for the gap between them is complete, so we
-    # can judge it right now instead of waiting for a later sync.
+    # Processors write the anchor AFTER importing the sync's transactions, so the ledger for
+    # the gap since the standing anchor is complete and we can judge it now:
     #
-    #   * the imported ledger explains the move to today's reading -> the old anchor
-    #     carries nothing the transactions don't already carry, so it just moves forward
-    #     in place (date AND amount) exactly like a same-day update
-    #   * it doesn't -> the provider knew something the ledger doesn't, so the old anchor
-    #     is preserved as a reconciliation waypoint (#1492, #1484) and a fresh anchor is
-    #     created for today
+    #   * the ledger explains the move -> the old anchor just moves forward in place
+    #   * it doesn't -> the provider knew something the ledger doesn't, so the old anchor is
+    #     kept as a reconciliation waypoint (#1492, #1484) and a fresh anchor created for today
     def set_current_balance_for_linked_account(balance)
       changes_made = false
 
@@ -129,33 +123,36 @@ class Account::CurrentBalanceManager
       Result.new(success?: true, changes_made?: changes_made, error: nil)
     end
 
-    # Deterministic even if legacy data (from a version that kept two anchors around)
-    # still carries more than one row: the newest one is always the live anchor.
+    # Legacy data can still carry more than one anchor row, and the query has no ORDER BY,
+    # so pick the newest deterministically. Ids are random UUIDs: a last-resort tiebreak only.
     def current_anchor_valuation
       @current_anchor_valuation ||=
-        account.valuations.current_anchor.includes(:entry).max_by { |v| v.entry.date }
+        account.valuations.current_anchor.includes(:entry).max_by { |v| [ v.entry.date, v.entry.created_at, v.entry.id ] }
     end
 
     # True when imported transactions and trades account for the entire move between the
     # standing anchor and the reading we're about to write.
     #
     # Sign convention is Balance::ForwardCalculator#signed_entry_flows: a positive entry
-    # amount decreases an asset and increases a liability, so
-    #   expected = older + (asset? ? -net : net)
-    # One sum covers any gap length, because that recurrence is additive across days.
+    # amount decreases an asset and increases a liability. One sum covers any gap length.
     #
-    # Both endpoints are inclusive. The lower one is load-bearing: the reading is mid-day,
-    # so entries dated on the older anchor's own date posted after it was taken. The upper
-    # one is right because it is the reading being written now, which by construction is
-    # the last one for today.
+    # The window is inclusive at both ends. The lower end matters because readings are taken
+    # mid-day, so entries dated on the anchor's own date can post after it was taken. On that
+    # date only, entries that predate the anchor's last write are skipped: the provider could
+    # already see them, so after an in-place move they are inside the stored amount and
+    # counting them again would make an explained move look unexplained. `updated_at` is the
+    # watermark (saved exactly when amount and/or date change) and `>` excludes entries
+    # imported in the same sync cycle as the anchor write, which share its timestamp.
     #
-    # Restricted to :cash accounts. For :investment the reported total moves with market
-    # prices and trades only shift cash <-> holdings, so the identity means nothing.
-    # :non_cash accounts are left out until someone measures a real feed: Property and
-    # friends are valuation-driven, and Loan is entry-driven but has no linked provider
-    # whose readings we have checked.
+    # Restricted to :cash accounts: an :investment total moves with market prices, and
+    # :non_cash accounts are valuation-driven, so the identity means nothing for either.
     def ledger_explains?(older_entry, new_balance)
       return false unless account.balance_type == :cash
+
+      # The identity below adds account-currency flows to the anchor's own amount, so an anchor
+      # written before a provider corrected the account's currency mixes units. Moving it forward
+      # would not repair that: `update_current_anchor` only ever rewrites amount and date.
+      return false unless older_entry.currency == account.currency
 
       # Same set the balance calculators see (Balance::SyncCache#converted_entries and
       # #get_entries): transactions and trades only, pending and split parents out,
@@ -165,6 +162,8 @@ class Account::CurrentBalanceManager
         .excluding_split_parents
         .where(date: older_entry.date..Date.current)
         .where.not(entryable_type: "Valuation")
+        .where("entries.date > :anchor_date OR entries.created_at > :anchor_written_at",
+               anchor_date: older_entry.date, anchor_written_at: older_entry.updated_at)
         .pluck(:currency, :amount)
 
       # A plain sum would silently add EUR to USD; bail rather than guess an FX rate.
