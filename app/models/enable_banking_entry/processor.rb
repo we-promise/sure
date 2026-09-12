@@ -232,6 +232,19 @@ class EnableBankingEntry::Processor
       # lacks counterparty data (e.g. a booked re-delivery of a transaction whose earlier
       # pending version had it) would leave the old, now-stale value in place instead of
       # clearing it.
+      #
+      # Deliberately stored in transactions.extra (plain jsonb, unencrypted),
+      # not given the deterministic-encryption treatment Account#iban/
+      # Merchant#iban get: this value is never looked up by DB-level equality
+      # (only ILIKE search, dedup, and Ruby-side comparisons after loading),
+      # so there's no lookup requirement forcing that tradeoff here. Actually
+      # encrypting it would require pulling it into its own real column --
+      # Active Record Encryption doesn't support querying inside an encrypted
+      # jsonb value, and every consumer (rules, search, dedup, transfer
+      # matching) reads it via `extra ->> 'counterparty_iban'` SQL directly.
+      # That's a larger, deliberate architecture change for a future PR, not
+      # a default to slide into by extending `extra` the same way fx_rate/
+      # pending/mcc already are.
       cp = counterparty_account_info
       result[:counterparty_iban] = cp[:iban]
       result[:counterparty_account_id] = cp[:iban].blank? ? cp[:other_id] : nil
