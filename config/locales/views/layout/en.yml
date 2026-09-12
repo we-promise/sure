@@ -10,6 +10,11 @@ en:
       release_highlight:
         title: What's new
         done: Got it
+      feature_highlight:
+        done: Got it
+        bills:
+          title: Meet Bills
+          description: Sure now finds your recurring bills and keeps them in one place - what's due, when, and what's already paid. Take a look at what it found.
       nav:
         assistant: Assistant
         bills: Bills

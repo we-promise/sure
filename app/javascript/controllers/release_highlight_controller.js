@@ -16,6 +16,11 @@ import { driver } from "driver.js";
 // quietly and the next page offers it again. A window-level flag keyed to the
 // tag prevents double-shows across Turbo reconnects, cached page restores,
 // and duplicate mounts.
+//
+// When the highlight settles - the user dismissed it, or there was nothing
+// to show - a "release-highlight:settled" event is dispatched on window so
+// queued popovers (e.g. an anchored feature highlight on the dashboard) can
+// follow without competing for the overlay.
 export default class extends Controller {
   static values = {
     contentUrl: String,
@@ -76,6 +81,7 @@ export default class extends Controller {
     // No notes (or gone again): release the flag so a later page can retry.
     if (!notesHtml) {
       this.releaseShownFlag();
+      this.notifySettled();
       return;
     }
 
@@ -96,12 +102,15 @@ export default class extends Controller {
           },
         },
       ],
+      // Dismissal is hooked on the button clicks directly: onDestroyed only
+      // fires after driver.js's transition bookkeeping completes, which is
+      // not guaranteed (fast dismissals, headless browsers), and it is the
+      // only signal that marks the release seen and settles the chain.
+      onDoneClick: () => this.dismissFromUser(),
+      onCloseClick: () => this.dismissFromUser(),
       onDestroyed: () => {
-        this.dismissed = !this.tearingDown;
-
-        if (this.dismissed) {
-          this.markSeen();
-        }
+        if (this.tearingDown) return;
+        this.dismissFromUser(false);
       },
     });
 
@@ -160,6 +169,25 @@ export default class extends Controller {
     }
   }
 
+  dismissFromUser(destroy = true) {
+    if (this.dismissed) return;
+    this.dismissed = true;
+
+    this.markSeen();
+    this.notifySettled();
+
+    if (destroy) this.driverObj?.destroy();
+  }
+
+  notifySettled() {
+    // Window-level flag so mounts that connect after the event (Turbo cache
+    // restores, late mounts) can still tell the popup already settled. The
+    // flag is keyed to this release's tag: a stale flag from an earlier
+    // release must not wave the feature highlight past a new pending popup.
+    window.__releaseHighlightSettledTag = this.tagValue;
+    window.dispatchEvent(new CustomEvent("release-highlight:settled"));
+  }
+
   async markSeen() {
     if (this.markedSeen) return;
     this.markedSeen = true;
@@ -167,13 +195,14 @@ export default class extends Controller {
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
 
     try {
-      const response = await fetch(this.dismissUrlValue, {
+      const url = new URL(this.dismissUrlValue, window.location.origin);
+      url.searchParams.set("tag", this.tagValue);
+
+      const response = await fetch(url, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
           ...(csrfToken ? { "X-CSRF-Token": csrfToken.content } : {}),
         },
-        body: JSON.stringify({ tag: this.tagValue }),
       });
 
       if (!response.ok) {

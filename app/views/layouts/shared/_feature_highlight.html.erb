@@ -1,0 +1,13 @@
+<%# Anchored feature highlight mount (e.g. Bills). Rendered on the dashboard
+    only, when a registered feature is unseen for this account. The Stimulus
+    controller waits for any pending release popup, spotlights the feature's
+    nav entry on the first interaction, and marks the feature seen once the
+    user dismisses the popover. %>
+<div
+  data-controller="feature-highlight"
+  data-feature-highlight-key-value="<%= pending.key %>"
+  data-feature-highlight-title-value="<%= t("layouts.application.feature_highlight.#{pending.key}.title") %>"
+  data-feature-highlight-description-value="<%= t("layouts.application.feature_highlight.#{pending.key}.description") %>"
+  data-feature-highlight-done-label-value="<%= t("layouts.application.feature_highlight.done") %>"
+  data-feature-highlight-dismiss-url-value="<%= feature_highlight_dismiss_path(key: pending.key) %>"
+  hidden></div>
