@@ -59,7 +59,14 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # the pre-existing raw-extra debug dump further down the page (which
     # would also contain the IBAN string regardless of this feature).
     assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
-    assert_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
+    # Masked to the last 4 characters by default -- a counterparty's own
+    # account identifier is more sensitive than the user's own account IBAN
+    # (elsewhere shown the same way), so the dedicated row doesn't show it in
+    # full just because Privacy Mode happens to be off. (The raw "Additional
+    # Details" debug dump further down the page still shows the unmasked
+    # value when this setting is on -- that's the existing, opt-in
+    # show-everything surface, unrelated to this dedicated row.)
+    assert_match "•3000", response.body
   end
 
   test "hides the counterparty account line when there is no counterparty data" do
@@ -89,7 +96,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
-    assert_match "ACC-998877", response.body
+    assert_match "•8877", response.body
   end
 
   test "the bill link-back stays hidden without preview access" do
