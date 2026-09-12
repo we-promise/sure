@@ -205,8 +205,12 @@ class EnableBankingAccount < ApplicationRecord
         if target.errors.any?
           capture_propagation_failure(target, target.errors.full_messages.join(", "))
         end
-      rescue ActiveRecord::RecordNotUnique => e
-        capture_propagation_failure(target, "Concurrent iban conflict: #{e.message}")
+      rescue ActiveRecord::RecordNotUnique
+        # Deliberately not e.message: PostgreSQL's unique-violation DETAIL
+        # clause embeds the actual conflicting IBAN value in plaintext,
+        # which would defeat the point of encrypting the column at rest by
+        # persisting it into an unrelated log table instead.
+        capture_propagation_failure(target, "Concurrent iban conflict on the family_id+iban unique index")
       end
     end
   end
