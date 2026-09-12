@@ -133,7 +133,9 @@ pub fn run() {
             Ok(())
         })
         .on_page_load(|window, payload| {
-            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+            if matches!(window.label(), "main" | "prefs")
+                && payload.event() == tauri::webview::PageLoadEvent::Finished
+            {
                 const BRIDGE: &str = include_str!("../../dist/bridge.js");
                 let _ = window.eval(BRIDGE);
             }
