@@ -8,22 +8,12 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
   MODAL_HEADERS = { "Turbo-Frame" => "modal" }.freeze
 
   TRANSLATED_SCOPES = %w[
-    onchain_wallet_items.new_wallet
-    onchain_wallet_items.choose_chain
-    onchain_wallet_items.errors
-    onchain_wallet_items.price_provider_warning
-    onchain_wallet_items.enable_crypto_prices
-    onchain_wallet_items.link_wallet
-    onchain_wallet_items.provider_connection
-    onchain_wallet_items.token_review
-    onchain_wallet_items.token_review_form
+    onchain_wallet_items
+    settings.providers.onchain_wallet_panel
   ].freeze
 
-  TRANSLATED_SETTINGS_KEYS = %w[
+  TRANSLATED_KEYS = %w[
     settings.providers.taglines.onchain_wallet
-    settings.providers.onchain_wallet_panel.add_wallet
-    settings.providers.onchain_wallet_panel.keyless_title
-    settings.providers.onchain_wallet_panel.keyless_body
   ].freeze
 
   setup do
@@ -35,7 +25,7 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
-  test "the Onchain add-wallet slice resolves directly in German" do
+  test "the Onchain wallet slices resolve directly in German" do
     translated_keys.each do |key|
       assert I18n.exists?(key, :de, fallback: false), "de is missing #{key}"
     end
@@ -65,6 +55,58 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
                  I18n.t("onchain_wallet_items.link_wallet.success", locale: :de, fallback: false, count: 2)
     assert_match "25", I18n.t("onchain_wallet_items.token_review_form.assets_truncated",
                               locale: :de, fallback: false, count: 25)
+    assert_equal "USDC wird nicht mehr verfolgt. Das Konto und der Verlauf bleiben erhalten.",
+                 I18n.t("onchain_wallet_items.disconnect_asset.success", locale: :de,
+                                                                 fallback: false, symbol: "USDC")
+    assert_equal "1 Vermögenswert an dieser Adresse wird nicht mehr verfolgt.",
+                 I18n.t("onchain_wallet_items.disconnect_wallet.success", locale: :de,
+                                                                  fallback: false, count: 1)
+    assert_equal "2 Vermögenswerte an dieser Adresse werden nicht mehr verfolgt.",
+                 I18n.t("onchain_wallet_items.disconnect_wallet.success", locale: :de,
+                                                                  fallback: false, count: 2)
+    assert_match "USDC",
+                 I18n.t("onchain_wallet_items.manage.disconnect_asset_confirm", locale: :de,
+                                                                                 fallback: false, symbol: "USDC")
+    assert_equal "Verfolgte Vermögenswerte aktualisiert (2 hinzugefügt, 1 entfernt).",
+                 I18n.t("onchain_wallet_items.update_tokens.success", locale: :de,
+                                                                           fallback: false, created: 2, removed: 1)
+    assert_equal "Vor 5 Minuten synchronisiert",
+                 I18n.t("onchain_wallet_items.wallet_card.status", locale: :de,
+                                                                       fallback: false, timestamp: "5 Minuten")
+  end
+
+  test "the German management page renders tracked wallet actions" do
+    item = create_onchain_wallet_item(family: users(:family_admin).family)
+    create_onchain_wallet_account(item: item)
+    create_onchain_wallet_account(item: item, asset: fake_token_asset(symbol: "USDC", contract: "0xusdc"))
+
+    get manage_onchain_wallet_item_url(item, locale: :de), headers: MODAL_HEADERS
+
+    assert_response :success
+    assert_match "Selbstverwahrte Wallets verwalten", response.body
+    assert_match "Vermögenswerte verwalten", response.body
+    assert_match "Wallet trennen", response.body
+    assert_match "Nicht mehr verfolgen", response.body
+    assert_match OnchainTestHelper::FAKE_ADDRESS, response.body
+    assert_match "USDC", response.body
+    assert_no_match "Manage self-custody wallets", response.body
+    assert_no_match "Disconnect wallet", response.body
+  end
+
+  test "the German settings panel renders management and advanced actions" do
+    item = create_onchain_wallet_item(family: users(:family_admin).family)
+    create_onchain_wallet_account(item: item)
+
+    get connect_form_settings_providers_path(provider_key: "onchain_wallet", locale: :de)
+
+    assert_response :success
+    assert_match "Wallets verwalten", response.body
+    assert_match "Erweitert", response.body
+    assert_match "Etherscan-API-Schlüssel (optional)", response.body
+    assert_match "Übertragungen vor diesem Datum ignorieren", response.body
+    assert_match "Alle Wallets trennen", response.body
+    assert_no_match "Manage wallets", response.body
+    assert_no_match "Disconnect all wallets", response.body
   end
 
   test "the German add-wallet form renders its security guidance" do
@@ -140,6 +182,12 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
                    I18n.t("onchain_wallet_items.new_wallet.read_only_note", fallback: false)
       assert_equal "Self-custody wallet",
                    I18n.t("onchain_wallet_items.provider_connection.name", fallback: false)
+      assert_equal "Manage self-custody wallets",
+                   I18n.t("onchain_wallet_items.manage.title", fallback: false)
+      assert_equal "Stopped tracking 2 assets at that address.",
+                   I18n.t("onchain_wallet_items.disconnect_wallet.success", fallback: false, count: 2)
+      assert_equal "Etherscan API key (optional)",
+                   I18n.t("settings.providers.onchain_wallet_panel.etherscan_api_key_label", fallback: false)
     end
 
     get new_wallet_onchain_wallet_items_url(locale: :en), headers: MODAL_HEADERS
@@ -159,7 +207,7 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
         flatten_keys(translations).map { |key| "#{scope}.#{key}" }
       end
 
-      scoped_keys + TRANSLATED_SETTINGS_KEYS
+      scoped_keys + TRANSLATED_KEYS
     end
 
     def flatten_keys(translations, prefix = nil)

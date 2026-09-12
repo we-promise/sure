@@ -1,0 +1,6 @@
+---
+pl:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: Tożsamość SSO może ponownie się zalogować lub założyć konto.

@@ -35,10 +35,10 @@ pt-BR:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
       brand_fetch_settings:
-        description: Insira o Client ID fornecido pelo Brand Fetch
+        description: Insira o Client ID fornecido pelo Brandfetch
         label: Client ID
         placeholder: Insira seu Client ID aqui
-        title: Configurações do Brand Fetch
+        title: Configurações do Brandfetch
       openai_settings:
         description: Insira o token de acesso e configure opcionalmente um provedor compatível com OpenAI personalizado
         env_configured_message: Configurado com sucesso através de variáveis de ambiente.

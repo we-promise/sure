@@ -4,6 +4,7 @@ class ProviderConnectionStatus
   PROVIDERS = [
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
+    { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "pluggy", type: "PluggyItem", association: :pluggy_items, accounts: :pluggy_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
@@ -12,6 +13,7 @@ class ProviderConnectionStatus
     { key: "coinbase", type: "CoinbaseItem", association: :coinbase_items, accounts: :coinbase_accounts },
     { key: "binance", type: "BinanceItem", association: :binance_items, accounts: :binance_accounts },
     { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },
+    { key: "coinspot", type: "CoinspotItem", association: :coinspot_items, accounts: :coinspot_accounts },
     { key: "onchain_wallet", type: "OnchainWalletItem", association: :onchain_wallet_items, accounts: :onchain_wallet_accounts },
     { key: "coinstats", type: "CoinstatsItem", association: :coinstats_items, accounts: :coinstats_accounts },
     { key: "snaptrade", type: "SnaptradeItem", association: :snaptrade_items, accounts: :snaptrade_accounts, linked_accounts: :linked_accounts },

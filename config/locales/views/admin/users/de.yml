@@ -30,6 +30,11 @@ de:
           never: "Nie"
           role: "Rolle"
         role_descriptions_title: "Rollenbeschreibungen"
+        removed_sso_identities:
+          title: "Entfernte SSO-Identitäten"
+          description: "Mit diesen Identitäten kann kein Konto erstellt oder erneut verknüpft werden. Lass eine Identität nur dann wieder zu, wenn sie versehentlich entfernt wurde."
+          allow_again: "Wieder zulassen"
+          confirm: "Möchtest du die SSO-Identität %{email} wieder für die Anmeldung oder Kontoerstellung zulassen?"
         roles:
           guest: "Gast"
           member: "Mitglied"

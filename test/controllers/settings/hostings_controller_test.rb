@@ -52,6 +52,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "renders OpenAI model and timeout guidance in German" do
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      get settings_hosting_url(locale: :de)
+
+      assert_response :success
+      assert_includes response.body, "Konfiguriertes Modell prüfen"
+      assert_includes response.body, "Tools beziehungsweise Function Calling unterstützt"
+      assert_includes response.body, "Zeitlimits"
+      assert_includes response.body, "Anfragezeitlimit in Sekunden (optional)"
+      assert_includes response.body, "OPENAI_REQUEST_TIMEOUT"
+      assert_includes response.body, "Antwortzeitlimit in Sekunden (optional)"
+      assert_includes response.body, "(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit"
+      assert_includes response.body, "AI_RESPONSE_TIMEOUT"
+      refute_includes response.body, "Request Timeout in Seconds"
+    end
+
+    %w[
+      model_function_calling_help
+      model_function_calling_link
+      timeout_heading
+      timeout_description
+      openai_request_timeout_label
+      openai_request_timeout_help
+      ai_response_timeout_label
+      ai_response_timeout_help
+    ].each do |key|
+      assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
   test "can update rentcast api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }
@@ -129,12 +161,16 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Italian translates part of yahoo_finance_settings but not the rate-limited
+  # strings this path renders (status_rate_limited, rate_limited_title,
+  # rate_limited_message), which is what makes it exercise the fallback. Move to
+  # another such locale if it gains them, rather than dropping the coverage.
   test "falls back to English for untranslated Yahoo Finance health guidance" do
     @provider.stubs(:health_status).returns(:rate_limited)
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
       with_self_hosting do
-        get settings_hosting_url(locale: :fr)
+        get settings_hosting_url(locale: :it)
 
         assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
         assert_not_includes response.body, "translation missing"
@@ -767,11 +803,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { securities_providers: [ "moex_public" ] } }
 
-      get settings_hosting_url
+      notices = {
+        en: "Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.",
+        de: "Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab."
+      }
+      notices.each do |locale, notice|
+        get settings_hosting_url(locale: locale)
 
-      assert_response :success
-      assert_select "input[name='setting[tinkoff_invest_api_key]']"
-      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+        assert_response :success
+        assert_select "input[name='setting[tinkoff_invest_api_key]']"
+        assert_includes response.body, notice
+        assert_equal notice, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice", locale: locale, fallback: false, raise: true)
+      end
     end
   ensure
     Setting.securities_providers = ""

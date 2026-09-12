@@ -52,15 +52,38 @@ de:
           stale: Veraltet
     setup_accounts:
       page_title: "Trade-Republic-Konto einrichten"
+      dialog_title: "Dein Trade-Republic-Konto einrichten"
       subtitle: "Verknüpfe dein Trade-Republic-Investmentkonto."
+      info_box:
+        title: "Trade-Republic-Import"
+        items:
+          item_1: "Aktuelle Positionen mit Kursen und Stückzahlen"
+          item_2: "Ausgeführte Käufe und Verkäufe"
+          item_3: "Ein- und Auszahlungen sowie Zinsgutschriften"
+      status:
+        fetching_accounts: "Konto wird von Trade Republic abgerufen …"
+        no_accounts_found_title: "Kein Konto gefunden."
+        no_accounts_found_description: "Sure hat kein Trade-Republic-Konto gefunden. Prüf, ob deine Trade-Republic-Sitzung noch gültig ist."
       available_accounts:
+        title: "Verfügbares Konto"
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Konto-ID: %{account_id}"
         account_type_investment: "Investment-Portfolio"
         account_type_cash: "Cash-Konto"
+      link_existing:
+        description: "Alternativ kannst du das gefundene Trade-Republic-Konto mit einem bestehenden manuellen Investmentkonto verknüpfen."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Konto auswählen …"
+      linked_accounts:
+        title: "Bereits verknüpft"
+        linked_to_html: "Verknüpft mit: %{account}"
       buttons:
         refresh: "Aktualisieren"
         cancel: "Abbrechen"
         link: "Verknüpfen"
         done: "Fertig"
+        back_to_settings: "Zurück zu den Einstellungen"
+        create_selected_accounts: "Ausgewählte Konten anlegen"
     sync:
       errors:
         phone_number_missing: "Die Telefonnummer für Trade Republic fehlt."

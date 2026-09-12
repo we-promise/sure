@@ -181,72 +181,73 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_in_delta 120.0, amounts[2], 0.01  # 100 EUR * 1.2
   end
 
-  # Regression (CodeRabbit, app/models/balance/sync_cache.rb converted_entries):
-  # a foreign entry with no historical rate must NOT be retained at its
-  # source-currency nominal and relabeled as account.currency — that silently
-  # treated €100 as $100 USD in the balance series. The fix DROPS the
-  # unconvertible entry from the cache (the downstream #flows_for_date sums
-  # entry.amount with no currency awareness, so keeping it — relabeled or not —
-  # would contaminate the sum) and surfaces a logged warn, while still not
-  # crashing the sync. Pre-fix this test asserted the buggy
-  # `currency: "USD", amount: 100.0` relabel+retain.
-  test "drops an entry whose exchange rate is missing instead of relabeling its nominal as account currency" do
-    _entry = @account.entries.create!(
+  test "excludes an entry with no available exchange rate instead of failing the whole account" do
+    convertible = @account.entries.create!(
       date: Date.current,
-      name: "EUR Transaction no rate",
+      name: "USD Transaction",
+      amount: 75,
+      currency: "USD",
+      entryable: Transaction.new(extra: {})
+    )
+    _unconvertible = @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction",
       amount: 100,
       currency: "EUR",
-      entryable: Transaction.new(
-        category: @family.categories.first,
-        extra: {}
-      )
+      entryable: Transaction.new(extra: {})
     )
 
-    DebugLogEntry.expects(:capture).with { |args| args[:category] == "balance" && args[:level] == "warn" }.once
+    sync_cache = Balance::SyncCache.new(@account)
+    converted_entries = sync_cache.send(:converted_entries)
 
-    converted_entries = Balance::SyncCache.new(@account).send(:converted_entries)
-
-    assert_empty converted_entries # dropped, not relabeled €100 → $100 USD
+    assert_equal [ convertible.name ], converted_entries.map(&:name)
+    assert_equal 1, sync_cache.unconvertible_entry_count
   end
 
-  # Pins both halves of the fix against a regression: of two same-day entries,
-  # the convertible one is kept (in account currency, true converted amount) and
-  # the rateless one is dropped — so neither a relabel-and-retain nor a
-  # mixed-currency sum can sneak back in. Pre-fix this returned 2 entries both
-  # in USD (€100 relabeled as $100 + €/GBP entries laundered), so length == 2
-  # and the €100 nominal was laundered into the balance; the fixed path returns
-  # length 1.
-  test "keeps convertible entries and drops rateless ones in the same day" do
-    ExchangeRate.create!(
-      from_currency: "EUR",
-      to_currency: "USD",
+  test "records a debug log entry naming the missing currency pairs" do
+    @account.entries.create!(
       date: Date.current,
-      rate: 1.2
-    )
-
-    _eur_with_rate = @account.entries.create!(
-      date: Date.current,
-      name: "EUR Transaction with rate",
+      name: "EUR Transaction",
       amount: 100,
       currency: "EUR",
-      entryable: Transaction.new(category: @family.categories.first, extra: {})
+      entryable: Transaction.new(extra: {})
     )
-    _gbp_no_rate = @account.entries.create!(
+    @account.entries.create!(
       date: Date.current,
-      name: "GBP Transaction no rate",
+      name: "GBP Transaction",
       amount: 50,
       currency: "GBP",
-      entryable: Transaction.new(category: @family.categories.first, extra: {})
+      entryable: Transaction.new(extra: {})
     )
 
-    DebugLogEntry.expects(:capture).with { |args| args[:category] == "balance" && args[:level] == "warn" }.once
+    assert_difference "DebugLogEntry.count", 1 do
+      Balance::SyncCache.new(@account).send(:converted_entries)
+    end
 
-    converted_entries = Balance::SyncCache.new(@account).send(:converted_entries)
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "Balance::SyncCache", log.source
+    assert_equal "warn", log.level
+    assert_equal @account, log.account
+    assert_equal Setting.exchange_rate_provider, log.provider_key
+    assert_equal 2, log.metadata["unconvertible_entry_count"]
+    assert_equal [ "EUR->USD", "GBP->USD" ], log.metadata["missing_rate_pairs"].sort
+  end
 
-    assert_equal 1, converted_entries.length
-    converted_entry = converted_entries.first
-    assert_equal "USD", converted_entry.currency
-    assert_in_delta 120.0, converted_entry.amount, 0.01 # €100 * 1.2, convertible kept
+  test "records no debug log entry when every entry converts" do
+    @account.entries.create!(
+      date: Date.current,
+      name: "USD Transaction",
+      amount: 75,
+      currency: "USD",
+      entryable: Transaction.new(extra: {})
+    )
+
+    assert_no_difference "DebugLogEntry.count" do
+      sync_cache = Balance::SyncCache.new(@account)
+      sync_cache.send(:converted_entries)
+
+      assert_equal 0, sync_cache.unconvertible_entry_count
+    end
   end
 
   # get_holdings_value
@@ -291,6 +292,41 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
 
     assert_equal 100, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "reports a holding valued at 1:1 rather than accepting the wrong number silently" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      sync_cache.get_holdings_value(Date.current)
+    end
+
+    assert_equal 1, sync_cache.unconvertible_holding_count
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal "Balance::SyncCache", log.source
+    assert_equal "warn", log.level
+    assert_equal @account, log.account
+    assert_equal 1, log.metadata["unconvertible_holding_count"]
+    assert_equal [ "EUR->USD" ], log.metadata["missing_rate_pairs"]
+  end
+
+  test "records no holding diagnostic when every holding converts" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+
+    security = Security.create!(ticker: "TST", name: "Test")
+    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    assert_no_difference "DebugLogEntry.count" do
+      assert_equal 150.0, sync_cache.get_holdings_value(Date.current)
+    end
+
+    assert_equal 0, sync_cache.unconvertible_holding_count
   end
 
   test "prioritizes custom rate over fetched rate" do

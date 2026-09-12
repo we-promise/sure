@@ -61,13 +61,13 @@ de:
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
       brand_fetch_settings:
-        description: Gib die von Brand Fetch bereitgestellte Client-ID ein.
+        description: Gib die von Brandfetch bereitgestellte Client-ID ein.
         label: Client-ID
         placeholder: Gib hier deine Client-ID ein
-        title: Brand Fetch Einstellungen
+        title: Brandfetch Einstellungen
         high_res_label: Hochauflösende Logos aktivieren
         high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40 abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
-        env_configured_message: Deine Brand-Fetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
+        env_configured_message: Deine Brandfetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
         setup_step_1_html: Öffne <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> und leg dir ein kostenloses Entwicklerkonto an.
         setup_step_2_html: Geh auf die Seite <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID“, um die ID sichtbar zu machen, und füg sie unten ein.
@@ -81,6 +81,8 @@ de:
         uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
         model_label: Modell (optional)
         model_placeholder: "gpt-4.1 (Standard)"
+        model_function_calling_help: Der KI-Assistent liest deine Daten mithilfe von Funktionsaufrufen. Wähl daher ein Modell, das laut Dokumentation deines Anbieters Tools beziehungsweise Function Calling unterstützt. Ohne diese Unterstützung schlägt der Chat mit einer wenig aussagekräftigen Fehlermeldung des Anbieters fehl.
+        model_function_calling_link: Konfiguriertes Modell prüfen
         json_mode_label: JSON-Modus
         json_mode_auto: Auto (empfohlen)
         json_mode_strict: Streng (am besten für Denk-Modelle)
@@ -96,6 +98,12 @@ de:
         max_items_per_call_label: Maximale Einträge pro Stapel (optional)
         max_response_tokens_help: 'Tokens, die für die Antwort des Modells reserviert sind. Standard: 512. Niedriger ansetzen, um Platz für längere Verläufe zu schaffen.'
         max_response_tokens_label: Maximale Antwort-Tokens (optional)
+        timeout_heading: Zeitlimits
+        timeout_description: Legt fest, wie lange Aufrufe OpenAI-kompatibler Modelle laufen dürfen, bevor Sure sie abbricht. Erhöhe diese Werte, wenn du ein lokales Modell auf langsamer Hardware betreibst.
+        openai_request_timeout_label: Anfragezeitlimit in Sekunden (optional)
+        openai_request_timeout_help: 'Standard: 60. Gilt für jede OpenAI-kompatible HTTP-Anfrage, einschließlich automatischer Kategorisierung, Händlererkennung, Chat, PDF-Verarbeitung und Vektorspeicher-Aufrufen. OPENAI_REQUEST_TIMEOUT überschreibt dieses Feld.'
+        ai_response_timeout_label: Antwortzeitlimit in Sekunden (optional)
+        ai_response_timeout_help: 'Standard: 90. Gilt nur für das Zeitlimit der gesamten Chat-Runde. Setz den Wert daher als Summe an: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit, plus Ausführungszeit der Tools und Wartezeit in der Warteschlange. AI_RESPONSE_TIMEOUT überschreibt dieses Feld.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse und Finanzdaten – ganz ohne API-Schlüssel.
@@ -253,6 +261,7 @@ de:
         description: Trag einen T-Invest-API-Token mit Lesezugriff ein. Er holt Logos zu Wertpapieren – auch für Fonds und Anleihen, deren Kurse von MOEX kommen – und, wenn oben aktiviert, Kurse russischer Papiere.
         env_configured_message: Über die Umgebungsvariable TINKOFF_INVEST_API_KEY eingerichtet.
         label: API-Token
+        moex_only_notice: Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab.
         placeholder: T-Invest-API-Token hier eintragen
         show_details: "(Details anzeigen)"
         step_1: Öffne bei T-Bank den Bereich Investments, dann Einstellungen, dann API-Tokens (setzt ein eröffnetes Depot bei T-Bank voraus).

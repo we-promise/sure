@@ -284,9 +284,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       @statement.day_change
     end
 
-    holdings_queries = queries.grep(/DISTINCT ON \(holdings\.account_id, holdings\.security_id\)/)
+    holdings_queries = queries.grep(/MAX\(provider_holdings\.updated_at::date\)/)
     assert_equal 1, holdings_queries.size,
-      "current_holdings should only run its DISTINCT ON query once per instance, not once per caller"
+      "current_holdings should only run its holdings query once per instance, not once per caller"
   end
 
   test "current_holdings memoizes the empty (no investment accounts) case too" do

@@ -1,0 +1,20 @@
+one:
+  family: dylan_family
+  name: My CoinSpot
+  api_key: test_coinspot_key_123
+  api_secret: test_coinspot_secret_456
+  last_nonce: 0
+  status: good
+  institution_name: CoinSpot
+  institution_domain: coinspot.com.au
+  institution_url: https://www.coinspot.com.au
+  institution_color: "#0F6BFF"
+
+requires_update:
+  family: dylan_family
+  name: Stale CoinSpot
+  api_key: old_coinspot_key
+  api_secret: old_coinspot_secret
+  last_nonce: 0
+  status: requires_update
+  institution_name: CoinSpot

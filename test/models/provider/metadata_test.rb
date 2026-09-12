@@ -18,18 +18,31 @@ class Provider::MetadataTest < ActiveSupport::TestCase
     end
   end
 
-  test "registers pluggy with BR region, Bank+Investment kinds, alpha maturity" do
-    meta = Provider::Metadata.for("pluggy")
-    assert_equal "BR", meta[:region]
-    assert_includes meta[:kinds], "Bank"
-    assert_includes meta[:kinds], "Investment"
-    assert_equal :alpha, meta[:maturity]
-    assert_equal "Py", meta[:logo_text]
-    assert_not_equal "bg-gray-500", meta[:logo_bg]
+  test "registered provider metadata keeps fallback colors out of raw tailwind classes" do
+    Provider::Metadata::REGISTRY.each_value do |metadata|
+      refute metadata.key?(:logo_bg)
+      assert_match(/\A#[0-9a-f]{6}\z/i, metadata[:logo_color]) if metadata[:logo_color].present?
+    end
   end
 
-  test "unknown provider falls back to gray default" do
-    meta = Provider::Metadata.for("definitely_not_a_real_provider_xyz")
-    assert_equal "bg-gray-500", meta[:logo_bg]
+  test "logo_url builds a Brandfetch URL from the provider domain" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    assert_equal "https://cdn.brandfetch.io/wise.com/icon/fallback/404/w/40/h/40?c=test-client-id",
+                 Provider::Metadata.logo_url(:wise)
+  end
+
+  test "logo_url is nil when Brandfetch is not configured" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    assert_nil Provider::Metadata.logo_url(:wise)
+  end
+
+  test "logo_url is nil for providers without a domain" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+
+    assert_nil Provider::Metadata.logo_url(:onchain_wallet)
+    assert_nil Provider::Metadata.logo_url(:unknown_provider)
   end
 end

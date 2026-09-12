@@ -279,6 +279,44 @@ When using `compose.example.ai.yml`, Pipelock is always running. External AI age
 
 For full Pipelock configuration, see [docs/hosting/pipelock.md](pipelock.md).
 
+## Running Sure on small (512 MB) hosts
+
+Sure runs comfortably on hosts or containers limited to 512 MB of RAM, which makes it a good fit for the smallest tiers on platforms like Render, Fly.io, or a cheap VPS. This section summarizes what fits, what does not, and how to handle the jobs that do not.
+
+### What fits in 512 MB
+
+Measured on a production deploy of the official image with the tuning below:
+
+- Boot, first-run onboarding, and everyday use (dashboard, transactions, budgets, reports)
+- Small bank syncs and CSV imports
+- Scheduled (cron) jobs such as exchange-rate refreshes
+
+Steady-state memory sits around **352 MB**, leaving comfortable headroom under a 512 MB limit.
+
+### What does not fit in 512 MB
+
+- **The demo-data generator** ("Load sample/demo data"): this is the one operation that deterministically exceeds 512 MB. On a 512 MB container it climbs to the limit and gets OOM-killed mid-generation (observed flat at ~680 MB on a 2 GB container, ~5 minutes). Because the generation runs in the worker, the symptom is a sample-data load that never completes, sometimes with all rows silently rolled back.
+- **Very large first-time imports or historical syncs** (tens of thousands of rows) can also exceed the limit. Import your history in smaller batches, or temporarily raise the memory limit for the initial import and lower it afterwards.
+- **AI features**: the assistant flavors need extra headroom. If you enable AI, run at least 1 GB.
+
+### Tuning already in the image
+
+The official image ships with the memory tuning that makes 512 MB viable, so no extra configuration is needed:
+
+- **jemalloc** preloaded to reduce memory fragmentation
+- **YJIT** (Ruby's JIT) enabled
+- **Puma constrained to 1 worker x 3 threads** (`WEB_CONCURRENCY=1`, `RAILS_MAX_THREADS=3`)
+
+If you run your own process supervisor instead of the official image, set those same values.
+
+### Operational note for the sample-data button
+
+If you want to load sample/demo data on a small host:
+
+1. Raise the **worker's** memory limit (the generator runs in the worker process, not the web process). On Render, bump the worker service's plan; on Docker Compose, raise the worker container's memory limit.
+2. Apply the change with a **fresh deploy/restart of the worker**. Note for Render specifically: plan changes only take effect on the next deploy - they do **not** apply on a plain restart.
+3. Load the sample data, then optionally drop the worker back to the small plan with another fresh deploy.
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
@@ -348,3 +386,4 @@ For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings �
 
 - Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
 - Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.
+

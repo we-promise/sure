@@ -1,19 +1,144 @@
 ---
 pl:
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: Budżet przekroczony o <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: do przydzielenia
+      over_set: "> 100% przydzielone"
+      percent_set: "%{percent} przydzielone"
+    bills_reserved: "%{amount} zarezerwowane na rachunki"
+    bills_reserved_unconvertible:
+      few: "%{count} rachunki nie są zarezerwowane, brak dostępnego kursu wymiany"
+      many: "%{count} rachunków nie jest zarezerwowanych, brak dostępnego kursu wymiany"
+      one: 1 rachunek nie jest zarezerwowany, brak dostępnego kursu wymiany
+      other: "%{count} rachunków nie jest zarezerwowanych, brak dostępnego kursu wymiany"
+    budget_category:
+      rolled_over: "+%{amount} przeniesione"
+    budget_category_form:
+      monthly_average: śr. %{amount}/mies.
+      rollover_label: Przenoszenie
+      rollover_title: Przenoś niewydane środki tej kategorii z miesiąca na miesiąc
+      shared_placeholder: Współdzielony
+      shared_title: Zostaw puste, aby współdzielić budżet kategorii nadrzędnej
+    confirm_button:
+      confirm: Potwierdź
+    index:
+      description: Dostosuj budżety kategorii, aby ustawić limity wydatków. Nieprzydzielone
+        środki zostaną automatycznie przypisane jako bez kategorii.
+      title: Edytuj budżety kategorii
+    move:
+      amount_label: Kwota
+      available: dostępne %{amount}
+      button_title: Przenieś środki z tej kategorii
+      cancel: Anuluj
+      dialog_title: Przenieś środki
+      errors:
+        different_budgets: Obie kategorie muszą należeć do tego samego budżetu.
+        insufficient_funds: To więcej niż przydzielono tej kategorii.
+        non_positive_amount: Podaj kwotę większą od zera.
+        parent_child: Środków nie można przenosić między kategorią a jej własną podkategorią.
+          Dostosuj podkategorię bezpośrednio.
+        same_category: Wybierz inną kategorię, do której chcesz przenieść środki.
+        uncategorized: "„Bez kategorii” nie jest prawdziwą kopertą budżetową, więc
+          nie można przenosić środków do niej ani z niej."
+      from_label: Z
+      no_destination: To jedyna koperta, z którą można teraz przenosić środki. Kategoria
+        nie może przekazywać środków własnej kategorii nadrzędnej ani podrzędnej.
+      submit: Przenieś
+      success: Środki przeniesione.
+      to_label: Do
+    no_categories:
+      new_category: Nowa kategoria
+      no_categories_message: Nie utworzono ani nie przypisano jeszcze żadnych kategorii
+        wydatków do transakcji.
+      oops: Ups!
+      use_defaults: Użyj domyślnych (zalecane)
+    show:
+      budgeted: Zbudżetowano
+      category: Kategoria
+      left: pozostało
+      monthly_average_spending: Średnie miesięczne wydatki
+      monthly_median_spending: Mediana miesięcznych wydatków
+      no_transactions: Nie znaleziono transakcji w tym okresie budżetowym.
+      overspent: przekroczono
+      overview: Przegląd
+      recent_transactions: Ostatnie transakcje
+      rolled_over: Przeniesiono
+      spending: 'Wydatki: %{date}'
+      status: Status
+      view_all_transactions: Zobacz wszystkie transakcje kategorii
   budgets:
+    actuals_summary:
+      expenses: Wydatki
+      income: Przychody
+    available_cash:
+      available: Dostępne w gotówce
+      earmarked: Już przypisane do celów
+      free: Naprawdę wolne
+      goals_link: Zobacz cele
+      heading: Stan gotówki
+      subtitle: Poza planem powyżej, nie jest jego częścią.
+    budget_donut:
+      new_budget: Nowy budżet
+      of_budget: z %{amount}
+      spent: Wydano
+      unused: Niewykorzystane
+    budget_header:
+      today: Dziś
+    budget_nav:
+      categories: Kategorie
+      setup: Konfiguracja
+    budgeted_summary:
+      budgeted: Zabudżetowano
+      earned: Zarobiono %{amount}
+      expected_income: Oczekiwany przychód
+      left: Pozostało %{amount}
+      over: Przekroczono o %{amount}
+      spent: Wydano %{amount}
+    copy_previous:
+      already_initialized: Ten budżet został już skonfigurowany
+      no_source: Nie znaleziono poprzedniego budżetu do skopiowania
+      success: Skopiowano budżet z %{source_name}
+    copy_previous_prompt:
+      copy_button: Kopiuj z %{source_name}
+      description: Możesz skopiować budżet z %{source_name} lub zacząć od zera.
+      fresh_button: Zacznij od zera
+      title: Skonfiguruj swój budżet
+    edit:
+      autosuggest_description: Będzie oparte na historii transakcji. AI może się mylić,
+        sprawdź przed kontynuowaniem.
+      autosuggest_title: Automatyczna sugestia budżetu przychodów i wydatków
+      budgeted_spending: Zabudżetowane wydatki
+      continue: Kontynuuj
+      expected_income: Oczekiwany przychód
+      setup_description: Wpisz poniżej swoje miesięczne zarobki i planowane wydatki,
+        żeby skonfigurować budżet.
+      setup_title: Skonfiguruj budżet
     name:
       custom_range: "%{start} do %{end_date}"
       month_year: "%{month}"
+    over_allocation_warning:
+      fix_allocations: Popraw alokacje
+      over_allocated_message: Budżet jest przealokowany. Popraw alokacje.
     show:
+      categories:
+        amount: Kwota
+        edit: Edytuj
+        title: Kategorie
+      filter:
+        all: Wszystkie
+        aria_label: Filtruj kategorie budżetu
+        on_track: Zgodnie z planem
+        over_budget: Przekroczony budżet
+      on_track_categories:
+        short_title: Zgodnie z planem
+        title: Zgodnie z planem
+      over_budget_categories:
+        short_title: Przekroczony budżet
+        title: Przekroczony budżet
       tabs:
         actual: Rzeczywiste
         budgeted: Zaplanowane
-    copy_previous_prompt:
-      title: "Skonfiguruj swój budżet"
-      description: "Możesz skopiować budżet z %{source_name} lub zacząć od zera."
-      copy_button: "Kopiuj z %{source_name}"
-      fresh_button: "Zacznij od zera"
-    copy_previous:
-      success: "Skopiowano budżet z %{source_name}"
-      no_source: "Nie znaleziono poprzedniego budżetu do skopiowania"
-      already_initialized: "Ten budżet został już skonfigurowany"
+    switcher:
+      aria_label: Przełącz budżet
+      household: Gospodarstwo domowe

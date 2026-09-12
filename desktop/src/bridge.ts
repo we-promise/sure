@@ -1,7 +1,7 @@
 // Injected into every page loaded in the main window (local onboarding + the
 // remote Sure site). Adds native-titlebar chrome, drags the window, forwards
-// notifications/badge to Rust, intercepts SSO into the system browser, and
-// navigates on server switches.
+// notifications/badge to Rust, enables report downloads, intercepts SSO into the
+// system browser, and navigates on server switches.
 (() => {
   const tauri = (window as any).__TAURI__;
 
@@ -15,6 +15,36 @@
     hasCore: !!tauri?.core,
     hasWindow: !!tauri?.window,
   });
+
+  // WKWebView needs the download attribute for renderable types such as CSV.
+  // Keep the request in this webview so its authenticated session is retained.
+  // Capture runs before Turbo, while leaving the native click action intact.
+  if (!(window as any).__sureReportDownloadHook) {
+    (window as any).__sureReportDownloadHook = true;
+    document.addEventListener(
+      "click",
+      (ev) => {
+        const link = (ev.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+        if (!link) return;
+        let url: URL;
+        try {
+          url = new URL(link.href, location.href);
+        } catch {
+          return;
+        }
+        if (
+          url.origin !== location.origin ||
+          !url.pathname.endsWith("/reports/export_transactions.csv")
+        ) {
+          return;
+        }
+        if (!link.hasAttribute("download")) link.setAttribute("download", "");
+        link.setAttribute("data-turbo", "false");
+        link.setAttribute("target", "_self");
+      },
+      true
+    );
+  }
 
   // Native titlebar chrome — offset the left icon rail so its logo clears the
   // traffic lights, and make the top ~34px band drag the window. Using a

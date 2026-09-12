@@ -30,8 +30,11 @@ class PropertiesEditTest < ApplicationSystemTestCase
     # racing the broadcast.
     def open_account_edit_dialog
       3.times do
-        # A prior (slow) attempt may have already opened the edit form.
-        return if has_selector?("#account_accountable_attributes_subtype", wait: 0)
+        # A prior (slow) attempt may have already opened the edit form. Check
+        # the field is enabled, not just present — the select briefly exists
+        # but disabled while the form finishes hydrating, and assert_field's
+        # default matcher (used by the caller) excludes disabled fields.
+        return if has_field?("account_accountable_attributes_subtype", wait: 0)
 
         begin
           within_testid("account-menu") do
@@ -50,9 +53,9 @@ class PropertiesEditTest < ApplicationSystemTestCase
           )
           next
         end
-        return if has_selector?("#account_accountable_attributes_subtype", wait: 2)
+        return if has_field?("account_accountable_attributes_subtype", wait: 2)
       end
-      assert_selector "#account_accountable_attributes_subtype"
+      assert_field "account_accountable_attributes_subtype"
     end
 
     def open_new_account_modal

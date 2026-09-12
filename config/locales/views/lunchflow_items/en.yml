@@ -14,6 +14,7 @@ en:
       service_down_label: Service Down
       service_down_desc: Lunch Flow API may be temporarily unavailable
       check_provider_settings: Check Provider Settings
+      unexpected_error: An unexpected error occurred. Please try again later.
     setup_required:
       title: Lunch Flow Setup Required
       api_key_not_configured: API Key Not Configured

@@ -1,0 +1,17 @@
+---
+pl:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Portfele niekustodialne
+  onchain_wallet_item:
+    movement:
+      received: Otrzymano %{quantity} %{symbol}
+      sent: Wysłano %{quantity} %{symbol}

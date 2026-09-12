@@ -62,6 +62,7 @@ Rails.application.routes.draw do
       post :sync
       get :setup_accounts
       post :complete_account_setup
+      post :generate_sca_keypair
     end
   end
 
@@ -113,6 +114,21 @@ Rails.application.routes.draw do
   end
 
   resources :kraken_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :coinspot_items, only: [ :create, :update, :destroy ] do
     collection do
       get :select_accounts
       post :link_accounts
@@ -315,6 +331,8 @@ Rails.application.routes.draw do
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
+  get "release_highlight", to: "release_highlights#show"
+  patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
   patch "dashboard/preferences", to: "pages#update_preferences"
 
@@ -383,7 +401,7 @@ Rails.application.routes.draw do
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
-    resource :ai_prompts, only: :show
+    resource :ai_prompts, only: %i[show update]
     resource :llm_usage, only: :show
     resource :guides, only: :show
     get "bank_sync", to: redirect("/settings/providers", status: 301)
@@ -891,6 +909,22 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :monobank_items, only: %i[create update destroy] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :sophtron_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -962,7 +996,9 @@ Rails.application.routes.draw do
     # name even for singular resources, unlike its plural siblings above
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
-    resource :system_health, only: :show, controller: "system_health"
+    resource :system_health, only: :show, controller: "system_health" do
+      post :verify_worker_ai
+    end
   end
 
   # Defines the root path route ("/")
