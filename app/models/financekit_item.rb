@@ -21,7 +21,7 @@ class FinancekitItem < ApplicationRecord
   end
 
   def pending_account_setup?
-    financekit_accounts.empty?
+    financekit_accounts.empty? || financekit_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).exists?
   end
 
   def selected_accounts
@@ -39,6 +39,7 @@ class FinancekitItem < ApplicationRecord
 
   def disconnect!
     with_lock do
+      financekit_accounts.includes(:account_provider).find_each { |source| source.account_provider&.destroy! }
       update!(status: "revoked")
     end
   end

@@ -9,7 +9,7 @@ class Api::V1::Financekit::BaseController < Api::V1::BaseController
   private
 
     def require_financekit_access
-      return unless authorize_scope!(request.get? ? :read : :write)
+      return unless authorize_scope!(request.get? || request.head? ? :read : :write)
       unless current_resource_owner.admin? && current_resource_owner.preview_features_enabled?
         raise Financekit::Error.new("publisher_forbidden", 403)
       end

@@ -1,5 +1,7 @@
 class Api::V1::Financekit::SyncsController < Api::V1::Financekit::BaseController
   def create
+    declared = request.content_length unless request.get_header("HTTP_TRANSFER_ENCODING").present?
+    raise Financekit::Error.new("payload_too_large", 413) if declared && declared > Financekit::MAX_BYTES
     raise Financekit::Error.new("payload_too_large", 413) if request.raw_post.bytesize > Financekit::MAX_BYTES
 
     batch = Financekit::Processor.new(connection).apply!(input)

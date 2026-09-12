@@ -36,11 +36,7 @@ jobs:
           scan-diff: 'true'
           fail-on-findings: 'true'
           test-vectors: 'false'
-          # Public Apple-generated interoperability keys and signed synthetic
-          # messages, never deployment credentials (docs/api/financekit.md).
           exclude-paths: |
-            test/fixtures/files/financekit/apple_vectors.json
-            test/support/financekit/generate_vectors.swift
             config/locales/views/reports/ca.yml
             config/locales/views/reports/de.yml
             config/locales/views/reports/en.yml

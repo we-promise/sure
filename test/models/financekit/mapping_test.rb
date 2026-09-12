@@ -78,6 +78,26 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal 1, third.reload.counts["review_required"]
   end
 
+  test "rejected source only updates do not create durable tombstones" do
+    Financekit::Processor.new(@item).apply!(financekit_payload)
+    rejected = financekit_payload
+    rejected["transactions"].first["status"] = "rejected"
+    rejected["transactions"].first.delete("posted_at")
+    Financekit::Processor.new(@item).apply!(rejected)
+
+    identity = @source.financekit_transactions.sole
+    assert_equal "rejected", identity.status
+    assert_nil identity.entry_id
+    assert_nil identity.tombstoned_at
+    assert_not identity.ledger_imported
+    assert_equal 0, @source.account.entries.count
+
+    Financekit::Processor.new(@item).apply!(financekit_payload)
+    assert_equal 1, @source.account.entries.count
+    assert_equal "booked", identity.reload.status
+    assert identity.ledger_imported
+  end
+
   test "protected tombstone becomes review and missing snapshot records never delete" do
     Financekit::Processor.new(@item).apply!(financekit_payload)
     @source.account.entries.sole.update!(import_locked: true)

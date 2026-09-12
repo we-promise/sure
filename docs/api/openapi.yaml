@@ -16,6 +16,15 @@ components:
       name: X-Api-Key
       in: header
       description: API key for authentication. Generate one from your account settings.
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: "/oauth/authorize"
+          tokenUrl: "/oauth/token"
+          scopes:
+            read: Read access
+            read_write: Read and write access
   schemas:
     Pagination:
       type: object
@@ -5347,6 +5356,8 @@ paths:
       - FinanceKit
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       responses:
         '200':
           description: Discover foreground FinanceKit sync support
@@ -5425,6 +5436,8 @@ paths:
       - FinanceKit
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       parameters: []
       responses:
         '201':
@@ -5516,6 +5529,8 @@ paths:
       - FinanceKit
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       parameters:
       - name: page
         in: query
@@ -5602,6 +5617,8 @@ paths:
       - FinanceKit
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       responses:
         '204':
           description: Revoke foreground sync access and retain existing financial
@@ -5688,6 +5705,8 @@ paths:
       - FinanceKit
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       parameters: []
       responses:
         '200':
@@ -5779,6 +5798,8 @@ paths:
       - FinanceKit
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       parameters: []
       responses:
         '201':

@@ -60,8 +60,9 @@ class Financekit::Processor
         return
       end
       if %w[rejected memo].include?(record["status"])
+        remove_source_only_entry!(source, identity, counts) if identity.entry
+        identity.ledger_imported = false unless identity.review_required?
         identity.save!
-        retract!(source, record, batch, counts) if identity.entry
         counts["source_only"] += 1
         return
       end
@@ -106,7 +107,26 @@ class Financekit::Processor
         metadata: { batch_id: batch.batch_id, source_identity_id: identity.id, review_required: identity.review_required })
     end
 
+    def remove_source_only_entry!(source, identity, counts)
+      entry = identity.entry
+      return unless entry
+
+      Entry.transaction do
+        entry.lock!
+        protected = entry.protected_from_sync? || entry.transaction.transfer_id.present? || entry.reconciled_at.present? ||
+          entry.split_parent? || entry.split_child? || entry.locked_attributes.present? || entry.transaction.locked_attributes.present?
+        if protected || entry.source != "financekit" || entry.account_id != source.account.id
+          identity.review_required = true
+          counts["review_required"] += 1
+        else
+          entry.destroy!
+          identity.entry = nil
+        end
+      end
+    end
+
     def schedule_downstream
+      @item.selected_accounts.includes(:account).find_each { |source| source.account&.sync_later }
       @item.family.auto_match_transfers!
       @item.family.rules.where(active: true).find_each(&:apply_later)
     rescue StandardError

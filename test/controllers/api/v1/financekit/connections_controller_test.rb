@@ -41,6 +41,11 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
   end
 
   test "connection mappings paginate and do not expose source payloads" do
+    @key.update!(scopes: [ "read" ])
+    head "/api/v1/financekit/connections/#{@item.id}", headers: @headers
+    assert_response :success
+    @key.update!(scopes: [ "read_write" ])
+
     get "/api/v1/financekit/connections/#{@item.id}", headers: @headers, params: { page: 2, per_page: 1 }
     assert_response :success
     assert_empty response.parsed_body["accounts"]

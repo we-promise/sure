@@ -31,6 +31,19 @@ RSpec.configure do |config|
             name: 'X-Api-Key',
             in: :header,
             description: 'API key for authentication. Generate one from your account settings.'
+          },
+          oauth2: {
+            type: :oauth2,
+            flows: {
+              authorizationCode: {
+                authorizationUrl: '/oauth/authorize',
+                tokenUrl: '/oauth/token',
+                scopes: {
+                  read: 'Read access',
+                  read_write: 'Read and write access'
+                }
+              }
+            }
           }
         },
         schemas: {
