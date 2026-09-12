@@ -4,52 +4,90 @@ set -euo pipefail
 # Disable profile loading to avoid environment errors
 export ENV=""
 export BASH_ENV=""
+export DEBIAN_FRONTEND=noninteractive
+
+# Allow setup to be invoked from outside the repository.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 echo "Installing PostgreSQL and dependencies..."
 apt-get update -qq
-apt-get install -yqq wget unzip libyaml-dev build-essential curl git libssl-dev libreadline-dev zlib1g-dev xz-utils ca-certificates libpq-dev vim redis-server postgresql libvips libvips-dev ffmpeg
+apt-get install -yqq --no-install-recommends \
+  wget unzip libyaml-dev build-essential curl git libssl-dev libreadline-dev \
+  zlib1g-dev xz-utils ca-certificates libpq-dev pkg-config vim redis-server \
+  postgresql libvips ffmpeg poppler-utils
 
-echo "Starting PostgreSQL cluster..."
-pg_ctlcluster --skip-systemctl-redirect 16 main start
-
-echo "Configuring PostgreSQL authentication..."
-# Configure pg_hba.conf to allow local connections without password
-PG_HBA_CONF="/etc/postgresql/16/main/pg_hba.conf"
-if [ -f "$PG_HBA_CONF" ]; then
-    # Backup original config
-    cp "$PG_HBA_CONF" "$PG_HBA_CONF.backup"
-    
-    # Update local connections to use 'trust' authentication for development
-    sed -i 's/^local   all             all                                     peer$/local   all             all                                     trust/' "$PG_HBA_CONF"
-    sed -i 's/^host    all             all             127.0.0.1\/32            scram-sha-256$/host    all             all             127.0.0.1\/32            trust/' "$PG_HBA_CONF"
-    sed -i 's/^host    all             all             ::1\/128                 scram-sha-256$/host    all             all             ::1\/128                 trust/' "$PG_HBA_CONF"
-    
-    echo "Updated PostgreSQL authentication configuration"
+# Codex's universal image includes mise. Bootstrap it for other Ubuntu/Debian images.
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v mise >/dev/null 2>&1; then
+  echo "Installing mise..."
+  curl -fsSL --retry 3 https://mise.run | MISE_INSTALL_PATH="$HOME/.local/bin/mise" sh
 fi
 
-echo "Reloading PostgreSQL configuration..."
-pg_ctlcluster --skip-systemctl-redirect 16 main reload
+RUBY_VERSION=$(tr -d '[:space:]' < .ruby-version)
+echo "Installing Ruby $RUBY_VERSION and Node.js with mise..."
+# Global selections survive setup's separate shell without adding repository files.
+# Node 24 matches the JavaScript CI job.
+mise use --global --yes "ruby@$RUBY_VERSION" node@24
+mise reshim
+MISE_SHIMS_DIR="${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims"
+export PATH="$MISE_SHIMS_DIR:$PATH"
+
+# Persist shims for later login and interactive Bash sessions. The
+# universal image already includes them in PATH; this also covers the bootstrap case.
+MISE_PATH_EXPORT="export PATH=$(printf '%q' "$MISE_SHIMS_DIR:$HOME/.local/bin"):\$PATH"
+printf '%s\n' "$MISE_PATH_EXPORT" > /etc/profile.d/sure-codex-env.sh
+touch "$HOME/.bashrc"
+if ! grep -qF '. /etc/profile.d/sure-codex-env.sh' "$HOME/.bashrc"; then
+  sed -i '1i . /etc/profile.d/sure-codex-env.sh' "$HOME/.bashrc"
+fi
+
+ruby --version
+node --version
+BUNDLER_VERSION=$(awk '/^BUNDLED WITH$/ { getline; gsub(/[[:space:]]/, ""); print; exit }' Gemfile.lock)
+gem install bundler --version "$BUNDLER_VERSION" --no-document --conservative
+mise reshim
+
+# The distro determines the PostgreSQL major version. Select the cluster on the
+# default Rails port, rather than assuming a 16/main cluster exists.
+PG_CLUSTER=$(pg_lsclusters --no-header | awk '$3 == 5432 { print $1, $2; exit }')
+if [ -z "$PG_CLUSTER" ]; then
+  echo "No PostgreSQL cluster found on port 5432." >&2
+  exit 1
+fi
+read -r PG_VERSION PG_NAME <<< "$PG_CLUSTER"
+
+echo "Configuring PostgreSQL authentication..."
+PG_HBA_CONF="/etc/postgresql/$PG_VERSION/$PG_NAME/pg_hba.conf"
+if [ ! -f "$PG_HBA_CONF.backup" ]; then
+  cp "$PG_HBA_CONF" "$PG_HBA_CONF.backup"
+fi
+# Allow passwordless development connections over sockets and loopback only.
+# Package versions use different whitespace and authentication defaults.
+sed -Ei \
+  -e 's/^([[:space:]]*local[[:space:]]+all[[:space:]]+all[[:space:]]+)(peer|md5|scram-sha-256)([[:space:]]|$)/\1trust\3/' \
+  -e 's/^([[:space:]]*host[[:space:]]+all[[:space:]]+all[[:space:]]+(127\.0\.0\.1\/32|::1\/128)[[:space:]]+)(md5|scram-sha-256)([[:space:]]|$)/\1trust\4/' \
+  "$PG_HBA_CONF"
+
+echo "Starting PostgreSQL $PG_VERSION/$PG_NAME..."
+# pg_ctlcluster start returns 2 when already running, which would abort under set -e.
+if ! pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" "$PG_NAME" status >/dev/null; then
+  pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" "$PG_NAME" start
+fi
+pg_ctlcluster --skip-systemctl-redirect "$PG_VERSION" "$PG_NAME" reload
+pg_isready --host 127.0.0.1 --port 5432 --timeout 5
 
 echo "Creating database user for $(whoami)..."
-# Use runuser instead of su to avoid profile loading issues
-runuser -l postgres -c "createuser -s $(whoami)" 2>/dev/null || echo "User may already exist"
+# Avoid login profiles and distinguish an existing role from a real SQL failure.
+runuser -u postgres -- psql -X --host /var/run/postgresql --port 5432 \
+  --username postgres --dbname postgres --set ON_ERROR_STOP=1 --set "username=$(whoami)" <<'SQL'
+SELECT format('CREATE ROLE %I LOGIN SUPERUSER', :'username')
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'username')
+\gexec
+SQL
 
 echo "Starting Redis server..."
 service redis-server start
-
-# Check Ruby version compatibility
-RUBY_VERSION=$(cat .ruby-version | tr -d '[:space:]')
-CURRENT_RUBY=$(ruby -v | awk '{print $2}' | cut -d'p' -f1)
-echo "Ruby version check: $CURRENT_RUBY (required: $RUBY_VERSION)"
-
-# Removing Ruby version requirement from Gemfile
-if [ "$CURRENT_RUBY" != "$RUBY_VERSION" ]; then
-  echo "Ruby version mismatch — commenting ruby version requirement in Gemfile..."
-  # Only comment if the line isn't already commented
-  sed -i 's/^ruby file: "\.ruby-version"$/#&/' Gemfile
-  # Ignore Gemfile changes for this session
-  git update-index --assume-unchanged Gemfile Gemfile.lock
-fi
+redis-cli ping | grep -qx PONG
 
 echo "Environment setup completed successfully!"
 echo "PostgreSQL and Redis are now running."
