@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_tokens.dart';
 import '../models/user.dart';
 import 'api_config.dart';
+import 'api_http_client.dart';
 import 'log_service.dart';
 
 class AuthService {
@@ -103,7 +103,7 @@ class AuthService {
         body['otp_code'] = otpCode;
       }
 
-      final response = await http
+      final response = await ApiHttpClient.instance
           .post(
             url,
             headers: ApiConfig.jsonHeaders(),
@@ -206,7 +206,7 @@ class AuthService {
         body['invite_code'] = inviteCode;
       }
 
-      final response = await http
+      final response = await ApiHttpClient.instance
           .post(
             url,
             headers: ApiConfig.jsonHeaders(),
@@ -279,7 +279,7 @@ class AuthService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/refresh');
 
-      final response = await http
+      final response = await ApiHttpClient.instance
           .post(
             url,
             headers: ApiConfig.jsonHeaders(),
@@ -351,7 +351,7 @@ class AuthService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/accounts');
 
-      final response = await http.get(
+      final response = await ApiHttpClient.instance.get(
         url,
         headers: {
           ...ApiConfig.customProxyHeaderMap,
@@ -451,7 +451,7 @@ class AuthService {
     // Exchange authorization code for tokens via secure POST
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_exchange');
-      final response = await http
+      final response = await ApiHttpClient.instance
           .post(
             url,
             headers: ApiConfig.jsonHeaders(),
@@ -517,7 +517,7 @@ class AuthService {
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/sso_link');
-      final response = await http
+      final response = await ApiHttpClient.instance
           .post(
             url,
             headers: ApiConfig.jsonHeaders(),
@@ -575,7 +575,7 @@ class AuthService {
       if (firstName != null) body['first_name'] = firstName;
       if (lastName != null) body['last_name'] = lastName;
 
-      final response = await http
+      final response = await ApiHttpClient.instance
           .post(
             url,
             headers: ApiConfig.jsonHeaders(),
@@ -620,7 +620,7 @@ class AuthService {
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/enable_ai');
-      final response = await http.patch(
+      final response = await ApiHttpClient.instance.patch(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),

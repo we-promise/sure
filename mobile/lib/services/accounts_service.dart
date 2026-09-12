@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/account.dart';
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 class AccountsService {
   Future<Map<String, dynamic>> getAccounts({
@@ -14,7 +14,7 @@ class AccountsService {
         '${ApiConfig.baseUrl}/api/v1/accounts?page=$page&per_page=$perPage',
       );
 
-      final response = await http.get(
+      final response = await ApiHttpClient.instance.get(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));

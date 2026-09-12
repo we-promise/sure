@@ -61,6 +61,9 @@
   "loginSignInWithGoogle": "Sign in with Google",
   "@loginSignInWithGoogle": { "description": "Google SSO button label." },
 
+  "loginSsoCustomCertificateUnsupported": "Browser sign-in cannot use an app-managed CA certificate. Install the CA on your device and remove it from the app to use Google sign-in.",
+  "@loginSsoCustomCertificateUnsupported": { "description": "Explanation shown when SSO is disabled because a custom CA is configured only inside the app." },
+
   "loginMfaLabel": "Authentication Code",
   "@loginMfaLabel": { "description": "Label for the MFA code input field." },
 
@@ -471,6 +474,23 @@
 
   "backendConfigChangeHint": "You can change this later in the settings.",
   "@backendConfigChangeHint": { "description": "Helper text below the config form." },
+  "backendConfigCertificateLabel": "Custom CA certificate",
+  "@backendConfigCertificateLabel": { "description": "Label for the custom CA certificate section." },
+  "backendConfigCertificateSubtitle": "Optional certificate for a private HTTPS server",
+  "@backendConfigCertificateSubtitle": { "description": "Subtitle when no custom CA certificate is selected." },
+  "backendConfigCertificateChoose": "Choose certificate",
+  "@backendConfigCertificateChoose": { "description": "Button label for selecting a CA certificate." },
+  "backendConfigCertificateRemove": "Remove certificate",
+  "@backendConfigCertificateRemove": { "description": "Tooltip for removing the selected CA certificate." },
+  "backendConfigCertificateHelp": "Select the root CA certificate used by your server (for example Caddy's root.crt). PEM and DER certificates are supported. Hostname verification remains enabled.",
+  "@backendConfigCertificateHelp": { "description": "Help text for custom CA certificate configuration." },
+  "backendConfigCertificateInvalid": "Select a file containing one valid X.509 certificate (maximum 64 KB).",
+  "@backendConfigCertificateInvalid": { "description": "Error shown when a selected certificate cannot be parsed." },
+  "backendConfigCertificateFingerprint": "SHA-256: {fingerprint}",
+  "@backendConfigCertificateFingerprint": {
+    "description": "SHA-256 fingerprint of the selected custom CA certificate.",
+    "placeholders": { "fingerprint": { "type": "String" } }
+  },
 
   "recentTransactionsTitle": "Recent Transactions",
   "@recentTransactionsTitle": { "description": "App bar title for the recent transactions screen." },
@@ -942,6 +962,9 @@
 
   "backendConfigUrlScheme": "URL must start with http:// or https://",
   "@backendConfigUrlScheme": { "description": "Validation error when the backend URL is missing an http(s) scheme." },
+
+  "backendConfigCertificateRequiresHttps": "A custom CA certificate requires an https:// backend URL",
+  "@backendConfigCertificateRequiresHttps": { "description": "Validation error when a custom CA is configured for a non-HTTPS backend." },
 
   "backendConfigUrlInvalid": "Please enter a valid URL",
   "@backendConfigUrlInvalid": { "description": "Validation error when the backend URL is malformed." },

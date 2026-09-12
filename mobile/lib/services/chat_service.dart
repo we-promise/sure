@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/chat.dart';
 import '../models/message.dart';
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 class ChatService {
   /// Get list of chats with pagination
@@ -16,7 +16,7 @@ class ChatService {
         '${ApiConfig.baseUrl}/api/v1/chats?page=$page&per_page=$perPage',
       );
 
-      final response = await http.get(
+      final response = await ApiHttpClient.instance.get(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -73,7 +73,7 @@ class ChatService {
         '${ApiConfig.baseUrl}/api/v1/chats/$chatId?page=$page&per_page=$perPage',
       );
 
-      final response = await http.get(
+      final response = await ApiHttpClient.instance.get(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -132,7 +132,7 @@ class ChatService {
         body['message'] = initialMessage;
       }
 
-      final response = await http.post(
+      final response = await ApiHttpClient.instance.post(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -186,7 +186,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId/messages');
 
-      final response = await http.post(
+      final response = await ApiHttpClient.instance.post(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -241,7 +241,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId');
 
-      final response = await http.patch(
+      final response = await ApiHttpClient.instance.patch(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -295,7 +295,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId');
 
-      final response = await http.delete(
+      final response = await ApiHttpClient.instance.delete(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -367,7 +367,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId/messages/retry');
 
-      final response = await http.post(
+      final response = await ApiHttpClient.instance.post(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
