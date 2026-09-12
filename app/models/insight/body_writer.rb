@@ -31,7 +31,7 @@ class Insight::BodyWriter
     # fallback already follows I18n, so this keeps both paths in the same language.
     def language_instruction
       locale = family.locale.presence || I18n.default_locale.to_s
-      "- Write in the user's language (ISO 639-1 code: #{locale}).\n"
+      "- Write in the user's language (BCP 47 locale: #{locale}).\n"
     end
 
     def template_body(generated_insight)

@@ -23,8 +23,8 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
     assert_equal "Narrated body.", body
   end
 
-  test "tells the LLM to write in the family's locale" do
-    @family.update!(locale: "pl")
+  test "tells the LLM to write in the family's full locale tag" do
+    @family.update!(locale: "pt-BR")
     provider = FakeLlmProvider.new("Narrated body.")
     captured = nil
     provider.stubs(:chat_response).with { |*, **kwargs| captured = kwargs[:instructions]; true }
@@ -33,7 +33,7 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
 
     Insight::BodyWriter.new(@family).write(generated_insight)
 
-    assert_includes captured, "ISO 639-1 code: pl"
+    assert_includes captured, "BCP 47 locale: pt-BR"
   end
 
   test "falls back to the template and captures a debug log when the LLM call fails" do
