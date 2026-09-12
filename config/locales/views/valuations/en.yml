@@ -30,6 +30,7 @@ en:
       entry_updated: Entry updated
     errors:
       amount_required: Amount is required
+      duplicate_date: This date already has a balance update. Please refresh and try again.
     form:
       amount: Amount
       submit: Add balance update

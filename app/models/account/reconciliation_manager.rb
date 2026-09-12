@@ -14,9 +14,19 @@ class Account::ReconciliationManager
     prior_valuation_amount = prepared_valuation.amount_in_database
 
     unless dry_run
-      prepared_valuation.save!
-      contribution = valuation_contribution(prepared_valuation, prior_valuation_amount, old_balance_components)
-      GoalPledge::Reconciler.new(prepared_valuation, valuation_delta: contribution).run
+      # requires_new: true opens a savepoint rather than joining whatever
+      # transaction the caller may already be in (e.g.
+      # Api::V1::ValuationsController#create wraps this in its own
+      # transaction). Without it, a RecordNotUnique here would abort that
+      # entire outer transaction on PostgreSQL, and the retry lookup in the
+      # rescue below would itself fail with PG::InFailedSqlTransaction
+      # instead of finding the winning row - the savepoint keeps the failure
+      # contained to just this insert attempt.
+      ActiveRecord::Base.transaction(requires_new: true) do
+        prepared_valuation.save!
+        contribution = valuation_contribution(prepared_valuation, prior_valuation_amount, old_balance_components)
+        GoalPledge::Reconciler.new(prepared_valuation, valuation_delta: contribution).run
+      end
     end
 
     ReconciliationResult.new(
@@ -27,6 +37,40 @@ class Account::ReconciliationManager
       new_balance: prepared_valuation.amount,
       error_message: nil
     )
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+    # Concurrent-request backstop: another request reconciling the same
+    # account+date won the race and committed its valuation in the window
+    # between our `find_by(date:)` lookup above (in #prepare_reconciliation)
+    # and our own #save!. Depending on exactly when the winner commits
+    # relative to our own save, this shows up as either:
+    #   - ActiveRecord::RecordNotUnique - the winner's INSERT lands between
+    #     our lookup and our own INSERT, so the partial unique index on
+    #     entries(account_id, date) rejects us at the database level; or
+    #   - ActiveRecord::RecordInvalid on :date - the winner's row is already
+    #     visible by the time our own validations run (before we ever reach
+    #     the database), so Entry's model-level date-uniqueness validation
+    #     catches it first.
+    # Either way, retry once against the now-existing row so the request
+    # that lost the race still applies its balance, instead of surfacing a
+    # raw DB/validation error to the user. A RecordInvalid for any other
+    # reason isn't this race - fall through to the generic failure below.
+    is_date_uniqueness_race = e.is_a?(ActiveRecord::RecordNotUnique) ||
+      e.record.errors.of_kind?(:date, :taken)
+
+    winning_valuation = is_date_uniqueness_race && existing_valuation_entry.nil? && find_existing_valuation_for_date(date)
+
+    if winning_valuation
+      reconcile_balance(balance: balance, date: date, dry_run: dry_run, existing_valuation_entry: winning_valuation)
+    else
+      # RecordNotUnique carries the raw Postgres exception text (including
+      # the internal index name), which must never reach end users. Swap in
+      # the same friendly message Entry's own uniqueness validation already
+      # produces for the sibling RecordInvalid case.
+      ReconciliationResult.new(
+        success?: false,
+        error_message: e.is_a?(ActiveRecord::RecordNotUnique) ? I18n.t("valuations.errors.duplicate_date") : e.message
+      )
+    end
   rescue => e
     ReconciliationResult.new(
       success?: false,
@@ -82,7 +126,7 @@ class Account::ReconciliationManager
 
     def prepare_reconciliation(balance, date, existing_valuation)
       valuation_record = existing_valuation ||
-                         account.entries.valuations.find_by(date: date) || # In case of conflict, where existing valuation is not passed as arg, but one exists
+                         find_existing_valuation_for_date(date) || # In case of conflict, where existing valuation is not passed as arg, but one exists
                          account.entries.build(
                                   name: Valuation.build_reconciliation_name(account.accountable_type),
                                   entryable: Valuation.new(kind: "reconciliation")
@@ -95,6 +139,10 @@ class Account::ReconciliationManager
       )
 
       valuation_record
+    end
+
+    def find_existing_valuation_for_date(date)
+      account.entries.valuations.find_by(date: date)
     end
 
     def derived_cash_balance(date:, total_balance:)
