@@ -16,6 +16,10 @@ en:
       title: Are you sure?
     money_field:
       label: Amount
+      operator_add: Add
+      operator_subtract: Subtract
+      operator_multiply: Multiply
+      operator_divide: Divide
     exchange_rate_tabs:
       calculate_rate_tab: Calculate FX rate
       convert_tab: Convert with FX rate
