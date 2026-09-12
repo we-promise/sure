@@ -1,0 +1,17 @@
+<%# locals: (form:) %>
+
+<div class="p-2 space-y-3">
+  <% Entry.reconciled_statuses.keys.each do |status| %>
+    <div class="flex items-center gap-3" data-filter-name="<%= status %>">
+      <%= form.check_box :reconcile_status,
+                             {
+                               multiple: true,
+                               checked: @q[:reconcile_status]&.include?(status),
+                               class: "checkbox checkbox--light"
+                             },
+                             status,
+                             nil %>
+      <%= form.label :reconcile_status, t("transactions.reconcile.statuses.#{status}"), value: status, class: "text-sm text-primary" %>
+    </div>
+  <% end %>
+</div>

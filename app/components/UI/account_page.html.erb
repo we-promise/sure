@@ -2,7 +2,7 @@
 
 <%= turbo_frame_tag id do %>
   <%= tag.div class: "space-y-4 pb-5 lg:pb-32" do %>
-    <%= render "accounts/show/header", account: account, title: title, subtitle: subtitle %>
+    <%= render "accounts/show/header", account: account, title: title, subtitle: subtitle, reconciliation_indicator: reconciliation_indicator %>
 
     <%= render UI::Account::Chart.new(account: account, period: chart_period, view: chart_view) %>
 

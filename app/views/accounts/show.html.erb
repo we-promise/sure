@@ -6,6 +6,7 @@
       statement_coverage: @statement_coverage,
       statements: @account_statements,
       reconciliation_statuses: @statement_reconciliation_statuses,
+      reconciliation_indicator: @reconciliation_indicator,
       can_manage_statements: @can_manage_statements
     ) do |account_page| %>
   <%= account_page.with_activity_feed(feed_data: @activity_feed_data, pagy: @pagy, search: @q[:search]) %>

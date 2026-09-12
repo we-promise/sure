@@ -1,4 +1,4 @@
-<%# locals: (account:, size: "md", color: nil) %>
+<%# locals: (account:, size: "md", color: nil, reconciliation_indicator: nil) %>
 
 <% size_classes = {
   "sm" => "w-6 h-6",
@@ -7,16 +7,39 @@
   "full" => "w-full h-full"
 } %>
 
-<% if account.logo_url.present? %>
-  <%= image_tag account.logo_url,
-        class: "shrink-0 rounded-full #{size_classes[size]}",
-        loading: "lazy" %>
-<% else %>
-  <%= render DS::FilledIcon.new(
-        variant: :text,
-        hex_color: color || account.accountable&.color,
-        text: account.name,
-        size: size,
-        rounded: true
-      ) %>
-<% end %>
+<div class="relative shrink-0">
+  <% if account.logo_url.present? %>
+    <%= image_tag account.logo_url,
+          class: "rounded-full #{size_classes[size]}",
+          loading: "lazy" %>
+  <% else %>
+    <%= render DS::FilledIcon.new(
+          variant: :text,
+          hex_color: color || account.accountable&.color,
+          text: account.name,
+          size: size,
+          rounded: true
+        ) %>
+  <% end %>
+
+  <% if reconciliation_indicator.present? %>
+    <% if reconciliation_indicator == :matched %>
+      <%= render DS::Tooltip.new(
+            text: t("accounts.reconciliation_indicator.matched"),
+            as: :span,
+            trigger_content: tag.span(
+              icon("check", class: "w-2 h-2 text-inverse"),
+              class: "absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border border-container bg-success"
+            )
+          ) %>
+    <% else %>
+      <%= render DS::Tooltip.new(
+            text: t("accounts.reconciliation_indicator.needs_attention"),
+            as: :span,
+            trigger_content: tag.span(
+              class: "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-container bg-warning"
+            )
+          ) %>
+    <% end %>
+  <% end %>
+</div>

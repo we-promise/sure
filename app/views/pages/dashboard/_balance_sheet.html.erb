@@ -76,7 +76,7 @@
                   <% account_group.accounts.each_with_index do |account, idx| %>
                     <div class="pl-7 pr-4 py-3 flex items-center justify-between text-sm font-medium">
                       <div class="flex items-center gap-2">
-                        <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
+                        <%= render "accounts/logo", account: account, size: "sm", color: account_group.color, reconciliation_indicator: @reconciliation_indicators[account.id] %>
 
                         <%= link_to account.name, account_path(account) %>
                       </div>

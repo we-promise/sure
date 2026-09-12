@@ -3,21 +3,43 @@ class Transactions::BulkUpdatesController < ApplicationController
   end
 
   def create
-    # Skip split parents from bulk update - update children instead
+    # Reject an out-of-range reconciled_status before it ever reaches
+    # bulk_update! — the enum's `validate: true` means an invalid value
+    # would otherwise raise ActiveRecord::RecordInvalid partway through the
+    # bulk transaction. The single-row TransactionsController#reconcile
+    # action can't hit this (advance_reconciled_status! only ever assigns a
+    # value from RECONCILED_STATUS_CYCLE), but this form field takes
+    # arbitrary user input, so it needs the same graceful-failure handling.
+    reconciled_status = bulk_update_params[:reconciled_status]
+    if reconciled_status.present? && !Entry.reconciled_statuses.key?(reconciled_status)
+      redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
+      return
+    end
+
+    # Skip split parents from bulk update - update children instead.
+    # Scope to accounts the current user can actually write to — family
+    # membership alone isn't enough (e.g. a read_only account share). Entries
+    # on accounts the user can't write to are silently excluded from the
+    # selection, the same "skip, don't error" posture bulk_update! already
+    # uses for reconciled_status on synced accounts.
     updated = Current.family
                      .entries
+                     .where(account_id: Account.writable_by(Current.user).select(:id))
                      .excluding_split_parents
                      .where(id: bulk_update_params[:entry_ids])
                      .includes(:entryable)
                      .bulk_update!(bulk_update_params, update_tags: tags_provided?)
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
+  rescue ActiveRecord::RecordInvalid => e
+    Rails.logger.error("Bulk update failed: #{e.message}")
+    redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
   end
 
   private
     def bulk_update_params
       params.require(:bulk_update)
-            .permit(:date, :notes, :name, :category_id, :merchant_id, entry_ids: [], tag_ids: [])
+            .permit(:date, :notes, :name, :category_id, :merchant_id, :reconciled_status, entry_ids: [], tag_ids: [])
     end
 
     # Check if tag_ids was explicitly provided in the request.

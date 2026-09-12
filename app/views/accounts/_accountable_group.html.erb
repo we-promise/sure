@@ -1,4 +1,4 @@
-<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, **args) %>
+<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, reconciliation_indicators: {}, **args) %>
 
 <div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>">
   <% is_open = open.nil? ? account_group.accounts.any? { |account| page_active?(account_path(account)) } : open %>
@@ -29,7 +29,7 @@
                     page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
                   ),
                   title: account.name do %>
-          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
+          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color, reconciliation_indicator: reconciliation_indicators[account.id] %>
 
           <div class="min-w-0 grow">
             <div class="flex items-center gap-2 mb-0.5">
