@@ -9,6 +9,34 @@ class PlaidItemTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:plaid_provider_for_region).returns(@plaid_provider)
   end
 
+  test "supports products granted through additional_consented_products" do
+    # Plaid reports products consented to at Link time -- but not yet billed --
+    # in consented_products, which is neither available_products nor
+    # billed_products. A credit-card item looks exactly like this: `liabilities`
+    # is billed, while `transactions` is only consented.
+    @plaid_item.update!(
+      available_products: [ "balance" ],
+      billed_products: [ "liabilities" ],
+      raw_payload: { "consented_products" => [ "transactions", "liabilities", "investments" ] }
+    )
+
+    assert @plaid_item.supports_product?("transactions")
+    assert @plaid_item.supports_product?("liabilities")
+    assert @plaid_item.supports_product?("balance")
+    assert_not @plaid_item.supports_product?("assets")
+  end
+
+  test "supported products tolerate a missing or non-hash raw payload" do
+    @plaid_item.update!(
+      available_products: [ "balance" ],
+      billed_products: [ "transactions" ],
+      raw_payload: nil
+    )
+
+    assert @plaid_item.supports_product?("transactions")
+    assert_not @plaid_item.supports_product?("liabilities")
+  end
+
   test "removes plaid item when destroyed" do
     @plaid_provider.expects(:remove_item).with(@plaid_item.access_token).once
 
