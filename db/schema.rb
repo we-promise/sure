@@ -598,6 +598,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.jsonb "raw_payload"
     t.jsonb "raw_transactions_payload"
     t.boolean "treat_balance_as_available_credit", default: false, null: false
+    t.date "sync_start_date"
     t.string "uid"
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_enable_banking_accounts_on_account_id"
