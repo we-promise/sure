@@ -36,10 +36,12 @@ de:
         exchange_rate_provider_label: Wechselkursanbieter
         securities_provider_label: Wertpapiere (Aktienkurse) Anbieter
         env_configured_message: Die Anbieterauswahl ist deaktiviert, weil Umgebungsvariablen (EXCHANGE_RATE_PROVIDER oder SECURITIES_PROVIDER) gesetzt sind. Um die Auswahl hier zu aktivieren, entferne diese Umgebungsvariablen aus deiner Konfiguration.
+        bibit_hint: kostenlos, kein API-Schlüssel – indonesische Reksadana (Investmentfonds)
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
           alpha_vantage: Alpha Vantage
+          bibit: Bibit
           binance_public: Binance
           eodhd: EODHD
           frankfurter: Frankfurter
