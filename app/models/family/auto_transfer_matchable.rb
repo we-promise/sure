@@ -5,7 +5,13 @@ module Family::AutoTransferMatchable
   # with several similar transactions in flight. It therefore gets a wider
   # date-tolerance window to absorb bank clearing delays; transactions
   # without a confirmed IBAN keep the existing, narrower window unchanged.
-  IBAN_CONFIRMED_DATE_WINDOW = 14
+  #
+  # Matches Transfer#transfer_within_date_range's own 30-day cap for
+  # status: "confirmed" (the status this match gets once it needs the wider
+  # window at all) -- a narrower value here would make the SQL candidate
+  # lookup itself exclude confirmed-eligible matches between that value and
+  # 30 days, before the model validation ever got a chance to allow them.
+  IBAN_CONFIRMED_DATE_WINDOW = 30
   DEFAULT_DATE_WINDOW = 4
 
   def transfer_match_candidates(
