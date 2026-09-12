@@ -9,6 +9,7 @@ class Investment < ApplicationRecord
   SUBTYPES = {
     # === United States ===
     "brokerage" => { short: "Brokerage", long: "Brokerage", region: "us", tax_treatment: :taxable },
+    "cash_management" => { short: "CMA", long: "Cash Management Account", region: "us", tax_treatment: :taxable },
     "401k" => { short: "401(k)", long: "401(k)", region: "us", tax_treatment: :tax_deferred },
     "roth_401k" => { short: "Roth 401(k)", long: "Roth 401(k)", region: "us", tax_treatment: :tax_exempt },
     "403b" => { short: "403(b)", long: "403(b)", region: "us", tax_treatment: :tax_deferred },
