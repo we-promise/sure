@@ -621,6 +621,10 @@ pl:
         sync_start_date_hint: Przelewy sprzed tej daty są ignorowane. Zostaw puste,
           aby zaimportować wszystko, co zgłasza eksplorator.
         sync_start_date_label: Ignoruj przelewy sprzed
+      open_banking_io_panel:
+        step_1_html: "Przejdź do %{link}, połącz swój bank i wyeksportuj swoje dane uwierzytelniające."
+        step_2: "Otwórz pobrany plik credentials.json."
+        step_3: "Wklej poniżej całą jego zawartość, zapisz, a następnie połącz zsynchronizowane konta."
       plaid_eu_panel:
         step_1_html: Otwórz %{link} i skopiuj swój europejski Client ID oraz Secret
           Key.

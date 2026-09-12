@@ -189,6 +189,7 @@ class Settings::ProvidersController < ApplicationController
     # them (see prepare_show_context).
     FAMILY_PANELS = [
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
+      { key: "open_banking_io", title: "open-banking.io", turbo_id: "open_banking_io", partial: "open_banking_io_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
@@ -218,6 +219,7 @@ class Settings::ProvidersController < ApplicationController
     # Maps panel key → ActiveRecord model name for sync health queries
     PANEL_SYNCABLE_TYPES = {
       "akahu"          => "AkahuItem",
+      "open_banking_io" => "OpenBankingIoItem",
       "up"             => "UpItem",
       "monobank"       => "MonobankItem",
       "simplefin"      => "SimplefinItem",
@@ -246,6 +248,8 @@ class Settings::ProvidersController < ApplicationController
       case provider_key
       when "akahu"
         @akahu_items = Current.family.akahu_items.active.ordered
+      when "open_banking_io"
+        @open_banking_io_items = Current.family.open_banking_io_items.active.ordered
       when "up"
         @up_items = Current.family.up_items.active.ordered
       when "monobank"
@@ -302,6 +306,7 @@ class Settings::ProvidersController < ApplicationController
       end
 
       @akahu_items = Current.family.akahu_items.active.ordered
+      @open_banking_io_items = Current.family.open_banking_io_items.active.ordered
       @up_items = Current.family.up_items.active.ordered
       @monobank_items = Current.family.monobank_items.active.ordered
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
@@ -344,6 +349,7 @@ class Settings::ProvidersController < ApplicationController
     def family_panel_items
       {
         "akahu"          => @akahu_items,
+        "open_banking_io" => @open_banking_io_items,
         "up"             => @up_items,
         "monobank"       => @monobank_items,
         "simplefin"      => @simplefin_items,

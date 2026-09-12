@@ -445,6 +445,10 @@ ca:
         sync_error: Error de sincronització
       not_authorized: No autoritzat
       not_found: Proveïdor no trobat.
+      open_banking_io_panel:
+        step_1_html: "Ves a %{link}, connecta el teu banc i exporta les teves credencials."
+        step_2: "Obre el fitxer credentials.json descarregat."
+        step_3: "Enganxa'n tot el contingut a sota, desa i després vincula els comptes sincronitzats."
       plaid_eu_panel:
         step_1_html: Obre el %{link} i copia el teu Client ID i Secret Key d'UE.
       plaid_panel:
@@ -484,6 +488,7 @@ ca:
       sync_provider_in_progress: Sincronització iniciada.
       sync_provider_no_items: No hi ha connexions disponibles per sincronitzar.
       taglines:
+        open_banking_io: "Sincronitza comptes bancaris europeus amb open-banking.io."
         binance: Sincronitza els teus saldos spot de Binance utilitzant una clau API
           de només lectura.
         brex: Sincronitza l'activitat d'efectiu i targeta corporativa de Brex amb

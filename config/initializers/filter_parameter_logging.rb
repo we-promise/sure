@@ -10,5 +10,11 @@ Rails.application.config.filter_parameters += [
   # A device code redeems into tokens on its own, so it is a bearer credential in
   # transit; verification_uri_complete embeds the user code, hence all three.
   :device_code, :user_code, :verification_uri_complete,
-  :bank_username, :bank_password, :security_answers, :captcha_input
+  :bank_username, :bank_password, :security_answers, :captcha_input,
+  :bank_username, :bank_password, :security_answers, :captcha_input,
+  # Whole-bundle credential pastes. open-banking.io's `credentials_json` carries an API key
+  # AND the PKCS#8 private key that decrypts every zero-knowledge envelope, and it matches
+  # none of the substrings above -- unlike `app_token`/`api_key`, which `:token`/`:_key`
+  # already cover for the other providers.
+  :credentials_json, :private_key
 ]
