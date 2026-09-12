@@ -232,9 +232,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "matches an iban-confirmed transfer up to 14 days apart, beyond the default 4-day window" do
+  test "matches an iban-confirmed transfer up to 30 days apart, beyond the default 4-day window" do
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
-    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow = create_transaction(date: 28.days.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(extra: { "counterparty_iban" => "DE89 3704 0044 0532 0130 00" })
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
@@ -245,10 +245,10 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
   test "an iban-confirmed match inside the default window still stays pending for review" do
     # IBAN confirmation only needs to force status: "confirmed" when a match
-    # would otherwise be rejected by the 4-day default window (see the 14-day
-    # test above). Within the default window it would have matched without
-    # any IBAN signal at all, so it must not skip user review just because
-    # it also happens to be IBAN-confirmed.
+    # would otherwise be rejected by the 4-day default window (see the
+    # 30-day test above). Within the default window it would have matched
+    # without any IBAN signal at all, so it must not skip user review just
+    # because it also happens to be IBAN-confirmed.
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
@@ -260,9 +260,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "pending", transfer.status
   end
 
-  test "still does not match beyond 14 days even with a confirmed iban" do
+  test "still does not match beyond 30 days even with a confirmed iban" do
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
-    outflow = create_transaction(date: 20.days.ago.to_date, account: @depository, amount: 500)
+    outflow = create_transaction(date: 31.days.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
