@@ -258,6 +258,24 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal category, outflow_entry.entryable.category
   end
 
+  test "auto-matched investment-to-investment transfers remain funds movements" do
+    source = accounts(:investment)
+    destination = @family.accounts.create!(
+      name: "Rollover IRA",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    outflow_entry = create_transaction(date: Date.current, account: source, amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: destination, amount: -500)
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", outflow_entry.reload.entryable.kind
+    assert_nil outflow_entry.entryable.category
+    assert_equal "funds_movement", inflow_entry.reload.entryable.kind
+  end
+
   test "auto-matched investment transfers reuse contribution category lookup" do
     investment = accounts(:investment)
     category = @family.investment_contributions_category
@@ -272,6 +290,30 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_difference -> { Transfer.count }, 2 do
       @family.auto_match_transfers!
     end
+  end
+
+  test "auto-matched investment to investment transfers remain funds movement" do
+    source = accounts(:investment)
+    destination = accounts(:crypto)
+    outflow_entry = create_transaction(date: Date.current, account: source, amount: 611)
+    inflow_entry = create_transaction(date: Date.current, account: destination, amount: -611)
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", outflow_entry.reload.entryable.kind
+    assert_equal "funds_movement", inflow_entry.reload.entryable.kind
+  end
+
+  test "auto-matched crypto to investment transfers remain funds movement" do
+    source = accounts(:crypto)
+    destination = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: source, amount: 613)
+    inflow_entry = create_transaction(date: Date.current, account: destination, amount: -613)
+
+    @family.auto_match_transfers!
+
+    assert_equal "funds_movement", outflow_entry.reload.entryable.kind
+    assert_equal "funds_movement", inflow_entry.reload.entryable.kind
   end
 
   test "does not match multi-currency transfer with missing exchange rate" do

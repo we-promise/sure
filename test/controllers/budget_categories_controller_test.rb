@@ -187,7 +187,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     # appearing under whatever category they retained (or under
     # Uncategorized once the matcher cleared the category). Filter
     # them out so the drilldown matches the aggregate.
-    create_transaction(
+    outflow = create_transaction(
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
@@ -200,6 +200,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       name: "BUG_1059_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
+    Transfer.find_by!(outflow_transaction: outflow.entryable).confirm!
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
@@ -207,6 +208,30 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       "matched cc_payment outflow must not appear in Uncategorized drilldown"
     refute_includes @response.body, "BUG_1059_REPRO_INFLOW",
       "matched funds_movement inflow must not appear in Uncategorized drilldown"
+  end
+
+  test "show drilldown includes matched loan_payment transfers" do
+    # Loan payments are real cash outflows, so their confirmed transfer match
+    # must not hide them from the budget aggregate or its drilldown.
+    outflow = create_transaction(
+      date: @budget.start_date,
+      account: accounts(:depository),
+      amount: 500,
+      name: "MORTGAGE_REPRO_OUTFLOW"
+    )
+    create_transaction(
+      date: @budget.start_date,
+      account: accounts(:loan),
+      amount: -500,
+      name: "MORTGAGE_REPRO_INFLOW"
+    )
+    @family.auto_match_transfers!
+    Transfer.find_by!(outflow_transaction: outflow.entryable).confirm!
+
+    get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
+    assert_response :success
+    assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
+      "matched loan_payment outflow must appear in Uncategorized drilldown"
   end
 
   test "show and update do not leak another member's personal budget category" do
@@ -227,7 +252,7 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 999.0, other_budget_category.reload.budgeted_spending.to_f
   end
 
-  test "show drilldown still lists loan_payment transfers (intentionally budget-tracked)" do
+  test "show drilldown still lists pending loan_payment transfers" do
     # loan_payment is NOT in BUDGET_EXCLUDED_KINDS. The drilldown should
     # keep showing loan_payment transfers so the user can see what's
     # under Uncategorized (or whichever category they manually set).
@@ -235,20 +260,20 @@ class BudgetCategoriesControllerTest < ActionDispatch::IntegrationTest
       date: @budget.start_date,
       account: accounts(:depository),
       amount: 500,
-      name: "MORTGAGE_REPRO_OUTFLOW"
+      name: "MORTGAGE_PENDING_REPRO_OUTFLOW"
     )
     create_transaction(
       date: @budget.start_date,
       account: accounts(:loan),
       amount: -500,
-      name: "MORTGAGE_REPRO_INFLOW"
+      name: "MORTGAGE_PENDING_REPRO_INFLOW"
     )
     @family.auto_match_transfers!
 
     get budget_budget_category_path(@budget, BudgetCategory.uncategorized.id)
     assert_response :success
-    assert_includes @response.body, "MORTGAGE_REPRO_OUTFLOW",
-      "loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
+    assert_includes @response.body, "MORTGAGE_PENDING_REPRO_OUTFLOW",
+      "pending loan_payment outflow remains visible (kind is not BUDGET_EXCLUDED)"
   end
 
   # --- move (Lot A2) ---

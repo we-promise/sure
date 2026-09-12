@@ -104,6 +104,7 @@ class Category < ApplicationRecord
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY = "investment_contributions"
   DEFAULT_CATEGORY_TRANSLATION_KEYS = %w[
     income
     food_and_drink
@@ -225,10 +226,25 @@ class Category < ApplicationRecord
     end
 
     def bootstrap!
-      default_categories.each do |name, color, icon|
-        find_or_create_by!(name: name) do |category|
-          category.color = color
-          category.lucide_icon = icon
+      default_categories.each do |name, color, icon, default_key|
+        category = if default_key
+          find_by(default_key: default_key) || find_by(name: name)
+        else
+          find_by(name: name)
+        end
+
+        if default_key && category.nil?
+          candidates = where(color: "#0d9488", lucide_icon: "trending-up", parent_id: nil)
+            .where(id: Transaction.joins(:transfer_as_outflow)
+              .where(kind: "investment_contribution", transfers: { status: "confirmed" })
+              .select(:category_id))
+          category = candidates.first if candidates.one?
+        end
+
+        if category
+          category.update!(default_key: default_key) if default_key && category.default_key != default_key
+        else
+          create!(name: name, color: color, lucide_icon: icon, default_key: default_key)
         end
       end
     end
@@ -335,7 +351,7 @@ class Category < ApplicationRecord
           [ I18n.t("models.category.defaults.services"),              "#7c3aed", "briefcase" ],
           [ I18n.t("models.category.defaults.fees"),                  "#6b7280", "receipt" ],
           [ I18n.t("models.category.defaults.savings_and_investments"), "#059669", "piggy-bank" ],
-          [ investment_contributions_name,                       "#0d9488", "trending-up" ]
+          [ investment_contributions_name,                       "#0d9488", "trending-up", INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY ]
         ]
       end
   end

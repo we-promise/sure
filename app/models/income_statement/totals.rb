@@ -1,12 +1,14 @@
 class IncomeStatement::Totals
+  include IncomeStatement::TransferFiltering
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, include_investment_contributions: true)
     @family = family
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades
     @included_account_ids = included_account_ids
+    @include_investment_contributions = include_investment_contributions
 
     validate_date_range!
   end
@@ -72,6 +74,7 @@ class IncomeStatement::Totals
         LEFT JOIN categories c ON c.id = at.category_id
         #{exchange_rates_join_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+          AND (#{transfer_filter_sql("at")})
           AND ae.excluded = false
           AND a.family_id = :family_id
           AND a.status IN ('draft', 'active')
@@ -97,6 +100,7 @@ class IncomeStatement::Totals
         LEFT JOIN categories c ON c.id = at.category_id
         #{exchange_rates_join_sql}
         WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
+          AND (#{transfer_filter_sql("at")})
           #{investment_activity_label_sql("at")}
           AND ae.excluded = false
           AND a.family_id = :family_id

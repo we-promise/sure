@@ -170,6 +170,11 @@ export default class extends Controller {
   }
 
   #navigateToTransactions(d) {
+    if (d.transactions_url) {
+      Turbo.visit(d.transactions_url);
+      return;
+    }
+
     if (!isNavigableCategoryNode(d.id)) {
       // Structural node (Cash Flow / Surplus): keep current zoom behavior.
       this.#zoomIn(d);

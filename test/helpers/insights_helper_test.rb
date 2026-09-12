@@ -70,7 +70,7 @@ class InsightsHelperTest < ActionView::TestCase
   end
 
   test "meta line labels a forward-looking window as next N days" do
-    travel_to Date.new(2026, 8, 1) do
+    travel_to Date.new(2026, 7, 15) do
       insight = build_insight(
         "cash_flow_warning",
         period_start: Date.current,

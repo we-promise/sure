@@ -5,6 +5,21 @@ class CategoryTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
+  test "bootstrap does not claim an unrelated matching category" do
+    family = Family.create!(name: "Category bootstrap family")
+    unrelated = family.categories.create!(
+      name: "Growth",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    family.categories.bootstrap!
+
+    assert_nil unrelated.reload.default_key
+    assert_equal Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY,
+      family.categories.find_by(name: Category.investment_contributions_name).default_key
+  end
+
   test "replacing and destroying" do
     transactions = categories(:food_and_drink).transactions.to_a
 
