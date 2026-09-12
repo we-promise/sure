@@ -1,22 +1,4 @@
 <%# locals: (account:, size: "md", color: nil) %>
 
-<% size_classes = {
-  "sm" => "w-6 h-6",
-  "md" => "w-9 h-9",
-  "lg" => "w-10 h-10",
-  "full" => "w-full h-full"
-} %>
+<%= render LogoWithFallback.new(account: account, size: size, color: color) %>
 
-<% if account.logo_url.present? %>
-  <%= image_tag account.logo_url,
-        class: "shrink-0 rounded-full #{size_classes[size]}",
-        loading: "lazy" %>
-<% else %>
-  <%= render DS::FilledIcon.new(
-        variant: :text,
-        hex_color: color || account.accountable&.color,
-        text: account.name,
-        size: size,
-        rounded: true
-      ) %>
-<% end %>

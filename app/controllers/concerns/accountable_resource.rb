@@ -59,24 +59,45 @@ module AccountableResource
   end
 
   def update
+    # Assign update_params without persisting first, then wrap the account save
+    # and balance update in a single transaction to ensure atomicity.
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+
     # Handle balance update if the value actually changed
     if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
-      result = @account.set_current_balance(account_params[:balance].to_d)
-      unless result.success?
-        @error_message = result.error_message
+      # Wrap both operations in a transaction
+      Account.transaction do
+        # First assign and validate all attributes
+        @account.assign_attributes(update_params)
+        unless @account.valid?
+          @error_message = @account.errors.full_messages.join(", ")
+          render :edit, status: :unprocessable_entity
+          return
+        end
+
+        # Save the account first
+        @account.save!
+
+        # Then update the balance
+        # Capture attributes saved before set_current_balance performs another save
+        @account.lock_saved_attributes!
+        result = @account.set_current_balance(account_params[:balance].to_d)
+        unless result.success?
+          @error_message = result.error_message
+          render :edit, status: :unprocessable_entity
+          raise ActiveRecord::Rollback
+        end
+      end
+      # Return immediately after successful transaction to prevent fall-through
+      # to the success redirect below (which would cause double-render if the
+      # transaction was rolled back).
+      return
+    else
+      unless @account.update(update_params)
+        @error_message = @account.errors.full_messages.join(", ")
         render :edit, status: :unprocessable_entity
         return
       end
-    end
-
-    # Update remaining account attributes. Note: currency is intentionally allowed
-    # here so all account types (depositories, credit cards, loans, etc.) can
-    # have their currency changed via this shared update path.
-    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
-    unless @account.update(update_params)
-      @error_message = @account.errors.full_messages.join(", ")
-      render :edit, status: :unprocessable_entity
-      return
     end
 
     @account.lock_saved_attributes!
@@ -112,7 +133,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
-        :enable_category_matcher,
+        :enable_category_matcher, :logo, :logo_source,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

@@ -65,4 +65,76 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='account[enable_category_matcher]']", 0
   end
+
+  # Regression for the broken manual icon: the form submits a multipart logo
+  # and logo_source=manual (set by the logo-source controller on file select).
+  # The uploaded blob must actually be served, not just attached — the bytes
+  # used to be lost to a dropped after-commit upload, leaving a 404ing icon.
+  test "create with a manually uploaded logo serves the uploaded file" do
+    assert_difference -> { Account.count } => 1 do
+      post depositories_path, params: {
+        account: {
+          name: "Manual Logo Checking",
+          currency: "USD",
+          balance: 100,
+          accountable_type: "Depository",
+          subtype: "checking",
+          logo: fixture_file_upload("square-placeholder.png", "image/png"),
+          logo_source: "manual"
+        }
+      }
+    end
+
+    account = @user.family.accounts.find_by!(name: "Manual Logo Checking")
+    assert account.logo_source_manual?
+    assert account.logo.attached?
+
+    # The blob URL redirects to the storage service URL; follow it to prove
+    # the actual bytes are served (a missing file 404s here).
+    get account.logo_url
+    follow_redirect!
+    assert_response :success, "the manually uploaded logo URL must not be broken"
+    assert_equal account.logo.blob.download, response.body
+  end
+
+  # Same flow when the logo-source JS never ran and the hidden field still
+  # carries "auto": the upload itself must still be stored correctly.
+  test "create with an uploaded logo and an auto source still stores the file" do
+    assert_difference -> { Account.count } => 1 do
+      post depositories_path, params: {
+        account: {
+          name: "Auto Logo Checking",
+          currency: "USD",
+          balance: 100,
+          accountable_type: "Depository",
+          subtype: "checking",
+          logo: fixture_file_upload("square-placeholder.png", "image/png"),
+          logo_source: "auto"
+        }
+      }
+    end
+
+    account = @user.family.accounts.find_by!(name: "Auto Logo Checking")
+    assert account.logo.attached?
+
+    get account.logo_url
+    follow_redirect!
+    assert_response :success, "the uploaded logo URL must not be broken even when the source stayed auto"
+  end
+
+  # The form previews a stored logo; the broken-image fallback wiring must be
+  # present so a stored-but-broken logo never renders as a broken <img>.
+  test "edit form renders the broken-image fallback wiring for a stored logo" do
+    @account.logo.attach(
+      io: StringIO.new("some-logo"),
+      filename: "logo.png",
+      content_type: "image/png"
+    )
+
+    get edit_account_url(@account)
+    assert_response :success
+    assert_select "[data-controller='image-fallback']"
+    assert_select "img[data-image-fallback-target='image']"
+    assert_select "[data-image-fallback-target='fallback']"
+  end
 end

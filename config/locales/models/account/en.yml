@@ -14,6 +14,13 @@ en:
       label: Name (Z-A)
       label_short: Name ↓
   activerecord:
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_type: "must be an image (PNG, JPEG, GIF, WebP, AVIF, HEIC, or SVG)"
+              too_large: "is too large (maximum is %{max_megabytes} MB)"
     attributes:
       account:
         balance: Balance

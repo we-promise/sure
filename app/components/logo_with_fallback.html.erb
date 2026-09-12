@@ -1,0 +1,28 @@
+<% if account.logo_url.present? %>
+  <%# image-fallback swaps a broken logo (missing blob bytes, corrupt image,
+      or a failed remote Brandfetch/favicon URL) for the default filled icon
+      so the user never sees a broken image. %>
+  <div class="shrink-0" data-controller="image-fallback">
+    <%= image_tag account.logo_url,
+          class: "rounded-full #{size_class}",
+          loading: "lazy",
+          data: { image_fallback_target: "image" } %>
+    <div class="hidden #{size_class} flex items-center justify-center" data-image-fallback-target="fallback">
+      <%= render DS::FilledIcon.new(
+            variant: :text,
+            hex_color: fallback_icon_color,
+            text: account.name,
+            size: icon_size,
+            rounded: true
+          ) %>
+    </div>
+  </div>
+<% else %>
+  <%= render DS::FilledIcon.new(
+        variant: :text,
+        hex_color: fallback_icon_color,
+        text: account.name,
+        size: icon_size,
+        rounded: true
+      ) %>
+<% end %>
