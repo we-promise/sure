@@ -119,6 +119,29 @@ class Transaction::Grouper::ByMerchantOrNameTest < ActiveSupport::TestCase
     assert_equal "Netflix", groups.last.grouping_key
   end
 
+  test "does not merge unrelated transactions that share the generic fallback name" do
+    create_transaction(account: @account, name: I18n.t("transactions.unknown_name"))
+    create_transaction(account: @account, name: I18n.t("transactions.unknown_name"))
+
+    groups = Transaction::Grouper::ByMerchantOrName.call(@family.entries)
+
+    assert_equal 2, groups.size
+    assert groups.all? { |g| g.entries.size == 1 }
+    assert(groups.all? { |g| g.grouping_key == I18n.t("transactions.unknown_name") })
+  end
+
+  test "still groups matching non-generic names together" do
+    create_transaction(account: @account, name: "AMZN MKTP US")
+    create_transaction(account: @account, name: "AMZN MKTP US")
+    create_transaction(account: @account, name: I18n.t("transactions.unknown_name"))
+
+    groups = Transaction::Grouper::ByMerchantOrName.call(@family.entries)
+
+    assert_equal 2, groups.size
+    amzn_group = groups.find { |g| g.grouping_key == "AMZN MKTP US" }
+    assert_equal 2, amzn_group.entries.size
+  end
+
   test "respects limit and offset" do
     create_transaction(account: @account, name: "A")
     create_transaction(account: @account, name: "B")
