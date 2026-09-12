@@ -323,7 +323,8 @@ RSpec.describe 'API V1 Transactions', type: :request do
                 type: :array,
                 items: { type: :string, format: :uuid },
                 description: 'Array of tag IDs to assign. Omit to preserve existing tags; use [] to clear all tags.'
-              }
+              },
+              user_modified: { type: :boolean, description: 'Whether provider syncs should preserve user-supplied transaction changes' }
             }
           }
         }

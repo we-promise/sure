@@ -169,6 +169,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         apply_refund_change!
         @entry.sync_account_later
         @entry.lock_saved_attributes!
+        @entry.mark_user_modified! if user_modified_requested?
 
         @transaction = @entry.transaction
         render :show
@@ -381,8 +382,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       )
     end
 
-    # An API client can opt a transaction it creates into the same
-    # sync-protection a manual edit gets (Entry#protected_from_sync?) -
+    # An API client can opt a transaction it creates or updates into the
+    # same sync-protection a manual edit gets (Entry#protected_from_sync?) -
     # useful for a client that owns its own writes into an account also
     # linked to a bank-sync provider (Plaid/SimpleFin/etc.), so the next
     # sync only links its external_id to the entry instead of overwriting

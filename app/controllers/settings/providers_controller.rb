@@ -190,7 +190,7 @@ class Settings::ProvidersController < ApplicationController
     FAMILY_PANELS = [
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
-      { key: "monobank",       title: "monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
+      { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
@@ -314,7 +314,7 @@ class Settings::ProvidersController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
-      @trading212_items = Current.family.trading212_items.ordered.select(:id)
+      @trading212_items = Current.family.trading212_items.ordered
       @trade_republic_items = Current.family.trade_republic_items.ordered.select(:id)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered

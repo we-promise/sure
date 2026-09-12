@@ -831,6 +831,38 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Transaction Name", response_data["name"]
   end
 
+  test "should protect transaction from provider sync when updated with user_modified true" do
+    update_params = {
+      transaction: {
+        name: "Client-owned Name",
+        user_modified: true
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal "Client-owned Name", response_data["name"]
+    assert_equal true, response_data["user_modified"]
+
+    entry = @transaction.entry.reload
+    assert entry.user_modified?
+    assert entry.protected_from_sync?
+  end
+
+  test "should not change user_modified on update by default" do
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Updated Name Only" } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal false, JSON.parse(response.body)["user_modified"]
+    assert_not @transaction.entry.reload.user_modified?
+  end
+
   test "should reject update with read-only API key" do
     update_params = {
       transaction: {

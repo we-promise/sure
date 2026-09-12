@@ -61,13 +61,13 @@ de:
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
       brand_fetch_settings:
-        description: Gib die von Brand Fetch bereitgestellte Client-ID ein.
+        description: Gib die von Brandfetch bereitgestellte Client-ID ein.
         label: Client-ID
         placeholder: Gib hier deine Client-ID ein
-        title: Brand Fetch Einstellungen
+        title: Brandfetch Einstellungen
         high_res_label: Hochauflösende Logos aktivieren
         high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40 abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
-        env_configured_message: Deine Brand-Fetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
+        env_configured_message: Deine Brandfetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
         setup_step_1_html: Öffne <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> und leg dir ein kostenloses Entwicklerkonto an.
         setup_step_2_html: Geh auf die Seite <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID“, um die ID sichtbar zu machen, und füg sie unten ein.
@@ -261,6 +261,7 @@ de:
         description: Trag einen T-Invest-API-Token mit Lesezugriff ein. Er holt Logos zu Wertpapieren – auch für Fonds und Anleihen, deren Kurse von MOEX kommen – und, wenn oben aktiviert, Kurse russischer Papiere.
         env_configured_message: Über die Umgebungsvariable TINKOFF_INVEST_API_KEY eingerichtet.
         label: API-Token
+        moex_only_notice: Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab.
         placeholder: T-Invest-API-Token hier eintragen
         show_details: "(Details anzeigen)"
         step_1: Öffne bei T-Bank den Bereich Investments, dann Einstellungen, dann API-Tokens (setzt ein eröffnetes Depot bei T-Bank voraus).

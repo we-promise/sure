@@ -257,7 +257,7 @@ module ApplicationHelper
     abs_qty = qty.abs
 
     precision = if exact
-      8     # "10.374"
+      18    # Preserve the full stored precision for crypto quantities
     elsif abs_qty >= 1
       1     # "10.4"
     elsif abs_qty >= 0.01
