@@ -126,6 +126,29 @@ de:
           start_principal: Die Restschuld zu Beginn dieses Tages
           start_value: Der Vermögenswert zu Beginn dieses Tages
       chart:
+        loan:
+          actual: "Erfasster Saldo"
+          aria_description: "Kreditsaldo-Diagramm. Erfasster Saldo %{current_balance}. Ursprünglich geplante Tilgung %{scheduled_payoff_date}. Voraussichtliche Tilgung ab dem heutigen Saldo %{projected_payoff_date}."
+          interest_added: "Zusätzliche Zinsen"
+          interest_saved: "Eingesparte Zinsen"
+          legend: "Diagrammreihen"
+          months_saved:
+            one: "%{count} Monat früher als geplant"
+            other: "%{count} Monate früher als geplant"
+          no_payoff: "mit der aktuellen Rate nicht erreicht"
+          not_converged: "Mit der aktuellen Rate ist dieser Saldo bis zum ursprünglichen Laufzeitende nicht getilgt; %{balloon} blieben offen."
+          on_schedule: "Im Plan"
+          projected: "Prognose ab heute"
+          projected_payoff: "Voraussichtliche Tilgung"
+          projection_basis: "Vergleicht den heute erfassten Saldo mit dem Saldo laut Tilgungsplan am selben Tag. Eine vor ihrem Fälligkeitstermin gebuchte Zahlung erscheint bis zu diesem Termin als Vorsprung, eine danach gebuchte als Rückstand."
+          scheduled: "Ursprünglicher Tilgungsplan"
+          table:
+            actual: "Erfasster Saldo"
+            date: "Datum"
+            projected: "Prognostizierter Saldo"
+            scheduled: "Geplanter Saldo"
+          today: "Heute"
+          view_as_table: "Diagrammdaten als Tabelle anzeigen"
         no_data_available: Keine Daten vorhanden
         title:
           balance: Saldo

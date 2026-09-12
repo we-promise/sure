@@ -1,12 +1,16 @@
-<%# locals: (account:) %>
+<%# locals: (account:, as_of: Date.current) %>
 
+<%# `as_of` is the page's one reference date: the chart above the tabs and
+    this table shade "past" against the same day. %>
+<% today = as_of %>
 <% schedule = account.loan.amortization_schedule %>
 <% payments = schedule.payments %>
-<% today = Date.current %>
 
 <div class="space-y-4">
   <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-    <%= summary_card title: t(".monthly_payment") do %>
+    <%# A re-amortising loan has no single monthly payment, so the card says
+        which one this is rather than implying the figure holds for the term. %>
+    <%= summary_card title: schedule.re_amortising? ? t(".opening_payment") : t(".monthly_payment") do %>
       <%= format_money schedule.periodic_payment %>
     <% end %>
 
@@ -26,6 +30,10 @@
   <p class="text-sm text-secondary">
     <%= t(".description", start_date: l(account.loan.origination_date, format: :long)) %>
   </p>
+
+  <% if account.loan.variable_rate_type? %>
+    <p class="text-sm text-secondary"><%= t(".variable_rate_notice") %></p>
+  <% end %>
 
   <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 overflow-hidden">
     <div class="max-h-[32rem] overflow-y-auto overflow-x-auto">

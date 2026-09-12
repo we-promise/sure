@@ -77,6 +77,11 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    # One reference date for everything on the page that is date-sensitive:
+    # the chart, its projection, the cards and the Schedule tab. Read
+    # separately, a render crossing midnight shows a chart projecting from one
+    # date beside a table shaded against another.
+    @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
@@ -84,6 +89,13 @@ class AccountsController < ApplicationController
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
     end
+
+    # Only for a response that will actually show the chart card. The payload
+    # runs the schedule and the projection; a Turbo frame request for the
+    # activity feed's `entries` frame (its pagination) renders the whole page
+    # and keeps one frame, so building it there was a full simulation per page
+    # turn for nothing. Same reasoning as the statements-frame return above.
+    @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period) if chart_card_requested?
 
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?
@@ -312,6 +324,39 @@ class AccountsController < ApplicationController
   end
 
   private
+    # Built here rather than in the template: assembling a chart payload is
+    # domain work, and `show` asks for it exactly once per request, so there
+    # is nothing to memoise.
+    #
+    # The payload runs the schedule, the projection and a balance query from
+    # inputs this app does not fully control: `term_months` and `rate_type`
+    # arrive from providers, `start_date` and the rate schedule from the form,
+    # balances from sync. A raise in any of them costs the chart, not the page:
+    # nil is what the component already takes as "no chart", and the account
+    # page then renders exactly as it did before the chart existed. Reported,
+    # because a loan silently losing its chart is a bug someone has to see.
+    def loan_payoff_chart(account, as_of:, period:)
+      return nil unless account.accountable.is_a?(Loan)
+
+      Loan::PayoffChart.new(account.loan, as_of: as_of, period: period).payload
+    rescue StandardError => e
+      Rails.logger.error("Loan payoff chart failed for account #{account.id}: #{e.class} - #{e.message}")
+      Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: "Account", record_id: account.id) } if defined?(Sentry)
+      nil
+    end
+
+    # A plain visit, or a frame request for one of the two frames the chart
+    # card sits inside: the account's container frame and the chart card's own
+    # chart_details frame. Any other frame is rendered and then discarded.
+    def chart_card_requested?
+      return true unless turbo_frame_request?
+
+      request.headers["Turbo-Frame"].in?([
+        helpers.dom_id(@account, :container),
+        helpers.dom_id(@account, :chart_details)
+      ])
+    end
+
     def family
       Current.family
     end
