@@ -224,4 +224,14 @@ class CoinbaseItemTest < ActiveSupport::TestCase
 
     assert_equal I18n.t("coinbase_items.coinbase_item.sync_status.partial_sync", linked_count: 1, unlinked_count: 1), @coinbase_item.sync_status_summary
   end
+
+  test "declares credentials and raw payloads as encrypted" do
+    skip "Encryption not configured" unless CoinbaseItem.encryption_ready?
+
+    encrypted = CoinbaseItem.encrypted_attributes.map(&:to_s)
+    assert_includes encrypted, "api_key"
+    assert_includes encrypted, "api_secret"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
+  end
 end

@@ -1,7 +1,13 @@
 class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+
+  # Encrypt raw provider payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
+  end
 
   validates :name, presence: true
 

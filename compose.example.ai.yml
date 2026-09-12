@@ -70,7 +70,16 @@ x-db-env: &db_env
 
 x-rails-env: &rails_env
   <<: *db_env
-  SECRET_KEY_BASE: ${SECRET_KEY_BASE:-a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13}
+  # No default: a shared, publicly-known SECRET_KEY_BASE would let anyone
+  # forge session cookies and, since ACTIVE_RECORD_ENCRYPTION_* below are
+  # deterministically derived from it when unset, compute your encryption
+  # keys too. Generate your own with: openssl rand -hex 64
+  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file, e.g. openssl rand -hex 64}"
+  # Optional but recommended: set these explicitly instead of relying on the
+  # SECRET_KEY_BASE auto-derivation fallback. Generate with: bin/rails db:encryption:init
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:-}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:-}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:-}
   SELF_HOSTED: "true"
   RAILS_FORCE_SSL: "false"
   RAILS_ASSUME_SSL: "false"

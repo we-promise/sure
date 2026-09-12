@@ -4,6 +4,14 @@
 # three partial indexes — one per asset kind — because a native coin is
 # identified by its address while a token is identified by its contract.
 class OnchainWalletAccount < ApplicationRecord
+  include Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_movements_payload
+  end
+
   belongs_to :onchain_wallet_item
 
   has_one :account_provider, as: :provider, dependent: :destroy
