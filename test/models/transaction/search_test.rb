@@ -704,6 +704,52 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes result_ids, pending_match.entryable.id
   end
 
+  test "search matches a monobank counterparty iban nested under its own provider key" do
+    # Monobank stores its counterparty IBAN under extra["monobank"]["counter_iban"]
+    # instead of the shared top-level counterparty_iban key (see the rules
+    # condition filter's identical fallback), so search needs the same
+    # fallback for parity -- otherwise a Monobank user could filter by
+    # counterparty IBAN through Rules but not find it via search.
+    monobank_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Monobank Payment"
+    )
+    monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "NL91ABNA0417164300" } }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "NL91ABNA0417164300" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, monobank_match.entryable.id
+  end
+
+  test "search matches a monobank counterparty iban stored with spaces and lowercase" do
+    # MonobankEntry::Processor stores counter_iban as-is from the provider
+    # payload with no normalization, unlike Enable Banking's counterparty_iban,
+    # so the stored side needs the same normalization as the search term.
+    monobank_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Monobank Unnormalized Payment"
+    )
+    monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "nl91 abna 0417 1643 00" } }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "NL91ABNA0417164300" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, monobank_match.entryable.id
+  end
+
   test "uncategorized filter works regardless of current locale since the filter value is a stable sentinel" do
     # The category filter now matches on the stable Category::UNCATEGORIZED_FILTER_VALUE sentinel
     # (not the translated display name), so the current locale can no longer affect matching.

@@ -150,10 +150,20 @@ class Transaction::Search
       # the IBAN case (see EnableBankingEntry::Processor#counterparty_account_info),
       # so matching it against the whitespace-stripped term would miss an
       # identifier like "ACC 998877" searched with its original spacing.
+      #
+      # Monobank stores its own counterparty IBAN nested under its provider
+      # key instead of the shared top-level counterparty_iban (see the rules
+      # condition filter's identical fallback for why), so it's included
+      # here too for parity -- otherwise a Monobank user could filter by
+      # counterparty IBAN through Rules but not find the same transaction
+      # through search. Normalized on both sides, unlike the Enable Banking
+      # column: MonobankEntry::Processor stores counter_iban as-is from the
+      # provider payload with no normalization step.
       query.where(
         "entries.name ILIKE :search OR entries.notes ILIKE :search " \
         "OR (transactions.extra ->> 'counterparty_iban') ILIKE :normalized_search " \
-        "OR (transactions.extra ->> 'counterparty_account_id') ILIKE :search",
+        "OR (transactions.extra ->> 'counterparty_account_id') ILIKE :search " \
+        "OR UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '\\s+', '', 'g')) ILIKE :normalized_search",
         search: sanitized_search, normalized_search: normalized_search
       )
     end
