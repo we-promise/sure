@@ -15,6 +15,8 @@ class Merchant < ApplicationRecord
   # and the source+iban uniqueness index. Only meaningful for ProviderMerchant
   # rows in practice, but lives on the shared base class like other
   # provider-specific columns (provider_merchant_id, source).
+  # See Account#iban for the deliberate tradeoff this makes (accepted here
+  # for the same reason: DB-level uniqueness/lookup can't work otherwise).
   if encryption_ready?
     encrypts :iban, deterministic: true
   end
