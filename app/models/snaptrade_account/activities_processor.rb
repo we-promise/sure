@@ -60,8 +60,18 @@ class SnaptradeAccount::ActivitiesProcessor
     activities_data.each do |activity_data|
       process_activity(activity_data.with_indifferent_access)
     rescue => e
-      Rails.logger.error "SnaptradeAccount::ActivitiesProcessor - Failed to process activity: #{e.message}"
-      Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
+      activity = activity_data.is_a?(Hash) ? activity_data.with_indifferent_access : {}
+      capture_debug_log(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to process activity #{activity[:id]}: #{e.message}",
+        metadata: {
+          activity_id: activity[:id]&.to_s,
+          activity_type: activity[:type],
+          error_class: e.class.name,
+          backtrace: e.backtrace&.first(5)
+        }
+      )
     end
 
     { trades: @trades_count, transactions: @transactions_count }
@@ -75,6 +85,27 @@ class SnaptradeAccount::ActivitiesProcessor
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    end
+
+    # Support-relevant events go to /settings/debug rather than the Rails log
+    def capture_debug_log(message:, category: "provider_sync", level: "warn", metadata: {})
+      DebugLogEntry.capture(
+        category: category,
+        level: level,
+        message: message,
+        source: self.class.name,
+        provider_key: "snaptrade",
+        family: @snaptrade_account.snaptrade_item.family,
+        account_provider: @snaptrade_account.account_provider,
+        metadata: { snaptrade_account_id: @snaptrade_account.id }.merge(metadata)
+      )
+    end
+
+    def capture_skipped_trade(reason, description, external_id:, activity_type:, ticker: nil)
+      capture_debug_log(
+        message: "Skipping trade #{external_id}: #{description}",
+        metadata: { activity_id: external_id, activity_type: activity_type, ticker: ticker, reason: reason }.compact
+      )
     end
 
     def process_activity(data)
@@ -131,13 +162,17 @@ class SnaptradeAccount::ActivitiesProcessor
 
       # Must have a symbol for trades
       if ticker.blank?
-        Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without symbol: #{external_id}"
+        capture_skipped_trade("missing_symbol", "no symbol", external_id: external_id, activity_type: activity_type)
         return
       end
 
       # Resolve security
       security = resolve_security(ticker, symbol_data)
-      return unless security
+      unless security
+        capture_skipped_trade("unresolved_security", "security could not be resolved",
+                              external_id: external_id, activity_type: activity_type, ticker: ticker)
+        return
+      end
 
       # Parse trade values
       quantity = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
@@ -148,7 +183,8 @@ class SnaptradeAccount::ActivitiesProcessor
       fee = (parse_decimal(data[:fee]) || parse_decimal(data["fee"]))&.abs
 
       if quantity.nil?
-        Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without quantity: #{external_id}"
+        capture_skipped_trade("missing_quantity", "no quantity",
+                              external_id: external_id, activity_type: activity_type, ticker: ticker)
         return
       end
 
@@ -168,7 +204,8 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       if amount.nil?
-        Rails.logger.warn "SnaptradeAccount::ActivitiesProcessor - Skipping trade without amount: #{external_id}"
+        capture_skipped_trade("missing_amount", "no amount, and no price to derive it from",
+                              external_id: external_id, activity_type: activity_type, ticker: ticker)
         return
       end
 
@@ -284,10 +321,10 @@ class SnaptradeAccount::ActivitiesProcessor
       label = SNAPTRADE_TYPE_TO_LABEL[normalized_type]
 
       if label.nil? && normalized_type.present?
-        # Log unmapped activity types for visibility - helps identify new types to add
-        Rails.logger.warn(
-          "SnaptradeAccount::ActivitiesProcessor - Unmapped activity type '#{normalized_type}' " \
-          "for account #{@snaptrade_account.id}. Consider adding to SNAPTRADE_TYPE_TO_LABEL mapping."
+        # Record unmapped activity types for visibility - helps identify new types to add
+        capture_debug_log(
+          message: "Unmapped activity type '#{normalized_type}'. Consider adding to SNAPTRADE_TYPE_TO_LABEL mapping.",
+          metadata: { activity_type: normalized_type }
         )
       end
 
