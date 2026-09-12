@@ -656,6 +656,45 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
   end
 
+  test "mobile SSO rejects a user purged between the initial check and token issuance" do
+    oidc_identity = oidc_identities(:bob_google)
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    get "/auth/mobile/openid_connect", params: {
+      device_id: "flutter-device-012",
+      device_name: "Pixel 8",
+      device_type: "android"
+    }
+
+    # Same window as the deactivation race above, but the row disappears
+    # entirely (async purge) instead of merely flipping active: false — the
+    # reload fast-path must treat RecordNotFound the same as inactive rather
+    # than letting it fall through to StoreLocation's generic 404.
+    SsoAuditLog.stubs(:log_login!).with do |**kwargs|
+      kwargs[:user].stubs(:reload).raises(ActiveRecord::RecordNotFound)
+      true
+    end
+
+    assert_no_difference [ "Doorkeeper::AccessToken.count", "MobileDevice.count" ] do
+      get "/auth/openid_connect/callback"
+    end
+
+    redirect_url = @response.redirect_url
+    params = Rack::Utils.parse_query(URI.parse(redirect_url).query)
+    assert_equal "account_deactivated", params["error"]
+    assert_nil session[:mobile_sso], "Expected mobile_sso session to be cleared"
+  end
+
   test "mobile SSO refuses to issue a token for a deactivated user" do
     oidc_identity = oidc_identities(:bob_google)
     @user.update_column(:active, false)

@@ -49,6 +49,12 @@ class Provider::Anthropic::AutoMerchantDetector
     raise
   end
 
+  # Public so /settings/ai_prompts can render the built-in text by constructing
+  # this class with `family: nil`.
+  def instructions
+    family&.ai_prompt(:merchant_anthropic) || default_instructions
+  end
+
   private
     AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
 
@@ -94,7 +100,7 @@ class Provider::Anthropic::AutoMerchantDetector
       }
     end
 
-    def instructions
+    def default_instructions
       <<~INSTRUCTIONS.strip_heredoc
         You are an assistant to a consumer personal finance app. Detect the business name and website URL
         for each transaction and return the result via the report_merchants tool.

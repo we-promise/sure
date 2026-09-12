@@ -28,10 +28,16 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
   test "shows the exact stored quantity for a small crypto holding in the holdings list" do
     account = accounts(:crypto)
+    security = Security.create!(
+      ticker: "CRYPTO:BTC",
+      name: "Bitcoin",
+      exchange_operating_mic: "XCBS",
+      offline: true
+    )
     holding = account.holdings.create!(
-      security: securities(:aapl),
+      security: security,
       date: Date.current,
-      qty: BigDecimal("0.00014884"),
+      qty: BigDecimal("0.000000000000000148"),
       price: 100_000,
       amount: 14.884,
       currency: "USD"
@@ -39,7 +45,7 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     get holdings_url(account_id: account.id)
 
-    assert_select "##{dom_id(holding)} p", text: "0.00014884 shares"
+    assert_select "##{dom_id(holding)} p", text: "0.000000000000000148 shares"
   end
 
   test "destroys holding and associated entries" do

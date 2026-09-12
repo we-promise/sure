@@ -13,6 +13,11 @@ class Settings::GuidesController < ApplicationController
       strikethrough: true,
       superscript: true
     )
-    @guide_content = markdown.render(File.read(Rails.root.join("docs/onboarding/guide.md")))
+    guide_source = File.read(Rails.root.join("docs/onboarding/guide.md"))
+    guide_source.gsub!(/src="assets\/([^"]+)"/) do
+      %(src="#{helpers.asset_path(Regexp.last_match(1))}")
+    end
+
+    @guide_content = markdown.render(guide_source)
   end
 end
