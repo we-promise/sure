@@ -311,6 +311,15 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       "the transaction must be assigned to the merchant that actually holds this iban, not the stale losing merchant"
     assert_nil name_matched_merchant.reload.iban
     assert_equal "DE89370400440532013000", concurrent_winner.reload.iban # pipelock:ignore IBAN
+
+    # The support debug UI renders this entry's message and metadata
+    # verbatim -- neither may contain the raw iban, or logging the race
+    # would defeat the point of encrypting the column at rest.
+    debug_entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", debug_entry.category
+    assert_not_includes debug_entry.message, "DE89370400440532013000" # pipelock:ignore IBAN
+    assert_not_includes debug_entry.metadata.to_s, "DE89370400440532013000" # pipelock:ignore IBAN
+    assert_equal name_matched_merchant.id, debug_entry.metadata["merchant_id"]
   end
 
   test "falls back to the stale merchant when the race winner can't be re-found" do
