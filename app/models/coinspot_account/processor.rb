@@ -4,6 +4,25 @@ class CoinspotAccount::Processor
   include CoinspotAccount::AudConverter
 
   class NativeFeeConversionUnavailableError < StandardError; end
+  class UnknownOrderTypeError < StandardError; end
+  class UnparseableTimestampError < StandardError; end
+
+  ORDER_TYPES = %w[buy sell].freeze
+
+  # Serializes a record with hash keys sorted recursively (array order is
+  # preserved, since it carries meaning) so a content hash identifies the
+  # record itself rather than the key order the provider happened to send.
+  def self.canonical_json(record)
+    deep_sort_keys(record).to_json
+  end
+
+  def self.deep_sort_keys(value)
+    case value
+    when Hash then value.sort_by { |key, _| key.to_s }.to_h { |key, nested| [ key, deep_sort_keys(nested) ] }
+    when Array then value.map { |element| deep_sort_keys(element) }
+    else value
+    end
+  end
 
   attr_reader :coinspot_account
 
@@ -88,7 +107,9 @@ class CoinspotAccount::Processor
       rate = order["rate"].to_d
       total_aud = order["audtotal"].presence&.to_d || order["total"].to_d
       fee_aud = order["audfeeExGst"].to_d + order["audGst"].to_d
-      date = parse_time(order["solddate"] || order["created"])&.to_date || Date.current
+      order_type = validate_order_type!(type)
+      date = parse_date!(order["solddate"] || order["created"], "order")
+      type = order_type
       signed_quantity = type == "sell" ? -quantity.abs : quantity.abs
       amount_aud = type == "sell" ? total_aud.abs : -total_aud.abs
 
@@ -134,7 +155,7 @@ class CoinspotAccount::Processor
     # native asset to AUD) as a separate transaction when CoinSpot reports one.
     def process_coin_movement(transaction, type)
       symbol = CoinspotAccount::SecurityResolver.normalize_symbol(transaction["coin"])
-      date = parse_time(transaction["timestamp"])&.to_date || Date.current
+      date = parse_date!(transaction["timestamp"], "send_receive")
       aud_amount = transaction["aud"].to_d
       signed_amount = type == "receive" ? -aud_amount.abs : aud_amount.abs
       amount, = convert_from_aud(signed_amount, date: date)
@@ -181,7 +202,7 @@ class CoinspotAccount::Processor
 
     # Imports one AUD deposit/withdrawal as a contribution/withdrawal transaction.
     def process_fiat_movement(transaction, type)
-      date = parse_time(transaction["created"])&.to_date || Date.current
+      date = parse_date!(transaction["created"], type)
       signed_aud = type == "deposit" ? -transaction["amount"].to_d.abs : transaction["amount"].to_d.abs
       amount, = convert_from_aud(signed_aud, date: date)
       label = type == "deposit" ? "Contribution" : "Withdrawal"
@@ -219,7 +240,8 @@ class CoinspotAccount::Processor
     # of the source record so re-processing the same history doesn't duplicate it.
     def import_fee(source_record, fee_aud, date, symbol)
       amount, = convert_from_aud(fee_aud.to_d.abs, date: date)
-      external_id = "coinspot_fee_#{Digest::SHA256.hexdigest(source_record.to_json)[0, 24]}"
+      fee_id = content_id(source_record) { |digest| "coinspot_fee_#{digest}" }
+      external_id = "coinspot_fee_#{fee_id}"
 
       import_adapter.import_transaction(
         external_id: external_id,
@@ -268,9 +290,33 @@ class CoinspotAccount::Processor
 
     # CoinSpot's flat market-order-history fallback doesn't split buy/sell
     # into separate lists like the primary history endpoint does, so the type
-    # has to be read off each order individually.
+    # has to be read off each order individually. Anything unrecognised is
+    # passed through verbatim for validate_order_type! to reject inside
+    # process_order's rescue -- mapping it to "buy" here would silently record
+    # a sell as a buy, with the wrong sign on both quantity and cash flow.
     def infer_order_type(order)
-      order["type"].to_s.downcase == "sell" ? "sell" : "buy"
+      order["type"].to_s.downcase.presence
+    end
+
+    # An order whose type isn't one of the two CoinSpot reports is a record we
+    # cannot sign correctly, so it becomes a structured per-record failure
+    # rather than a guess.
+    def validate_order_type!(type)
+      normalized = type.to_s.downcase
+      return normalized if ORDER_TYPES.include?(normalized)
+
+      raise UnknownOrderTypeError, "CoinSpot order has unknown type #{type.inspect}"
+    end
+
+    # A record whose timestamp can't be parsed would otherwise be stamped with
+    # Date.current, and since the date is part of every external id, the next
+    # sync that parses it correctly would import it a second time instead of
+    # updating it.
+    def parse_date!(value, kind)
+      parsed = parse_time(value)&.to_date
+      return parsed if parsed
+
+      raise UnparseableTimestampError, "CoinSpot #{kind} record has unparseable timestamp #{value.inspect}"
     end
 
     # The base asset symbol from a "BASE/QUOTE" market pair (e.g. "ETH" from "ETH/BTC").
@@ -282,20 +328,37 @@ class CoinspotAccount::Processor
     # updates rather than duplicates it. Falls back to a content hash when
     # CoinSpot doesn't supply its own order id.
     def order_external_id(order, type, symbol, date)
-      id = order["id"].presence || Digest::SHA256.hexdigest(order.to_json)[0, 24]
+      id = order["id"].presence || content_id(order) { |digest| "coinspot_order_#{type}_#{symbol}_#{date}_#{digest}" }
       "coinspot_order_#{type}_#{symbol}_#{date}_#{id}"
     end
 
     # Stable external id for a send/receive transaction.
     def coin_movement_external_id(transaction, type, symbol, date)
-      id = transaction["txid"].presence || transaction["reference"].presence || Digest::SHA256.hexdigest(transaction.to_json)[0, 24]
+      id = transaction["txid"].presence || transaction["reference"].presence ||
+        content_id(transaction) { |digest| "coinspot_#{type}_#{symbol}_#{date}_#{digest}" }
       "coinspot_#{type}_#{symbol}_#{date}_#{id}"
     end
 
     # Stable external id for an AUD deposit/withdrawal transaction.
     def fiat_external_id(transaction, type, date)
-      id = transaction["reference"].presence || Digest::SHA256.hexdigest(transaction.to_json)[0, 24]
+      id = transaction["reference"].presence ||
+        content_id(transaction) { |digest| "coinspot_#{type}_aud_#{date}_#{digest}" }
       "coinspot_#{type}_aud_#{date}_#{id}"
+    end
+
+    # Content hash for a record CoinSpot gave no id of its own.
+    #
+    # New records hash the key-sorted form, so a provider key-order change
+    # can't produce a second id for the same record. Records imported before
+    # that change were hashed unsorted, so the legacy digest is checked first
+    # via the caller's id format: switching them to the canonical digest would
+    # re-import every historical id-less trade, movement and fee as a
+    # duplicate -- the exact harm the canonical form exists to prevent.
+    def content_id(record)
+      legacy = Digest::SHA256.hexdigest(record.to_json)[0, 24]
+      return legacy if account.entries.exists?(external_id: yield(legacy), source: "coinspot")
+
+      Digest::SHA256.hexdigest(self.class.canonical_json(record))[0, 24]
     end
 
     # Parses a CoinSpot timestamp string, returning nil rather than raising

@@ -133,12 +133,20 @@ class CoinspotItem::Importer
           family: coinspot_item.family,
           metadata: { coinspot_item_id: coinspot_item.id, date: startdate.to_s }
         )
+        # A saturated single day is known-truncated and CoinSpot offers no
+        # finer paging, so persisting it would bake a partial history in as if
+        # it were complete. Fail the window instead (fetch_order_history raises
+        # on any failed window) rather than merging what came back.
+        @failed_order_windows << { startdate: startdate, enddate: enddate }
+        return
       end
 
       buckets.each do |kind, orders|
         orders.each do |order|
           order_id = order["id"] || order[:id]
-          deduplication_key = order_id.presence || Digest::SHA256.hexdigest(order.to_json)
+          # Key-sorted before hashing: two responses describing the same order
+          # with different key order would otherwise dedupe as two orders.
+          deduplication_key = order_id.presence || Digest::SHA256.hexdigest(CoinspotAccount::Processor.canonical_json(order))
           orders_by_id[kind][deduplication_key] = order
         end
       end

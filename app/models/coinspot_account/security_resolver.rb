@@ -21,11 +21,11 @@ class CoinspotAccount::SecurityResolver
 
     # Uppercases and trims a raw symbol, discarding anything CoinSpot appends
     # after a "|||" separator (seen on some market-order pair identifiers).
+    # The blank check has to happen AFTER the suffix is dropped, not before:
+    # "|||BTC" is not blank but yields an empty symbol, and "BTC |||AUD"
+    # yields "BTC " with a trailing space that would build a bad ticker.
     def normalize_symbol(symbol)
-      value = symbol.to_s.strip.upcase
-      return nil if value.blank?
-
-      value.split("|||").first
+      symbol.to_s.upcase.split("|||", 2).first&.strip.presence
     end
 
     private

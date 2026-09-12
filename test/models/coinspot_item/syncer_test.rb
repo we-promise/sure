@@ -47,6 +47,27 @@ class CoinspotItem::SyncerTest < ActiveSupport::TestCase
     assert_equal error.message, sync.error
   end
 
+  # schedule_account_syncs rescues per account and reports { success: false }
+  # instead of raising, so discarding its result let a sync report success
+  # while an account kept a stale balance.
+  test "fails the sync when scheduling an account's balance sync fails" do
+    sync = @item.syncs.create!
+    @item.expects(:import_latest_coinspot_data).returns(success: true)
+    @item.expects(:process_accounts).returns([
+      { coinspot_account_id: @coinspot_account.id, success: true }
+    ])
+    @item.expects(:schedule_account_syncs).returns([
+      { account_id: @account.id, success: false, error: "boom" }
+    ])
+
+    error = assert_raises(CoinspotItem::Syncer::ProcessingFailureError) do
+      CoinspotItem::Syncer.new(@item).perform_sync(sync)
+    end
+
+    assert_equal I18n.t("coinspot_item.syncer.processing_failed", count: 1), error.message
+    assert sync.reload.failed?
+  end
+
   test "propagates per-account processor failures to the syncer" do
     CoinspotAccount::Processor.any_instance.stubs(:process).returns(
       success: false,

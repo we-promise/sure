@@ -78,7 +78,9 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal(-0.002.to_d, sell.trade.qty)
     assert_equal "Sell", sell.trade.investment_activity_label
 
-    fee = @account.entries.find_by!(external_id: "coinspot_fee_#{Digest::SHA256.hexdigest(@coinspot_account.raw_transactions_payload.dig("send_receive", "sendtransactions").first.to_json)[0, 24]}", source: "coinspot")
+    send_record = @coinspot_account.raw_transactions_payload.dig("send_receive", "sendtransactions").first
+    fee_digest = Digest::SHA256.hexdigest(CoinspotAccount::Processor.canonical_json(send_record))[0, 24]
+    fee = @account.entries.find_by!(external_id: "coinspot_fee_#{fee_digest}", source: "coinspot")
     assert_equal 1.to_d, fee.amount
     assert_equal "Fee", fee.transaction.investment_activity_label
 
@@ -107,7 +109,8 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal true, result[:success], result.inspect
     source_record = @coinspot_account.raw_transactions_payload.dig("send_receive", "sendtransactions").first
-    fee = @account.entries.find_by!(external_id: "coinspot_fee_#{Digest::SHA256.hexdigest(source_record.to_json)[0, 24]}")
+    digest = Digest::SHA256.hexdigest(CoinspotAccount::Processor.canonical_json(source_record))[0, 24]
+    fee = @account.entries.find_by!(external_id: "coinspot_fee_#{digest}")
     assert_equal BigDecimal("1"), fee.amount
   end
 
@@ -215,8 +218,87 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
 
     CoinspotAccount::Processor.new(@coinspot_account).process
 
-    digest = Digest::SHA256.hexdigest(order.to_json)[0, 24]
+    digest = Digest::SHA256.hexdigest(CoinspotAccount::Processor.canonical_json(order))[0, 24]
     assert @account.entries.exists?(external_id: "coinspot_order_buy_BTC_2026-01-09_#{digest}", source: "coinspot")
+  end
+
+  # The id-less fallback hashes the record's content, so the same order arriving
+  # with its JSON keys in a different order must not import a second time.
+  test "an id-less order re-imports as the same entry when its key order changes" do
+    order = {
+      "coin" => "btc", "amount" => "0.001", "audtotal" => "100.00",
+      "rate" => "100000.00", "created" => "2026-01-09T10:00:00Z"
+    }
+    @coinspot_account.update!(raw_transactions_payload: { "orders" => { "buyorders" => [ order ] } })
+    CoinspotAccount::Processor.new(@coinspot_account).process
+
+    reordered = { "created" => "2026-01-09T10:00:00Z", "rate" => "100000.00",
+                  "audtotal" => "100.00", "amount" => "0.001", "coin" => "btc" }
+    assert_not_equal order.to_json, reordered.to_json
+    @coinspot_account.update!(raw_transactions_payload: { "orders" => { "buyorders" => [ reordered ] } })
+
+    assert_no_difference -> { @account.entries.where(source: "coinspot").count } do
+      CoinspotAccount::Processor.new(@coinspot_account).process
+    end
+  end
+
+  # Records imported before canonical hashing keep the id they were stored
+  # under, so an upgrade doesn't re-import a family's whole CoinSpot history.
+  test "an order already stored under the legacy content hash keeps that id" do
+    order = {
+      "coin" => "btc", "amount" => "0.001", "audtotal" => "100.00",
+      "rate" => "100000.00", "created" => "2026-01-09T10:00:00Z"
+    }
+    legacy_digest = Digest::SHA256.hexdigest(order.to_json)[0, 24]
+    legacy_id = "coinspot_order_buy_BTC_2026-01-09_#{legacy_digest}"
+    @account.entries.create!(
+      external_id: legacy_id, source: "coinspot", name: "legacy", date: Date.new(2026, 1, 9),
+      amount: -100, currency: "AUD",
+      entryable: Trade.new(security: @security, qty: 0.001, price: 100_000, currency: "AUD")
+    )
+    @coinspot_account.update!(raw_transactions_payload: { "orders" => { "buyorders" => [ order ] } })
+
+    assert_no_difference -> { @account.entries.where(source: "coinspot").count } do
+      CoinspotAccount::Processor.new(@coinspot_account).process
+    end
+    assert @account.entries.exists?(external_id: legacy_id, source: "coinspot")
+  end
+
+  # A record whose date can't be parsed would be stamped Date.current, and the
+  # date is part of every external id -- so the next sync that parses it
+  # correctly would import it again instead of updating it.
+  test "rejects an order whose timestamp cannot be parsed instead of dating it today" do
+    @coinspot_account.update!(raw_transactions_payload: {
+      "orders" => { "buyorders" => [ { "id" => "bad-date", "coin" => "btc", "amount" => "0.001",
+                                       "audtotal" => "100.00", "created" => "not-a-date" } ] }
+    })
+
+    result = nil
+    assert_no_difference -> { @account.entries.where(source: "coinspot").count } do
+      result = CoinspotAccount::Processor.new(@coinspot_account).process
+    end
+
+    assert_equal false, result[:success]
+    assert_equal "order", result[:failures].first[:kind]
+    assert_equal "CoinspotAccount::Processor::UnparseableTimestampError", result[:failures].first[:error_class]
+  end
+
+  # The market-order fallback carries its side per record. Defaulting an
+  # unreadable one to "buy" books a sell with the wrong sign on both the
+  # quantity and the cash flow.
+  test "rejects a market order whose type is missing rather than treating it as a buy" do
+    @coinspot_account.update!(raw_transactions_payload: {
+      "orders" => { "orders" => [ { "id" => "no-type", "coin" => "btc", "amount" => "0.001",
+                                    "audtotal" => "100.00", "created" => "2026-01-09T10:00:00Z" } ] }
+    })
+
+    result = nil
+    assert_no_difference -> { @account.entries.where(source: "coinspot").count } do
+      result = CoinspotAccount::Processor.new(@coinspot_account).process
+    end
+
+    assert_equal false, result[:success]
+    assert_equal "CoinspotAccount::Processor::UnknownOrderTypeError", result[:failures].first[:error_class]
   end
 
   private

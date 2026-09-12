@@ -68,11 +68,28 @@ class CoinspotItem::Syncer
     end
 
     sync.update!(status_text: I18n.t("coinspot_item.syncer.calculating_balances")) if sync.respond_to?(:status_text)
-    coinspot_item.schedule_account_syncs(
+    # schedule_account_syncs rescues per account and reports { success: false }
+    # rather than raising. Discarding that let the sync report success while an
+    # account kept a stale balance, so treat it like a processing failure.
+    schedule_failures = coinspot_item.schedule_account_syncs(
       parent_sync: sync,
       window_start_date: sync.window_start_date,
       window_end_date: sync.window_end_date
-    )
+    ).select { |result| result[:success] == false }
+
+    if schedule_failures.any?
+      message = I18n.t("coinspot_item.syncer.processing_failed", count: schedule_failures.count)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: message,
+        source: self.class.name,
+        provider_key: "coinspot",
+        family: coinspot_item.family,
+        metadata: { coinspot_item_id: coinspot_item.id, failures: schedule_failures }
+      )
+      raise ProcessingFailureError, message
+    end
 
     account_ids = linked.map { |coinspot_account| coinspot_account.current_account&.id }.compact
     if account_ids.any?

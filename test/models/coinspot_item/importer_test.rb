@@ -74,6 +74,25 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     assert_empty @item.coinspot_accounts
   end
 
+  # A single day at the record limit is known-truncated and CoinSpot offers no
+  # finer paging, so persisting it would record a partial history as complete.
+  test "fails without persisting when a single-day window is still saturated" do
+    travel_to Date.new(2026, 1, 2) do
+      @provider.stubs(:get_balances).returns("balances" => [])
+      @item.update!(sync_start_date: Date.new(2026, 1, 2))
+
+      saturated = Array.new(CoinspotItem::Importer::ORDER_HISTORY_LIMIT) { |i| { "id" => "sat-#{i}", "coin" => "BTC" } }
+      @provider.stubs(:get_order_history).returns("buyorders" => saturated, "sellorders" => [])
+
+      error = assert_raises(CoinspotItem::Importer::OrderHistoryUnavailableError) do
+        CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+      end
+
+      assert_includes error.message, "2026-01-02"
+      assert_empty @item.coinspot_accounts
+    end
+  end
+
   test "fails rather than valuing a nonzero asset at zero when its AUD price is missing" do
     @provider.stubs(:get_balances).returns(
       "balances" => [ { "xyz" => { "balance" => "12.5" } } ]
