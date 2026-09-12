@@ -321,11 +321,11 @@ class Budget < ApplicationRecord
   end
 
   def income_category_totals
-    net_totals.net_income_categories.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
+    income_totals.category_totals.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
   end
 
   def expense_category_totals
-    net_totals.net_expense_categories.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
+    expense_totals.category_totals.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
   end
 
   def current?
@@ -406,14 +406,12 @@ class Budget < ApplicationRecord
   end
 
   def actual_spending
-    net_totals.total_net_expense
+    expense_totals.total
   end
 
   def budget_category_actual_spending(budget_category)
     key = budget_category.category_id || stable_synthetic_key(budget_category.category)
-    expense = expense_totals_by_category[key]&.total || 0
-    refund = income_totals_by_category[key]&.total || 0
-    [ expense - refund, 0 ].max
+    expense_totals_by_category[key]&.total || 0
   end
 
   def category_median_monthly_expense(category)
@@ -525,10 +523,6 @@ class Budget < ApplicationRecord
       family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 
-    def net_totals
-      @net_totals ||= income_statement.net_category_totals(period: period)
-    end
-
     def expense_totals
       @expense_totals ||= income_statement.expense_totals(period: period)
     end
@@ -539,10 +533,6 @@ class Budget < ApplicationRecord
 
     def expense_totals_by_category
       @expense_totals_by_category ||= expense_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
-    end
-
-    def income_totals_by_category
-      @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
     end
 
     def stable_synthetic_key(category)
