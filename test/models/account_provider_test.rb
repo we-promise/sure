@@ -102,6 +102,28 @@ class AccountProviderTest < ActiveSupport::TestCase
     assert_includes duplicate_link.errors[:provider_id], "has already been taken"
   end
 
+  test "reports a missing account without raising from the custom validation" do
+    link = AccountProvider.new(provider: @plaid_account)
+
+    assert_not link.valid?
+    assert link.errors[:account].present?
+  end
+
+  test "does not allow a provider link after deletion is scheduled" do
+    account = @family.accounts.create!(
+      owner: users(:family_admin),
+      name: "Pending deletion account",
+      accountable: Depository.new,
+      balance: 0,
+      currency: "USD"
+    )
+    account.destroy_later
+    link = AccountProvider.new(account: account, provider: @plaid_account)
+
+    assert_not link.save
+    assert_includes link.errors[:account], "is pending deletion and cannot be linked"
+  end
+
   test "adapter method returns correct adapter" do
     provider = AccountProvider.create!(
       account: @account,

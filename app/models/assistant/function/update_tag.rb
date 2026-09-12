@@ -1,52 +1,29 @@
 class Assistant::Function::UpdateTag < Assistant::Function
   class << self
-    def name
-      "update_tag"
-    end
-
-    def description
-      <<~INSTRUCTIONS
-        Updates an existing tag's name or color.
-
-        Identify the tag by its current name. At least one of new_name or color must be provided.
-        Use get_tags first to confirm the tag exists.
-      INSTRUCTIONS
-    end
+    def name = "update_tag"
+    def description = "Updates an existing family tag by its stable ID from get_tags."
   end
 
-  def strict_mode?
-    false
-  end
+  def strict_mode? = false
 
   def params_schema
     build_schema(
-      required: [ "name" ],
+      required: [ "id" ],
       properties: {
-        name: {
-          type: "string",
-          description: "Current name of the tag to update",
-          enum: family_tag_names
-        },
-        new_name: {
-          type: "string",
-          description: "New name for the tag (optional)"
-        },
-        color: {
-          type: "string",
-          description: "New hex color code (optional)"
-        }
+        id: { type: "string", description: "Tag ID from get_tags" },
+        new_name: { type: "string", description: "New tag name" },
+        color: { type: "string", description: "New hex color code" }
       }
     )
   end
 
   def call(params = {})
-    tag = family.tags.find_by(name: params["name"].to_s.strip)
-    return error("not_found", "Tag '#{params["name"]}' not found.") unless tag
+    tag = valid_uuid?(params["id"]) ? family.tags.find_by(id: params["id"]) : nil
+    return error("not_found", "Tag not found.") unless tag
 
     attrs = {}
     attrs[:name] = params["new_name"].strip if params["new_name"].present?
     attrs[:color] = params["color"].strip if params["color"].present?
-
     return error("no_changes", "Provide at least one of new_name or color to update.") if attrs.empty?
 
     if tag.update(attrs)
@@ -58,6 +35,6 @@ class Assistant::Function::UpdateTag < Assistant::Function
 
   private
     def error(key, message)
-      { success: false, error: key, message: message }
+      { success: false, error: key, message: }
     end
 end

@@ -49,10 +49,9 @@ module Assistant
       REGISTRY.keys
     end
 
-    # The single registry behind both the builtin chat and the /mcp endpoint's
-    # tools/list — a function class added here is immediately callable by an
-    # external agent, so pass the user to keep preview tools out of the default
-    # surface.
+    # Shared baseline for builtin chat and MCP. MCP-only destructive tools are
+    # appended in mcp_function_classes so they are not exposed to the builtin
+    # assistant; pass the user to keep preview tools out of the default surface.
     def function_classes(user = nil)
       classes = [
         Function::GetTransactions,
@@ -72,12 +71,32 @@ module Assistant
         Function::CreateCategory,
         Function::UpdateCategory,
         Function::GetMerchants,
+        Function::CreateTransaction,
         Function::UpdateTransaction,
         Function::UpdateBudget
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
       classes
+    end
+
+    def mcp_function_classes(user = nil)
+      function_classes(user) + [
+        Function::GetAccountTypes,
+        Function::GetTransfers,
+        Function::GetGoals,
+        Function::CreateAccount,
+        Function::UpdateAccount,
+        Function::DeleteAccount,
+        Function::DeleteTransaction,
+        Function::CreateTransfer,
+        Function::UpdateTransfer,
+        Function::DeleteTransfer,
+        Function::UpdateGoal,
+        Function::DeleteGoal,
+        Function::DeleteTag,
+        Function::DeleteCategory
+      ]
     end
 
     private

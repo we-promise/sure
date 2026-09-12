@@ -55,7 +55,7 @@ openssl rand -base64 32
 The `MCP_USER_EMAIL` must match an existing Sure user's email address. The AI assistant will have access to all financial data for that user's family.
 
 > [!CAUTION]
-> The AI assistant can call the MCP tools available to the specified user. This includes reading financial data and write-capable tools such as statement import, goal/category/tag changes, transaction updates, and budget updates. Only set this for users you trust with your AI provider.
+> The AI assistant receives the full MCP tool set for the specified user. This includes tools that create, update, unlink, schedule deletion of, and permanently delete financial records. Only configure a trusted AI client and user.
 
 ## Configuration
 
@@ -129,7 +129,8 @@ Sure implements the following JSON-RPC 2.0 methods:
 
 ### Available Tools
 
-The MCP endpoint exposes the same tool registry used by Sure's built-in assistant. Clients should treat `tools/list` as the source of truth.
+The MCP endpoint exposes Sure's built-in assistant tools plus MCP-only financial
+CRUD actions. Clients should treat `tools/list` as the source of truth.
 
 At the time of writing, `tools/list` includes:
 
@@ -138,6 +139,7 @@ At the time of writing, `tools/list` includes:
 | `get_transactions` | Search transactions with filters (exact names or ids), sorting by date or absolute amount, and pagination |
 | `get_recurring_transactions` | Detected and manual recurring transactions (subscriptions, bills, salaries) with expected dates and per-currency totals |
 | `get_accounts` | Accounts with ids and current balances; pass `include_balance_series: true` for a period-bounded history series |
+| `get_account_types` | Account types and the valid subtype values accepted by `create_account` |
 | `get_holdings` | Query investment holdings |
 | `get_balance_sheet` | Net worth, assets and liabilities with a configurable history period and interval |
 | `get_income_statement` | Income and expenses for a period, with optional monthly series, prior-period comparison and account filtering |
@@ -145,13 +147,24 @@ At the time of writing, `tools/list` includes:
 | `get_merchants` | Merchants with the ids `update_transaction` accepts and the exact names `get_transactions` filters on |
 | `get_tags` | Tags with pagination |
 | `get_categories` | Categories with hierarchy and pagination |
-| `create_goal` | Create a savings goal linked to depository accounts |
-| `create_tag` / `update_tag` | Manage tags |
+| `create_account` / `update_account` / `delete_account` | Create and update writable manual accounts; account deletion requires ownership |
+| `create_goal` | Create a goal with an explicit whole-account or fixed-amount allocation from eligible Depository or Investment account IDs |
+| `get_goals` / `update_goal` / `delete_goal` | List and manage goals and their complete funding allocation |
+| `create_tag` / `update_tag` | Create tags and update them by stable ID |
+| `delete_tag` | Delete a tag, optionally reassigning its transactions |
 | `create_category` / `update_category` | Manage categories |
+| `delete_category` | Delete a category, optionally reassigning its transactions |
+| `create_transaction` / `delete_transaction` | Create and delete standard income and expense transactions |
+| `get_transfers` / `create_transfer` / `update_transfer` / `delete_transfer` | List and manage transfers between writable accounts |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
 | `update_budget` | Update budget allocations for a month |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
+
+`get_accounts`, `get_goals`, `get_tags`, `get_transfers`, and the other list tools return the stable IDs required by follow-up actions. `get_accounts` includes each account's current type, subtype, permission, and `goal_funding` status. Goal create/update calls use one complete `funding_accounts` list; every item identifies an account ID and chooses either `whole_account` or `fixed_amount`. Call `get_account_types` before `create_account` to discover valid subtype values. In `get_accounts`, `writable` means the account can be used for account-level and balance-affecting write tools; `transaction_editing.annotations` separately reports whether the user can update transaction notes, categories, merchants, or tags on that account. Creation tools that accept an `external_id` require the caller to reuse the same key when retrying an operation.
+
+Destructive MCP-only tools are not automatically exposed to Sure's built-in
+assistant.
 
 ### Preview Tools
 

@@ -25,7 +25,7 @@ class Transfer::Creator
     end
   end
 
-  def create
+  def create(sync: true)
     raise ArgumentError, "source_fee_amount must be non-negative" if source_fee_amount.negative?
     raise ArgumentError, "destination_fee_amount must be non-negative" if destination_fee_amount.negative?
 
@@ -63,8 +63,10 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    source_account.sync_later
-    destination_account.sync_later
+    if sync
+      source_account.sync_later
+      destination_account.sync_later
+    end
 
     transfer
   rescue ActiveRecord::RecordNotUnique
