@@ -156,7 +156,7 @@ class Settings::ProvidersController < ApplicationController
 
     def set_encryption_warning_context
       @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
-        !ActiveRecordEncryptionConfig.explicitly_configured?
+        !ActiveRecordEncryptionConfig.ready?
     end
 
     # Reload provider configurations after settings update

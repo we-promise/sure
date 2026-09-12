@@ -1,19 +1,9 @@
 # Represents a CoinStats API connection for a family.
 # Stores credentials and manages associated wallet and exchange portfolio accounts.
 class CoinstatsItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-
-  # Checks if ActiveRecord Encryption is properly configured.
-  # @return [Boolean] true if encryption keys are available
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   encrypts :api_key, deterministic: true if encryption_ready?
