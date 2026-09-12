@@ -46,6 +46,18 @@
                         data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
                         class: "hover:underline" %>
             </div>
+
+            <% if entry.scheduled? %>
+              <div class="flex items-center flex-shrink-0">
+                <%= render DS::Pill.new(
+                  label: t("trades.trade.scheduled"),
+                  tone: :neutral,
+                  marker: false,
+                  icon: "calendar",
+                  title: t("trades.trade.scheduled_tooltip")
+                ) %>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -64,6 +76,7 @@
             <%= icon "lock", size: "sm", class: "text-secondary" %>
           <% end %>
         <% end %>
+
         <%= content_tag :p,
                     format_money(-entry.amount_money),
                     class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>

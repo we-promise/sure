@@ -6,6 +6,8 @@
 
         <% if account.supports_trades? %>
           <%= render "investments/value_tooltip", balance: account.balance_money, holdings: holdings_value_money, cash: account.cash_balance_money %>
+        <% elsif account.scheduled_entries_total_money.amount.abs.round.nonzero? %>
+          <%= render "accounts/scheduled_balance_tooltip", account: account %>
         <% end %>
       </div>
       <div class="flex flex-row gap-2 items-baseline">

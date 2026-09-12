@@ -679,4 +679,83 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
+
+  test "projected_balance_money nets scheduled entries against an asset account's balance" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date) # expense, decreases balance
+    create_transaction(account: @account, amount: -50, date: 5.days.from_now.to_date) # income, increases balance
+
+    assert_equal Money.new(-150, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(4850, "USD"), @account.projected_balance_money
+  end
+
+  test "projected_balance_money keeps the sign for a liability account (expense increases debt)" do
+    credit_card = accounts(:credit_card)
+    create_transaction(account: credit_card, amount: 200, date: 3.days.from_now.to_date) # expense, increases debt
+
+    assert_equal Money.new(200, "USD"), credit_card.scheduled_entries_total_money
+    assert_equal Money.new(1200, "USD"), credit_card.projected_balance_money
+  end
+
+  test "projected_balance_money ignores transactions on non-cash valuation-only accounts" do
+    property = accounts(:property)
+    create_transaction(account: property, amount: 5000, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), property.scheduled_entries_total_money
+    assert_equal property.balance_money, property.projected_balance_money
+  end
+
+  test "scheduled_entries_total_money ignores future-dated valuations and buy/sell trades" do
+    create_valuation(account: @account, amount: 999_999, date: 3.days.from_now.to_date)
+
+    investment = accounts(:investment)
+    create_trade(securities(:aapl), account: investment, qty: 1, price: 100, date: 3.days.from_now.to_date)
+
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal Money.new(0, "USD"), investment.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money includes future-dated interest/dividend trades" do
+    investment = accounts(:investment)
+
+    Entry.create!(
+      account: investment,
+      name: "Interest",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: -50,
+      entryable: Trade.new(qty: 0, price: 0, currency: "USD", security: securities(:aapl), investment_activity_label: "Interest")
+    )
+
+    assert_equal Money.new(50, "USD"), investment.scheduled_entries_total_money
+    assert_equal investment.balance_money + Money.new(50, "USD"), investment.projected_balance_money
+  end
+
+  test "projected_balance_money equals balance_money when nothing is scheduled" do
+    assert_equal Money.new(0, "USD"), @account.scheduled_entries_total_money
+    assert_equal @account.balance_money, @account.projected_balance_money
+  end
+
+  test "scheduled_entries_total_money uses custom exchange_rate when present" do
+    eur_account = @family.accounts.create!(
+      name: "EUR Checking",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    transaction = Transaction.new
+    transaction.exchange_rate = 1.10
+
+    Entry.create!(
+      account: eur_account,
+      name: "Scheduled FX expense",
+      date: 3.days.from_now.to_date,
+      currency: "USD",
+      amount: 100,
+      entryable: transaction
+    )
+
+    # 100 USD × custom_rate 1.10 = 110 EUR, negated because asset
+    assert_equal Money.new(-110, "EUR"), eur_account.scheduled_entries_total_money
+  end
 end
