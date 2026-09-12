@@ -65,10 +65,10 @@ pl:
           title: Rozłączyć zewnętrznego asystenta?
           body: To usunie zapisany URL, token i ID agenta oraz przełączy na asystenta wbudowanego. Możesz połączyć ponownie później, podając nowe dane.
       brand_fetch_settings:
-        description: Wprowadź Client ID otrzymany od Brand Fetch
+        description: Wprowadź Client ID otrzymany od Brandfetch
         label: Client ID
         placeholder: Wprowadź tutaj swój Client ID
-        title: Ustawienia Brand Fetch
+        title: Ustawienia Brandfetch
         high_res_label: Włącz logotypy o wysokiej rozdzielczości
         high_res_description: Gdy włączone, logotypy będą pobierane w rozdzielczości 120x120 zamiast 40x40. Zapewnia to ostrzejsze obrazy na ekranach o wysokim DPI.
       openai_settings:

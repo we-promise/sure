@@ -25,10 +25,10 @@ ro:
           title: Ștergi cache-ul de date?
           body: Ești sigur că vrei să ștergi cache-ul de date? Aceasta va elimina toate ratele de schimb, prețurile titlurilor de valoare, soldurile conturilor și alte date. Această acțiune nu poate fi anulată.
       brand_fetch_settings:
-        description: Introdu ID-ul Clientului furnizat de Brand Fetch
+        description: Introdu ID-ul Clientului furnizat de Brandfetch
         label: ID Client
         placeholder: Introdu ID-ul tău de Client aici
-        title: Setări Brand Fetch
+        title: Setări Brandfetch
       openai_settings:
         description: Introdu tokenul de acces și configurează opțional un furnizor personalizat compatibil cu OpenAI
         env_configured_message: Configurat cu succes prin variabile de mediu.
