@@ -3,6 +3,7 @@
 class Provider::Brex
   include HTTParty
   extend SslConfigurable
+  extend BaseUrlAllowlistable
 
   DEFAULT_BASE_URL = "https://api.brex.com"
   STAGING_BASE_URL = "https://api-staging.brex.com"
@@ -22,27 +23,6 @@ class Provider::Brex
     raise ArgumentError, "Brex base URL must be blank or one of: #{ALLOWED_BASE_URLS.join(', ')}" unless @base_url.present?
   end
 
-  def self.normalize_base_url(value)
-    stripped = value.to_s.strip
-    return DEFAULT_BASE_URL if stripped.blank?
-
-    uri = URI.parse(stripped)
-    return nil unless uri.is_a?(URI::HTTPS)
-    return nil if uri.userinfo.present?
-    return nil if uri.query.present? || uri.fragment.present?
-    return nil unless uri.path.blank? || uri.path == "/"
-    return nil unless uri.port == 443
-
-    # This exact allowlist is the SSRF boundary; arbitrary Brex-like hosts are never accepted.
-    normalized = "#{uri.scheme.downcase}://#{uri.host.to_s.downcase}"
-    ALLOWED_BASE_URLS.include?(normalized) ? normalized : nil
-  rescue URI::InvalidURIError
-    nil
-  end
-
-  def self.allowed_base_url?(value)
-    normalize_base_url(value).present?
-  end
 
   def get_accounts
     cash_accounts = get_cash_accounts

@@ -2,7 +2,9 @@ require "test_helper"
 
 class Provider::LunchflowTest < ActiveSupport::TestCase
   setup do
-    @provider = Provider::Lunchflow.new("test_key", base_url: "https://www.lunchflow.app/api/v1")
+    # The canonical host. LunchflowItem has always sent this one, so the www
+    # form the allow-list now refuses was never reachable in production.
+    @provider = Provider::Lunchflow.new("test_key", base_url: Provider::Lunchflow::DEFAULT_BASE_URL)
   end
 
   test "retries a wrapped GoCardless rate limit and preserves its type" do
