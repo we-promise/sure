@@ -63,6 +63,9 @@ module SettingsHelper
     when "up"
       return { status: :off } unless @up_items&.any?
       sync_based_summary(key)
+    when "monobank"
+      return { status: :off } unless @monobank_items&.any?
+      sync_based_summary(key)
     when "simplefin"
       return { status: :off } unless @simplefin_items&.any?
       sync_based_summary(key)
@@ -96,13 +99,18 @@ module SettingsHelper
     when "onchain_wallet"
       return { status: :off } unless @onchain_wallet_items&.any?
       sync_based_summary(key)
+    when "trading212"
+      return { status: :off } unless @trading212_items&.any?
+      sync_based_summary(key)
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item
-
       sync_based_summary(key)
     when "ibkr"
       return { status: :off } unless @ibkr_items&.any?
+      sync_based_summary(key)
+    when "trade_republic"
+      return { status: :off } unless @trade_republic_items&.any?
       sync_based_summary(key)
     when "indexa_capital"
       return { status: :off } unless @indexa_capital_items&.any?

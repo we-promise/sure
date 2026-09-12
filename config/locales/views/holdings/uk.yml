@@ -43,6 +43,9 @@ uk:
       unknown: "--"
       no_cost_basis: "Немає базової вартості"
     index:
+      positions:
+        one: "%{count} позиція"
+        other: "%{count} позицій"
       average_cost: "Середня вартість"
       holdings: "Активи"
       name: "Назва"

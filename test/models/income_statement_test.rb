@@ -20,6 +20,33 @@ class IncomeStatementTest < ActiveSupport::TestCase
     create_transaction(account: @credit_card_account, amount: 400, category: @groceries_category)
   end
 
+  test "daily_expense_series cache busts when the family currency changes" do
+    statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::DailyExpenseTotals.expects(:new).twice.returns(stub(call: []))
+
+    statement.daily_expense_series(period: period)
+    @family.update!(currency: "EUR")
+    statement.daily_expense_series(period: period)
+  end
+
+  test "daily_expense_series cache busts when exchange rates change" do
+    statement = IncomeStatement.new(@family)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::DailyExpenseTotals.expects(:new).twice.returns(stub(call: []))
+
+    statement.daily_expense_series(period: period)
+
+    travel 1.second do
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+      statement.daily_expense_series(period: period)
+    end
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)

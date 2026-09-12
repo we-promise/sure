@@ -49,6 +49,72 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     )
   end
 
+  # A reservation that silently omits an obligation reads as money still free to
+  # spend, so one with no rate is counted and reported instead of skipped.
+  test "bills_reserved counts an obligation it cannot convert" do
+    foreign = @family.recurring_transactions.create!(
+      name: "Tokyo storage", account: accounts(:depository), amount: 50_000,
+      currency: "JPY", bill_type: "bill", category_id: @parent_category.id,
+      expected_day_of_month: 3, anchor_date: @budget.start_date,
+      last_occurrence_date: @budget.start_date, next_expected_date: @budget.start_date,
+      status: "active", manual: true
+    )
+    # Creating a series generates its own occurrences; clear them so this test
+    # asserts against exactly one known row.
+    foreign.recurring_occurrences.destroy_all
+    foreign.recurring_occurrences.create!(
+      family: @family, original_due_on: @budget.start_date + 3,
+      due_on: @budget.start_date + 3, currency: "JPY", expected_amount: 50_000
+    )
+    assert_equal 0, ExchangeRate.where(from_currency: "JPY", to_currency: "USD").count,
+      "the scenario depends on there being no rate to find"
+
+    assert_equal 1, @parent_budget_category.bills_reserved_unconvertible_count,
+      "the JPY obligation must be reported rather than dropped from the reservation"
+  end
+
+  # A foreign obligation is still owed out of this category, so it is converted
+  # rather than skipped. The old behaviour reserved nothing for it at all.
+  test "bills_reserved converts a foreign obligation it has a rate for" do
+    # exchange_to defaults to today's rate, matching how every other bills
+    # total converts.
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", rate: 1.1,
+                         date: Date.current)
+    eur = @family.recurring_transactions.create!(
+      name: "Berlin storage", account: accounts(:depository), amount: 100,
+      currency: "EUR", bill_type: "bill", category_id: @parent_category.id,
+      expected_day_of_month: 3, anchor_date: @budget.start_date,
+      last_occurrence_date: @budget.start_date, next_expected_date: @budget.start_date,
+      status: "active", manual: true
+    )
+    eur.recurring_occurrences.destroy_all
+    eur.recurring_occurrences.create!(
+      family: @family, original_due_on: @budget.start_date + 3,
+      due_on: @budget.start_date + 3, currency: "EUR", expected_amount: 100
+    )
+
+    assert_equal 110, @parent_budget_category.bills_reserved.amount
+    assert_equal 0, @parent_budget_category.bills_reserved_unconvertible_count
+  end
+
+  test "bills_reserved sums obligations in the budget currency" do
+    bill = @family.recurring_transactions.create!(
+      name: "Groceries plan", account: accounts(:depository), amount: 120,
+      currency: "USD", bill_type: "bill", category_id: @parent_category.id,
+      expected_day_of_month: 3, anchor_date: @budget.start_date,
+      last_occurrence_date: @budget.start_date, next_expected_date: @budget.start_date,
+      status: "active", manual: true
+    )
+    bill.recurring_occurrences.destroy_all
+    bill.recurring_occurrences.create!(
+      family: @family, original_due_on: @budget.start_date + 3,
+      due_on: @budget.start_date + 3, currency: "USD", expected_amount: 120
+    )
+
+    assert_equal 120, @parent_budget_category.bills_reserved.amount
+    assert_equal 0, @parent_budget_category.bills_reserved_unconvertible_count
+  end
+
   test "subcategory with zero budget inherits from parent" do
     assert @subcategory_inheriting_bc.inherits_parent_budget?
     refute @subcategory_with_limit_bc.inherits_parent_budget?
@@ -67,32 +133,73 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 1000, @parent_budget_category.display_budgeted_spending
   end
 
-  test "inheriting subcategory shares parent available_to_spend" do
+  test "parent available_to_spend reflects its displayed budget and total spending" do
     # Mock the actual spending values
     # Parent's actual_spending from income_statement includes all children
     @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(150)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(100)
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(50)
 
-    # Parent available calculation:
-    # shared_pool = 1000 (parent budget) - 300 (subcategory with limit budget) = 700
-    # shared_pool_spending = 150 (total) - 100 (subcategory with limit spending) = 50
-    # available = 700 - 50 = 650
-    assert_equal 650, @parent_budget_category.available_to_spend
+    # The parent displays the full 1000 budget and 150 total spending, so its
+    # available amount must reconcile with those figures.
+    assert_equal 850, @parent_budget_category.available_to_spend
 
-    # Inheriting subcategory shares parent's available (650)
+    # The inheriting subcategory can use the $700 shared pool after the $300
+    # ring-fenced allocation, less its $50 spending.
     assert_equal 650, @subcategory_inheriting_bc.available_to_spend
 
     # Subcategory with limit: 300 (its budget) - 100 (its spending) = 200
     assert_equal 200, @subcategory_with_limit_bc.available_to_spend
   end
 
-  test "percent_of_budget_spent for inheriting subcategory uses parent budget" do
+  test "inheriting subcategory does not copy parent overspending" do
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(1050)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(300)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(0)
+
+    assert_equal(-50, @parent_budget_category.available_to_spend)
+    assert_equal 0, @subcategory_inheriting_bc.available_to_spend
+    assert @parent_budget_category.over_budget?
+    assert_not @subcategory_inheriting_bc.over_budget?
+  end
+
+  test "parent availability includes rollover carried by ring-fenced children" do
+    @parent_budget_category.update!(budgeted_spending: 100)
+    @subcategory_with_limit_bc.update!(budgeted_spending: 100, rollover_enabled: true)
+    @subcategory_with_limit_bc.update_column(:rolled_over_amount, 80)
+
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(150)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(150)
+
+    assert_equal 30, @parent_budget_category.available_to_spend
+    assert_equal 30, @subcategory_with_limit_bc.available_to_spend
+    assert_equal 0, @subcategory_inheriting_bc.available_to_spend
+    assert_equal 80, @parent_budget_category.display_rolled_over_amount
+    assert @parent_budget_category.rolled_over?
+    assert_in_delta 83.33, @parent_budget_category.percent_of_budget_spent, 0.01
+    assert_not @parent_budget_category.over_budget?
+    assert_not @parent_budget_category.near_limit?
+  end
+
+  test "inheriting subcategory excludes ring-fenced sibling funds" do
+    @parent_budget_category.update!(budgeted_spending: 100)
+    @subcategory_with_limit_bc.update!(budgeted_spending: 80)
+
+    @budget.stubs(:budget_category_actual_spending).with(@parent_budget_category).returns(10)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_with_limit_bc).returns(0)
+    @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(10)
+
+    assert_equal 90, @parent_budget_category.available_to_spend
+    assert_equal 10, @subcategory_inheriting_bc.available_to_spend
+    assert_equal 50.0, @subcategory_inheriting_bc.percent_of_budget_spent
+  end
+
+  test "percent_of_budget_spent for inheriting subcategory uses shared parent budget" do
     # Mock spending
     @budget.stubs(:budget_category_actual_spending).with(@subcategory_inheriting_bc).returns(100)
 
-    # 100 / 1000 (parent budget) = 10%
-    assert_equal 10.0, @subcategory_inheriting_bc.percent_of_budget_spent
+    # 100 / 700 (parent budget less the $300 ring-fenced sibling) = 14.29%
+    assert_in_delta 14.29, @subcategory_inheriting_bc.percent_of_budget_spent, 0.01
   end
 
   test "parent with no subcategories works as before" do

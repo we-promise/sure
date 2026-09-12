@@ -78,6 +78,14 @@ class User < ApplicationRecord
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
   # get the specified admin-capable fallback role.
+  # Keep this one-key advisory lock stable across deploys so old and new app
+  # processes serialize first-user role selection on the same database lock.
+  FIRST_USER_ROLE_LOCK_KEY = 8_391_247
+
+  def self.lock_first_user_role!
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", FIRST_USER_ROLE_LOCK_KEY ]))
+  end
+
   def self.role_for_new_family_creator(fallback_role: :admin)
     fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
 
@@ -237,6 +245,7 @@ class User < ApplicationRecord
   before_destroy :ensure_not_last_super_admin_on_destroy
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
     return true unless active?
@@ -315,6 +324,36 @@ class User < ApplicationRecord
     oidc_identities.destroy_all
   end
 
+  # Raised by #with_active_lock! to reject session/token issuance for a
+  # deactivated or concurrently-purged user. The one error contract every
+  # web/JSON/mobile/OAuth-adapter caller rescues, so a deactivation result
+  # can never be confused with an unrelated persistence failure.
+  class InactiveError < StandardError; end
+
+  # The one locked primitive for the actual authorization boundary: asserts
+  # this user is eligible for new session/token issuance *right now*, under
+  # a row lock, immediately before minting. Callers may additionally check
+  # #active? earlier for a fast, friendly rejection (skip an MFA/device
+  # round trip) — that's a UX optimization only, never a substitute for
+  # this check, however "obviously" already-checked the user seems.
+  def with_active_lock!
+    lock_acquired = false
+
+    with_lock do
+      lock_acquired = true
+      raise InactiveError unless active?
+      yield self
+    end
+  rescue ActiveRecord::RecordNotFound
+    # Only translate a RecordNotFound raised by with_lock's own reload (the
+    # row was deleted by a concurrent purge before we could lock it) into
+    # InactiveError. Once the lock is held, re-raise: a RecordNotFound from
+    # inside the caller's block is an unrelated failure and must not be
+    # misreported as "inactive" either.
+    raise if lock_acquired
+    raise InactiveError
+  end
+
   def can_deactivate
     if admin? && family.users.count > 1
       errors.add(:base, :cannot_deactivate_admin_with_other_users)
@@ -376,6 +415,29 @@ class User < ApplicationRecord
     end
 
     provider.public_send(item_association.name) if item_association
+  end
+
+  # Revokes mobile/third-party API access alongside the web-session
+  # invalidation above. Without this, a deactivated user's existing
+  # Doorkeeper tokens and API keys stay valid on the wire — currently
+  # harmless only because Api::V1::BaseController/McpController re-check
+  # active? on every request, but that's a second, independent safeguard,
+  # not a substitute for actually revoking the credentials. Also revokes
+  # unexchanged OAuth authorization grants — /oauth/token doesn't go
+  # through the cookie authenticator, so a still-valid grant issued right
+  # before deactivation could otherwise be exchanged for a fresh token
+  # afterward.
+  def revoke_all_access_tokens
+    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
+
+    if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn(
+        "[AUTH] Revoked #{tokens_revoked} access token(s), #{grants_revoked} authorization grant(s), " \
+        "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
+      )
+    end
   end
 
   def purge
@@ -470,6 +532,43 @@ class User < ApplicationRecord
     return nil unless account&.eligible_for_transaction_default? && account.family_id == family_id
 
     account
+  end
+
+  # Release highlight ("What's new" popup) tracking. Account-level so every
+  # device the user signs in from stays in sync.
+  def last_seen_release_tag
+    preferences&.[]("last_seen_release_tag")
+  end
+
+  def mark_release_seen!(tag)
+    tag_version = parsed_release_tag_version!(tag)
+
+    with_lock do
+      current = last_seen_release_tag
+
+      # Never regress the marker: a stale tab (or an old app version during a
+      # rolling deploy) must not make an already-acknowledged release look
+      # unseen again. A previously stored malformed tag is overwritten by the
+      # next valid dismissal so the account can recover.
+      if current
+        current_version = parsed_release_tag_version(current)
+        next if current_version && tag_version < current_version
+      end
+
+      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+    end
+  end
+
+  def parsed_release_tag_version!(tag)
+    raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
+
+    Semver.from_release_tag(tag).version
+  end
+
+  def parsed_release_tag_version(tag)
+    parsed_release_tag_version!(tag)
+  rescue ArgumentError
+    nil
   end
 
   # Dashboard preferences management

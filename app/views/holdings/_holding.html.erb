@@ -1,4 +1,4 @@
-<%# locals: (holding:) %>
+<%# locals: (holding:, crypto:) %>
 
 <%= turbo_frame_tag dom_id(holding) do %>
   <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4">
@@ -39,7 +39,7 @@
       <% else %>
         <%= tag.p "--", class: "text-secondary" %>
       <% end %>
-      <%= tag.p t(".shares", qty: format_quantity(holding.qty)), class: "font-normal text-secondary privacy-sensitive" %>
+      <%= tag.p t(".shares", qty: format_quantity(holding.qty, exact: crypto)), class: "font-normal text-secondary privacy-sensitive" %>
     </div>
 
     <div class="col-span-2 text-right">

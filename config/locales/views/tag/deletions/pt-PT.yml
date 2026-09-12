@@ -1,0 +1,16 @@
+---
+pt-PT:
+  tag:
+    deletions:
+      create:
+        deleted: Etiqueta eliminada
+      new:
+        delete_and_leave_uncategorized: Eliminar "%{tag_name}"
+        delete_and_recategorize: Eliminar "%{tag_name}" e atribuir nova etiqueta
+        delete_and_reassign: Eliminar e reatribuir
+        delete_tag: Eliminar etiqueta?
+        explanation: "%{tag_name} será removida das transações e de outras entidades
+          marcáveis. Em vez de as deixar sem etiqueta, também pode atribuir uma nova
+          etiqueta abaixo."
+        replacement_tag_prompt: Selecione etiqueta
+        tag: Etiqueta

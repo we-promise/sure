@@ -16,6 +16,31 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "index delegates whole-row account clicks to the account link" do
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(@account)} [data-controller='clickable-row']")
+    account_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal account_path(@account), account_link["href"]
+  end
+
+  test "index localizes the Plaid add accounts action" do
+    ensure_tailwind_build
+    @user.update!(locale: "de")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]",
+                  edit_plaid_item_path(plaid_items(:one), add_accounts: true),
+                  text: "Konten hinzufügen",
+                  count: 1
+  end
+
   test "index renders kraken items" do
     kraken_item = kraken_items(:one)
     get accounts_url
@@ -75,6 +100,51 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  test "index renders trading212 items" do
+    trading212_item = trading212_items(:configured_item)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+  end
+
+  test "index renders only accessible accounts for a visible trading212 item" do
+    accessible_account = accounts(:depository)
+    inaccessible_account = accounts(:investment)
+    trading212_item = trading212_items(:configured_item)
+    trading212_accounts(:main_account).ensure_account_provider!(accessible_account)
+    trading212_item.trading212_accounts.create!(
+      name: "Private Trading 212 Account",
+      trading212_account_id: "t212_private_123",
+      currency: "USD",
+      current_balance: 1000,
+      cash_balance: 100,
+      raw_positions_payload: [],
+      raw_orders_payload: [],
+      raw_dividends_payload: [],
+      raw_transactions_payload: []
+    ).ensure_account_provider!(inaccessible_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+    assert_select "turbo-frame##{dom_id(accessible_account)}", count: 1
+    assert_select "turbo-frame##{dom_id(inaccessible_account)}", count: 0
+  end
+
+  test "index renders only trading212 items with accessible accounts for members" do
+    shared_account = accounts(:credit_card)
+    trading212_accounts(:main_account).ensure_account_provider!(shared_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_items(:configured_item))}"
+    assert_select "##{dom_id(trading212_items(:pending_setup_item))}", count: 0
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
@@ -89,8 +159,41 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='DS--tooltip']"
   end
 
+  test "show renders the balance chart as drag-selectable for a custom date range" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#lineChart[data-time-series-chart-selectable-value='true']"
+  end
+
+  test "show honors a custom start_date/end_date range" do
+    start_date = 15.days.ago.to_date
+    end_date = Date.current
+
+    get account_url(@account), params: { start_date: start_date.to_s, end_date: end_date.to_s }
+
+    assert_response :success
+    # If the params were ignored, the user's default preset would render as the
+    # checked option instead of the custom row.
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
+    assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
   test "sync all requests fresh Plaid transactions before syncing the family" do
-    PlaidItem.any_instance.expects(:request_transactions_refresh_later).once
+    sequence = sequence("manual sync all")
+    Family.any_instance
+      .expects(:request_plaid_transactions_refreshes_later)
+      .with(source: "AccountsController#sync_all")
+      .in_sequence(sequence)
+    Family.any_instance.expects(:sync_later).once.in_sequence(sequence)
+
+    post sync_all_accounts_url
+
+    assert_redirected_to accounts_url
+  end
+
+  test "sync all continues when Plaid refresh orchestration cannot be enqueued" do
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
     Family.any_instance.expects(:sync_later).once
 
     post sync_all_accounts_url
@@ -111,6 +214,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, per_row_transfer, "N+1 per-row transfer queries detected (#{per_row_transfer})"
   end
 
+  test "show delegates whole-row trade clicks to the drawer link" do
+    investment_account = accounts(:investment)
+    entry = entries(:trade)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{dom_id(entry.entryable)} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
+  end
+
   test "show avoids N+1 split-parent queries across paginated entries" do
     queries = capture_sql_queries { get account_url(@account) }
     assert_response :success
@@ -121,6 +239,59 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       q.match?(/FROM "entries".*WHERE.*"parent_entry_id"/) && !q.include?(" IN (")
     }
     assert_equal 0, per_row_split, "N+1 per-row split-parent queries detected (#{per_row_split})"
+  end
+
+  test "show groups split transactions into a single split-group row when grouping is enabled" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    assert_select ".split-group" do
+      assert_select "p", text: "Food", count: 0
+    end
+  end
+
+  test "show renders split children as flat rows when grouping is disabled" do
+    @user.update!(preferences: { "show_split_grouped" => false })
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 0
+  end
+
+  test "show avoids N+1 queries when loading split parents for grouped display" do
+    @user.update!(preferences: { "show_split_grouped" => true })
+    3.times do |i|
+      entry = create_transaction(name: "Grocery Store #{i}", amount: 100, account: @account)
+      entry.split!([
+        { name: "Food", amount: 60 },
+        { name: "Household", amount: 40 }
+      ])
+    end
+
+    queries = capture_sql_queries { get account_url(@account) }
+    assert_response :success
+
+    # @split_parents loads all referenced split-parent entries in a single
+    # `WHERE "entries"."id" IN (...)` query — a per-row `"id" = $1` lookup
+    # would indicate the batching regressed into N+1.
+    per_row_split_parent = queries.count { |q|
+      q.match?(/FROM "entries".*WHERE.*"entries"\."id" = \$?\d+/) && !q.include?(" IN (")
+    }
+    assert_equal 0, per_row_split_parent, "N+1 per-row split-parent lookups detected (#{per_row_split_parent})"
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do

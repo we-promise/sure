@@ -52,6 +52,8 @@ fr:
     form:
       additional_details: Détails supplémentaires
       balance: 'Solde à la date :'
+      enable_category_matcher_hint: Lorsque cette option est activée, la catégorie suggérée par le fournisseur est appliquée aux transactions importées. Désactivez-la pour laisser les nouvelles transactions sans catégorie.
+      enable_category_matcher_label: Activer l'attribution automatique de catégorie
       exclude_from_reports: Exclure de tous les rapports
       institution_domain_label: Domaine de l'institution
       institution_domain_placeholder: ex., banquepopulaire.fr
@@ -64,6 +66,7 @@ fr:
       opening_balance_date_label: Date du solde d'ouverture
     index:
       accounts: Comptes
+      cancel_sync: Annuler la synchronisation
       manual_accounts:
         other_accounts: Autres comptes
       new_account: Nouveau compte

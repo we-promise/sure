@@ -33,6 +33,8 @@ de:
     index:
       chats: Chats
       new_chat: Neuer Chat
+    new:
+      default_title: "Neuer Chat %{timestamp}"
     update:
       success: Chat aktualisiert
     worker_unhealthy_warning: KI-Antworten kommen gerade womöglich nicht an – der Hintergrundprozess scheint gestoppt oder überlastet. Prüf, ob dein Sidekiq-Worker läuft.

@@ -1,0 +1,120 @@
+---
+pt-PT:
+  pages:
+    feedback:
+      title: Feedback
+      heading: Deixe o seu feedback
+      description: Informe-nos se tiver algum feedback específico. Sinta-se à vontade para incluir ligações para vídeos ou capturas de ecrã.
+      feature_request: Escreva um pedido de funcionalidade
+      bug_report: Comunique um erro
+      discuss: "Discuta %{product} com outras pessoas"
+    intro:
+      not_authorized: "A Introdução está disponível apenas para utilizadores convidados."
+      welcome: "Bem-vindo(a)!"
+      coming_soon: A experiência de introdução chega em breve
+      description: "Estamos a desenvolver uma jornada de integração mais completa para conhecer os seus objetivos, marcos e necessidades do dia a dia. Por agora, dirija-se à barra lateral de chat para iniciar uma conversa com a Sure e diga-nos em que ponto está da sua jornada financeira."
+      start_chatting: Começar a conversar
+    redis_configuration_error:
+      page_title: Configuração de Redis Necessária - Sure
+      heading: Configuração de Redis Necessária
+      subheading: A sua instalação da Sure com alojamento próprio precisa que o Redis esteja configurado corretamente.
+      why_required_title: Porque é que o Redis é necessário?
+      why_required_body: A Sure utiliza o Redis para potenciar os trabalhos em segundo plano do Sidekiq para tarefas como sincronizar dados de contas, processar importações e outras operações em segundo plano que mantêm os seus dados financeiros atualizados.
+      view_setup_guide: Ver Guia de Configuração
+      setup_guide_hint: Siga o nosso guia completo de configuração Docker para configurar o Redis
+      refresh_hint: "Depois de configurar o Redis, atualize esta página para continuar."
+      refresh_page: Atualizar página
+    changelog:
+      title: Novidades
+    release_notes_unavailable:
+      name: Notas de versão indisponíveis
+      body_html: "<p>Não foi possível obter as notas de versão mais recentes neste momento. Volte mais tarde ou visite a nossa <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>página de versões do GitHub</a> diretamente.</p>"
+    privacy:
+      title: Política de Privacidade
+      heading: Política de Privacidade
+      placeholder: O conteúdo da política de privacidade será apresentado aqui.
+    terms:
+      title: Termos de Serviço
+      heading: Termos de Serviço
+      placeholder: O conteúdo dos termos de serviço será apresentado aqui.
+    dashboard:
+      welcome: "Bem-vindo(a) de volta, %{name}"
+      subtitle: "Acompanhe a evolução das suas finanças"
+      new: "Novo"
+      sections_aria_label: "Secções da Visão Geral"
+      drag_to_reorder: "Arraste para reordenar a secção"
+      toggle_section: "Alternar a visibilidade da secção"
+      widget_size:
+        label: "Ajustar tamanho"
+        width_label: "Largura"
+        half: "Metade"
+        full: "Total"
+        height_label: "Altura"
+        compact: "Compacto"
+        auto: "Automático"
+        tall: "Alto"
+      net_worth_chart:
+        data_not_available: Dados não disponíveis para o período selecionado
+        title: Património líquido
+      no_account_empty_state:
+        new_account: Nova conta
+        no_account_subtitle: Ainda não adicionou nenhuma conta, por isso não existem dados para apresentar. Adicione as suas primeiras contas para começar a ver os dados na visão geral.
+        no_account_title: Ainda sem contas
+      balance_sheet:
+        title: "Balanço"
+        no_items: "Ainda sem %{name}"
+        add_accounts: "Adicione as suas contas de %{name} para ver um detalhe completo"
+        no_asset: "Ainda sem ativos"
+        no_liability: "Ainda sem passivos"
+        add_asset_accounts: "Adicione as suas contas de ativos para ver um detalhe completo"
+        add_liability_accounts: "Adicione as suas contas de passivos para ver um detalhe completo"
+        name: "Designação"
+        weight: "Peso"
+        value: "Valor"
+        classifications:
+          asset: "Ativos"
+          liability: "Passivos"
+      insights_feed:
+        title: "Indicadores"
+      cashflow_sankey:
+        title: "Fluxo de caixa"
+        zoom_out: "Voltar ao fluxo de caixa completo"
+        no_data_title: "Sem dados de fluxo de caixa para este período"
+        no_data_description: "Adicione transações para apresentar os dados de fluxo de caixa ou alargue o período de tempo"
+        add_transaction: "Adicionar transação"
+      no_accounts:
+        title: "Ainda sem contas"
+        description: "Adicione contas para apresentar os dados de património líquido"
+        add_account: "Adicionar conta"
+      outflows_donut:
+        title: "Saídas"
+        total_outflows: "Total de Saídas"
+        categories: "Categorias"
+        value: "Valor"
+        weight: "Peso"
+      investment_summary:
+        title: "Investimentos"
+        total_return: "Retorno Total"
+        holding: "Detenção"
+        weight: "Peso"
+        value: "Valor"
+        return: "Retorno"
+        period_activity: "Atividade de %{period}"
+        contributions: "Contribuições"
+        withdrawals: "Levantamentos"
+        trades: "Negociações"
+        no_investments: "Sem contas de investimento"
+        add_investment: "Adicione uma conta de investimento para acompanhar a sua carteira"
+      money_flow:
+        title: "Rendimentos e Despesas"
+        date_range: "%{start_date} a %{end_date}"
+        month_picker_aria_label: "Selecionar mês"
+        filter_accounts: "Filtrar contas (%{count})"
+        filter_accounts_all: "Todas as contas"
+        period_scope_hint: "Apresenta os meses selecionados aqui, independentemente do período definido no topo da visão geral."
+        search_accounts: "Procurar contas"
+        apply: "Aplicar"
+        balance: "Saldo de transações"
+        chart_span: "Últimos %{count} meses"
+        income: "Rendimentos"
+        expenses: "Despesas"

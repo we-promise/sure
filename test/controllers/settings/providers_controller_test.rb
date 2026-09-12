@@ -33,6 +33,23 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # A panel missing from family_panel_items reports :ok forever, however badly its
+  # connection is doing: compute_provider_sync_health skips any key whose items are
+  # absent, so no error badge ever reaches the page.
+  test "a failed monobank sync surfaces as an error on the providers page" do
+    monobank_items(:one).syncs.create!(status: :failed)
+
+    get settings_providers_url
+    assert_response :success
+
+    health = @controller.view_assigns["provider_sync_health"]["monobank"]
+    assert health.present?, "monobank is missing from the computed sync health"
+    assert health[:error], "monobank sync health should report an error"
+
+    needs_attention = @controller.view_assigns["needs_attention"]
+    assert_includes needs_attention.map { |entry| entry[:provider_key] }, "monobank"
+  end
+
   test "shows configured Brex connections in bank sync settings" do
     get settings_providers_url
 
@@ -508,6 +525,22 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, I18n.t("wise_items.provider_panel.encryption_warning.message")
     assert_includes response.body, I18n.t("settings.providers.drawer_trust_statement_encryption_unconfigured")
     refute_includes response.body, I18n.t("settings.providers.drawer_trust_statement")
+  end
+
+  test "GET show includes Trade Republic in bank sync providers" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_match(/Trade Republic/i, response.body)
+    assert_match(/Approve the login in your Trade Republic app/i, response.body)
+  end
+
+  test "GET connect_form renders Trade Republic panel" do
+    get connect_form_settings_providers_path(provider_key: "trade_republic")
+
+    assert_response :success
+    assert_match(/Trade Republic/i, response.body)
+    assert_match(I18n.t("settings.providers.trade_republic_panel.phone_number_label"), response.body)
   end
 
   test "GET connect_form for snaptrade shows OAuth setup instructions when instance is not configured" do

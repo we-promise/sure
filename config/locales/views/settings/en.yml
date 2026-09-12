@@ -112,20 +112,40 @@ en:
         cost_estimates_title: "About Cost Estimates"
         cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
+      prompt_field:
+        provider_label: Provider
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Reset to default
+        reset_confirm_title: Reset to default prompt?
+        reset_confirm_body: This will discard your custom prompt and restore the built-in default instructions.
+        status_custom: Using your custom prompt
+        status_default: Using the built-in default
+        format_risk: 'Your %{provider} prompt dropped the {"%{key}": ...} example. Each request still asks for that shape, so parsing usually holds, but an override that asks for a different output format will break it.'
       show:
         page_title: AI Prompts
-        openai_label: OpenAI
         disable_ai: Disable AI Assistant
-        prompt_instructions: Prompt Instructions
+        save: Save prompts
+        save_confirm:
+          title: "Save custom AI prompts?"
+          body: "Custom prompt overrides replace the built-in system instructions and safety guardrails (such as financial advice restrictions) for your family."
+          dont_show_again: "Don't show this warning again"
+          cancel: "Cancel"
+          confirm: "Confirm"
         main_system_prompt:
           title: Main System Prompt
           subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+          label: Chat system prompt
         transaction_categorizer:
           title: Transaction Categorizer
           subtitle: AI automatically categorizes your transactions based on your defined categories
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+      update:
+        success: AI prompts updated
+        multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"
     payments:
       show:
         page_title: Payments
@@ -419,6 +439,7 @@ en:
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
+        monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
@@ -430,6 +451,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM and Solana wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
         indexa_capital: Track your Indexa Capital automated investment portfolio.
@@ -571,6 +593,10 @@ en:
         step_1_html: "Go to %{link} and generate a personal access token."
         step_2: "Copy your personal access token."
         step_3: "Paste the token below, save, then link your synced accounts."
+      monobank_panel:
+        step_1_html: "Go to %{link}, sign in with the Monobank app and generate a personal token."
+        step_2: "Copy the token — it is shown only once."
+        step_3: "Paste the token below, save, then link the cards and jars you want to track."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
@@ -641,6 +667,59 @@ en:
         accounts_tab: Accounts
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      trade_republic_panel:
+        encryption_warning:
+          title: Encryption is not configured
+          message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
+        steps:
+          step_1: Enter the phone number and PIN you use for the Trade Republic app, then save.
+          step_2: Enter the code from your authenticator app when requested.
+          step_3: Approve the login in your Trade Republic app when prompted.
+        phone_number_label: Phone number
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Leave blank to keep the current phone number
+        pin_label: PIN
+        pin_placeholder_new: Your Trade Republic app PIN
+        pin_placeholder_existing: Leave blank to keep the current PIN
+        currency_label: Account currency
+        connect: Log in
+        confirm_login: Check login
+        complete_login: Continue
+        authenticator_code_label: Authenticator code (if prompted)
+        authenticator_code_placeholder: "6-digit code"
+        push_login_notice: Approve the login in your Trade Republic app now. Sure checks automatically in the background. You can also check the status yourself.
+        check_login_status: Check status now
+        authenticator_code_notice: Enter the code from your authenticator app.
+        approval_pending: Login started. Approve it in the Trade Republic app; Sure is checking automatically.
+        awaiting_confirmation: Approval in the Trade Republic app is pending.
+        awaiting_authenticator_code: Authenticator code required.
+        login_expired: The approval request has expired.
+        restart_login: Start login again
+        connection_success:
+          title: Trade Republic connected successfully
+          message: Your Trade Republic connection is ready.
+          description: Sure is now syncing your Trade Republic data in the background.
+          close: Done
+        qr_login: Log in with QR code
+        qr_cancel: Cancel QR login
+        qr_back_to_credentials: Back to phone number and PIN
+        qr_loading: Preparing QR code …
+        qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
+        qr_success: Login approved. Sure is refreshing the provider page.
+        qr_error: QR login could not be started. Please try again.
+        save_configuration: Save & Start Login
+        update_configuration: Update Configuration
+        sync: Sync
+        disconnect: Disconnect Trade Republic
+        disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
+        status_configured_prefix: "Connected. Visit the"
+        accounts_tab: Accounts
+        setup_accounts: Set up accounts
+        accounts_discovered:
+          one: 1 Trade Republic account discovered.
+          other: "%{count} Trade Republic accounts discovered."
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).
@@ -659,7 +738,11 @@ en:
         save_configuration: Save Configuration
         update_configuration: Update Configuration
         sync: Sync
+        syncing: Syncing...
+        disconnect: Disconnect Trading 212 account
         disconnect_confirm: Disconnect Trading 212?
+        default_account_name: Trading 212 Account
+        add_account: Add another account
         status_configured_prefix: "Configured. Visit the"
         accounts_tab: Accounts
         status_configured_suffix: tab to manage discovered accounts.

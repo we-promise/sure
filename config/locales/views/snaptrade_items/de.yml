@@ -117,6 +117,25 @@ de:
       failed: Die SnapTrade-Freigabe ließ sich nicht abschließen. Versuch es noch einmal.
       state_mismatch: Die SnapTrade-Freigabe hat eine Sicherheitsprüfung nicht bestanden. Versuch es noch einmal.
       success: SnapTrade-Freigabe abgeschlossen.
+    oauth_device_flow:
+      title: SnapTrade verbinden
+      subtitle: Gib Sure mit einem Gerätecode den Zugriff auf SnapTrade frei.
+      instructions: Öffne SnapTrade, bestätige diesen Gerätecode und komm dann hierher zurück, um die Freigabe abzuschließen.
+      code_label: Gerätecode
+      open_snaptrade: SnapTrade öffnen
+      start_button: Freigabe starten
+      complete_button: Ich habe die Freigabe bei SnapTrade bestätigt
+      cancel_button: Abbrechen
+      missing_client_id: SnapTrade OAuth ist nicht konfiguriert. Füg SNAPTRADE_OAUTH_CLIENT_ID zu .env.local hinzu, starte die App neu und versuch es dann noch einmal.
+    start_oauth_device_flow:
+      failed: Die SnapTrade-Freigabe per Gerätecode ließ sich nicht starten. Versuch es noch einmal.
+    complete_oauth_device_flow:
+      success: SnapTrade-Freigabe abgeschlossen.
+      device_code_required: Für diese Verbindung läuft keine SnapTrade-Freigabe per Gerätecode. Starte sie erneut, um einen neuen Code zu erhalten.
+      authorization_pending: SnapTrade hat deine Bestätigung noch nicht erkannt. Bestätige den Code bei SnapTrade und versuch es dann noch einmal.
+      expired: Dieser Gerätecode ist abgelaufen. Starte die Freigabe erneut.
+      access_denied: Die SnapTrade-Freigabe wurde abgelehnt.
+      failed: Die SnapTrade-Freigabe per Gerätecode ließ sich nicht abschließen. Versuch es noch einmal.
 
   providers:
     snaptrade:
@@ -150,12 +169,14 @@ de:
       delete_connection_confirm: "Verbindung löschen"
       manage_at_snaptrade: Verbindungen bei SnapTrade verwalten
       oauth_connect_button: Mit SnapTrade verbinden
+      oauth_device_button: Gerätecode verwenden
       oauth_reauthorize_button: Erneut freigeben
       oauth_setup_step_1_html: Registrier eine OAuth-App unter <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
-      oauth_setup_step_2_html: Trag die Callback-URL dieser App (<code>%{callback_url}</code>) als zulässige Redirect-URI ein
-      oauth_setup_step_3: Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET in deiner Umgebung und starte neu
+      oauth_setup_step_2_html: "Nur für die Browser-Freigabe: Trag die Callback-URL dieser App (<code>%{callback_url}</code>) als zulässige Redirect-URI ein"
+      oauth_setup_step_3: Setz SNAPTRADE_OAUTH_CLIENT_ID in deiner Umgebung und starte neu. Das allein aktiviert die Freigabe per Gerätecode. Füg für die Browser-Freigabe zusätzlich SNAPTRADE_OAUTH_CLIENT_SECRET hinzu.
       oauth_status_authorized: Bei SnapTrade freigegeben.
       oauth_status_ready: Gib Sure den Lesezugriff auf deine SnapTrade-Kontodaten frei.
+      oauth_status_ready_device: Gib Sure mit einem Gerätecode Lesezugriff auf deine SnapTrade-Kontodaten.
       oauth_title: SnapTrade OAuth
 
   snaptrade_item:

@@ -23,6 +23,42 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.buy"), count: 0
   end
 
+  test "the German header localizes supported provider activity labels" do
+    @user.update!(locale: "de")
+
+    translations = {
+      "Buy" => "Kaufen",
+      "Contribution" => "Einlage",
+      "Dividend" => "Dividende",
+      "Exchange" => "Umtausch",
+      "Fee" => "Gebühr",
+      "Interest" => "Zinsen",
+      "Other" => "Sonstige",
+      "Reinvestment" => "Reinvestition",
+      "Sell" => "Verkaufen",
+      "Sweep In" => "Sweep In",
+      "Sweep Out" => "Sweep Out",
+      "Transfer" => "Überweisung",
+      "Withdrawal" => "Entnahme"
+    }
+
+    assert_equal Trade::ACTIVITY_LABELS.sort, translations.keys.sort
+
+    translations.each do |activity_label, translation|
+      key = activity_label.parameterize(separator: "_")
+
+      assert_equal translation,
+                   I18n.t("trades.header.#{key}", locale: :de, fallback: false, default: nil)
+
+      @entry.trade.update!(investment_activity_label: activity_label)
+
+      get trade_url(@entry)
+
+      assert_response :success
+      assert_select "span.text-secondary.text-sm", text: translation
+    end
+  end
+
   test "an unlabelled trade still reads from the amount" do
     @entry.trade.update!(investment_activity_label: nil)
 

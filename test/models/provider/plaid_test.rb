@@ -32,6 +32,54 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests liability products only for liability account types" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "investments" ] &&
+        params[:additional_consented_products] == [ "transactions" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Investment"
+    )
+  end
+
+  test "does not request liabilities for a depository link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "transactions" ] &&
+        params[:additional_consented_products] == [ "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "Depository"
+    )
+  end
+
+  test "requests liabilities as primary for a credit card link" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:products] == [ "liabilities" ] &&
+        params[:additional_consented_products] == [ "transactions", "investments" ]
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: "https://example.com/webhooks",
+      redirect_url: @redirect_url,
+      accountable_type: "CreditCard"
+    )
+  end
+
   test "enables account selection for an update link token" do
     request = mock
     Plaid::LinkTokenCreateRequest.expects(:new).with do |params|

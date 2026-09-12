@@ -1,0 +1,45 @@
+---
+pt-PT:
+  mfa:
+    backup_codes:
+      backup_codes_description: Cada código só pode ser utilizado uma vez. Mantenha estes códigos
+        seguros e protegidos.
+      backup_codes_title: Os Seus Códigos de Cópia de Segurança
+      continue: Continuar para as Definições de Segurança
+      description: Guarde estes códigos de cópia de segurança num local seguro - vai precisar deles
+        se perder o acesso à sua aplicação de autenticação
+      page_title: Códigos de Cópia de Segurança
+      title: Guarde Os Seus Códigos de Cópia de Segurança
+    create:
+      invalid_code: Código de verificação inválido. Tente novamente.
+    disable:
+      success: A autenticação de dois fatores foi desativada
+    new:
+      code_label: Código de Verificação
+      code_placeholder: Introduza o código de 6 dígitos
+      description: Reforce a segurança da sua conta configurando a autenticação de dois fatores
+      page_title: Configuração da Autenticação de Dois Fatores
+      scan_description: Utilize uma aplicação de autenticação como o Google Authenticator ou o 1Password
+        para ler este código QR
+      scan_title: 1. Ler o Código QR
+      secret_description: Se não conseguir ler o código QR, introduza esta chave secreta manualmente
+        na sua aplicação de autenticação
+      secret_title: Código de Introdução Manual
+      title: Configurar Autenticação de Dois Fatores
+      verify_button: Verificar e Ativar 2FA
+      verify_description: Introduza o código de 6 dígitos da sua aplicação de autenticação
+      verify_title: 2. Introduzir o Código de Verificação
+    verify:
+      description: Introduza o código da sua aplicação de autenticação para continuar
+      or: ou
+      page_title: Verificar Autenticação de Dois Fatores
+      title: Autenticação de Dois Fatores
+      verify_button: Verificar
+      webauthn_button: Utilizar chave de acesso ou chave de segurança
+      webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves de segurança.
+    verify_code:
+      invalid_code: Código de autenticação inválido. Tente novamente.
+    verify_webauthn:
+      invalid_credential: Não foi possível verificar essa chave de acesso ou chave de segurança. Tente novamente.
+    webauthn_options:
+      unavailable: Não existem chaves de acesso ou chaves de segurança disponíveis para esta conta.

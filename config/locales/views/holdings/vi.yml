@@ -43,6 +43,9 @@ vi:
       unknown: "--"
       no_cost_basis: Không có giá vốn
     index:
+      positions:
+        one: "%{count} vị thế"
+        other: "%{count} vị thế"
       average_cost: Giá trung bình
       holdings: Danh mục nắm giữ
       name: Tên
