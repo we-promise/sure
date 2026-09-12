@@ -97,8 +97,12 @@
     <%= render "pending_pledge_banner", pledge: pledge %>
   <% end %>
 
-  <% if @unattributed_outflows.any? %>
-    <%= render "unattributed_outflows", goal: @goal, outflows: @unattributed_outflows %>
+  <%# One card for both states of the same story, right below the header —
+      not after the ring, the projection chart and funding accounts. On a
+      phone that gap used to be three screens of scrolling between "was this
+      spent on X?" and "here is what X paid for". %>
+  <% if @unattributed_outflows.any? || @consumed_entries.any? || @goal.any_consumption? %>
+    <%= render "spending", goal: @goal, unattributed: @unattributed_outflows, consumed: @consumed_entries %>
   <% end %>
 
   <% if @goal.paused? %>
