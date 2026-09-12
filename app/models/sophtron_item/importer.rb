@@ -59,6 +59,13 @@ class SophtronItem::Importer
         status: :requires_update,
         last_connection_error: error_message
       )
+      sophtron_item.debug_log_event(
+        category: "sophtron_transaction_sync",
+        level: "warn",
+        message: "Sophtron import stopped because the institution connection is incomplete",
+        source: self.class.name,
+        metadata: { sync_id: sync&.id }
+      )
 
       return {
         success: false,
@@ -77,6 +84,13 @@ class SophtronItem::Importer
       Rails.logger.error "SophtronItem::Importer - Failed to fetch accounts data for item #{sophtron_item.id}"
       return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
     end
+
+    sophtron_item.debug_log_event(
+      category: "sophtron_transaction_sync",
+      message: "Sophtron accounts fetched",
+      source: self.class.name,
+      metadata: { sync_id: sync&.id, discovered_account_count: accounts_data[:accounts].to_a.size }
+    )
 
     # Store raw payload
     begin
@@ -134,6 +148,17 @@ class SophtronItem::Importer
     end
 
     Rails.logger.info "SophtronItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
+    sophtron_item.debug_log_event(
+      category: "sophtron_account_registration",
+      message: "Sophtron account discovery finished",
+      source: self.class.name,
+      metadata: {
+        sync_id: sync&.id,
+        accounts_updated: accounts_updated,
+        accounts_created: accounts_created,
+        accounts_failed: accounts_failed
+      }
+    )
 
     # Step 3: Fetch transactions only for linked accounts with active status
     transactions_imported = 0
@@ -157,6 +182,20 @@ class SophtronItem::Importer
     end
 
     Rails.logger.info "SophtronItem::Importer - Completed import for item #{sophtron_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
+    sophtron_item.debug_log_event(
+      category: "sophtron_transaction_sync",
+      level: accounts_failed.positive? || transactions_failed.positive? ? "warn" : "info",
+      message: "Sophtron import finished",
+      source: self.class.name,
+      metadata: {
+        sync_id: sync&.id,
+        accounts_updated: accounts_updated,
+        accounts_created: accounts_created,
+        accounts_failed: accounts_failed,
+        transactions_imported: transactions_imported,
+        transactions_failed: transactions_failed
+      }
+    )
 
     {
       success: accounts_failed == 0 && transactions_failed == 0,
@@ -187,13 +226,34 @@ class SophtronItem::Importer
           end
         end
         Rails.logger.error "SophtronItem::Importer - Sophtron API error: #{e.message}"
+        sophtron_item.debug_log_event(
+          category: "sophtron_transaction_sync",
+          level: "error",
+          message: "Sophtron account fetch failed",
+          source: self.class.name,
+          metadata: { sync_id: sync&.id, error: e.message, error_type: e.error_type }
+        )
         return nil
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse Sophtron API response: #{e.message}"
+        sophtron_item.debug_log_event(
+          category: "sophtron_transaction_sync",
+          level: "error",
+          message: "Sophtron account fetch response could not be parsed",
+          source: self.class.name,
+          metadata: { sync_id: sync&.id, error: e.message }
+        )
         return nil
       rescue => e
         Rails.logger.error "SophtronItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
+        sophtron_item.debug_log_event(
+          category: "sophtron_transaction_sync",
+          level: "error",
+          message: "Sophtron account fetch failed unexpectedly",
+          source: self.class.name,
+          metadata: { sync_id: sync&.id, error: e.message, error_class: e.class.name }
+        )
         return nil
       end
 
@@ -272,6 +332,16 @@ class SophtronItem::Importer
     def fetch_and_store_transactions(sophtron_account, refresh: true)
       start_date = determine_sync_start_date(sophtron_account)
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
+      log_transaction_event(
+        sophtron_account,
+        message: "Sophtron transaction fetch started",
+        metadata: {
+          sync_id: sync&.id,
+          start_date: start_date,
+          refresh_requested: refresh,
+          initial_fetch: initial_transaction_fetch?(sophtron_account)
+        }
+      )
 
       begin
         if refresh && !initial_transaction_fetch?(sophtron_account)
@@ -324,31 +394,81 @@ class SophtronItem::Importer
             if new_transactions.any?
               Rails.logger.info "SophtronItem::Importer - Storing #{new_transactions.count} new transactions (#{existing_transactions.count} existing, #{transactions.count - new_transactions.count} duplicates skipped) for account #{sophtron_account.account_id}"
               sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions + new_transactions)
+              log_transaction_event(
+                sophtron_account,
+                message: "Sophtron transactions stored",
+                metadata: {
+                  sync_id: sync&.id,
+                  fetched_count: transactions_count,
+                  new_transaction_count: new_transactions.count,
+                  duplicate_count: transactions.count - new_transactions.count,
+                  existing_transaction_count: existing_transactions.count
+                }
+              )
             else
               Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
               sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
+              log_transaction_event(
+                sophtron_account,
+                message: "Sophtron transaction fetch found no new transactions",
+                metadata: {
+                  sync_id: sync&.id,
+                  fetched_count: transactions_count,
+                  duplicate_count: transactions.count,
+                  existing_transaction_count: existing_transactions.count
+                }
+              )
             end
           rescue => e
             Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
+            log_transaction_event(
+              sophtron_account,
+              level: "error",
+              message: "Sophtron transactions could not be stored",
+              metadata: { sync_id: sync&.id, error: e.message, error_class: e.class.name }
+            )
             return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
           end
         else
           Rails.logger.info "SophtronItem::Importer - No transactions to store for account #{sophtron_account.account_id}"
           sophtron_account.upsert_sophtron_transactions_snapshot!([]) if sophtron_account.raw_transactions_payload.nil?
+          log_transaction_event(
+            sophtron_account,
+            message: "Sophtron transaction fetch returned no transactions",
+            metadata: { sync_id: sync&.id, fetched_count: 0 }
+          )
         end
 
         { success: true, transactions_count: transactions_count }
       rescue Provider::Sophtron::Error => e
         requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-        sophtron_item.update!(status: :requires_update) if requires_update
+        sophtron_item.update(status: :requires_update) if requires_update
         Rails.logger.error "SophtronItem::Importer - Sophtron API error for account #{sophtron_account.id}: #{e.message}"
+        log_transaction_event(
+          sophtron_account,
+          level: "error",
+          message: "Sophtron transaction fetch failed",
+          metadata: { sync_id: sync&.id, error: e.message, error_type: e.error_type, requires_update: requires_update }
+        )
         { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
+        log_transaction_event(
+          sophtron_account,
+          level: "error",
+          message: "Sophtron transaction response could not be parsed",
+          metadata: { sync_id: sync&.id, error: e.message }
+        )
         { success: false, transactions_count: 0, error: "Failed to parse response" }
       rescue => e
         Rails.logger.error "SophtronItem::Importer - Unexpected error fetching transactions for account #{sophtron_account.id}: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
+        log_transaction_event(
+          sophtron_account,
+          level: "error",
+          message: "Sophtron transaction fetch failed unexpectedly",
+          metadata: { sync_id: sync&.id, error: e.message, error_class: e.class.name }
+        )
         { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
       end
     end
@@ -358,6 +478,12 @@ class SophtronItem::Importer
       job_id = refresh_response.with_indifferent_access[:JobID] || refresh_response.with_indifferent_access[:job_id]
       return nil if job_id.blank?
 
+      log_transaction_event(
+        sophtron_account,
+        message: "Sophtron account refresh requested before transaction fetch",
+        metadata: { sync_id: sync&.id, job_id: job_id }
+      )
+
       job = Provider::Sophtron.response_data!(sophtron_provider.get_job_information(job_id))
       sophtron_item.upsert_job_snapshot!(job)
 
@@ -365,13 +491,25 @@ class SophtronItem::Importer
         sophtron_item.update!(
           status: :requires_update,
           current_job_id: job_id,
-          last_connection_error: "Sophtron refresh requires MFA"
+          last_connection_error: I18n.t("sophtron_items.errors.refresh_requires_mfa")
         )
-        return { success: false, transactions_count: 0, error: "Sophtron refresh requires MFA", requires_update: true }
+        log_transaction_event(
+          sophtron_account,
+          level: "warn",
+          message: "Sophtron account refresh requires MFA before transaction fetch",
+          metadata: { sync_id: sync&.id, job_id: job_id }
+        )
+        return { success: false, transactions_count: 0, error: I18n.t("sophtron_items.errors.refresh_requires_mfa"), requires_update: true }
       end
 
       if Provider::Sophtron.job_failed?(job)
-        return { success: false, transactions_count: 0, error: "Sophtron refresh failed" }
+        log_transaction_event(
+          sophtron_account,
+          level: "error",
+          message: "Sophtron account refresh failed before transaction fetch",
+          metadata: { sync_id: sync&.id, job_id: job_id, job_status: job.with_indifferent_access[:LastStatus] || job.with_indifferent_access[:last_status] }
+        )
+        return { success: false, transactions_count: 0, error: I18n.t("sophtron_items.errors.refresh_failed") }
       end
 
       unless Provider::Sophtron.job_success?(job) || Provider::Sophtron.job_completed?(job)
@@ -381,15 +519,47 @@ class SophtronItem::Importer
           sync: sync
         )
 
+        log_transaction_event(
+          sophtron_account,
+          message: "Sophtron account refresh is still running; polling job enqueued",
+          metadata: { sync_id: sync&.id, job_id: job_id }
+        )
+
         return { success: true, transactions_count: 0, refresh_pending: true }
       end
 
+      log_transaction_event(
+        sophtron_account,
+        message: "Sophtron account refresh completed before transaction fetch",
+        metadata: { sync_id: sync&.id, job_id: job_id }
+      )
       nil
     rescue Provider::Sophtron::Error => e
       requires_update = e.error_type.in?([ :unauthorized, :access_forbidden ])
-      sophtron_item.update!(status: :requires_update) if requires_update
+      sophtron_item.update(status: :requires_update) if requires_update
       Rails.logger.error "SophtronItem::Importer - Sophtron API error refreshing account #{sophtron_account.id}: #{e.message}"
+      log_transaction_event(
+        sophtron_account,
+        level: "error",
+        message: "Sophtron account refresh failed before transaction fetch",
+        metadata: { sync_id: sync&.id, error: e.message, error_type: e.error_type, requires_update: requires_update }
+      )
       { success: false, transactions_count: 0, error: e.message, requires_update: requires_update }
+    end
+
+    def log_transaction_event(sophtron_account, message:, level: "info", metadata: {})
+      sophtron_item.debug_log_event(
+        category: "sophtron_transaction_sync",
+        level: level,
+        message: message,
+        source: self.class.name,
+        account: sophtron_account.current_account,
+        account_provider: sophtron_account.account_provider,
+        metadata: {
+          sophtron_account_id: sophtron_account.id,
+          sophtron_account_external_id: sophtron_account.account_id
+        }.merge(metadata)
+      )
     end
 
     # Determines the appropriate start date for fetching transactions.
@@ -452,6 +622,13 @@ class SophtronItem::Importer
       end
 
       Rails.logger.error "SophtronItem::Importer - API error: #{error_message}"
+      sophtron_item.debug_log_event(
+        category: "sophtron_transaction_sync",
+        level: "error",
+        message: "Sophtron API returned an error payload during import",
+        source: self.class.name,
+        metadata: { sync_id: sync&.id, error: error_message, requires_update: needs_update }
+      )
       raise Provider::Sophtron::Error.new(
         "Sophtron API error: #{error_message}",
         :api_error
