@@ -702,6 +702,13 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      namespace :financekit do
+        get "capabilities", to: "connections#capabilities"
+        resources :connections, only: [ :create, :show, :destroy ] do
+          put "account_mappings/:source_id", to: "connections#mapping"
+          post "syncs", to: "syncs#create"
+        end
+      end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"

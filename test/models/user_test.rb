@@ -720,6 +720,22 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_family, statement.reload.family
   end
 
+  test "transfer_to_family! moves unmapped FinanceKit items owned by the user" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred FinanceKit Family")
+    user.update!(role: "admin", preferences: user.preferences.merge("preview_features_enabled" => true))
+    financekit_item = Financekit::Enrollment.create!(user, { "enrollment_id" => SecureRandom.uuid, "protocol" => 1,
+      "consent" => { "version" => 1, "upload_authorized" => true, "enrichment_acknowledged" => true, "source_ids" => [ SecureRandom.uuid ] } })
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_equal new_family, user.reload.family
+    assert_equal new_family, financekit_item.reload.family
+    assert financekit_item.pending_account_setup?
+    assert_not_equal source_family, financekit_item.family
+  end
+
   test "transfer_to_family! rejects provider items linked to accounts outside the transfer" do
     user = users(:family_member)
     other_user = users(:family_admin)
