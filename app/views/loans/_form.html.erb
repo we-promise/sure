@@ -5,6 +5,8 @@
 
   <div class="space-y-2">
     <%= form.fields_for :accountable do |loan_form| %>
+      <div data-controller="loan-rate-changes"
+           data-loan-rate-changes-fixed-type-value="<%= Loan::FIXED_RATE_TYPE %>">
       <div class="flex items-center gap-2">
         <%= loan_form.money_field :initial_balance,
                                  label: t("loans.form.initial_balance"),
@@ -18,15 +20,77 @@
                                  placeholder: t("loans.form.interest_rate_placeholder"),
                                  min: 0,
                                  step: 0.005 %>
+        <%# A provider can write a rate type the form never offers ("arm"); it
+            stays in the list so saving the form keeps it rather than silently
+            replacing it with the first option. %>
         <%= loan_form.select :rate_type,
-                           [[t("loans.form.rate_type_fixed"), "fixed"], [t("loans.form.rate_type_variable"), "variable"], [t("loans.form.rate_type_adjustable"), "adjustable"]],
-                           { label: t("loans.form.rate_type") } %>
+                           loan_rate_type_options(account.loan),
+                           { label: t("loans.form.rate_type") },
+                           { data: { loan_rate_changes_target: "rateType",
+                                     action: "change->loan-rate-changes#toggle" } } %>
       </div>
 
       <div class="flex items-center gap-2">
+        <%= loan_form.date_field :start_date,
+                                 label: t("loans.form.start_date"),
+                                 max: Date.current %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.start_date_hint") %></p>
+
+      <div class="flex items-center gap-2">
+        <%# Bounded here rather than validated on Loan: PlaidAccount::Liabilities::StudentLoanProcessor
+            writes this column from provider dates, and a term the simulator will not walk is
+            answered tolerantly there (no schedule, as for an unknown rate type). %>
         <%= loan_form.number_field :term_months,
                                  label: t("loans.form.term_months"),
-                                 placeholder: t("loans.form.term_months_placeholder") %>
+                                 placeholder: t("loans.form.term_months_placeholder"),
+                                 min: 1,
+                                 max: Loan::Simulator::MAX_PERIODS %>
+      </div>
+
+      <%# Rate changes only mean something for a loan whose rate can move. The
+          section is rendered for every rate type, retained rows included, and
+          for fixed it is hidden AND its inputs disabled -- here, server-side,
+          not only by the Stimulus controller, so a save without JavaScript
+          behaves the same. A disabled input is not submitted, so a fixed loan
+          sends no rate_changes key and its recorded changes are retained
+          rather than cleared. Switching the select to variable enables and
+          reveals the retained rows, and the save resubmits them. %>
+      <% rate_changes_disabled = !account.loan.variable_rate_type? %>
+      <div class="space-y-2" data-loan-rate-changes-target="section"
+           <%= "hidden" if rate_changes_disabled %>>
+        <h3 class="text-sm font-medium text-primary"><%= t("loans.form.rate_changes") %></h3>
+        <p class="text-xs text-secondary"><%= t("loans.form.rate_changes_hint") %></p>
+
+        <%# Submitted whenever the section is enabled, so removing the last row
+            still sends the key and the writer is called to clear the schedule.
+            Without it, "remove them all" would send nothing and silently leave
+            them persisted. Disabled with the section: on a fixed loan this
+            input alone would otherwise submit and clear the retained rows. %>
+        <input type="hidden" name="account[accountable_attributes][rate_changes][]" value=""
+               <%= "disabled" if rate_changes_disabled %>>
+
+        <div data-loan-rate-changes-target="rows" class="space-y-2">
+          <% account.loan.rate_change_rows.each do |row| %>
+            <%= render "loans/rate_change_row",
+                       effective_date: row[:effective_date], rate: row[:rate],
+                       disabled: rate_changes_disabled %>
+          <% end %>
+        </div>
+
+        <p data-loan-rate-changes-target="empty" class="text-xs text-subdued"
+           <%= "hidden" if account.loan.rate_change_rows.any? %>>
+          <%= t("loans.form.rate_changes_empty") %>
+        </p>
+
+        <template data-loan-rate-changes-target="template">
+          <%= render "loans/rate_change_row", effective_date: nil, rate: nil %>
+        </template>
+
+        <%= render DS::Button.new(text: t("loans.form.rate_change_add"), icon: "plus", variant: "ghost", type: "button",
+                                  disabled: rate_changes_disabled, data: { action: "loan-rate-changes#add" }) %>
+      </div>
+
       </div>
 
       <div>

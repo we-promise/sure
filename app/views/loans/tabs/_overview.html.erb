@@ -1,4 +1,9 @@
-<%# locals: (account:) %>
+<%# locals: (account:, as_of: Date.current) %>
+
+<%# ONE reference date for every figure on this tab, supplied by the caller
+    where it has one (the account page passes the same date to the Schedule
+    tab). %>
+<% today = as_of %>
 
 <div class="grid grid-cols-3 gap-2">
   <%= summary_card title: t(".original_principal") do %>
@@ -9,18 +14,24 @@
     <%= format_money account.balance_money %>
   <% end %>
 
+  <%# The rate in force today, not the one the loan was written at. On a
+      variable loan with a recorded change the Schedule tab beside this card
+      re-amortises at that change; quoting `interest_rate` here showed the
+      origination rate next to a schedule that no longer used it. For a fixed
+      loan, or before any change applies, this is the column unchanged. %>
   <%= summary_card title: t(".interest_rate") do %>
-    <% if account.loan.interest_rate.present? %>
-      <%= number_to_percentage(account.loan.interest_rate, precision: 3) %>
+    <% current_rate = account.loan.current_variable_rate(today) %>
+    <% if current_rate.present? %>
+      <%= number_to_percentage(current_rate, precision: 3) %>
     <% else %>
       <%= t(".unknown") %>
     <% end %>
   <% end %>
 
   <%= summary_card title: t(".monthly_payment") do %>
-    <% if account.loan.rate_type.present? && account.loan.rate_type != 'fixed' %>
+    <% if account.loan.variable_rate_type? %>
       <%= t(".not_applicable") %>
-    <% elsif account.loan.rate_type == 'fixed' && account.loan.monthly_payment.present? %>
+    <% elsif account.loan.monthly_payment.present? %>
       <%= format_money(account.loan.monthly_payment) %>
     <% else %>
       <%= t(".unknown") %>

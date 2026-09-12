@@ -21,6 +21,13 @@ class AccountTest < ActiveSupport::TestCase
     admin = users(:empty)
     super_admin = users(:sure_support_staff)
 
+    # Fixtures stamp every row with one `created_at`, and this family holds a
+    # second admin (`sso_only`), so "the earliest admin" is only meaningful
+    # once the timestamps differ. Without this the assertion below rides on
+    # whichever admin the query plan happens to return first.
+    family.users.update_all(created_at: 1.hour.ago)
+    admin.update!(created_at: 2.hours.ago)
+
     Current.reset
 
     account = family.accounts.create!(
@@ -32,6 +39,25 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal admin, account.owner
     assert_not_equal super_admin, account.owner
+  end
+
+  test "default owner is stable when two admins share a created_at" do
+    family = families(:empty)
+    family.users.where(role: "admin").update_all(created_at: 1.hour.ago)
+
+    Current.reset
+
+    owners = 2.times.map do |i|
+      family.accounts.create!(
+        name: "Unowned tie-break account #{i}",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      ).owner
+    end
+
+    assert_equal "admin", owners.first.role
+    assert_equal owners.first, owners.last
   end
 
   test "create_and_sync calls sync_later by default" do

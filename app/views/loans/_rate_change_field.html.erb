@@ -1,0 +1,13 @@
+<%# locals: (label:, type:, name:, value:, disabled: false, attributes: {}) %>
+
+<%# The field shape StyledFormBuilder renders (.form-field, a label, the
+    input), written out because the builder labels through `for`/id and the
+    rate-change row is also the JS clone template, so an id would repeat on
+    every cloned row. The label wraps its input instead, which associates the
+    two without one. %>
+<div class="form-field">
+  <label class="form-field__body">
+    <span class="form-field__label"><%= label %></span>
+    <%= tag.input type: type, name: name, value: value, autocomplete: "off", class: "form-field__input", disabled: disabled, **attributes %>
+  </label>
+</div>

@@ -1,0 +1,7 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Rate change rows need both an effective date and a rate.
