@@ -273,7 +273,7 @@ class OpenBankingIoItemsController < ApplicationController
 
     redirect_to accounts_path, status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error("open-banking.io account setup failed: #{e.class} - #{e.message}")
+    @open_banking_io_item.capture_provider_error("Failed to set up open-banking.io accounts", error: e)
     redirect_to accounts_path, alert: t(".creation_failed"), status: :see_other
   end
 

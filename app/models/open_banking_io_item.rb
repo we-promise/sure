@@ -108,7 +108,8 @@ class OpenBankingIoItem < ApplicationRecord
       metadata: {
         open_banking_io_item_id: id,
         error_class: error&.class&.name,
-        error_message: error&.message
+        error_message: error&.message,
+        backtrace: error&.backtrace&.first(5)
       }.merge(metadata).compact
     )
   end
