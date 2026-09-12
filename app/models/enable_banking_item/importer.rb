@@ -597,27 +597,42 @@ class EnableBankingItem::Importer
 
       duplicates_removed = 0
 
-      # Within each duplicate group, keep the richest representative -- a
-      # present counterparty IBAN first, then BOOK over PDNG -- rather than
-      # whichever row the API happened to return first. IBAN ranks above
-      # status: a BOOK row that lost its IBAN in a later delivery (some
-      # ASPSPs drop counterparty data once a transaction settles) must not
-      # win over a PDNG row from the same group that still carries it, or the
-      # dedup pass would silently discard real IBAN data. Array order isn't a
-      # reliability signal either, and picking the first row arbitrarily
-      # could discard a settled/IBAN-bearing row in favor of a thinner one
-      # (or, in a bucket a blank-IBAN row aliases into, discard the row that
-      # actually owns that IBAN).
+      # Within each duplicate group, keep the richest representative --
+      # BOOK over PDNG, same as before IBAN existed -- rather than whichever
+      # row the API happened to return first. Status ranks above IBAN
+      # presence here (unlike an earlier version of this method): picking a
+      # still-pending row over a settled one just because it had richer
+      # account data would leave the transaction permanently stuck pending
+      # (PENDING_PROVIDERS-gated balances/analytics exclude it) on every
+      # future sync, which is worse than the IBAN gap it would have closed.
+      # Instead, when the BOOK-preferred representative itself lacks IBAN
+      # data that a PDNG sibling in the same group carries (some ASPSPs drop
+      # counterparty data once a transaction settles), that IBAN is merged
+      # into the representative's own account fields below -- so both the
+      # settled status and the IBAN data survive, instead of trading one for
+      # the other.
       result = keyed_with_index.values.map do |group|
         duplicates_removed += group.size - 1 if group.size > 1
 
-        group.min_by do |tx, index|
+        representative, index = group.min_by do |tx, index|
           [
-            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present? ? 0 : 1,
             tx[:status].to_s == "BOOK" ? 0 : 1,
             index
           ]
         end
+
+        unless counterparty_iban_for_content_key(representative, representative[:credit_debit_indicator]).present?
+          donor = group.map(&:first).find do |tx|
+            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present?
+          end
+
+          if donor
+            account_key = representative[:credit_debit_indicator] == "CRDT" ? :debtor_account : :creditor_account
+            representative = representative.merge(account_key => donor[account_key])
+          end
+        end
+
+        [ representative, index ]
       end.sort_by { |_tx, index| index }.map(&:first)
 
       if duplicates_removed > 0

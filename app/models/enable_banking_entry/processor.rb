@@ -46,6 +46,19 @@ class EnableBankingEntry::Processor
   # ID fields *and* two distinct payments with byte-identical date/amount/
   # currency/direction/creditor/debtor/remittance text, which is rare enough
   # to prefer stability for the common case.
+  #
+  # The same gap exists, for the same reason, when transaction_id/entry_reference
+  # IS present but reused by the ASPSP across two genuinely distinct payments
+  # (the API docs don't guarantee uniqueness -- see the importer's dedup key
+  # comment): the dedup pass can now correctly keep both as separate raw rows
+  # when their counterparty IBANs differ, but they still compute the SAME
+  # external_id here and get collapsed into one Entry during import, silently
+  # dropping one real transaction. Folding IBAN into this branch's ID would
+  # have the identical every-existing-transaction-becomes-a-duplicate problem
+  # as above, just triggered by a much more common ASPSP behavior (a present
+  # but reused transaction_id, vs. an absent one) -- so it's deliberately
+  # left as the wider, still-open half of this same accepted tradeoff rather
+  # than patched narrowly here.
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence

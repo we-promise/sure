@@ -179,12 +179,14 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 1, result.count
   end
 
-  test "prefers an iban-bearing pending row over a booked row that lost its iban" do
+  test "merges a pending row's iban into the booked representative that lost it" do
     # Some ASPSPs drop counterparty account data once a transaction settles
     # (the booked delivery has less detail than the earlier pending one).
-    # IBAN presence must outrank BOOK/PDNG status when picking the group's
-    # representative, or dedup would silently discard real IBAN data by
-    # keeping the thinner booked row just because it settled.
+    # Status still ranks above IBAN presence when picking the group's
+    # representative (a still-pending row would otherwise get stuck pending
+    # forever), but the IBAN itself must not be silently discarded either --
+    # it's merged into the booked representative instead of being traded
+    # away for it.
     transactions = [
       {
         entry_reference: "ref_pending_with_iban",
@@ -208,7 +210,10 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
     assert_equal 1, result.count
-    assert_equal "ref_pending_with_iban", result.first[:entry_reference]
+    assert_equal "ref_booked_without_iban", result.first[:entry_reference],
+      "the settled row must be kept, not the still-pending one"
+    assert_equal "DE89370400440532013000", result.first.dig(:creditor_account, :iban), # pipelock:ignore IBAN
+      "the booked representative must still gain the pending sibling's iban"
   end
 
   test "keeps transactions with different creditors" do
