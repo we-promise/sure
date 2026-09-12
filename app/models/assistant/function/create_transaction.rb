@@ -181,15 +181,28 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     entry.lock_saved_attributes!
     entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
     entry.mark_user_modified! if user_modified?(params)
-    entry.sync_account_later
+
+    # Post-commit account sync is best-effort. entry.save has ALREADY committed
+    # the transaction, so a failure to enqueue the balance-sync job (e.g. an
+    # unavailable job backend) must NOT be reported as a failed create — doing
+    # so would make an MCP caller retry without an external_id and create a
+    # duplicate. Mirrors DeleteTransaction's post-destroy sync handling.
+    sync_warning = nil
+    begin
+      entry.sync_account_later
+    rescue StandardError => e
+      sync_warning = "Transaction created, but the post-create account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
+    end
 
     transaction = entry.transaction
-    {
+    response = {
       success: true,
       created: true,
       transaction: serialize(transaction),
       message: "Created #{transaction.entry.name} (#{format_money(entry)} on #{date.iso8601})."
     }
+    response[:warning] = sync_warning if sync_warning
+    response
   rescue ActiveRecord::RecordNotUnique
     # Lost a race on the idempotency index: a concurrent call created it first.
     if entry_params[:external_id].present?

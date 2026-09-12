@@ -61,6 +61,30 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.00"), entry.amount
   end
 
+  test "reports created with a warning when the post-create sync fails to enqueue" do
+    # The transaction is committed by entry.save BEFORE sync_account_later runs.
+    # A failure to enqueue the balance-sync job (e.g. an unavailable job
+    # backend) must NOT be reported as a failed create — otherwise an MCP
+    # caller retries without an external_id and creates a duplicate.
+    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "job backend unavailable")
+
+    result = @function.call(
+      "account_id" => @account.id,
+      "date" => "2026-09-11",
+      "amount" => 100.00,
+      "type" => "expense",
+      "name" => "Sync Failure Case"
+    )
+
+    assert_equal true, result[:success]
+    assert_equal true, result[:created]
+    assert_match(/could not be enqueued/, result[:warning])
+
+    # The transaction was actually persisted despite the sync failure.
+    entry = Entry.find_by(name: "Sync Failure Case", account: @account, date: Date.new(2026, 9, 11))
+    assert entry
+  end
+
   test "stores amount as-given when no type is provided" do
     result = @function.call(
       "account_id" => @account.id,
