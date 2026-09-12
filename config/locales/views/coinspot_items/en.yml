@@ -13,6 +13,7 @@ en:
       success: Successfully updated CoinSpot connection.
     destroy:
       success: Scheduled CoinSpot connection for deletion.
+      unlink_failed: Could not disconnect CoinSpot connection
     select_accounts:
       select_connection: Choose a CoinSpot connection in Provider Settings.
       no_credentials_configured: Add CoinSpot API credentials before setting up accounts.

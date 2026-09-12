@@ -60,6 +60,26 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [], payload.dig("orders", "buyorders")
   end
 
+  # The fallback read only response["orders"], so buy/sell orders the market
+  # endpoint does return were dropped on the floor.
+  test "market order fallback keeps buyorders and sellorders alongside orders" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
+    @provider.stubs(:get_market_order_history).returns({
+      "orders" => [ { "id" => "m1", "coin" => "BTC" } ],
+      "buyorders" => [ { "id" => "b1", "coin" => "BTC" } ],
+      "sellorders" => [ { "id" => "s1", "coin" => "BTC" } ]
+    })
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal %w[b1], payload.dig("orders", "buyorders").map { |o| o["id"] }
+    assert_equal %w[s1], payload.dig("orders", "sellorders").map { |o| o["id"] }
+    assert_equal %w[m1], payload.dig("orders", "orders").map { |o| o["id"] }
+    assert_equal 3, result[:orders_imported]
+  end
+
   test "fails without persisting a partial snapshot when both order history endpoints fail" do
     @provider.stubs(:get_balances).returns("balances" => [])
     @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")

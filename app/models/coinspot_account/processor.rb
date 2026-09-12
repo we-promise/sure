@@ -224,6 +224,8 @@ class CoinspotAccount::Processor
     end
 
     def log_record_failure(kind, record, error)
+      details = sanitized_record(record)
+
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "error",
@@ -231,9 +233,22 @@ class CoinspotAccount::Processor
         source: self.class.name,
         provider_key: "coinspot",
         family: coinspot_account.coinspot_item&.family,
-        metadata: { record: record, error_class: error.class.name }
+        metadata: { record: details, error_class: error.class.name }
       )
-      { kind: kind, error: error.message, error_class: error.class.name, record: record }
+      { kind: kind, error: error.message, error_class: error.class.name, record: details }
+    end
+
+    # An allowlist, not a redaction list: the whole provider record used to go
+    # into DebugLogEntry and into the failure result the syncer surfaces, which
+    # put addresses, transaction ids and amounts in front of anyone who can
+    # read the debug UI. Only what is needed to identify the failing record is
+    # kept, and anything new CoinSpot adds is excluded by default.
+    SAFE_RECORD_KEYS = %w[id txid reference coin market type].freeze
+
+    def sanitized_record(record)
+      return {} unless record.is_a?(Hash)
+
+      record.slice(*SAFE_RECORD_KEYS)
     end
 
     # Imports a fee (already in AUD) as its own transaction, keyed off a hash

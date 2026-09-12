@@ -19,7 +19,15 @@ module CoinspotAccount::AudConverter
       rate = ExchangeRate.find_or_fetch_rate(from: "AUD", to: target, date: date)
       raise ConversionUnavailableError, "No AUD-#{target} exchange rate for #{date}" unless rate
 
-      [ amount * rate.rate.to_d, rate.date != date, rate.date ]
+      # ExchangeRate validates presence but not numericality, so a zero,
+      # negative or non-finite rate is storable -- and multiplying by one
+      # silently writes a zeroed or sign-flipped valuation rather than failing.
+      numeric_rate = rate.rate.to_d
+      unless numeric_rate.finite? && numeric_rate.positive?
+        raise ConversionUnavailableError, "AUD-#{target} exchange rate for #{date} is not usable: #{rate.rate.inspect}"
+      end
+
+      [ amount * numeric_rate, rate.date != date, rate.date ]
     rescue ConversionUnavailableError => e
       capture_conversion_failure(amount, date, target, e)
       raise

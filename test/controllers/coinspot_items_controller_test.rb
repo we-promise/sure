@@ -295,6 +295,33 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "You don't have permission to manage this account", flash[:alert]
   end
 
+  # unlink_all! captures a per-account failure on its result rather than
+  # raising, so discarding the results scheduled the connection for deletion
+  # while accounts were still linked to it.
+  test "destroy does not schedule deletion when unlinking an account fails" do
+    CoinspotItem.any_instance.stubs(:unlink_all!).returns([
+      { provider_account_id: SecureRandom.uuid, name: "CoinSpot", provider_link_ids: [], error: "boom" }
+    ])
+    CoinspotItem.any_instance.expects(:destroy_later).never
+
+    delete coinspot_item_url(@second_item)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinspot_items.destroy.unlink_failed"), flash[:alert]
+  end
+
+  test "destroy schedules deletion when every account unlinks cleanly" do
+    CoinspotItem.any_instance.stubs(:unlink_all!).returns([
+      { provider_account_id: SecureRandom.uuid, name: "CoinSpot", provider_link_ids: [] }
+    ])
+    CoinspotItem.any_instance.expects(:destroy_later).once
+
+    delete coinspot_item_url(@second_item)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("coinspot_items.destroy.success"), flash[:notice]
+  end
+
   test "select existing account renders selected coinspot item id" do
     account = manual_crypto_exchange_account
     @second_item.coinspot_accounts.create!(name: "CoinSpot", account_id: "combined", account_type: "combined", currency: "AUD")

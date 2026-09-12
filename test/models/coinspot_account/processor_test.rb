@@ -206,6 +206,51 @@ class CoinspotAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 3000.to_d, trade.price
   end
 
+  # The whole provider record used to go into DebugLogEntry metadata and into
+  # the failure result the syncer surfaces, putting addresses and amounts in
+  # front of anyone who can read the debug UI.
+  test "a record failure reports only allowlisted fields, not the whole record" do
+    @coinspot_account.update!(raw_transactions_payload: {
+      "send_receive" => {
+        "sendtransactions" => [ {
+          "txid" => "send-9", "coin" => "btc", "amount" => "0.001", "aud" => "100.00",
+          "timestamp" => "2026-01-04T10:00:00Z",
+          "address" => "bc1qsecretdestinationaddress", "sendfee" => "0.00001"
+        } ]
+      }
+    })
+    Account::ProviderImportAdapter.any_instance.stubs(:import_transaction).raises(StandardError, "boom")
+
+    result = CoinspotAccount::Processor.new(@coinspot_account).process
+
+    assert_equal false, result[:success]
+    record = result[:failures].first[:record]
+    assert_equal "send-9", record["txid"]
+    assert_equal "btc", record["coin"]
+    assert_nil record["address"]
+    assert_nil record["aud"]
+    assert_nil record["amount"]
+    assert_not_includes record.to_json, "bc1qsecretdestinationaddress"
+  end
+
+  # ExchangeRate validates presence but not numericality, so a zero or negative
+  # rate is storable -- multiplying by one writes a zeroed valuation instead of
+  # failing.
+  test "refuses to convert with a non-positive exchange rate" do
+    @family.update!(currency: "USD")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(
+      ExchangeRate.new(from_currency: "AUD", to_currency: "USD", rate: 0, date: Date.current)
+    )
+
+    assert_raises(CoinspotAccount::AudConverter::ConversionUnavailableError) do
+      CoinspotAccount::Processor.new(@coinspot_account).process
+    end
+
+    @account.reload
+    assert_equal 0.to_d, @account.balance
+    assert_equal "AUD", @account.currency
+  end
+
   test "imports an order without a provider id using a stable content hash" do
     order = {
       "coin" => "btc",

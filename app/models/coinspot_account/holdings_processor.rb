@@ -3,6 +3,8 @@
 class CoinspotAccount::HoldingsProcessor
   include CoinspotAccount::AudConverter
 
+  class SnapshotUnavailableError < StandardError; end
+
   # Initializes with the CoinspotAccount whose latest balance snapshot
   # (raw_payload) will be turned into holdings.
   def initialize(coinspot_account)
@@ -17,7 +19,18 @@ class CoinspotAccount::HoldingsProcessor
   def process
     return unless account&.accountable_type == "Crypto"
 
-    failures = raw_assets.filter_map { |asset| process_asset(asset) }
+    # An unavailable snapshot is NOT an empty portfolio. raw_payload["assets"]
+    # missing (a failed or never-completed fetch) used to read as [], and
+    # mark_absent_provider_holdings_zero! then zeroed every holding the
+    # account had. A genuinely empty array still zeroes, which is how a
+    # wallet emptied down to nothing is represented.
+    assets = snapshot_assets
+    unless assets
+      failure = log_failure(nil, SnapshotUnavailableError.new("CoinSpot balance snapshot has no assets array"))
+      return { success: false, failures: [ failure ] }
+    end
+
+    failures = assets.filter_map { |asset| process_asset(asset) }
     mark_absent_provider_holdings_zero!
     { success: failures.empty?, failures: failures }
   rescue StandardError => e
@@ -39,9 +52,18 @@ class CoinspotAccount::HoldingsProcessor
       coinspot_account.current_account
     end
 
-    # The `assets` array from the account's last-synced balance snapshot.
+    # The `assets` array from the account's last-synced balance snapshot, or
+    # nil when the snapshot doesn't carry one. Callers must treat nil as
+    # "unknown" rather than "empty" -- see #process.
+    def snapshot_assets
+      assets = coinspot_account.raw_payload&.dig("assets")
+      assets.is_a?(Array) ? assets : nil
+    end
+
+    # The assets actually present in the snapshot; [] when unavailable, for
+    # the read-only callers that only ask what is currently held.
     def raw_assets
-      coinspot_account.raw_payload&.dig("assets") || []
+      snapshot_assets || []
     end
 
     # Resolves one raw balance-snapshot asset to a Security and imports it as

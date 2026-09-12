@@ -176,7 +176,15 @@ class CoinspotItem::Importer
 
       begin
         response = coinspot_provider.get_market_order_history(startdate: startdate, enddate: enddate)
-        { "orders" => Array(response["orders"]) }
+        # Keep all three buckets: the market endpoint's documented response
+        # also carries buyorders/sellorders, and reading only "orders"
+        # discarded them. The mixed "orders" list stays as-is -- its side is
+        # per-record, which is what infer_order_type reads.
+        {
+          "buyorders" => Array(response["buyorders"]),
+          "sellorders" => Array(response["sellorders"]),
+          "orders" => Array(response["orders"])
+        }
       rescue Provider::Coinspot::ApiError => e
         DebugLogEntry.capture(
           category: "provider_sync_error",

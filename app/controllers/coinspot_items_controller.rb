@@ -35,7 +35,16 @@ class CoinspotItemsController < ApplicationController
   # Unlinks every account from this connection, then schedules the
   # connection itself for asynchronous deletion.
   def destroy
-    @coinspot_item.unlink_all!(dry_run: false)
+    # unlink_all! captures a per-account failure on the result rather than
+    # raising, so discarding the results scheduled the connection for deletion
+    # even when accounts were still linked to it -- taking their provider
+    # links down with it.
+    unlink_results = @coinspot_item.unlink_all!(dry_run: false)
+    if unlink_results.any? { |result| result[:error].present? }
+      redirect_to settings_providers_path, alert: t(".unlink_failed")
+      return
+    end
+
     @coinspot_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success")
   end
@@ -133,11 +142,22 @@ class CoinspotItemsController < ApplicationController
     unless coinspot_account
       return redirect_or_flash_error(t(".errors.invalid_coinspot_account"), account_path(@account))
     end
-    if coinspot_account.account_provider.present?
+    # Check and create under one lock: two concurrent submissions both passed
+    # a bare `present?` check and then both created a link. complete_account_setup
+    # already locks for the same reason.
+    already_linked = false
+    coinspot_account.with_lock do
+      if coinspot_account.reload.account_provider.present?
+        already_linked = true
+      else
+        AccountProvider.create!(account: @account, provider: coinspot_account)
+      end
+    end
+
+    if already_linked
       return redirect_or_flash_error(t(".errors.coinspot_account_already_linked"), account_path(@account))
     end
 
-    AccountProvider.create!(account: @account, provider: coinspot_account)
     coinspot_item.sync_later
 
     redirect_to accounts_path, notice: t(".success")

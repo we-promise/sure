@@ -96,6 +96,32 @@ class CoinspotAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "holding", result[:failures].first[:kind]
   end
 
+  # An unavailable snapshot is not an empty portfolio. `assets` missing used to
+  # read as [], and the absent-holdings sweep then zeroed everything the
+  # account held -- silent data loss on a failed fetch.
+  test "does not zero holdings when the snapshot carries no assets array" do
+    @account.holdings.create!(
+      security: @security,
+      provider_security: @security,
+      qty: 0.5,
+      amount: 50_000,
+      currency: "AUD",
+      date: Date.current - 1.day,
+      price: 100_000,
+      account_provider_id: @account_provider.id,
+      external_id: "coinspot_BTC_spot_#{Date.current - 1.day}"
+    )
+    @coinspot_account.update!(raw_payload: { "status" => "error" })
+
+    result = nil
+    assert_no_difference -> { @account.holdings.where(account_provider_id: @account_provider.id).count } do
+      result = CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+    end
+
+    assert_equal false, result[:success]
+    assert_equal 0.5.to_d, @account.holdings.where(account_provider_id: @account_provider.id).order(:date).last.qty
+  end
+
   test "does not import a holding when its non-AUD valuation cannot be converted" do
     @family.update!(currency: "USD")
     @coinspot_account.update!(raw_payload: {
