@@ -142,15 +142,24 @@ class CoinspotItemsController < ApplicationController
     unless coinspot_account
       return redirect_or_flash_error(t(".errors.invalid_coinspot_account"), account_path(@account))
     end
-    # Check and create under one lock: two concurrent submissions both passed
-    # a bare `present?` check and then both created a link. complete_account_setup
-    # already locks for the same reason.
+    # Two locks, outer on @account, because the unique index is on
+    # (account_id, provider_type): locking only the coinspot row lets two
+    # requests pick DIFFERENT coinspot accounts for the SAME @account, both
+    # pass their own check, and the second create! raise RecordNotUnique as an
+    # unrescued 500. The eligibility check is repeated inside the lock, since
+    # manual_crypto_exchange_account? read account_providers before it.
     already_linked = false
-    coinspot_account.with_lock do
-      if coinspot_account.reload.account_provider.present?
+    @account.with_lock do
+      if @account.reload.account_providers.any?
         already_linked = true
       else
-        AccountProvider.create!(account: @account, provider: coinspot_account)
+        coinspot_account.with_lock do
+          if coinspot_account.reload.account_provider.present?
+            already_linked = true
+          else
+            AccountProvider.create!(account: @account, provider: coinspot_account)
+          end
+        end
       end
     end
 

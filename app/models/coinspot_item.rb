@@ -31,9 +31,21 @@ class CoinspotItem < ApplicationRecord
 
   # Marks the connection for asynchronous deletion rather than destroying it
   # inline, so a large item with many accounts doesn't block the request.
+  # `active` excludes a flagged row, so if the enqueue never lands the
+  # connection disappears from the UI with no job coming to delete it and no
+  # way for the user to retry. DestroyJob's own rescue only covers failures
+  # once the job is *running*, which is the other side of this window.
+  # perform_later can both raise (Redis down) and return false (a rejecting
+  # enqueue callback), so both are restored.
   def destroy_later
     update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+
+    enqueued = DestroyJob.perform_later(self)
+    update!(scheduled_for_deletion: false) if enqueued == false
+    enqueued
+  rescue StandardError
+    update!(scheduled_for_deletion: false)
+    raise
   end
 
   # Fetches and imports this connection's latest balances and transaction

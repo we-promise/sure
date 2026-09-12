@@ -38,6 +38,12 @@ class CoinspotAccount::SecurityResolver
           security.offline = true unless security.offline
           security.save! if security.changed?
         end
+      rescue ActiveRecord::RecordNotUnique
+        # Race: another sync inserted this placeholder between our SELECT and
+        # INSERT. The unique index is on upper(ticker) + upper(mic), and both
+        # values are already uppercase here, so the read-back matches it.
+        # Same handling as ExchangeRate::Provided.
+        Security.find_by!(ticker: ticker, exchange_operating_mic: EXCHANGE_MIC)
       end
   end
 end

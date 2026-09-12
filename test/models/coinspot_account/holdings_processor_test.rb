@@ -122,6 +122,30 @@ class CoinspotAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 0.5.to_d, @account.holdings.where(account_provider_id: @account_provider.id).order(:date).last.qty
   end
 
+  # Same guard, non-array shape: a payload whose `assets` is a Hash or String
+  # is malformed, not empty. A count assertion alone cannot catch the
+  # regression, because zeroing rewrites the row rather than removing it --
+  # hence the explicit quantity assertion.
+  test "does not zero holdings when assets is present but not an array" do
+    @account.holdings.create!(
+      security: @security,
+      provider_security: @security,
+      qty: 0.5,
+      amount: 50_000,
+      currency: "AUD",
+      date: Date.current - 1.day,
+      price: 100_000,
+      account_provider_id: @account_provider.id,
+      external_id: "coinspot_BTC_spot_#{Date.current - 1.day}"
+    )
+    @coinspot_account.update!(raw_payload: { "assets" => { "btc" => { "balance" => "0.5" } } })
+
+    result = CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+
+    assert_equal false, result[:success]
+    assert_equal 0.5.to_d, @account.holdings.where(account_provider_id: @account_provider.id).order(:date).last.qty
+  end
+
   test "does not import a holding when its non-AUD valuation cannot be converted" do
     @family.update!(currency: "USD")
     @coinspot_account.update!(raw_payload: {

@@ -87,7 +87,12 @@ class Provider::Coinspot
     # Posts a signed request to CoinSpot's read-only API and returns the
     # parsed, successful response body, raising a classified error otherwise.
     def read_only_post(path, params = {})
-      request_params = { "nonce" => nonce_generator.call }.merge(stringify_params(params))
+      # CoinSpot requires an integer nonce and rejects a quoted one. The
+      # injected generator (CoinspotItem#next_nonce!) returns a String so the
+      # value survives a bigint column round-trip, and JSON.generate would
+      # preserve that type -- sending "nonce":"1757..." in production even
+      # though every test passed an Integer literal. Convert at the boundary.
+      request_params = { "nonce" => Integer(nonce_generator.call) }.merge(stringify_params(params))
       body = JSON.generate(request_params)
 
       response = self.class.post(

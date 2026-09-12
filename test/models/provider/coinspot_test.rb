@@ -29,6 +29,25 @@ class Provider::CoinspotTest < ActiveSupport::TestCase
     assert_equal({ "status" => "ok", "balances" => [] }, @provider.get_balances)
   end
 
+  # CoinspotItem#next_nonce! returns a String (it round-trips a bigint column),
+  # and JSON.generate preserves that type -- so production sent "nonce":"..."
+  # while every test here passed an Integer literal and saw nothing. CoinSpot
+  # requires an integer nonce and can reject the quoted form.
+  test "serializes a string-returning nonce generator as a json integer" do
+    provider = Provider::Coinspot.new(
+      api_key: "test_key", api_secret: "test_secret",
+      nonce_generator: -> { "1616492376594" }
+    )
+    expected_body = JSON.generate({ "nonce" => 1616492376594 })
+    response = mock_httparty_response(200, { "status" => "ok" })
+
+    Provider::Coinspot.expects(:post)
+      .with("/api/v2/ro/status", has_entries(body: expected_body))
+      .returns(response)
+
+    provider.status
+  end
+
   test "history requests include date params and the max record limit in signed body" do
     response = mock_httparty_response(200, { "status" => "ok", "buyorders" => [] })
 

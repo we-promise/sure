@@ -19,4 +19,21 @@ class CoinspotAccount::SecurityResolverTest < ActiveSupport::TestCase
     assert_nil CoinspotAccount::SecurityResolver.normalize_symbol(nil)
     assert_nil CoinspotAccount::SecurityResolver.normalize_symbol("   ")
   end
+
+  # find_or_initialize_by checks before save!, so two overlapping syncs
+  # resolving a new symbol can both miss and both insert. The unique index
+  # rejects the loser, and that exception used to escape into a per-record
+  # import failure instead of simply reading back the row that won.
+  test "resolve reads back the placeholder when a concurrent insert wins the race" do
+    existing = Security.create!(
+      ticker: "CRYPTO:XYZ", name: "XYZ", exchange_operating_mic: "XCSO", offline: true
+    )
+    Security::Resolver.any_instance.stubs(:resolve).returns(nil)
+    Security.stubs(:find_or_initialize_by).returns(
+      Security.new(ticker: "CRYPTO:XYZ", exchange_operating_mic: "XCSO")
+    )
+    Security.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key"))
+
+    assert_equal existing, CoinspotAccount::SecurityResolver.resolve("XYZ")
+  end
 end
