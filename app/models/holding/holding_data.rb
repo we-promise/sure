@@ -4,6 +4,6 @@
 # no cost basis can be known here" — a stale calculated figure has to go.
 Holding::HoldingData = Struct.new(
   :account_id, :security_id, :date,
-  :qty, :price, :currency, :amount, :cost_basis, :cost_basis_unknown,
+  :qty, :price, :currency, :amount, :cost_basis, :cost_basis_unknown, :cash_equivalent,
   keyword_init: true
 )

@@ -40,6 +40,18 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal "+$110.00", component.converted_balance_display
   end
 
+  test "cash-equivalent holdings are displayed as cash instead of holdings" do
+    @account.update!(balance: 6500, cash_balance: 1000, currency: "USD")
+    @account.holdings.create!(security: securities(:aapl), date: Date.current, qty: 15, price: 100, amount: 1500, currency: "USD")
+    @account.holdings.create!(security: Security.create!(ticker: "SPAXX", name: "Money Market Fund"), date: Date.current, qty: 4000, price: 1, amount: 4000, currency: "USD", cash_equivalent: true)
+
+    component = UI::Account::Chart.new(account: @account, view: "cash_balance")
+
+    assert_equal Money.new(1500, "USD"), component.holdings_value_money
+    assert_equal Money.new(5000, "USD"), component.cash_balance_money
+    assert_equal Money.new(5000, "USD"), component.view_balance_money
+  end
+
   private
     # 10 shares at $100 market price; gain = 1000 - cost_basis * 10
     def create_holding(cost_basis:)

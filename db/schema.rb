@@ -919,6 +919,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
     t.boolean "security_locked", default: false, null: false
+    t.boolean "cash_equivalent", default: false, null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "external_id"], name: "idx_holdings_on_account_id_external_id_unique", unique: true, where: "(external_id IS NOT NULL)"
     t.index ["account_id", "security_id", "date", "currency"], name: "idx_on_account_id_security_id_date_currency_5323e39f8b", unique: true

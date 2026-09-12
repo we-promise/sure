@@ -101,10 +101,13 @@ class Balance::BaseCalculator
       # trades (interest/dividend with qty=0, which are cash-only events and
       # must not produce spurious non_cash_outflows in the flow breakdown).
       regular_trades = entries.select { |e| e.trade? && e.entryable.qty != 0 }
+      non_cash_trades = regular_trades.reject { |entry| cash_equivalent_trade?(entry) }
       income_trades   = entries.select { |e| e.trade? && e.entryable.qty == 0 }
 
       trade_cash_inflow_sum = regular_trades.select { |e| e.amount < 0 }.sum(&:amount)
       trade_cash_outflow_sum = regular_trades.select { |e| e.amount >= 0 }.sum(&:amount)
+      trade_non_cash_inflow_sum = non_cash_trades.select { |e| e.amount < 0 }.sum(&:amount)
+      trade_non_cash_outflow_sum = non_cash_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
       income_inflow_sum = income_trades.select { |e| e.amount < 0 }.sum(&:amount)
       income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
@@ -117,8 +120,11 @@ class Balance::BaseCalculator
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum
 
         # Trades are inverse (a "buy" is outflow of cash, but "inflow" of non-cash, aka "holdings")
-        non_cash_outflows = trade_cash_inflow_sum.abs
-        non_cash_inflows = trade_cash_outflow_sum
+        # Cash-equivalent positions are already included in the cash side of
+        # the account. Their trades must not be treated as non-cash flows or
+        # they appear as phantom market gains/losses.
+        non_cash_outflows = trade_non_cash_inflow_sum.abs
+        non_cash_inflows = trade_non_cash_outflow_sum
       end
 
       {
@@ -127,6 +133,23 @@ class Balance::BaseCalculator
         non_cash_inflows: non_cash_inflows,
         non_cash_outflows: non_cash_outflows
       }
+    end
+
+    def cash_equivalent_trade?(entry)
+      cash_equivalent_security_ids.key?(entry.entryable.security_id)
+    end
+
+    def cash_equivalent_security_ids
+      @cash_equivalent_security_ids ||= begin
+        ids = {}
+
+        account.holdings.includes(:security).each do |holding|
+          ids[holding.security_id] = true if holding.cash_equivalent? || holding.security.cash?
+        end
+
+        Security.where(kind: "cash").pluck(:id).each { |id| ids[id] = true }
+        ids
+      end
     end
 
     def derive_cash_balance(cash_balance, date)

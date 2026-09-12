@@ -261,7 +261,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         currency: "USD",
         date: holding_date,
         price: 150.00,
-        source: "plaid"
+        source: "plaid",
+        cash_equivalent: true
       )
 
       assert_equal security.id, holding.security_id
@@ -269,7 +270,56 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal 1575.00, holding.amount
       assert_equal 150.00, holding.price
       assert_equal holding_date, holding.date
+      assert holding.cash_equivalent?
     end
+  end
+
+  test "preserves an existing cash-equivalent classification when omitted" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    security = securities(:aapl)
+    holding_date = Date.today - 3.days
+    external_id = "cash_equivalent_preservation_test"
+
+    holding = adapter.import_holding(
+      security: security,
+      quantity: 10,
+      amount: 1500,
+      currency: "USD",
+      date: holding_date,
+      price: 150,
+      external_id: external_id,
+      source: "plaid",
+      cash_equivalent: true
+    )
+
+    updated = adapter.import_holding(
+      security: security,
+      quantity: 12,
+      amount: 1800,
+      currency: "USD",
+      date: holding_date,
+      price: 150,
+      external_id: external_id,
+      source: "plaid"
+    )
+
+    assert_equal holding.id, updated.id
+    assert updated.cash_equivalent?, "omitting the classification must preserve true"
+
+    explicitly_non_cash = adapter.import_holding(
+      security: security,
+      quantity: 12,
+      amount: 1800,
+      currency: "USD",
+      date: holding_date,
+      price: 150,
+      external_id: external_id,
+      source: "plaid",
+      cash_equivalent: false
+    )
+
+    assert_not explicitly_non_cash.cash_equivalent?, "an explicit false must clear the classification"
   end
 
   test "raises error when security is missing for holding import" do

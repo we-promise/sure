@@ -278,6 +278,42 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 2000, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
+  test "excludes cash-equivalent and synthetic cash holdings" do
+    stock = Security.create!(ticker: "TST", name: "Test")
+    money_market = Security.create!(ticker: "SPAXX", name: "Money Market Fund")
+    cash_security = Security.cash_for(@account)
+
+    @account.holdings.create!(security: stock, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    @account.holdings.create!(security: money_market, date: Date.current, qty: 4000, price: 1, amount: 4000, currency: "USD", cash_equivalent: true)
+    @account.holdings.create!(security: cash_security, date: Date.current, qty: 800, price: 1, amount: 800, currency: "USD")
+
+    assert_equal 1000, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "does not attribute cash-equivalent trades to net market flows" do
+    security = Security.create!(ticker: "SPAXX", name: "Money Market Fund")
+    @account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 100,
+      price: 1,
+      amount: 100,
+      currency: "USD",
+      cash_equivalent: true
+    )
+    @account.entries.create!(
+      date: Date.current,
+      name: "Cash-equivalent purchase",
+      amount: 100,
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 100, price: 1, currency: "USD")
+    )
+
+    balance = Balance::ForwardCalculator.new(@account).calculate.find { |row| row.date == Date.current }
+
+    assert_equal 0, balance.net_market_flows
+  end
+
   test "converts foreign currency holdings to account currency" do
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
 

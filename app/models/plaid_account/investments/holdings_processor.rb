@@ -34,7 +34,8 @@ class PlaidAccount::Investments::HoldingsProcessor
         price: price_bd,
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
-        delete_future_holdings: false  # Plaid doesn't allow holdings deletion
+        delete_future_holdings: false,  # Plaid doesn't allow holdings deletion
+        cash_equivalent: resolved_security_result.cash_equivalent?
       )
     end
   end

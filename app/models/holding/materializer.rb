@@ -95,6 +95,7 @@ class Holding::Materializer
           "price" => holding.price,
           "amount" => holding.amount,
           "security_id" => holding.security_id,
+          "cash_equivalent" => holding.cash_equivalent || false,
           "account_id" => account.id,
           "updated_at" => current_time
         }
