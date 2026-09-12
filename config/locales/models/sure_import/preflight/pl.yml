@@ -1,0 +1,8 @@
+---
+pl:
+  sure_import:
+    preflight:
+      missing_reference: Wiersz %{line} %{type} odwołuje się do brakującego pola %{field}
+        %{value}.
+      skipped_missing_reference: Wiersz %{line} %{type} odwołuje się do brakującego
+        pola %{field} %{value}. Zostanie pominięty podczas importu.

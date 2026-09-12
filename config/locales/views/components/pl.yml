@@ -1,81 +1,189 @@
 ---
 pl:
+  UI:
+    account:
+      activity_date:
+        balance_tooltip: Saldo na koniec dnia, po uwzględnieniu wszystkich transakcji
+          i korekt
+        no_balance_data: Brak danych o saldzie dla tej daty
+      activity_feed:
+        toggle_selection_checkboxes: Przełącz zaznaczenie
+      balance_reconciliation:
+        labels:
+          adjustments: Korekty
+          buys: Zakupy
+          change_in_brokerage_cash: Zmiana środków maklerskich
+          change_in_holdings_market: Zmiana wartości aktywów (ruchy cen rynkowych)
+          change_in_holdings_trades: Zmiana wartości aktywów (zakupy/sprzedaże)
+          charges: Opłaty
+          end_balance: Saldo końcowe
+          end_principal: Kapitał końcowy
+          end_value: Wartość końcowa
+          final_balance: Saldo na koniec dnia
+          final_principal: Kapitał na koniec dnia
+          final_value: Wartość na koniec dnia
+          market_changes: Zmiany rynkowe
+          net_cash_flow: Przepływ gotówki netto
+          net_principal_change: Zmiana kapitału netto
+          net_value_change: Zmiana wartości netto
+          payments: Płatności
+          sells: Sprzedaże
+          start_balance: Saldo początkowe
+          start_principal: Kapitał początkowy
+          start_value: Wartość początkowa
+        tooltips:
+          adjustments: Ręczne uzgodnienia lub inne korekty
+          adjustments_asset: Ręczne korekty wartości lub wyceny
+          buys: Zakupy kryptowalut w ciągu dnia
+          change_in_brokerage_cash: Zmiana netto środków pieniężnych z wpłat, wypłat
+            i transakcji
+          change_in_holdings_market: Zmiana wartości aktywów wynikająca z ruchów cen
+            rynkowych
+          change_in_holdings_trades: Wpływ na wartość aktywów wynikający z kupna i
+            sprzedaży papierów wartościowych
+          charges: Nowe opłaty naliczone w ciągu dnia
+          end_balance: Obliczone saldo po uwzględnieniu wszystkich transakcji
+          end_balance_investment: Obliczone saldo po uwzględnieniu całej aktywności
+          end_principal: Obliczony kapitał po uwzględnieniu wszystkich transakcji
+          end_value: Obliczona wartość po uwzględnieniu wszystkich zmian
+          final_balance: Końcowe saldo konta za dany dzień
+          final_balance_credit: Ostateczne saldo zadłużenia za dany dzień
+          final_balance_crypto: Ostateczna wartość posiadanych kryptowalut za dany
+            dzień
+          final_balance_investment: Ostateczna wartość portfela za dany dzień
+          final_principal: Końcowy kapitał za dany dzień
+          final_value: Końcowa wartość aktywa za dany dzień
+          market_changes: Zmiany wartości wynikające z ruchów cen rynkowych
+          net_cash_flow: Zmiana netto salda wynikająca ze wszystkich transakcji w
+            ciągu dnia
+          net_principal_change: Spłaty kapitału i nowe zadłużenie w ciągu dnia
+          net_value_change: Wszystkie zmiany wartości, w tym ulepszenia i amortyzacja
+          payments: Płatności dokonane na kartę w ciągu dnia
+          sells: Sprzedaże kryptowalut w ciągu dnia
+          start_balance: Saldo konta na początek tego dnia
+          start_balance_credit: Saldo zadłużenia na początek tego dnia
+          start_balance_crypto: Wartość posiadanych kryptowalut na początek tego dnia
+          start_balance_investment: Łączna wartość portfela na początek tego dnia
+          start_principal: Kapitał na początek tego dnia
+          start_value: Wartość aktywa na początek tego dnia
+      chart:
+        no_data_available: Brak dostępnych danych
+        title:
+          balance: Saldo
+          cash_value: Wartość gotówki
+          debt_balance: Saldo zadłużenia
+          estimated_property_value: Szacowana wartość nieruchomości
+          estimated_vehicle_value: Szacowana wartość pojazdu
+          holdings_value: Wartość aktywów
+          remaining_principal_balance: Pozostały kapitał
+          total_account_value: Łączna wartość konta
+          total_gains: Łączny zysk
+        views:
+          cash: Gotówka
+          gains: Zyski / ROI
+          holdings: Aktywa
+          total_value: Wartość całkowita
+        vs_available_history: względem dostępnej historii
+    period_picker:
+      aria_label: 'Okres: %{period}'
+  ds:
+    alert:
+      variants:
+        destructive: Błąd
+        error: Błąd
+        info: Informacja
+        success: Sukces
+        warning: Ostrzeżenie
+    dialog:
+      close: Zamknij
+    icon_picker:
+      no_matching_icons: Brak pasujących ikon
+      search_placeholder: Szukaj ikon...
+    link:
+      opens_in_new_tab: "(otwiera się w nowej karcie)"
+    pill:
+      aria_label: "%{label}"
+      default_label: Podgląd
+    popover:
+      avatar_default_label: Otwórz menu
+    tooltip:
+      trigger_label: Więcej informacji
   provider_sync_summary:
-    title: Podsumowanie synchronizacji
-    last_sync: 'Ostatnia synchronizacja: %{time_ago} temu'
     accounts:
+      institutions: 'Instytucje: %{count}'
+      linked: 'Połączone: %{count}'
       title: Konta
       total: 'Łącznie: %{count}'
-      linked: 'Połączone: %{count}'
       unlinked: 'Niepołączone: %{count}'
-      institutions: 'Instytucje: %{count}'
-    transactions:
-      title: Transakcje
-      seen: 'Wykryte: %{count}'
-      imported: 'Zaimportowane: %{count}'
-      updated: 'Zaktualizowane: %{count}'
-      skipped: 'Pominięte: %{count}'
-      fetching: Pobieranie z biura maklerskiego...
-      protected:
-        one: "%{count} wpis chroniony (nie nadpisano)"
-        few: "%{count} wpisy chronione (nie nadpisano)"
-        many: "%{count} wpisów chronionych (nie nadpisano)"
-        other: "%{count} wpisów chronionych (nie nadpisano)"
-      view_protected: Zobacz chronione wpisy
-    skip_reasons:
-      excluded: Wykluczone
-      user_modified: Zmodyfikowane przez użytkownika
-      import_locked: Import z CSV
-      protected: Chronione
-    holdings:
-      title: Pozycje
-      found: 'Znalezione: %{count}'
-      processed: 'Przetworzone: %{count}'
-    trades:
-      title: Transakcje giełdowe
-      imported: 'Zaimportowane: %{count}'
-      skipped: 'Pominięte: %{count}'
-      fetching: Pobieranie aktywności z biura maklerskiego...
     health:
-      title: Kondycja
-      view_error_details: Zobacz szczegóły błędów
-      rate_limited: Ograniczenie limitu %{time_ago}
-      recently: niedawno
-      errors: 'Błędy: %{count}'
-      pending_reconciled:
-        one: "Uzgodniono %{count} zduplikowaną transakcję oczekującą"
-        few: "Uzgodniono %{count} zduplikowane transakcje oczekujące"
-        many: "Uzgodniono %{count} zduplikowanych transakcji oczekujących"
-        other: "Uzgodniono %{count} zduplikowanych transakcji oczekujących"
-      view_reconciled: Zobacz uzgodnione transakcje
+      data_warnings: 'Ostrzeżenia danych: %{count}'
       duplicate_suggestions:
-        one: "%{count} możliwy duplikat wymaga przeglądu"
         few: "%{count} możliwe duplikaty wymagają przeglądu"
         many: "%{count} możliwych duplikatów wymaga przeglądu"
+        one: "%{count} możliwy duplikat wymaga przeglądu"
         other: "%{count} możliwe duplikaty wymagają przeglądu"
-      view_duplicate_suggestions: Zobacz sugerowane duplikaty
+      errors: 'Błędy: %{count}'
+      notices: 'Powiadomienia: %{count}'
+      pending_reconciled:
+        few: Uzgodniono %{count} zduplikowane transakcje oczekujące
+        many: Uzgodniono %{count} zduplikowanych transakcji oczekujących
+        one: Uzgodniono %{count} zduplikowaną transakcję oczekującą
+        other: Uzgodniono %{count} zduplikowanych transakcji oczekujących
+      rate_limited: Ograniczenie limitu %{time_ago}
+      recently: niedawno
       stale_pending:
-        one: "%{count} przestarzała transakcja oczekująca (wykluczona z budżetów)"
         few: "%{count} przestarzałe transakcje oczekujące (wykluczone z budżetów)"
         many: "%{count} przestarzałych transakcji oczekujących (wykluczonych z budżetów)"
+        one: "%{count} przestarzała transakcja oczekująca (wykluczona z budżetów)"
         other: "%{count} przestarzałych transakcji oczekujących (wykluczonych z budżetów)"
-      view_stale_pending: Zobacz dotknięte konta
       stale_pending_count:
-        one: "%{count} transakcja"
         few: "%{count} transakcje"
         many: "%{count} transakcji"
+        one: "%{count} transakcja"
         other: "%{count} transakcji"
       stale_unmatched:
-        one: "%{count} transakcja oczekująca wymaga ręcznego przeglądu"
         few: "%{count} transakcje oczekujące wymagają ręcznego przeglądu"
         many: "%{count} transakcji oczekujących wymaga ręcznego przeglądu"
+        one: "%{count} transakcja oczekująca wymaga ręcznego przeglądu"
         other: "%{count} transakcji oczekujących wymaga ręcznego przeglądu"
-      view_stale_unmatched: Zobacz transakcje wymagające przeglądu
       stale_unmatched_count:
-        one: "%{count} transakcja"
         few: "%{count} transakcje"
         many: "%{count} transakcji"
+        one: "%{count} transakcja"
         other: "%{count} transakcji"
-      data_warnings: 'Ostrzeżenia danych: %{count}'
-      notices: 'Powiadomienia: %{count}'
+      title: Kondycja
       view_data_quality: Zobacz szczegóły jakości danych
+      view_duplicate_suggestions: Zobacz sugerowane duplikaty
+      view_error_details: Zobacz szczegóły błędów
+      view_reconciled: Zobacz uzgodnione transakcje
+      view_stale_pending: Zobacz dotknięte konta
+      view_stale_unmatched: Zobacz transakcje wymagające przeglądu
+    holdings:
+      found: 'Znalezione: %{count}'
+      processed: 'Przetworzone: %{count}'
+      title: Pozycje
+    last_sync: 'Ostatnia synchronizacja: %{time_ago} temu'
+    skip_reasons:
+      excluded: Wykluczone
+      import_locked: Import z CSV
+      protected: Chronione
+      user_modified: Zmodyfikowane przez użytkownika
+    title: Podsumowanie synchronizacji
+    trades:
+      fetching: Pobieranie aktywności z biura maklerskiego...
+      imported: 'Zaimportowane: %{count}'
+      skipped: 'Pominięte: %{count}'
+      title: Transakcje giełdowe
+    transactions:
+      fetching: Pobieranie z biura maklerskiego...
+      imported: 'Zaimportowane: %{count}'
+      protected:
+        few: "%{count} wpisy chronione (nie nadpisano)"
+        many: "%{count} wpisów chronionych (nie nadpisano)"
+        one: "%{count} wpis chroniony (nie nadpisano)"
+        other: "%{count} wpisów chronionych (nie nadpisano)"
+      seen: 'Wykryte: %{count}'
+      skipped: 'Pominięte: %{count}'
+      title: Transakcje
+      updated: 'Zaktualizowane: %{count}'
+      view_protected: Zobacz chronione wpisy

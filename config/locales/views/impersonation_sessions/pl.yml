@@ -13,3 +13,13 @@ pl:
       success: Opuszczono sesję
     reject:
       success: Wniosek został odrzucony
+    super_admin_bar:
+      impersonating: Podszycie się
+      jobs: Zadania
+      join: Dołącz
+      join_a_session: Dołącz do sesji
+      leave: Opuść
+      request_impersonation: Poproś o podszycie się
+      super_admin: Super administrator
+      terminate: Zakończ
+      uuid_placeholder: UUID

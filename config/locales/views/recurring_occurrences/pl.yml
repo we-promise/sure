@@ -1,0 +1,54 @@
+---
+pl:
+  recurring_occurrences:
+    history_status:
+      missed: Zaległy
+      paid: Opłacony
+      scheduled: Zaplanowany
+      skipped: Pominięty
+    mark_paid:
+      success: Rachunek oznaczono jako opłacony
+    override_amount:
+      success: Zaktualizowano oczekiwaną kwotę
+    reopen:
+      success: Rachunek ponownie otwarty
+    show:
+      add_heading: Dodaj kolejną płatność
+      cant_find: Nie możesz znaleźć transakcji?
+      due_on: 'Termin: %{date}'
+      find_heading: Znajdź płatność
+      link_payment: Połącz płatność
+      manual_amount_label: Kwota
+      manual_date_label: Data
+      manual_explainer: Zapisz płatność, o której wiesz, że nastąpiła, gdy żadna z
+        tych transakcji jej nie odpowiada.
+      manual_payment: Płatność ręczna
+      mark_paid: Oznacz jako opłacone
+      mark_paid_hint: Rozlicza resztę bez zapisywania transakcji.
+      missed: Oznaczono jako zaległy
+      no_candidates: Brak pobliskich transakcji do połączenia.
+      no_ranked_candidates: Nic tutaj nie wygląda jeszcze na płatność za ten rachunek.
+      no_search_results: Nic nie pasuje do „%{query}”.
+      not_this_one: To nie ta
+      other_matches: Inne prawdopodobne dopasowania
+      overpaid: więcej niż oczekiwano
+      paid_headline: Opłacono %{amount}
+      paid_of: Opłacono %{paid} z %{expected}
+      payments: Płatności
+      record_payment: Zapisz płatność
+      remaining: Pozostało %{amount}
+      reopen: Otwórz ponownie
+      review_heading: Sprawdź płatność
+      search_all: Przeszukaj wszystkie transakcje
+      search_placeholder: Szukaj transakcji
+      settled: Opłacono w całości
+      skip: Pomiń
+      skipped: Pominięto
+      snooze_week: Odłóż o tydzień
+      unlink: Odłącz
+      view_bill: Zobacz cały rachunek
+    skip:
+      success: Rachunek pominięty
+    snooze:
+      invalid_date: Nie udało się odczytać tej daty
+      success: Odłożono do %{date}
