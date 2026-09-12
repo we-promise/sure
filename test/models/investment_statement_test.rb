@@ -268,6 +268,115 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
+  test "totals aggregate dividend and interest income from income trades" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    create_income_trade(account: account, label: "Dividend", amount: 50, date: period.start_date)
+    create_income_trade(account: account, label: "Dividend", amount: 25, date: period.start_date + 1.day)
+    create_income_trade(account: account, label: "Interest", amount: 10, date: period.start_date)
+    # Outside the period, must not be counted
+    create_income_trade(account: account, label: "Dividend", amount: 999, date: period.start_date - 1.day)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(75, "USD"), totals.dividends
+    assert_equal Money.new(10, "USD"), totals.interest
+    assert_equal Money.new(85, "USD"), totals.total_income
+  end
+
+  test "income trades are not counted as contributions or withdrawals" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    create_income_trade(account: account, label: "Dividend", amount: 50, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    # qty: 0 keeps income out of both direction branches
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(50, "USD"), totals.dividends
+  end
+
+  test "a buy relabeled to Dividend is counted as income only, not also as a contribution" do
+    # The activity-label quick editor permits changing the label on its own and
+    # leaves qty untouched, so an income-labeled trade can carry qty > 0. It must
+    # not land in both the direction bucket and the income bucket.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    trade_entry = create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    trade_entry.trade.update!(investment_activity_label: "Dividend")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(120, "USD"), totals.dividends
+    assert_equal Money.new(120, "USD"), totals.total_income
+  end
+
+  test "a sell relabeled to Interest is counted as income only, not also as a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    trade_entry = create_trade(account: account, qty: -1, amount: -40, date: period.start_date)
+    trade_entry.trade.update!(investment_activity_label: "Interest")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(40, "USD"), totals.interest
+  end
+
+  test "labeled non-income trades still count by direction" do
+    # Only Dividend/Interest are excluded from the direction buckets; Buy, Sell
+    # and Reinvestment keep their existing contribution/withdrawal treatment.
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+
+    buy = create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    buy.trade.update!(investment_activity_label: "Buy")
+    reinvest = create_trade(account: account, qty: 1, amount: 30, date: period.start_date)
+    reinvest.trade.update!(investment_activity_label: "Reinvestment")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(150, "USD"), totals.contributions
+    # Reinvestment is deliberately not folded into dividend income; doing so
+    # would require removing it from contributions too.
+    assert_equal Money.new(0, "USD"), totals.dividends
+  end
+
+  test "totals convert foreign-currency dividends into family currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+
+    ExchangeRate.create!(
+      from_currency: "EUR",
+      to_currency: "USD",
+      date: period.start_date,
+      rate: 1.1
+    )
+
+    create_income_trade(account: account, label: "Dividend", amount: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(110, "USD"), totals.dividends
+  end
+
+  test "total_dividends and total_interest expose all-time income" do
+    account = create_investment_account(balance: 500)
+
+    create_income_trade(account: account, label: "Dividend", amount: 40, date: 2.years.ago.to_date)
+    create_income_trade(account: account, label: "Interest", amount: 5, date: Date.current)
+
+    assert_equal 40, @statement.total_dividends
+    assert_equal 5, @statement.total_interest
+  end
+
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
     account = create_investment_account(balance: 2100, currency: "USD")
     security = Security.create!(ticker: "AAPL", name: "Apple")
@@ -308,6 +417,25 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    # Investment income (dividends, interest) is recorded as a Trade with
+    # qty: 0 and price: 0, matching Trade::CreateForm#create_income_trade.
+    # A negative amount means cash coming in.
+    def create_income_trade(account:, label:, amount:, date:)
+      account.entries.create!(
+        name: "#{label} #{SecureRandom.hex(3)}",
+        amount: -amount.to_d.abs,
+        date: date,
+        currency: account.currency,
+        entryable: Trade.new(
+          security: Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
+          qty: 0,
+          price: 0,
+          currency: account.currency,
+          investment_activity_label: label
+        )
       )
     end
 
