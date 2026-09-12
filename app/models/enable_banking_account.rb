@@ -8,6 +8,8 @@ class EnableBankingAccount < ApplicationRecord
     # deterministic: true preserves equality lookups (e.g. find_by(iban:)) —
     # the account's own IBAN was previously stored in plaintext here, unlike
     # the other columns on this model.
+    # See Account#iban for the deliberate tradeoff this makes (accepted here
+    # for the same reason: DB-level uniqueness/lookup can't work otherwise).
     encrypts :iban, deterministic: true
   end
 
