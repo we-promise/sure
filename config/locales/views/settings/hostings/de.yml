@@ -67,7 +67,7 @@ de:
         title: Brandfetch Einstellungen
         high_res_label: Hochauflösende Logos aktivieren
         high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40 abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
-        env_configured_message: Deine Brand-Fetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
+        env_configured_message: Deine Brandfetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
         setup_step_1_html: Öffne <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> und leg dir ein kostenloses Entwicklerkonto an.
         setup_step_2_html: Geh auf die Seite <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID“, um die ID sichtbar zu machen, und füg sie unten ein.

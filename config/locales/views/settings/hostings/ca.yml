@@ -58,8 +58,8 @@ ca:
         url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
         description: Introdueix el Client ID proporcionat per Brandfetch
-        env_configured_message: Has configurat correctament el teu Client ID de Brand
-          Fetch mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
+        env_configured_message: Has configurat correctament el teu Client ID de Brandfetch
+          mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
         high_res_description: Quan està activat, els logotips es recuperaran amb resolució
           120×120 en lloc de 40×40. Això proporciona imatges més nítides en pantalles
           d'alta densitat.
