@@ -44,6 +44,9 @@ de:
       name: Name
       new_holding: Neue Transaktion
       no_holdings: Keine Positionen vorhanden
+      positions:
+        one: "%{count} Position"
+        other: "%{count} Positionen"
       return: Gesamtrendite
       weight: Gewichtung
     missing_price_tooltip:

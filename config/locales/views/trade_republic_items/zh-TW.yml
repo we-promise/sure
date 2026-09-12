@@ -1,0 +1,106 @@
+---
+zh-TW:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "透過安全的網頁登入連結 Trade Republic 投資帳戶"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "經紀帳戶"
+      private_markets: "私人市場"
+      interest_products: "計息產品"
+      crypto_wallet: "加密貨幣錢包"
+    trade_republic_item:
+      syncing: "正在同步"
+      requires_update: "需要重新驗證"
+      error: "錯誤"
+      synced: "%{time}前同步。%{summary}。"
+      setup_accounts: "設定帳戶"
+      delete: "刪除"
+      accounts_need_setup: "帳戶需要設定"
+      accounts_need_setup_description: "您的 Trade Republic 帳戶需要連結至 Sure 帳戶。"
+      no_accounts_discovered: "尚未發現 Trade Republic 帳戶。"
+      no_accounts_discovered_description: "完成登入並執行同步以發現您的帳戶。"
+      data_quality:
+        title: "資料品質與同步詳細資料"
+        repair: "修復匯入的資料"
+        positions:
+          one: "%{count} 個持倉"
+          other: "%{count} 個持倉"
+        unpriced:
+          one: "%{count} 個沒有目前價格"
+          other: "%{count} 個沒有目前價格"
+        events:
+          one: "%{count} 筆活動"
+          other: "%{count} 筆活動"
+        unknown:
+          one: "%{count} 筆未知活動"
+          other: "%{count} 筆未知活動"
+        expenses:
+          one: "過去 30 天 %{count} 筆支出（%{amount}）"
+          other: "過去 30 天 %{count} 筆支出（%{amount}）"
+        reconciliation: "%{matched}/%{total} 個帳戶餘額已核對"
+        sync_history: 最近同步
+        sync_status:
+          completed: 已完成
+          failed: 失敗
+          pending: 待處理
+          syncing: 同步中
+          stale: 已過期
+    setup_accounts:
+      page_title: "設定 Trade Republic 帳戶"
+      subtitle: "連結您的 Trade Republic 投資帳戶。"
+      available_accounts:
+        account_type_investment: "Investment portfolio"
+        account_type_cash: "Cash account"
+      buttons:
+        refresh: "重新整理"
+        cancel: "取消"
+        link: "連結"
+        done: "完成"
+    sync:
+      errors:
+        phone_number_missing: "缺少 Trade Republic 電話號碼。"
+        reauthentication_required: "Trade Republic 工作階段遺失或已過期。請從設定 > 供應商重新連線。"
+      status:
+        checking_credentials: "正在檢查 Trade Republic 認證資訊..."
+        importing_account: "正在匯入 Trade Republic 帳戶..."
+        processing_activity: "正在處理持股與活動..."
+        calculating_balances: "正在計算餘額..."
+    repair:
+      scheduled: "已排程修復 Trade Republic 資料。"
+    select_existing_account:
+      title: "連結 Trade Republic 帳戶"
+      link: "連結"
+      cancel: "取消"
+    initiate_login:
+      verification_required: "登入已開始。請透過 %{method} 確認，然後按下確認登入。"
+    complete_login:
+      approval_pending: "尚未確認。請在 Trade Republic 應用程式中核准登入後再試一次。"
+      success: "Trade Republic 已成功連線。"
+      login_expired: "登入要求已過期。請重新開始。"
+    link_existing_account:
+      not_found: "找不到帳戶或 Trade Republic 設定。"
+      success: "已成功連結至 Trade Republic 帳戶。"
+    complete_account_setup:
+      success:
+        one: "已成功建立 %{count} 個 Trade Republic 帳戶。"
+        other: "已成功建立 %{count} 個 Trade Republic 帳戶。"
+      none_created: "未建立任何帳戶。"
+      partial_failure:
+        one: "無法完整設定所選的一個 Trade Republic 帳戶。請檢查除錯記錄並重試。"
+        other: "無法完整設定所選的 %{count} 個 Trade Republic 帳戶。請檢查除錯記錄並重試。"
+    activities:
+      labels:
+        contribution: 入金
+        withdrawal: 出金
+        interest: 利息
+        dividend: 股息
+        card_payment: 刷卡付款
+        cash_withdrawal: 提領現金
+        card_fee: 卡片費用
+        card_refund: 卡片退款
+        tax_refund: 退稅
+        buy: 買入
+        sell: 賣出

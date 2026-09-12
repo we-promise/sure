@@ -5,6 +5,7 @@ class ProviderConnectionStatus
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "open_banking_io", type: "OpenBankingIoItem", association: :open_banking_io_items, accounts: :open_banking_io_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
+    { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
@@ -21,6 +22,7 @@ class ProviderConnectionStatus
     { key: "sophtron", type: "SophtronItem", association: :sophtron_items, accounts: :sophtron_accounts },
     { key: "indexa_capital", type: "IndexaCapitalItem", association: :indexa_capital_items, accounts: :indexa_capital_accounts },
     { key: "trading212", type: "Trading212Item", association: :trading212_items, accounts: :trading212_accounts },
+    { key: "trade_republic", type: "TradeRepublicItem", association: :trade_republic_items, accounts: :trade_republic_accounts },
     { key: "questrade", type: "QuestradeItem", association: :questrade_items, accounts: :questrade_accounts },
     { key: "redbark", type: "RedbarkItem", association: :redbark_items, accounts: :redbark_accounts },
     { key: "wise", type: "WiseItem", association: :wise_items, accounts: :wise_accounts }

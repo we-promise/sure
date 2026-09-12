@@ -37,6 +37,7 @@
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-tint-10 text-link">
                   <%= t("recurring_transactions.projected") %>
                 </span>
+                <%= render "recurring_transactions/pay_action", recurring_transaction: recurring_transaction, show_add: false %>
               </div>
             </div>
 

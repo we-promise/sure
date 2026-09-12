@@ -1,0 +1,327 @@
+---
+en:
+  bills:
+    row_overdue: Overdue
+    row_today: Today
+    detect:
+      found:
+        one: Found 1 possible bill. Review it below.
+        other: Found %{count} possible bills. Review them below.
+      none_found: No new recurring patterns found. You can add bills by hand.
+      already_running: Detection is already running. Check back in a moment.
+    feed:
+      calendar_name: Sure Bills
+    ai_prompts:
+      due_before_paycheck: What's due before my next paycheck?
+      subscriptions_up: Which subscriptions went up this year?
+      monthly_subscriptions: What am I paying monthly for subscriptions?
+      safe_to_spend: How much is safe to spend this period?
+    smart_configurations:
+      show:
+        trigger: Let AI configure
+        title: "AI suggestions for %{name}"
+        intro: Check the changes to apply. Unchecked ones are left exactly as they are.
+        no_changes: This bill already matches its payment history. Nothing to change.
+        failed: Could not analyze this bill right now. Its configuration is untouched.
+        field_name: Name
+        field_amount: Amount
+        field_schedule: Schedule
+        field_category: Category
+        field_kind: Kind
+        field_autopay: Autopay
+        uncategorized: Uncategorized
+        autopay_off: "Off"
+        autopay_on: "On"
+        apply: Apply selected
+    detail:
+      current: Current
+      next_payment: Next payment
+      around: "around %{date}"
+      rules: How this bill is matched
+      rule_named: "%{name}"
+      rule_amount_range: "from %{min} to %{max}"
+      rule_aliases: "Also matches %{names}"
+      rule_learned_tolerance: "Amounts within %{percent} of the usual amount match this bill"
+      history_title: Last 12 months
+      history_aria: Payments over the last twelve months
+      key_metrics: Per year
+      year: Year
+      spent_per_year: Spent
+      avg_payment: Avg payment
+      average: Average paid
+      range: "%{min} to %{max}"
+      annualized: A year
+      ytd: Paid this year
+      last_account: Last account used
+      upcoming: Coming up
+      recent_payments: Recent payments
+      manual_payment: Manual payment
+      history: History
+      payment_count:
+        one: "1 payment"
+        other: "%{count} payments"
+      notes: Notes
+      trial_chip: "Trial ends %{date}"
+      renews_chip: "Renews %{date}"
+      cancelled_chip: "Cancelled %{date}"
+      price_changes: Price changes
+      price_change_line: "%{from} → %{to}"
+    month_pulse:
+      bill_count:
+        one: 1 bill
+        other: "%{count} bills"
+      left_to_pay: left to pay
+      pulse_paid: paid
+      pulse_overdue: overdue
+      pulse_next_seven: next 7 days
+      pulse_bar_aria: "%{percent}% of this month's bills paid"
+      next_up: Next up
+      view_upcoming: View upcoming
+      # The strip has a column to itself, so the date stands alone rather than
+      # reading as a sentence the way the row sublines do.
+      date_today: Today
+      date_tomorrow: Tomorrow
+      unconvertible:
+        one: "1 bill is not included, no exchange rate available"
+        other: "%{count} bills are not included, no exchange rate available"
+    summary:
+      remaining: "%{amount} remaining"
+      paid_headline: "%{amount} paid"
+      cost_line: "Averages %{average} a payment, about %{annualized} a year"
+    pane:
+      close: Collapse details
+    add_bill: Add bill
+    manage: Manage
+    find_payment: Find payment
+    add_payment: Add payment
+    review_match: Review match
+    resolve: Resolve
+    manage_payments: Manage payments
+    view_full_bill: View full bill
+    match:
+      same_merchant: Same merchant
+      name_matches: Name matches
+      exact_amount: Exact amount
+      amount_off: "%{amount} off"
+      due_date: Due-date match
+      days_before:
+        one: 1 day before due
+        other: "%{count} days before due"
+      days_after:
+        one: 1 day after due
+        other: "%{count} days after due"
+    attention:
+      needs_review: Match needs review
+      partial: "Partial · %{amount} remaining"
+      amount_changed: Amount changed
+      overdue:
+        one: 1 day overdue
+        other: "%{count} days overdue"
+    paid_label: Paid
+    paid_over_short: Paid, over
+    installment_progress: "Payment %{done_plus_one} of %{total}"
+    partial_progress: "%{paid} of %{expected} paid"
+    cancelled_still_scheduled: "You marked this cancelled on %{date}, but it is still scheduled, so future bills will keep appearing."
+    paid_over: "Paid %{paid}, more than expected"
+    remaining_label: remaining
+    debt_payment: "· debt payment"
+    paid_from: "from %{account}"
+    amount_range: "ranges %{min} to %{max}"
+    possible_duplicate: Possible duplicate
+    due_label:
+      overdue:
+        one: "Overdue by 1 day, was due %{date}"
+        other: "Overdue by %{count} days, was due %{date}"
+      today: "Due today"
+      settled: "Was due %{date}"
+      due_since: "Due %{date}"
+      snoozed: "Snoozed until %{date}"
+      upcoming:
+        one: "Due tomorrow, %{date}"
+        other: "Due in %{count} days, %{date}"
+    views:
+      aria_label: Bills views
+      overview: Overview
+      calendar: Calendar
+      # Named for income rather than for a paycheck: a declared income series
+      # can be a pension, an invoice or a benefit, and this is the only place
+      # in the app where income is added or managed. "Plan" keeps it from
+      # promising the earnings reporting that Reports already owns.
+      paycheck: Income plan
+      all: All bills
+    pay_period:
+      paycheck_on: "Paycheck %{date}"
+      before_next_paycheck: Before your next paycheck
+      due_before_date: "%{amount} due before %{date}"
+    paycheck:
+      unconvertible:
+        one: "1 obligation is not included, no exchange rate available"
+        other: "%{count} obligations are not included, no exchange rate available"
+      income_section_title: Income schedule
+      manage: Manage
+      add_income: Add income
+      income_paused: Paused, not planned
+      income_detected: Detected automatically, does not set paydays
+      income_next_payday: "next %{date}"
+      income_source_count:
+        one: "%{count} income source"
+        other: "%{count} income sources"
+      next_on: "Next %{date}"
+      no_upcoming_income: No income scheduled from here on.
+      empty:
+        title: Declare your income schedule
+        description: Add your income to see what each payday has to cover. Detected inflows never set your paydays on their own -- you do.
+        action: Add income
+      all_clear:
+        title: Nothing to cover
+        description: "No bills come due between now and %{date}, so nothing in that stretch is spoken for."
+      # The three words the page is built on: due now, reserved for later,
+      # safe after bills. Anything that adds two of them together needs a very
+      # good reason, because the whole job here is keeping them apart.
+      safe_after_bills: Safe after bills
+      short_after_bills: Short after bills
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} income sources"
+      before_next_paycheck: "Before %{date}"
+      no_income_arriving: No income arrives
+      income_amount: "%{amount} income"
+      due_this_period: Due this period
+      reserved_ahead: Reserved ahead
+      # The bar's key uses the short forms so three columns fit a phone; the
+      # header carries the full phrase.
+      safe_short: Safe
+      short_short: Short
+      reserved_footer:
+        one: Reserved ahead for 1 later bill
+        other: "Reserved ahead for %{count} later bills"
+      bills_this_period:
+        one: Bills this period · 1
+        other: "Bills this period · %{count}"
+      bills_before_payday:
+        one: Bills before your next payday · 1
+        other: "Bills before your next payday · %{count}"
+      of_total: "of %{amount}"
+      # The gap before the next payday, said as news rather than drawn as a
+      # pay period. Compact on purpose: it has to be noticeable without
+      # becoming the identity of the page.
+      bridge_label: Before your next paycheck
+      bridge_amount: "· %{amount} due"
+      bridge_split: "Due before %{date}, covered by the %{cash} in your accounts."
+      shortfall_label: Short before your next payday
+      shortfall_amount: "· %{amount}"
+      shortfall_split: "%{obligations} is due before %{date} and your accounts hold %{cash}."
+      shortfall_largest: "Largest upcoming obligation:"
+      review_plan: Review plan
+      allocation_aria: "Of %{income} income, %{due} is due now, %{reserved} is reserved for later, and %{safe} is safe to spend."
+      allocation_aria_short: "%{income} of income goes to what is committed here, and %{short} more is needed."
+    reset_feed_token:
+      done: Feed link reset. Calendar apps using the old link will stop updating; resubscribe with the new one.
+      confirm: Reset the calendar feed link? Every previously shared link stops working.
+    calendar:
+      subscribe_ical: Subscribe (iCal)
+      reset_feed: Reset link
+      previous_month: Previous month
+      next_month: Next month
+      today: Today
+      month_totals: "%{expected} expected · %{paid} paid"
+      empty_month: No bills due this month.
+    all:
+      search_placeholder: Search bills
+      any_status: Any status
+      status_filters:
+        overdue: Overdue
+        due: Due soon
+        partial: Partly paid
+        paid: Paid
+        paused: Paused
+        ended: Dismissed
+      subscription_monthly: A month
+      subscription_annual: A year
+      subscription_active: Active
+      subscription_price_changes: Price changes this year
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      any_type: Any type
+      sort_due: By next due
+      sort_name: By name
+      sort_amount: By amount
+      no_matches_title: Nothing matches
+      no_matches_description: Try clearing a filter or the search.
+      col_name: Name
+      col_type: Type
+      col_frequency: Frequency
+      col_amount: Amount
+      col_next: Next due
+      next_short: "next %{date}"
+      col_status: Status
+      col_actions: Actions
+      monthly_equivalent: "%{amount}/mo"
+      types:
+        bill: Bill
+        subscription: Subscription
+        installment: Installment plan
+        income: Income
+        transfer: Transfer
+        other: Other
+    show:
+      edit: Edit bill
+    index:
+      left_to_pay: left to pay
+      paid_so_far: Paid so far
+      hero_past_due: "%{amount} past due"
+      hero_next_seven: "%{amount} due in the next 7 days"
+      add_bill: Add bill
+      add_income: Add income
+      review_with_ai: Review with AI
+      detected_review:
+        one: We found 1 recurring payment in your transactions. Check it over so the totals here match what you actually pay.
+        other: We found %{count} recurring payments in your transactions. Check them over so the totals here match what you actually pay.
+      detected_review_action: Review them
+      needs_review: Needs review
+      notice_trial: "%{name}'s trial ends %{date}"
+      notice_renewal: "%{name} renews %{date}"
+      notice_price: "%{name} changed price: %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: "1 smaller change"
+        other: "%{count} smaller changes"
+      suggestion_line: "%{entry} looks like a payment of %{bill}"
+      suggestion_unknown_entry: A transaction
+      confidence: "%{percent}% match"
+      accept: Apply
+      reject: Not this bill
+      title: Bills
+      summary_label: Due this month
+      summary_count:
+        one: "1 bill due"
+        other: "%{count} bills due"
+      summary_needs_action:
+        one: "1 needs you"
+        other: "%{count} need you"
+      all_automatic: "all on autopay"
+      recurring_label: Recurring commitment
+      recurring_monthly: "%{amount} a month"
+      recurring_annual: "%{amount} a year"
+      unconvertible:
+        one: "1 bill is not included, no exchange rate available"
+        other: "%{count} bills are not included, no exchange rate available"
+      overdue: Overdue
+      needs_attention: Needs attention
+      attention_overdue_total: "%{amount} overdue"
+      this_month: This month
+      later: After this month
+      paid_this_month: Paid this month
+      dormant: Dormant
+      kpi_remaining: Remaining this month
+      kpi_paid: Paid this month
+      kpi_next_seven: Due next 7 days
+      kpi_past_due: Past due
+      paid_count:
+        one: "1 bill settled"
+        other: "%{count} bills settled"
+      needs_action_count:
+        one: "1 needs you"
+        other: "%{count} need you"
+      empty:
+        title: No bills yet
+        description: Bills are your recurring expenses. Sure finds them automatically from your transaction history, and you can add a payment link to each one so you can pay straight from here.
+        action: Find recurring transactions
+        no_history_description: No transactions yet. Connect an account or import history and Sure will find your bills automatically, or add one by hand.

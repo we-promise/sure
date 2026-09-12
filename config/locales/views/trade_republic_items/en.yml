@@ -1,0 +1,174 @@
+---
+en:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: Connect a Trade Republic investment account via secure web login
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: Brokerage
+      private_markets: Private Markets
+      interest_products: Interest Products
+      crypto_wallet: Crypto Wallet
+    defaults:
+      name: Trade Republic
+    trade_republic_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      requires_update: Re-authentication required
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Account needs setup
+      accounts_need_setup_description: Your Trade Republic account needs to be linked to a Sure account.
+      no_accounts_discovered: No Trade Republic account discovered yet.
+      no_accounts_discovered_description: Complete the login and run a sync to discover your account.
+      data_quality:
+        title: Data quality and sync details
+        repair: Repair imported data
+        positions:
+          one: "%{count} position"
+          other: "%{count} positions"
+        unpriced:
+          one: "%{count} without current price"
+          other: "%{count} without current price"
+        events:
+          one: "%{count} activity"
+          other: "%{count} activities"
+        unknown:
+          one: "%{count} unknown activity"
+          other: "%{count} unknown activities"
+        expenses:
+          one: "%{count} expense in the last 30 days (%{amount})"
+          other: "%{count} expenses in the last 30 days (%{amount})"
+        reconciliation: "%{matched}/%{total} account balances reconciled"
+        sync_history: Recent syncs
+        sync_status:
+          completed: Completed
+          failed: Failed
+          pending: Pending
+          syncing: Syncing
+          stale: Stale
+    setup_accounts:
+      page_title: Set Up Trade Republic Account
+      dialog_title: Set Up Your Trade Republic Account
+      subtitle: Link your Trade Republic investment account.
+      info_box:
+        title: Trade Republic Import
+        items:
+          item_1: Current positions with prices and quantities
+          item_2: Executed trades (buys and sells)
+          item_3: Deposits, withdrawals, and interest payouts
+      status:
+        fetching_accounts: Fetching account from Trade Republic...
+        no_accounts_found_title: No account found.
+        no_accounts_found_description: Sure could not find a Trade Republic account. Check that your session is still valid.
+      available_accounts:
+        title: Available account
+        account_type_investment: Investment portfolio
+        account_type_cash: Cash account
+        account_summary: "%{account_type} • Balance: %{balance}"
+        account_id: "Account ID: %{account_id}"
+      link_existing:
+        description: Or link the discovered Trade Republic account to an existing manual investment account.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync:
+      errors:
+        phone_number_missing: Trade Republic phone number is missing.
+        reauthentication_required: Trade Republic session missing or expired. Re-connect from Settings > Providers.
+      status:
+        checking_credentials: Checking Trade Republic credentials...
+        importing_account: Importing Trade Republic account...
+        checking_configuration: Checking account configuration...
+        accounts_need_setup:
+          one: 1 Trade Republic account needs setup...
+          other: "%{count} Trade Republic accounts need setup..."
+        processing_activity: Processing positions and activity...
+        calculating_balances: Calculating balances...
+    repair:
+      scheduled: Trade Republic data repair scheduled.
+    sync_status:
+      no_accounts: No Trade Republic account discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link Trade Republic account
+      no_accounts_available: No unlinked Trade Republic accounts are available yet.
+      run_sync_hint: "Complete the login and run a sync from Settings > Providers."
+      wait_for_sync: Wait for the account discovery sync to finish.
+      balance: Balance
+      link: Link
+      cancel: Cancel
+    create:
+      success: Trade Republic saved. Confirm the login in the Trade Republic app to finish connecting.
+    update:
+      success: Successfully updated Trade Republic configuration.
+      pin_required: Enter your Trade Republic PIN to re-authenticate.
+    destroy:
+      success: Scheduled Trade Republic connection for deletion.
+      unlink_failed: Trade Republic could not be disconnected completely. The connection was kept so it can be retried safely.
+    select_accounts:
+      not_configured: Trade Republic is not configured.
+    initiate_login:
+      not_configured: Trade Republic is not configured.
+      pin_required: Enter your Trade Republic PIN to start a new login.
+      verification_required: "Login started. Confirm it via %{method}, then press Confirm login."
+    initiate_qr_login:
+      not_configured: Trade Republic is not configured.
+    poll_login:
+      no_pending_login: No login is currently pending. Start a new login first.
+      login_expired: The login request expired. Please start again.
+    poll_qr_login:
+      no_pending_login: No QR login is pending.
+      success: Trade Republic connected successfully.
+    complete_login:
+      no_pending_login: No login is currently pending. Start a new login first.
+      approval_pending: Not confirmed yet. Approve the login in the Trade Republic app, then try again.
+      still_pending: Not confirmed yet. Approve the login in the Trade Republic app, then try again.
+      success: Trade Republic connected successfully.
+      login_expired: The login request expired. Please start again.
+    link_existing_account:
+      not_found: Account or Trade Republic configuration not found.
+      only_manual_investment: Only manual investment accounts can be linked to Trade Republic.
+      already_linked: This Trade Republic account is already linked.
+      success: Successfully linked to Trade Republic account.
+      processing_failed: The account was linked, but its initial data processing failed. A sync has been scheduled; check the debug log if it remains incomplete.
+      failed: Failed to link Trade Republic account.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} Trade Republic account.
+        other: Successfully created %{count} Trade Republic accounts.
+      none_selected: No accounts were selected.
+      none_created: No accounts were created.
+      partial_failure:
+        one: One selected Trade Republic account could not be completed. Check the debug log and try again.
+        other: "%{count} selected Trade Republic accounts could not be completed. Check the debug log and try again."
+    activities:
+      labels:
+        contribution: Contribution
+        withdrawal: Withdrawal
+        interest: Interest
+        dividend: Dividend
+        card_payment: Card payment
+        cash_withdrawal: Cash withdrawal
+        card_fee: Card fee
+        card_refund: Card refund
+        tax_refund: Tax refund
+        buy: Buy
+        sell: Sell
