@@ -2,6 +2,7 @@
 
 class Api::V1::PushSubscriptionsController < Api::V1::BaseController
   before_action :ensure_write_scope
+  before_action :require_hosted_push
 
   def create
     token = subscription_params[:token].to_s.downcase
@@ -38,6 +39,13 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
   end
 
   private
+    def require_hosted_push
+      return if Apns::Client.hosted?
+
+      render json: { error: "feature_disabled", message: "Push notifications are available only in hosted mode" },
+             status: :forbidden
+    end
+
     def ensure_write_scope
       authorize_scope!(:write)
     end

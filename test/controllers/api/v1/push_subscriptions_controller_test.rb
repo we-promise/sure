@@ -2,6 +2,7 @@ require "test_helper"
 
 class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
     @user = users(:family_admin)
     key = ApiKey.generate_secure_key
     @api_key = ApiKey.create!(
@@ -156,5 +157,55 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
          as: :json
 
     assert_response :unauthorized
+  end
+
+  test "self hosted mode rejects registration even when APNs is configured" do
+    Rails.application.config.stubs(:app_mode).returns("self_hosted".inquiry)
+    Apns::Client.stubs(:configured?).returns(true)
+    assert_no_difference "PushSubscription.count" do
+      post api_v1_push_subscriptions_url,
+        params: { token: @token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
+    end
+    assert_response :forbidden
+    assert_equal "feature_disabled", response.parsed_body["error"]
+  end
+
+  test "self hosted mode rejects unregistering subscriptions" do
+    subscription = @user.push_subscriptions.create!(
+      token: @token, environment: "sandbox", platform: "ios", last_registered_at: Time.current
+    )
+    Rails.application.config.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert_no_difference "PushSubscription.count" do
+      delete api_v1_push_subscription_url(subscription), headers: @headers
+    end
+    assert_response :forbidden
+    assert_equal "feature_disabled", response.parsed_body["error"]
+  end
+
+  test "accepts variable length byte tokens but rejects oversized and incomplete bytes" do
+    [ "ab" * 16, "ab" * 128 ].each do |token|
+      post api_v1_push_subscriptions_url,
+        params: { token: token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
+      assert_response :created
+    end
+    [ "ab" * 2049, "abc" ].each do |token|
+      post api_v1_push_subscriptions_url,
+        params: { token: token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "renews a stale registration without changing its identity" do
+    subscription = @user.push_subscriptions.create!(
+      token: @token, environment: "sandbox", platform: "ios", last_registered_at: 91.days.ago
+    )
+    freeze_time do
+      post api_v1_push_subscriptions_url,
+        params: { token: @token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
+      assert_response :created
+      assert_equal subscription.id, response.parsed_body["id"]
+      assert_equal Time.current, subscription.reload.last_registered_at
+      assert subscription.eligible?
+    end
   end
 end

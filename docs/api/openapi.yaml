@@ -6056,12 +6056,19 @@ paths:
   "/api/v1/push_subscriptions":
     post:
       summary: Register an APNs device token
+      description: Available only in hosted (managed) mode. Requires write scope.
       tags:
       - Push Subscriptions
       security:
       - apiKeyAuth: []
       parameters: []
       responses:
+        '403':
+          description: push unavailable in self-hosted mode
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '201':
           description: token registered
           content:
@@ -6086,6 +6093,8 @@ paths:
               properties:
                 token:
                   type: string
+                  maxLength: 4096
+                  pattern: "^(?:[0-9a-fA-F]{2})+$"
                 environment:
                   type: string
                   enum:
@@ -6105,11 +6114,18 @@ paths:
         type: string
     delete:
       summary: Unregister an APNs device token
+      description: Available only in hosted (managed) mode. Requires write scope.
       tags:
       - Push Subscriptions
       security:
       - apiKeyAuth: []
       responses:
+        '403':
+          description: push unavailable in self-hosted mode
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '204':
           description: token unregistered
   "/api/v1/recurring_transactions":

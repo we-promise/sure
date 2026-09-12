@@ -1,7 +1,7 @@
 <%= content_for :page_title, t(".title") %>
 
 <%= render DS::Tabs.new(
-  active_tab: params[:tab].presence_in(%w[background_jobs ai]) || "background_jobs",
+  active_tab: @active_tab,
   url_param_key: "tab",
   navigate_on_change: true,
   testid: "system-health-tabs"
@@ -12,7 +12,9 @@
   <% end %>
 
   <% tabs.with_panel(tab_id: "background_jobs") do %>
-    <%= render "background_jobs", health: @health %>
+    <%= render "background_jobs", health: @health, push_notification_test: @push_notification_test,
+      push_disabled_reason: @push_disabled_reason, latest_push_test: @latest_push_test,
+      push_test_results: @push_test_results %>
   <% end %>
 
   <% tabs.with_panel(tab_id: "ai") do %>
