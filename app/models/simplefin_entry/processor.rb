@@ -84,6 +84,11 @@ class SimplefinEntry::Processor
         sf["pending"] = false
       end
 
+      sf.merge!(Provider::BankEntryDate.provenance([
+        [ :posted, data[:posted] ],
+        [ :transacted_at, data[:transacted_at] ]
+      ]))
+
       # FX metadata: when tx currency differs from account currency
       tx_currency = parse_currency(data[:currency])
       acct_currency = account.currency
@@ -164,21 +169,27 @@ class SimplefinEntry::Processor
     # UI/entry date selection by account type:
     # - Credit cards/loans: prefer transaction date (matches statements), then posted
     # - Others: prefer posted date, then transaction date
-    # Epochs parsed as UTC timestamps via DateUtils
+    # Epochs parsed as UTC timestamps via DateUtils. A future preferred date falls
+    # back to the next non-future candidate (or clamps to today) per #2907.
     def date
-      # Prefer transaction date for revolving debt (credit cards/loans); otherwise prefer posted date
       acct_type = simplefin_account&.account_type.to_s.strip.downcase.tr(" ", "_")
-      if %w[credit_card credit loan mortgage].include?(acct_type)
-        t = transacted_date
-        return t if t
-        p = posted_date
-        return p if p
+      candidates = if %w[credit_card credit loan mortgage].include?(acct_type)
+        [ [ "transacted_at", transacted_date ], [ "posted", posted_date ] ]
       else
-        p = posted_date
-        return p if p
-        t = transacted_date
-        return t if t
+        [ [ "posted", posted_date ], [ "transacted_at", transacted_date ] ]
       end
+
+      selected = Provider::BankEntryDate.select(
+        candidates,
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: external_id,
+          source: "simplefin"
+        )
+      )
+      return selected if selected
+
       Rails.logger.error("SimpleFin transaction missing posted/transacted date: #{data.inspect}")
       raise ArgumentError, "Invalid date format: #{data[:posted].inspect} / #{data[:transacted_at].inspect}"
     end

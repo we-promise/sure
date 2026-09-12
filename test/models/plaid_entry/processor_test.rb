@@ -120,4 +120,60 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
     entry = Entry.order(created_at: :desc).first
     assert_nil entry.transaction.category_id
   end
+
+  test "uses non-future authorized_date when posted date is in the future" do
+    travel_to Date.new(2026, 8, 5) do
+      plaid_transaction = {
+        "transaction_id" => "plaid_future_posted",
+        "merchant_name" => "Future Shop",
+        "amount" => 25,
+        "date" => "2026-08-08",
+        "authorized_date" => "2026-08-04",
+        "iso_currency_code" => "USD"
+      }
+
+      @category_matcher.expects(:match).never
+
+      entry = PlaidEntry::Processor.new(
+        plaid_transaction,
+        plaid_account: @plaid_account,
+        category_matcher: @category_matcher
+      ).process
+
+      assert_equal Date.new(2026, 8, 4), entry.date
+      assert_equal "2026-08-08", entry.transaction.extra.dig("plaid", "date")
+      assert_equal "2026-08-04", entry.transaction.extra.dig("plaid", "authorized_date")
+    end
+  end
+
+  test "all-future date clamp stays put across daily resyncs" do
+    plaid_transaction = {
+      "transaction_id" => "plaid_future_clamp",
+      "merchant_name" => "Clamp Shop",
+      "amount" => 40,
+      "date" => "2026-08-10",
+      "authorized_date" => "2026-08-09",
+      "iso_currency_code" => "USD"
+    }
+
+    @category_matcher.stubs(:match).returns(nil)
+
+    travel_to Date.new(2026, 8, 5) do
+      entry = PlaidEntry::Processor.new(
+        plaid_transaction,
+        plaid_account: @plaid_account,
+        category_matcher: @category_matcher
+      ).process
+      assert_equal Date.new(2026, 8, 5), entry.date
+    end
+
+    travel_to Date.new(2026, 8, 6) do
+      entry = PlaidEntry::Processor.new(
+        plaid_transaction,
+        plaid_account: @plaid_account,
+        category_matcher: @category_matcher
+      ).process
+      assert_equal Date.new(2026, 8, 5), entry.date
+    end
+  end
 end

@@ -599,6 +599,17 @@ end
 
 After generation, you'll typically want to customize three files:
 
+### Bank transaction dates (important)
+
+Generated bank `Transactions::Processor` classes use `Provider::BankEntryDate` to:
+
+1. Parse provider date candidates separately (`transaction_date`, `authorized_date`, `initiated_at`, `posted_at`/`posted_date`, `booking_date`, `date`)
+2. Choose `entries.date` from the first non-future candidate in preference order (clamp to family-local today via `as_of: Provider::BankEntryDate.family_today(account&.family)` if every candidate is future on first import)
+3. On resync, pass `existing_date: Provider::BankEntryDate.existing_entry_date(...)` so an all-future payload does not advance the clamped date day-by-day; once a real ≤-as_of candidate appears, it wins
+4. Store raw provider dates under `transaction.extra["<provider>"]` for provenance
+
+Reorder the candidate list to match your provider’s preferred display date. Do **not** apply this banking clamp to investment activity processors — prefer `trade_date` for display and leave future `settlement_date` values unclamped. Pass raw `trade_date` / `settlement_date` via `extra:` on both `import_trade` and `import_transaction` so provenance survives while `entries.date` stays the selected display date.
+
 ### 1. Customize the Adapter
 
 Implement the `build_provider` method in `app/models/provider/my_bank_adapter.rb`:

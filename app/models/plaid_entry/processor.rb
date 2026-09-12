@@ -20,8 +20,14 @@ class PlaidEntry::Processor
       extra: {
         plaid: {
           pending: plaid_transaction["pending"],
-          pending_transaction_id: pending_transaction_id # Also store for reference
-        }
+          pending_transaction_id: pending_transaction_id, # Also store for reference
+          **Provider::BankEntryDate.provenance([
+            [ :date, plaid_transaction["date"] ],
+            [ :authorized_date, plaid_transaction["authorized_date"] ],
+            [ :datetime, plaid_transaction["datetime"] ],
+            [ :authorized_datetime, plaid_transaction["authorized_datetime"] ]
+          ])
+        }.compact
       }
     )
   end
@@ -53,8 +59,46 @@ class PlaidEntry::Processor
       plaid_transaction["iso_currency_code"]
     end
 
+    # Prefer Plaid's posted `date`, then authorized/datetime fields when needed to
+    # avoid a future display date (#2907).
     def date
-      plaid_transaction["date"]
+      selected = Provider::BankEntryDate.select([
+        [ "date", parse_provider_date(plaid_transaction["date"]) ],
+        [ "authorized_date", parse_provider_date(plaid_transaction["authorized_date"]) ],
+        [ "datetime", parse_provider_date(plaid_transaction["datetime"]) ],
+        [ "authorized_datetime", parse_provider_date(plaid_transaction["authorized_datetime"]) ]
+      ],
+        as_of: Provider::BankEntryDate.family_today(account&.family),
+        existing_date: Provider::BankEntryDate.existing_entry_date(
+          account: account,
+          external_id: external_id,
+          source: "plaid"
+        ))
+
+      return selected if selected
+
+      raise ArgumentError, "Invalid date format: #{plaid_transaction["date"].inspect}"
+    end
+
+    def parse_provider_date(date_value)
+      return nil if date_value.blank?
+
+      case date_value
+      when String
+        if date_value.include?("T") || date_value.include?(":")
+          Time.parse(date_value).in_time_zone(account&.family&.timezone).to_date
+        else
+          Date.parse(date_value)
+        end
+      when Time, DateTime, ActiveSupport::TimeWithZone
+        date_value.in_time_zone(account&.family&.timezone).to_date
+      when Date
+        date_value
+      else
+        nil
+      end
+    rescue ArgumentError, TypeError
+      nil
     end
 
     # Plaid provides this linking ID when a posted transaction matches a pending one
