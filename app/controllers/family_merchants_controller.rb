@@ -195,10 +195,10 @@ class FamilyMerchantsController < ApplicationController
       params.require(key).permit(:name, :color, :website_url, :iban)
     end
 
-    # Mirrors Merchant#normalize_iban so a submitted value can be compared
-    # against the persisted (already-normalized) iban without saving first.
+    # So a submitted value can be compared against the persisted
+    # (already-normalized) iban without saving first.
     def normalize_iban(value)
-      value.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      IbanNormalizable.normalize(value)
     end
 
     def render_create_error
