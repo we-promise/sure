@@ -44,7 +44,7 @@
             icon: "refresh-cw",
             type: "button",
             full_width: true,
-            onclick: "window.location.reload()"
+            data: { controller: "page-reload", action: "click->page-reload#reload" }
           ) %>
         </div>
       </div>
