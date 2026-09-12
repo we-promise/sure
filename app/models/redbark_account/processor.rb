@@ -21,16 +21,19 @@ class RedbarkAccount::Processor
     transactions_count = redbark_account.raw_transactions_payload&.size || 0
     Rails.logger.info "RedbarkAccount::Processor - Transactions payload has #{transactions_count} items"
 
+    transactions_ok = true
     if redbark_account.raw_transactions_payload.present?
       Rails.logger.info "RedbarkAccount::Processor - Processing transactions..."
-      RedbarkAccount::Transactions::Processor.new(redbark_account).process
+      transactions_ok = RedbarkAccount::Transactions::Processor.new(redbark_account).process[:success]
     else
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
 
     # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
     # complete ledger. See Account::CurrentBalanceManager.
-    account.set_current_balance(anchor_balance) if anchor_balance
+    # A failed import leaves the ledger incomplete, so skip anchoring and let the next
+    # successful sync judge the wider gap.
+    account.set_current_balance(anchor_balance) if anchor_balance && transactions_ok
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete
