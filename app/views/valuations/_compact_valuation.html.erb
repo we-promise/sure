@@ -1,0 +1,41 @@
+<%# locals: (entry:, running_balance: nil, hide_balance: false, flat: false) %>
+<% valuation = entry.entryable %>
+<% has_running_balance = defined?(running_balance) && running_balance.present? %>
+<% show_date = flat || has_running_balance %>
+
+<%= turbo_frame_tag dom_id(entry) do %>
+  <%= turbo_frame_tag dom_id(valuation) do %>
+    <%= render DS::CompactRow.new(show_date: show_date, show_balance: has_running_balance && !hide_balance) do |row| %>
+      <% row.with_checkbox do %>
+        <%= check_box_tag dom_id(entry, "selection"),
+            class: "checkbox checkbox--light",
+            data: { id: entry.id, entry_type: entry.entryable_type, "bulk-select-target": "row", action: "bulk-select#toggleRowSelection", checkbox_toggle_target: "selectionEntry" } %>
+      <% end %>
+
+      <% if show_date %>
+        <% row.with_date { format_date(entry.date) } %>
+      <% end %>
+
+      <% row.with_primary do %>
+        <div class="min-w-0 flex-1 truncate">
+          <%= link_to(
+                valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name,
+                entry_path(entry),
+                data: { turbo_frame: "drawer", turbo_prefetch: false },
+                class: "hover:underline truncate"
+              ) %>
+        </div>
+      <% end %>
+
+      <% row.with_amount do %>
+        <%= tag.p format_money(entry.amount_money), class: "privacy-sensitive text-sm font-medium truncate" %>
+      <% end %>
+
+      <% if has_running_balance && !hide_balance %>
+        <% row.with_balance do %>
+          <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

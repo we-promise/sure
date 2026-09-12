@@ -115,6 +115,8 @@ en:
       transfer_or_debt_payment: "Transfer or Debt Payment?"
       open_matcher: "Open matcher"
       convert: "Convert"
+      account: Account
+      notes: Notes
     activity_labels:
       buy: Buy
       sell: Sell

@@ -182,6 +182,12 @@ en:
         dashboard_two_column_description: Display dashboard widgets in two columns on large screens, with per-widget width and height controls in each widget's header. When off, widgets stack in a single column.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
+        compact_title: Compact table
+        compact_description: Use a denser row layout so more transactions are visible at once. Applies to the transactions page and account activity feeds. Requires preview features.
+        group_by_date_title: Group by date
+        group_by_date_description: Group transactions by day with date headers. When off, transactions appear in a flat list on both pages.
+        per_page_title: Transactions per page
+        per_page_description: Default number of transactions shown per page on both pages. You can still change this on either page.
     preferences:
       show:
         country: Country

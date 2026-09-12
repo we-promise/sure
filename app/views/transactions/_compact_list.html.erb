@@ -1,0 +1,116 @@
+<%# locals: (transactions:, projected_recurring:, q:, pagy:) %>
+<div id="transactions"
+  data-controller="bulk-select checkbox-toggle drag-and-drop-import"
+  data-bulk-select-singular-label-value="<%= t("transactions.list.transaction") %>"
+  data-bulk-select-plural-label-value="<%= t("transactions.list.transactions") %>"
+  data-bulk-select-selected-label-value="<%= t("transactions.selection_bar.selected") %>"
+  data-bulk-select-edit-label-value="<%= t("transactions.selection_bar.edit") %>"
+  class="flex flex-col bg-container rounded-xl shadow-border-xs px-2 py-3 lg:p-3 relative group">
+
+  <%= form_with url: imports_path, method: :post, class: "hidden", data: { drag_and_drop_import_target: "form", turbo: false } do |f| %>
+    <%= f.hidden_field "import[type]", value: "TransactionImport" %>
+    <%= f.file_field "import[import_file]", class: "hidden", data: { drag_and_drop_import_target: "input" }, accept: ".csv" %>
+  <% end %>
+
+  <%= render "imports/drag_drop_overlay", title: t("transactions.list.drag_drop_title"), subtitle: t("transactions.list.drag_drop_subtitle") %>
+
+  <%= render "transactions/searches/search" %>
+
+  <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
+    <%= render "transactions/selection_bar" %>
+  </div>
+
+  <% if @pagy.count > 0 || (@projected_recurring.any? && @q.blank?) %>
+    <div class="grow">
+      <% if @transactions.any? %>
+        <% if @group_by_date == false %>
+          <div class="bg-container-inset rounded-xl px-2 py-2 text-xs uppercase font-medium text-secondary items-center mb-2 flex gap-2 lg:gap-3">
+            <div class="hidden lg:flex w-8 shrink-0 justify-center">
+              <%= check_box_tag "selection_entry",
+                  class: "checkbox checkbox--light",
+                  data: {
+                    action: "bulk-select#togglePageSelection",
+                    checkbox_toggle_target: "selectionEntry"
+                  } %>
+            </div>
+            <p class="hidden lg:block w-[110px] shrink-0"><%= t("transactions.show.date_label") %></p>
+            <p class="flex-[2] min-w-0"><%= t("transactions.list.transaction") %></p>
+            <p class="hidden lg:block flex-[2] min-w-0"><%= t("transactions.show.notes") %></p>
+            <p class="hidden md:block flex-[1] min-w-0"><%= t("transactions.form.category_label") %></p>
+            <p class="w-[120px] shrink-0 text-right"><%= t("transactions.show.amount") %></p>
+          </div>
+        <% else %>
+          <div class="grid-cols-12 bg-container-inset rounded-xl px-3 py-2 text-xs uppercase font-medium text-secondary items-center mb-2 grid">
+            <div class="pl-0.5 col-span-4 flex items-center gap-2">
+              <%= check_box_tag "selection_entry",
+                  class: "checkbox checkbox--light hidden lg:block",
+                  data: {
+                    action: "bulk-select#togglePageSelection",
+                    checkbox_toggle_target: "selectionEntry"
+                  } %>
+              <p><%= t("transactions.list.transaction") %></p>
+            </div>
+            <p class="col-span-4 hidden lg:block"><%= t("transactions.show.notes") %></p>
+            <p class="col-span-2 md:block hidden"><%= t("transactions.form.category_label") %></p>
+            <p class="col-span-4 lg:col-span-2 ml-auto justify-self-end"><%= t("transactions.show.amount") %></p>
+          </div>
+        <% end %>
+      <% end %>
+
+      <% if @group_by_date == false %>
+        <div class="bg-container-inset rounded-xl p-1">
+          <div class="bg-container shadow-border-xs rounded-lg">
+            <% entries = @transactions.map(&:entry).compact %>
+            <% if Current.user.show_split_grouped? %>
+              <% group_split_entries(entries, @split_parents).each do |item| %>
+                <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                  <div class="split-group">
+                    <%= render "transactions/compact_split_parent_row", entry: item.parent, view_ctx: "global", is_filtered: q.present?, flat: true %>
+                    <% item.children.each do |child_entry| %>
+                      <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "global", in_split_group: true, is_filtered: q.present?, flat: true %>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <%= render "transactions/compact_transaction", entry: item, view_ctx: "global", in_split_group: false, is_filtered: q.present?, flat: true %>
+                <% end %>
+              <% end %>
+            <% else %>
+              <% entries.each do |entry| %>
+                <%= render "transactions/compact_transaction", entry: entry, view_ctx: "global", in_split_group: false, is_filtered: q.present?, flat: true %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
+            <% if Current.user.show_split_grouped? %>
+              <% group_split_entries(entries, @split_parents).each do |item| %>
+                <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                  <div class="split-group">
+                    <%= render "transactions/split_parent_row", entry: item.parent, view_ctx: "global", is_filtered: q.present? %>
+                    <% item.children.each do |child_entry| %>
+                      <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "global", in_split_group: true, is_filtered: q.present? %>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <%= render "transactions/compact_transaction", entry: item, view_ctx: "global", in_split_group: false, is_filtered: q.present? %>
+                <% end %>
+              <% end %>
+            <% else %>
+              <% entries.each do |entry| %>
+                <%= render "transactions/compact_transaction", entry: entry, view_ctx: "global", in_split_group: false, is_filtered: q.present? %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render "entries/empty" %>
+  <% end %>
+
+  <div class="pt-3">
+    <%= render "shared/pagination", pagy: @pagy %>
+  </div>
+</div>

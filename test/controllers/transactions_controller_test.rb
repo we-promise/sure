@@ -390,6 +390,121 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
+  test "turbo_stream update renders balance from explicit view_ctx/is_filtered params without referer" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    entry_row_html = turbo_stream_row_html(@entry)
+    assert_match(/justify-end px-2/, entry_row_html, "unfiltered account context should render the running balance")
+  end
+
+  test "turbo_stream update hides balance for explicit filtered account context" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "1",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+  end
+
+  test "turbo_stream update hides balance for explicit global context" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry))
+  end
+
+  test "explicit view_ctx params win over referer" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "global",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "explicit global context must win over an account referer")
+  end
+
+  test "turbo_stream update falls back to referer when explicit params are absent" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, headers: { "Referer" => account_url(@entry.account) }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "unfiltered account referer fallback should render the running balance")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: "Updated again",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, headers: { "Referer" => "#{account_url(@entry.account)}?search=foo" }, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match(/justify-end px-2/, turbo_stream_row_html(@entry),
+      "filtered account referer fallback should hide the running balance")
+  end
+
+  test "show drawer renders explicit view_ctx/is_filtered hidden fields" do
+    get transaction_url(@entry, view_ctx: "account", is_filtered: "1")
+
+    assert_response :success
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
+    assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
+  end
+
+  test "failed update re-render keeps explicit view_ctx/is_filtered hidden fields" do
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "1",
+      entry: {
+        name: "",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type='hidden'][name='view_ctx'][value='account']", minimum: 1
+    assert_select "input[type='hidden'][name='is_filtered'][value='1']", minimum: 1
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)
@@ -518,7 +633,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     drawer_link = row.at_css("a[data-clickable-row-target='link']")
 
     assert_equal "click->clickable-row#open", row["data-action"]
-    assert_equal entry_path(@entry), drawer_link["href"]
+    assert_equal entry_path(@entry, view_ctx: "global", is_filtered: false), drawer_link["href"]
   end
 
   test "split parent row delegates whole-row clicks to the drawer link" do
@@ -537,7 +652,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     drawer_link = row.at_css("a[data-clickable-row-target='link']")
 
     assert_equal "click->clickable-row#open", row["data-action"]
-    assert_equal entry_path(entry), drawer_link["href"]
+    assert_equal entry_path(entry, view_ctx: "global", is_filtered: false), drawer_link["href"]
   end
 
   test "can paginate" do
@@ -1574,9 +1689,184 @@ end
     Rails.cache = original_cache
   end
 
+  # --- Preview-gated compact / group_by_date / per_page ---
+
+  test "standard list renders when preview disabled even if compact pref set" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false, "transactions_compact" => true, "transactions_group_by_date" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account)
+
+    get transactions_url
+
+    assert_response :success
+    # standard list header is grid-cols-12 px-5 py-3; compact flat is px-2 py-2 with w-[110px] date col
+    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-5.py-3", count: 1
+    assert_no_match(/w-\[110px\]/, response.body)
+  end
+
+  test "compact grouped list renders when preview enabled and compact true" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => true))
+
+    # ensure at least one transaction so header renders
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account)
+
+    get transactions_url
+
+    assert_response :success
+    # compact grouped header is px-3 py-2 grid, standard is px-5 py-3
+    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-3.py-2", count: 1
+    assert_select "div.bg-container-inset.rounded-xl.px-2.py-2", count: 0
+  end
+
+  test "compact flat list renders when preview enabled and group_by_date disabled" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "div.bg-container-inset.rounded-xl.px-2.py-2", count: 1
+    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-3.py-2", count: 0
+  end
+
+  test "group_by_date toggle only affects compact view" do
+    family = families(:empty)
+    sign_in users(:empty)
+    @user = users(:empty)
+
+    # without compact, both true/false still render standard grouped layout
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => false, "transactions_group_by_date" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account)
+
+    get transactions_url
+    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-5.py-3", count: 1
+
+    @user.update!(preferences: (@user.preferences || {}).merge("transactions_group_by_date" => true))
+    get transactions_url
+    assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-5.py-3", count: 1
+  end
+
+  test "preview per_page preference takes precedence over session stored value" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    25.times { |i| create_transaction(account: account, name: "Tx #{i}", amount: 100 + i, date: Date.current - i.days) }
+
+    # store 50 in session while preview off (persists only to session)
+    get transactions_url(per_page: 50)
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+
+    # enable preview with pref 20 — should win over stored 50 when request has query params (bypasses restore redirect)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true, "transactions_per_page" => 20))
+
+    get transactions_url(q: { search: "Tx" })
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='20'][selected]"
+    assert_equal 20, css_select("turbo-frame[id^='entry_']").count
+  end
+
+  test "per_page falls back to session when preview disabled ignores preference" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    25.times { |i| create_transaction(account: account, name: "Tx #{i}", amount: 100 + i, date: Date.current - i.days) }
+
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true, "transactions_per_page" => 10))
+    get transactions_url(per_page: 30)
+    assert_select "select[name='per_page'] option[value='30'][selected]"
+    # now disable preview but keep pref 30 in DB — session still holds 30
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => false))
+    # explicitly store 50 via session to prove it wins
+    get transactions_url(per_page: 50)
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+    # next request without param should stay at 50, not revert to pref 30
+    get transactions_url(q: { search: "Tx" })
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+  end
+
+  test "per_page param persists to preference only when preview enabled and value allowed" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    user.update!(preferences: user.preferences.merge("transactions_per_page" => nil))
+
+    get transactions_url(per_page: 30)
+    assert_response :success
+    assert_equal 30, user.reload.transactions_per_page
+
+    # non-allowed value (nearest would be 30) must not persist
+    get transactions_url(per_page: 27)
+    assert_response :success
+    assert_equal 30, user.reload.transactions_per_page, "nearest allowed must not be persisted when not exact"
+
+    # preview off — must not persist even when allowed
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => false))
+    get transactions_url(per_page: 50)
+    assert_response :success
+    assert_equal 30, user.reload.transactions_per_page
+  end
+
+  test "restore redirect uses preference default when no stored per_page" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true, "transactions_per_page" => 20))
+    # seed session with q so should_restore_params? is true but per_page blank
+    Current.session.update!(prev_transaction_page_params: { "q" => { "search" => "foo" }, "page" => "1", "per_page" => nil })
+
+    get transactions_url
+    assert_response :redirect
+    assert_equal "20", Rack::Utils.parse_query(URI.parse(response.location).query)["per_page"]
+  end
+
+  test "restore redirect falls back to 50 when preview disabled and no stored per_page" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => false, "transactions_per_page" => 20))
+    Current.session.update!(prev_transaction_page_params: { "q" => { "search" => "foo" }, "page" => "1", "per_page" => nil })
+
+    get transactions_url
+    assert_response :redirect
+    assert_equal "50", Rack::Utils.parse_query(URI.parse(response.location).query)["per_page"]
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
+    end
+
+    # Extracts the entry-row turbo-stream's inner HTML from an update response,
+    # so compact-row rendering (e.g. the running-balance column) can be asserted.
+    def turbo_stream_row_html(entry)
+      doc = Nokogiri::HTML::Document.parse(response.body)
+      stream = doc.css("turbo-stream[action='replace']").find { |s| s["target"] == dom_id(entry) }
+      assert stream.present?, "Expected a turbo-stream replacing the entry row"
+      stream.to_html
     end
 
     def normalize_sql_query(sql)
