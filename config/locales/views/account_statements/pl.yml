@@ -2,9 +2,10 @@
 pl:
   account_statements:
     account_tab:
-      coverage_title: Pokrycie wyciągami
-      coverage_description: Historyczne miesiące poparte przesłanymi wyciągami i uzgodnieniami sald.
+      coverage_description: Historyczne miesiące poparte przesłanymi wyciągami i uzgodnieniami
+        sald.
       coverage_range: "%{start} - %{end}"
+      coverage_title: Pokrycie wyciągami
       empty: Brak wyciągów powiązanych z tym kontem.
       open_inbox: Skrzynka odbiorcza
       statements_title: Wyciągi
@@ -21,28 +22,29 @@ pl:
         not_expected: Niespodziewany
     create:
       duplicates:
-        few: "Pominięto %{count} duplikaty wyciągów."
-        many: "Pominięto %{count} duplikatów wyciągów."
+        few: Pominięto %{count} duplikaty wyciągów.
+        many: Pominięto %{count} duplikatów wyciągów.
         one: Pominięto 1 duplikat wyciągu.
-        other: "Pominięto %{count} duplikatów wyciągów."
-      invalid_file_type: Prześlij wyciąg w formacie PDF, CSV lub XLSX poniżej limitu rozmiaru.
+        other: Pominięto %{count} duplikatów wyciągów.
+      invalid_file_type: Prześlij wyciąg w formacie PDF, CSV lub XLSX poniżej limitu
+        rozmiaru.
       no_files: Wybierz co najmniej jeden plik wyciągu.
       success:
-        few: "Przesłano %{count} wyciągi."
-        many: "Przesłano %{count} wyciągów."
+        few: Przesłano %{count} wyciągi.
+        many: Przesłano %{count} wyciągów.
         one: Przesłano 1 wyciąg.
-        other: "Przesłano %{count} wyciągów."
+        other: Przesłano %{count} wyciągów.
     destroy:
       failure: Nie można usunąć wyciągu.
       success: Wyciąg usunięty.
     form:
       account_upload: Prześlij wyciąg
-      files_hint: "PDF, CSV lub XLSX. Maks. %{max_size} MB na plik."
+      files_hint: PDF, CSV lub XLSX. Maks. %{max_size} MB na plik.
       files_label: Pliki wyciągów
       inbox_upload: Prześlij
     index:
       account_label: Konto
-      confidence: "Zgodność %{confidence}"
+      confidence: Zgodność %{confidence}
       empty_linked: Brak powiązanych wyciągów.
       empty_unmatched: Skrzynka odbiorcza wyciągów jest pusta.
       leave_unmatched: Pozostaw niedopasowane
@@ -51,11 +53,12 @@ pl:
       storage_used: Użyte miejsce
       title: Magazyn wyciągów
       unmatched_title: Niedopasowane
-      upload_description: Prześlij wyciągi do skrzynki odbiorczej lub wybierz konto, aby natychmiast powiązać.
+      upload_description: Prześlij wyciągi do skrzynki odbiorczej lub wybierz konto,
+        aby natychmiast powiązać.
       upload_title: Prześlij wyciągi
     link:
       no_account: Wybierz konto przed powiązaniem tego wyciągu.
-      success: "Powiązano wyciąg z %{account}."
+      success: Powiązano wyciąg z %{account}.
     period:
       unknown: Nieznany okres
     reconciliation:
@@ -80,24 +83,25 @@ pl:
       download: Pobierz
       institution_name_hint: Podpowiedź instytucji
       ledger_amount: Księga Sure
-      linked_to: "Powiązane z %{account}."
-      linking_title: Powiązanie konta
       link_suggestion: Sugestia powiązania
+      linked_to: Powiązane z %{account}.
+      linking_title: Powiązanie konta
       metadata_title: Metadane wyciągu
       no_suggestion: Brak sugestii konta.
       opening_balance: Saldo początkowe
       period_end_on: Koniec okresu
       period_start_on: Początek okresu
       reconciliation_title: Uzgodnienie
-      reconciliation_unavailable: Dodaj okres wyciągu oraz saldo początkowe lub końcowe, a następnie upewnij się, że Sure ma historię sald dla tych dat.
+      reconciliation_unavailable: Dodaj okres wyciągu oraz saldo początkowe lub końcowe,
+        a następnie upewnij się, że Sure ma historię sald dla tych dat.
       reject: Odrzuć
       save: Zapisz wyciąg
       statement_amount: Wyciąg
-      suggested_account: "Sugerowane konto to %{account} (ufność: %{confidence})."
+      suggested_account: 'Sugerowane konto to %{account} (ufność: %{confidence}).'
       title: Wyciąg
+      unknown_value: Nieznane
       unlink: Odłącz
       unmatched_account: Niedopasowane
-      unknown_value: Nieznane
     status:
       linked: Powiązany
       rejected: Odrzucony

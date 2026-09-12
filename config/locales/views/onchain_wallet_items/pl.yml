@@ -1,0 +1,145 @@
+---
+pl:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Znaleziono aktywność
+      explanation: Ten format adresu jest używany przez więcej niż jedną sieć, a salda
+        w każdej z nich są inne. Wybierz tę, którą chcesz śledzić.
+      no_activity_found: Nic nie znaleziono
+      subtitle: "%{address}"
+      title: Która sieć?
+    destroy:
+      success: Zaplanowano usunięcie połączenia portfela własnego.
+    disconnect_asset:
+      success: Zatrzymano śledzenie %{symbol}. Konto i historia zostały zachowane.
+    disconnect_wallet:
+      success:
+        few: Zatrzymano śledzenie %{count} aktywów pod tym adresem.
+        many: Zatrzymano śledzenie %{count} aktywów pod tym adresem.
+        one: Zatrzymano śledzenie 1 aktywa pod tym adresem.
+        other: Zatrzymano śledzenie %{count} aktywów pod tym adresem.
+    enable_crypto_prices:
+      not_self_hosted: Dostawcy danych rynkowych są konfigurowani przez operatora
+        tej instancji.
+      success: Ceny kryptowalut są włączone. Wartości portfela pojawią się po następnej
+        synchronizacji.
+    errors:
+      address_required: Wpisz adres portfela.
+      already_linked: Ten adres jest już śledzony w tej sieci. Użyj opcji Przejrzyj
+        tokeny, aby zmienić śledzone aktywa.
+      chain_unreachable: Nie udało się połączyć z publicznym eksploratorem tej sieci.
+        Spróbuj ponownie za chwilę.
+      rate_limited: Publiczny eksplorator obecnie ogranicza liczbę żądań. Spróbuj
+        ponownie za kilka minut.
+      unexpected: Coś poszło nie tak podczas odczytu tego portfela. Szczegóły zostały
+        zapisane do wsparcia technicznego.
+      unrecognized_address: To nie wygląda na adres w żadnej obsługiwanej sieci.
+      wallet_not_found: Ten portfel nie jest śledzony przez to połączenie.
+    link_wallet:
+      errors:
+        none_tracked: 'Nic nie zostało dodane do śledzenia: nie udało się dodać %{assets}.
+          Spróbuj ponownie za chwilę.'
+        nothing_selected: Wybierz co najmniej jedno aktywo do śledzenia.
+        some_failed: Nie udało się śledzić %{assets} i zostało pominięte.
+      success:
+        few: Śledzenie %{count} aktywów z tego portfela.
+        many: Śledzenie %{count} aktywów z tego portfela.
+        one: Śledzenie 1 aktywa z tego portfela.
+        other: Śledzenie %{count} aktywów z tego portfela.
+    manage:
+      assets_truncated: Ten adres posiada więcej tokenów, niż pokazuje jeden odczyt,
+        więc wyświetlono tylko %{count} najbardziej wiarygodnych. Wszystko, co jest
+        już śledzone, nadal się synchronizuje.
+      disconnect_asset: Zatrzymaj śledzenie
+      disconnect_asset_confirm: Zatrzymać śledzenie %{symbol}? Konto i historia zostaną
+        zachowane, ale przestaną się aktualizować.
+      disconnect_wallet: Odłącz portfel
+      disconnect_wallet_confirm: Zatrzymać śledzenie wszystkich aktywów pod tym adresem?
+      history_note: Odłączenie zachowuje konta i ich historię, po prostu przestają
+        się aktualizować.
+      history_truncated: Nie udało się odczytać całej historii przelewów dla tego
+        adresu — historii jest więcej, niż obejmuje jedna synchronizacja, albo eksplorator
+        odmówił dostępu. Salda są kompletne, brakuje części przelewów.
+      native: Natywne
+      no_wallets: Żaden portfel nie jest jeszcze śledzony.
+      review_tokens: Przejrzyj tokeny
+      subtitle: Każdy adres odczytywany przez to połączenie i co jest przy nim śledzone.
+      title: Zarządzaj portfelami własnymi
+    new_wallet:
+      address_label: Adres portfela
+      address_placeholder: bc1..., 0x... albo adres Solany
+      bitcoin_single_address_note: Bitcoin jest śledzony po jednym adresie naraz.
+        Klucze rozszerzone (xpub/ypub/zpub) nie są obsługiwane, więc portfel rozkładający
+        środki na adresy pochodne pokaże tylko saldo wpisanego adresu.
+      chain_auto_detect: Wykryj automatycznie
+      chain_label: Sieć
+      continue: Dalej
+      read_only_note: Odczytywane są wyłącznie publiczne dane sieci. Nigdy nie wpisuj
+        frazy seed ani klucza prywatnego.
+      subtitle: Śledź portfel, do którego masz klucze, na podstawie jego publicznego
+        adresu.
+      title: Dodaj portfel własny
+    onchain_wallet_item:
+      assets_tracked:
+        few: "%{count} śledzone aktywa"
+        many: "%{count} śledzonych aktywów"
+        one: 1 śledzone aktywo
+        other: "%{count} śledzonych aktywów"
+      sync: Synchronizuj teraz
+      syncing: Synchronizowanie...
+    price_provider_warning:
+      body: Żaden włączony dostawca danych rynkowych nie wycenia kryptowalut, więc
+        te portfele śledzą ilości, ale pokazują wartość zero.
+      enable: Włącz ceny kryptowalut
+      exchange_rate_body: Kryptowaluty są wyceniane w USD, a żaden dostawca kursów
+        wymiany nie jest skonfigurowany do przeliczania ich na %{currency}, więc te
+        portfele śledzą ilości, ale pokazują wartość zero. Ustaw EXCHANGE_RATE_PROVIDER
+        — Frankfurter nie wymaga klucza API.
+      exchange_rate_title: Nie skonfigurowano dostawcy kursów wymiany
+      link: Otwórz ustawienia danych rynkowych
+      title: Ceny kryptowalut nie są skonfigurowane
+    provider_connection:
+      description: Śledź portfel, do którego masz klucze, na podstawie jego publicznego
+        adresu.
+      name: Portfel własny
+    review_tokens:
+      save: Zapisz śledzone aktywa
+      subtitle: "%{chain} · %{address}"
+      title: Przejrzyj śledzone aktywa
+    token_review:
+      import_selected: Śledź wybrane aktywa
+      subtitle: "%{chain} · %{address}"
+      title: Wybierz, co śledzić
+    token_review_form:
+      assets_truncated: Ten adres posiada więcej tokenów, niż pokazuje jeden odczyt,
+        więc wyświetlono tylko %{count} najbardziej wiarygodnych.
+      cancel: Anuluj
+      explanation: Aktywa ze znaną ceną są zaznaczone. Reszta jest odznaczona — portfele
+        zbierają spamowe airdropy, a śledzenie ich nie ma żadnej wartości.
+      native: Natywne
+      no_price: Brak dostępnej ceny, śledzone tylko ilościowo
+      nothing_found: Ten adres nie zawiera niczego, co widzimy w tej sieci.
+    update:
+      success: Zaktualizowano połączenie portfela własnego.
+    update_tokens:
+      errors:
+        no_changes: Nic się nie zmieniło, te same aktywa są nadal zaznaczone.
+        none_tracked: 'Nic się nie zmieniło: nie udało się dodać %{assets}. Spróbuj
+          ponownie za chwilę.'
+        some_failed: Nie udało się śledzić %{assets} i zostało pominięte.
+      success: Zaktualizowano śledzone aktywa (dodano %{created}, usunięto %{removed}).
+    wallet_card:
+      addresses_tracked:
+        few: "%{count} śledzone adresy"
+        many: "%{count} śledzonych adresów"
+        one: 1 śledzony adres
+        other: "%{count} śledzonych adresów"
+      delete: Usuń połączenie
+      deletion_in_progress: Usuwanie...
+      needs_attention: Wymaga uwagi
+      no_wallets_message: Połącz adres w ustawieniach dostawcy, aby zobaczyć go tutaj.
+      no_wallets_title: Nie połączono jeszcze żadnego portfela
+      status: Zsynchronizowano %{timestamp} temu
+      status_never: Nigdy nie synchronizowano
+      sync: Synchronizuj teraz
+      syncing: Synchronizowanie...

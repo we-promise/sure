@@ -3,77 +3,160 @@ pl:
   pages:
     changelog:
       title: Co nowego
-    privacy:
-      title: Polityka prywatności
-      heading: Polityka prywatności
-      placeholder: Treść polityki prywatności będzie wyświetlana tutaj.
-    terms:
-      title: Warunki korzystania z usługi
-      heading: Warunki korzystania z usługi
-      placeholder: Treść warunków korzystania z usługi będzie wyświetlana tutaj.
     dashboard:
-      welcome: Witaj ponownie, %{name}
-      subtitle: Zobacz, co dzieje się z Twoimi finansami
-      new: Nowe
+      balance_sheet:
+        add_accounts: Dodaj konta %{name}, aby zobaczyć pełny podział
+        add_asset_accounts: Dodaj konta aktywów, aby zobaczyć pełny podział
+        add_liability_accounts: Dodaj konta zobowiązań, aby zobaczyć pełny podział
+        classifications:
+          asset: Aktywa
+          liability: Zobowiązania
+        name: Nazwa
+        no_asset: Brak aktywów
+        no_items: Brak %{name}
+        no_liability: Brak zobowiązań
+        title: Bilans
+        value: Wartość
+        weight: Udział
       bond_rate_review_notice:
-        one: "1 partia obligacji wymaga aktualizacji stopy emisji (%{accounts})."
         few: "%{count} partie obligacji wymagają aktualizacji stopy emisji (%{accounts})."
         many: "%{count} partii obligacji wymaga aktualizacji stopy emisji (%{accounts})."
+        one: 1 partia obligacji wymaga aktualizacji stopy emisji (%{accounts}).
         other: "%{count} partii obligacji wymaga aktualizacji stopy emisji (%{accounts})."
+      bond_summary:
+        account_wrapper: "%{account} • %{wrapper}"
+        bond: Obligacja
+        maturity: Zapadalność
+        maturity_label: Data zapadalności
+        no_bonds: Brak kont obligacji
+        principal: Kapitał
+        principal_term: Kapitał, %{term}
+        rate: Oprocentowanie
+        term_months:
+          few: "%{count} miesiące"
+          many: "%{count} miesięcy"
+          one: 1 miesiąc
+          other: "%{count} miesiąca"
+        title: Obligacje
+        total_return: Łączny zwrot
+      cashflow_sankey:
+        add_transaction: Dodaj transakcję
+        no_data_description: Dodaj transakcje, aby wyświetlić dane o przepływach pieniężnych,
+          albo poszerz zakres czasu
+        no_data_title: Brak danych o przepływach pieniężnych dla tego okresu
+        title: Przepływy pieniężne
+        zoom_out: Wróć do pełnego przepływu środków
       drag_to_reorder: Przeciągnij, aby zmienić kolejność sekcji
-      toggle_section: Przełącz widoczność sekcji
+      insights_feed:
+        title: Analizy
+      investment_summary:
+        add_investment: Dodaj konto inwestycyjne, aby śledzić swój portfel
+        contributions: Wpłaty
+        holding: Pozycja
+        no_investments: Brak kont inwestycyjnych
+        period_activity: Aktywność za %{period}
+        return: Zwrot
+        title: Inwestycje
+        total_return: Łączny zwrot
+        trades: Transakcje giełdowe
+        value: Wartość
+        weight: Udział
+        withdrawals: Wypłaty
+      money_flow:
+        apply: Zastosuj
+        balance: Saldo transakcji
+        chart_span: Ostatnie %{count} miesięcy
+        date_range: "%{start_date} do %{end_date}"
+        expenses: Wydatki
+        filter_accounts: Filtruj konta (%{count})
+        filter_accounts_all: Wszystkie konta
+        income: Przychody
+        month_picker_aria_label: Wybierz miesiąc
+        period_scope_hint: Pokazuje miesiące wybrane tutaj, niezależnie od zakresu
+          czasu pulpitu u góry.
+        search_accounts: Szukaj kont
+        title: Przychody i wydatki
       net_worth_chart:
         data_not_available: Dane niedostępne dla wybranego okresu
         title: Majątek netto
+      new: Nowe
       no_account_empty_state:
         new_account: Nowe konto
-        no_account_subtitle: Ponieważ nie dodano jeszcze żadnych kont, nie ma danych do wyświetlenia. Dodaj pierwsze konto, aby zacząć przeglądać dane pulpitu.
+        no_account_subtitle: Ponieważ nie dodano jeszcze żadnych kont, nie ma danych
+          do wyświetlenia. Dodaj pierwsze konto, aby zacząć przeglądać dane pulpitu.
         no_account_title: Brak kont
-      balance_sheet:
-        title: Bilans
-        no_items: Brak %{name}
-        add_accounts: Dodaj konta %{name}, aby zobaczyć pełny podział
-      cashflow_sankey:
-        title: Przepływy pieniężne
-        no_data_title: Brak danych o przepływach pieniężnych dla tego okresu
-        no_data_description: Dodaj transakcje, aby wyświetlić dane o przepływach pieniężnych, albo poszerz zakres czasu
-        add_transaction: Dodaj transakcję
       no_accounts:
-        title: Brak kont
-        description: Dodaj konta, aby wyświetlić dane o majątku netto
         add_account: Dodaj konto
+        description: Dodaj konta, aby wyświetlić dane o majątku netto
+        title: Brak kont
       outflows_donut:
+        categories: Kategorie
         title: Wydatki
         total_outflows: Łączne wydatki
-        categories: Kategorie
         value: Wartość
         weight: Udział
-      investment_summary:
-        title: Inwestycje
-        total_return: Łączny zwrot
-        holding: Pozycja
-        weight: Udział
-        value: Wartość
-        return: Zwrot
-        period_activity: Aktywność za %{period}
-        contributions: Wpłaty
-        withdrawals: Wypłaty
-        trades: Transakcje giełdowe
-        no_investments: Brak kont inwestycyjnych
-        add_investment: Dodaj konto inwestycyjne, aby śledzić swój portfel
-      bond_summary:
-        title: Obligacje
-        total_return: Łączny zwrot
-        bond: Obligacja
-        rate: Oprocentowanie
-        principal: Kapitał
-        maturity: Zapadalność
-        maturity_label: Data zapadalności
-        principal_term: Kapitał, %{term}
-        term_months:
-          one: 1 miesiąc
-          few: "%{count} miesiące"
-          many: "%{count} miesięcy"
-          other: "%{count} miesiąca"
-        no_bonds: Brak kont obligacji
-        account_wrapper: "%{account} • %{wrapper}"
+      sections_aria_label: Sekcje pulpitu
+      spending_trend:
+        date_range: "%{start_date} – %{end_date}"
+        date_range_short: "%{start_date} – %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: Wybierz miesiąc
+        no_data: Brak danych o wydatkach w tym miesiącu
+        period_scope_hint: Pokazuje miesiąc wybrany tutaj — niezależnie od okresu
+          pulpitu ustawionego na górze.
+        previous_comparison_days: "(1-%{end_day})"
+        title: Wydatki
+      subtitle: Zobacz, co dzieje się z Twoimi finansami
+      toggle_section: Przełącz widoczność sekcji
+      welcome: Witaj ponownie, %{name}
+      widget_size:
+        auto: Automatyczny
+        compact: Kompaktowy
+        full: Pełny
+        half: Połowa
+        height_label: Wysokość
+        label: Dostosuj rozmiar
+        tall: Wysoki
+        width_label: Szerokość
+    feedback:
+      bug_report: Zgłoś błąd
+      description: Daj nam znać, jeśli masz konkretne uwagi. Możesz dołączyć linki
+        do filmów lub zrzutów ekranu.
+      discuss: Porozmawiaj o %{product} z innymi
+      feature_request: Zgłoś propozycję funkcji
+      heading: Zostaw opinię
+      title: Opinia
+    intro:
+      coming_soon: Wprowadzenie już wkrótce
+      description: Pracujemy nad bogatszym wprowadzeniem, które pozna Twoje cele,
+        kamienie milowe i codzienne potrzeby. Na razie przejdź do czatu w panelu bocznym,
+        aby porozmawiać z Sure i powiedzieć, na jakim etapie finansowej podróży jesteś.
+      not_authorized: Wprowadzenie jest dostępne tylko dla użytkowników gościnnych.
+      start_chatting: Rozpocznij rozmowę
+      welcome: Witaj!
+    privacy:
+      heading: Polityka prywatności
+      placeholder: Treść polityki prywatności będzie wyświetlana tutaj.
+      title: Polityka prywatności
+    redis_configuration_error:
+      heading: Wymagana konfiguracja Redis
+      page_title: Wymagana konfiguracja Redis - Sure
+      refresh_hint: Po skonfigurowaniu Redis odśwież tę stronę, aby kontynuować.
+      refresh_page: Odśwież stronę
+      setup_guide_hint: Skonfiguruj Redis według naszego pełnego przewodnika Docker
+      subheading: Twoja samodzielnie hostowana instalacja Sure wymaga poprawnie skonfigurowanego
+        Redis.
+      view_setup_guide: Zobacz przewodnik konfiguracji
+      why_required_body: Sure używa Redis do obsługi zadań Sidekiq w tle, takich jak
+        synchronizacja danych kont, przetwarzanie importów i inne operacje utrzymujące
+        aktualność Twoich danych finansowych.
+      why_required_title: Dlaczego Redis jest wymagany?
+    release_notes_unavailable:
+      body_html: "<p>Nie udało się teraz pobrać najnowszych informacji o wydaniu.
+        Spróbuj ponownie później albo odwiedź bezpośrednio naszą <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>stronę wydań na GitHubie</a>.</p>"
+      name: Informacje o wydaniu niedostępne
+    terms:
+      heading: Warunki korzystania z usługi
+      placeholder: Treść warunków korzystania z usługi będzie wyświetlana tutaj.
+      title: Warunki korzystania z usługi

@@ -1,14 +1,23 @@
 ---
 pl:
   pending_duplicate_merges:
+    create:
+      invalid_transaction: Wybrano nieprawidłową transakcję do scalenia
+      merge_failed: Nie udało się scalić transakcji
+      merge_success: Transakcja oczekująca scalona z zaksięgowaną transakcją
+      no_posted_selected: Wybierz zaksięgowaną transakcję, z którą chcesz scalić
     new:
-      title: Połącz z zaksięgowaną transakcją
-      warning_title: Ręczne łączenie duplikatów
-      warning_description: Użyj tej opcji, aby ręcznie połączyć transakcję oczekującą z jej zaksięgowaną wersją. Transakcja oczekująca zostanie usunięta, a pozostanie tylko zaksięgowana.
-      pending_transaction: Transakcja oczekująca
-      select_posted: Wybierz zaksięgowaną transakcję do połączenia
-      showing_range: "Wyświetlane %{start} - %{end}"
-      previous: "← Poprzednie 10"
-      next: "Następne 10 →"
+      next: Następne 10 →
       no_candidates: Nie znaleziono zaksięgowanych transakcji na tym koncie.
+      pending_transaction: Transakcja oczekująca
+      previous: "← Poprzednie 10"
+      select_posted: Wybierz zaksięgowaną transakcję do połączenia
+      showing_range: Wyświetlane %{start} - %{end}
       submit_button: Połącz transakcje
+      title: Połącz z zaksięgowaną transakcją
+      warning_description: Użyj tej opcji, aby ręcznie połączyć transakcję oczekującą
+        z jej zaksięgowaną wersją. Transakcja oczekująca zostanie usunięta, a pozostanie
+        tylko zaksięgowana.
+      warning_title: Ręczne łączenie duplikatów
+    set_transaction:
+      pending_only: Ta funkcja jest dostępna tylko dla transakcji oczekujących
