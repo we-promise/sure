@@ -17,12 +17,11 @@ class PlaidEntry::Processor
       category_id: matched_category&.id,
       merchant: merchant,
       pending_transaction_id: pending_transaction_id, # Plaid's linking ID for pending→posted
-      extra: {
-        plaid: {
-          pending: plaid_transaction["pending"],
-          pending_transaction_id: pending_transaction_id # Also store for reference
-        }
-      }
+      extra: plaid_extra,
+      # plaid_extra is a full snapshot of what Plaid currently reports, so the
+      # branch is replaced rather than merged — otherwise a nested value Plaid
+      # stopped sending (say payment_meta.payee) would linger indefinitely.
+      replace_extra_namespaces: [ "plaid" ]
     )
   end
 
@@ -42,7 +41,71 @@ class PlaidEntry::Processor
     end
 
     def name
-      plaid_transaction["merchant_name"] || plaid_transaction["original_description"]
+      merchant_name || original_description
+    end
+
+    def merchant_name
+      plaid_transaction["merchant_name"]
+    end
+
+    def original_description
+      plaid_transaction["original_description"]
+    end
+
+    # Every key is emitted on every sync, including when the value is absent.
+    # Account::ProviderImportAdapter#import_transaction deep-merges this into
+    # the existing Transaction#extra, so an omitted key would leave the previous
+    # value in place forever once Plaid stops sending it — the drawer would go
+    # on showing metadata the provider has since cleared. Writing an explicit
+    # nil is what clears it.
+    def plaid_extra
+      plaid = {
+        "pending" => plaid_transaction["pending"],
+        "pending_transaction_id" => pending_transaction_id,
+        "original_description" => original_description.presence,
+        "payment_channel" => plaid_transaction["payment_channel"].presence,
+        "transaction_code" => plaid_transaction["transaction_code"].presence,
+        "payment_meta" => compact_provider_hash(plaid_transaction["payment_meta"]),
+        "counterparties" => compact_counterparties(plaid_transaction["counterparties"])
+      }
+
+      { "plaid" => plaid }
+    end
+
+    def compact_provider_hash(value)
+      return nil unless value.is_a?(Hash)
+
+      compacted = {}
+      value.each do |key, raw|
+        next if blank_provider_value?(raw)
+
+        if raw.is_a?(Hash)
+          nested = compact_provider_hash(raw)
+          compacted[key.to_s] = nested if nested.present?
+        else
+          compacted[key.to_s] = raw
+        end
+      end
+      compacted.presence
+    end
+
+    # Only strings get the whitespace treatment. `blank?` would also discard
+    # `false`, which is a meaningful value for a provider flag.
+    def blank_provider_value?(raw)
+      return true if raw.nil?
+      return raw.strip.empty? if raw.is_a?(String)
+
+      false
+    end
+
+    def compact_counterparties(value)
+      return nil unless value.is_a?(Array)
+
+      value.filter_map do |counterparty|
+        next unless counterparty.is_a?(Hash)
+
+        compact_provider_hash(counterparty)
+      end.presence
     end
 
     def amount
