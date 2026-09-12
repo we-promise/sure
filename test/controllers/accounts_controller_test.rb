@@ -380,6 +380,54 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match non_matching.name, response.body
   end
 
+  test "show filters entries by status" do
+    confirmed = create_transaction(name: "Confirmed Status Entry", amount: 10, account: @account)
+    pending_entry = create_transaction(name: "Pending Status Entry", amount: 10, account: @account)
+    pending_entry.entryable.update!(extra: { "plaid" => { "pending" => true } })
+
+    get account_url(@account, q: { status: [ "confirmed" ] })
+
+    assert_response :success
+    assert_match confirmed.name, response.body
+    assert_no_match pending_entry.name, response.body
+  end
+
+  test "show filters entries by merchant" do
+    merchant = @account.family.merchants.create!(name: "Unique Test Merchant")
+    matching = create_transaction(name: "Merchant Filter Entry", amount: 10, account: @account, merchant: merchant)
+    non_matching = create_transaction(name: "No Merchant Filter Entry", amount: 10, account: @account)
+
+    get account_url(@account, q: { merchants: [ merchant.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
+  test "show filters entries by tag" do
+    tag = @account.family.tags.create!(name: "Unique Test Tag")
+    matching = create_transaction(name: "Tagged Filter Entry", amount: 10, account: @account)
+    matching.entryable.update!(tag_ids: [ tag.id ])
+    non_matching = create_transaction(name: "Untagged Filter Entry", amount: 10, account: @account)
+
+    get account_url(@account, q: { tags: [ tag.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
+  test "show filters entries by type" do
+    expense = create_transaction(name: "Expense Type Entry", amount: 100, account: @account)
+    income = create_transaction(name: "Income Type Entry", amount: -100, account: @account)
+
+    get account_url(@account, q: { types: [ "income" ] })
+
+    assert_response :success
+    assert_match income.name, response.body
+    assert_no_match expense.name, response.body
+  end
+
   test "show lazily loads statement tab data unless statements tab is active" do
     AccountStatement::Coverage.expects(:for_year).never
     AccountStatement.expects(:reconciliation_statuses_for).never
