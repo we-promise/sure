@@ -21,6 +21,22 @@ class CategoryTest < ActiveSupport::TestCase
     assert_nil transactions.map { |t| t.reload.category }.uniq.first
   end
 
+  test "changing a parent's color cascades to its subcategories" do
+    parent = @family.categories.create!(name: "Travel", color: "#000000", lucide_icon: "plane")
+    subcategory = @family.categories.create!(name: "Flights", color: "#000000", lucide_icon: "plane", parent: parent)
+
+    parent.update!(color: "#123456")
+
+    assert_equal "#123456", subcategory.reload.color
+  end
+
+  test "changing a category color without subcategories does not error" do
+    category = @family.categories.create!(name: "Standalone", color: "#000000", lucide_icon: "tag")
+
+    assert_nothing_raised { category.update!(color: "#654321") }
+    assert_equal "#654321", category.reload.color
+  end
+
   test "destroying parent category preserves subcategory transaction assignments" do
     parent = @family.categories.create!(
       name: "Parent With Child Transactions",
