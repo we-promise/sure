@@ -1,5 +1,5 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable
 
   # deterministic: true preserves equality lookups (e.g. find_by(iban:)) and
   # the family_id+iban uniqueness index, since the same plaintext always
@@ -24,11 +24,11 @@ class Account < ApplicationRecord
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
-  # Strips whitespace and upcases so provider-supplied IBANs ("DE893704...")
-  # and manually-entered ones ("DE89 3704...") normalize to the same value —
-  # required for both the uniqueness index and deterministic-encryption
-  # equality lookups to actually match.
-  before_validation :normalize_iban
+  # IbanNormalizable strips everything but letters/digits and upcases, so
+  # provider-supplied IBANs ("DE893704...") and manually-entered ones in any
+  # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
+  # normalize to the same value — required for both the uniqueness index and
+  # deterministic-encryption equality lookups to actually match.
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -735,14 +735,6 @@ class Account < ApplicationRecord
   end
 
   private
-
-    def normalize_iban
-      # [[:space:]] rather than a literal " " -- a pasted IBAN can carry
-      # tabs, newlines, or NBSP (common when copying from a formatted PDF
-      # bank statement), which delete(" ") would leave in place and quietly
-      # break the uniqueness index and deterministic-encryption lookups.
-      self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
-    end
 
     def assign_default_owner
       return if owner.present?

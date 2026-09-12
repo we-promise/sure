@@ -27,6 +27,13 @@ class MerchantTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
   end
 
+  test "normalizes iban by stripping dots, dashes, and other punctuation" do
+    merchant = FamilyMerchant.new(name: "Landlord", family: families(:dylan_family), iban: "de89.3704-0044/0532:0130'00")
+    merchant.valid?
+
+    assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
+  end
+
   test "leaves a blank iban as nil" do
     merchant = FamilyMerchant.new(name: "Landlord", family: families(:dylan_family), iban: "")
     merchant.valid?
