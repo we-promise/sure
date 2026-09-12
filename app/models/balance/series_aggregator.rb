@@ -8,6 +8,7 @@ class Balance::SeriesAggregator
     @align_to_common_start = align_to_common_start
   end
 
+  # Combines component series into one currency-normalized balance series.
   def aggregate
     return empty_series if normalized_series_list.empty?
 
@@ -29,7 +30,7 @@ class Balance::SeriesAggregator
 
       series_value = Series::Value.new(
         date: date,
-        date_formatted: I18n.l(date, format: :long),
+        date_formatted: Series.format_date(date),
         value: current_value,
         trend: Trend.new(
           current: current_value,

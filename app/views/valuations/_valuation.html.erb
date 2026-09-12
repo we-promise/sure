@@ -18,7 +18,7 @@
 
           <div class="truncate text-primary">
             <%= link_to(
-                  valuation.opening_anchor? ? t("valuations.show.opening_balance") : entry.name,
+                  valuation.display_name(entry),
                   entry_path(entry),
                   data: { turbo_frame: "drawer", turbo_prefetch: false },
                   class: "hover:underline"
