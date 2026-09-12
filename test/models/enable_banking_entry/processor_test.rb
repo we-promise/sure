@@ -291,6 +291,131 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  # --- identifiers assigned after the fact ---
+
+  def identifierless_transaction(amount: "12.34", payee: "ACME 0001234", booking_date: Date.current)
+    {
+      transaction_id: nil,
+      entry_reference: nil,
+      booking_date: booking_date.to_s,
+      transaction_amount: { amount: amount, currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ payee ],
+      status: "BOOK"
+    }
+  end
+
+  test "a transaction that later gains an identifier claims its own earlier row instead of importing twice" do
+    raw = identifierless_transaction
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    assert @account.entries.exists?(external_id: content_id)
+    before = @account.entries.count
+
+    settled = raw.merge(entry_reference: "2026-01-01.1")
+    settled_id = EnableBankingEntry::Processor.compute_external_id(settled)
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before, @account.entries.count, "the settled row should not import a second time"
+    assert @account.entries.exists?(external_id: settled_id)
+    assert_not @account.entries.exists?(external_id: content_id)
+  end
+
+  test "the superseded identifier is recorded so the stale payload row is skipped" do
+    raw = identifierless_transaction(amount: "23.45")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+
+    settled = raw.merge(entry_reference: "2026-01-01.2")
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    entry = @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+    recorded = Array(entry.transaction.extra[EnableBankingEntry::Processor::SUPERSEDED_IDS_KEY])
+    assert_includes recorded, content_id
+  end
+
+  test "claiming a predecessor does not freeze the booking date against later corrections" do
+    # auto_claimed_pending_ids would: Account::ProviderImportAdapter#import_transaction
+    # keeps the stored date on any row carrying that key, forever. These are BOOK
+    # rows whose date the ASPSP may still correct, so the claim must not set it.
+    booked_on = Date.current - 3
+    raw = identifierless_transaction(amount: "45.67", booking_date: booked_on)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+
+    settled = raw.merge(entry_reference: "2026-01-01.5")
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    entry = @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+    assert_equal booked_on, entry.date
+
+    corrected_on = booked_on + 1
+    EnableBankingEntry::Processor.new(settled.merge(booking_date: corrected_on.to_s),
+                                      enable_banking_account: @enable_banking_account).process
+
+    assert_equal corrected_on, entry.reload.date, "a corrected booking date must still be applied"
+  end
+
+  test "an ASPSP identifier that looks synthesised still claims its predecessor" do
+    raw = identifierless_transaction(amount: "56.78")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    before = @account.entries.count
+
+    # compute_external_id renders this as "enable_banking_content_..." even though
+    # the ASPSP did supply an identifier, so a prefix check would misread it.
+    settled = raw.merge(transaction_id: "content_0a1b2c3d")
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before, @account.entries.count
+    assert_not @account.entries.exists?(external_id: content_id)
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+  end
+
+  test "a predecessor already claimed elsewhere is not taken over" do
+    raw = identifierless_transaction(amount: "67.89")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    predecessor = @account.entries.find_by!(external_id: content_id)
+
+    # Another sync of the same item claimed the row first. The set handed to this
+    # processor still lists the content id, which is what a concurrent run would
+    # see, so the claim is attempted and must decline.
+    predecessor.update_column(:external_id, "enable_banking_claimed_elsewhere.1")
+
+    settled = raw.merge(entry_reference: "2026-01-01.6")
+    EnableBankingEntry::Processor.new(settled,
+                                      enable_banking_account: @enable_banking_account,
+                                      identifierless_external_ids: Set[ content_id ]).process
+
+    assert_equal "enable_banking_claimed_elsewhere.1", predecessor.reload.external_id,
+                 "the earlier claim must stand"
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+  end
+
+  test "only one settled row claims the predecessor, so identical charges stay apart" do
+    raw = identifierless_transaction(amount: "34.56")
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    before = @account.entries.count
+
+    # Two settled rows with identical content and different identifiers: one real
+    # movement was already stored, the other is a genuinely separate charge.
+    first = raw.merge(entry_reference: "2026-01-01.3")
+    second = raw.merge(entry_reference: "2026-01-01.4")
+    EnableBankingEntry::Processor.new(first, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(second, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before + 1, @account.entries.count,
+                 "the first settled row claims the predecessor, the second imports on its own"
+  end
+
   # --- payment wallet prefixes ---
 
   test "a payment wallet prefix does not claim the transaction for the wallet's merchant" do
