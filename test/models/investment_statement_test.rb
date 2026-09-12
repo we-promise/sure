@@ -268,6 +268,41 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_no_match(/JOIN accounts/, aggregate_queries.first)
   end
 
+  test "totals sum dividend and interest trades and keep them out of trades_count" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    investment_account = create_investment_account(balance: 500)
+
+    create_trade(account: investment_account, qty: 2, amount: 120, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Dividend", amount: -25, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Dividend", amount: -10, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Interest", amount: -4, date: period.start_date)
+
+    totals = InvestmentStatement.new(@family, user: nil).totals(period: period)
+
+    assert_equal Money.new(35, "USD"), totals.dividends
+    assert_equal Money.new(4, "USD"), totals.interest
+    # The buy is the only trade the user actually placed; income is not a trade.
+    assert_equal 1, totals.trades_count
+    # Income has qty 0, so it lands in neither direction.
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  test "totals net a dividend reversal against the dividend it reverses" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    investment_account = create_investment_account(balance: 500)
+
+    create_income_trade(account: investment_account, label: "Dividend", amount: -25, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Dividend", amount: 25, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Interest", amount: -4, date: period.start_date)
+    create_income_trade(account: investment_account, label: "Interest", amount: 1, date: period.start_date)
+
+    totals = InvestmentStatement.new(@family, user: nil).totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.dividends
+    assert_equal Money.new(3, "USD"), totals.interest
+  end
+
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
     account = create_investment_account(balance: 2100, currency: "USD")
     security = Security.create!(ticker: "AAPL", name: "Apple")
@@ -308,6 +343,24 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    # Investment income: a Trade with qty 0 and price 0, the shape both
+    # Trade::CreateForm and Account::ProviderImportAdapter build.
+    def create_income_trade(account:, label:, amount:, date:)
+      account.entries.create!(
+        name: "#{label} #{SecureRandom.hex(3)}",
+        amount: amount,
+        date: date,
+        currency: account.currency,
+        entryable: Trade.new(
+          security: Security.create!(ticker: "T#{SecureRandom.hex(8)}", name: "Test Security"),
+          qty: 0,
+          price: 0,
+          currency: account.currency,
+          investment_activity_label: label
+        )
       )
     end
 

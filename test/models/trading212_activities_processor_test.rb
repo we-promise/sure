@@ -150,7 +150,7 @@ class Trading212ActivitiesProcessorTest < ActiveSupport::TestCase
 
   # === process dividends ===
 
-  test "processes dividend as a cash transaction" do
+  test "processes dividend as a zero-quantity trade" do
     @trading212_account.update!(
       raw_dividends_payload: [
         {
@@ -171,8 +171,12 @@ class Trading212ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 1, result[:dividends]
     entry = @account.entries.find_by(external_id: "trading212_dividend_div_001")
     assert_not_nil entry
-    assert_equal "Transaction", entry.entryable_type
+    assert_equal "Trade", entry.entryable_type
     assert_equal "Dividend", entry.entryable.investment_activity_label
+    assert_equal 0, entry.entryable.qty
+    assert_equal 0, entry.entryable.price
+    # The paying instrument is a real association now, not extra["security_id"]
+    assert_equal "AAPL", entry.entryable.security.ticker
     # Dividends are negative in Sure (inflow)
     assert entry.amount.negative?
   end

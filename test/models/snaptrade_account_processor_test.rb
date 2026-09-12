@@ -290,7 +290,7 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "Sell", trade_entry.entryable.investment_activity_label
   end
 
-  test "activities processor handles DIVIDEND as cash transaction" do
+  test "activities processor handles DIVIDEND as a zero-quantity trade" do
     @snaptrade_account.update!(
       raw_activities_payload: [
         {
@@ -308,11 +308,15 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
     result = processor.process
 
-    assert_equal 1, result[:transactions]
-    tx_entry = @account.entries.find_by(external_id: "activity_div_1")
-    assert_not_nil tx_entry
-    assert_equal "Transaction", tx_entry.entryable_type
-    assert_equal "Dividend", tx_entry.entryable.investment_activity_label
+    assert_equal 1, result[:trades]
+    div_entry = @account.entries.find_by(external_id: "activity_div_1")
+    assert_not_nil div_entry
+    assert_equal "Trade", div_entry.entryable_type
+    assert_equal "Dividend", div_entry.entryable.investment_activity_label
+    assert_equal 0, div_entry.entryable.qty
+    assert_equal 0, div_entry.entryable.price
+    assert_equal "AAPL", div_entry.entryable.security.ticker
+    assert_equal(-25.50, div_entry.amount.to_f)
   end
 
   test "activities processor normalizes withdrawal as positive outflow amount" do

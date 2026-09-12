@@ -124,9 +124,13 @@ class IbkrAccountProcessorTest < ActiveSupport::TestCase
 
     dividend = @account.entries.find_by(external_id: "ibkr_cash_4002")
     assert_not_nil dividend
+    assert_equal "Trade", dividend.entryable_type
     assert_equal "Dividend", dividend.entryable.investment_activity_label
     assert_equal BigDecimal("-2.5"), dividend.amount
-    assert_equal securities(:aapl).id, dividend.entryable.extra["security_id"]
+    assert_equal 0, dividend.entryable.qty
+    assert_equal 0, dividend.entryable.price
+    # The conid-resolved security is a real association now, not extra["security_id"]
+    assert_equal securities(:aapl), dividend.entryable.security
 
     commission_one = @account.entries.find_by(external_id: "ibkr_trade_fee_1001")
     commission_two = @account.entries.find_by(external_id: "ibkr_trade_fee_1002")

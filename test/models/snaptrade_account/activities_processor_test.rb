@@ -70,7 +70,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Sell", trade.investment_activity_label
   end
 
-  test "processes dividend cash activity as negative inflow" do
+  test "processes dividend activity as a zero-quantity trade" do
     @snaptrade_account.update!(raw_activities_payload: [
       build_cash_activity(
         id: "div_001",
@@ -86,11 +86,99 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "div_001", source: "snaptrade")
     assert_not_nil entry, "Entry should be created"
-    assert entry.entryable.is_a?(Transaction), "Entry should be a Transaction"
+    assert entry.entryable.is_a?(Trade), "Dividends are recorded as Trades, matching manual entry"
 
-    transaction = entry.entryable
+    trade = entry.entryable
     assert_equal(-25.50, entry.amount.to_f)
-    assert_equal "Dividend", transaction.investment_activity_label
+    assert_equal 0, trade.qty
+    assert_equal 0, trade.price
+    assert_equal 0, trade.fee
+    assert_equal "Dividend", trade.investment_activity_label
+    assert_equal "VTI", trade.security.ticker
+  end
+
+  test "processes interest activity as a zero-quantity trade against cash" do
+    @snaptrade_account.update!(raw_activities_payload: [
+      build_cash_activity(
+        id: "int_001",
+        type: "INTEREST",
+        amount: 3.21,
+        settlement_date: Date.current.to_s
+      )
+    ])
+
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+    processor.process
+
+    entry = @account.entries.find_by(external_id: "int_001", source: "snaptrade")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+
+    trade = entry.entryable
+    assert_equal(-3.21, entry.amount.to_f)
+    assert_equal 0, trade.qty
+    assert_equal "Interest", trade.investment_activity_label
+    assert trade.security.cash?, "Interest with no symbol falls back to the synthetic cash security"
+  end
+
+  test "leaves a dividend already imported as a transaction alone" do
+    legacy = @account.entries.create!(
+      external_id: "div_001",
+      source: "snaptrade",
+      name: "Dividend - VTI",
+      date: Date.current,
+      amount: -25.50,
+      currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Dividend")
+    )
+
+    @snaptrade_account.update!(raw_activities_payload: [
+      build_cash_activity(
+        id: "div_001",
+        type: "DIVIDEND",
+        amount: 25.50,
+        settlement_date: Date.current.to_s,
+        symbol: "VTI"
+      )
+    ])
+
+    SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account).process
+
+    # Transaction carries merchant, transfer, taggings and attachments that
+    # Trade has no column for, so an existing row keeps its representation
+    # rather than being converted and losing them. Only new dividends are trades.
+    legacy.reload
+    assert legacy.entryable.is_a?(Transaction)
+    assert_equal 1, @account.entries.where(external_id: "div_001", source: "snaptrade").count
+  end
+
+  test "leaves a user-modified dividend transaction alone" do
+    legacy = @account.entries.create!(
+      external_id: "div_001",
+      source: "snaptrade",
+      name: "My own name for this",
+      date: Date.current,
+      amount: -25.50,
+      currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Dividend")
+    )
+    legacy.mark_user_modified!
+
+    @snaptrade_account.update!(raw_activities_payload: [
+      build_cash_activity(
+        id: "div_001",
+        type: "DIVIDEND",
+        amount: 25.50,
+        settlement_date: Date.current.to_s,
+        symbol: "VTI"
+      )
+    ])
+
+    SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account).process
+
+    legacy.reload
+    assert legacy.entryable.is_a?(Transaction)
+    assert_equal "My own name for this", legacy.name
   end
 
   test "processes contribution with negative inflow amount" do

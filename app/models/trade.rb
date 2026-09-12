@@ -36,6 +36,14 @@ class Trade < ApplicationRecord
   # narrow until something does.
   TRANSFER_LABEL = "Transfer".freeze
 
+  # Income paid on a position rather than a change in it: a dividend or an
+  # interest payment. Recorded as a trade with qty and price of 0 and the cash
+  # value on the entry, by both manual entry (Trade::CreateForm) and provider
+  # sync. Named here because the labels alone distinguish them from a trade the
+  # user placed — the investment statement counts them separately for that
+  # reason.
+  INCOME_LABELS = %w[Dividend Interest].freeze
+
   validates :qty, presence: true
   validates :price, :currency, presence: true
   validates :investment_activity_label, inclusion: { in: ACTIVITY_LABELS }, allow_nil: true

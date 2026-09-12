@@ -13,8 +13,8 @@ class InvestmentStatement::Totals
     {
       contributions: result["contributions"]&.to_d || 0,
       withdrawals: result["withdrawals"]&.to_d || 0,
-      dividends: 0, # Dividends come through as transactions, not trades
-      interest: 0,  # Interest comes through as transactions, not trades
+      dividends: result["dividends"]&.to_d || 0,
+      interest: result["interest"]&.to_d || 0,
       trades_count: result["trades_count"]&.to_i || 0
     }
   end
@@ -42,6 +42,11 @@ class InvestmentStatement::Totals
     # Sells (qty < 0) = withdrawals (cash coming in from selling securities)
     # Missing FX rates preserve InvestmentStatement's existing 1:1 fallback.
     #
+    # Dividends and interest are trades with qty = 0 (Trade::INCOME_LABELS), so
+    # they fall into neither direction and are summed by label instead. They are
+    # also excluded from trades_count: they are income paid on a position, not a
+    # trade the user placed.
+    #
     # account_ids is already scoped to the family's visible (draft/active)
     # investment accounts, so the query trusts that input and skips a join back
     # to accounts for family/status filtering.
@@ -50,7 +55,11 @@ class InvestmentStatement::Totals
         SELECT
           COALESCE(SUM(CASE WHEN trades.qty > 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
           COALESCE(SUM(CASE WHEN trades.qty < 0 THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
-          COUNT(trades.id) as trades_count
+          COALESCE(SUM(CASE WHEN trades.qty = 0 AND trades.investment_activity_label = 'Dividend' THEN -(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as dividends,
+          COALESCE(SUM(CASE WHEN trades.qty = 0 AND trades.investment_activity_label = 'Interest' THEN -(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as interest,
+          COUNT(trades.id) FILTER (
+            WHERE NOT (trades.qty = 0 AND COALESCE(trades.investment_activity_label, '') IN ('Dividend', 'Interest'))
+          ) as trades_count
         FROM entries
         JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
         LEFT JOIN exchange_rates er ON (
