@@ -13,6 +13,9 @@ pl:
         reports: Raporty
         transactions: Transakcje
       privacy_mode: Przełącz tryb prywatności
+      release_highlight:
+        done: Rozumiem
+        title: Co nowego
       resize_left_sidebar: Zmień szerokość panelu kont
       resize_right_sidebar: Zmień szerokość panelu asystenta
       skip_to_main: Przejdź do głównej treści

@@ -5,9 +5,9 @@ pl:
       transakcji (Kupno, Sprzedaż, Dywidenda) są niedostępne, co może wpłynąć na dokładność
       budżetu. Rozważ tworzenie reguł wykluczenia lub kategoryzacji transakcji inwestycyjnych.
     lunchflow_accounts_failed:
-      few: 'Import Lunch Flow: nie udało się zaktualizować %{count} kont'
+      few: 'Import Lunch Flow: nie udało się zaktualizować %{count} konta'
       many: 'Import Lunch Flow: nie udało się zaktualizować %{count} kont'
-      one: 'Import Lunch Flow: nie udało się zaktualizować %{count} konta'
+      one: 'Import Lunch Flow: nie udało się zaktualizować %{count} konto'
       other: 'Import Lunch Flow: nie udało się zaktualizować %{count} kont'
     lunchflow_import_error: 'Import Lunch Flow: %{error}'
     lunchflow_transactions_failed:

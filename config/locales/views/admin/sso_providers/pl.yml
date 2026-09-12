@@ -87,7 +87,7 @@ pl:
         role_super_admin: Superadministrator
         saml_configuration: Konfiguracja SAML
         saml_sp_callback_url_help: Skonfiguruj ten URL jako Assertion Consumer Service
-          URL w swoim dostawcy tożsamości (IdP)
+          URL u swojego dostawcy tożsamości (IdP)
         saml_sp_callback_url_label: URL zwrotny SP (ACS URL)
         scopes_help: Lista zakresów OIDC oddzielona spacjami. Pozostaw puste dla wartości
           domyślnych (openid email profile). Dodaj 'groups', aby pobrać claims grup.

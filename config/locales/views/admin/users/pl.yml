@@ -70,8 +70,8 @@ pl:
         remove: Usuń użytkownika
         removed_sso_identities:
           allow_again: Zezwól ponownie
-          confirm: Zezwolić %{email} ponownie logować się lub zakładać konto przez
-            SSO?
+          confirm: Czy ponownie zezwolić na logowanie się lub zakładanie konta przez
+            SSO dla użytkownika %{email}?
           description: Te tożsamości nie mogą założyć ani ponownie połączyć konta.
             Zezwól ponownie tylko wtedy, gdy usunięcie było przypadkowe.
           title: Usunięte tożsamości SSO

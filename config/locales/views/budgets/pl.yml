@@ -42,8 +42,8 @@ pl:
         uncategorized: "„Bez kategorii” nie jest prawdziwą kopertą budżetową, więc
           nie można przenosić środków do niej ani z niej."
       from_label: Z
-      no_destination: To jedyna koperta, między którą można teraz przenosić środki.
-        Kategoria nie może przekazywać środków własnej kategorii nadrzędnej ani podrzędnej.
+      no_destination: To jedyna koperta, z którą można teraz przenosić środki. Kategoria
+        nie może przekazywać środków własnej kategorii nadrzędnej ani podrzędnej.
       submit: Przenieś
       success: Środki przeniesione.
       to_label: Do

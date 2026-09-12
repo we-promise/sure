@@ -16,7 +16,8 @@ pl:
       to_label: na
       value_placeholder: Wprowadź wartość
     apply_all:
-      ai_cost_message: To użyje AI do kategoryzacji maksymalnie %{transactions} transakcji.
+      ai_cost_message: 'Maksymalna liczba transakcji do skategoryzowania przez AI:
+        %{transactions}.'
       ai_cost_title: Szacowanie kosztu AI
       button: Zastosuj wszystkie
       confirm_button: Potwierdź i zastosuj wszystkie

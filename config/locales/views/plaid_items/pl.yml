@@ -29,6 +29,7 @@ pl:
       no_accounts_description: Nie udało się wczytać żadnych kont z tej instytucji
         finansowej.
       no_accounts_title: Nie znaleziono kont
+      provider_name: Plaid
       requires_update: Połącz ponownie
       status: Ostatnia synchronizacja %{timestamp} temu
       status_never: Wymaga synchronizacji danych

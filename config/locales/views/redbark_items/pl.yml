@@ -101,7 +101,7 @@ pl:
       link_accounts: Połącz wybrane konta
       no_accounts_found: Nie znaleziono kont. Sprawdź konfigurację klucza API.
       no_api_key: Klucz API Redbark nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
-      no_credentials_configured: Skonfiguruj najpierw dane logowania Redbark w Ustawieniach
+      no_credentials_configured: Skonfiguruj najpierw klucz API Redbark w Ustawieniach
         dostawcy.
       no_name_placeholder: "(Brak nazwy)"
       title: Wybierz konta Redbark
@@ -126,7 +126,7 @@ pl:
       no_accounts_found: Nie znaleziono kont Redbark. Sprawdź konfigurację klucza
         API.
       no_api_key: Klucz API Redbark nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
-      no_credentials_configured: Skonfiguruj najpierw dane logowania Redbark w Ustawieniach
+      no_credentials_configured: Skonfiguruj najpierw klucz API Redbark w Ustawieniach
         dostawcy.
       no_name_placeholder: "(Brak nazwy)"
       settings_link: Przejdź do Ustawień dostawcy

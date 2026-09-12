@@ -188,7 +188,7 @@ pl:
       account_types:
         credit_card: Karta kredytowa
         crypto: Konto kryptowalutowe
-        depository: Konto czekowe lub oszczędnościowe
+        depository: Konto bieżące lub oszczędnościowe
         investment: Konto inwestycyjne
         loan: Pożyczka lub hipoteka
         other_asset: Inny składnik aktywów
@@ -241,7 +241,7 @@ pl:
       subtypes:
         depository:
           cd: Certyfikat depozytowy
-          checking: Czekowe
+          checking: Bieżące
           hsa: Konto oszczędnościowe zdrowotne
           money_market: Rynek pieniężny
           savings: Oszczędnościowe
