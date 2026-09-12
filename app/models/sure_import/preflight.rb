@@ -16,6 +16,7 @@ class SureImport::Preflight
     "Category" => %w[id name],
     "Tag" => %w[id name],
     "Merchant" => %w[id name],
+    "ValuableItem" => %w[id account_id description acquired_on weight weight_unit cost_amount currency],
     "RecurringTransaction" => %w[id amount expected_day_of_month last_occurrence_date next_expected_date],
     "Transaction" => %w[id account_id date amount],
     "Transfer" => %w[inflow_transaction_id outflow_transaction_id],
@@ -37,6 +38,7 @@ class SureImport::Preflight
 
   SOURCE_ID_TYPES = TAXONOMY_TYPES.merge(
     "Account" => :accounts,
+    "ValuableItem" => :valuable_items,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
     "Budget" => :budgets
@@ -44,6 +46,7 @@ class SureImport::Preflight
 
   REFERENCE_FIELDS = {
     "Balance" => { accounts: %w[account_id] },
+    "ValuableItem" => { accounts: %w[account_id], merchants: %w[merchant_id] },
     "Category" => { categories: %w[parent_id] },
     "RecurringTransaction" => { accounts: %w[account_id], merchants: %w[merchant_id] },
     "Transaction" => { accounts: %w[account_id], categories: %w[category_id], merchants: %w[merchant_id] },
@@ -264,6 +267,22 @@ class SureImport::Preflight
           validate_tag_references(record, type)
           validate_split_line_references(record) if type == "Transaction"
         end
+      end
+
+      validate_valuable_item_account_types
+    end
+
+    def validate_valuable_item_account_types
+      account_types = @records["Account"].to_h { |record| [ record[:data]["id"].to_s, record[:data]["accountable_type"] ] }
+
+      @records["ValuableItem"].each do |record|
+        account_id = record[:data]["account_id"]
+        next if account_id.blank? || account_types[account_id.to_s].blank? || account_types[account_id.to_s] == "Valuable"
+
+        add_error(
+          :invalid_reference,
+          "Line #{record[:line_number]} ValuableItem references account_id #{account_id.inspect}, which must have accountable_type \"Valuable\"."
+        )
       end
     end
 

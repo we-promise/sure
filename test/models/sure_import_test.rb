@@ -286,6 +286,13 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal 1, other_family.accounts.count
   end
 
+  test "readback snapshot counts physical gold lots within the import family" do
+    account = @family.accounts.create!(name: "Gold", balance: 0, currency: "USD", accountable: Valuable.new)
+    account.valuable.lots.create!(description: "Coin", acquired_on: Date.current, weight: 10, weight_unit: "gram", karat: 24, cost_amount: 1_000)
+
+    assert_equal 1, @import.send(:readback_count_snapshot)["valuable_items"]
+  end
+
   test "publish verifies expected zero record types against unexpected readback deltas" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -673,6 +680,24 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal Depository, Accountable.from_type("Depository")
     assert_equal [ "invalid_accountable_type" ], result.errors.map { |error| error[:code] }
     assert_includes result.error_message, 'invalid accountable_type "Kernel"'
+  end
+
+  test "preflight requires valuable items to reference a valuable account" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "100", currency: "USD", accountable_type: "Depository"
+      } },
+      { type: "ValuableItem", data: {
+        id: "item-1", account_id: "account-1", description: "Gold coin", acquired_on: "2026-01-01",
+        weight: "1", weight_unit: "gram", cost_amount: "100", currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "invalid_reference"
+    assert_includes result.error_message, 'must have accountable_type "Valuable"'
   end
 
   test "preflight catches duplicate taxonomy names inside ndjson" do

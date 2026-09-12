@@ -63,6 +63,8 @@ class UI::Account::Chart < ApplicationComponent
       I18n.t("UI.account.chart.title.debt_balance")
     when "Loan"
       I18n.t("UI.account.chart.title.remaining_principal_balance")
+    when "Valuable"
+      I18n.t("UI.account.chart.title.total_valuation")
     else
       I18n.t("UI.account.chart.title.balance")
     end
@@ -70,6 +72,12 @@ class UI::Account::Chart < ApplicationComponent
 
   def foreign_currency?
     account.currency != account.family.currency
+  end
+
+  def converted_balance_label
+    return unless account.valuable? && converted_balance_display
+
+    I18n.t("UI.account.chart.family_currency_equivalent", currency: account.family.currency)
   end
 
   # Main indicator converted to the family currency for foreign-currency accounts,

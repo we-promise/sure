@@ -1,0 +1,14 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <p class="text-secondary text-sm"><%= t(".description") %></p>
+  </div>
+
+  <%= styled_form_with model: Setting.new, url: settings_hosting_path, method: :patch,
+                       data: { controller: "auto-submit-form", "auto-submit-form-trigger-event-value": "blur" } do |form| %>
+    <% configured = ENV["GOLD_API_KEY"].present? || Setting.gold_api_key.present? %>
+    <%= form.text_field :gold_api_key, label: t(".label"), type: "password",
+                        placeholder: t(".placeholder"), value: configured ? "********" : "",
+                        disabled: ENV["GOLD_API_KEY"].present?, data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+</div>

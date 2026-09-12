@@ -21,6 +21,7 @@ class GoalPledge < ApplicationRecord
   validates :currency, presence: true
   validates :expires_at, presence: true
   validate :account_must_be_linked_to_goal
+  validate :account_can_receive_pledges
   validate :currency_matches_goal
   validate :no_duplicate_open_pledge, on: :create
 
@@ -63,7 +64,7 @@ class GoalPledge < ApplicationRecord
     if is_valuation
       # Never match a valuation delta on an investment account: it may be a
       # market move, not a deposit, and would false-match (investment goals).
-      return false if account&.investment?
+      return false if account&.investment? || account&.valuable?
       return false if valuation_delta.nil? || valuation_delta.to_d <= 0
     elsif kind_transfer? && !entry.amount.to_d.negative?
       return false
@@ -155,6 +156,10 @@ class GoalPledge < ApplicationRecord
       return if goal.goal_accounts.where(account_id: account_id).exists?
 
       errors.add(:account, :must_be_linked_to_goal)
+    end
+
+    def account_can_receive_pledges
+      errors.add(:account, :cannot_receive_pledges) if account&.valuable?
     end
 
     def currency_matches_goal
