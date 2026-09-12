@@ -6,7 +6,7 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       end_cash_balance = derive_cash_balance_on_date_from_total(
         total_balance: account.current_anchor_balance,
         date: account.current_anchor_date
-      )
+      ) || 0
       end_non_cash_balance = account.current_anchor_balance - end_cash_balance
 
       # Calculates in reverse-chronological order (End of day -> Start of day).
@@ -25,7 +25,7 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
           end_cash_balance = derive_cash_balance_on_date_from_total(
             total_balance: account.opening_anchor_balance,
             date: date
-          )
+          ) || end_cash_balance
           end_non_cash_balance = account.opening_anchor_balance - end_cash_balance
 
           start_cash_balance = end_cash_balance
@@ -40,7 +40,7 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
           end_cash_balance = derive_cash_balance_on_date_from_total(
             total_balance: valuation.amount,
             date: date
-          )
+          ) || end_cash_balance
           end_non_cash_balance = valuation.amount - end_cash_balance
 
           start_cash_balance = derive_start_cash_balance(end_cash_balance: end_cash_balance, date: date)
@@ -146,7 +146,7 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       opening_cash_balance = derive_cash_balance_on_date_from_total(
         total_balance: account.opening_anchor_balance,
         date: account.opening_anchor_date
-      )
+      ) || 0
 
       [ opening_cash_balance, account.opening_anchor_balance - opening_cash_balance ]
     end

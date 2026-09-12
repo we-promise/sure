@@ -287,11 +287,85 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal 150.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
   end
 
-  test "falls back to 1:1 conversion rate when exchange rate is missing for a foreign currency holding" do
-    security = Security.create!(ticker: "TST", name: "Test")
-    @account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+  # Main values an unconvertible holding at 1:1 and reports it (#3493); the
+  # per-pair aggregation below is ours, kept so a multi-date sync still emits a
+  # single diagnostic rather than one per holding.
+  test "aggregates unconvertible holdings into a single diagnostic per sync" do
+    s1 = Security.create!(ticker: "S1", name: "Security 1")
+    s2 = Security.create!(ticker: "S2", name: "Security 2")
+    yesterday = 1.day.ago.to_date
 
-    assert_equal 100, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+    @account.holdings.create!(security: s1, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+    @account.holdings.create!(security: s2, date: Date.current, qty: 1, price: 50, amount: 50, currency: "EUR")
+    @account.holdings.create!(security: s1, date: yesterday, qty: 1, price: 40, amount: 40, currency: "EUR")
+
+    sync_cache = Balance::SyncCache.new(@account)
+
+    assert_difference "DebugLogEntry.count", 1 do
+      # 1:1 fallback, so the EUR amounts pass through unconverted.
+      assert_equal 150, sync_cache.get_holdings_value(Date.current)
+    end
+
+    assert_equal 3, sync_cache.unconvertible_holding_count
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_equal 3, log.metadata["unconvertible_holding_count"]
+    assert_equal [ "EUR->USD" ], log.metadata["missing_rate_pairs"]
+  end
+
+
+  test "zero-amount foreign holdings need no exchange rate" do
+    sold_out = Security.create!(ticker: "SOLD", name: "Sold Out")
+    active = Security.create!(ticker: "LIVE", name: "Live Position")
+
+    # Closed USD position in a CAD account — no FX rate needed (amount is zero).
+    @account.update!(currency: "CAD")
+    @account.holdings.create!(
+      security: sold_out,
+      date: Date.current,
+      qty: 0,
+      price: 100,
+      amount: 0,
+      currency: "USD"
+    )
+    @account.holdings.create!(
+      security: active,
+      date: Date.current,
+      qty: 1,
+      price: 200,
+      amount: 200,
+      currency: "CAD"
+    )
+
+    DebugLogEntry.expects(:capture).never
+
+    assert_equal 200, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "batches FX lookups for foreign holdings on the same date" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.25)
+
+    s1 = Security.create!(ticker: "S1", name: "Security 1")
+    s2 = Security.create!(ticker: "S2", name: "Security 2")
+    @account.holdings.create!(security: s1, date: Date.current, qty: 1, price: 100, amount: 100, currency: "EUR")
+    @account.holdings.create!(security: s2, date: Date.current, qty: 1, price: 80, amount: 80, currency: "GBP")
+
+    # One batched rates_for call for the date, not per-holding find_or_fetch_rate.
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    assert_equal 250.0, Balance::SyncCache.new(@account).get_holdings_value(Date.current)
+  end
+
+  test "uses nearest lookback rate for weekend holding dates" do
+    friday = Date.current.beginning_of_week(:monday) + 4.days
+    saturday = friday + 1.day
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: friday, rate: 1.4)
+
+    security = Security.create!(ticker: "WKND", name: "Weekend")
+    @account.holdings.create!(security: security, date: saturday, qty: 1, price: 100, amount: 100, currency: "EUR")
+
+    assert_equal 140.0, Balance::SyncCache.new(@account).get_holdings_value(saturday)
   end
 
   test "reports a holding valued at 1:1 rather than accepting the wrong number silently" do

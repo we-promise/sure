@@ -29,7 +29,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
         - `page`: The current page of results
         - `page_size`: The number of results per page (this will always be #{default_page_size})
         - `total_results`: The total number of results for the given filters
-        - `total_value`: The total value of all holdings for the given filters
+        - `total_value`: The total value of convertible holdings in the family currency
+          (holdings that cannot be FX-converted are excluded from this total)
+        - Holdings that cannot be converted into the family currency include
+          `value_unavailable: true` and omit `weight` so you can disclose the gap
+          instead of treating the position as zero
 
         Simple example (all current holdings):
 
@@ -84,16 +88,26 @@ class Assistant::Function::GetHoldings < Assistant::Function
   end
 
   def call(params = {})
-    holdings_query = build_holdings_query(params)
+    holdings = build_holdings_query(params).includes(:security, :account).to_a
+    rates = exchange_rates_for(holdings)
 
-    ordered_holdings = holdings_query.order(amount: :desc)
-    pagy = Pagy.new(count: ordered_holdings.count, page: resolved_page(params), limit: default_page_size)
-    paginated_holdings = ordered_holdings.includes(:security, :account).offset(pagy.offset).limit(pagy.limit)
+    holdings_with_value = holdings.map do |holding|
+      [ holding, convert_to_family_currency(holding.amount, holding.currency, rates) ]
+    end
 
-    total_value = holdings_query.sum(:amount)
+    # Only sum convertible rows — nil is unknown FX, not a zero position.
+    total_value = holdings_with_value.filter_map { |(_, value)| value }.sum
 
-    normalized_holdings = paginated_holdings.map do |holding|
-      {
+    # Convertible holdings first (by family-currency value); unknown FX last.
+    sorted_holdings = holdings_with_value.sort_by do |(_, value)|
+      [ value.nil? ? 1 : 0, -(value || 0) ]
+    end
+
+    pagy = Pagy.new(count: sorted_holdings.size, page: resolved_page(params), limit: default_page_size)
+    paginated_holdings = sorted_holdings.slice(pagy.offset, pagy.limit) || []
+
+    normalized_holdings = paginated_holdings.map do |holding, family_value|
+      payload = {
         ticker: holding.ticker,
         name: holding.name,
         quantity: holding.qty.to_f,
@@ -101,12 +115,19 @@ class Assistant::Function::GetHoldings < Assistant::Function
         currency: holding.currency,
         amount: holding.amount.to_f,
         formatted_amount: holding.amount_money.format,
-        weight: holding.weight&.round(2),
         average_cost: holding.avg_cost&.to_f,
         formatted_average_cost: holding.avg_cost&.format,
         account: holding.account.name,
         date: holding.date
       }
+
+      if family_value.nil?
+        payload[:value_unavailable] = true
+      else
+        payload[:weight] = holding.weight&.round(2)
+      end
+
+      payload
     end
 
     {
@@ -136,7 +157,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
           id: Holding.where(account: accounts)
             .select("DISTINCT ON (account_id, security_id) id")
             .where.not(qty: 0)
-            .order(:account_id, :security_id, date: :desc)
+            .order(Arel.sql(
+              Holding.latest_security_order_sql(
+                partition_columns: %w[account_id security_id]
+              )
+            ))
         )
 
       if params["securities"].present?
@@ -145,6 +170,21 @@ class Assistant::Function::GetHoldings < Assistant::Function
       end
 
       holdings
+    end
+
+    def exchange_rates_for(holdings)
+      foreign = holdings.map(&:currency).uniq.reject { |currency| currency == family.currency }
+      ExchangeRate.rates_for(foreign, to: family.currency, date: Date.current, fallback: nil)
+    end
+
+    def convert_to_family_currency(amount, from_currency, rates)
+      return amount.to_d if from_currency == family.currency
+
+      rate = rates[from_currency]
+      # Match Money#exchange_to: missing/non-positive rates are unknown, not zero.
+      return nil unless rate&.positive?
+
+      amount.to_d * rate
     end
 
     def investment_accounts

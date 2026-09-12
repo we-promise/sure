@@ -33,6 +33,29 @@ class Holding::CurrentForInvestmentAccountsTest < ActiveSupport::TestCase
     assert_equal [ latest.id ], described_query.pluck(:id)
   end
 
+  # A manual holding keeps its native currency (a EUR position inside a USD
+  # account), so the manual-account branch must not filter on the account
+  # currency — doing so drops the row entirely rather than repricing it.
+  test "keeps a manual holding denominated in a currency other than the account's" do
+    security = Security.create!(ticker: "ASML", name: "ASML")
+    native = @account.holdings.create!(
+      security: security, date: Date.current,
+      qty: 4, price: 500, amount: 2000, currency: "EUR"
+    )
+
+    assert_equal [ native.id ], described_query.pluck(:id)
+  end
+
+  test "picks one row per security when a security is held in two currencies" do
+    security = Security.create!(ticker: "SHEL", name: "Shell")
+    @account.holdings.create!(security: security, date: 2.days.ago.to_date,
+                              qty: 1, price: 100, amount: 100, currency: "EUR")
+    latest = @account.holdings.create!(security: security, date: Date.current,
+                                       qty: 1, price: 100, amount: 100, currency: "GBP")
+
+    assert_equal [ latest.id ], described_query.pluck(:id)
+  end
+
   private
     def described_query
       Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation

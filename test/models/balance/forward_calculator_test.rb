@@ -337,6 +337,43 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  # An unconvertible holding is valued at 1:1 and reported (#3493) rather than
+  # dropped, so cash still derives — off only by the FX gap, not by the whole
+  # position. The opening day carries a flow because the position appears
+  # without a trade, which is not FX-specific; what a missing rate must not do
+  # is keep generating moves once the amount stops changing.
+  test "an unconvertible foreign holding settles without ongoing phantom flows" do
+    start_date = 2.days.ago.to_date
+    end_date = Date.current
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: start_date, balance: 1000 },
+        { type: "reconciliation", date: end_date, balance: 1000 }
+      ],
+      holdings: [
+        { ticker: "UNKNOWNFX", date: start_date, qty: 1, price: 100, amount: 100, currency: "EUR" },
+        { ticker: "UNKNOWNFX", date: start_date + 1.day, qty: 1, price: 100, amount: 100, currency: "EUR" },
+        { ticker: "UNKNOWNFX", date: end_date, qty: 1, price: 100, amount: 100, currency: "EUR" }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    calculated.each do |balance|
+      assert_equal 900, balance.cash_balance,
+        "Cash derives from the 1:1 valuation (1000 total - 100 holdings) on #{balance.date}"
+      assert_equal 1000, balance.balance,
+        "The reconciled total must hold on #{balance.date}"
+    end
+
+    after_opening = calculated.reject { |b| b.date == start_date }
+    after_opening.each do |balance|
+      assert_equal 0, balance.net_market_flows,
+        "A missing rate must not keep generating market moves on #{balance.date}"
+    end
+  end
+
   test "depository account with transactions and balance reconciliations" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
@@ -821,6 +858,36 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert corrected
     assert_equal 800, corrected.balance,
       "Balance should reflect the corrected EUR→USD rate (€500 * 1.2 = $600, not $500)"
+  end
+
+  test "foreign holdings alone force full recalc so late exchange rate imports are picked up" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 }
+      ]
+    )
+    security = Security.create!(ticker: "EURONLY", name: "EUR Only Holding")
+    holding_date = 2.days.ago.to_date
+
+    ExchangeRate.create!(date: holding_date, from_currency: "EUR", to_currency: "USD", rate: 1.0)
+    account.holdings.create!(
+      security: security,
+      date: holding_date,
+      qty: 1,
+      price: 500,
+      amount: 500,
+      currency: "EUR"
+    )
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    ExchangeRate.find_by!(date: holding_date, from_currency: "EUR", to_currency: "USD").update!(rate: 1.2)
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 1.day.ago.to_date)
+    calculator.calculate
+
+    assert_not calculator.incremental?, "Native foreign holdings must force full balance recalc"
   end
 
   test "falls back to full recalculation for foreign accounts (account currency != family currency)" do

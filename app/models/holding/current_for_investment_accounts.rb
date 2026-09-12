@@ -1,4 +1,9 @@
 class Holding::CurrentForInvestmentAccounts
+  # One current row per (account, security). The manual-account branch does not
+  # constrain currency: a manual holding keeps its native currency (a EUR position
+  # inside a USD account), so matching holdings.currency against the account's
+  # would drop it entirely. Ties on the same date fall back to id so exactly one
+  # row wins.
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
@@ -15,18 +20,12 @@ class Holding::CurrentForInvestmentAccounts
         WHERE provider_holdings.account_id = holdings.account_id
           AND provider_holdings.account_provider_id IS NOT NULL
       )
-      AND holdings.currency = (
-        SELECT accounts.currency
-        FROM accounts
-        WHERE accounts.id = holdings.account_id
-      )
       AND holdings.id = (
         SELECT latest_holdings.id
         FROM holdings latest_holdings
         WHERE latest_holdings.account_id = holdings.account_id
           AND latest_holdings.security_id = holdings.security_id
-          AND latest_holdings.currency = holdings.currency
-        ORDER BY latest_holdings.date DESC
+        ORDER BY latest_holdings.date DESC, latest_holdings.id DESC
         LIMIT 1
       )
     )

@@ -40,23 +40,57 @@ class Balance::SyncCache
       @entries_by_date ||= converted_entries.group_by(&:date)
     end
 
+    # Converts holdings into account currency per date.
+    # Uses batched FX lookups (exact date, then nearest lookback). A date with
+    # any unconvertible foreign holding is unknown, rather than silently treating
+    # that holding as 1:1 or zero. Callers use nil to preserve existing balance
+    # components and avoid reclassifying unknown investments as cash.
+    #
+    # Zero-amount rows (sold-out positions, neutralized manual rows) are skipped:
+    # they contribute nothing to the total and must not demand FX or mark the
+    # whole date unknown when rates are missing.
     def holdings_value_by_date
       @holdings_value_by_date ||= begin
         missing_rate_pairs = []
+        rows = account.holdings.pluck(:id, :date, :amount, :currency)
+        totals = rows.group_by { |(_id, date, _amount, _currency)| date }.each_with_object(Hash.new(0)) do |(date, day_rows), day_totals|
+          day_rows = day_rows.reject { |(_id, _date, amount, _currency)| amount.zero? }
 
-        totals = account.holdings.each_with_object(Hash.new(0)) do |h, acc|
-          begin
-            converted = Money.new(h.amount, h.currency).exchange_to(account.currency, date: h.date).amount
-          rescue Money::ConversionError => error
-            # Fall back to a 1:1 rate, which misstates the holding by the FX gap. Excluding it
-            # instead would be worse here: `BaseCalculator#derive_cash_balance_on_date_from_total`
-            # derives cash as `total_balance - holdings_value`, so a dropped holding reappears
-            # as phantom cash. Report it rather than silently accepting the wrong number.
-            converted = h.amount
-            @unconvertible_holding_count += 1
-            missing_rate_pairs |= [ [ error.from_currency, error.to_currency ] ]
+          foreign_currencies = day_rows
+            .map { |(_id, _date, _amount, currency)| currency }
+            .uniq
+            .reject { |currency| currency == account.currency }
+
+          # One batched lookup per date rather than a Money#exchange_to per holding,
+          # which issues a rate query per row. rates_for already falls back to the
+          # nearest recent rate, so weekend and holiday dates still convert.
+          rates = ExchangeRate.rates_for(
+            foreign_currencies,
+            to: account.currency,
+            date: date,
+            fallback: nil
+          )
+
+          day_rows.each do |_id, _date, amount, currency|
+            if currency == account.currency
+              day_totals[date] += amount
+              next
+            end
+
+            rate = rates[currency]
+            if rate.nil?
+              # Fall back to a 1:1 rate, which misstates the holding by the FX gap.
+              # Excluding it instead would be worse here: `BaseCalculator#derive_cash_balance_on_date_from_total`
+              # derives cash as `total_balance - holdings_value`, so a dropped holding reappears
+              # as phantom cash. Report it rather than silently accepting the wrong number.
+              day_totals[date] += amount
+              @unconvertible_holding_count += 1
+              missing_rate_pairs |= [ [ currency, account.currency ] ]
+              next
+            end
+
+            day_totals[date] += amount * rate
           end
-          acc[h.date] += converted
         end
 
         if @unconvertible_holding_count.positive?

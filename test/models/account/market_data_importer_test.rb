@@ -112,6 +112,49 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     assert_equal 1, Security::Price.where(security: security, date: trade_date).count
   end
 
+  test "imports holding and trade currency pairs for multi-currency investment accounts" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "CAD Brokerage",
+      currency: "CAD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    trade_date = 10.days.ago.to_date
+
+    # CAD-denominated trade into a USD-priced security (native holding currency).
+    trade = Trade.new(security: security, qty: 1, price: 100, currency: "CAD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy AAPL", date: trade_date, amount: 100, currency: "CAD", entryable: trade)
+    account.holdings.create!(
+      security: security,
+      date: Date.current,
+      qty: 1,
+      price: 110,
+      amount: 110,
+      currency: "USD"
+    )
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+
+    end_date = Date.current
+
+    # Entry→account is same-currency (CAD→CAD) so not imported; we need:
+    # USD→CAD for balance sync and CAD→USD for cost basis.
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "USD", to: "CAD", start_date: anything, end_date: end_date)
+             .returns(provider_success_response([]))
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "CAD", to: "USD", start_date: anything, end_date: end_date)
+             .returns(provider_success_response([]))
+
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([]))
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "Apple", logo_url: nil)))
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
   test "caps end_date at last holding date for securities no longer held" do
     family = Family.create!(name: "Smith", currency: "USD")
 

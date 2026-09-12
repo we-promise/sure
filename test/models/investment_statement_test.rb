@@ -61,6 +61,28 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 2, @statement.current_holdings.count
   end
 
+  # Guards the InvestmentStatement path specifically: the query object has its
+  # own tests, but nothing previously asserted that #3484's staleness rule still
+  # applies once current_holdings goes through it.
+  test "current_holdings excludes stale provider holdings" do
+    account = create_investment_account(balance: 200, cash_balance: 0, currency: "USD")
+    item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider_account = item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
+    account_provider = AccountProvider.create!(account: account, provider: provider_account)
+
+    current = Security.create!(ticker: "AAPL", name: "Apple")
+    stale = Security.create!(ticker: "STALE", name: "Stale")
+
+    account.holdings.create!(security: current, date: Date.current, qty: 1, price: 100,
+                             amount: 100, currency: "USD", account_provider: account_provider)
+    stale_holding = account.holdings.create!(security: stale, date: 1.day.ago.to_date, qty: 1,
+                                             price: 100, amount: 100, currency: "USD",
+                                             account_provider: account_provider)
+    stale_holding.update_columns(created_at: 2.days.ago, updated_at: 2.days.ago)
+
+    assert_equal [ "AAPL" ], @statement.current_holdings.map { |h| h.security.ticker }
+  end
+
   test "top_holdings ranks by family-currency value across currencies" do
     usd_account = create_investment_account(balance: 2100, currency: "USD")
     eur_account = create_investment_account(balance: 2000, currency: "EUR")

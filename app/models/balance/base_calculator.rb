@@ -46,7 +46,13 @@ class Balance::BaseCalculator
 
     def derive_cash_balance_on_date_from_total(total_balance:, date:)
       if account.balance_type == :investment
-        total_balance - holdings_value_for_date(date)
+        holdings_value = holdings_value_for_date(date)
+        # An unconvertible holding makes the split unknown. Returning nil lets
+        # directional calculators retain their known cash component instead of
+        # assigning the entire valuation to cash.
+        return nil if holdings_value.nil?
+
+        total_balance - holdings_value
       elsif account.balance_type == :cash
         total_balance
       else
@@ -79,6 +85,8 @@ class Balance::BaseCalculator
 
       start_of_day_holdings_value = holdings_value_for_date(date.prev_day)
       end_of_day_holdings_value = holdings_value_for_date(date)
+      # Do not write a full-value loss/recovery when FX coverage drops out.
+      return 0 if start_of_day_holdings_value.nil? || end_of_day_holdings_value.nil?
 
       change_holdings_value = end_of_day_holdings_value - start_of_day_holdings_value
       net_buy_sell_value = flows[:non_cash_inflows] - flows[:non_cash_outflows]
@@ -147,7 +155,7 @@ class Balance::BaseCalculator
       elsif account.balance_type == :investment
         # For reverse calculations, we need the previous day's holdings
         target_date = direction == :forward ? date : date.prev_day
-        holdings_value_for_date(target_date)
+        holdings_value_for_date(target_date) || non_cash_balance
       else
         non_cash_balance
       end

@@ -97,12 +97,46 @@ class CoinbaseAccount::Processor
         end
       end
 
-      # Fallback: Sum holdings values for this account
+      # Fallback: Sum holdings values for this account, converting into native currency
       account = coinbase_account.current_account
       if account.present?
-        today_holdings = account.holdings.where(date: Date.current)
+        today_holdings = account.holdings.where(date: Date.current).to_a
         if today_holdings.any?
-          return today_holdings.sum(:amount)
+          foreign = today_holdings.map(&:currency).uniq.reject { |currency| currency == native_currency }
+          rates = ExchangeRate.rates_for(foreign, to: native_currency, date: Date.current, fallback: nil)
+          unknown_fx = Hash.new(0)
+
+          total = today_holdings.sum do |holding|
+            if holding.currency == native_currency
+              holding.amount
+            elsif (rate = rates[holding.currency])
+              holding.amount * rate
+            else
+              unknown_fx[[ holding.currency, native_currency ]] += 1
+              0
+            end
+          end
+
+          unknown_fx.each do |(from_currency, to_currency), count|
+            DebugLogEntry.capture(
+              category: "exchange_rate_conversion",
+              level: "warn",
+              message: "Cannot convert Coinbase holding into native currency",
+              source: self.class.name,
+              family: account.family,
+              account: account,
+              account_provider: coinbase_account.account_provider,
+              provider_key: "coinbase",
+              metadata: {
+                from_currency: from_currency,
+                to_currency: to_currency,
+                holdings_affected: count,
+                date: Date.current
+              }
+            )
+          end
+
+          return total
         end
       end
 
