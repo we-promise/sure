@@ -1,10 +1,13 @@
 <%= tag.span class: class_names("relative block overflow-hidden shrink-0", class_name) do %>
-  <%= tag.span class: class_names("absolute inset-0 flex items-center justify-center", metadata[:logo_bg]), aria: { hidden: true } do %>
-    <% if metadata[:logo_icon] %>
-      <%= helpers.icon metadata[:logo_icon], size: "sm", color: "white" %>
-    <% else %>
-      <span class="text-xs font-bold text-inverse"><%= metadata[:logo_text] %></span>
-    <% end %>
+  <%= tag.span class: "absolute inset-0", aria: { hidden: true } do %>
+    <%= render DS::FilledIcon.new(
+          icon: fallback_icon,
+          text: fallback_text,
+          text_length: 2,
+          hex_color: fallback_color,
+          rounded: rounded?,
+          class_name: class_names("w-full h-full", rounded? ? "rounded-full" : "rounded-lg")
+        ) %>
   <% end %>
   <% if (url = brand_url) %>
     <%= helpers.image_tag url, class: "absolute inset-0 w-full h-full bg-container", alt: "", loading: "lazy", onerror: ProviderLogo::REMOVE_ON_ERROR %>

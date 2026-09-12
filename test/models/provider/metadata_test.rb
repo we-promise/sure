@@ -18,6 +18,13 @@ class Provider::MetadataTest < ActiveSupport::TestCase
     end
   end
 
+  test "registered provider metadata keeps fallback colors out of raw tailwind classes" do
+    Provider::Metadata::REGISTRY.each_value do |metadata|
+      refute metadata.key?(:logo_bg)
+      assert_match(/\A#[0-9a-f]{6}\z/i, metadata[:logo_color]) if metadata[:logo_color].present?
+    end
+  end
+
   test "logo_url builds a Brandfetch URL from the provider domain" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     Setting.stubs(:brand_fetch_logo_size).returns(40)

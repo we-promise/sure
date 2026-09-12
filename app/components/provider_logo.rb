@@ -24,4 +24,20 @@ class ProviderLogo < ApplicationComponent
   def metadata
     @metadata ||= Provider::Metadata.for(@provider_key)
   end
+
+  def fallback_icon
+    metadata[:logo_icon]
+  end
+
+  def fallback_text
+    metadata[:logo_text]
+  end
+
+  def fallback_color
+    metadata[:logo_color]
+  end
+
+  def rounded?
+    class_name.to_s.include?("rounded-full")
+  end
 end
