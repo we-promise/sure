@@ -34,6 +34,30 @@ Lookbook is mounted at `/design-system` outside production; see
 [`config/routes.rb`](../../config/routes.rb). Letter Opener supports development
 email previews. Use Docker/devcontainers where useful for consistent environments.
 
+## Codex Cloud setup
+
+For the Linux cloud environment, set the custom setup script to one command:
+
+```sh
+./bin/codex-env ./bin/setup
+```
+
+`bin/codex-env` installs system packages, selects Ruby from `.ruby-version` and
+Node.js 24 with mise, and starts PostgreSQL and Redis. It then runs the supplied
+command with those runtimes. `bin/setup` installs application dependencies,
+prepares the database, clears logs and temporary files, and requests an app restart.
+Omit `./bin/setup` when only the system environment should be prepared.
+
+Do not run `./bin/setup` as a separate next line: the calling shell can still have
+the image's older Ruby directory in `PATH`. Exports in a child process and changes
+to shell startup files do not update that already-running shell. The combined
+command uses `mise exec` to select the runtimes explicitly for application setup.
+The shim configuration also persists for later login and interactive Bash sessions.
+
+After changing the repository's bootstrap script, reset the environment cache
+before retrying setup. See the [Cloud environment documentation](https://developers.openai.com/codex/cloud/environments/)
+for setup shell and cache behavior.
+
 ## Before opening a pull request
 
 Run these checks locally before **every** PR. All required checks must pass before

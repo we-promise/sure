@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Codex Cloud setup command: ./bin/codex-env ./bin/setup
+# Optional command arguments run with the installed runtimes before this shell exits.
+
 # Disable profile loading to avoid environment errors
 export ENV=""
 export BASH_ENV=""
@@ -25,7 +28,8 @@ fi
 
 RUBY_VERSION=$(tr -d '[:space:]' < .ruby-version)
 echo "Installing Ruby $RUBY_VERSION and Node.js with mise..."
-# Global selections survive setup's separate shell without adding repository files.
+# Global selections persist for mise shims in later shells. They cannot update
+# the calling shell's PATH, which may still point directly at an older Ruby.
 # Node 24 matches the JavaScript CI job.
 mise use --global --yes "ruby@$RUBY_VERSION" node@24
 mise reshim
@@ -91,4 +95,10 @@ redis-cli ping | grep -qx PONG
 
 echo "Environment setup completed successfully!"
 echo "PostgreSQL and Redis are now running."
-echo "You can now run 'bin/setup' to prepare your Rails application and database."
+
+if [ "$#" -gt 0 ]; then
+  echo "Running application setup command with Ruby $RUBY_VERSION and Node.js 24..."
+  exec mise exec "ruby@$RUBY_VERSION" node@24 -- "$@"
+fi
+
+echo "To also prepare the Rails application and database, run: ./bin/codex-env ./bin/setup"

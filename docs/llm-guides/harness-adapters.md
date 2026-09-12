@@ -115,9 +115,9 @@ then overwrites its generated header; repairing the generator is separate work.
 The ignored `agent.mdc`, `dev_workflow.mdc` and `taskmaster.mdc` paths likewise
 remain local/generated context.
 
-[bin/codex-env](../../bin/codex-env) is a legacy Linux environment bootstrap,
-not the standard setup procedure or a skill. It installs system packages,
-changes PostgreSQL authentication, and can comment out the Ruby requirement
-and mark Gemfiles assume-unchanged when versions differ. It remains unchanged;
-use the maintained [development guide](development.md) for repository setup and
-checks.
+[bin/codex-env](../../bin/codex-env) is a Linux environment bootstrap for Codex
+Cloud, not a skill or the standard local setup procedure. It installs system
+packages, configures local PostgreSQL authentication, and selects the required
+Ruby and Node.js versions with mise. Follow the [Cloud setup instructions](development.md#codex-cloud-setup)
+to run application setup with those runtimes, and the [development guide](development.md)
+for local setup and checks.
