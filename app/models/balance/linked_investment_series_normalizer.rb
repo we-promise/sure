@@ -37,9 +37,13 @@ class Balance::LinkedInvestmentSeriesNormalizer
       )
     end
 
+    def supported_history_start_date(account)
+      new(account: account, series: nil).supported_history_start_date
+    end
+
     private
       def common_supported_history_start_date(account_ids)
-        account_ids = Array(account_ids)
+        account_ids = Array(account_ids).compact
         return if account_ids.empty?
 
         activity_dates = Entry.where(account_id: account_ids)
@@ -49,16 +53,10 @@ class Balance::LinkedInvestmentSeriesNormalizer
           .group(:account_id)
           .minimum(:date)
 
-        anchor_dates = Valuation.opening_anchor
-          .joins(:entry)
-          .where(entries: { account_id: account_ids })
-          .group("entries.account_id")
-          .minimum("entries.date")
-
         stable_holding_dates = stable_provider_holding_start_dates(account_ids)
 
         account_ids.filter_map do |account_id|
-          [ anchor_dates[account_id], activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
+          [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
         end.max
       end
 
@@ -144,11 +142,11 @@ class Balance::LinkedInvestmentSeriesNormalizer
     )
   end
 
-  private
+  def supported_history_start_date
+    [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+  end
 
-    def supported_history_start_date
-      [ (account.opening_anchor_date if account.has_opening_anchor?), first_provider_activity_date, stable_provider_holding_start_date ].compact.min
-    end
+  private
 
     def first_provider_activity_date
       @first_provider_activity_date ||= account.entries

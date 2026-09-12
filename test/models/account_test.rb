@@ -845,4 +845,48 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal posted_date, account.history_start_date
   end
+
+  test "history_start_date on linked investment account resolves to provider activity ignoring default anchor" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Linked Investment Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    recent_trade_date = 14.days.ago.to_date
+    account.entries.create!(
+      name: "Recent Provider Trade",
+      date: recent_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+
+    assert_equal recent_trade_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account returns nil when no provider activity exists" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Fresh Linked Investment",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    assert_nil account.history_start_date
+  end
 end

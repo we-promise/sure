@@ -34,30 +34,52 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal posted_date, start_date
   end
 
-  test "common_supported_history_start_date includes opening anchor valuation date" do
-    account = families(:empty).accounts.create!(
-      name: "Linked Investment Anchor",
+  test "common_supported_history_start_date ignores unlinked manual accounts in mixed portfolio" do
+    linked_account = families(:empty).accounts.create!(
+      name: "Linked Investment",
       balance: 0,
       currency: "USD",
       accountable: Investment.new
     )
-    anchor_date = 20.days.ago.to_date
-    posted_date = 10.days.ago.to_date
-
-    account.set_opening_anchor_balance(balance: 100, date: anchor_date)
-    account.entries.create!(
-      date: posted_date,
-      name: "Posted Transaction",
-      amount: 100,
+    manual_account = families(:empty).accounts.create!(
+      name: "Manual Investment",
+      balance: 0,
       currency: "USD",
-      source: "plaid",
-      entryable: Transaction.new
+      accountable: Investment.new
     )
 
-    start_date = Balance::LinkedInvestmentSeriesNormalizer
-      .send(:common_supported_history_start_date, [ account.id ])
+    linked_activity_date = 20.days.ago.to_date
+    manual_anchor_date = 5.days.ago.to_date
 
-    assert_equal anchor_date, start_date
+    linked_account.entries.create!(
+      date: linked_activity_date,
+      name: "Trade",
+      amount: 100,
+      currency: "USD",
+      source: "snaptrade",
+      entryable: Transaction.new
+    )
+    manual_account.set_opening_anchor_balance(balance: 50, date: manual_anchor_date)
+
+    start_date = Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ linked_account.id, manual_account.id ])
+
+    assert_equal linked_activity_date, start_date
+  end
+
+  test "common_supported_history_start_date returns nil when no accounts have provider history" do
+    manual_account = families(:empty).accounts.create!(
+      name: "Manual Investment",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new
+    )
+    manual_account.set_opening_anchor_balance(balance: 50, date: 5.days.ago.to_date)
+
+    start_date = Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ manual_account.id ])
+
+    assert_nil start_date
   end
 
   test "common_supported_history_start_date prefers trade date over later valuation" do
@@ -411,12 +433,11 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     account.account_providers.create!(provider: coinstats_account)
 
     anchor_date = 15.days.ago.to_date
-    later_trade_date = 8.days.ago.to_date
 
     account.set_opening_anchor_balance(balance: 5000, date: anchor_date)
     account.entries.create!(
-      name: "Later Trade",
-      date: later_trade_date,
+      name: "Trade on Anchor Date",
+      date: anchor_date,
       amount: 100,
       currency: "USD",
       source: "snaptrade",

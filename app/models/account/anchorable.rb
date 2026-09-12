@@ -28,11 +28,15 @@ module Account::Anchorable
   end
 
   def history_start_date
-    [
-      (opening_anchor_date if has_opening_anchor?),
-      entries.excluding_pending.minimum(:date),
-      balances.minimum(:date)
-    ].compact.min
+    if linked? && balance_type == :investment
+      Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
+    else
+      [
+        (opening_anchor_date if has_opening_anchor?),
+        entries.excluding_pending.minimum(:date),
+        balances.minimum(:date)
+      ].compact.min
+    end
   end
 
   def set_current_balance(balance)
