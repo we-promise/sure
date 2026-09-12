@@ -28,6 +28,11 @@ class CoinstatsItem::DefiAccountManager
     active_defi_ids = []
     had_upsert_failures = false
 
+    # Pre-fetch the USD→family_currency exchange rate once to avoid N+1 DB queries
+    # inside the asset loop (each call to convert_usd_balance would otherwise issue
+    # an individual SELECT against the exchange_rates table).
+    prefetched_rate = prefetch_usd_exchange_rate(family_currency)
+
     protocols.each do |protocol|
       protocol = protocol.with_indifferent_access
 
@@ -41,7 +46,7 @@ class CoinstatsItem::DefiAccountManager
 
           account_id = build_account_id(protocol, investment, asset, blockchain: normalized_blockchain)
 
-          if upsert_account!(address: normalized_address, blockchain: normalized_blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id)
+          if upsert_account!(address: normalized_address, blockchain: normalized_blockchain, protocol: protocol, investment: investment, asset: asset, account_id: account_id, prefetched_rate: prefetched_rate)
             active_defi_ids << account_id
           else
             had_upsert_failures = true
@@ -119,7 +124,7 @@ class CoinstatsItem::DefiAccountManager
     end
 
     # Returns true on success, false on failure (so the caller can track active positions correctly).
-    def upsert_account!(address:, blockchain:, protocol:, investment:, asset:, account_id:)
+    def upsert_account!(address:, blockchain:, protocol:, investment:, asset:, account_id:, prefetched_rate: nil)
       coinstats_account = coinstats_item.coinstats_accounts.find_or_initialize_by(
         account_id: account_id,
         wallet_address: address
@@ -138,7 +143,7 @@ class CoinstatsItem::DefiAccountManager
       # Convert the USD balance to the family's base currency for consistent portfolio reporting.
       # convert_usd_balance returns the actual currency used — it may fall back to "USD" if the
       # exchange rate is unavailable, so we use the returned currency rather than assuming success.
-      balance, actual_currency = convert_usd_balance(total_balance_usd, family_currency)
+      balance, actual_currency = convert_usd_balance(total_balance_usd, family_currency, prefetched_rate: prefetched_rate)
       quantity = asset[:amount].to_f
       per_token_price = quantity > 0 ? balance / quantity : 0
 
@@ -192,15 +197,33 @@ class CoinstatsItem::DefiAccountManager
       coinstats_item.family.currency.presence || "USD"
     end
 
-    # Converts a USD amount to the target currency using Money exchange rates.
+    # Converts a USD amount to the target currency.
+    # Accepts a pre-fetched rate (a numeric multiplier) to avoid a DB query when converting
+    # many assets in a loop. Falls back to a live Money exchange if no rate is supplied.
     # Returns [amount, currency] so the caller always knows what currency the amount is in.
     # Falls back to [usd_amount, "USD"] if conversion is unavailable.
-    def convert_usd_balance(usd_amount, target_currency)
+    def convert_usd_balance(usd_amount, target_currency, prefetched_rate: nil)
       return [ usd_amount, "USD" ] if target_currency == "USD" || usd_amount.zero?
 
-      [ Money.new(usd_amount, "USD").exchange_to(target_currency).amount, target_currency ]
+      if prefetched_rate
+        [ (usd_amount * prefetched_rate).round(10), target_currency ]
+      else
+        [ Money.new(usd_amount, "USD").exchange_to(target_currency).amount, target_currency ]
+      end
     rescue => e
       Rails.logger.warn "CoinstatsItem::DefiAccountManager - FX conversion USD->#{target_currency} failed: #{e.message}"
       [ usd_amount, "USD" ]
+    end
+
+    # Fetches the most recent exchange rate from USD to the given currency in a single DB query.
+    # Returns nil when the target is USD (no conversion needed) or no rate is found.
+    def prefetch_usd_exchange_rate(target_currency)
+      return nil if target_currency.blank? || target_currency == "USD"
+
+      ExchangeRate
+        .where(from_currency: "USD", to_currency: target_currency)
+        .order(date: :desc)
+        .limit(1)
+        .pick(:rate)
     end
 end
