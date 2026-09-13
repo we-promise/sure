@@ -172,7 +172,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     Zip::File.open_buffer(zip_data) do |zip|
       # Check accounts.csv
       accounts_csv = zip.read("accounts.csv")
-      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ],
+      assert_equal [ "id", "name", "type", "subtype", "balance", "currency", "created_at", "iban" ],
                    CSV.parse(accounts_csv, headers: true).headers
 
       # Check version marker
@@ -182,7 +182,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check transactions.csv
       transactions_csv = zip.read("transactions.csv")
-      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ],
+      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "counterparty_iban" ],
                    CSV.parse(transactions_csv, headers: true).headers
 
       # Check trades.csv
@@ -277,6 +277,114 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_includes row["tags"], "\\,"
       assert_includes row["tags"], "\\|"
       assert_equal [ @tag.name, tag2.name ].sort, Import::Row.new(tags: row["tags"]).tags_list.sort
+    end
+  end
+
+  test "exports account iban and leaves it blank when not set" do
+    @account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    other_account = @family.accounts.create!(name: "No IBAN Account", balance: 0, currency: "USD", accountable: Depository.new)
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("accounts.csv"), headers: true)
+
+      with_iban = rows.find { |csv_row| csv_row["name"] == @account.name }
+      without_iban = rows.find { |csv_row| csv_row["name"] == other_account.name }
+
+      assert_equal "DE89370400440532013000", with_iban["iban"] # pipelock:ignore IBAN
+      assert_nil without_iban["iban"]
+    end
+  end
+
+  test "exports transaction counterparty iban and leaves it blank when not present" do
+    with_iban_entry = @account.entries.create!(
+      name: "CSV Rent Payment",
+      amount: 850,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+    )
+    without_iban_entry = @account.entries.create!(
+      name: "CSV Cash Withdrawal",
+      amount: 40,
+      currency: "USD",
+      date: Date.parse("2024-05-16"),
+      entryable: Transaction.new(category: @category)
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("transactions.csv"), headers: true)
+
+      with_iban_row = rows.find { |csv_row| csv_row["name"] == with_iban_entry.name }
+      without_iban_row = rows.find { |csv_row| csv_row["name"] == without_iban_entry.name }
+
+      assert_equal "DE89370400440532013000", with_iban_row["counterparty_iban"] # pipelock:ignore IBAN
+      assert_nil without_iban_row["counterparty_iban"]
+    end
+  end
+
+  test "exports the split parent's counterparty iban on split child rows" do
+    split_parent = @account.entries.create!(
+      name: "CSV Split Parent",
+      amount: 100,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+    )
+    split_children = split_parent.split!([
+      { name: "CSV Split Child A", amount: 60, category_id: @category.id },
+      { name: "CSV Split Child B", amount: 40, category_id: @category.id }
+    ])
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rows = CSV.parse(zip.read("transactions.csv"), headers: true)
+
+      split_children.each do |child|
+        row = rows.find { |csv_row| csv_row["name"] == child.name }
+        assert_equal "DE89370400440532013000", row["counterparty_iban"] # pipelock:ignore IBAN
+      end
+    end
+  end
+
+  test "neutralizes a formula-like account iban so it can't execute in a spreadsheet" do
+    # IbanNormalizable's before_validation strips non-alphanumeric characters
+    # (so a normal update! can no longer store "=1+1" as-is), but iban is
+    # still just a free-text column at the database level -- a pre-existing
+    # row written before that fix shipped, or written directly via SQL/import,
+    # could still carry a formula payload. update_columns bypasses the
+    # callback (while still writing through encryption) to simulate that, so
+    # this test keeps covering the export-time defense in depth.
+    @account.update_columns(iban: "=1+1")
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      row = CSV.parse(zip.read("accounts.csv"), headers: true).find { |csv_row| csv_row["name"] == @account.name }
+
+      assert_equal "'=1+1", row["iban"]
+    end
+  end
+
+  test "neutralizes a formula-like transaction counterparty iban" do
+    entry = @account.entries.create!(
+      name: "CSV Formula Payment",
+      amount: 10,
+      currency: "USD",
+      date: Date.parse("2024-05-15"),
+      entryable: Transaction.new(category: @category, extra: { "counterparty_iban" => "@SUM(1+1)" })
+    )
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      row = CSV.parse(zip.read("transactions.csv"), headers: true).find { |csv_row| csv_row["name"] == entry.name }
+
+      assert_equal "'@SUM(1+1)", row["counterparty_iban"]
     end
   end
 

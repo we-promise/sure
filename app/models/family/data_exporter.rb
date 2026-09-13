@@ -62,7 +62,11 @@ class Family::DataExporter
 
     def generate_accounts_csv
       CSV.generate do |csv|
-        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
+        # iban appended after created_at (not inserted before it) so a
+        # positional (non-header) reader of a pre-existing export -- the
+        # previous last column, created_at, stays at the same index instead
+        # of shifting a row's IBAN string into where a timestamp was expected.
+        csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at", "iban" ]
 
         # Only export accounts belonging to this family
         @family.accounts.includes(:accountable).find_each do |account|
@@ -73,7 +77,8 @@ class Family::DataExporter
             account.subtype,
             account.balance.to_s,
             account.currency,
-            account.created_at.iso8601
+            account.created_at.iso8601,
+            csv_safe(account.iban)
           ]
         end
       end
@@ -81,12 +86,12 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "counterparty_iban" ]
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
         exportable_transactions
-          .includes(:category, :tags, entry: :account)
+          .includes(:category, :tags, entry: [ :account, parent_entry: :entryable ])
           .find_each do |transaction|
             csv << [
               transaction.entry.date&.iso8601,
@@ -96,14 +101,43 @@ class Family::DataExporter
               transaction.category&.name,
               transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
-              transaction.entry.currency
+              transaction.entry.currency,
+              csv_safe(transaction_counterparty_iban(transaction))
             ]
           end
       end
     end
 
+    # Split children don't inherit the parent transaction's extra metadata
+    # (Entry#split! never copies it), so a split-off row would otherwise
+    # export blank even though the original synced transaction had a
+    # counterparty IBAN. Falls back to the parent's value in that case.
+    def transaction_counterparty_iban(transaction)
+      transaction.extra&.dig("counterparty_iban") ||
+        parent_transaction(transaction)&.extra&.dig("counterparty_iban")
+    end
+
+    def parent_transaction(transaction)
+      parent = transaction.entry.parent_entry&.entryable
+      parent if parent.is_a?(Transaction)
+    end
+
     def escape_legacy_tag_name(name)
       name.to_s.gsub(/[\\,|]/) { |char| "\\#{char}" }
+    end
+
+    # iban/counterparty_iban are free text with no format validation (unlike
+    # most other exported columns, which are either system-generated or
+    # constrained by other means), so a family member with no export access
+    # of their own could plant a formula payload for an admin to later open
+    # in a spreadsheet application (CSV/formula injection). Prefixing a
+    # leading =, +, -, @, tab, or CR with a single quote is the standard
+    # mitigation: spreadsheet apps then treat the cell as plain text instead
+    # of evaluating it, while the value itself is unchanged for CSV/text
+    # consumers (including this app's own CSV importer).
+    def csv_safe(value)
+      return value if value.blank?
+      value.start_with?("=", "+", "-", "@", "\t", "\r") ? "'#{value}" : value
     end
 
     def generate_trades_csv

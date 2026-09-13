@@ -78,10 +78,30 @@ class Account::ProviderImportAdapter
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction)
+            updated_extra = entry.transaction.extra
+
+            if !incoming_pending
+              entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| updated_extra&.dig(p, "pending") }
+              updated_extra = clear_pending_flags_from_extra(updated_extra) if entry_is_pending
+            end
+
+            # counterparty_iban/counterparty_account_id are provider-derived
+            # facts with no corresponding UI field, so backfilling them here
+            # doesn't risk reverting a user edit the way overwriting name/
+            # category/notes would -- unlike those, protecting the user's
+            # work gives no reason to withhold this data. Without this, a
+            # transaction the user touched before this metadata existed
+            # would never receive it, even on later syncs.
+            if extra.is_a?(Hash)
+              counterparty_updates = extra.with_indifferent_access.slice("counterparty_iban", "counterparty_account_id")
+              if counterparty_updates.present?
+                updated_extra = (updated_extra || {}).deep_merge(counterparty_updates.deep_stringify_keys)
+              end
+            end
+
+            if updated_extra != entry.transaction.extra
+              entry.transaction.update!(extra: updated_extra)
             end
           end
           record_skip(entry, skip_reason)
