@@ -1,0 +1,92 @@
+<% blocked_count = @candidates.count(&:blocked?) %>
+<% selected_count = @candidates.size - blocked_count %>
+
+<div class="space-y-6 p-4 max-w-3xl mx-auto">
+  <header class="space-y-1">
+    <h1 class="text-primary text-xl font-medium"><%= t(".title") %></h1>
+    <p class="text-secondary text-sm"><%= @account.name %></p>
+  </header>
+
+  <% if @candidates.empty? %>
+    <%= render DS::Alert.new(message: t(".empty"), variant: :info) %>
+  <% else %>
+    <%= render DS::Alert.new(message: t(".explanation"), variant: :info) %>
+
+    <%= styled_form_with url: account_card_twin_cleanup_path(@account),
+                         scope: :card_twin_cleanup,
+                         class: "space-y-4",
+                         data: {
+                           controller: "select-all",
+                           select_all_selected_label_value: t(".selected_label"),
+                           select_all_kept_label_value: t(".kept_label")
+                         } do |f| %>
+      <div class="flex items-center gap-2 px-2">
+        <%= check_box_tag "card_twin_cleanup_select_all", "1", blocked_count.zero?,
+                          class: "checkbox checkbox--light",
+                          data: { select_all_target: "selectAll", action: "change->select-all#toggle" } %>
+        <p class="text-secondary text-sm" data-select-all-target="count">
+          <%= t(".selected_count", selected: selected_count, kept: blocked_count) %>
+        </p>
+      </div>
+
+      <ul class="divide-y divide-primary border border-primary rounded-lg bg-container">
+        <% @candidates.each do |candidate| %>
+          <li class="p-4">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <%= check_box_tag "card_twin_cleanup[entry_ids][]", candidate.entry.id, !candidate.blocked?,
+                                id: "candidate_#{candidate.entry.id}",
+                                class: "checkbox checkbox--light mt-1",
+                                data: { select_all_target: "checkbox", action: "change->select-all#refresh" } %>
+
+              <div class="flex-1 text-sm space-y-1">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-primary font-medium"><%= candidate.entry.name %></span>
+                  <span class="text-primary tabular-nums privacy-sensitive">
+                    <%= format_money(candidate.entry.amount_money.abs) %>
+                  </span>
+                </div>
+
+                <p class="text-secondary text-xs">
+                  <%= l(candidate.entry.date, format: :short) %> •
+                  <%= t(".keeps", name: candidate.survivor.name) %>
+                </p>
+
+                <% if candidate.blockers.include?(:transfer) %>
+                  <p class="text-warning text-xs inline-flex items-start gap-1">
+                    <%= icon "alert-triangle", size: "sm", class: "text-warning shrink-0" %>
+                    <%= t(".blocker_transfer") %>
+                  </p>
+                <% end %>
+
+                <% if candidate.blockers.include?(:attachment) %>
+                  <p class="text-warning text-xs inline-flex items-start gap-1">
+                    <%= icon "alert-triangle", size: "sm", class: "text-warning shrink-0" %>
+                    <%= t(".blocker_attachment",
+                          count: candidate.entry.entryable.attachments.count) %>
+                  </p>
+                <% end %>
+
+                <% if candidate.transfers_anything? %>
+                  <p class="text-secondary text-xs">
+                    <%= t(".carried_over",
+                          fields: candidate_carried_fields(candidate).to_sentence) %>
+                  </p>
+                <% end %>
+              </div>
+            </label>
+          </li>
+        <% end %>
+      </ul>
+
+      <% if blocked_count.positive? %>
+        <%= render DS::Alert.new(message: t(".unticked_explanation", count: blocked_count),
+                                 variant: :warning) %>
+      <% end %>
+
+      <div class="flex justify-end items-center gap-2">
+        <%= render DS::Link.new(text: t(".cancel"), variant: :secondary, href: account_path(@account)) %>
+        <%= f.submit t(".submit"), data: { turbo_confirm: t(".confirm") } %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

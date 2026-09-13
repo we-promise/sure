@@ -23,6 +23,12 @@ class EnableBankingAccount < ApplicationRecord
     account
   end
 
+  # Duplicate merchant-side card transactions still in the database from before
+  # the twin filter landed. See EnableBankingAccount::CardTwinCandidates.
+  def card_twin_candidates
+    @card_twin_candidates ||= CardTwinCandidates.new(self)
+  end
+
   # Returns the API account ID (UUID) for Enable Banking API calls
   # The Enable Banking API requires a valid UUID for balance/transaction endpoints
   # Falls back to raw_payload["uid"] for existing accounts that have the wrong account_id stored
