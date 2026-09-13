@@ -187,7 +187,8 @@ module ProviderLinkAuthorizationTests
       account.update!(name: name)
       account.account_shares.where(user: users(:family_admin)).destroy_all
       account.share_with!(users(:family_admin), permission: permission) if permission
-      assert_equal permission&.to_sym, account.reload.permission_for(users(:family_admin))
+      actual = account.reload.permission_for(users(:family_admin))
+      permission ? assert_equal(permission.to_sym, actual) : assert_nil(actual)
       account
     end
 
