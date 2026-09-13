@@ -98,7 +98,7 @@ class Goal < ApplicationRecord
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
-  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment].freeze
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository PhysicalCash Investment].freeze
 
   # States in which a goal has let go of the money it was holding, and so
   # drops out of the shared pool. `completed` belongs here: reaching a goal
@@ -1294,7 +1294,7 @@ class Goal < ApplicationRecord
 
     def linked_accounts_must_be_fundable
       offending = goal_accounts.reject(&:marked_for_destruction?).reject do |sga|
-        sga.account&.depository? || sga.account&.investment?
+        sga.account&.depository? || sga.account&.physical_cash? || sga.account&.investment?
       end
       return if offending.empty?
 

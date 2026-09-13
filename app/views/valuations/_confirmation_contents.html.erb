@@ -23,7 +23,7 @@
     </div>
   <% else %>
     <p><%= action_verb.capitalize %>
-      <% if account.depository? %>
+      <% if account.depository? || account.physical_cash? %>
         <%= t(".account_balance") %>
       <% elsif account.credit_card? %>
         <%= t(".credit_card_balance") %>
