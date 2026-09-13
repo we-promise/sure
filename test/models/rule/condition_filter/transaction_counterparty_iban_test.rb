@@ -61,6 +61,19 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
     assert_equal [ @with_iban.transaction.id ], filtered.pluck(:id)
   end
 
+  test "equal_to normalizes a value entered with dots and dashes" do
+    condition = Rule::Condition.new(
+      rule: @rule,
+      condition_type: "transaction_counterparty_iban",
+      operator: "=",
+      value: "de89.3704-0044/0532:0130'00"
+    )
+
+    filtered = condition.apply(condition.prepare(@rule_scope))
+
+    assert_equal [ @with_iban.transaction.id ], filtered.pluck(:id)
+  end
+
   test "does not match a substring of a different iban" do
     condition = Rule::Condition.new(
       rule: @rule,
@@ -145,6 +158,22 @@ class Rule::ConditionFilter::TransactionCounterpartyIbanTest < ActiveSupport::Te
     # @with_monobank_iban already stores this same IBAN in its clean,
     # canonical form, so it matches too -- the point of this test is that
     # the un-normalized row now matches as well, not that it matches alone.
+    assert_equal [ @with_monobank_iban.transaction.id, unnormalized.transaction.id ].sort, filtered.pluck(:id).sort
+  end
+
+  test "equal_to matches a monobank counter_iban stored with dots and dashes" do
+    unnormalized = create_transaction(date: Date.current, account: @account, amount: 60, name: "Utility")
+    unnormalized.transaction.update!(extra: { "monobank" => { "counter_iban" => "nl91.abna-0417/1643:00'" } }) # pipelock:ignore IBAN
+
+    condition = Rule::Condition.new(
+      rule: @rule,
+      condition_type: "transaction_counterparty_iban",
+      operator: "=",
+      value: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    )
+
+    filtered = condition.apply(condition.prepare(@rule_scope))
+
     assert_equal [ @with_monobank_iban.transaction.id, unnormalized.transaction.id ].sort, filtered.pluck(:id).sort
   end
 end

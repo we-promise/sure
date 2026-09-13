@@ -38,14 +38,14 @@ class Rule::ConditionFilter::TransactionCounterpartyIban < Rule::ConditionFilter
     # condition even though the data exists on their transactions.
     #
     # The Monobank side is wrapped in the same normalization applied to
-    # `normalized_value` below (strip whitespace, upcase): unlike
-    # EnableBankingEntry::Processor, MonobankEntry::Processor stores
+    # `normalized_value` below (strip all non-alphanumeric characters, upcase):
+    # unlike EnableBankingEntry::Processor, MonobankEntry::Processor stores
     # counter_iban as-is from the provider payload with no normalization
     # step, so comparing it unnormalized against a normalized user-entered
     # value would silently stop matching the moment Monobank's API ever
-    # returns a differently-cased or spaced IBAN.
+    # returns a differently-formatted (spaced, punctuated, or cased) IBAN.
     field = "COALESCE(transactions.extra ->> 'counterparty_iban', " \
-            "UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '\\s+', '', 'g')))"
+            "UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '[^a-zA-Z0-9]', '', 'g')))"
 
     if operator == "is_null"
       scope.where("#{field} IS NULL")
@@ -53,10 +53,10 @@ class Rule::ConditionFilter::TransactionCounterpartyIban < Rule::ConditionFilter
       scope.where("#{field} IS NOT NULL")
     else
       # Normalized the same way accounts.iban/merchants.iban and the stored
-      # extra value are: a user pasting an IBAN with a tab, newline, or NBSP
-      # (common when copying from a formatted PDF) must still match the
-      # compact value Enable Banking stores.
-      normalized_value = value.to_s.gsub(/[[:space:]]+/, "").upcase
+      # extra value are: a user pasting an IBAN with a tab, newline, NBSP, or
+      # punctuation (common when copying from a formatted PDF or bank
+      # statement) must still match the compact value Enable Banking stores.
+      normalized_value = IbanNormalizable.normalize(value).to_s
       sql_operator = operator == "!=" ? "IS DISTINCT FROM" : "="
 
       scope.where(
