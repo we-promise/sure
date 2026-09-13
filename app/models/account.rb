@@ -1,19 +1,34 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable
 
   # deterministic: true preserves equality lookups (e.g. find_by(iban:)) and
   # the family_id+iban uniqueness index, since the same plaintext always
   # produces the same ciphertext.
+  #
+  # Deliberate tradeoff, not an oversight: unlike MonobankAccount#iban
+  # (encrypted non-deterministically, since it's never looked up by value),
+  # this column's whole purpose requires DB-level equality -- the uniqueness
+  # index and find_by(iban:) lookups can't work without a value-preserving
+  # transform. Splitting into a deterministic lookup column plus a separate
+  # non-deterministic display column (the pattern this codebase uses
+  # elsewhere, e.g. SnaptradeItem's client_id/consumer_key vs
+  # snaptrade_user_secret) wouldn't remove the ciphertext-correlation
+  # property being traded off here either, since IT'S the SAME value in both
+  # roles -- the deterministic column would still leak equality. Accepted
+  # for the user's own account/merchant IBAN; deliberately NOT applied to a
+  # transaction's counterparty_iban (see EnableBankingEntry::Processor),
+  # which has no uniqueness requirement and stays in the existing
+  # unencrypted `extra` jsonb column rather than inheriting this tradeoff.
   if encryption_ready?
     encrypts :iban, deterministic: true
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
-  # Strips whitespace and upcases so provider-supplied IBANs ("DE893704...")
-  # and manually-entered ones ("DE89 3704...") normalize to the same value —
-  # required for both the uniqueness index and deterministic-encryption
-  # equality lookups to actually match.
-  before_validation :normalize_iban
+  # IbanNormalizable strips everything but letters/digits and upcases, so
+  # provider-supplied IBANs ("DE893704...") and manually-entered ones in any
+  # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
+  # normalize to the same value — required for both the uniqueness index and
+  # deterministic-encryption equality lookups to actually match.
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -720,14 +735,6 @@ class Account < ApplicationRecord
   end
 
   private
-
-    def normalize_iban
-      # [[:space:]] rather than a literal " " -- a pasted IBAN can carry
-      # tabs, newlines, or NBSP (common when copying from a formatted PDF
-      # bank statement), which delete(" ") would leave in place and quietly
-      # break the uniqueness index and deterministic-encryption lookups.
-      self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
-    end
 
     def assign_default_owner
       return if owner.present?
