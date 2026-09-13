@@ -8,6 +8,11 @@ class Provider::Mercury
   ALLOWED_BASE_URLS = [ DEFAULT_BASE_URL, SANDBOX_BASE_URL ].freeze
 
   headers "User-Agent" => "Sure Finance Mercury Client"
+  # The credential travels in a custom header, and HTTParty resends custom
+  # headers on a redirect; its host-change protection covers basic_auth only.
+  # A redirect off the allow-listed host would carry the token with it, so
+  # redirects are not followed at all.
+  no_follow true
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   attr_reader :token, :base_url

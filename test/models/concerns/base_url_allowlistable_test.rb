@@ -22,6 +22,13 @@ class BaseUrlAllowlistableTest < ActiveSupport::TestCase
     assert_nil MisconfiguredSubject.normalize_base_url("https://api.example.com/v1")
   end
 
+  # Blank resolves to the default, and the default is checked too. A cleartext
+  # default must not come back just because nothing was configured.
+  test "a blank value does not hand out a cleartext default" do
+    assert_nil MisconfiguredSubject.normalize_base_url("")
+    assert_nil MisconfiguredSubject.normalize_base_url(nil)
+  end
+
   test "a blank value resolves to the default" do
     [ nil, "", "   " ].each do |value|
       assert_equal Subject::DEFAULT_BASE_URL, Subject.normalize_base_url(value)

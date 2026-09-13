@@ -13,6 +13,11 @@ class Provider::Sophtron < Provider
   FAILURE_JOB_STATUSES = %w[Completed Timeout Failed Failure Error].freeze
 
   headers "User-Agent" => USER_AGENT
+  # The credential travels in a custom header, and HTTParty resends custom
+  # headers on a redirect; its host-change protection covers basic_auth only.
+  # A redirect off the allow-listed host would carry the token with it, so
+  # redirects are not followed at all.
+  no_follow true
   default_options.merge!(verify: true, ssl_verify_mode: OpenSSL::SSL::VERIFY_PEER, timeout: 120)
 
   Error = Class.new(Provider::Error) do
