@@ -344,6 +344,30 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/Insight"
+    PushSubscriptionRegistration:
+      type: object
+      required:
+      - token
+      - environment
+      - platform
+      properties:
+        token:
+          type: string
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        platform:
+          type: string
+          enum:
+          - ios
+        device_key:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: Optional 256-bit installation secret, unique per server and
+            kept in device secure storage. Required proof to replace another user’s
+            registration for this device. Never returned.
     PushSubscription:
       type: object
       required:
@@ -3180,6 +3204,97 @@ components:
         formatted:
           type: string
           description: Locale-formatted money string
+    FinancialPeriod:
+      type: object
+      required:
+      - start_date
+      - end_date
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    SpendingPoint:
+      type: object
+      required:
+      - date
+      - amount
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          description: Cumulative decimal amount in family currency
+    FinancialSummary:
+      type: object
+      required:
+      - month
+      - as_of
+      - time_zone
+      - currency
+      - period
+      - income
+      - spending
+      - net_savings
+      - savings_rate
+      - spending_comparison
+      properties:
+        month:
+          type: string
+          format: date
+        as_of:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        currency:
+          type: string
+        period:
+          "$ref": "#/components/schemas/FinancialPeriod"
+        income:
+          type: string
+        spending:
+          type: string
+        net_savings:
+          type: string
+        savings_rate:
+          type: string
+          nullable: true
+          description: Percentage points; null when income is nonpositive. May be
+            negative.
+        spending_comparison:
+          type: object
+          required:
+          - previous_period
+          - current_total
+          - comparison_total
+          - comparison_end_date
+          - delta
+          - current
+          - previous
+          properties:
+            previous_period:
+              "$ref": "#/components/schemas/FinancialPeriod"
+            current_total:
+              type: string
+            comparison_total:
+              type: string
+            delta:
+              type: string
+            comparison_end_date:
+              type: string
+              format: date
+            current:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SpendingPoint"
+            previous:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SpendingPoint"
     BalanceSheet:
       type: object
       required:
@@ -4878,6 +4993,44 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/financial_summary":
+    get:
+      summary: Show monthly financial summary
+      tags:
+      - Financial Summary
+      description: Server-calculated income, spending, savings, and daily cumulative
+        comparison in family currency. Uses the authenticated user’s finance accounts
+        and Sure reporting rules.
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Non-future first day YYYY-MM-01; defaults to the current month
+          in the family time zone.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: summary returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancialSummary"
+        '422':
+          description: invalid month
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/holdings":
     get:
       summary: List holdings
@@ -6078,23 +6231,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - token
-              - environment
-              - platform
-              properties:
-                token:
-                  type: string
-                environment:
-                  type: string
-                  enum:
-                  - sandbox
-                  - production
-                platform:
-                  type: string
-                  enum:
-                  - ios
+              "$ref": "#/components/schemas/PushSubscriptionRegistration"
         required: true
   "/api/v1/push_subscriptions/{id}":
     parameters:

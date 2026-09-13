@@ -107,3 +107,18 @@ endpoint guides such as [docs/api/transactions.md](api/transactions.md).
 All clients should connect to a Sure server the user controls or trusts. Native,
 mobile, API, and MCP clients do not replace the server; they are different ways
 to access it.
+
+### Native reporting and device continuity
+
+Read monthly server-calculated totals and the daily spending comparison using
+[`GET /api/v1/financial_summary`](api/financial-summary.md). Native clients should
+use these values instead of rebuilding Sure's reporting rules from transactions.
+
+Push registration accepts an optional `device_key`: 32 securely random bytes
+encoded as 64 lowercase hex characters, generated independently per server and
+stored only in secure device storage. Preserve it across user logout. The server
+stores only its SHA-256 digest. If the APNs token already belongs to another user,
+a matching key allows atomic replacement with a **new subscription ID**, making
+old queued deliveries and deletes harmless. A missing or wrong proof returns 422.
+An existing registration without a digest must first be enrolled by its original
+owner or removed by that owner; knowing the APNs token alone never authorizes transfer.
