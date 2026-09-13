@@ -91,11 +91,7 @@ class CoinspotItemsController < ApplicationController
   # to an existing manual Crypto exchange account.
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    # require_admin! is a family-role check, not an account one: an admin who
-    # neither owns this account nor holds full_control on it still reaches
-    # here. auto_share_with_family! only grants members read_write, so without
-    # this the dialog exposes a co-member's account to be linked.
-    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
+    return unless require_linkable_account!(@account)
 
     account_flow = coinspot_item_account_flow_context
     @coinspot_item = account_flow[:coinspot_item]
@@ -122,10 +118,7 @@ class CoinspotItemsController < ApplicationController
   # and queues a sync so its history imports immediately.
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    # Must precede the AccountProvider.create! below: family scoping alone
-    # would let an admin attach a provider to a co-member's account they only
-    # hold read_write on. Same guard as select_existing_account.
-    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
+    return unless require_linkable_account!(@account)
 
     coinspot_item = coinspot_item_account_flow_context[:coinspot_item]
 

@@ -252,48 +252,21 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(available_account)
   end
 
-  # require_admin! only checks the family role, so the signed-in admin still
-  # reaches these actions for an account owned by another member. Ownership is
-  # reassigned and shares cleared so the actor has no permission at all:
-  # auto_share_with_family! would otherwise grant read_write, which is still
-  # short of the :write (owner/full_control) the guard demands.
-  test "link existing account rejects an account the admin cannot write" do
-    account = manual_crypto_exchange_account
-    account.account_shares.destroy_all
-    account.update!(owner: users(:family_member))
-    coinspot_account = @second_item.coinspot_accounts.create!(
-      name: "CoinSpot", account_id: "combined", account_type: "combined", currency: "AUD"
-    )
-
-    assert_no_difference "AccountProvider.count" do
-      post link_existing_account_coinspot_items_url, params: {
-        coinspot_item_id: @second_item.id,
-        account_id: account.id,
-        coinspot_account_id: coinspot_account.id
-      }
-    end
-
-    assert_redirected_to accounts_path
-    assert_equal "You don't have permission to manage this account", flash[:alert]
-    assert_nil coinspot_account.reload.current_account
-  end
-
-  test "select existing account rejects an account the admin cannot write" do
-    account = manual_crypto_exchange_account
-    account.account_shares.destroy_all
-    account.update!(owner: users(:family_member))
-    @second_item.coinspot_accounts.create!(
-      name: "CoinSpot", account_id: "combined", account_type: "combined", currency: "AUD"
-    )
-
-    get select_existing_account_coinspot_items_url, params: {
-      coinspot_item_id: @second_item.id,
-      account_id: account.id
-    }
-
-    assert_redirected_to accounts_path
-    assert_equal "You don't have permission to manage this account", flash[:alert]
-  end
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_coinspot_items_url,
+    link_url: :link_existing_account_coinspot_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Crypto", balance: 0, currency: "AUD",
+                               accountable: Crypto.create!(subtype: "exchange"))
+    },
+    provider_account: -> {
+      @second_item.coinspot_accounts.create!(name: "CoinSpot", account_id: SecureRandom.hex(6),
+                                             account_type: "combined", currency: "AUD", current_balance: 1000)
+    },
+    provider_param: :coinspot_account_id,
+    params: -> { { coinspot_item_id: @second_item.id } }
+  )
 
   # unlink_all! captures a per-account failure on its result rather than
   # raising, so discarding the results scheduled the connection for deletion
