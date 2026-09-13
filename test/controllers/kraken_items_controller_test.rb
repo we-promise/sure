@@ -252,6 +252,50 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, %(value="#{@second_item.id}")
   end
 
+  test "existing account flows enforce account write permission" do
+    account = @family.accounts.create!(
+      owner: users(:family_member),
+      name: "Read-write Shared Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    account.share_with!(users(:family_admin), permission: "read_write")
+    assert_equal :read_write, account.permission_for(users(:family_admin))
+
+    kraken_account = @second_item.kraken_accounts.create!(
+      name: "Kraken",
+      account_id: "shared_combined",
+      account_type: "combined",
+      currency: "USD",
+      current_balance: 1000
+    )
+    params = { kraken_item_id: @second_item.id, account_id: account.id }
+
+    get select_existing_account_kraken_items_url, params: params
+    assert_redirected_to accounts_path
+    refute_includes response.body, account.name
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_kraken_items_url, params: params.merge(kraken_account_id: kraken_account.id)
+    end
+
+    assert_redirected_to accounts_path
+    assert_nil kraken_account.reload.account_provider
+
+    account.account_shares.find_by!(user: users(:family_admin)).update!(permission: "full_control")
+
+    get select_existing_account_kraken_items_url, params: params
+    assert_response :success
+
+    assert_difference "AccountProvider.count", 1 do
+      post link_existing_account_kraken_items_url, params: params.merge(kraken_account_id: kraken_account.id)
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal account, kraken_account.reload.account_provider.account
+  end
+
   test "cannot access another family's kraken item" do
     other_item = KrakenItem.create!(
       family: families(:empty),
