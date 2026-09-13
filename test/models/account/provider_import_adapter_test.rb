@@ -235,6 +235,19 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "finds or creates merchant with an iban containing dots and dashes" do
+    assert_difference "ProviderMerchant.count", 1 do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "de89.3704-0044/0532:0130'00"
+      )
+
+      assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
+    end
+  end
+
   test "prefers a family merchant matched by iban over creating a provider merchant" do
     family_merchant = @family.merchants.create!(
       name: "My Landlord",

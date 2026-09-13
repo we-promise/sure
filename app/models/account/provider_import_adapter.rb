@@ -357,7 +357,7 @@ class Account::ProviderImportAdapter
   def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil, iban: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
-    normalized_iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+    normalized_iban = IbanNormalizable.normalize(iban)
 
     # A FamilyMerchant with a manually-entered IBAN (see FamilyMerchantsController)
     # is the family's own canonical identity for that counterparty -- typically set
