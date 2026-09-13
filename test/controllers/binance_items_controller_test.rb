@@ -236,4 +236,52 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     get select_existing_account_binance_items_url, params: { account_id: account.id }
     assert_response :success
   end
+
+  test "existing account flows enforce account write permission" do
+    account = @family.accounts.create!(
+      owner: users(:family_member),
+      name: "Read-write Shared Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    account.share_with!(users(:family_admin), permission: "read_write")
+    assert_equal :read_write, account.permission_for(users(:family_admin))
+
+    binance_account = @binance_item.binance_accounts.create!(
+      name: "Spot Portfolio",
+      account_type: "spot",
+      currency: "USD",
+      current_balance: 1000.0
+    )
+
+    get select_existing_account_binance_items_url, params: { account_id: account.id }
+    assert_redirected_to accounts_path
+    refute_includes response.body, account.name
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_binance_items_url, params: {
+        account_id: account.id,
+        binance_account_id: binance_account.id
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_nil binance_account.reload.account_provider
+
+    account.account_shares.find_by!(user: users(:family_admin)).update!(permission: "full_control")
+
+    get select_existing_account_binance_items_url, params: { account_id: account.id }
+    assert_response :success
+
+    assert_difference "AccountProvider.count", 1 do
+      post link_existing_account_binance_items_url, params: {
+        account_id: account.id,
+        binance_account_id: binance_account.id
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal account, binance_account.reload.account_provider.account
+  end
 end

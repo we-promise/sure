@@ -175,4 +175,52 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
   end
+
+  test "existing account flows enforce account write permission" do
+    account = @family.accounts.create!(
+      owner: users(:family_member),
+      name: "Read-write Shared Crypto",
+      balance: 0,
+      currency: "USD",
+      accountable: Crypto.create!(subtype: "exchange")
+    )
+    account.share_with!(users(:family_admin), permission: "read_write")
+    assert_equal :read_write, account.permission_for(users(:family_admin))
+
+    coinbase_account = @coinbase_item.coinbase_accounts.create!(
+      name: "BTC Wallet",
+      account_id: "shared_btc_123",
+      currency: "BTC",
+      current_balance: 0.5
+    )
+
+    get select_existing_account_coinbase_items_url, params: { account_id: account.id }
+    assert_redirected_to accounts_path
+    refute_includes response.body, account.name
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_coinbase_items_url, params: {
+        account_id: account.id,
+        coinbase_account_id: coinbase_account.id
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_nil coinbase_account.reload.account_provider
+
+    account.account_shares.find_by!(user: users(:family_admin)).update!(permission: "full_control")
+
+    get select_existing_account_coinbase_items_url, params: { account_id: account.id }
+    assert_response :success
+
+    assert_difference "AccountProvider.count", 1 do
+      post link_existing_account_coinbase_items_url, params: {
+        account_id: account.id,
+        coinbase_account_id: coinbase_account.id
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal account, coinbase_account.reload.account_provider.account
+  end
 end
