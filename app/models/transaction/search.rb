@@ -40,7 +40,7 @@ class Transaction::Search
       query = apply_status_filter(query, status)
       query = apply_merchant_filter(query, merchants)
       query = apply_tag_filter(query, tags)
-      query = EntrySearch.apply_search_filter(query, search)
+      query = apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
       query = EntrySearch.apply_accounts_filter(query, accounts, account_ids)
@@ -57,7 +57,10 @@ class Transaction::Search
       # the old logic would keep being served (same cache_key_base) after
       # deploy, disagreeing with the (uncached) transactions_scope list
       # until entries_cache_version next changes for that family.
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      # v4: bumped for the new counterparty_iban search predicate -- same
+      # reasoning, a pre-existing cache entry doesn't know this filter exists
+      # and would keep serving totals computed without it.
+      Rails.cache.fetch("transaction_search_totals/v4/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation
@@ -116,6 +119,55 @@ class Transaction::Search
 
   private
     Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+
+    # Transaction-specific superset of EntrySearch.apply_search_filter: also
+    # matches a counterparty IBAN (or other provider-supplied account
+    # identifier) stored in transactions.extra, so a user can find a payment
+    # by searching the IBAN they have on a bank statement. Kept local to
+    # this class rather than added to the shared EntrySearch -- that class's
+    # build_query also runs against generic Entry scopes (e.g. Valuations),
+    # where a bare "transactions" table reference wouldn't resolve.
+    def apply_search_filter(query, search)
+      return query if search.blank?
+
+      sanitized_search = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
+      # The stored counterparty_iban is normalized (all non-alphanumeric
+      # characters stripped, upcased) -- match that convention here too, or
+      # an IBAN pasted in its common statement format ("DE89 3704 ...", or
+      # with dots/dashes/a tab/newline/NBSP from a formatted PDF) would never
+      # match. name/notes matching keeps the raw search term since those
+      # aren't normalized.
+      normalized_search = "%#{ActiveRecord::Base.sanitize_sql_like(IbanNormalizable.normalize(search).to_s)}%"
+
+      # Targets the two counterparty keys explicitly rather than casting the
+      # whole extra blob to text: that field also carries unrelated
+      # provider/internal data (fx_rate, pending flags, goal pledge ids,
+      # merge/match state, ...), and matching anywhere in that JSON would
+      # surface transactions whose name/notes/counterparty don't actually
+      # contain the search term.
+      #
+      # counterparty_account_id (the non-IBAN fallback identifier) is stored
+      # verbatim, unlike counterparty_iban -- the processor only normalizes
+      # the IBAN case (see EnableBankingEntry::Processor#counterparty_account_info),
+      # so matching it against the whitespace-stripped term would miss an
+      # identifier like "ACC 998877" searched with its original spacing.
+      #
+      # Monobank stores its own counterparty IBAN nested under its provider
+      # key instead of the shared top-level counterparty_iban (see the rules
+      # condition filter's identical fallback for why), so it's included
+      # here too for parity -- otherwise a Monobank user could filter by
+      # counterparty IBAN through Rules but not find the same transaction
+      # through search. Normalized on both sides, unlike the Enable Banking
+      # column: MonobankEntry::Processor stores counter_iban as-is from the
+      # provider payload with no normalization step.
+      query.where(
+        "entries.name ILIKE :search OR entries.notes ILIKE :search " \
+        "OR (transactions.extra ->> 'counterparty_iban') ILIKE :normalized_search " \
+        "OR (transactions.extra ->> 'counterparty_account_id') ILIKE :search " \
+        "OR UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '[^a-zA-Z0-9]', '', 'g')) ILIKE :normalized_search",
+        search: sanitized_search, normalized_search: normalized_search
+      )
+    end
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)

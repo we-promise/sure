@@ -597,6 +597,197 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes result_ids, no_match.entryable.id
   end
 
+  test "search matches a counterparty iban stored in extra" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    no_match = create_transaction(
+      account: @checking_account,
+      amount: 50,
+      kind: "standard",
+      name: "Other Payment"
+    )
+    no_match.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "DE89370400440532013000" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+    assert_not_includes result_ids, no_match.entryable.id
+  end
+
+  test "search matches a counterparty iban pasted with spaces" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "de89 3704 0044 0532 0130 00" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+  end
+
+  test "search matches a counterparty iban pasted with tabs and newlines" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "de89\t3704\n0044 0532 0130 00" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+  end
+
+  test "search matches a counterparty iban pasted with dots and dashes" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "de89.3704-0044/0532:0130'00" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+  end
+
+  test "search matches a counterparty_account_id with its original spacing" do
+    # Unlike counterparty_iban, the processor stores this fallback
+    # identifier verbatim (not normalized) -- searching it with the exact
+    # spacing it was stored with must still match.
+    account_id_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "POS Terminal"
+    )
+    account_id_match.entryable.update!(extra: { "counterparty_account_id" => "ACC 998877" })
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "ACC 998877" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, account_id_match.entryable.id
+  end
+
+  test "search does not match unrelated data elsewhere in the extra jsonb blob" do
+    pending_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Some Purchase"
+    )
+    pending_match.entryable.update!(extra: { "enable_banking" => { "pending" => true } })
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "pending" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_not_includes result_ids, pending_match.entryable.id
+  end
+
+  test "search matches a monobank counterparty iban nested under its own provider key" do
+    # Monobank stores its counterparty IBAN under extra["monobank"]["counter_iban"]
+    # instead of the shared top-level counterparty_iban key (see the rules
+    # condition filter's identical fallback), so search needs the same
+    # fallback for parity -- otherwise a Monobank user could filter by
+    # counterparty IBAN through Rules but not find it via search.
+    monobank_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Monobank Payment"
+    )
+    monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "NL91ABNA0417164300" } }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "NL91ABNA0417164300" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, monobank_match.entryable.id
+  end
+
+  test "search matches a monobank counterparty iban stored with spaces and lowercase" do
+    # MonobankEntry::Processor stores counter_iban as-is from the provider
+    # payload with no normalization, unlike Enable Banking's counterparty_iban,
+    # so the stored side needs the same normalization as the search term.
+    monobank_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Monobank Unnormalized Payment"
+    )
+    monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "nl91 abna 0417 1643 00" } }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "NL91ABNA0417164300" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, monobank_match.entryable.id
+  end
+
+  test "search matches a monobank counterparty iban stored with dots and dashes" do
+    monobank_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Monobank Unnormalized Payment"
+    )
+    monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "nl91.abna-0417/1643:00'" } }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "NL91ABNA0417164300" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, monobank_match.entryable.id
+  end
+
   test "uncategorized filter works regardless of current locale since the filter value is a stable sentinel" do
     # The category filter now matches on the stable Category::UNCATEGORIZED_FILTER_VALUE sentinel
     # (not the translated display name), so the current locale can no longer affect matching.

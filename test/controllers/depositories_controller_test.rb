@@ -60,6 +60,52 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "create re-renders the form instead of a 500 on a raw unique-index race" do
+    # Simulates two concurrent requests both passing the Rails uniqueness
+    # validation before either commits -- the second one hits the raw DB
+    # constraint instead, surfacing as RecordNotUnique rather than the
+    # RecordInvalid the previous test covers.
+    Account.any_instance.stubs(:save!).raises(
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+
+    assert_no_difference -> { Account.count } do
+      post depositories_path, params: {
+        account: { name: "Race Checking", currency: "USD", balance: 100, accountable_type: "Depository", iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update re-renders the form instead of a 500 on a raw unique-index race" do
+    linked_account = accounts(:connected)
+    Account.any_instance.stubs(:update).raises(
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+
+    patch depository_path(linked_account), params: {
+      account: { iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update rolls back a balance change when the iban update fails in the same request" do
+    linked_account = accounts(:connected)
+    other_account = accounts(:depository)
+    other_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    original_balance = linked_account.balance
+
+    patch depository_path(linked_account), params: {
+      account: { balance: original_balance + 100, iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal original_balance, linked_account.reload.balance,
+      "the balance change must not persist when the same request's iban update fails"
+  end
+
   test "update persists a manually entered iban through the shared update action" do
     linked_account = accounts(:connected)
 
