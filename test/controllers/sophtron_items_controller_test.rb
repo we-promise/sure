@@ -444,6 +444,52 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert @item.pending_account_setup?
   end
 
+  test "connection_status refuses to continue a link to an account the admin cannot write" do
+    account = sophtron_member_account("read_write", name: "Member Sophtron Checking")
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns(completed_post_mfa_job)
+    provider.expects(:get_accounts).never
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 5, post_mfa: true, account_id: account.id)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_not_includes response.body, account.name
+    assert_equal "job-1", @item.reload.current_job_id
+  end
+
+  test "connection_status refuses an unwritable account when the connection job succeeds" do
+    account = sophtron_member_account(nil, name: "Unshared Sophtron Checking")
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns({ JobID: "job-1", LastStatus: "AccountsReady" })
+    provider.expects(:get_accounts).never
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, account_id: account.id)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_not_includes response.body, account.name
+  end
+
+  test "connection_status continues a link to an account the admin holds full_control on" do
+    account = sophtron_member_account("full_control", name: "Shared Sophtron Checking")
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    provider = mock
+    provider.expects(:get_job_information).with("job-1").returns(completed_post_mfa_job)
+    provider.expects(:get_accounts).with("ui-1").returns({ accounts: [ sophtron_remote_account ], total: 1 })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    get connection_status_sophtron_item_url(@item, poll_attempt: 5, post_mfa: true, account_id: account.id)
+
+    assert_response :success
+    assert_includes response.body, account.name
+    assert_includes response.body, "Sophtron Checking"
+  end
+
   test "connection_status keeps polling when post mfa completed job has no accounts yet" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock
@@ -972,4 +1018,24 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
       SophtronItem.any_instance.stubs(:fetch_remote_accounts).returns(remote.map(&:with_indifferent_access))
     }
   )
+
+  private
+    # A family_member account on which family_admin holds exactly `permission`
+    # (nil: no share at all).
+    def sophtron_member_account(permission, name:)
+      account = @user.family.accounts.create!(owner: users(:family_member), name: name, balance: 0,
+                                              currency: "USD", accountable: Depository.new)
+      account.account_shares.where(user: @user).destroy_all
+      account.share_with!(@user, permission: permission) if permission
+      account
+    end
+
+    def completed_post_mfa_job
+      { JobID: "job-1", JobType: "AddAccounts", TokenInput: "123456", LastStep: "TokenInput", LastStatus: "Completed" }
+    end
+
+    def sophtron_remote_account
+      { id: "acct-1", account_id: "acct-1", account_name: "Sophtron Checking", institution_name: "Example Bank",
+        balance: "123.45", balance_currency: "USD", currency: "USD", status: "active" }.with_indifferent_access
+    end
 end
