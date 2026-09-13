@@ -19,6 +19,7 @@ class SimplefinAccount < ApplicationRecord
 
   validates :name, :account_type, :currency, presence: true
   validates :account_id, uniqueness: { scope: :simplefin_item_id, allow_nil: true }
+  validates :balance_sign_override, inclusion: { in: %w[credit debt], allow_nil: true }
   validate :has_balance
 
   # Helper to get account using new system first, falling back to legacy
