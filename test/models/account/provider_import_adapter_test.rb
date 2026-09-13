@@ -1575,4 +1575,38 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         "pending flag must be cleared even for user-modified entries"
     end
   end
+
+  test "backfills counterparty iban on a user-modified entry that predates the feature" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_no_iban",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking"
+    )
+    assert_nil entry.transaction.extra&.dig("counterparty_iban")
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync now carries counterparty data the original payload lacked.
+    # The entry is protected (user_modified), but this field has no UI for the
+    # user to have relied upon, so it should still be backfilled.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_no_iban",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
+    end
+  end
 end

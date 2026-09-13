@@ -30,6 +30,35 @@ class EnableBankingEntry::Processor
   #   transaction_amount: { amount, currency },
   #   creditor_name, debtor_name, remittance_information, ...
   # }
+  #
+  # Deliberately excludes counterparty IBAN, unlike the importer's dedup key
+  # (see EnableBankingItem::Importer#build_transaction_base_key /
+  # #distinct_ibans_by_base_key). This is a known, narrower gap: two ID-less
+  # transactions that share identical base content but differ only by
+  # counterparty IBAN both survive dedup as distinct raw rows, but still
+  # collapse onto the same external_id here and get merged into one Entry by
+  # the transaction processor. Including the IBAN would close that gap, but
+  # would also change the external_id of every existing content-ID-based
+  # transaction on its next sync for ASPSPs that omit transaction_id/
+  # entry_reference (a real, pre-existing production code path) -- each one
+  # would import as a brand-new duplicate Entry instead of updating in place.
+  # Accepted as a tradeoff: the collision requires an ASPSP that omits both
+  # ID fields *and* two distinct payments with byte-identical date/amount/
+  # currency/direction/creditor/debtor/remittance text, which is rare enough
+  # to prefer stability for the common case.
+  #
+  # The same gap exists, for the same reason, when transaction_id/entry_reference
+  # IS present but reused by the ASPSP across two genuinely distinct payments
+  # (the API docs don't guarantee uniqueness -- see the importer's dedup key
+  # comment): the dedup pass can now correctly keep both as separate raw rows
+  # when their counterparty IBANs differ, but they still compute the SAME
+  # external_id here and get collapsed into one Entry during import, silently
+  # dropping one real transaction. Folding IBAN into this branch's ID would
+  # have the identical every-existing-transaction-becomes-a-duplicate problem
+  # as above, just triggered by a much more common ASPSP behavior (a present
+  # but reused transaction_id, vs. an absent one) -- so it's deliberately
+  # left as the wider, still-open half of this same accepted tradeoff rather
+  # than patched narrowly here.
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
@@ -181,6 +210,9 @@ class EnableBankingEntry::Processor
 
       parts << data[:note] if data[:note].present?
 
+      bank_name = counterparty_account_info[:bank_name]
+      parts << I18n.t("enable_banking_items.entry.bank_note", name: bank_name) if bank_name.present?
+
       parts.join("\n\n").presence
     end
 
@@ -197,7 +229,68 @@ class EnableBankingEntry::Processor
       eb[:pending] = true if data[:_pending] == true
 
       eb.compact!
-      eb.empty? ? nil : { enable_banking: eb }
+
+      result = eb.empty? ? {} : { enable_banking: eb }
+
+      # Top-level, not namespaced under enable_banking: this is a
+      # provider-neutral fact about the transaction itself (who it was with),
+      # not an Enable-Banking-specific sync detail like fx_rate/mcc above.
+      # Any future provider that surfaces a counterparty IBAN writes to the
+      # same key, so consumers (rules, search, transfer matching) never need
+      # to know which provider populated it. See issue #3306 for the
+      # opposite, hardcoded-provider-list anti-pattern this avoids.
+      # Always assigned (even to nil), not just when present: Account::ProviderImportAdapter
+      # deep-merges this hash into the persisted extra, which only overwrites keys that are
+      # actually present in the incoming hash. Omitting these keys when the current payload
+      # lacks counterparty data (e.g. a booked re-delivery of a transaction whose earlier
+      # pending version had it) would leave the old, now-stale value in place instead of
+      # clearing it.
+      #
+      # Deliberately stored in transactions.extra (plain jsonb, unencrypted),
+      # not given the deterministic-encryption treatment Account#iban/
+      # Merchant#iban get: this value is never looked up by DB-level equality
+      # (only ILIKE search, dedup, and Ruby-side comparisons after loading),
+      # so there's no lookup requirement forcing that tradeoff here. Actually
+      # encrypting it would require pulling it into its own real column --
+      # Active Record Encryption doesn't support querying inside an encrypted
+      # jsonb value, and every consumer (rules, search, dedup, transfer
+      # matching) reads it via `extra ->> 'counterparty_iban'` SQL directly.
+      # That's a larger, deliberate architecture change for a future PR, not
+      # a default to slide into by extending `extra` the same way fx_rate/
+      # pending/mcc already are.
+      cp = counterparty_account_info
+      result[:counterparty_iban] = cp[:iban]
+      result[:counterparty_account_id] = cp[:iban].blank? ? cp[:other_id] : nil
+
+      result.presence
+    end
+
+    # PSD2/Enable Banking exposes the counterparty's own account/bank details
+    # on creditor_account/creditor_agent (who we paid) or
+    # debtor_account/debtor_agent (who paid us), depending on direction.
+    # Populated for SEPA transfers/direct debits; typically blank for card
+    # and wallet payments (those aren't account-to-account), so callers must
+    # treat a blank result as "no data available", not an error.
+    def counterparty_account_info
+      @counterparty_account_info ||= begin
+        if credit_debit_indicator == "CRDT"
+          account_key, agent_key, additional_key = :debtor_account, :debtor_agent, :debtor_account_additional_identification
+        else
+          account_key, agent_key, additional_key = :creditor_account, :creditor_agent, :creditor_account_additional_identification
+        end
+
+        {
+          # Normalized so it matches the same convention as
+          # accounts.iban/merchants.iban -- required for equality
+          # lookups/comparisons elsewhere (transfer matching, rule
+          # conditions) to actually line up, regardless of whether an ASPSP
+          # happens to include spaces or other punctuation in its IBAN
+          # formatting.
+          iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
+          other_id: data.dig(additional_key, :identification).presence,
+          bank_name: data.dig(agent_key, :name).presence
+        }
+      end
     end
 
     def amount_value
