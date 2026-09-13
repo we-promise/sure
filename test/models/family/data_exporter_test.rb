@@ -352,11 +352,14 @@ class Family::DataExporterTest < ActiveSupport::TestCase
   end
 
   test "neutralizes a formula-like account iban so it can't execute in a spreadsheet" do
-    # iban has no format validation, so a family member with no export access
-    # of their own could plant a formula payload here for an admin to later
-    # open in Excel/Sheets (CSV/formula injection). The account.rb model
-    # doesn't constrain iban's shape, so this must be handled at export time.
-    @account.update!(iban: "=1+1")
+    # IbanNormalizable's before_validation strips non-alphanumeric characters
+    # (so a normal update! can no longer store "=1+1" as-is), but iban is
+    # still just a free-text column at the database level -- a pre-existing
+    # row written before that fix shipped, or written directly via SQL/import,
+    # could still carry a formula payload. update_columns bypasses the
+    # callback (while still writing through encryption) to simulate that, so
+    # this test keeps covering the export-time defense in depth.
+    @account.update_columns(iban: "=1+1")
 
     zip_data = @exporter.generate_export
 
