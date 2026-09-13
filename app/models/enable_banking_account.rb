@@ -1,5 +1,5 @@
 class EnableBankingAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable
+  include CurrencyNormalizable, Encryptable, IbanNormalizable
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -12,12 +12,6 @@ class EnableBankingAccount < ApplicationRecord
     # for the same reason: DB-level uniqueness/lookup can't work otherwise).
     encrypts :iban, deterministic: true
   end
-
-  # Same normalization as Account#normalize_iban, applied here too: a
-  # formatted/lowercase provider IBAN must canonicalize to the same
-  # deterministic ciphertext as one written elsewhere, or find_by(iban:)
-  # lookups against this column silently miss.
-  before_validation :normalize_iban
 
   belongs_to :enable_banking_item
 
