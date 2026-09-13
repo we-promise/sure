@@ -608,6 +608,10 @@ class User < ApplicationRecord
     preferences&.dig("show_split_grouped") != false
   end
 
+  def show_counterparty_account?
+    preferences&.dig("show_counterparty_account") != false
+  end
+
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
   end

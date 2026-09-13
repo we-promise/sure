@@ -50,18 +50,16 @@ class FamilyMerchantsController < ApplicationController
         format.json { render json: merchant_json(@family_merchant), status: :created }
       end
     else
-      respond_to do |format|
-        # No explicit format.turbo_stream branch: Turbo's form submissions send an
-        # Accept header that prefers turbo-stream, but forcing that format here would
-        # lock the response's Content-Type to turbo-stream while still rendering the
-        # plain :new HTML template — Turbo's client then sees a turbo-stream
-        # Content-Type with no <turbo-stream> tags in the body and does nothing.
-        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
-        # format.html below, which renders :new with the correct text/html type.
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
-      end
+      render_create_error
     end
+  rescue ActiveRecord::RecordNotUnique
+    # A raw DB-level race on the partial (family_id, iban) unique index: two
+    # concurrent creates both passed the Rails uniqueness validation before
+    # either committed, so it surfaces here instead of the `save` branch
+    # above. #save doesn't rescue this on its own since it's a raw
+    # PG::UniqueViolation, not a validation failure.
+    @family_merchant.errors.add(:iban, :taken)
+    render_create_error
   end
 
   def edit
@@ -103,7 +101,26 @@ class FamilyMerchantsController < ApplicationController
       render :edit, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordInvalid => e
-    @family_merchant = e.record
+    # e.record is the unsaved, never-persisted FamilyMerchant the failed
+    # conversion tried to create. Replacing @family_merchant with it (as a
+    # naive rescue would) breaks the re-rendered form: _form.html.erb picks
+    # its action URL from `family_merchant.persisted?`, so an unpersisted
+    # record posts to the FamilyMerchant#create route instead of back to
+    # this ProviderMerchant's #update -- silently dropping the whole
+    # conversion (transaction reassignment, user_modified protection) on
+    # the next submit. Keep @merchant/@family_merchant pointed at the
+    # original, persisted ProviderMerchant so the form still targets
+    # #update; copy over the failed attempt's errors and submitted values
+    # so the user sees what they typed and why it failed.
+    restore_merchant_after_failed_conversion!
+    e.record.errors.each { |error| @merchant.errors.add(error.attribute, error.type, **error.options) }
+    render :edit, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotUnique
+    # Same race as above, surfaced through the raw DB constraint instead of
+    # the Rails-level validation: two concurrent conversions in the same
+    # family both passed uniqueness before either committed.
+    restore_merchant_after_failed_conversion!
+    @merchant.errors.add(:iban, :taken)
     render :edit, status: :unprocessable_entity
   end
 
@@ -178,10 +195,35 @@ class FamilyMerchantsController < ApplicationController
       params.require(key).permit(:name, :color, :website_url, :iban)
     end
 
-    # Mirrors Merchant#normalize_iban so a submitted value can be compared
-    # against the persisted (already-normalized) iban without saving first.
+    # So a submitted value can be compared against the persisted
+    # (already-normalized) iban without saving first.
     def normalize_iban(value)
-      value.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      IbanNormalizable.normalize(value)
+    end
+
+    def render_create_error
+      respond_to do |format|
+        # No explicit format.turbo_stream branch: Turbo's form submissions send an
+        # Accept header that prefers turbo-stream, but forcing that format here would
+        # lock the response's Content-Type to turbo-stream while still rendering the
+        # plain :new HTML template — Turbo's client then sees a turbo-stream
+        # Content-Type with no <turbo-stream> tags in the body and does nothing.
+        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
+        # format.html below, which renders :new with the correct text/html type.
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
+      end
+    end
+
+    # Keeps @merchant/@family_merchant pointed at the original, persisted
+    # ProviderMerchant after a failed conversion attempt (see the #update
+    # rescues), instead of an unpersisted FamilyMerchant that would break
+    # the re-rendered form's submit target. Restores every attribute the
+    # form could have submitted, including :color -- merchant_params
+    # permits it and convert_to_family_merchant_for receives it, so omitting
+    # it here would silently revert a color change on the failed attempt.
+    def restore_merchant_after_failed_conversion!
+      @merchant.assign_attributes(merchant_params.slice(:name, :color, :website_url, :iban))
     end
 
     def merchant_json(merchant)
