@@ -24,6 +24,7 @@ class Provider
       plaid:          { region: "US",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid" },
       plaid_eu:       { region: "EU",      kinds: %w[Bank],            maturity: :stable, logo_text: "PL", logo_color: "#4f46e5", domain: "plaid.com", tier: "Paid", name: "Plaid EU" },
       questrade:      { region: "CA",      kinds: %w[Investment],      maturity: :beta,   logo_text: "QT", logo_color: "#0d9488", domain: "questrade.com" },
+      pluggy:         { region: "BR",      kinds: %w[Bank Investment], maturity: :alpha,  logo_text: "Py", logo_color: "#16a34a" },
       redbark:        { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "RB", logo_color: "#b91c1c", domain: "redbark.com" },
       onchain_wallet: { region: "Global",  kinds: %w[Crypto],          maturity: :alpha,  logo_text: "OC", logo_color: "#d97706", domain: nil, logo_icon: "wallet", name: "On-chain wallets" }
     }.freeze

@@ -39,6 +39,7 @@ When you arrive at the main dashboard, showing **No accounts yet**, you're all s
 > - [**Lunch Flow**](https://www.lunchflow.app/)
 > - [**Enable Banking**](https://enablebanking.com/) (beta)
 > - [**Monobank**](https://github.com/we-promise/sure/blob/main/docs/hosting/monobank.md) (Ukrainian cards and jars)
+> - [**Pluggy**](/docs/onboarding/pluggy.md) — Latin America
 > - [**Redbark**](https://github.com/we-promise/sure/blob/main/docs/hosting/redbark.md) (Australian banks)
 > - [**Up**](https://up.com.au/) (Australian bank)
 > - [**Akahu**](https://www.akahu.nz/) (New Zealand banks)

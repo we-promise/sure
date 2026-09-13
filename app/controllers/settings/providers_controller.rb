@@ -117,6 +117,31 @@ class Settings::ProvidersController < ApplicationController
       @panel_partial = panel[:partial]
       @panel_title   = panel[:title]
       load_provider_items(provider_key)
+
+      # Mint the Pluggy token only on POST; item_id selects CREATE or UPDATE mode.
+      if provider_key == "pluggy"
+        @connect_item = PluggyItem.preferred_for_connect(Current.family)
+        if @connect_item&.credentials_configured? && request.post?
+          begin
+            @connect_token = @connect_item.pluggy_provider.connect_token(
+              client_user_id: @connect_item.client_user_id,
+              webhook_url: @connect_item.webhook_url,
+              redirect_url: @connect_item.redirect_url,
+              item_id: @connect_item.pluggy_item_id.presence
+            )
+          rescue Provider::Pluggy::Error => e
+            # Show provider errors in the drawer instead of returning 500.
+            Rails.logger.error "Failed to mint Pluggy connect token: #{e.class} - #{e.message}"
+            @error_message = e.message
+          end
+        end
+      end
+
+      if provider_key == "pluggy" && request.post?
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Turbo-Cache-Control"] = "no-cache"
+      end
+
       return render :connect_form
     end
 
@@ -210,7 +235,8 @@ class Settings::ProvidersController < ApplicationController
       { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
-      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
+      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
+      { key: "pluggy",         title: "Pluggy",          turbo_id: "pluggy",         partial: "pluggy_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -239,7 +265,8 @@ class Settings::ProvidersController < ApplicationController
       "trading212"     => "Trading212Item",
       "trade_republic" => "TradeRepublicItem",
       "indexa_capital" => "IndexaCapitalItem",
-      "sophtron"       => "SophtronItem"
+      "sophtron"       => "SophtronItem",
+      "pluggy"         => "PluggyItem"
     }.freeze
 
     def load_provider_items(provider_key)
@@ -290,6 +317,8 @@ class Settings::ProvidersController < ApplicationController
         @sophtron_items = Current.family.sophtron_items.ordered
       when "questrade"
         @questrade_items = Current.family.questrade_items.active.ordered
+      when "pluggy"
+        @pluggy_items = Current.family.pluggy_items.ordered.includes(:syncs, :pluggy_accounts)
       end
     end
 
@@ -326,6 +355,22 @@ class Settings::ProvidersController < ApplicationController
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      # Partial select feeding the status row ("connected" / "credentials only")
+      # and provider-sync-health. Token minting moved to @connect_item below,
+      # which needs full record access (client_user_id, etc.).
+      @pluggy_items = Current.family.pluggy_items.where.not(client_id: [ nil, "" ]).ordered.select(:id, :pluggy_item_id, :client_id, :client_secret, :family_id)
+
+      # The Pluggy Connect token is NO LONGER minted eagerly on this GET. Doing
+      # so hit the live Pluggy API (hydrate_item_id! + connect_token) on every
+      # /settings/providers render — a synchronous network round-trip and a DB
+      # write (save! on hydrate) on a read request, which also silently swallowed
+      # auth failures via `rescue nil`. The token is now minted lazily in the
+      # `connect_form` action (the Connect drawer, loaded via a Turbo frame when
+      # the user opens it). Here we only do a DB-only lookup so the panel can
+      # render the launcher; it falls back to the drawer link when `@connect_token`
+      # is blank (see _pluggy_panel.html.erb). @connect_item stays DB-only — no
+      # upstream Pluggy call, no DB write on GET render.
+      @connect_item = PluggyItem.preferred_for_connect(Current.family)
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -365,7 +410,8 @@ class Settings::ProvidersController < ApplicationController
         "trading212"     => @trading212_items,
         "trade_republic" => @trade_republic_items,
         "indexa_capital" => @indexa_capital_items,
-        "sophtron"       => @sophtron_items
+        "sophtron"       => @sophtron_items,
+        "pluggy"         => @pluggy_items
       }
     end
 

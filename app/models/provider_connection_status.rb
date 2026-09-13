@@ -6,6 +6,7 @@ class ProviderConnectionStatus
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
     { key: "plaid", type: "PlaidItem", association: :plaid_items, accounts: :plaid_accounts },
+    { key: "pluggy", type: "PluggyItem", association: :pluggy_items, accounts: :pluggy_accounts },
     { key: "simplefin", type: "SimplefinItem", association: :simplefin_items, accounts: :simplefin_accounts },
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
     { key: "enable_banking", type: "EnableBankingItem", association: :enable_banking_items, accounts: :enable_banking_accounts },

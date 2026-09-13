@@ -19,6 +19,7 @@ class DataEnrichment < ApplicationRecord
     sophtron: "sophtron",
     ibkr: "ibkr",
     questrade: "questrade",
+    pluggy: "pluggy",
     redbark: "redbark",
     trade_republic: "trade_republic",
     bayes: "bayes"
