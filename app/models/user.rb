@@ -645,6 +645,7 @@ class User < ApplicationRecord
     preferences&.dig("show_split_grouped") != false
   end
 
+  # Returns whether the user has enabled the two-column dashboard layout.
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
   end
@@ -662,6 +663,7 @@ class User < ApplicationRecord
     always_expanded_account_groups.include?(account_group_key.to_s)
   end
 
+  # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
   end

@@ -1,6 +1,7 @@
 class Settings::AppearancesController < ApplicationController
   layout "settings"
 
+  # Renders the user's appearance settings page (the form for #update).
   def show
     @user = Current.user
   end
