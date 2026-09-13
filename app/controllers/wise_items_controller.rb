@@ -213,6 +213,8 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.select_existing_account.not_found") and return
     end
 
+    return unless require_linkable_account!(@account)
+
     @available_accounts = @wise_item.wise_accounts.unlinked
 
     render layout: false
@@ -225,6 +227,8 @@ class WiseItemsController < ApplicationController
     unless account && wise_account
       redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
+
+    return unless require_linkable_account!(account)
 
     AccountProvider.create!(account: account, provider: wise_account)
     wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?

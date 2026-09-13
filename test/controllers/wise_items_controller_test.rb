@@ -161,4 +161,20 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_providers_path
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_wise_items_url,
+    link_url: :link_existing_account_wise_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "EUR",
+                               accountable: Depository.create!)
+    },
+    provider_account: -> {
+      @wise_item.wise_accounts.create!(name: "Wise EUR", balance_id: SecureRandom.hex(6), currency: "EUR",
+                                       current_balance: 1000)
+    },
+    provider_param: :wise_account_id,
+    params: -> { { wise_item_id: @wise_item.id } }
+  )
 end
