@@ -120,6 +120,7 @@ class CoinbaseItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
 
     # List all available Coinbase accounts for the family that can be linked
     @available_coinbase_accounts = Current.family.coinbase_items
@@ -137,6 +138,7 @@ class CoinbaseItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
 
     # Scope lookup to family's coinbase accounts for security
     coinbase_account = Current.family.coinbase_items

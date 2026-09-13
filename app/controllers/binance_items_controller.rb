@@ -112,6 +112,7 @@ class BinanceItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
 
     @available_binance_accounts = Current.family.binance_items
       .includes(binance_accounts: [ :account, { account_provider: :account } ])
@@ -125,6 +126,7 @@ class BinanceItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
 
     binance_account = BinanceAccount
       .joins(:binance_item)
