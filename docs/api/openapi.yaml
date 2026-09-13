@@ -7842,6 +7842,10 @@ paths:
                         format: uuid
                       description: Array of tag IDs to assign. Omit to preserve existing
                         tags; use [] to clear all tags.
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
         required: true
     delete:
       summary: Delete a transaction

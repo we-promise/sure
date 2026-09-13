@@ -36,6 +36,43 @@ class OauthBasicTest < ActionDispatch::IntegrationTest
     assert_not Session.exists?(id: session_record.id), "stale session should be destroyed, not just skipped"
   end
 
+  test "oauth token endpoint refuses a refresh_token exchange after the user is deactivated" do
+    oauth_app = Doorkeeper::Application.create!(
+      name: "Test API Client",
+      redirect_uri: "https://client.example.com/callback",
+      scopes: "read_write"
+    )
+    user = users(:family_admin)
+
+    access_token = Doorkeeper::AccessToken.create!(
+      application: oauth_app,
+      resource_owner_id: user.id,
+      expires_in: 2.hours,
+      scopes: "read_write",
+      use_refresh_token: true
+    )
+    refresh_token = access_token.plaintext_refresh_token
+
+    # update_column bypasses callbacks (same idiom as the test above), then
+    # explicitly exercises User#revoke_all_access_tokens — the mechanism
+    # that actually revokes standard Doorkeeper grants/tokens on
+    # deactivation, since this endpoint never goes through our custom
+    # Authentication concern or MobileDevice#issue_token! at all.
+    user.update_column(:active, false)
+    user.revoke_all_access_tokens
+
+    post "/oauth/token", params: {
+      grant_type: "refresh_token",
+      refresh_token: refresh_token,
+      client_id: oauth_app.uid,
+      client_secret: oauth_app.secret
+    }
+
+    assert_response :bad_request
+    response_body = JSON.parse(response.body)
+    assert_equal "invalid_grant", response_body["error"]
+  end
+
   test "oauth token endpoint exists and handles requests" do
     post "/oauth/token", params: {
       grant_type: "authorization_code",

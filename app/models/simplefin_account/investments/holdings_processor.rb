@@ -7,6 +7,14 @@ class SimplefinAccount::Investments::HoldingsProcessor
     return if holdings_data.empty?
     return unless [ "Investment", "Crypto" ].include?(account&.accountable_type)
 
+    # SimpleFIN reports one record per LOT, so a single position can arrive as
+    # several records sharing a security -- a 401k that splits employee deferral
+    # from employer match is the common case. `holdings` is uniquely indexed on
+    # (account_id, security_id, date, currency), so importing lots one at a time
+    # makes each overwrite the last and the account silently loses the value of
+    # every lot but one. Combine them into the position they represent first.
+    positions = {}
+
     holdings_data.each do |simplefin_holding|
       begin
         symbol = simplefin_holding["symbol"].presence
@@ -75,25 +83,82 @@ class SimplefinAccount::Investments::HoldingsProcessor
         # Skip zero positions with no value to avoid invisible rows
         next if qty.to_d.zero? && computed_amount.to_d.zero?
 
-        saved = import_adapter.import_holding(
+        currency = simplefin_holding["currency"].presence || "USD"
+        position = positions[[ security.id, currency, holding_date ]] ||= {
           security: security,
-          quantity: qty,
-          amount: computed_amount,
-          currency: simplefin_holding["currency"].presence || "USD",
+          currency: currency,
           date: holding_date,
-          price: price,
-          cost_basis: cost_basis,
-          external_id: "simplefin_#{holding_id}",
-          account_provider_id: simplefin_account.account_provider&.id,
-          source: "simplefin",
-          delete_future_holdings: false  # SimpleFin tracks each holding uniquely
-        )
+          qty: 0.to_d,
+          amount: 0.to_d,
+          # cost_basis is stored PER SHARE, so lots combine into a
+          # share-weighted average rather than a sum. That average is only
+          # meaningful if EVERY lot reported one -- see basis_complete.
+          basis_value: 0.to_d,
+          basis_qty: 0.to_d,
+          basis_complete: true,
+          fallback_price: nil,
+          external_ids: []
+        }
 
-        Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id }.to_json)
+        position[:qty] += qty.to_d
+        position[:amount] += computed_amount.to_d
+        position[:external_ids] << "simplefin_#{holding_id}"
+        position[:fallback_price] ||= price if price.to_d.positive?
+
+        if qty.to_d.positive?
+          if cost_basis.present?
+            position[:basis_value] += cost_basis.to_d * qty.to_d
+            position[:basis_qty] += qty.to_d
+          else
+            # Averaging over only the lots that reported a basis would apply
+            # that figure to shares whose cost is genuinely unknown, inventing
+            # cost and therefore inventing gain/loss. Unknown has to stay
+            # unknown for the whole position.
+            position[:basis_complete] = false
+          end
+        end
       rescue => e
         ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
         Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"
       end
+    end
+
+    positions.each_value do |position|
+      qty = position[:qty]
+      amount = position[:amount]
+
+      price = if qty.positive? && amount.positive?
+        amount / qty
+      else
+        position[:fallback_price] || 0
+      end
+
+      cost_basis = if position[:basis_complete] && position[:basis_qty].positive?
+        position[:basis_value] / position[:basis_qty]
+      end
+
+      # Sorted so the identifier stays stable across syncs when a provider
+      # reorders lots. If the chosen lot later disappears, import_holding falls
+      # back to matching on security/date/currency and updates the same row.
+      external_id = position[:external_ids].sort.first
+
+      saved = import_adapter.import_holding(
+        security: position[:security],
+        quantity: qty,
+        amount: amount,
+        currency: position[:currency],
+        date: position[:date],
+        price: price,
+        cost_basis: cost_basis,
+        external_id: external_id,
+        account_provider_id: simplefin_account.account_provider&.id,
+        source: "simplefin",
+        delete_future_holdings: false  # SimpleFin tracks each holding uniquely
+      )
+
+      Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id, lots: position[:external_ids].size }.to_json)
+    rescue => e
+      Rails.logger.error "Error importing SimpleFin position #{position[:security]&.ticker}: #{e.message}"
     end
   end
 
