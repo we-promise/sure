@@ -251,6 +251,7 @@ class LunchflowItemsController < ApplicationController
     end
 
     @account = Current.family.accounts.find(account_id)
+    return unless require_linkable_account!(@account)
 
     # Check if account is already linked
     if @account.account_providers.exists?
@@ -343,6 +344,7 @@ class LunchflowItemsController < ApplicationController
     end
 
     @account = Current.family.accounts.find(account_id)
+    return unless require_linkable_account!(@account)
 
     # Check if account is already linked
     if @account.account_providers.exists?
