@@ -14,7 +14,7 @@ en:
       website_placeholder: Website (e.g., starbucks.com)
       website_hint: Enter the merchant's website to automatically display their logo
       iban_placeholder: IBAN (optional)
-      iban_hint: Used to match transactions to this merchant by account number, in addition to name
+      iban_hint: The merchant's own bank account number, if known
     index:
       empty: No merchants yet
       new: New merchant

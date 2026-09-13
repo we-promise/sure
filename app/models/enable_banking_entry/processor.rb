@@ -46,6 +46,19 @@ class EnableBankingEntry::Processor
   # ID fields *and* two distinct payments with byte-identical date/amount/
   # currency/direction/creditor/debtor/remittance text, which is rare enough
   # to prefer stability for the common case.
+  #
+  # The same gap exists, for the same reason, when transaction_id/entry_reference
+  # IS present but reused by the ASPSP across two genuinely distinct payments
+  # (the API docs don't guarantee uniqueness -- see the importer's dedup key
+  # comment): the dedup pass can now correctly keep both as separate raw rows
+  # when their counterparty IBANs differ, but they still compute the SAME
+  # external_id here and get collapsed into one Entry during import, silently
+  # dropping one real transaction. Folding IBAN into this branch's ID would
+  # have the identical every-existing-transaction-becomes-a-duplicate problem
+  # as above, just triggered by a much more common ASPSP behavior (a present
+  # but reused transaction_id, vs. an absent one) -- so it's deliberately
+  # left as the wider, still-open half of this same accepted tradeoff rather
+  # than patched narrowly here.
   def self.compute_external_id(raw_transaction_data)
     data = raw_transaction_data.with_indifferent_access
     id = data[:transaction_id].presence || data[:entry_reference].presence
@@ -177,7 +190,8 @@ class EnableBankingEntry::Processor
         import_adapter.find_or_create_merchant(
           provider_merchant_id: "enable_banking_merchant_#{merchant_id}",
           name: merchant_name,
-          source: "enable_banking"
+          source: "enable_banking",
+          iban: counterparty_account_info[:iban]
         )
       rescue ActiveRecord::RecordInvalid => e
         Rails.logger.error "EnableBankingEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"
@@ -232,6 +246,19 @@ class EnableBankingEntry::Processor
       # lacks counterparty data (e.g. a booked re-delivery of a transaction whose earlier
       # pending version had it) would leave the old, now-stale value in place instead of
       # clearing it.
+      #
+      # Deliberately stored in transactions.extra (plain jsonb, unencrypted),
+      # not given the deterministic-encryption treatment Account#iban/
+      # Merchant#iban get: this value is never looked up by DB-level equality
+      # (only ILIKE search, dedup, and Ruby-side comparisons after loading),
+      # so there's no lookup requirement forcing that tradeoff here. Actually
+      # encrypting it would require pulling it into its own real column --
+      # Active Record Encryption doesn't support querying inside an encrypted
+      # jsonb value, and every consumer (rules, search, dedup, transfer
+      # matching) reads it via `extra ->> 'counterparty_iban'` SQL directly.
+      # That's a larger, deliberate architecture change for a future PR, not
+      # a default to slide into by extending `extra` the same way fx_rate/
+      # pending/mcc already are.
       cp = counterparty_account_info
       result[:counterparty_iban] = cp[:iban]
       result[:counterparty_account_id] = cp[:iban].blank? ? cp[:other_id] : nil
@@ -254,12 +281,13 @@ class EnableBankingEntry::Processor
         end
 
         {
-          # Normalized (no spaces, upcased) so it matches the same
-          # convention as accounts.iban/merchants.iban -- required for
-          # equality lookups/comparisons elsewhere (transfer matching, rule
+          # Normalized so it matches the same convention as
+          # accounts.iban/merchants.iban -- required for equality
+          # lookups/comparisons elsewhere (transfer matching, rule
           # conditions) to actually line up, regardless of whether an ASPSP
-          # happens to include spaces in its IBAN formatting.
-          iban: data.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence,
+          # happens to include spaces or other punctuation in its IBAN
+          # formatting.
+          iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
           other_id: data.dig(additional_key, :identification).presence,
           bank_name: data.dig(agent_key, :name).presence
         }
