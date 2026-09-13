@@ -7,6 +7,18 @@ class Provider::LunchflowTest < ActiveSupport::TestCase
     @provider = Provider::Lunchflow.new("test_key", base_url: Provider::Lunchflow::DEFAULT_BASE_URL)
   end
 
+  # HTTParty resends caller-supplied headers on a redirect; its host-change
+  # protection only covers basic_auth. The credential lives in a custom header
+  # here, so a redirect off the allow-listed host would carry it along.
+  test "does not follow a redirect off the allow-listed host with the credential" do
+    stub_request(:get, "https://lunchflow.app/api/v1/accounts")
+      .to_return(status: 302, headers: { "Location" => "https://evil.example/collect" })
+    leak = stub_request(:get, "https://evil.example/collect").to_return(status: 200, body: "{}")
+
+    assert_raises(Provider::Lunchflow::LunchflowError) { @provider.get_accounts }
+    assert_not_requested leak
+  end
+
   test "retries a wrapped GoCardless rate limit and preserves its type" do
     rate_limited = response(
       503,

@@ -4,6 +4,11 @@ class Provider::Lunchflow
   extend BaseUrlAllowlistable
 
   headers "User-Agent" => "Sure Finance Lunch Flow Client"
+  # The credential travels in a custom header, and HTTParty resends custom
+  # headers on a redirect; its host-change protection covers basic_auth only.
+  # A redirect off the allow-listed host would carry the token with it, so
+  # redirects are not followed at all.
+  no_follow true
   default_options.merge!({ timeout: 120 }.merge(httparty_ssl_options))
 
   MAX_RETRIES = 2

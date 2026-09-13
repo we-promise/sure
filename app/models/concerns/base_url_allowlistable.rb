@@ -20,8 +20,11 @@ module BaseUrlAllowlistable
   # Returns the canonical form of an allowed URL, or nil when it is not on the
   # list. A blank value means "unset", which resolves to the default.
   def normalize_base_url(value)
+    # A blank value means "the default", and the default goes through the same
+    # check as everything else. Returning it raw would let a provider that
+    # declared a cleartext default hand it straight out.
     stripped = value.to_s.strip
-    return self::DEFAULT_BASE_URL if stripped.blank?
+    stripped = self::DEFAULT_BASE_URL if stripped.blank?
 
     canonical = BaseUrlAllowlistable.canonicalize(stripped)
     return nil if canonical.nil?
