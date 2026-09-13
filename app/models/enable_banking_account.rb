@@ -1,5 +1,5 @@
 class EnableBankingAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable
+  include CurrencyNormalizable, Encryptable, IbanNormalizable
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -12,12 +12,6 @@ class EnableBankingAccount < ApplicationRecord
     # for the same reason: DB-level uniqueness/lookup can't work otherwise).
     encrypts :iban, deterministic: true
   end
-
-  # Same normalization as Account#normalize_iban, applied here too: a
-  # formatted/lowercase provider IBAN must canonicalize to the same
-  # deterministic ciphertext as one written elsewhere, or find_by(iban:)
-  # lookups against this column silently miss.
-  before_validation :normalize_iban
 
   belongs_to :enable_banking_item
 
@@ -217,8 +211,18 @@ class EnableBankingAccount < ApplicationRecord
 
   private
 
-    def normalize_iban
-      self.iban = iban.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+    def capture_propagation_failure(target, message)
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Could not propagate IBAN to account: #{message}",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item&.family,
+        account: target,
+        account_provider: account_provider,
+        metadata: { enable_banking_account_id: id, account_id: target.id }
+      )
     end
 
     def capture_propagation_failure(target, message)

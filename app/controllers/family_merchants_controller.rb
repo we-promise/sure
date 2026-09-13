@@ -195,10 +195,35 @@ class FamilyMerchantsController < ApplicationController
       params.require(key).permit(:name, :color, :website_url, :iban)
     end
 
-    # Mirrors Merchant#normalize_iban so a submitted value can be compared
-    # against the persisted (already-normalized) iban without saving first.
+    # So a submitted value can be compared against the persisted
+    # (already-normalized) iban without saving first.
     def normalize_iban(value)
-      value.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      IbanNormalizable.normalize(value)
+    end
+
+    def render_create_error
+      respond_to do |format|
+        # No explicit format.turbo_stream branch: Turbo's form submissions send an
+        # Accept header that prefers turbo-stream, but forcing that format here would
+        # lock the response's Content-Type to turbo-stream while still rendering the
+        # plain :new HTML template — Turbo's client then sees a turbo-stream
+        # Content-Type with no <turbo-stream> tags in the body and does nothing.
+        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
+        # format.html below, which renders :new with the correct text/html type.
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
+      end
+    end
+
+    # Keeps @merchant/@family_merchant pointed at the original, persisted
+    # ProviderMerchant after a failed conversion attempt (see the #update
+    # rescues), instead of an unpersisted FamilyMerchant that would break
+    # the re-rendered form's submit target. Restores every attribute the
+    # form could have submitted, including :color -- merchant_params
+    # permits it and convert_to_family_merchant_for receives it, so omitting
+    # it here would silently revert a color change on the failed attempt.
+    def restore_merchant_after_failed_conversion!
+      @merchant.assign_attributes(merchant_params.slice(:name, :color, :website_url, :iban))
     end
 
     def render_create_error
