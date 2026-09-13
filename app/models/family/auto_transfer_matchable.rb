@@ -5,7 +5,13 @@ module Family::AutoTransferMatchable
   # with several similar transactions in flight. It therefore gets a wider
   # date-tolerance window to absorb bank clearing delays; transactions
   # without a confirmed IBAN keep the existing, narrower window unchanged.
-  IBAN_CONFIRMED_DATE_WINDOW = 14
+  #
+  # Matches Transfer#transfer_within_date_range's own 30-day cap for
+  # status: "confirmed" (the status this match gets once it needs the wider
+  # window at all) -- a narrower value here would make the SQL candidate
+  # lookup itself exclude confirmed-eligible matches between that value and
+  # 30 days, before the model validation ever got a chance to allow them.
+  IBAN_CONFIRMED_DATE_WINDOW = 30
   DEFAULT_DATE_WINDOW = 4
 
   def transfer_match_candidates(
@@ -111,6 +117,39 @@ module Family::AutoTransferMatchable
     end
   end
 
+  # An outflow entry whose counterparty IBAN matches another of this
+  # family's accounts (synced or manual) is a transfer whose destination
+  # account is known, even though the matching inflow transaction doesn't
+  # exist yet -- e.g. the destination is a manually-tracked account the
+  # user hasn't recorded this deposit on. Returns that account, or nil when
+  # there's nothing to suggest (no counterparty IBAN, no matching account,
+  # already a transfer, or the user already dismissed this suggestion).
+  #
+  # Deliberately entry-scoped rather than family-wide: this only needs to
+  # answer "should the transfer-match dialog for THIS entry pre-fill a
+  # target account", not enumerate every missing counterpart across the
+  # family (no UI surfaces that broader list yet).
+  # user: required so the suggested account is restricted to the same
+  # writable+visible set TransferMatchesController#new offers in its
+  # target_account_id dropdown. Without it, a match on a disabled account or
+  # one the current user has no access to (family sharing permissions) would
+  # get preselected in the UI despite never appearing among the selectable
+  # options -- and would leak that account's name/existence to a user who
+  # can't otherwise see it.
+  def missing_transfer_suggestion_for(entry, user:)
+    return nil unless entry.amount.positive?
+
+    transaction = entry.entryable
+    return nil unless transaction.is_a?(Transaction)
+    return nil if transaction.transfer?
+    return nil if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
+
+    counterparty_iban = transaction.extra&.dig("counterparty_iban")
+    return nil if counterparty_iban.blank?
+
+    accounts.writable_by(user).visible.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
+  end
+
   private
     # True when the inflow's destination account has its own IBAN set and it
     # matches the outflow transaction's recorded counterparty IBAN. Blank on
@@ -125,12 +164,26 @@ module Family::AutoTransferMatchable
       destination_iban = inflow.entry.account.iban
       counterparty_iban = outflow.extra&.dig("counterparty_iban")
       return false if destination_iban.blank? || counterparty_iban.blank?
+      return false unless normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
 
-      normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
+      # The inflow side's own recorded counterparty IBAN (who the destination
+      # account's bank says paid it) is a second, independent signal from the
+      # same provider sync. When it's present, it must agree with the source
+      # account's IBAN too -- a contradiction here (matching amount/date, but
+      # the destination account's bank recorded a DIFFERENT payer) means this
+      # is very likely two distinct transactions that merely coincide, not a
+      # confirmed transfer. Blank is not a contradiction: not every provider
+      # supplies this on the inflow side, so its absence is uninformative.
+      source_iban = outflow.entry.account.iban
+      inflow_counterparty_iban = inflow.extra&.dig("counterparty_iban")
+      return false if source_iban.present? && inflow_counterparty_iban.present? &&
+        normalize_iban(source_iban) != normalize_iban(inflow_counterparty_iban)
+
+      true
     end
 
     def normalize_iban(value)
-      value.to_s.gsub(/[[:space:]]+/, "").upcase
+      IbanNormalizable.normalize(value).to_s
     end
 
     # Create the transfer for a matched candidate, tolerating a concurrent sync
