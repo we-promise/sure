@@ -98,8 +98,13 @@
         keyboard — touchstart matters on touch devices where the synthetic
         mousedown following a tap can lag, and preventDefault on touchstart
         also suppresses that synthetic mousedown, so there's no double
-        insert. %>
-    <div class="hidden group-focus-within:flex items-center gap-1 mt-1">
+        insert. Absolutely positioned (against .form-field, which is
+        already `position: relative`) rather than a normal flow sibling:
+        toggling a flow element's display shifts everything below it at the
+        exact moment the field blurs — i.e. exactly when a user clicks past
+        it to the next field — which was intermittently swallowing that
+        click in a system test. %>
+    <div class="hidden group-focus-within:flex items-center gap-1 absolute left-0 top-full mt-1 z-10 bg-container border border-primary rounded-md p-1 shadow-sm">
       <%= render DS::Button.new(text: "+", variant: :outline, size: :sm,
             data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator", "money-field-operator-param": "+" },
             aria: { label: t(".operator_add") }) %>
