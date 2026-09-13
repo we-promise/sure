@@ -150,7 +150,7 @@ module Family::AutoTransferMatchable
     end
 
     def normalize_iban(value)
-      value.to_s.gsub(/[[:space:]]+/, "").upcase
+      IbanNormalizable.normalize(value).to_s
     end
 
     # Create the transfer for a matched candidate, tolerating a concurrent sync
