@@ -510,6 +510,24 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
   end
 
+  test "normalizes a counterparty iban with dots and dashes before storing it" do
+    tx = {
+      entry_reference: "ref_iban_punctuation",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Landlord GmbH" },
+      creditor_account: { iban: "de89.3704-0044/0532:0130'00" },
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_punctuation")
+
+    assert_equal "DE89370400440532013000", entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
+  end
+
   test "stores counterparty iban from the debtor side for an incoming payment" do
     tx = {
       entry_reference: "ref_iban_in",
