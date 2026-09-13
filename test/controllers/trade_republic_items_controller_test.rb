@@ -132,6 +132,24 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal item, trade_republic_account.trade_republic_item
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_trade_republic_items_url,
+    link_url: :link_existing_account_trade_republic_items_url,
+    target: ->(owner) {
+      families(:dylan_family).accounts.create!(owner: owner, name: "Manual Investment", balance: 0, currency: "EUR",
+                                               accountable: Investment.create!)
+    },
+    # One portfolio account per item is allowed, so each gets its own item.
+    provider_account: -> {
+      item = families(:dylan_family).trade_republic_items.create!(name: "Trade Republic", currency: "EUR",
+                                                                  phone_number: "+491701234567")
+      item.trade_republic_accounts.create!(name: "Trade Republic", trade_republic_account_id: SecureRandom.hex(6),
+                                           currency: "EUR", current_balance: 1000)
+    },
+    provider_param: :trade_republic_account_id
+  )
+
   test "successful QR polling can complete without a phone number" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",
