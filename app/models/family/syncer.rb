@@ -20,7 +20,9 @@ class Family::Syncer
   end
 
   def perform_post_sync
-    family.auto_match_transfers!
+    # Family-wide syncs only add recent entries, so bound transfer matching to a
+    # recent window to avoid an O(N^2) self-join across all historical entries.
+    family.auto_match_transfers!(since_date: 90.days.ago.to_date)
 
     Rails.logger.info("Applying rules for family #{family.id}")
     family.rules.where(active: true).each do |rule|
