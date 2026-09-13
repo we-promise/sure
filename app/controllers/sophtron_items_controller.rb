@@ -297,6 +297,7 @@ class SophtronItemsController < ApplicationController
     end
 
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     if @account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
@@ -345,6 +346,7 @@ class SophtronItemsController < ApplicationController
     end
 
     account = Current.family.accounts.find(account_id)
+    return unless require_linkable_account!(account)
 
     if account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
