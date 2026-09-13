@@ -1,33 +1,81 @@
 // Only +, -, *, / are treated as operators; commas and dots always belong to
-// a number (as a decimal or thousands separator), so tokenizing on these four
-// characters is unambiguous.
+// a number (as a decimal separator), so tokenizing on these four characters
+// is unambiguous.
 const OPERATOR = /[+\-*/]/
 
 // A valid number token: an optional sign, then a digit, then any run of
-// digits/dot/comma/space (grouping space). Anything else (letters, an empty
-// token, a bare sign) is not a number, so the whole input is rejected rather
-// than silently parsed to 0. This is a coarse character-class check only —
-// parseTypedNumber below still validates the *shape* (where the separators
-// sit), so e.g. "12,50,30" passes this but is caught later.
-const NUMBER = /^[+-]?\d[\d.,\u0020\u00a0\u202f]*$/
-
-// Exhaustive shapes a cleaned (sign and grouping-space stripped) number can
-// take. Anything that isn't one of these is rejected outright rather than
-// guessed at — a money field is not the place to be lenient about what
-// "1.2,3.4" or "1,,234" might have meant.
-const INTEGER = /^\d+$/
-const DOT_DECIMAL = /^\d+\.\d*$/
-const COMMA_DECIMAL = /^\d+,\d*$/
-const DOT_GROUPED = /^\d{1,3}(\.\d{3})+$/ // "1.234.567" — dot used only for grouping
-const COMMA_GROUPED = /^\d{1,3}(,\d{3})+$/ // "1,234,567" — comma used only for grouping
-const EURO_FORMAT = /^\d{1,3}(\.\d{3})+,\d+$/ // "1.234,56" — dot-grouped thousands + comma decimal
-const US_FORMAT = /^\d{1,3}(,\d{3})+\.\d+$/ // "1,234.56" — comma-grouped thousands + dot decimal
+// digits/dot/comma. Anything else (letters, an empty token, a bare sign) is
+// not a number, so the whole input is rejected rather than silently parsed
+// to 0. This is a coarse character-class check only — parseTypedNumber below
+// still validates that at most one separator is present.
+const NUMBER = /^[+-]?\d[\d.,]*$/
 
 // A sane upper bound on how long a single number token can be. Nothing
 // resembling a real amount needs more than this; without a cap a
-// pathological paste/typed string (thousands of digits) would still be
-// handed to the regexes and Number.parseFloat for no legitimate reason.
+// pathological typed string (thousands of digits) would still be handed to
+// the regexes and Number.parseFloat for no legitimate reason.
 const MAX_TOKEN_LENGTH = 32
+
+// Matches the old type="number" field's min/max attributes (dropped when the
+// field became a text input, see the PR that introduced this file) — the
+// amount columns are decimal(19,4), and nothing resembling a real
+// transaction needs a 15-digit amount. Checked on every parsed operand and
+// on the final result, so neither a single huge typed number nor an
+// expression that multiplies its way past this bound reaches the server.
+const MAX_AMOUNT = 99999999999999
+
+// Parses one number token typed by hand into this field (as opposed to one
+// pasted in from a bank statement — see parse_amount_paste.js/
+// parseLocaleFloat, which favor a thousands-grouping reading of an
+// ambiguous comma, because pasted statement data is often grouped).
+//
+// Someone typing digit by digit essentially never adds a thousands
+// separator, and trying to guess when they *might* have — "is this comma a
+// decimal point, or the start of a 3-digit group, or a typo?" — is exactly
+// what kept producing new edge cases (bug reports: "10,321" silently became
+// 10321; later, inputs with more than one separator like "12,50,30" or
+// "1.2,3.4" were silently mis-parsed instead of rejected). Rather than add
+// another shape to recognize, typed input now allows **at most one**
+// separator (comma or dot) in a number, full stop — and that separator is
+// always the decimal point, however many digits follow it. Two or more
+// separators, in any combination, is not a supported way to type a number
+// here and is rejected outright, with no attempt to guess what was meant.
+// Thousands grouping remains fully supported when *pasting*, via the
+// separate, unchanged parseAmountPaste/parseLocaleFloat path.
+//
+// An explicit `separator` hint (e.g. from a future user/family decimal-
+// separator preference, mirroring the existing date format setting) locks
+// in which single character is accepted as the decimal point — a token
+// using the other one is then rejected rather than silently accepted, so
+// once that preference exists there is no ambiguity left to resolve at all.
+function parseTypedNumber(token, { separator } = {}) {
+  if (token.length > MAX_TOKEN_LENGTH) return null
+
+  const negative = token.startsWith("-")
+  const unsigned = token.replace(/^[+-]/, "")
+
+  const separators = unsigned.match(/[.,]/g) || []
+  if (separators.length > 1) return null
+
+  let normalized
+  if (separators.length === 0) {
+    if (!/^\d+$/.test(unsigned)) return null
+    normalized = unsigned
+  } else {
+    const decimalChar = separators[0]
+    if (separator && decimalChar !== separator) return null
+
+    const shape = decimalChar === "." ? /^\d+\.\d*$/ : /^\d+,\d*$/
+    if (!shape.test(unsigned)) return null
+
+    normalized = unsigned.replace(decimalChar, ".")
+  }
+
+  const value = Number.parseFloat(normalized)
+  if (!Number.isFinite(value) || Math.abs(value) > MAX_AMOUNT) return null
+
+  return negative ? -value : value
+}
 
 // Splits a raw amount string into number/operator tokens, treating a +/- as
 // a sign (part of the number) when it opens the string or follows another
@@ -59,76 +107,12 @@ function tokenize(trimmed) {
   return tokens
 }
 
-// Parses one number token typed by hand into this field (as opposed to one
-// pasted in from a bank statement, see parse_amount_paste.js/parseLocaleFloat
-// — those favor a thousands-grouping reading of an ambiguous comma, because
-// pasted statement data is often grouped). Someone typing digit by digit
-// almost never adds a thousands separator, so a single comma or a single dot
-// is read as *the* decimal point regardless of how many digits follow it —
-// "10,321" is ten-point-three-two-one, not ten thousand three hundred
-// twenty-one.
-//
-// A separator is only read as grouping when the token unambiguously has that
-// shape: the same separator repeated in strict 3-digit groups ("1,234,567"),
-// or a grouped integer followed by the other separator used once as the
-// decimal point ("1.234,56", "1,234.56"). Anything that doesn't match one of
-// these exact shapes — "12,50,30" (groups aren't 3 digits), "1,,234"
-// (empty group), "1.2,3.4" (both separators, but not a recognized
-// thousands+decimal shape) — is rejected rather than guessed at by quietly
-// stripping whichever characters are "in the way".
-function parseTypedNumber(token, { separator } = {}) {
-  if (token.length > MAX_TOKEN_LENGTH) return null
-
-  const negative = token.startsWith("-")
-  const unsigned = token.replace(/^[+-]/, "")
-  const cleaned = unsigned.replace(/[\u0020\u00a0\u202f]/g, "")
-
-  let normalized = null
-
-  if (separator === ",") {
-    if (INTEGER.test(cleaned) || COMMA_DECIMAL.test(cleaned)) {
-      normalized = cleaned.replace(",", ".")
-    } else if (DOT_GROUPED.test(cleaned)) {
-      normalized = cleaned.replace(/\./g, "")
-    } else if (EURO_FORMAT.test(cleaned)) {
-      normalized = cleaned.replace(/\./g, "").replace(",", ".")
-    }
-  } else if (separator === ".") {
-    if (INTEGER.test(cleaned) || DOT_DECIMAL.test(cleaned)) {
-      normalized = cleaned
-    } else if (COMMA_GROUPED.test(cleaned)) {
-      normalized = cleaned.replace(/,/g, "")
-    } else if (US_FORMAT.test(cleaned)) {
-      normalized = cleaned.replace(/,/g, "")
-    }
-  } else if (INTEGER.test(cleaned) || DOT_DECIMAL.test(cleaned)) {
-    normalized = cleaned
-  } else if (COMMA_DECIMAL.test(cleaned)) {
-    normalized = cleaned.replace(",", ".")
-  } else if (DOT_GROUPED.test(cleaned)) {
-    normalized = cleaned.replace(/\./g, "")
-  } else if (COMMA_GROUPED.test(cleaned)) {
-    normalized = cleaned.replace(/,/g, "")
-  } else if (EURO_FORMAT.test(cleaned)) {
-    normalized = cleaned.replace(/\./g, "").replace(",", ".")
-  } else if (US_FORMAT.test(cleaned)) {
-    normalized = cleaned.replace(/,/g, "")
-  }
-
-  if (normalized === null) return null
-
-  const value = Number.parseFloat(normalized)
-  if (!Number.isFinite(value)) return null
-
-  return negative ? -value : value
-}
-
 // Parses a money field's raw text as a single typed amount, or as a simple
 // arithmetic expression over such amounts (e.g. "12,50 + 4,30" or "100/3"),
 // evaluated left to right with the usual * / before + - precedence. Returns
-// a finite number, or null when the text isn't a valid amount or expression
-// (so the caller can leave the field untouched instead of overwriting a typo
-// — or a deliberately malformed value — with 0).
+// a finite, sanely-bounded number, or null when the text isn't a valid
+// amount or expression (so the caller can leave the field untouched instead
+// of overwriting a typo — or a deliberately malformed value — with 0).
 export default function evaluateAmountExpression(value, options = {}) {
   if (typeof value !== "string") return null
 
@@ -174,7 +158,20 @@ export default function evaluateAmountExpression(value, options = {}) {
     result = additive[i] === "+" ? result + values[i + 1] : result - values[i + 1]
   }
 
-  return Number.isFinite(result) ? result : null
+  if (!Number.isFinite(result) || Math.abs(result) > MAX_AMOUNT) return null
+
+  return result
+}
+
+// toFixed rounds away IEEE-754 float drift (e.g. "0.1+0.2" evaluates to
+// 0.30000000000000004) but, unlike Number/String round-tripping, never
+// switches to exponential notation for very small magnitudes — that only
+// happens when a number below 1e-6 is converted back through Number()/
+// String(). Trimming the padding zeros toFixed leaves behind keeps a
+// sub-cent crypto price ("0.00000001") intact instead of rounding it to 0.
+export function formatUnroundedAmount(amount) {
+  const fixed = amount.toFixed(10)
+  return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed
 }
 
 // Formats a parsed amount back into field text, matching whichever decimal
@@ -184,7 +181,8 @@ export default function evaluateAmountExpression(value, options = {}) {
 // exported as a pure function (no DOM) so the round trip is covered by a
 // plain unit test rather than only trusted to work inside a real browser.
 export function formatAmountForDisplay(amount, precision, raw) {
-  const formatted = precision === null ? String(amount) : amount.toFixed(precision)
+  const formatted =
+    precision === null ? formatUnroundedAmount(amount) : amount.toFixed(precision)
   return typeof raw === "string" && raw.includes(",")
     ? formatted.replace(".", ",")
     : formatted
