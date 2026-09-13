@@ -281,12 +281,13 @@ class EnableBankingEntry::Processor
         end
 
         {
-          # Normalized (no spaces, upcased) so it matches the same
-          # convention as accounts.iban/merchants.iban -- required for
-          # equality lookups/comparisons elsewhere (transfer matching, rule
+          # Normalized so it matches the same convention as
+          # accounts.iban/merchants.iban -- required for equality
+          # lookups/comparisons elsewhere (transfer matching, rule
           # conditions) to actually line up, regardless of whether an ASPSP
-          # happens to include spaces in its IBAN formatting.
-          iban: data.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence,
+          # happens to include spaces or other punctuation in its IBAN
+          # formatting.
+          iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
           other_id: data.dig(additional_key, :identification).presence,
           bank_name: data.dig(agent_key, :name).presence
         }
