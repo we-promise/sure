@@ -663,6 +663,25 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes result_ids, iban_match.entryable.id
   end
 
+  test "search matches a counterparty iban pasted with dots and dashes" do
+    iban_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Landlord GmbH"
+    )
+    iban_match.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "de89.3704-0044/0532:0130'00" }
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, iban_match.entryable.id
+  end
+
   test "search matches a counterparty_account_id with its original spacing" do
     # Unlike counterparty_iban, the processor stores this fallback
     # identifier verbatim (not normalized) -- searching it with the exact
@@ -739,6 +758,25 @@ class Transaction::SearchTest < ActiveSupport::TestCase
       name: "Monobank Unnormalized Payment"
     )
     monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "nl91 abna 0417 1643 00" } }) # pipelock:ignore IBAN
+
+    search = Transaction::Search.new(
+      @family,
+      filters: { search: "NL91ABNA0417164300" } # pipelock:ignore IBAN
+    )
+
+    result_ids = search.transactions_scope.pluck(:id)
+
+    assert_includes result_ids, monobank_match.entryable.id
+  end
+
+  test "search matches a monobank counterparty iban stored with dots and dashes" do
+    monobank_match = create_transaction(
+      account: @checking_account,
+      amount: 100,
+      kind: "standard",
+      name: "Monobank Unnormalized Payment"
+    )
+    monobank_match.entryable.update!(extra: { "monobank" => { "counter_iban" => "nl91.abna-0417/1643:00'" } }) # pipelock:ignore IBAN
 
     search = Transaction::Search.new(
       @family,

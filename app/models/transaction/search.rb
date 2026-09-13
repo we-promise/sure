@@ -131,12 +131,13 @@ class Transaction::Search
       return query if search.blank?
 
       sanitized_search = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
-      # The stored counterparty_iban is normalized ([[:space:]]+ stripped,
-      # upcased) -- match that convention here too, or an IBAN pasted in its
-      # common statement format ("DE89 3704 ...", or with a tab/newline/NBSP
-      # from a formatted PDF) would never match. name/notes matching keeps
-      # the raw search term since those aren't normalized.
-      normalized_search = "%#{ActiveRecord::Base.sanitize_sql_like(search.gsub(/[[:space:]]+/, "").upcase)}%"
+      # The stored counterparty_iban is normalized (all non-alphanumeric
+      # characters stripped, upcased) -- match that convention here too, or
+      # an IBAN pasted in its common statement format ("DE89 3704 ...", or
+      # with dots/dashes/a tab/newline/NBSP from a formatted PDF) would never
+      # match. name/notes matching keeps the raw search term since those
+      # aren't normalized.
+      normalized_search = "%#{ActiveRecord::Base.sanitize_sql_like(IbanNormalizable.normalize(search).to_s)}%"
 
       # Targets the two counterparty keys explicitly rather than casting the
       # whole extra blob to text: that field also carries unrelated
@@ -163,7 +164,7 @@ class Transaction::Search
         "entries.name ILIKE :search OR entries.notes ILIKE :search " \
         "OR (transactions.extra ->> 'counterparty_iban') ILIKE :normalized_search " \
         "OR (transactions.extra ->> 'counterparty_account_id') ILIKE :search " \
-        "OR UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '\\s+', '', 'g')) ILIKE :normalized_search",
+        "OR UPPER(REGEXP_REPLACE(transactions.extra -> 'monobank' ->> 'counter_iban', '[^a-zA-Z0-9]', '', 'g')) ILIKE :normalized_search",
         search: sanitized_search, normalized_search: normalized_search
       )
     end
