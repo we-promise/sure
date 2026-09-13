@@ -245,6 +245,14 @@ RSpec.configure do |config|
               insights: { type: :array, items: { '$ref' => '#/components/schemas/Insight' } }
             }
           },
+          PushSubscriptionRegistration: {
+            type: :object, required: %w[token environment platform],
+            properties: {
+              token: { type: :string }, environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              device_key: { type: :string, pattern: '^[0-9a-f]{64}$', description: 'Optional 256-bit installation secret, unique per server and kept in device secure storage. Required proof to replace another user’s registration for this device. Never returned.' }
+            }
+          },
           PushSubscription: {
             type: :object,
             required: %w[id environment platform last_registered_at],
@@ -1718,6 +1726,36 @@ RSpec.configure do |config|
               amount: { type: :string, description: 'Numeric amount as string' },
               currency: { type: :string, description: 'ISO 4217 currency code' },
               formatted: { type: :string, description: 'Locale-formatted money string' }
+            }
+          },
+          FinancialPeriod: {
+            type: :object, required: %w[start_date end_date],
+            properties: { start_date: { type: :string, format: :date }, end_date: { type: :string, format: :date } }
+          },
+          SpendingPoint: {
+            type: :object, required: %w[date amount],
+            properties: { date: { type: :string, format: :date }, amount: { type: :string, description: 'Cumulative decimal amount in family currency' } }
+          },
+          FinancialSummary: {
+            type: :object,
+            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
+            properties: {
+              month: { type: :string, format: :date }, as_of: { type: :string, format: :date },
+              time_zone: { type: :string }, currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
+              savings_rate: { type: :string, nullable: true, description: 'Percentage points; null when income is nonpositive. May be negative.' },
+              spending_comparison: {
+                type: :object,
+                required: %w[previous_period current_total comparison_total comparison_end_date delta current previous],
+                properties: {
+                  previous_period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+                  current_total: { type: :string }, comparison_total: { type: :string }, delta: { type: :string },
+                  comparison_end_date: { type: :string, format: :date },
+                  current: { type: :array, items: { '$ref' => '#/components/schemas/SpendingPoint' } },
+                  previous: { type: :array, items: { '$ref' => '#/components/schemas/SpendingPoint' } }
+                }
+              }
             }
           },
           BalanceSheet: {
