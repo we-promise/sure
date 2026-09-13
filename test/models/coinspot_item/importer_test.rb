@@ -1,0 +1,196 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class CoinspotItem::ImporterTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:dylan_family)
+    @item = CoinspotItem.create!(
+      family: @family,
+      name: "CoinSpot",
+      api_key: "k",
+      api_secret: "s"
+    )
+    @provider = mock
+    @provider.stubs(:status).returns({ "status" => "ok" })
+    @provider.stubs(:get_order_history).returns({ "buyorders" => [], "sellorders" => [] })
+    @provider.stubs(:get_send_receive_history).returns({ "sendtransactions" => [], "receivetransactions" => [] })
+    @provider.stubs(:get_deposit_history).returns({ "deposits" => [] })
+    @provider.stubs(:get_withdrawal_history).returns({ "withdrawals" => [] })
+  end
+
+  test "creates a combined coinspot account from balances" do
+    @provider.stubs(:get_balances).returns(
+      "status" => "ok",
+      "balances" => [
+        { "btc" => { "balance" => "0.5", "audbalance" => "50000.00", "rate" => "100000.00" } },
+        { "aud" => { "balance" => "125.50", "audbalance" => "125.50", "rate" => "1.00" } },
+        { "eth" => { "balance" => "0", "audbalance" => "0", "rate" => "5000.00" } }
+      ]
+    )
+
+    assert_difference "@item.coinspot_accounts.count", 1 do
+      result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+      assert_equal 2, result[:assets_imported]
+      assert_in_delta 50_125.50, result[:total_aud], 0.01
+    end
+
+    account = @item.coinspot_accounts.first
+    assert_equal "combined", account.account_id
+    assert_equal "combined", account.account_type
+    assert_equal "AUD", account.currency
+    assert_in_delta 50_125.50, account.current_balance, 0.01
+
+    btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" }
+    assert_equal "0.5", btc["balance"]
+    assert_equal "50000.0", btc["amount_aud"]
+    assert_equal "100000.0", btc["price_aud"]
+  end
+
+  test "falls back to market order history when standard order history is unavailable" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
+    @provider.stubs(:get_market_order_history).returns({ "orders" => [ { "id" => "m1", "coin" => "BTC" } ] })
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    assert_equal 1, result[:orders_imported]
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal [ { "id" => "m1", "coin" => "BTC" } ], payload.dig("orders", "orders")
+    assert_equal [], payload.dig("orders", "buyorders")
+  end
+
+  # The fallback read only response["orders"], so buy/sell orders the market
+  # endpoint does return were dropped on the floor.
+  test "market order fallback keeps buyorders and sellorders alongside orders" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
+    @provider.stubs(:get_market_order_history).returns({
+      "orders" => [ { "id" => "m1", "coin" => "BTC" } ],
+      "buyorders" => [ { "id" => "b1", "coin" => "BTC" } ],
+      "sellorders" => [ { "id" => "s1", "coin" => "BTC" } ]
+    })
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal %w[b1], payload.dig("orders", "buyorders").map { |o| o["id"] }
+    assert_equal %w[s1], payload.dig("orders", "sellorders").map { |o| o["id"] }
+    assert_equal %w[m1], payload.dig("orders", "orders").map { |o| o["id"] }
+    assert_equal 3, result[:orders_imported]
+  end
+
+  test "fails without persisting a partial snapshot when both order history endpoints fail" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).raises(Provider::Coinspot::ApiError, "unavailable")
+    @provider.stubs(:get_market_order_history).raises(Provider::Coinspot::ApiError, "also unavailable")
+    @item.update!(sync_start_date: Date.current)
+
+    error = assert_raises(CoinspotItem::Importer::OrderHistoryUnavailableError) do
+      CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+    end
+
+    assert_includes error.message, Date.current.to_s
+    assert_empty @item.coinspot_accounts
+  end
+
+  # A single day at the record limit is known-truncated and CoinSpot offers no
+  # finer paging, so persisting it would record a partial history as complete.
+  test "fails without persisting when a single-day window is still saturated" do
+    travel_to Date.new(2026, 1, 2) do
+      @provider.stubs(:get_balances).returns("balances" => [])
+      @item.update!(sync_start_date: Date.new(2026, 1, 2))
+
+      saturated = Array.new(CoinspotItem::Importer::ORDER_HISTORY_LIMIT) { |i| { "id" => "sat-#{i}", "coin" => "BTC" } }
+      @provider.stubs(:get_order_history).returns("buyorders" => saturated, "sellorders" => [])
+
+      error = assert_raises(CoinspotItem::Importer::OrderHistoryUnavailableError) do
+        CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+      end
+
+      assert_includes error.message, "2026-01-02"
+      assert_empty @item.coinspot_accounts
+    end
+  end
+
+  test "fails rather than valuing a nonzero asset at zero when its AUD price is missing" do
+    @provider.stubs(:get_balances).returns(
+      "balances" => [ { "xyz" => { "balance" => "12.5" } } ]
+    )
+
+    error = nil
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      error = assert_raises(CoinspotItem::Importer::MissingAssetPriceError) do
+        CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+      end
+    end
+
+    assert_equal "CoinSpot returned XYZ without an AUD balance or rate", error.message
+    assert_empty @item.coinspot_accounts
+  end
+
+  test "preserves sell orders alongside buy orders from the primary endpoint" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).returns(
+      "buyorders" => [ { "id" => "b1", "coin" => "BTC" } ],
+      "sellorders" => [ { "id" => "s1", "coin" => "BTC" } ]
+    )
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    assert_equal 2, result[:orders_imported]
+    payload = @item.coinspot_accounts.first.raw_transactions_payload
+    assert_equal [ { "id" => "b1", "coin" => "BTC" } ], payload.dig("orders", "buyorders")
+    assert_equal [ { "id" => "s1", "coin" => "BTC" } ], payload.dig("orders", "sellorders")
+  end
+
+  test "preserves distinct orders that do not have provider ids" do
+    @provider.stubs(:get_balances).returns("balances" => [])
+    @provider.stubs(:get_order_history).returns(
+      "buyorders" => [
+        { "coin" => "BTC", "amount" => "0.1", "audtotal" => "1000", "created" => "2026-01-02T10:00:00Z" },
+        { "coin" => "BTC", "amount" => "0.2", "audtotal" => "2000", "created" => "2026-01-03T10:00:00Z" }
+      ],
+      "sellorders" => []
+    )
+
+    result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+    assert_equal 2, result[:orders_imported]
+    orders = @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "buyorders")
+    assert_equal [ "0.1", "0.2" ], orders.map { |order| order["amount"] }
+  end
+
+  test "bisects a window that comes back saturated at the record limit" do
+    travel_to Date.new(2026, 1, 20) do
+      @provider.stubs(:get_balances).returns("balances" => [])
+      @item.update!(sync_start_date: Date.new(2026, 1, 1))
+
+      full_window_orders = Array.new(CoinspotItem::Importer::ORDER_HISTORY_LIMIT) { |i| { "id" => "sat-#{i}", "coin" => "BTC" } }
+      first_half_orders = [ { "id" => "half-1", "coin" => "BTC" } ]
+      second_half_orders = [ { "id" => "half-2", "coin" => "BTC" } ]
+
+      @provider.stubs(:get_order_history).with(startdate: Date.new(2026, 1, 1), enddate: Date.new(2026, 1, 20))
+        .returns("buyorders" => full_window_orders, "sellorders" => [])
+      @provider.stubs(:get_order_history).with(startdate: Date.new(2026, 1, 1), enddate: Date.new(2026, 1, 10))
+        .returns("buyorders" => first_half_orders, "sellorders" => [])
+      @provider.stubs(:get_order_history).with(startdate: Date.new(2026, 1, 11), enddate: Date.new(2026, 1, 20))
+        .returns("buyorders" => second_half_orders, "sellorders" => [])
+
+      CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+
+      buyorders = @item.coinspot_accounts.first.raw_transactions_payload.dig("orders", "buyorders")
+      assert_equal %w[half-1 half-2], buyorders.map { |order| order["id"] }.sort
+    end
+  end
+
+  test "marks item requires update when permissions are invalid" do
+    @provider.stubs(:get_balances).raises(Provider::Coinspot::PermissionError, "Permission denied")
+
+    assert_raises(Provider::Coinspot::PermissionError) do
+      CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
+    end
+
+    assert @item.reload.requires_update?
+  end
+end

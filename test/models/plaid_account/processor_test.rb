@@ -131,6 +131,23 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     PlaidAccount::Processor.new(@plaid_account).process
   end
 
+  test "processes credit liability data for non-credit-card subtypes" do
+    # Plaid reports PayPal Credit as credit/paypal. Dispatching only on
+    # ["credit", "credit card"] left these accounts with a stored liabilities
+    # payload but no minimum_payment or apr.
+    expect_investment_product_processor_calls
+    expect_no_investment_balance_calculator_calls
+    expect_depository_product_processor_calls
+
+    @plaid_account.update!(plaid_type: "credit", plaid_subtype: "paypal")
+
+    PlaidAccount::Liabilities::CreditProcessor.any_instance.expects(:process).once
+    PlaidAccount::Liabilities::MortgageProcessor.any_instance.expects(:process).never
+    PlaidAccount::Liabilities::StudentLoanProcessor.any_instance.expects(:process).never
+
+    PlaidAccount::Processor.new(@plaid_account).process
+  end
+
   test "processes mortgage liability data" do
     expect_investment_product_processor_calls
     expect_no_investment_balance_calculator_calls
