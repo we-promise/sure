@@ -1,6 +1,20 @@
 <%# locals: (balance_sheet:, **args) %>
 
-<div class="space-y-6" id="balance-sheet">
+<div class="space-y-6" id="balance-sheet"
+     data-always-expanded="<%= Current.user.always_expanded_account_groups.to_json %>">
+  <div class="sticky top-0 z-10 flex justify-end px-4 bg-container">
+    <button
+      type="button"
+      data-balance-sheet-expand-all
+      data-expand-label="<%= t("pages.dashboard.balance_sheet.expand_all") %>"
+      data-collapse-label="<%= t("pages.dashboard.balance_sheet.collapse_all") %>"
+      class="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
+      aria-expanded="false">
+      <%= icon("chevrons-up-down", size: "sm") %>
+      <span><%= t("pages.dashboard.balance_sheet.expand_all") %></span>
+    </button>
+  </div>
+
   <% balance_sheet.classification_groups.each do |classification_group| %>
     <div class="space-y-4 px-4">
       <div class="flex items-center gap-2">
@@ -53,7 +67,8 @@
               <details class="group open:bg-container
                 <%= idx == 0 ? "rounded-t-lg" : "" %>
                 <%= idx == classification_group.account_groups.size - 1 ? "rounded-b-lg" : "" %>
-              ">
+              " data-group-key="<%= account_group.key %>"
+              <%= "open" if Current.user.always_expanded_account_group?(account_group.key) %>>
                 <summary class="cursor-pointer p-4 group-open:bg-container rounded-lg flex items-center justify-between">
                   <div class="w-40 shrink-0 flex items-center gap-1">
                     <%= icon("chevron-right", class: "group-open:rotate-90") %>
@@ -135,3 +150,67 @@
     display: none;
   }
 </style>
+
+<%#
+  "Expand all / Collapse all" for the balance-sheet account groups.
+
+  This is an inline <script> (not a Stimulus controller) on purpose: Sure ships
+  its JS via importmap, and the .importmap.json manifest is baked into the
+  Docker image at build time. A newly bind-mounted *_controller.js would not be
+  in that manifest, so the browser would 404 it and the button would be dead on
+  the running image. An inline script is served with the HTML and re-runs
+  automatically when the surrounding Turbo frame re-renders (e.g. on a period
+  change). Wrapped in javascript_tag for CSP nonce compliance.
+%>
+<% if balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
+<%= javascript_tag nonce: true do %>
+  (function () {
+    var root = document.getElementById("balance-sheet");
+    var button = root && root.querySelector("[data-balance-sheet-expand-all]");
+    if (!button) return;
+
+    var details = Array.prototype.slice.call(root.querySelectorAll("details"));
+    if (details.length === 0) { button.style.display = "none"; return; }
+
+    // Enforce "always expanded" preference client-side. The root div carries
+    // the current preference list (server-rendered); each <details> carries
+    // its own data-group-key. This works on full page loads, Turbo frame
+    // swaps, and bfcache restores alike.
+    var alwaysExpanded = [];
+    try { alwaysExpanded = JSON.parse(root.getAttribute("data-always-expanded") || "[]"); } catch (e) {}
+    if (alwaysExpanded.length > 0) {
+      details.forEach(function (d) {
+        var key = d.getAttribute("data-group-key");
+        if (key && alwaysExpanded.indexOf(key) !== -1) d.open = true;
+      });
+    }
+
+    var expandLabel = button.getAttribute("data-expand-label") || "Expand all";
+    var collapseLabel = button.getAttribute("data-collapse-label") || "Collapse all";
+
+    function allOpen() {
+      return details.every(function (d) { return d.open; });
+    }
+
+    function syncButton() {
+      var open = allOpen();
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      var label = button.querySelector("span");
+      if (label) label.textContent = open ? collapseLabel : expandLabel;
+    }
+
+    button.addEventListener("click", function () {
+      var open = allOpen();
+      details.forEach(function (d) { d.open = !open; });
+      syncButton();
+    });
+
+    // Keep the button in sync if an individual group is toggled by hand.
+    details.forEach(function (d) {
+      d.addEventListener("toggle", syncButton);
+    });
+
+    syncButton();
+  })();
+<% end %>
+<% end %>

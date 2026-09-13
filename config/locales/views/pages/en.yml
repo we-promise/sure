@@ -71,6 +71,8 @@ en:
         name: "Name"
         weight: "Weight"
         value: "Value"
+        expand_all: "Expand all"
+        collapse_all: "Collapse all"
         classifications:
           asset: "Assets"
           liability: "Liabilities"

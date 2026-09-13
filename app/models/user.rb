@@ -649,6 +649,19 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_two_column") == true
   end
 
+  # Returns the accountable keys (e.g. "depository", "credit_card") that should
+  # start expanded in the sidebar and dashboard balance sheet, or an empty
+  # array when unset. Stored in the preferences JSONB column.
+  def always_expanded_account_groups
+    preferences&.dig("always_expanded_account_groups") || []
+  end
+
+  # Returns whether the given key (coerced to a string) is selected to start
+  # expanded in the sidebar and dashboard balance sheet.
+  def always_expanded_account_group?(account_group_key)
+    always_expanded_account_groups.include?(account_group_key.to_s)
+  end
+
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
   end
