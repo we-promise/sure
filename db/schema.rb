@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_184745) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -109,6 +109,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.boolean "enable_category_matcher", default: true, null: false
     t.boolean "exclude_from_reports", default: false, null: false
     t.uuid "family_id", null: false
+    t.string "iban"
     t.uuid "import_id"
     t.string "institution_domain"
     t.string "institution_name"
@@ -126,6 +127,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "exclude_from_reports"], name: "index_accounts_on_family_id_and_exclude_from_reports"
+    t.index ["family_id", "iban"], name: "index_accounts_on_family_id_and_iban", unique: true, where: "(iban IS NOT NULL)"
     t.index ["family_id", "id"], name: "index_accounts_on_family_id_and_id"
     t.index ["family_id", "status", "accountable_type"], name: "index_accounts_on_family_id_status_accountable_type"
     t.index ["family_id", "status"], name: "index_accounts_on_family_id_and_status"
@@ -1405,6 +1407,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "color"
     t.datetime "created_at", null: false
     t.uuid "family_id"
+    t.string "iban"
     t.string "logo_url"
     t.string "name", null: false
     t.string "provider_merchant_id"
@@ -1412,9 +1415,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.string "website_url"
+    t.index ["family_id", "iban"], name: "index_merchants_on_family_id_and_iban", unique: true, where: "((iban IS NOT NULL) AND ((type)::text = 'FamilyMerchant'::text))"
     t.index ["family_id", "name"], name: "index_merchants_on_family_id_and_name", unique: true, where: "((type)::text = 'FamilyMerchant'::text)"
     t.index ["family_id"], name: "index_merchants_on_family_id"
     t.index ["provider_merchant_id", "source"], name: "index_merchants_on_provider_merchant_id_and_source", unique: true, where: "((provider_merchant_id IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
+    t.index ["source", "iban"], name: "index_merchants_on_source_and_iban", unique: true, where: "((iban IS NOT NULL) AND ((type)::text = 'ProviderMerchant'::text))"
     t.index ["source", "name"], name: "index_merchants_on_source_and_name", unique: true, where: "((type)::text = 'ProviderMerchant'::text)"
     t.index ["type"], name: "index_merchants_on_type"
   end

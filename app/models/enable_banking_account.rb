@@ -5,6 +5,12 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    # deterministic: true preserves equality lookups (e.g. find_by(iban:)) —
+    # the account's own IBAN was previously stored in plaintext here, unlike
+    # the other columns on this model.
+    # See Account#iban for the deliberate tradeoff this makes (accepted here
+    # for the same reason: DB-level uniqueness/lookup can't work otherwise).
+    encrypts :iban, deterministic: true
   end
 
   belongs_to :enable_banking_item
@@ -129,6 +135,8 @@ class EnableBankingAccount < ApplicationRecord
       }.compact,
       raw_payload: account_snapshot
     )
+
+    propagate_iban_to_account!
   end
 
   def upsert_enable_banking_transactions_snapshot!(transactions_snapshot)
@@ -139,7 +147,83 @@ class EnableBankingAccount < ApplicationRecord
     save!
   end
 
+  # Only fills a blank Account#iban with the provider value, and never a
+  # blank the user set deliberately (see Enrichable) -- a plain
+  # target.iban.blank? check can't tell "never touched" apart from "user
+  # cleared it on purpose", and this must not undo the latter.
+  #
+  # Public (not called only from #upsert_enable_banking_snapshot!): account
+  # discovery runs before the linking AccountProvider exists, so this is a
+  # no-op at that point (current_account is nil). EnableBankingItemsController
+  # calls this again right after creating the AccountProvider, once there is
+  # actually a target to propagate to.
+  def propagate_iban_to_account!
+    return if iban.blank?
+
+    target = current_account
+    return if target.nil?
+
+    # #with_lock reloads target under SELECT FOR UPDATE before the block
+    # runs, so a concurrent manual edit that lands between our earlier
+    # load of `target` and this write can't be silently clobbered by the
+    # sync (a plain `target.iban.present?` check followed by `update` has
+    # no such guarantee).
+    target.with_lock do
+      next if target.iban.present?
+
+      # enrich_attribute no-ops if `iban` is locked (the user explicitly set
+      # or cleared it via the account form -- lock_saved_attributes! locks
+      # either way), and uses `save` rather than `save!`, so a Rails-level
+      # uniqueness validation failure just fails to enrich instead of
+      # raising. #with_lock only serializes writers to THIS row though: two
+      # different blank-iban accounts in the family can both pass that
+      # validation concurrently and then lose at the raw DB unique index on
+      # commit, which surfaces as RecordNotUnique -- save doesn't rescue
+      # that. Isolated in its own savepoint (same pattern as
+      # Account::ProviderImportAdapter#backfill_merchant_iban!): a failed
+      # statement would otherwise abort the whole surrounding transaction.
+      begin
+        ActiveRecord::Base.transaction(requires_new: true) do
+          target.enrich_attribute(:iban, iban, source: "enable_banking")
+        end
+
+        # enrich_attribute's own "was it modified" return value can't be
+        # trusted to reflect a failed save (a Rails quirk in how it derives
+        # that from previous_changes), so check the record's errors
+        # directly instead. Empty errors covers both a successful write and
+        # a locked attribute (an intentional, silent skip -- see the method
+        # comment above); errors present means the internal `save` actually
+        # attempted and failed (e.g. another account in the family already
+        # has this IBAN), which is worth surfacing in the support debug log
+        # rather than only a Rails log line.
+        if target.errors.any?
+          capture_propagation_failure(target, target.errors.full_messages.join(", "))
+        end
+      rescue ActiveRecord::RecordNotUnique
+        # Deliberately not e.message: PostgreSQL's unique-violation DETAIL
+        # clause embeds the actual conflicting IBAN value in plaintext,
+        # which would defeat the point of encrypting the column at rest by
+        # persisting it into an unrelated log table instead.
+        capture_propagation_failure(target, "Concurrent iban conflict on the family_id+iban unique index")
+      end
+    end
+  end
+
   private
+
+    def capture_propagation_failure(target, message)
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Could not propagate IBAN to account: #{message}",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item&.family,
+        account: target,
+        account_provider: account_provider,
+        metadata: { enable_banking_account_id: id, account_id: target.id }
+      )
+    end
 
     def build_account_name(snapshot)
       # Try to build a meaningful name from the account data
@@ -161,7 +245,7 @@ class EnableBankingAccount < ApplicationRecord
       else
         "Enable Banking Account"
       end
-    end
+  end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for EnableBanking account #{id}, defaulting to EUR")
