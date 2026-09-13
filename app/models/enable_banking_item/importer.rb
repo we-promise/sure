@@ -683,9 +683,9 @@ class EnableBankingItem::Importer
       account_key = direction == "CRDT" ? :debtor_account : :creditor_account
       # Normalized the same way EnableBankingEntry::Processor stores it:
       # without this, two representations of the same duplicate transaction
-      # with differently-formatted IBANs (spaces vs none) would produce
-      # different content keys and defeat the dedup this key exists for.
-      tx.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      # with differently-formatted IBANs (spaces/punctuation vs none) would
+      # produce different content keys and defeat the dedup this key exists for.
+      IbanNormalizable.normalize(tx.dig(account_key, :iban))
     end
 
     class PaginationTruncatedError < StandardError; end

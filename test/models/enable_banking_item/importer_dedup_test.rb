@@ -179,6 +179,33 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 1, result.count
   end
 
+  test "still deduplicates identical transactions whose counterparty iban differs only in punctuation" do
+    transactions = [
+      {
+        entry_reference: "ref_dup_punct_1",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_dup_punct_2",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "de89.3704-0044/0532:0130'00" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+  end
+
   test "merges a pending row's iban into the booked representative that lost it" do
     # Some ASPSPs drop counterparty account data once a transaction settles
     # (the booked delivery has less detail than the earlier pending one).

@@ -13,12 +13,6 @@ class EnableBankingAccount < ApplicationRecord
     encrypts :iban, deterministic: true
   end
 
-  # Same normalization as Account#normalize_iban, applied here too: a
-  # formatted/lowercase provider IBAN must canonicalize to the same
-  # deterministic ciphertext as one written elsewhere, or find_by(iban:)
-  # lookups against this column silently miss.
-  before_validation :normalize_iban
-
   belongs_to :enable_banking_item
 
   # New association through account_providers
