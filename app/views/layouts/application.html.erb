@@ -112,7 +112,7 @@ end %>
        inert: !Current.user.show_sidebar?,
        data: { app_layout_target: "leftSidebar", sidebar_resize_target: "leftSidebar" } do %>
       <%= render "layouts/shared/sidebar_resize_handle", side: "left" %>
-      <div class="px-4 h-full flex flex-col overflow-y-auto">
+      <div id="sidebar-scroll" data-controller="preserve-scroll" class="px-4 h-full flex flex-col overflow-y-auto">
         <% if content_for?(:sidebar) %>
           <%= yield :sidebar %>
         <% else %>
