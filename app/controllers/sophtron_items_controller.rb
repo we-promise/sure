@@ -1021,13 +1021,25 @@ class SophtronItemsController < ApplicationController
       end
     end
 
+    # connection_status can continue an existing-account link, and that dialog
+    # shows the account, so it needs the same write check as
+    # select_existing_account. Returns nil when no account was requested.
+    def requested_link_account
+      return if params[:account_id].blank?
+
+      account = Current.family.accounts.find(params[:account_id])
+      account if require_linkable_account!(account)
+    end
+
     def render_account_selection(item, force_refresh: false)
+      @account = requested_link_account
+      return if performed?
+
       @available_accounts = item.reject_already_linked(item.fetch_remote_accounts(force: force_refresh))
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
-      if params[:account_id].present?
-        @account = Current.family.accounts.find(params[:account_id])
+      if @account
         render :select_existing_account, layout: false
       else
         render :select_accounts, layout: false
@@ -1035,6 +1047,9 @@ class SophtronItemsController < ApplicationController
     end
 
     def render_account_selection_if_accounts_available(item)
+      @account = requested_link_account
+      return true if performed?
+
       accounts = item.fetch_remote_accounts(force: true)
       return false if accounts.empty?
 
@@ -1049,8 +1064,7 @@ class SophtronItemsController < ApplicationController
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
-      if params[:account_id].present?
-        @account = Current.family.accounts.find(params[:account_id])
+      if @account
         render :select_existing_account, layout: false
       else
         render :select_accounts, layout: false
