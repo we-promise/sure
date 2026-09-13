@@ -971,7 +971,7 @@ class UserTest < ActiveSupport::TestCase
     application = Doorkeeper::Application.create!(
       name: "Test App #{SecureRandom.hex(4)}", redirect_uri: "sureapp://oauth/callback", scopes: "read_write"
     )
-    token = Doorkeeper::AccessToken.create!(
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
       application: application, resource_owner_id: user.id, scopes: "read_write", expires_in: 30.days.to_i
     )
 
