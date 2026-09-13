@@ -361,6 +361,7 @@ class SimplefinItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     # Allow explicit relinking by listing all available SimpleFIN accounts for the family.
     # The UI will surface the current mapping (if any), and the action will move the link.
@@ -375,7 +376,8 @@ class SimplefinItemsController < ApplicationController
       # - Show SFAs that are still legacy-linked (`sfa.account.present?`) => candidates to move.
       # - Show SFAs that are fully unlinked (no legacy account and no account_provider) => candidates to link.
       # - Hide SFAs that are linked via AccountProvider but no longer legacy-linked => already relinked.
-      .select { |sfa| sfa.account.present? || sfa.account_provider.nil? }
+      # - Never offer (or name) a link held by an account the user cannot write.
+      .select { |sfa| (sfa.account.present? || sfa.account_provider.nil?) && relinkable_by_current_user?(sfa) }
       .sort_by { |sfa| sfa.updated_at || sfa.created_at }
       .reverse
 
@@ -385,6 +387,8 @@ class SimplefinItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     simplefin_account = SimplefinAccount.find(params[:simplefin_account_id])
 
     # Cross-provider guard: we only support swapping SimpleFIN-to-SimpleFIN links
@@ -414,6 +418,10 @@ class SimplefinItemsController < ApplicationController
       end
       return
     end
+
+    # The relink below clears the legacy FK on the account holding it, moves
+    # the AccountProvider off its account and may queue that account for deletion.
+    return unless require_relinkable_provider_account!(simplefin_account, @account)
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account
     Account.transaction do
