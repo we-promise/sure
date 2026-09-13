@@ -173,6 +173,25 @@ class Assistant::Function::CreateTransactionTest < ActiveSupport::TestCase
     assert_equal "account_not_found", result[:error]
   end
 
+  test "does not let a user from a different family create in an account" do
+    # josh belongs to the `empty` family; the account belongs to `dylan_family`.
+    # Cross-family account ids are structurally unresolvable and must not leak
+    # existence — the same write-gate scoping as the read-only-share case.
+    function = Assistant::Function::CreateTransaction.new(users(:josh))
+
+    result = function.call(
+      "account_id" => @account.id,
+      "date" => "2026-09-11",
+      "amount" => 10.00,
+      "type" => "expense",
+      "name" => "Cross Family"
+    )
+
+    assert_equal false, result[:success]
+    assert_equal "account_not_found", result[:error]
+    assert_nil Entry.find_by(name: "Cross Family")
+  end
+
   test "rejects an invalid date" do
     result = @function.call(
       "account_id" => @account.id,
