@@ -23,6 +23,30 @@
         </div>
       </div>
     </div>
+    <% error_msg = local_assigns[:error_message] || @error_message %>
+    <% if error_msg.present? %>
+      <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
+        <%= error_msg %>
+      </div>
+    <% end %>
+    <% items = local_assigns[:pluggy_items] || @pluggy_items || Current.family.pluggy_items.where.not(client_id: [nil, ""]) %>
+    <% if items&.any? %>
+      <% connected = items.any? { |item| item.attributes["pluggy_item_id"].present? } %>
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 <%= connected ? "bg-success" : "bg-warning" %> rounded-full"></div>
+        <p class="text-sm text-secondary">
+          <%= connected ? t("pluggy_items.panel.status_connected_html", accounts_path: accounts_path).html_safe : t("pluggy_items.panel.status_credentials_only") %>
+        </p>
+      </div>
+      <%= render DS::Link.new(
+        text: t("pluggy_items.panel.connect_action"),
+        icon: "link",
+        variant: "secondary",
+        href: connect_form_settings_providers_path(provider_key: "pluggy"),
+        frame: "drawer",
+        data: { turbo_method: :post }
+      ) %>
+    <% end %>
   <% else %>
     <div class="prose prose-sm text-secondary">
       <p class="text-primary font-medium"><%= t("pluggy_items.panel.setup_instructions") %></p>

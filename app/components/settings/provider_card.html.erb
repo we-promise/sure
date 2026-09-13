@@ -1,6 +1,6 @@
 <%= link_to connect_path,
             class: "bg-container shadow-border-xs hover:bg-surface-inset rounded-xl p-4 flex flex-col gap-2.5 text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
-            data: { turbo_frame: "drawer", turbo_method: :post, turbo_prefetch: "false" }.merge(filter_data) do %>
+            data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data) do %>
   <div class="flex items-start gap-2.5">
     <%= render ProviderLogo.new(provider_key: provider_key, class_name: "w-9 h-9 rounded-lg") %>
     <div class="flex-1 min-w-0">

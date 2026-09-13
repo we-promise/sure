@@ -118,32 +118,10 @@ class Settings::ProvidersController < ApplicationController
       @panel_title   = panel[:title]
       load_provider_items(provider_key)
 
-      # Generate Pluggy Connect token for widget flow if credentials exist.
-      # Bind the token to the existing item's `pluggy_item_id` (UPDATE mode) when
-      # the family is already connected so the widget re-auths instead of
-      # creating a duplicate Pluggy rejects as ITEM_USER_ALREADY_EXISTS; fall back
-      # to a CREATE-mode token (avoid_duplicates) only when no item is connected
-      # yet. @connect_item carries the bound record so the panel can wire the
-      # is-update / item-id / record-id Stimulus values from it (mirrors
-      # prepare_show_context).
+      # Mint the Pluggy token only on POST; item_id selects CREATE or UPDATE mode.
       if provider_key == "pluggy"
         @connect_item = PluggyItem.preferred_for_connect(Current.family)
-        # The connect token's UPDATE-vs-CREATE mode is driven by
-        # `@connect_item.pluggy_item_id.presence` passed as `item_id:` below (nil
-        # → CREATE, set → UPDATE/re-auth). Pluggy does NOT expose item listing
-        # (https://docs.pluggy.ai/docs/item), so the upstream id must have been
-        # persisted from the widget / webhook / dashboard flow — there is no
-        # discovery call to make here. The SDK derives `avoid_duplicates` from
-        # `item_id` presence, so the re-auth path is reached only when the id was
-        # already persisted.
         if @connect_item&.credentials_configured? && request.post?
-          # `avoid_duplicates:` is intentionally OMITTED: the SDK derives the flag
-          # from `item_id` presence (nil -> CREATE: false, present -> UPDATE:
-          # true). Hardcoding `true` here forced CREATE-mode tokens to send
-          # `avoidDuplicates: true`, so Pluggy's dup-check on the institution
-          # bank credentials matched the orphaned upstream item after a Docker
-          # `-v` wipe and 400'd with ITEM_USER_ALREADY_EXISTS. See
-          # Provider::Pluggy.connect_token derivation comment.
           begin
             @connect_token = @connect_item.pluggy_provider.connect_token(
               client_user_id: @connect_item.client_user_id,
@@ -152,15 +130,7 @@ class Settings::ProvidersController < ApplicationController
               item_id: @connect_item.pluggy_item_id.presence
             )
           rescue Provider::Pluggy::Error => e
-            # Bad/invalid Pluggy credentials or a Pluggy API outage turns the
-            # token mint into a 500 here — leaving the drawer blank with no
-            # usable error. Surface the message in the panel's existing error
-            # slot (@error_message is read in _pluggy_panel) and leave
-            # @connect_token nil so the widget box stays hidden and the
-            # drawer-link fallback renders. AuthenticationError < Error, so this
-            # catches the bad-credentials path too. Mirrors the swallow in
-            # PluggyItemsController#issue_pluggy_connect_token but keeps the
-            # message visible instead of silently nil.
+            # Show provider errors in the drawer instead of returning 500.
             Rails.logger.error "Failed to mint Pluggy connect token: #{e.class} - #{e.message}"
             @error_message = e.message
           end
