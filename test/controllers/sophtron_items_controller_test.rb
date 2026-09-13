@@ -947,4 +947,29 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "SophtronAccount", account.account_providers.first.provider_type
     assert_redirected_to accounts_path
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_sophtron_items_url,
+    link_url: :link_existing_account_sophtron_items_url,
+    target: ->(owner) {
+      @user.family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "USD",
+                                    accountable: Depository.create!(subtype: "checking"))
+    },
+    # Sophtron links by the remote account id, so the record's account_id is its own id.
+    provider_account: -> {
+      id = SecureRandom.uuid
+      @item.sophtron_accounts.create!(id: id, account_id: id, name: "Sophtron Checking", currency: "USD", balance: 100)
+    },
+    provider_param: :sophtron_account_id,
+    prepare: -> {
+      @item.update!(user_institution_id: "ui-1")
+      remote = @item.sophtron_accounts.map do |record|
+        { id: record.account_id, account_id: record.account_id, account_name: record.name, currency: "USD", balance: "100" }
+      end
+      remote << { id: "remote-unlinked", account_id: "remote-unlinked", account_name: "Remote Savings", currency: "USD", balance: "5" }
+      SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
+      SophtronItem.any_instance.stubs(:fetch_remote_accounts).returns(remote.map(&:with_indifferent_access))
+    }
+  )
 end
