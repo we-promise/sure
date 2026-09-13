@@ -13,6 +13,61 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  include ProviderLinkAuthorizationTests
+  # The shared dialog test links through AccountProvider only, which SimpleFIN's
+  # select already hides, so the legacy-FK dialog case is tested below.
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_simplefin_items_url,
+    link_url: :link_existing_account_simplefin_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "USD",
+                               accountable: Depository.create!(subtype: "checking"))
+    },
+    provider_account: -> {
+      @simplefin_item.simplefin_accounts.create!(name: "SF Checking", account_id: SecureRandom.hex(6),
+                                                 account_type: "depository", currency: "USD", current_balance: 0)
+    },
+    provider_param: :simplefin_account_id,
+    relinks: true,
+    dialog_names_linked: false
+  )
+
+  test "link_existing_account refuses to clear a legacy link held by an account the admin cannot write" do
+    holder = provider_link_member_account("read_write")
+    sfa = provider_link_new_provider_account
+    holder.update!(simplefin_account_id: sfa.id)
+    target_account = provider_link_admin_account
+
+    assert_no_enqueued_jobs(only: DestroyJob) do
+      assert_no_difference "AccountProvider.count" do
+        post link_existing_account_simplefin_items_url, params: { account_id: target_account.id, simplefin_account_id: sfa.id }
+      end
+    end
+
+    assert_provider_link_refused
+    assert_equal sfa.id, holder.reload.simplefin_account_id
+    assert_nil sfa.reload.account_provider
+    refute holder.pending_deletion?
+  end
+
+  test "select_existing_account does not offer legacy links held by an account the admin cannot write" do
+    hidden = provider_link_member_account(nil, name: "Hidden legacy holder #{SecureRandom.hex(4)}")
+    hidden_sfa = provider_link_new_provider_account
+    hidden.update!(simplefin_account_id: hidden_sfa.id)
+    visible = provider_link_admin_account(name: "Visible legacy holder #{SecureRandom.hex(4)}")
+    visible_sfa = provider_link_new_provider_account
+    visible.update!(simplefin_account_id: visible_sfa.id)
+    target_account = provider_link_admin_account
+
+    get select_existing_account_simplefin_items_url, params: { account_id: target_account.id }
+
+    assert_response :success
+    refute_includes response.body, hidden.name
+    assert_select %(input[value="#{hidden_sfa.id}"]), count: 0
+    assert_includes response.body, visible.name
+    assert_select %(input[value="#{visible_sfa.id}"]), count: 1
+  end
+
 
   test "should destroy simplefin item" do
     assert_difference("SimplefinItem.count", 0) do # doesn't actually delete immediately
