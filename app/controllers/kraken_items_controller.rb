@@ -64,7 +64,7 @@ class KrakenItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
+    return unless require_linkable_account!(@account)
 
     account_flow = kraken_item_account_flow_context
     @kraken_item = account_flow[:kraken_item]
@@ -89,7 +89,7 @@ class KrakenItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    return unless require_account_permission!(@account, :write, redirect_path: accounts_path)
+    return unless require_linkable_account!(@account)
 
     kraken_item = kraken_item_account_flow_context[:kraken_item]
 

@@ -110,55 +110,21 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select %(input[name="return_to"][value="#{return_to}"])
   end
 
-  test "existing account flows enforce account write permission" do
-    account = @family.accounts.create!(
-      owner: users(:family_member),
-      name: "Read-write Shared Checking",
-      balance: 0,
-      currency: "NZD",
-      accountable: Depository.new
-    )
-    account.share_with!(users(:family_admin), permission: "read_write")
-    assert_equal :read_write, account.permission_for(users(:family_admin))
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
-
-    get select_existing_account_akahu_items_url, params: {
-      account_id: account.id,
-      akahu_item_id: @akahu_item.id
-    }
-    assert_redirected_to accounts_path
-    refute_includes response.body, account.name
-
-    assert_no_difference "AccountProvider.count" do
-      post link_existing_account_akahu_items_url, params: {
-        account_id: account.id,
-        akahu_item_id: @akahu_item.id,
-        akahu_account_id: @akahu_account.id
-      }
-    end
-
-    assert_redirected_to accounts_path
-    assert_nil @akahu_account.reload.account_provider
-
-    account.account_shares.find_by!(user: users(:family_admin)).update!(permission: "full_control")
-
-    get select_existing_account_akahu_items_url, params: {
-      account_id: account.id,
-      akahu_item_id: @akahu_item.id
-    }
-    assert_response :success
-
-    assert_difference "AccountProvider.count", 1 do
-      post link_existing_account_akahu_items_url, params: {
-        account_id: account.id,
-        akahu_item_id: @akahu_item.id,
-        akahu_account_id: @akahu_account.id
-      }
-    end
-
-    assert_redirected_to accounts_path
-    assert_equal account, @akahu_account.reload.account_provider.account
-  end
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_akahu_items_url,
+    link_url: :link_existing_account_akahu_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "NZD",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      @akahu_item.akahu_accounts.create!(name: "Akahu Checking", account_id: SecureRandom.hex(6), currency: "NZD")
+    },
+    provider_param: :akahu_account_id,
+    params: -> { { akahu_item_id: @akahu_item.id } },
+    prepare: -> { AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil) }
+  )
 
   test "link accounts rejects unsafe return path on no selection redirect" do
     post link_accounts_akahu_items_url, params: {
