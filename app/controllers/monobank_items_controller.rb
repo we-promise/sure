@@ -152,6 +152,7 @@ class MonobankItemsController < ApplicationController
   # Render the picker to attach a Monobank account to an existing Sure account.
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     if @account.account_providers.exists?
       redirect_to accounts_path, alert: t(".account_already_linked")
@@ -177,6 +178,7 @@ class MonobankItemsController < ApplicationController
   # Link a selected Monobank account to an existing Sure account and sync.
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(account)
     monobank_item = requested_monobank_item
 
     unless monobank_item.credentials_configured?
