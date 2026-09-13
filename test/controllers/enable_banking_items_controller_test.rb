@@ -63,4 +63,20 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
     assert_equal "DECOUPLED", @item.reload.aspsp_auth_approach
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_enable_banking_items_url,
+    link_url: :link_existing_account_enable_banking_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "EUR",
+                               accountable: Depository.create!)
+    },
+    provider_account: -> {
+      @item.enable_banking_accounts.create!(name: "Girokonto", uid: SecureRandom.hex(6), currency: "EUR",
+                                            current_balance: 100)
+    },
+    provider_param: :enable_banking_account_id,
+    relinks: true
+  )
 end

@@ -59,6 +59,8 @@ class PlaidItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @region = params[:region] || "us"
 
     # A non-admin reaches this action now, so the target account needs its own
@@ -84,6 +86,8 @@ class PlaidItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     plaid_account = PlaidAccount.find(params[:plaid_account_id])
 
     # Verify the Plaid account belongs to this family's Plaid items, and that
