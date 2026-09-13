@@ -44,7 +44,10 @@ describe("evaluateAmountExpression", () => {
     })
   })
 
-  describe("comma decimal with more than two decimal places (iOS bug report)", () => {
+  describe("a single separator is always the decimal point (iOS bug report)", () => {
+    // Someone typing digit by digit never adds a thousands separator, so
+    // there's no ambiguity to resolve here — a lone comma or dot is always
+    // the decimal point, however many digits follow it.
     it("reads a 3-decimal comma amount as a decimal, not thousands", () => {
       assert.equal(evaluateAmountExpression("10,321"), 10.321)
     })
@@ -60,36 +63,43 @@ describe("evaluateAmountExpression", () => {
     it("still reads the classic 2-decimal comma case correctly", () => {
       assert.equal(evaluateAmountExpression("256,54"), 256.54)
     })
+
+    it("reads a 3-digit comma amount as a decimal even though it looks like a thousands group", () => {
+      assert.equal(evaluateAmountExpression("1,234"), 1.234)
+      assert.equal(evaluateAmountExpression("12,345"), 12.345)
+    })
   })
 
-  describe("thousands grouping (only accepted in strict 3-digit groups)", () => {
-    it("treats a repeated comma as thousands grouping", () => {
-      assert.equal(evaluateAmountExpression("1,234,567"), 1234567)
+  describe("thousands grouping is not supported while typing — only when pasting", () => {
+    // Grouping is a paste-only concern (parse_amount_paste.js/
+    // parseLocaleFloat, unchanged by this module): pasted statement data is
+    // often grouped, but nobody types a grouping separator digit by digit.
+    // Anything with more than one comma/dot, in any combination, is
+    // rejected outright rather than guessed at.
+    it("rejects a repeated comma", () => {
+      assert.equal(evaluateAmountExpression("1,234,567"), null)
     })
 
-    it("treats a repeated dot as thousands grouping", () => {
-      assert.equal(evaluateAmountExpression("1.234.567"), 1234567)
+    it("rejects a repeated dot", () => {
+      assert.equal(evaluateAmountExpression("1.234.567"), null)
     })
 
-    it("a single separator is always the decimal point, never grouping — even with 3 digits after it", () => {
-      // This is the inverse of "treats a repeated comma/dot as thousands
-      // grouping" above: grouping only kicks in once the separator repeats
-      // (2+ groups). A single occurrence is always read as the decimal
-      // point, matching the iOS bug report's "10,321" case.
-      assert.equal(evaluateAmountExpression("12,345"), 12.345)
+    it("rejects dot-thousands + comma-decimal (European grouped format)", () => {
+      assert.equal(evaluateAmountExpression("1.234,56"), null)
+    })
+
+    it("rejects comma-thousands + dot-decimal (English grouped format)", () => {
+      assert.equal(evaluateAmountExpression("1,234.56"), null)
+    })
+
+    it("intentionally reads the same literal text differently than pasting would", () => {
+      // parseAmountPaste("1,234") -> 1234 (thousands, tested in
+      // parse_amount_paste_test.mjs) because pasted statement data is
+      // usually grouped. Typed input has no such context to lean on, so a
+      // lone comma is always the decimal point instead — same text, two
+      // different (and each internally consistent) readings depending on
+      // how it arrived in the field.
       assert.equal(evaluateAmountExpression("1,234"), 1.234)
-    })
-
-    it("resolves dot-thousands + comma-decimal (European) via last separator", () => {
-      assert.equal(evaluateAmountExpression("1.234,56"), 1234.56)
-    })
-
-    it("resolves comma-thousands + dot-decimal (English) via last separator", () => {
-      assert.equal(evaluateAmountExpression("1,234.56"), 1234.56)
-    })
-
-    it("resolves multi-group European amounts", () => {
-      assert.equal(evaluateAmountExpression("12.345.678,90"), 12345678.9)
     })
   })
 
@@ -107,7 +117,7 @@ describe("evaluateAmountExpression", () => {
       assert.equal(evaluateAmountExpression(".."), null)
     })
 
-    it("rejects mixed separators that don't form a recognized thousands+decimal shape", () => {
+    it("rejects mixed separators regardless of shape", () => {
       assert.equal(evaluateAmountExpression("1.2,3.4"), null)
       assert.equal(evaluateAmountExpression("1,2.3,4"), null)
       assert.equal(evaluateAmountExpression("1,234.56,78"), null)
@@ -223,12 +233,35 @@ describe("evaluateAmountExpression", () => {
   })
 
   describe("whitespace tolerance", () => {
-    it("ignores surrounding and internal spaces", () => {
+    it("ignores surrounding and internal spaces around operators", () => {
       assert.equal(evaluateAmountExpression("  12.50  +  4.30  "), 16.8)
     })
 
-    it("ignores spaces used as thousands grouping", () => {
-      assert.equal(evaluateAmountExpression("1 234,56"), 1234.56)
+    it("rejects a space used as thousands grouping (not supported while typing)", () => {
+      assert.equal(evaluateAmountExpression("1 234,56"), null)
+      assert.equal(evaluateAmountExpression("12 50"), null)
+    })
+
+    it("trims incidental whitespace, including newlines, around a token", () => {
+      assert.equal(evaluateAmountExpression("12\n+3"), 15)
+    })
+  })
+
+  describe("magnitude bound (matches the old type=number min/max)", () => {
+    it("accepts an amount right at the bound", () => {
+      assert.equal(evaluateAmountExpression("99999999999999"), 99999999999999)
+    })
+
+    it("rejects a single amount over the bound", () => {
+      assert.equal(evaluateAmountExpression("999999999999999"), null)
+    })
+
+    it("rejects an expression whose result exceeds the bound, even if each operand doesn't", () => {
+      assert.equal(evaluateAmountExpression("99999999999999*10"), null)
+    })
+
+    it("rejects a negative amount over the bound", () => {
+      assert.equal(evaluateAmountExpression("-999999999999999"), null)
     })
   })
 
@@ -310,9 +343,6 @@ describe("evaluateAmountExpression", () => {
     })
 
     it("rejects a number so large it would parse to Infinity", () => {
-      // Below the MAX_TOKEN_LENGTH cut-off in digit count, but still
-      // astronomically large — must be rejected via the finite check, not
-      // silently accepted as Infinity.
       assert.equal(evaluateAmountExpression("1e400"), null)
     })
 
@@ -321,17 +351,9 @@ describe("evaluateAmountExpression", () => {
       assert.equal(evaluateAmountExpression("Infinity"), null)
     })
 
-    it("tolerates a plain grouping space between digits (by design, same as pasted grouped amounts)", () => {
-      assert.equal(evaluateAmountExpression("12 50"), 1250)
-    })
-
     it("rejects a null byte or other control character embedded in a number", () => {
       assert.equal(evaluateAmountExpression("1\x002"), null)
       assert.equal(evaluateAmountExpression("12\x1b[31m3"), null)
-    })
-
-    it("trims incidental surrounding whitespace, including newlines, same as spaces", () => {
-      assert.equal(evaluateAmountExpression("12\n+3"), 15)
     })
 
     it("rejects full-width/unicode digit look-alikes", () => {
@@ -346,29 +368,33 @@ describe("evaluateAmountExpression", () => {
     })
   })
 
-  describe("separator hint (deterministic, overrides the typed-input heuristic)", () => {
-    it("forces comma as the decimal separator", () => {
+  describe("separator hint (deterministic — for a future user/family decimal-separator preference)", () => {
+    it("accepts the hinted separator", () => {
       assert.equal(evaluateAmountExpression("1,234", { separator: "," }), 1.234)
+      assert.equal(evaluateAmountExpression("1.234", { separator: "." }), 1.234)
     })
 
-    it("forces dot as the decimal separator, comma as grouping", () => {
-      assert.equal(evaluateAmountExpression("1,234", { separator: "." }), 1234)
+    it("rejects the other separator instead of reinterpreting it as grouping", () => {
+      assert.equal(evaluateAmountExpression("1,234", { separator: "." }), null)
+      assert.equal(evaluateAmountExpression("1.234", { separator: "," }), null)
     })
 
     it("applies the hint to every operand in an expression", () => {
       assert.equal(
-        evaluateAmountExpression("1,234+1", { separator: "." }),
-        1235,
-      )
-      assert.equal(
         evaluateAmountExpression("1,234+1", { separator: "," }),
         2.234,
       )
+      assert.equal(evaluateAmountExpression("1,234+1", { separator: "." }), null)
     })
 
     it("still rejects malformed groups under a hint", () => {
-      assert.equal(evaluateAmountExpression("12,50,30", { separator: "." }), null)
+      assert.equal(evaluateAmountExpression("12,50,30", { separator: "," }), null)
       assert.equal(evaluateAmountExpression("1,,234", { separator: "," }), null)
+    })
+
+    it("plain integers are unaffected by the hint", () => {
+      assert.equal(evaluateAmountExpression("1234", { separator: "," }), 1234)
+      assert.equal(evaluateAmountExpression("1234", { separator: "." }), 1234)
     })
   })
 })
@@ -392,11 +418,31 @@ describe("formatAmountForDisplay", () => {
     assert.equal(formatAmountForDisplay(16.8, 2, "12,50+4,30"), "16,80")
   })
 
-  it("renders without rounding when precision is null", () => {
-    assert.equal(formatAmountForDisplay(1.23456789, null, "1,23456789"), "1,23456789")
-  })
-
   it("only substitutes the decimal point, not a negative sign", () => {
     assert.equal(formatAmountForDisplay(-12.5, 2, "-12,50"), "-12,50")
+  })
+
+  describe('null precision (step="any" fields, e.g. crypto price/fee)', () => {
+    it("rounds away float drift instead of rendering it verbatim", () => {
+      // 0.1 + 0.2 in IEEE-754 double math is 0.30000000000000004.
+      assert.equal(formatAmountForDisplay(0.1 + 0.2, null, "0.1+0.2"), "0.3")
+    })
+
+    it("keeps a sub-cent crypto price intact", () => {
+      assert.equal(formatAmountForDisplay(0.00000001, null, "0.00000001"), "0.00000001")
+    })
+
+    it("never falls back to exponential notation for a very small amount", () => {
+      const formatted = formatAmountForDisplay(0.0000000001, null, "0.0000000001")
+      assert.ok(!formatted.includes("e"), `expected no exponential notation, got ${formatted}`)
+    })
+
+    it("renders a whole number without a trailing decimal point", () => {
+      assert.equal(formatAmountForDisplay(12, null, "12"), "12")
+    })
+
+    it("still substitutes a comma when the raw text used one", () => {
+      assert.equal(formatAmountForDisplay(0.1 + 0.2, null, "0,1+0,2"), "0,3")
+    })
   })
 })

@@ -92,21 +92,25 @@
         field has no +/-×÷ keys, so an expression can only be typed with a
         physical keyboard. This row gives touch users the same four
         operators; hidden until the field has focus so it doesn't clutter
-        every money field on the page. Bound to "mousedown" (not "click") so
-        preventDefault in the controller stops the tap from blurring the
-        input, which would otherwise dismiss the on-screen keyboard. %>
+        every money field on the page. Bound to "mousedown"/"touchstart"
+        (not "click") so preventDefault in the controller stops the tap from
+        blurring the input, which would otherwise dismiss the on-screen
+        keyboard — touchstart matters on touch devices where the synthetic
+        mousedown following a tap can lag, and preventDefault on touchstart
+        also suppresses that synthetic mousedown, so there's no double
+        insert. %>
     <div class="hidden group-focus-within:flex items-center gap-1 mt-1">
       <%= render DS::Button.new(text: "+", variant: :outline, size: :sm,
-            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "+" },
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator", "money-field-operator-param": "+" },
             aria: { label: t(".operator_add") }) %>
       <%= render DS::Button.new(text: "−", variant: :outline, size: :sm,
-            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "-" },
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator", "money-field-operator-param": "-" },
             aria: { label: t(".operator_subtract") }) %>
       <%= render DS::Button.new(text: "×", variant: :outline, size: :sm,
-            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "*" },
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator", "money-field-operator-param": "*" },
             aria: { label: t(".operator_multiply") }) %>
       <%= render DS::Button.new(text: "÷", variant: :outline, size: :sm,
-            data: { action: "mousedown->money-field#insertOperator", "money-field-operator-param": "/" },
+            data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator", "money-field-operator-param": "/" },
             aria: { label: t(".operator_divide") }) %>
     </div>
   </div>

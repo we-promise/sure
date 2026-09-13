@@ -1,8 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
 import { CurrenciesService } from "services/currencies_service";
-import parseLocaleFloat from "utils/parse_locale_float";
 import parseAmountPaste from "utils/parse_amount_paste";
-import evaluateAmountExpression, { formatAmountForDisplay } from "utils/evaluate_amount_expression";
+import evaluateAmountExpression, {
+  formatAmountForDisplay,
+  formatUnroundedAmount,
+} from "utils/evaluate_amount_expression";
 
 // Connects to data-controller="money-field"
 // when currency select change, update the input value with the correct placeholder and step
@@ -81,7 +83,7 @@ export default class extends Controller {
     event.preventDefault();
     const precision = this.#fieldPrecision();
     this.amountTarget.value =
-      precision === null ? String(parsed) : parsed.toFixed(precision);
+      precision === null ? formatUnroundedAmount(parsed) : parsed.toFixed(precision);
 
     // auto_submit_form listens for "change" on number inputs while validation
     // and the goal form's suggestion listen for "input", and assigning .value
@@ -142,11 +144,10 @@ export default class extends Controller {
   // formatAmountForDisplay in evaluate_amount_expression.js), but the
   // server only accepts a dot — Rails' decimal typecast doesn't treat a
   // comma as a decimal point, it just strips it, silently turning "54,43"
-  // into 5443. The "formdata" event
-  // fires whenever this field's form is serialized — on a native submit and
-  // on Turbo's fetch-based one alike — so the submitted entry can be
-  // rewritten to the canonical dot form right here, without touching what's
-  // still on screen.
+  // into 5443. The "formdata" event fires whenever this field's form is
+  // serialized — on a native submit and on Turbo's fetch-based one alike —
+  // so the submitted entry can be rewritten to the canonical dot form right
+  // here, without touching what's still on screen.
   canonicalizeForSubmit(event) {
     if (!this.hasAmountTarget || this.amountTarget.disabled) return;
 
@@ -157,7 +158,8 @@ export default class extends Controller {
     if (result === null) return;
 
     const precision = this.#fieldPrecision();
-    const canonical = precision === null ? String(result) : result.toFixed(precision);
+    const canonical =
+      precision === null ? formatUnroundedAmount(result) : result.toFixed(precision);
     event.formData.set(this.amountTarget.name, canonical);
   }
 
