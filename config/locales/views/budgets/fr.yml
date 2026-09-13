@@ -6,6 +6,10 @@ fr:
       left_to_allocate: reste à attribuer
       over_set: "> 100 % réglé"
       percent_set: "%{percent} défini"
+    bills_reserved: "%{amount} réservés par des factures"
+    bills_reserved_unconvertible:
+      one: 1 facture n'est pas réservée, aucun taux de change disponible
+      other: "%{count} factures ne sont pas réservées, aucun taux de change disponible"
     budget_category:
       rolled_over: "+%{amount} de report"
     budget_category_form:

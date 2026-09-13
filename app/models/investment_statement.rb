@@ -69,25 +69,10 @@ class InvestmentStatement
   # and day_change each call this, so an unmemoized version ran the same
   # DISTINCT ON query up to 5x per dashboard/report request.
   def current_holdings
-    @current_holdings ||= begin
-      account_ids = investment_account_ids
-
-      if account_ids.any?
-        # Get the latest holding for each security per account
-        Holding
-          .where(account_id: account_ids)
-          .where.not(qty: 0)
-          .where(
-            id: Holding
-              .where(account_id: account_ids)
-              .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.id")
-              .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-          )
-          .includes(:security, :account)
-      else
-        Holding.none
-      end
-    end
+    @current_holdings ||= Holding::CurrentForInvestmentAccounts
+      .new(investment_account_ids)
+      .relation
+      .includes(:security, :account)
   end
 
   # Top holdings by family-currency value

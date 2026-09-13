@@ -23,15 +23,24 @@ fr:
       type_withdrawal: Retrait
     header:
       buy: Acheter
+      contribution: Contribution
       current_market_price_label: Prix du marché actuel
       dividend: Dividende
+      exchange: Échange
+      fee: Frais
       interest: Intérêts
+      other: Autre
       overview: Aperçu
       purchase_price_label: Prix d'achat
       purchase_qty_label: Quantité achetée
+      reinvestment: Réinvestissement
       sell: Vendre
+      sweep_in: Balayage entrant
+      sweep_out: Balayage sortant
       symbol_label: Symbole
       total_return_label: Gain/perte non réalisé(e)
+      transfer: Transfert
+      withdrawal: Retrait
     new:
       title: Nouvelle transaction
     show:

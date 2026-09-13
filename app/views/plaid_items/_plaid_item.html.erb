@@ -7,15 +7,7 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 bg-blue-600/10 rounded-full">
-            <% if plaid_item.logo.attached? %>
-              <%= image_tag plaid_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
-            <% else %>
-              <div class="flex items-center justify-center">
-                <%= tag.p plaid_item.name.first.upcase, class: "text-blue-600 text-xs font-medium" %>
-              </div>
-            <% end %>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :plaid) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">
@@ -24,6 +16,7 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
+            <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
             <% if plaid_item.syncing? %>
               <div class="text-secondary flex items-center gap-1">
                 <%= icon "loader", size: "sm", class: "animate-pulse" %>

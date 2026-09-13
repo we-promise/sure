@@ -26,11 +26,21 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
 
     txn = create_transaction(account: @account, name: "Starbucks Coffee").transaction
 
-    assert_difference "DataEnrichment.count", 1 do
+    assert_difference [ "DataEnrichment.count", "DebugLogEntry.count" ], 1 do
       assert_equal 1, @family.auto_categorize_transactions([ txn.id ])
     end
     assert_equal @coffee, txn.reload.category
     assert_equal "bayes", txn.data_enrichments.find_by(attribute_name: "category_id").source
+
+    log_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "auto_categorization", log_entry.category
+    assert_equal "info", log_entry.level
+    assert_equal "Bayesian categorization handled all transactions; skipped LLM categorization", log_entry.message
+    assert_equal "Family", log_entry.source
+    assert_equal @family, log_entry.family
+    assert_equal [ txn.id ], log_entry.metadata["requested_transaction_ids"]
+    assert_equal [ txn.id ], log_entry.metadata["categorized_transaction_ids"]
+    assert_equal 1, log_entry.metadata["modified_count"]
   end
 
   test "bayes handles nothing: raises without LLM provider, same contract as today" do
@@ -54,10 +64,12 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
       AutoCategorization.new(transaction_id: txn.id, category_name: test_category.name)
     ])).once
 
-    assert_difference "DataEnrichment.count", 1 do
+    assert_difference [ "DataEnrichment.count", "DebugLogEntry.count" ], 1 do
       assert_equal 1, @family.auto_categorize_transactions([ txn.id ])
     end
     assert_equal test_category, txn.reload.category
+
+    assert_ai_categorization_log(transaction_ids: [ txn.id ])
   end
 
   test "bayes handles some, LLM handles the rest: modified_count sums" do
@@ -73,12 +85,29 @@ class Family::AutoCategorizeTransactionsTest < ActiveSupport::TestCase
     ])).once
 
     assert_difference "DataEnrichment.count", 2 do
-      assert_equal 2, @family.auto_categorize_transactions([ bayes_txn.id, llm_txn.id ])
+      assert_difference "DebugLogEntry.count", 1 do
+        assert_equal 2, @family.auto_categorize_transactions([ bayes_txn.id, llm_txn.id ])
+      end
     end
     assert_equal @coffee, bayes_txn.reload.category
     assert_equal test_category, llm_txn.reload.category
+
+    assert_ai_categorization_log(transaction_ids: [ llm_txn.id ])
   end
 
   private
+    def assert_ai_categorization_log(transaction_ids:, categorized_transaction_ids: transaction_ids)
+      log_entry = DebugLogEntry.order(:created_at).last
+
+      assert_equal "auto_categorization", log_entry.category
+      assert_equal "info", log_entry.level
+      assert_equal "AI categorization completed", log_entry.message
+      assert_equal "Family::AutoCategorizer", log_entry.source
+      assert_equal @family, log_entry.family
+      assert_equal transaction_ids, log_entry.metadata["requested_transaction_ids"]
+      assert_equal categorized_transaction_ids, log_entry.metadata["categorized_transaction_ids"]
+      assert_equal categorized_transaction_ids.size, log_entry.metadata["modified_count"]
+    end
+
     AutoCategorization = Provider::LlmConcept::AutoCategorization
 end
