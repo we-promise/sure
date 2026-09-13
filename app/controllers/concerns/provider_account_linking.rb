@@ -27,8 +27,18 @@ module ProviderAccountLinking
     # Select dialogs that offer already-linked provider accounts must not offer,
     # or name, an account the user cannot write.
     def relinkable_by_current_user?(provider_account)
-      provider_link_holders(provider_account).all? do |holder|
-        holder.permission_for(Current.user).in?(%i[owner full_control])
+      provider_link_holders(provider_account).all? { |holder| writable_account_ids.include?(holder.id) }
+    end
+
+    # Owner or full_control, the rule require_account_permission!(:write)
+    # applies, resolved once per request so a dialog listing many linked
+    # accounts does not run a share lookup per row.
+    def writable_account_ids
+      @writable_account_ids ||= begin
+        full_control_ids = AccountShare.where(user_id: Current.user.id, permission: "full_control").select(:account_id)
+        Current.family.accounts.where(owner_id: Current.user.id)
+          .or(Current.family.accounts.where(id: full_control_ids))
+          .pluck(:id).to_set
       end
     end
 

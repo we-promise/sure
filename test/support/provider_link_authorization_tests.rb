@@ -25,6 +25,7 @@ module ProviderLinkAuthorizationTests
 
   included do
     include ActiveJob::TestHelper
+    include SqlQueryCapture
   end
 
   class_methods do
@@ -102,7 +103,7 @@ module ProviderLinkAuthorizationTests
 
       return unless relinks
 
-      REFUSED_SHARES.slice("no share", "read_write").each do |label, permission|
+      REFUSED_SHARES.each do |label, permission|
         test "link_existing_account refuses to move a link off an account the admin holds #{label} on" do
           holder = provider_link_member_account(permission)
           provider_record = provider_link_new_provider_account
@@ -121,15 +122,45 @@ module ProviderLinkAuthorizationTests
         end
       end
 
-      test "link_existing_account moves a link off an account the admin can write" do
-        holder = provider_link_admin_account
-        provider_record = provider_link_new_provider_account
-        AccountProvider.create!(account: holder, provider: provider_record)
+      { "owns" => :owner, "holds full_control on" => "full_control" }.each do |label, access|
+        test "link_existing_account moves a link off an account the admin #{label}" do
+          holder = access == :owner ? provider_link_admin_account : provider_link_member_account(access)
+          provider_record = provider_link_new_provider_account
+          AccountProvider.create!(account: holder, provider: provider_record)
+          target_account = provider_link_admin_account
+
+          post provider_link_url(:link_url), params: provider_link_link_params(target_account, provider_record)
+
+          refute_equal I18n.t("accounts.not_authorized"), flash[:alert]
+          assert_equal target_account, provider_record.reload.account_provider.account
+        end
+      end
+
+      # Each linked row's holder is checked against one batched lookup, not a
+      # share query per row, and full_control holders still count as writable.
+      test "select_existing_account checks linked accounts without a query per account" do
         target_account = provider_link_admin_account
+        linked_records = []
+        share_queries = lambda do |additional_holders|
+          additional_holders.times do
+            holder = provider_link_member_account("full_control")
+            linked_records << provider_link_new_provider_account
+            AccountProvider.create!(account: holder, provider: linked_records.last)
+          end
+          capture_sql_queries do
+            get provider_link_url(:select_url), params: provider_link_params.merge(account_id: target_account.id)
+          end.count { |sql| sql.include?(%("account_shares")) }
+        end
 
-        post provider_link_url(:link_url), params: provider_link_link_params(target_account, provider_record)
+        with_one_holder = share_queries.call(1)
+        assert_response :success
+        with_three_holders = share_queries.call(2)
+        assert_response :success
 
-        assert_equal target_account, provider_record.reload.account_provider.account
+        assert_equal with_one_holder, with_three_holders
+        if dialog_names_linked
+          linked_records.each { |record| assert_select %(input[value="#{record.id}"]), count: 1 }
+        end
       end
 
       test "select_existing_account does not offer accounts linked to an account the admin cannot write" do
