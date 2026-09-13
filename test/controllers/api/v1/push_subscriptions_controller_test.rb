@@ -137,6 +137,20 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
+  test "requires write scope to remove a token" do
+    @api_key.update!(scopes: [ "read" ])
+    subscription = @user.push_subscriptions.create!(
+      token: @token, environment: "sandbox", platform: "ios", last_registered_at: Time.current
+    )
+
+    assert_no_difference "PushSubscription.count" do
+      delete api_v1_push_subscription_url(subscription), headers: @headers
+    end
+
+    assert_response :forbidden
+    assert PushSubscription.exists?(subscription.id)
+  end
+
   test "does not remove another user's token" do
     subscription = users(:empty).push_subscriptions.create!(
       token: @token,
@@ -188,11 +202,34 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
         params: { token: token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
       assert_response :created
     end
-    [ "ab" * 2049, "abc" ].each do |token|
+    [ "ab" * 1025, "abc" ].each do |token|
       post api_v1_push_subscriptions_url,
         params: { token: token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
       assert_response :unprocessable_entity
     end
+  end
+
+  test "persists a maximum length token without relying on index compression" do
+    token = SecureRandom.hex(1024)
+
+    assert_difference "PushSubscription.count", 1 do
+      post api_v1_push_subscriptions_url,
+        params: { token: token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
+    end
+
+    assert_response :created
+    assert_equal token, @user.push_subscriptions.find(response.parsed_body["id"]).token
+  end
+
+  test "rejects tokens exceeding the index limit with a validation response" do
+    assert_no_difference "PushSubscription.count" do
+      post api_v1_push_subscriptions_url,
+        params: { token: SecureRandom.hex(2048), environment: "sandbox", platform: "ios" },
+        headers: @headers, as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_error", response.parsed_body["error"]
   end
 
   test "renews a stale registration without changing its identity" do

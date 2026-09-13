@@ -5,8 +5,10 @@ class PushSubscription < ApplicationRecord
 
   normalizes :token, with: ->(token) { token.downcase }
 
+  # Keep hexadecimal tokens below PostgreSQL's B-tree entry limit for the
+  # unique lower(token) index, even when the value cannot be compressed.
   validates :token, presence: true, uniqueness: { case_sensitive: false },
-                    length: { maximum: 4096 },
+                    length: { maximum: 2048 },
                     format: { with: /\A(?:[0-9a-f]{2})+\z/i }
   validates :platform, inclusion: { in: %w[ios] }
   validates :last_registered_at, presence: true

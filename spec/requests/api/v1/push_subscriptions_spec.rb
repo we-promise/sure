@@ -26,14 +26,14 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
         type: :object,
         required: %w[token environment platform],
         properties: {
-          token: { type: :string, maxLength: 4096, pattern: "^(?:[0-9a-fA-F]{2})+$" },
+          token: { type: :string, maxLength: 2048, pattern: "^(?:[0-9a-fA-F]{2})+$" },
           environment: { type: :string, enum: %w[sandbox production] },
           platform: { type: :string, enum: %w[ios] }
         }
       }
       let(:subscription) { { token: "ab" * 32, environment: "sandbox", platform: "ios" } }
 
-      response "403", "push unavailable in self-hosted mode" do
+      response "403", "push unavailable in self-hosted mode or insufficient write scope" do
         before { allow(Rails.application.config).to receive(:app_mode).and_return("self_hosted".inquiry) }
         schema "$ref" => "#/components/schemas/ErrorResponse"
         run_test!
@@ -72,7 +72,7 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
       tags "Push Subscriptions"
       security [ { apiKeyAuth: [] } ]
 
-      response "403", "push unavailable in self-hosted mode" do
+      response "403", "push unavailable in self-hosted mode or insufficient write scope" do
         before { allow(Rails.application.config).to receive(:app_mode).and_return("self_hosted".inquiry) }
         produces "application/json"
         schema "$ref" => "#/components/schemas/ErrorResponse"

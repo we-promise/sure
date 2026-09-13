@@ -6064,7 +6064,8 @@ paths:
       parameters: []
       responses:
         '403':
-          description: push unavailable in self-hosted mode
+          description: push unavailable in self-hosted mode or insufficient write
+            scope
           content:
             application/json:
               schema:
@@ -6093,7 +6094,7 @@ paths:
               properties:
                 token:
                   type: string
-                  maxLength: 4096
+                  maxLength: 2048
                   pattern: "^(?:[0-9a-fA-F]{2})+$"
                 environment:
                   type: string
@@ -6121,7 +6122,8 @@ paths:
       - apiKeyAuth: []
       responses:
         '403':
-          description: push unavailable in self-hosted mode
+          description: push unavailable in self-hosted mode or insufficient write
+            scope
           content:
             application/json:
               schema:
