@@ -6,6 +6,24 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new redirects to login when self-hosted onboarding is closed" do
+    with_self_hosting do
+      Setting.onboarding_state = "closed"
+
+      get new_registration_url
+
+      assert_redirected_to new_session_path
+    end
+  end
+
+  test "new ignores closed onboarding outside self-hosted mode" do
+    Setting.onboarding_state = "closed"
+
+    get new_registration_url
+
+    assert_response :success
+  end
+
   test "create redirects to correct URL" do
     post registration_url, params: { user: {
       email: "john@example.com",
