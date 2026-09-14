@@ -120,6 +120,12 @@ class Transaction < ApplicationRecord
   PENDING_FLAG_FALSE_VALUES = (ActiveModel::Type::Boolean::FALSE_VALUES.grep(String) + [ "" ]).uniq.freeze
   PENDING_FLAG_TYPE = ActiveModel::Type::Boolean.new.freeze
 
+  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals. Built from the
+  # constant alone, so class loading needs no database connection, and shared by
+  # pending_sql and PENDING_CHECK_SQL so the two cannot quote the values
+  # differently.
+  PENDING_FLAG_FALSE_VALUES_SQL = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ").freeze
+
   # Canonical reusable SQL form of the pending? decision. Callers that inspect
   # only provider namespaces they own can pass that subset in `providers:`.
   #
@@ -138,29 +144,23 @@ class Transaction < ApplicationRecord
   # parity test carries the case.
   def self.pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)
     quoted_table = connection.quote_table_name(table_alias)
-    false_values = pending_flag_false_values_sql
     selected_providers = Array(providers).map(&:to_s).uniq & PENDING_PROVIDERS
     return "FALSE" if selected_providers.empty?
 
     selected_providers
       .map do |provider|
-        "COALESCE(#{quoted_table}.extra -> #{connection.quote(provider)} ->> #{connection.quote("pending")}, #{connection.quote("")}) NOT IN (#{false_values})"
+        "COALESCE(#{quoted_table}.extra -> #{connection.quote(provider)} ->> #{connection.quote("pending")}, #{connection.quote("")}) NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
       end
       .join(" OR ")
       .then { |predicate| "(#{predicate})" }
   end
 
-  def self.pending_flag_false_values_sql
-    @pending_flag_false_values_sql ||= PENDING_FLAG_FALSE_VALUES.map { |value| connection.quote(value) }.join(", ").freeze
-  end
-
   # Fixed-alias fragment for correlated SQL. Build from model constants without
   # borrowing a database connection during class loading.
   PENDING_CHECK_SQL = begin
-    false_values = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ")
     PENDING_PROVIDERS
       .map do |provider|
-        "COALESCE(t.extra -> '#{provider}' ->> 'pending', '') NOT IN (#{false_values})"
+        "COALESCE(t.extra -> '#{provider}' ->> 'pending', '') NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
       end
       .join(" OR ")
       .then { |predicate| "(#{predicate})" }
