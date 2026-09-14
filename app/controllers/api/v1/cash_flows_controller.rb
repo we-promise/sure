@@ -1,4 +1,4 @@
-class Api::V1::FinancialSummariesController < Api::V1::BaseController
+class Api::V1::CashFlowsController < Api::V1::BaseController
   before_action :ensure_read_scope
 
   def show
@@ -12,7 +12,7 @@ class Api::V1::FinancialSummariesController < Api::V1::BaseController
         return
       end
       statement = IncomeStatement.new(current_resource_owner.family, user: current_resource_owner)
-      render json: IncomeStatement::FinancialSummary.new(statement, month: month, as_of: today)
+      render json: IncomeStatement::CashFlow.new(statement, month: month, as_of: today)
     end
   end
 

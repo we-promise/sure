@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Api::V1::FinancialSummariesControllerTest < ActionDispatch::IntegrationTest
+class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   setup do
     @user = users(:family_admin)
@@ -11,7 +11,7 @@ class Api::V1::FinancialSummariesControllerTest < ActionDispatch::IntegrationTes
   end
 
   test "requires authentication" do
-    get "/api/v1/financial_summary"
+    get "/api/v1/cash_flow"
     assert_response :unauthorized
   end
 
@@ -20,7 +20,7 @@ class Api::V1::FinancialSummariesControllerTest < ActionDispatch::IntegrationTes
     travel_to Time.utc(2024, 3, 1, 1) do
       %w[read read_write].each do |scope|
         @auth.update!(scopes: [ scope ])
-        get "/api/v1/financial_summary", headers: api_headers(@auth)
+        get "/api/v1/cash_flow", headers: api_headers(@auth)
         assert_response :success
         body = response.parsed_body
         assert_equal "2024-02-01", body["month"]
@@ -33,7 +33,7 @@ class Api::V1::FinancialSummariesControllerTest < ActionDispatch::IntegrationTes
 
   test "rejects invalid and future periods" do
     [ "2024-02-02", "2024-13-01", "not-a-date", "9999-01-01", "" ].each do |month|
-      get "/api/v1/financial_summary", params: { month: month }, headers: api_headers(@auth)
+      get "/api/v1/cash_flow", params: { month: month }, headers: api_headers(@auth)
       assert_response :unprocessable_entity
       assert_equal "invalid_month", response.parsed_body["error"]
     end
@@ -47,7 +47,7 @@ class Api::V1::FinancialSummariesControllerTest < ActionDispatch::IntegrationTes
     excluded.account_shares.create!(user: @user, permission: "read_only", include_in_finances: false)
     create_transaction(account: own, amount: 12, date: month)
     create_transaction(account: excluded, amount: 900, date: month)
-    get "/api/v1/financial_summary", params: { month: month.iso8601 }, headers: api_headers(@auth)
+    get "/api/v1/cash_flow", params: { month: month.iso8601 }, headers: api_headers(@auth)
     assert_response :success
     assert_equal "12.0", response.parsed_body["spending"]
     assert_equal "12.0", response.parsed_body.dig("spending_comparison", "current_total")

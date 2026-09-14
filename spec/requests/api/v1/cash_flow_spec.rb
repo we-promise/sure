@@ -2,7 +2,7 @@
 
 require 'swagger_helper'
 
-RSpec.describe 'API V1 Financial Summary', type: :request do
+RSpec.describe 'API V1 Cash Flow', type: :request do
   let(:family) do
     Family.create!(
       name: 'API Family',
@@ -33,16 +33,16 @@ RSpec.describe 'API V1 Financial Summary', type: :request do
 
   let(:'X-Api-Key') { api_key.plain_key }
 
-  path '/api/v1/financial_summary' do
-    get 'Show monthly financial summary' do
-      tags 'Financial Summary'
+  path '/api/v1/cash_flow' do
+    get 'Show monthly cash flow' do
+      tags 'Cash Flow'
       description 'Server-calculated income, spending, savings, and daily cumulative comparison in family currency. Uses the authenticated user’s finance accounts and Sure reporting rules.'
       parameter name: :month, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Non-future first day YYYY-MM-01; defaults to the current month in the family time zone.'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       response '200', 'summary returned' do
-        schema '$ref' => '#/components/schemas/FinancialSummary'
+        schema '$ref' => '#/components/schemas/CashFlow'
 
         run_test!
       end

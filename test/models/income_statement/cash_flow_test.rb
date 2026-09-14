@@ -1,6 +1,6 @@
 require "test_helper"
 
-class IncomeStatement::FinancialSummaryTest < ActiveSupport::TestCase
+class IncomeStatement::CashFlowTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
   setup do
@@ -73,6 +73,6 @@ class IncomeStatement::FinancialSummaryTest < ActiveSupport::TestCase
 
   private
     def summary(month: @month, as_of: Date.new(2024, 3, 5))
-      IncomeStatement::FinancialSummary.new(IncomeStatement.new(@family), month: month, as_of: as_of).as_json
+      IncomeStatement::CashFlow.new(IncomeStatement.new(@family), month: month, as_of: as_of).as_json
     end
 end

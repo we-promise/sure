@@ -1,6 +1,6 @@
 # A bounded monthly projection of Sure's existing reporting calculations.
 # The client never needs to download transaction history to reproduce these rules.
-class IncomeStatement::FinancialSummary
+class IncomeStatement::CashFlow
   def initialize(statement, month:, as_of: Date.current, time_zone: Time.zone.tzinfo.identifier)
     raise ArgumentError, "month must be a non-future first day" unless month.day == 1 && month <= as_of
 

@@ -1736,7 +1736,7 @@ RSpec.configure do |config|
             type: :object, required: %w[date amount],
             properties: { date: { type: :string, format: :date }, amount: { type: :string, description: 'Cumulative decimal amount in family currency' } }
           },
-          FinancialSummary: {
+          CashFlow: {
             type: :object,
             required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
             properties: {

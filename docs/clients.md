@@ -111,7 +111,7 @@ to access it.
 ### Native reporting and device continuity
 
 Read monthly server-calculated totals and the daily spending comparison using
-[`GET /api/v1/financial_summary`](api/financial-summary.md). Native clients should
+[`GET /api/v1/cash_flow`](api/cash-flow.md). Native clients should
 use these values instead of rebuilding Sure's reporting rules from transactions.
 
 Push registration accepts an optional `device_key`: 32 securely random bytes

@@ -3228,7 +3228,7 @@ components:
         amount:
           type: string
           description: Cumulative decimal amount in family currency
-    FinancialSummary:
+    CashFlow:
       type: object
       required:
       - month
@@ -4485,6 +4485,44 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/cash_flow":
+    get:
+      summary: Show monthly cash flow
+      tags:
+      - Cash Flow
+      description: Server-calculated income, spending, savings, and daily cumulative
+        comparison in family currency. Uses the authenticated user’s finance accounts
+        and Sure reporting rules.
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Non-future first day YYYY-MM-01; defaults to the current month
+          in the family time zone.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: summary returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CashFlow"
+        '422':
+          description: invalid month
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/categories":
     get:
       summary: List categories
@@ -4989,44 +5027,6 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: insufficient scope
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/financial_summary":
-    get:
-      summary: Show monthly financial summary
-      tags:
-      - Financial Summary
-      description: Server-calculated income, spending, savings, and daily cumulative
-        comparison in family currency. Uses the authenticated user’s finance accounts
-        and Sure reporting rules.
-      parameters:
-      - name: month
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-        description: Non-future first day YYYY-MM-01; defaults to the current month
-          in the family time zone.
-      security:
-      - apiKeyAuth: []
-      responses:
-        '200':
-          description: summary returned
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancialSummary"
-        '422':
-          description: invalid month
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '401':
-          description: unauthorized
           content:
             application/json:
               schema:
