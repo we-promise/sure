@@ -48,7 +48,11 @@
 
   <%= render "summary", totals: @search.totals %>
   <% if Current.family.recurring_transactions_disabled? %>
-    <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+    <% if @compact_view %>
+      <%= render "transactions/compact_list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+    <% else %>
+      <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+    <% end %>
   <% else %>
     <%= render DS::Tabs.new(active_tab: params[:tab].presence || "transactions") do |tabs| %>
       <% tabs.with_nav(classes: "max-w-fit") do |nav| %>
@@ -58,7 +62,11 @@
 
       <% tabs.with_panel(tab_id: "transactions") do %>
         <div class="bg-container rounded-xl shadow-border-xs">
-          <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+          <% if @compact_view %>
+            <%= render "transactions/compact_list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+          <% else %>
+            <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
+          <% end %>
         </div>
       <% end %>
 

@@ -71,21 +71,85 @@
 <% end %>
 
 <%= settings_section title: t(".transactions_title"), subtitle: t(".transactions_subtitle") do %>
-  <div>
-    <%= form_with url: settings_appearance_path, method: :patch,
-          class: "p-3",
-          data: { controller: "auto-submit-form" } do |f| %>
-      <div class="flex cursor-pointer items-center gap-4 justify-between">
-        <div class="text-sm space-y-1">
-          <p class="text-primary font-medium"><%= t(".split_grouped_title") %></p>
-          <p class="text-secondary"><%= t(".split_grouped_description") %></p>
+  <div class="divide-y divide-primary">
+    <div>
+      <%= form_with url: settings_appearance_path, method: :patch,
+            class: "p-3",
+            data: { controller: "auto-submit-form" } do |f| %>
+        <div class="flex cursor-pointer items-center gap-4 justify-between">
+          <div class="text-sm space-y-1">
+            <p class="text-primary font-medium"><%= t(".split_grouped_title") %></p>
+            <p class="text-secondary"><%= t(".split_grouped_description") %></p>
+          </div>
+          <%= render DS::Toggle.new(
+                id: "user_show_split_grouped",
+                name: "user[show_split_grouped]",
+                checked: @user.show_split_grouped?,
+                data: { auto_submit_form_target: "auto" }
+          ) %>
         </div>
-        <%= render DS::Toggle.new(
-              id: "user_show_split_grouped",
-              name: "user[show_split_grouped]",
-              checked: @user.show_split_grouped?,
-              data: { auto_submit_form_target: "auto" }
-        ) %>
+      <% end %>
+    </div>
+
+    <% if @user.preview_features_enabled? %>
+      <div>
+        <%= form_with url: settings_appearance_path, method: :patch,
+              class: "p-3",
+              data: { controller: "auto-submit-form" } do |f| %>
+          <div class="flex cursor-pointer items-center gap-4 justify-between">
+            <div class="text-sm space-y-1">
+              <div class="flex items-center gap-2">
+                <p class="text-primary font-medium"><%= t(".compact_title") %></p>
+                <%= render DS::Pill.new(label: t("shared.preview"), tone: :neutral) %>
+              </div>
+              <p class="text-secondary"><%= t(".compact_description") %></p>
+            </div>
+            <%= render DS::Toggle.new(
+                  id: "user_transactions_compact",
+                  name: "user[transactions_compact]",
+                  checked: @user.transactions_compact?,
+                  data: { auto_submit_form_target: "auto" }
+            ) %>
+          </div>
+        <% end %>
+      </div>
+
+      <div>
+        <%= form_with url: settings_appearance_path, method: :patch,
+              class: "p-3",
+              data: { controller: "auto-submit-form" } do |f| %>
+          <div class="flex cursor-pointer items-center gap-4 justify-between">
+            <div class="text-sm space-y-1">
+              <p class="text-primary font-medium"><%= t(".group_by_date_title") %></p>
+              <p class="text-secondary"><%= t(".group_by_date_description") %></p>
+            </div>
+            <%= render DS::Toggle.new(
+                  id: "user_transactions_group_by_date",
+                  name: "user[transactions_group_by_date]",
+                  checked: @user.transactions_group_by_date?,
+                  data: { auto_submit_form_target: "auto" }
+            ) %>
+          </div>
+        <% end %>
+      </div>
+
+      <div>
+        <%= form_with url: settings_appearance_path, method: :patch,
+              class: "p-3",
+              data: { controller: "auto-submit-form" } do |f| %>
+          <div class="flex cursor-pointer items-center gap-4 justify-between">
+            <div class="text-sm space-y-1">
+              <p class="text-primary font-medium"><%= t(".per_page_title") %></p>
+              <p class="text-secondary"><%= t(".per_page_description") %></p>
+            </div>
+            <div class="shrink-0">
+              <%= select_tag "user[transactions_per_page]",
+                    options_for_select([ [ "10", 10 ], [ "20", 20 ], [ "30", 30 ], [ "50", 50 ], [ "100", 100 ] ], @user.transactions_per_page || 50),
+                    class: "text-sm text-primary font-medium bg-container border border-primary rounded-lg px-3 py-1.5 focus:border-primary focus:ring-primary",
+                    data: { auto_submit_form_target: "auto", action: "change->auto-submit-form#submit" } %>
+            </div>
+          </div>
+        <% end %>
       </div>
     <% end %>
   </div>

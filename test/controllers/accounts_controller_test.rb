@@ -217,7 +217,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     drawer_link = row.at_css("a[data-clickable-row-target='link']")
 
     assert_equal "click->clickable-row#open", row["data-action"]
-    assert_equal entry_path(entry), drawer_link["href"]
+    assert_equal entry_path(entry, view_ctx: "account", is_filtered: false), drawer_link["href"]
   end
 
   test "show avoids N+1 split-parent queries across paginated entries" do
@@ -283,6 +283,194 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       q.match?(/FROM "entries".*WHERE.*"entries"\."id" = \$?\d+/) && !q.include?(" IN (")
     }
     assert_equal 0, per_row_split_parent, "N+1 per-row split-parent lookups detected (#{per_row_split_parent})"
+  end
+
+  # --- Compact view: valuations, split groups, running balance, and filters ---
+
+  test "show renders valuations with the compact partial when compact and grouped by date" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => true))
+    create_valuation(account: @account, amount: 5000)
+
+    get account_url(@account)
+
+    assert_response :success
+    # compact_valuation renders a flex row; the full-size partial renders a grid-cols-12 row instead
+    assert_select "turbo-frame[id^='valuation_']"
+    assert_select "turbo-frame[id^='valuation_'] div.grid-cols-12", count: 0
+  end
+
+  test "show groups split parents into a single split-group row in the compact flat (ungrouped) view" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "show_split_grouped" => true))
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    # Split children should not render as orphaned rows outside the split-group wrapper
+    assert_select ".split-group [id^='entry_']", minimum: 1
+  end
+
+  test "show renders split children as flat rows in the compact flat view when grouping is disabled" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "show_split_grouped" => false))
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 0
+  end
+
+  test "show renders the split-parent row with the compact flex layout, not the legacy grid" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false, "show_split_grouped" => true))
+    entry = create_transaction(name: "Grocery Store", amount: 100, account: @account)
+    entry.split!([
+      { name: "Food", amount: 60 },
+      { name: "Household", amount: 40 }
+    ])
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select ".split-group", count: 1
+    # The split-parent row should use the same fixed-width flex shell as its
+    # compact siblings, not the old grid-cols-12 layout.
+    assert_select ".split-group div.grid-cols-12", count: 0
+    assert_select ".split-group .flex.items-center", minimum: 1
+  end
+
+  test "show computes running balances only for compact flat (ungrouped) view" do
+    @account.balances.where(date: Date.current).destroy_all
+    @account.balances.create!(date: Date.current, balance: 500, currency: @account.currency, start_balance: 500, end_balance: 500)
+    create_transaction(name: "Coffee", amount: 5, account: @account, date: Date.current)
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    get account_url(@account)
+    assert_response :success
+    assert @controller.instance_variable_get(:@running_balances).present?
+
+    @user.update!(preferences: (@user.preferences || {}).merge("transactions_group_by_date" => true))
+    get account_url(@account)
+    assert_response :success
+    assert_equal({}, @controller.instance_variable_get(:@running_balances))
+  end
+
+  test "show computes a distinct per-transaction running balance for same-day entries" do
+    @account.balances.where(date: Date.current - 1.day).destroy_all
+    @account.balances.create!(date: Date.current - 1.day, balance: 500, currency: @account.currency, start_balance: 500, end_balance: 500)
+
+    # Two same-day transactions should NOT both show the day's closing balance —
+    # each should reflect the balance immediately after that specific entry.
+    entry_1 = create_transaction(name: "Coffee", amount: 100, account: @account, date: Date.current, created_at: Time.current - 2.hours)
+    entry_2 = create_transaction(name: "Lunch", amount: -30, account: @account, date: Date.current, created_at: Time.current - 1.hour)
+
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    get account_url(@account)
+    assert_response :success
+
+    running_balances = @controller.instance_variable_get(:@running_balances)
+    assert_not_equal running_balances[entry_1.id], running_balances[entry_2.id]
+  end
+
+  test "show filters entries by search term" do
+    create_transaction(name: "Uniquely Named Coffee Shop", amount: 5, account: @account)
+    create_transaction(name: "Grocery Store", amount: 40, account: @account)
+
+    get account_url(@account, q: { search: "Uniquely Named" })
+
+    assert_response :success
+    assert_match "Uniquely Named Coffee Shop", response.body
+    assert_no_match "Grocery Store", response.body
+  end
+
+  test "show filters entries by date range" do
+    in_range = create_transaction(name: "In Range Entry", amount: 10, account: @account, date: 5.days.ago.to_date)
+    out_of_range = create_transaction(name: "Out Of Range Entry", amount: 10, account: @account, date: 30.days.ago.to_date)
+
+    get account_url(@account, q: { start_date: 10.days.ago.to_date.to_s, end_date: Date.current.to_s })
+
+    assert_response :success
+    assert_match in_range.name, response.body
+    assert_no_match out_of_range.name, response.body
+  end
+
+  test "show filters entries by amount" do
+    create_transaction(name: "Small Amount Entry", amount: 5, account: @account)
+    create_transaction(name: "Big Amount Entry", amount: 500, account: @account)
+
+    get account_url(@account, q: { amount: "100", amount_operator: "greater" })
+
+    assert_response :success
+    assert_match "Big Amount Entry", response.body
+    assert_no_match "Small Amount Entry", response.body
+  end
+
+  test "show filters entries by category" do
+    category = categories(:food_and_drink)
+    matching = create_transaction(name: "Categorized Entry", amount: 10, account: @account, category: category)
+    non_matching = create_transaction(name: "Uncategorized Entry", amount: 10, account: @account)
+
+    get account_url(@account, q: { categories: [ category.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
+  test "show filters entries by status" do
+    confirmed = create_transaction(name: "Confirmed Status Entry", amount: 10, account: @account)
+    pending_entry = create_transaction(name: "Pending Status Entry", amount: 10, account: @account)
+    pending_entry.entryable.update!(extra: { "plaid" => { "pending" => true } })
+
+    get account_url(@account, q: { status: [ "confirmed" ] })
+
+    assert_response :success
+    assert_match confirmed.name, response.body
+    assert_no_match pending_entry.name, response.body
+  end
+
+  test "show filters entries by merchant" do
+    merchant = @account.family.merchants.create!(name: "Unique Test Merchant")
+    matching = create_transaction(name: "Merchant Filter Entry", amount: 10, account: @account, merchant: merchant)
+    non_matching = create_transaction(name: "No Merchant Filter Entry", amount: 10, account: @account)
+
+    get account_url(@account, q: { merchants: [ merchant.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
+  test "show filters entries by tag" do
+    tag = @account.family.tags.create!(name: "Unique Test Tag")
+    matching = create_transaction(name: "Tagged Filter Entry", amount: 10, account: @account)
+    matching.entryable.update!(tag_ids: [ tag.id ])
+    non_matching = create_transaction(name: "Untagged Filter Entry", amount: 10, account: @account)
+
+    get account_url(@account, q: { tags: [ tag.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
+  test "show filters entries by type" do
+    expense = create_transaction(name: "Expense Type Entry", amount: 100, account: @account)
+    income = create_transaction(name: "Income Type Entry", amount: -100, account: @account)
+
+    get account_url(@account, q: { types: [ "income" ] })
+
+    assert_response :success
+    assert_match income.name, response.body
+    assert_no_match expense.name, response.body
   end
 
   test "show lazily loads statement tab data unless statements tab is active" do
