@@ -7294,7 +7294,7 @@ paths:
       parameters: []
       responses:
         '201':
-          description: interest created
+          description: trade created
           content:
             application/json:
               schema:
@@ -7312,7 +7312,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: deposit without amount returns error
+          description: invalid trade request
           content:
             application/json:
               schema:
@@ -7342,23 +7342,30 @@ paths:
                       description: Trade date (required)
                     qty:
                       type: number
-                      description: Quantity (required for buy/sell)
+                      description: Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     price:
                       type: number
-                      description: Price (required for buy/sell)
+                      description: Price (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     amount:
                       type: number
                       description: Amount (required for dividend, deposit, withdrawal,
-                        interest)
+                        interest, fee)
+                    fee:
+                      type: number
+                      description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
                       enum:
                       - buy
                       - sell
+                      - sweep_in
+                      - sweep_out
                       - dividend
+                      - reinvestment
+                      - interest
+                      - fee
                       - deposit
                       - withdrawal
-                      - interest
                       description: Trade type (required)
                     security_id:
                       type: string
@@ -7478,10 +7485,9 @@ paths:
                       enum:
                       - buy
                       - sell
-                      - dividend
-                      - deposit
-                      - withdrawal
-                      - interest
+                      - sweep_in
+                      - sweep_out
+                      - reinvestment
                     nature:
                       type: string
                       enum:
