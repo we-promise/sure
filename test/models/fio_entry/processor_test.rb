@@ -57,11 +57,12 @@ class FioEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 6, 15), entry.date
   end
 
-  # The documented JSON sample uses epoch milliseconds, but Fio has also been observed
-  # serving the offset form the XML and CSV exports use. Both are the same banking day
-  # and neither may drift by the reader's timezone.
+  # What the live API actually returns for column0 is a string like "2026-08-16+0200"
+  # (no colon in the offset), not the epoch milliseconds the JSON sample in the docs
+  # shows. Both forms are the same banking day and neither may drift by the reader's
+  # timezone, so both are read.
   test "reads a booking day given as a date with an offset" do
-    entry = process(id: 21, date: "2026-06-15+02:00", amount: -1.0)
+    entry = process(id: 21, date: "2026-06-15+0200", amount: -1.0)
 
     assert_equal Date.new(2026, 6, 15), entry.date
   end

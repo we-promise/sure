@@ -37,8 +37,10 @@ class Provider::FioTest < ActiveSupport::TestCase
       assert_equal [ 1_148_734_530 ], statement.dig(:transactionList, :transaction).map { |tx| tx.dig(:column22, :value) }
     end
 
+    # Fio puts the token after the endpoint name, not before it. Verified against the
+    # live API: the other order answers 404.
     assert_equal(
-      "https://fioapi.fio.cz/v1/rest/fio-token/periods/2026-06-01/2026-06-30/transactions.json",
+      "https://fioapi.fio.cz/v1/rest/periods/fio-token/2026-06-01/2026-06-30/transactions.json",
       requests.sole[:url]
     )
   end

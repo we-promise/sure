@@ -82,7 +82,7 @@ class Provider::Fio < Provider
       raise Error.new("Fio statement range ends before it starts", failure_code: :bad_request)
     end
 
-    body = get("periods/#{path_segment(from_date)}/#{path_segment(to_date_value)}/transactions.json",
+    body = get("periods/#{token}/#{path_segment(from_date)}/#{path_segment(to_date_value)}/transactions.json",
                operation: "GET periods")
 
     # A range with no movements can answer 200 with an empty body rather than a header
@@ -115,9 +115,10 @@ class Provider::Fio < Provider
     end
 
     # Resolves a relative path against the base URL, refusing to send the token anywhere
-    # but Fio's HTTPS host.
+    # but Fio's HTTPS host. The token sits inside `path`: Fio places it after the
+    # endpoint name, not before it (`/v1/rest/periods/{token}/{from}/{to}/…`).
     def resolve_url(path)
-      "#{DEFAULT_BASE_URL}/#{token}/#{path}".tap do |url|
+      "#{DEFAULT_BASE_URL}/#{path}".tap do |url|
         uri = URI.parse(url)
         unless uri.scheme == "https" && uri.host == ALLOWED_HOST
           raise Error.new("Refusing to send credentials to untrusted host", failure_code: :invalid_url)
