@@ -34,10 +34,23 @@ class TransactionsHelperTest < ActionView::TestCase
 
     rows = details[:provider_extras].index_by { |row| row[:key] }
 
-    assert_equal "REF-1", rows["Payment meta · reference number"][:value]
-    assert_equal "Amazon", rows["Counterparty 1 · name"][:value]
-    assert_equal "merchant", rows["Counterparty 1 · type"][:value]
-    refute rows["Counterparty 1 · name"][:multiline]
+    assert_equal "REF-1", rows["Payment meta · Reference number"][:value]
+    assert_equal "Amazon", rows["Counterparty 1 · Name"][:value]
+    assert_equal "merchant", rows["Counterparty 1 · Type"][:value]
+    refute rows["Counterparty 1 · Name"][:multiline]
+  end
+
+  # A composed label is part translation, part provider identifier. Running
+  # `humanize` over the whole thing lowercased the translated half, so the field
+  # name is translated on its own and the result is left alone.
+  test "labels a provider field we do not know by humanizing its identifier" do
+    details = build_transaction_extra_details(transaction_with({
+      "plaid" => { "payment_meta" => { "some_future_field" => "value" } }
+    }))
+
+    keys = details[:provider_extras].map { |row| row[:key] }
+
+    assert_includes keys, "Payment meta · Some future field"
   end
 
   # The drawer should stay closed for transactions where Plaid told us nothing
