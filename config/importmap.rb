@@ -59,3 +59,4 @@ pin "d3-shape-src", to: "d3-shape.js"
 # "What's new" release highlight popover
 pin "driver.js", to: "driver.js.mjs" # @1.8.0
 pin "utils/cash_flow_chart_data", to: "utils/cash_flow_chart_data.mjs"
+pin "utils/sankey_preview_analytics", to: "utils/sankey_preview_analytics.mjs"

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
+import { formatCashFlowCurrency } from "utils/cash_flow_chart_data";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
@@ -8,7 +9,7 @@ import {
   isNavigableCategoryNode,
 } from "utils/transactions_filter_url";
 
-// Connects to data-controller="sankey-chart"
+// Preview-only renderer. Keep the legacy Sankey unchanged during comparison.
 export default class extends Controller {
   static targets = ["chart", "zoomOutButton"];
 
@@ -16,7 +17,7 @@ export default class extends Controller {
     data: Object,
     nodeWidth: { type: Number, default: 15 },
     nodePadding: { type: Number, default: 20 },
-    currencySymbol: { type: String, default: "$" },
+    currency: { type: String, default: "USD" },
     startDate: String,
     endDate: String,
   };
@@ -65,6 +66,13 @@ export default class extends Controller {
     this.tooltip = null;
   }
 
+  clear() {
+    clearTimeout(this.drawTimeout);
+    this.tooltip?.remove();
+    this.tooltip = null;
+    d3.select(this.#chartElement()).selectAll("svg").interrupt().remove();
+  }
+
   zoomOut() {
     if (!this.zoomRootId) return;
 
@@ -75,7 +83,6 @@ export default class extends Controller {
 
   #draw({ animate = false } = {}) {
     const { nodes = [], links = [] } = this.#visibleData();
-    if (!nodes.length || !links.length) return;
 
     // Hide tooltip and reset any hover states before redrawing
     this.#hideTooltip();
@@ -85,6 +92,11 @@ export default class extends Controller {
 
     clearTimeout(this.drawTimeout);
     chart.selectAll("svg").interrupt();
+
+    if (!nodes.length || !links.length) {
+      chart.selectAll("svg").remove();
+      return;
+    }
 
     if (animate) {
       chart
@@ -170,7 +182,7 @@ export default class extends Controller {
   }
 
   #navigateToTransactions(d) {
-    if (!isNavigableCategoryNode(d.id)) {
+    if (!isNavigableCategoryNode(d.id) || !d.filter_value) {
       // Structural node (Cash Flow / Surplus): keep current zoom behavior.
       this.#zoomIn(d);
       return;
@@ -517,7 +529,7 @@ export default class extends Controller {
     nodeGroups
       .selectAll("text")
       .style("cursor", (d) =>
-        isNavigableCategoryNode(d.id) ||
+        (isNavigableCategoryNode(d.id) && d.filter_value) ||
         sankeyNodeHasChildren(this.#visibleData(), d.id)
           ? "pointer"
           : "default",
@@ -554,7 +566,7 @@ export default class extends Controller {
       .append("div")
       // Shared visual contract + this chart's positioning class; opacity is
       // toggled via inline style below.
-      .attr("class", `${CHART_TOOLTIP_CLASSES} top-0`)
+      .attr("class", `${CHART_TOOLTIP_CLASSES} top-0 ph-no-capture`)
       .style("opacity", 0)
       .style("pointer-events", "none");
   }
@@ -565,7 +577,13 @@ export default class extends Controller {
     return String(s).replace(
       /[&<>"']/g,
       (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c],
     );
   }
 
@@ -621,10 +639,6 @@ export default class extends Controller {
   }
 
   #formatCurrency(value) {
-    const formatted = Number.parseFloat(value).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return this.currencySymbolValue + formatted;
+    return formatCashFlowCurrency(value, this.currencyValue);
   }
 }

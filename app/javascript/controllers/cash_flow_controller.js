@@ -19,7 +19,7 @@ export default class extends Controller {
     this.request?.abort();
     this.request = null;
     this.chartTargets.forEach((chart) => {
-      chart.removeAttribute("data-sankey-chart-data-value");
+      chart.removeAttribute("data-preview-sankey-chart-data-value");
       chart.querySelectorAll("svg").forEach((svg) => svg.remove());
     });
     this.show("loading");
@@ -41,9 +41,12 @@ export default class extends Controller {
       const data = cashFlowChartData(body);
       if (this.request !== request) return;
       this.chartTargets.forEach((chart) => {
-        chart.setAttribute("data-sankey-chart-currency-value", body.currency);
         chart.setAttribute(
-          "data-sankey-chart-data-value",
+          "data-preview-sankey-chart-currency-value",
+          body.currency,
+        );
+        chart.setAttribute(
+          "data-preview-sankey-chart-data-value",
           JSON.stringify(data),
         );
       });
@@ -57,6 +60,6 @@ export default class extends Controller {
     for (const name of ["loading", "error", "empty", "content"]) {
       this[`${name}Target`].hidden = name !== state;
     }
-    this.dispatch("state", { detail: { ready: state === "content" } });
+    this.dispatch("state", { detail: { state, ready: state === "content" } });
   }
 }

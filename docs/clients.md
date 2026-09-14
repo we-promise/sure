@@ -133,7 +133,12 @@ scope. Explicit API credentials never fall back to a browser session. Responses
 are private and not HTTP-cacheable; native clients retain their own authenticated,
 identity-scoped offline cache.
 
-![Dashboard cash flow with synthetic test data](screenshots/cash-flow-sankey.png)
+The web dashboard keeps its original Sankey unchanged and renders the API-backed
+chart directly below it only for users with preview features enabled. See
+[Sankey preview feedback](hosting/sankey-preview-feedback.md) for the PostHog
+survey configuration and display-event definitions.
+
+![Original and preview cash flow with synthetic test data](screenshots/cash-flow-sankey.png)
 
 Push registration accepts an optional `device_key`: 32 securely random bytes
 encoded as 64 lowercase hex characters, generated independently per server and

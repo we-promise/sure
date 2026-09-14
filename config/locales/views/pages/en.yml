@@ -76,6 +76,19 @@ en:
           liability: "Liabilities"
       insights_feed:
         title: "Insights"
+      cashflow_preview:
+        title: "New cash flow chart"
+        preview: "Preview"
+        description: "Compare this chart with the original above and let us know what looks different."
+        feedback_prompt: "Does this chart look right?"
+        positive: "Looks right"
+        negative: "Something looks wrong"
+        feedback_title: "Cash flow chart feedback"
+        feedback_loading: "Loading feedback form…"
+        feedback_unavailable: "Feedback isn't available right now. Please try again later."
+        feedback_thanks: "Thanks for helping improve the chart!"
+        feedback_privacy: "Your response is sent to PostHog. Describe the issue without account numbers, balances, or other private financial details."
+        feedback_submit: "Send feedback"
       cashflow_sankey:
         loading: "Loading cash flow…"
         load_error: "Cash flow could not be loaded. Please try again."
