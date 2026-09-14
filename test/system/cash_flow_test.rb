@@ -19,8 +19,12 @@ class CashFlowTest < ApplicationSystemTestCase
     chart = find("#cashflow-sankey-chart [data-sankey-chart-target='chart']", match: :first)
     assert_selector "#cashflow-sankey-chart svg .sankey-link"
     assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/api/v1/cash_flow?'))")
-    find("[data-section-key='cashflow_sankey']").hover
-    find("[data-cashflow-expand-target='button']").click
+    within "[data-section-key='cashflow_sankey']" do
+      # Reveal the header controls through keyboard focus without depending on
+      # desktop hover support in the browser.
+      find("[data-dashboard-section-target='button']").send_keys(:tab)
+      find("button[data-cashflow-expand-target='button']:not([disabled])").click
+    end
     within "#cashflow-expanded-dialog" do
       assert_selector "svg .sankey-link"
     end
@@ -53,8 +57,6 @@ class CashFlowTest < ApplicationSystemTestCase
       click_button "Try again"
     end
     assert_selector "#cashflow-sankey-chart svg .sankey-link"
-    find("h1", text: @user.first_name).hover
-    page.save_screenshot("/tmp/sankey-web.png")
     visit root_path(start_date: "1900-01-01", end_date: "1900-01-02")
     assert_selector "[data-cash-flow-target='empty']:not([hidden])"
     assert_no_selector "[data-sankey-chart-target='chart'] svg"
