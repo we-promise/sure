@@ -446,9 +446,9 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "connection_status refuses to continue a link to an account the admin cannot write" do
     account = sophtron_member_account("read_write", name: "Member Sophtron Checking")
-    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1", status: :requires_update)
     provider = mock
-    provider.expects(:get_job_information).with("job-1").returns(completed_post_mfa_job)
+    provider.expects(:get_job_information).never
     provider.expects(:get_accounts).never
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
@@ -457,14 +457,14 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
     assert_not_includes response.body, account.name
-    assert_equal "job-1", @item.reload.current_job_id
+    assert_sophtron_job_untouched
   end
 
   test "connection_status refuses an unwritable account when the connection job succeeds" do
     account = sophtron_member_account(nil, name: "Unshared Sophtron Checking")
-    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
+    @item.update!(user_institution_id: "ui-1", current_job_id: "job-1", status: :requires_update)
     provider = mock
-    provider.expects(:get_job_information).with("job-1").returns({ JobID: "job-1", LastStatus: "AccountsReady" })
+    provider.stubs(:get_job_information).with("job-1").returns({ JobID: "job-1", LastStatus: "AccountsReady" })
     provider.expects(:get_accounts).never
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
@@ -473,6 +473,7 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
     assert_not_includes response.body, account.name
+    assert_sophtron_job_untouched
   end
 
   test "connection_status continues a link to an account the admin holds full_control on" do
@@ -1028,6 +1029,14 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
       account.account_shares.where(user: @user).destroy_all
       account.share_with!(@user, permission: permission) if permission
       account
+    end
+
+    # A refused connection_status must leave the pending job for the next poll.
+    def assert_sophtron_job_untouched
+      @item.reload
+      assert_equal "job-1", @item.current_job_id
+      assert_equal "requires_update", @item.status
+      refute @item.pending_account_setup?
     end
 
     def completed_post_mfa_job

@@ -134,6 +134,11 @@ class SophtronItemsController < ApplicationController
       return
     end
 
+    # Before any provider call or item update, so a refused account cannot
+    # consume the pending connection job.
+    @account = requested_link_account
+    return if performed?
+
     if @sophtron_item.current_job_id.blank?
       redirect_to select_accounts_sophtron_items_path(connection_context_params)
       return
@@ -1031,10 +1036,9 @@ class SophtronItemsController < ApplicationController
       account if require_linkable_account!(account)
     end
 
+    # Both render helpers rely on connection_status having resolved and
+    # authorized @account first.
     def render_account_selection(item, force_refresh: false)
-      @account = requested_link_account
-      return if performed?
-
       @available_accounts = item.reject_already_linked(item.fetch_remote_accounts(force: force_refresh))
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
@@ -1047,9 +1051,6 @@ class SophtronItemsController < ApplicationController
     end
 
     def render_account_selection_if_accounts_available(item)
-      @account = requested_link_account
-      return true if performed?
-
       accounts = item.fetch_remote_accounts(force: true)
       return false if accounts.empty?
 
