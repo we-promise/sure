@@ -13,6 +13,11 @@ pl:
       expiration_date: Data ważności
       minimum_payment: Minimalna spłata
       minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: Włącz, jeśli bank podaje saldo
+        tej karty jako pozostały dostępny limit kredytowy zamiast kwoty zadłużenia.
+        Zadłużenie jest wtedy wyliczane z limitu kredytowego podanego przez bank albo
+        z pola Dostępny limit kredytowy, jeśli bank go nie podaje.
+      treat_balance_as_available_credit_label: Saldo to dostępny limit kredytowy
     new:
       title: Wprowadź dane karty kredytowej
     overview:
@@ -20,6 +25,7 @@ pl:
       annual_fee: Opłata roczna
       apr: RRSO
       available_credit: Dostępny limit kredytowy
+      edit_account_details: Edytuj dane konta
       expiration_date: Data ważności
       minimum_payment: Minimalna spłata
       unknown: Nieznane

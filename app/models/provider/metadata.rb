@@ -14,6 +14,7 @@ class Provider
       coinbase:       { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CB", logo_color: "#3b82f6", domain: "coinbase.com" },
       binance:        { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "BI", logo_color: "#ca8a04", domain: "binance.com" },
       kraken:         { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "KR", logo_color: "#7c3aed", domain: "kraken.com" },
+      coinspot:       { region: "AU",      kinds: %w[Crypto],          maturity: :beta,   logo_text: "CS", logo_color: "#111827", domain: "coinspot.com.au", name: "CoinSpot" },
       snaptrade:      { region: "US / CA", kinds: %w[Investment],      maturity: :beta,   logo_text: "ST", logo_color: "#16a34a", domain: "snaptrade.com" },
       ibkr:           { region: "Global",  kinds: %w[Investment],      maturity: :beta,   logo_text: "IB", logo_color: "#dc2626", domain: "interactivebrokers.com" },
       indexa_capital: { region: "ES",      kinds: %w[Investment],      maturity: :alpha,  logo_text: "IC", logo_color: "#dc2626", domain: "indexacapital.com" },
