@@ -35,6 +35,171 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
   end
 
+  test "creates a linked refund and exposes net purchase cost without changing cash sign" do
+    purchase = create_transaction(account: @account, amount: 500, category: categories(:one))
+    post api_v1_transactions_url, params: { transaction: {
+      account_id: @account.id, name: "Returned shirts", date: Date.current, amount: 300,
+      nature: "income", refund: true, refund_of_transaction_id: purchase.entryable_id
+    } }, headers: api_headers(@api_key), as: :json
+    assert_response :created
+    body = response.parsed_body
+    assert_equal "refund", body["kind"]
+    assert_equal "income", body["classification"]
+    assert_equal "expense", body["reporting_classification"]
+    assert_equal 30000, body["signed_amount_cents"]
+    assert_equal purchase.entryable_id, body["refund_of_transaction_id"]
+    refund_id = body["id"]
+
+    get api_v1_transaction_url(purchase.entryable_id), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ refund_id ], response.parsed_body["refund_transaction_ids"]
+    assert_equal 20000, response.parsed_body.dig("net_purchase_cost", "amount_cents")
+  end
+
+  test "refund update can mark relink unlink and undo while omission preserves the link" do
+    purchase = create_transaction(account: @account, amount: 500)
+    another = create_transaction(account: @account, amount: 400)
+    refund = create_transaction(account: @account, amount: -300)
+    url = api_v1_transaction_url(refund.entryable_id)
+    [ { refund: true, refund_of_transaction_id: purchase.entryable_id },
+      { notes: "Preserve link" },
+      { refund_of_transaction_id: another.entryable_id },
+      { refund_of_transaction_id: nil },
+      { refund: false } ].zip([ purchase.entryable_id, purchase.entryable_id, another.entryable_id, nil, nil ]).each do |attributes, expected_id|
+      patch url, params: { transaction: attributes }, headers: api_headers(@api_key), as: :json
+      assert_response :success
+      if expected_id
+        assert_equal expected_id, response.parsed_body["refund_of_transaction_id"]
+      else
+        assert_nil response.parsed_body["refund_of_transaction_id"]
+      end
+    end
+    assert_equal "standard", refund.transaction.reload.kind
+  end
+
+  test "invalid refund creation is atomic" do
+    assert_no_difference "Entry.count" do
+      post api_v1_transactions_url, params: { transaction: {
+        account_id: @account.id, name: "Invalid refund", date: Date.current,
+        amount: 300, nature: "expense", refund: true
+      } }, headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "inaccessible purchase IDs do not change an existing credit" do
+    other = families(:empty).accounts.create!(name: "Private", currency: "USD", balance: 0, accountable: Depository.new)
+    purchase = create_transaction(account: other, amount: 500)
+    refund = create_transaction(account: @account, amount: -300)
+    patch api_v1_transaction_url(refund.entryable_id), params: { transaction: {
+      notes: "Must roll back", refund: true, refund_of_transaction_id: purchase.entryable_id
+    } }, headers: api_headers(@api_key), as: :json
+    assert_response :not_found
+    assert_nil refund.reload.notes
+    assert refund.transaction.reload.standard?
+  end
+
+  test "refund inputs reject conflicting flags and nonboolean values" do
+    purchase = create_transaction(account: @account, amount: 500)
+    refund = create_transaction(account: @account, amount: -300)
+    [ { refund: "maybe" }, { refund: false, refund_of_transaction_id: purchase.entryable_id } ].each do |attributes|
+      patch api_v1_transaction_url(refund.entryable_id), params: { transaction: attributes }, headers: api_headers(@api_key), as: :json
+      assert_response :unprocessable_entity
+      assert refund.transaction.reload.standard?
+    end
+  end
+
+  test "read only API keys cannot classify refunds" do
+    refund = create_transaction(account: @account, amount: -300)
+    patch api_v1_transaction_url(refund.entryable_id), params: { transaction: { refund: true } }, headers: api_headers(@read_only_api_key), as: :json
+    assert_response :forbidden
+    assert refund.transaction.reload.standard?
+  end
+
+  test "refund type filter is explicit and income excludes refunds" do
+    refund = create_transaction(account: @account, amount: -300, kind: "refund")
+    get api_v1_transactions_url, params: { type: "refund" }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal [ refund.entryable_id ], response.parsed_body["transactions"].map { |row| row["id"] }
+    get api_v1_transactions_url, params: { type: "income" }, headers: api_headers(@api_key)
+    assert_not_includes response.parsed_body["transactions"].map { |row| row["id"] }, refund.entryable_id
+  end
+
+  test "refund metadata hides inaccessible links and net cost uses only visible refunds" do
+    member = users(:family_member)
+    key = ApiKey.create!(user: member, name: "Refund reader", scopes: [ "read_write" ], display_key: "refund_reader_#{SecureRandom.hex(8)}")
+    visible = accounts(:depository)
+    hidden = accounts(:investment)
+    purchase = create_transaction(account: hidden, amount: 500)
+    credit = create_transaction(account: visible, amount: -300)
+    credit.transaction.mark_as_refund!(purchase: purchase.transaction)
+    get api_v1_transaction_url(credit.entryable_id), headers: api_headers(key)
+    assert_response :success
+    assert_nil response.parsed_body["refund_of_transaction_id"]
+
+    visible_purchase = create_transaction(account: visible, amount: 500)
+    hidden_credit = create_transaction(account: hidden, amount: -300)
+    hidden_credit.transaction.mark_as_refund!(purchase: visible_purchase.transaction)
+    get api_v1_transaction_url(visible_purchase.entryable_id), headers: api_headers(key)
+    assert_response :success
+    assert_empty response.parsed_body["refund_transaction_ids"]
+    assert_equal 50000, response.parsed_body.dig("net_purchase_cost", "amount_cents")
+  end
+
+  test "read only account sharing cannot be bypassed with a write API key" do
+    member = users(:family_member)
+    key = ApiKey.create!(user: member, name: "Refund writer", scopes: [ "read_write" ], display_key: "refund_writer_#{SecureRandom.hex(8)}")
+    refund = create_transaction(account: accounts(:credit_card), amount: -300)
+    patch api_v1_transaction_url(refund.entryable_id), params: { transaction: { refund: true } }, headers: api_headers(key), as: :json
+    assert_response :forbidden
+    assert refund.transaction.reload.standard?
+
+    refund.transaction.mark_as_refund!
+    patch api_v1_transaction_url(refund.entryable_id), params: { transaction: { notes: "Unauthorized edit" } }, headers: api_headers(key), as: :json
+    assert_response :forbidden
+    assert_nil refund.reload.notes
+  end
+
+  test "net purchase cost exposes dated conversion and missing rate status" do
+    purchase = create_transaction(account: @account, amount: 500, currency: "USD")
+    credit = create_transaction(account: @account, amount: -300, currency: "EUR", date: 2.days.ago.to_date)
+    credit.transaction.mark_as_refund!(purchase: purchase.transaction)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: credit.date, rate: 1.1)
+    get api_v1_transaction_url(purchase.entryable_id), headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal 17000, response.parsed_body.dig("net_purchase_cost", "amount_cents")
+    assert_equal "available", response.parsed_body["net_purchase_cost_status"]
+
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    get api_v1_transaction_url(purchase.entryable_id), headers: api_headers(@api_key)
+    assert_response :success
+    assert_nil response.parsed_body["net_purchase_cost"]
+    assert_equal "exchange_rate_missing", response.parsed_body["net_purchase_cost_status"]
+  end
+
+  test "invalid refund update rolls back ordinary attribute changes" do
+    outflow = create_transaction(account: @account, amount: 300)
+    patch api_v1_transaction_url(outflow.entryable_id), params: { transaction: { name: "Must roll back", refund: true } }, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_equal "Transaction", outflow.reload.name
+    assert outflow.transaction.reload.standard?
+  end
+
+  test "split credits can be classified through refund-only updates" do
+    purchase = create_transaction(account: @account, amount: 500)
+    credit = create_transaction(account: @account, amount: -300)
+    child = credit.split!([ { name: "Return", amount: -200 }, { name: "Other", amount: -100 } ]).first
+    patch api_v1_transaction_url(child.entryable_id), params: { transaction: {
+      refund: true, refund_of_transaction_id: purchase.entryable_id
+    } }, headers: api_headers(@api_key), as: :json
+    assert_response :success
+    assert_equal purchase.entryable_id, child.transaction.reload.refund_of_id
+
+    patch api_v1_transaction_url(child.entryable_id), params: { transaction: { refund: true, amount: 400 } }, headers: api_headers(@api_key), as: :json
+    assert_response :unprocessable_entity
+    assert_equal(-200, child.reload.amount)
+  end
+
   # INDEX action tests
   test "should get index with valid API key" do
     get api_v1_transactions_url, headers: api_headers(@api_key)

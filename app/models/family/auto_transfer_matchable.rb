@@ -172,6 +172,11 @@ module Family::AutoTransferMatchable
             inflow_accounts.status IN ('draft', 'active') AND
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
+            NOT EXISTS (
+              SELECT 1 FROM transactions refund_transactions
+              WHERE (refund_transactions.id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id) AND refund_transactions.kind = 'refund')
+                OR refund_transactions.refund_of_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
+            ) AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
@@ -215,6 +220,11 @@ module Family::AutoTransferMatchable
             inflow_accounts.status IN ('draft', 'active') AND
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
+            NOT EXISTS (
+              SELECT 1 FROM transactions refund_transactions
+              WHERE (refund_transactions.id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id) AND refund_transactions.kind = 'refund')
+                OR refund_transactions.refund_of_id IN (inflow_candidates.entryable_id, outflow_candidates.entryable_id)
+            ) AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND

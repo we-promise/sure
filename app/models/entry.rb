@@ -33,6 +33,7 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :refund_direction_unchanged
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -448,12 +449,21 @@ class Entry < ApplicationRecord
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, excluded: } hashes
   # @return [Array<Entry>] the created child entries
   def split!(splits)
-    total = splits.sum { |s| s[:amount].to_d }
-    unless total == amount
-      raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
-    end
-
     self.class.transaction do
+      # Refund linking and splitting must serialize on the same row. Reload
+      # the entry after waiting so its amount and associations are current.
+      transaction.lock! if transaction?
+      reload
+      if transaction? && transaction.refund_linked?
+        errors.add(:base, :refund_links_present)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      total = splits.sum { |s| s[:amount].to_d }
+      unless total == amount
+        raise ActiveRecord::RecordInvalid.new(self), "Split amounts must sum to parent amount (expected #{amount}, got #{total})"
+      end
+
       children = splits.map do |split_attrs|
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
@@ -485,7 +495,19 @@ class Entry < ApplicationRecord
   # Removes split children and restores parent entry.
   def unsplit!
     self.class.transaction do
-      child_entries.each do |child|
+      transaction.lock! if transaction?
+      reload
+      children = child_entries.includes(:entryable).to_a
+      transactions = children.select(&:transaction?).map(&:transaction).sort_by { |record| record.id.to_s }
+      # Refund linking takes these same locks. Recheck after waiting so a
+      # concurrently linked child cannot be deleted and lose its refund link.
+      transactions.each(&:lock!)
+      if transactions.any? { |record| record.refund? || record.refund_linked? }
+        errors.add(:base, :refund_links_present)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      children.each do |child|
         child.unsplitting = true
         child.destroy!
       end
@@ -570,6 +592,14 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    def refund_direction_unchanged
+      return unless transaction? && amount.present?
+
+      if (transaction.refund? && !amount.negative?) || (amount <= 0 && transaction.purchase_refunds.exists?)
+        errors.add(:amount, :invalid_refund)
+      end
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

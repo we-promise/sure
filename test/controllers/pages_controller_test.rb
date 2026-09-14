@@ -88,6 +88,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       .once
       .returns(fake_income_period_total)
 
+    income_statement.expects(:build_period_total)
+      .with(classification: "expense", period: kind_of(Period), rows: [])
+      .once
+      .returns(fake_expense_period_total)
+
     get root_path
 
     assert_response :ok
