@@ -7,6 +7,45 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "investment account activity is not offered as a bill or an income source" do
+    # Brokerage and retirement feeds deliver dividends, reinvestments and
+    # payroll contributions as plain Transaction rows, monthly and tightly
+    # clustered -- the exact shape the detector looks for.
+    investment = accounts(:investment)
+    assert_equal "Investment", investment.accountable_type
+
+    3.times do |i|
+      # A monthly dividend reinvestment: looks exactly like a subscription.
+      investment.entries.create!(
+        date: (i + 1).months.ago.to_date,
+        amount: 7.24,
+        currency: "USD",
+        name: "REINVESTMENT FIDELITY US BOND INDEX",
+        entryable: Transaction.new
+      )
+
+      # A payroll 401k contribution: an inflow, so it reads as recurring income.
+      investment.entries.create!(
+        date: (i + 1).months.ago.to_date,
+        amount: -437.50,
+        currency: "USD",
+        name: "LEGAL & GENERAL S&P DC CIT",
+        entryable: Transaction.new
+      )
+    end
+
+    bill_names = @identifier.candidate_patterns(sign: :outflow, min_occurrences: 2).map { |p| p[:name] }
+    assert_not_includes bill_names, "REINVESTMENT FIDELITY US BOND INDEX"
+
+    income_names = @identifier.income_source_candidates(min_occurrences: 2).map { |c| c[:name] }
+    assert_not_includes income_names, "LEGAL & GENERAL S&P DC CIT"
+
+    # And the automatic pipeline does not create series for them either.
+    assert_no_difference "@family.recurring_transactions.count" do
+      @identifier.identify_recurring_patterns
+    end
+  end
+
   test "candidate_patterns offers undeclared recurring shapes and skips claimed, junk, and wrong-sign ones" do
     account = @family.accounts.first
 

@@ -20,6 +20,17 @@ class RecurringTransaction
     # worth offering as a bill or income starting point.
     MINIMUM_CANDIDATE_AMOUNT = 1
 
+    # Accounts whose activity is never a bill or an income source. Brokerage and
+    # retirement feeds deliver dividends, reinvestments and payroll
+    # contributions as plain Transaction rows rather than Trades, on a fixed
+    # monthly cadence and in tightly clustered amounts -- the exact shape the
+    # detector looks for. Left in, a fund's monthly dividend is offered as a
+    # subscription, and a 401k contribution is detected as recurring INCOME
+    # because it is an inflow to the account, which inflates cash-flow
+    # projections. Trades are already skipped via the entryable_type filter;
+    # this covers the same activity when a provider reports it as a transaction.
+    NON_BILLABLE_ACCOUNTABLE_TYPES = %w[Investment Crypto].freeze
+
     # Read-only: recurring-shaped patterns NOT already covered by an
     # existing series, for the add-dialog picker. Two consistent
     # occurrences are enough to OFFER a candidate (the automatic pipeline
@@ -50,6 +61,7 @@ class RecurringTransaction
       inflows = family.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction")
+        .where.not(accounts: { accountable_type: NON_BILLABLE_ACCOUNTABLE_TYPES })
         .where("entries.date >= ?", lookback.ago.to_date)
         .where("entries.amount < 0")
         .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
@@ -199,6 +211,7 @@ class RecurringTransaction
         entries_with_transactions = family.entries
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
           .where(entryable_type: "Transaction")
+          .where.not(accounts: { accountable_type: NON_BILLABLE_ACCOUNTABLE_TYPES })
           .where("entries.date >= ?", three_months_ago)
           .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
           .includes(:entryable)
