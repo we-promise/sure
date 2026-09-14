@@ -25,6 +25,7 @@ class Holding::ForwardCalculator
         trades = portfolio_cache.get_trades(date: date)
         update_cost_basis_tracker(trades)
         next_portfolio = transform_portfolio(current_portfolio, trades, direction: :forward)
+        release_transferred_positions(next_portfolio)
         holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
@@ -108,6 +109,12 @@ class Holding::ForwardCalculator
 
         @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
       end
+    end
+
+    # A position that has returned to zero holds no transferred-in units any more,
+    # so the "unknown" mark is released and a later repurchase reads as known again.
+    def release_transferred_positions(portfolio)
+      @transferred_security_ids.delete_if { |security_id| (portfolio[security_id] || 0) <= 0 }
     end
 
     # Returns the current cost basis for a security, or nil if nothing is held

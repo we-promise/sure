@@ -164,6 +164,30 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_not current.cost_basis_unknown, "an outbound-only transfer should not mark the basis unknown"
   end
 
+  # An inbound transfer marks the basis unknown while those units are held, but once
+  # the position is fully closed and repurchased the new lot must read as known again.
+  test "an inbound transfer stops shadowing the basis once the position is closed and repurchased" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    transfer_in = create_trade(@voo, qty: 5, date: 3.days.ago.to_date, price: 470, account: @account)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+    create_trade(@voo, qty: -15, date: 2.days.ago.to_date, price: 480, account: @account) # fully closed
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 490, account: @account)     # repurchased
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+
+    # While the transferred-in units are held, the basis is unknown.
+    while_held = calculated.find { |h| h.security_id == @voo.id && h.date == 3.days.ago.to_date }
+    assert while_held.cost_basis_unknown
+    assert_nil while_held.cost_basis
+
+    # After the position is fully closed and bought again, the new lot is known.
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+    assert_not current.cost_basis_unknown
+    assert_equal BigDecimal("490"), current.cost_basis
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
