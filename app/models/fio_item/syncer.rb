@@ -30,6 +30,11 @@ class FioItem::Syncer
 
     sync.update!(status_text: I18n.t("fio_item.sync.status.checking_setup")) if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: fio_item.fio_accounts)
+    # The collector derives unlinked as total minus linked, which counts an account the
+    # user skipped during setup as outstanding work. FioItem's own counts exclude it, and
+    # the status summary reads these stats in preference to them, so it would otherwise
+    # keep reporting setup the user has already declined.
+    merge_sync_stats(sync, "unlinked_accounts" => fio_item.unlinked_accounts_count)
 
     linked_accounts = fio_item.fio_accounts.joins(:account_provider)
     unlinked_accounts = fio_item.fio_accounts.needs_setup
