@@ -78,6 +78,14 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejects conflicting graph modes" do
+    [ {}, { month: "2024-01-01" }, { start_date: "2024-01-01", end_date: "2024-01-02" } ].each do |period|
+      get "/api/v1/cash_flow", params: period.merge(include: "sankey", view: "sankey"), headers: api_headers(@auth)
+      assert_response :unprocessable_entity
+      assert_equal "invalid_view", response.parsed_body["error"]
+    end
+  end
+
   test "dashboard cookie can read only this endpoint and never overrides explicit credentials" do
     sign_in @user
     get "/api/v1/cash_flow", params: { view: "sankey" }

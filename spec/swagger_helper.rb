@@ -26,8 +26,6 @@ RSpec.configure do |config|
       ],
       components: {
         securitySchemes: {
-          cashFlowSession: { type: :apiKey, in: :cookie, name: 'session_token', description: 'Signed web session; accepted only by GET cash_flow for the dashboard.' },
-          cashFlowBearer: { type: :http, scheme: :bearer },
           apiKeyAuth: {
             type: :apiKey,
             name: 'X-Api-Key',

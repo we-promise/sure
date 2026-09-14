@@ -5,6 +5,9 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     response.headers["Cache-Control"] = "private, no-store"
     today = Date.current
     statement = IncomeStatement.new(current_resource_owner.family, user: current_resource_owner)
+    if params[:include] && params[:view]
+      return invalid_query("invalid_view", "include and view cannot be combined")
+    end
     unless [ nil, "sankey" ].include?(params[:include]) && [ nil, "sankey" ].include?(params[:view])
       return invalid_query("invalid_view", "include and view support only sankey")
     end

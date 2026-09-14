@@ -38,11 +38,11 @@ RSpec.describe 'API V1 Cash Flow', type: :request do
       tags 'Cash Flow'
       description 'Server-calculated income, spending, savings, and daily cumulative comparison in family currency. Uses the authenticated user’s finance accounts and Sure reporting rules.'
       parameter name: :month, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Non-future first day YYYY-MM-01; defaults to the current month in the family time zone.'
-      parameter name: :include, in: :query, required: false, schema: { type: :string, enum: [ 'sankey' ] }, description: 'Append server-calculated graph to the monthly summary.'
-      parameter name: :view, in: :query, required: false, schema: { type: :string, enum: [ 'sankey' ] }, description: 'Graph-only envelope; omits daily comparison. Accepts month or an explicit date range.'
+      parameter name: :include, in: :query, required: false, schema: { type: :string, enum: [ 'sankey' ] }, description: 'Append server-calculated graph to the monthly summary; cannot combine with view.'
+      parameter name: :view, in: :query, required: false, schema: { type: :string, enum: [ 'sankey' ] }, description: 'Graph-only envelope; omits daily comparison. Accepts month or an explicit date range; cannot combine with include.'
       parameter name: :start_date, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Inclusive ISO date. Requires end_date and view=sankey; cannot combine with month.'
       parameter name: :end_date, in: :query, required: false, schema: { type: :string, format: :date }, description: 'Inclusive ISO date at or after start_date. Explicit ranges preserve their bounds, including future dates.'
-      security [ { apiKeyAuth: [] }, { cashFlowBearer: [] }, { cashFlowSession: [] } ]
+      security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 
       response '200', 'summary returned' do
@@ -51,7 +51,7 @@ RSpec.describe 'API V1 Cash Flow', type: :request do
         run_test!
       end
 
-      response '422', 'invalid month' do
+      response '422', 'invalid query' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:month) { 'invalid' }
         run_test!

@@ -11,14 +11,6 @@ servers:
   description: Local development
 components:
   securitySchemes:
-    cashFlowSession:
-      type: apiKey
-      in: cookie
-      name: session_token
-      description: Signed web session; accepted only by GET cash_flow for the dashboard.
-    cashFlowBearer:
-      type: http
-      scheme: bearer
     apiKeyAuth:
       type: apiKey
       name: X-Api-Key
@@ -4635,7 +4627,8 @@ paths:
           type: string
           enum:
           - sankey
-        description: Append server-calculated graph to the monthly summary.
+        description: Append server-calculated graph to the monthly summary; cannot
+          combine with view.
       - name: view
         in: query
         required: false
@@ -4644,7 +4637,7 @@ paths:
           enum:
           - sankey
         description: Graph-only envelope; omits daily comparison. Accepts month or
-          an explicit date range.
+          an explicit date range; cannot combine with include.
       - name: start_date
         in: query
         required: false
@@ -4663,8 +4656,6 @@ paths:
           their bounds, including future dates.
       security:
       - apiKeyAuth: []
-      - cashFlowBearer: []
-      - cashFlowSession: []
       responses:
         '200':
           description: summary returned
@@ -4675,7 +4666,7 @@ paths:
                 - "$ref": "#/components/schemas/CashFlow"
                 - "$ref": "#/components/schemas/CashFlowGraph"
         '422':
-          description: invalid month
+          description: invalid query
           content:
             application/json:
               schema:

@@ -114,6 +114,11 @@ Read monthly server-calculated totals and the daily spending comparison using
 [`GET /api/v1/cash_flow`](api/openapi.yaml). Native clients should
 use these values instead of rebuilding Sure's reporting rules from transactions.
 
+Structural node `name` values are fallback labels; clients should localize
+`cash_flow`, `surplus`, and `deficit` by `kind` at the presentation boundary.
+
+`include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
+
 Request `include=sankey` to append category nodes and links to the monthly
 summary. For the web dashboard's arbitrary date filters, request
 `view=sankey&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` to receive only the graph
