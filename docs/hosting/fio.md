@@ -71,15 +71,32 @@ To collect the rest: unlock the history in internet banking, then press **Sync**
 connection. That is what tells Sure the unlock happened, and the sync reaches for the
 whole range again. Changing the token or the start date does the same.
 
-### Categories and merchants
+### What lands in a transaction
 
-Fio does not categorise anything. For card payments it reports the acceptor, so
-`Nákup: PENNY MARKET s.r.o., Jaromer, CZ` becomes the merchant `PENNY MARKET s.r.o.`,
-which your rules can then act on. Transfers are named after the counterparty, and
-everything else after the operation type.
+Fio returns each movement as numbered columns — the same ids its CSV and XML exports
+use. Values below are shaped as the live API returns them, anonymised.
 
-The original amount of a converted card payment (Fio's `Upřesnění`, e.g. `15.90 EUR`) is
-kept on the transaction, so a payment abroad shows what was actually charged.
+| Fio column | Becomes | Example in | Example out |
+| --- | --- | --- | --- |
+| `column22` *ID pohybu* | the transaction's provider id | `27707247780` | `fio_27707247780` |
+| `column0` *Datum* | date | `"2026-06-27+0200"` | `2026-06-27` |
+| `column1` *Objem* | amount | `-958.0` | `958.0` spent |
+| `column10` *Název protiúčtu* | name, for transfers | `"Junák - český skaut, z. s."` | same |
+| `column7` *Uživatelská identifikace* | name and merchant, for card payments | `"Nákup: BILLA 1234,  NA PRIKOPE 1, PRAHA 1, 11000, CZE, dne 26.6.2026, částka  958.00 CZK"` | `BILLA 1234` |
+| `column16` *Zpráva pro příjemce* | notes | `"Záloha na účet tábora"` | same |
+| `column18` *Upřesnění* | the original amount of a converted payment | `"15.90 EUR"` | `EUR`, `15.9` |
+| `column4` `column5` `column6` *KS/VS/SS*, `column17` *ID pokynu*, `column2`+`column3` | kept on the transaction for rules to match | `"202609"` | `202609` |
+
+Fio does not categorise anything, so nothing arrives with a category. A card payment is
+named after the acceptor — only the first field of the receipt line, so every branch of
+a chain stays one merchant and your rules only have to be written once. A transfer is
+named after the counterparty. Anything with neither, such as a fee or credited interest,
+is named after the operation type.
+
+Fio repeats the same text across *Zpráva pro příjemce*, *Komentář* and, on card
+payments, *Uživatelská identifikace*. Notes only keep it when it says something the name
+does not, so a card payment usually has none. The acceptor's full address stays on the
+transaction's provider data, not in the name.
 
 ### Configuration
 
