@@ -21,7 +21,7 @@ class DS::ExpandToggleTest < ViewComponent::TestCase
     # revealed by JS once the groups are all open).
     assert_selector "button[aria-label='Expand all']"
     assert_selector "button [data-icon='expand']"
-    assert_selector "button [data-icon='collapse']"
+    assert_selector "button [data-icon='collapse']", visible: :all
   end
 
   test "renders the balance-sheet marker without a shrink class" do
@@ -35,7 +35,7 @@ class DS::ExpandToggleTest < ViewComponent::TestCase
     assert_selector "button[data-balance-sheet-expand-all][aria-expanded='false']"
     assert_selector "button[aria-label='Expand all']"
     assert_selector "button [data-icon='expand']"
-    assert_selector "button [data-icon='collapse']"
+    assert_selector "button [data-icon='collapse']", visible: :all
   end
 
   test "keeps the shared icon-only outline style and the caller's extra class" do
