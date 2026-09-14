@@ -30,16 +30,11 @@ module ProviderAccountLinking
       provider_link_holders(provider_account).all? { |holder| writable_account_ids.include?(holder.id) }
     end
 
-    # Owner or full_control, the rule require_account_permission!(:write)
-    # applies, resolved once per request so a dialog listing many linked
-    # accounts does not run a share lookup per row.
+    # Resolved once per request through Account.writable_by, the app-wide
+    # definition of write access, so a dialog listing many linked accounts
+    # does not run a share lookup per row.
     def writable_account_ids
-      @writable_account_ids ||= begin
-        full_control_ids = AccountShare.where(user_id: Current.user.id, permission: "full_control").select(:account_id)
-        Current.family.accounts.where(owner_id: Current.user.id)
-          .or(Current.family.accounts.where(id: full_control_ids))
-          .pluck(:id).to_set
-      end
+      @writable_account_ids ||= Current.family.accounts.writable_by(Current.user).pluck(:id).to_set
     end
 
     # The AccountProvider link, plus the legacy foreign key some providers
