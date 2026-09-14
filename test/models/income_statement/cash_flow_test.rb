@@ -9,6 +9,14 @@ class IncomeStatement::CashFlowTest < ActiveSupport::TestCase
     @month = Date.new(2024, 2, 1)
   end
 
+  test "reads account and exchange rate freshness once for the complete report" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    queries = ActiveRecord::Base.uncached { capture_sql_queries { summary } }
+
+    assert_equal 1, queries.grep(/MAX\("accounts"\."updated_at"\)/i).size
+    assert_equal 1, queries.grep(/MAX\("exchange_rates"\."updated_at"\)/i).size
+  end
+
   test "uses server reporting rules and exact decimal amounts" do
     create_transaction(account: @account, amount: -1000, date: @month)
     create_transaction(account: @account, amount: 12.345.to_d, date: @month)
