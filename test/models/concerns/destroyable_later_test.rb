@@ -72,6 +72,21 @@ class DestroyableLaterTest < ActiveSupport::TestCase
     assert @item.reload.scheduled_for_deletion?
   end
 
+  # A validation unrelated to deletion must not make a connection undeletable.
+  # BrexItem validates base_url against an allowlist on every save, so a row
+  # written before the allowlist changed would fail update!.
+  test "flags an item that fails an unrelated validation" do
+    item = BrexItem.create!(family: families(:dylan_family), name: "Legacy Brex", token: "tok")
+    item.update_column(:base_url, "https://legacy-proxy.example.com")
+    assert_not item.valid?
+
+    assert_enqueued_with(job: DestroyJob, args: [ item ]) do
+      assert item.destroy_later
+    end
+
+    assert item.reload.scheduled_for_deletion?
+  end
+
   # QuestradeItem only requires a refresh token while not scheduled for
   # deletion, so a restore that re-ran validations would raise RecordInvalid
   # here, masking the enqueue error and leaving the flag set.

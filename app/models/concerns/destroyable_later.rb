@@ -10,8 +10,12 @@
 # Redis is unreachable) or return false (an enqueue callback aborting, or an
 # adapter raising ActiveJob::EnqueueError). Both restore the flag.
 #
-# The restore uses update_column so it cannot fail on a validation that depends
-# on the flag -- QuestradeItem skips its refresh_token presence check while
+# Both writes use update_column, skipping validations (item models declare no
+# save callbacks for it to skip). Setting the flag must not fail on a validation
+# unrelated to deletion: BrexItem checks base_url against an allowlist on every
+# save, so a row that predates an allowlist change would otherwise be
+# undeletable. Restoring it must not fail on one that depends on the flag --
+# QuestradeItem skips its refresh_token presence check while
 # scheduled_for_deletion is set -- and mask the enqueue error with its own.
 #
 # Don't call this inside a transaction: ApplicationJob defers enqueues until
@@ -53,7 +57,7 @@ module DestroyableLater
       with_lock do
         next false if scheduled_for_deletion?
 
-        update!(scheduled_for_deletion: true)
+        update_column(:scheduled_for_deletion, true)
         true
       end
     end
