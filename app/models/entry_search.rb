@@ -62,14 +62,14 @@ class EntrySearch
       return scope unless statuses.present?
       return scope if statuses.uniq.sort == %w[confirmed pending] # Both selected = no filter
 
-      # Use the shared pending check with the "t" alias so every supported
-      # provider is covered, including enable_banking.
+      # Source the pending check from Transaction::PENDING_CHECK_SQL (aliased to
+      # "t") so every supported provider is covered.
       pending_condition = <<~SQL.squish
         entries.entryable_type = 'Transaction'
         AND EXISTS (
           SELECT 1 FROM transactions t
           WHERE t.id = entries.entryable_id
-          AND (#{Transaction.pending_check_sql})
+          AND (#{Transaction::PENDING_CHECK_SQL})
         )
       SQL
 
@@ -78,7 +78,7 @@ class EntrySearch
         OR NOT EXISTS (
           SELECT 1 FROM transactions t
           WHERE t.id = entries.entryable_id
-          AND (#{Transaction.pending_check_sql})
+          AND (#{Transaction::PENDING_CHECK_SQL})
         )
       SQL
 
