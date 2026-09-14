@@ -94,7 +94,7 @@ class Holding::ReverseCalculator
 
         security_id = trade.security_id
 
-        if trade.investment_activity_label == Trade::TRANSFER_LABEL
+        if trade.internal_movement?
           @first_transfer_dates[security_id] ||= trade_entry.date
           next
         end
