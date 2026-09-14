@@ -294,12 +294,17 @@ end %>
       (window.__sidebarScrollPreserve = { openKeys: null, scrollTop: null });
 
     var PREFIX_RE = /^(mobile_)?(all|asset|liability)_/;
-    var GROUP_RE = /^(credit_card|depository|investment|loan|property|vehicle)$/;
+    // Accepted group keys, derived from Accountable::TYPES at render time
+    // so the set stays in sync with the source of truth: adding a new
+    // accountable type cannot silently recreate the "open group not
+    // re-opened after navigation" gap. `to_json` escapes <>& as unicode
+    // (safe inside a <script> tag); `raw` keeps ERB from double-escaping.
+    var GROUP_KEYS = new Set(<%= raw(Accountable::TYPES.map(&:underscore).to_json) %>);
 
     function container() { return document.getElementById("sidebar-scroll"); }
 
     function validKey(value) {
-      return value && GROUP_RE.test(value) ? value : null;
+      return value && GROUP_KEYS.has(value) ? value : null;
     }
 
     // Derive a tab-independent group key from a <details>, or null if it is
