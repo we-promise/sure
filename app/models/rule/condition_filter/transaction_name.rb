@@ -27,39 +27,39 @@ class Rule::ConditionFilter::TransactionName < Rule::ConditionFilter
       return scope.where(build_sanitized_where_condition("entries.name", operator, value))
     end
 
-    matches = plaid_aware_name_match(value)
-
-    scope.where(operator == "=" ? matches : "NOT (#{matches})")
+    scope.where(plaid_aware_name_condition(operator, value))
   end
 
   private
-    # Returns SQL that is true when the name equals the value outright, or when a
-    # Plaid row's name is that value followed by the separator and the bank's
-    # description.
+    # True when the name equals the value outright, or when a Plaid row's name is
+    # that value followed by the separator and the bank's description.
     #
     # entries.source is nullable, so the Plaid arm evaluates to NULL for manual
     # rows; `NOT (FALSE OR NULL)` is NULL, which would drop every manual row out
-    # of a `!=` rule. COALESCE settles the whole predicate to a real boolean
-    # before the negation sees it — the same hazard the `!=` operator handles
-    # with IS DISTINCT FROM in Rule::ConditionFilter#sanitize_operator.
+    # of a `!=` rule. COALESCE settles the predicate to a real boolean before the
+    # negation sees it — the same hazard `!=` handles with IS DISTINCT FROM in
+    # Rule::ConditionFilter#sanitize_operator.
     #
+    # Every user-supplied value is bound, and the only interpolations are the
+    # field expression built from the "entries.name" literal by normalize_field
+    # and the two frozen constants, so the whole condition leaves here as one
+    # sanitized string.
+    #
+    # @param operator [String] "=" or "!="
     # @param value [String] the value the user wrote in the rule
     # @return [String] a sanitized SQL boolean expression
-    def plaid_aware_name_match(value)
+    def plaid_aware_name_condition(operator, value)
       normalized_value = normalize_value(value)
-      normalized_field = normalize_field("entries.name")
-
-      exact = ActiveRecord::Base.sanitize_sql_for_conditions([
-        "#{normalized_field} = ?", normalized_value
-      ])
+      field = normalize_field("entries.name")
 
       # LIKE, not ILIKE: `=` is case-sensitive today and this must not loosen it.
-      combined = ActiveRecord::Base.sanitize_sql_for_conditions([
-        "entries.source = ? AND #{normalized_field} LIKE ?",
+      match = "COALESCE(#{field} = ? OR (entries.source = ? AND #{field} LIKE ?), FALSE)"
+
+      ActiveRecord::Base.sanitize_sql_for_conditions([
+        operator == "=" ? match : "NOT (#{match})",
+        normalized_value,
         PlaidEntry::Processor::SOURCE,
         "#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}#{PlaidEntry::Processor::NAME_SEPARATOR}%"
       ])
-
-      "COALESCE(#{exact} OR (#{combined}), FALSE)"
     end
 end
