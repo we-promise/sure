@@ -33,11 +33,28 @@ class FioItem::SyncerTest < ActiveSupport::TestCase
     refute @fio_item.reload.pending_account_setup?
   end
 
+  # A connection is linked between its discovery sync and the next one, on the same
+  # in-memory record. Counts memoized during the first sync must not outlive it.
+  test "counts an account linked since the last sync as linked" do
+    sync_item
+
+    account = Account.create!(
+      family: @family, name: "Fio", accountable: Depository.new(subtype: "checking"),
+      balance: 0, currency: "CZK"
+    )
+    AccountProvider.create!(account: account, provider: @fio_account)
+
+    sync = sync_item
+
+    assert_equal 1, sync.sync_stats["linked_accounts"]
+    assert_equal 0, sync.sync_stats["unlinked_accounts"]
+  end
+
   private
 
     def sync_item
       sync = Sync.create!(syncable: @fio_item)
-      FioItem::Syncer.new(@fio_item).perform_sync(sync)
+      FioItem::Syncer.new(@fio_item.reload).perform_sync(sync)
       sync.reload
     end
 end

@@ -40,9 +40,12 @@ class FioEntry::Processor
   # transaction to the previous day for anyone west of Prague.
   BANK_TIME_ZONE = "Europe/Prague".freeze
 
-  # Card acceptor strings look like "Nákup: PENNY MARKET s.r.o., Jaromer, CZ".
-  CARD_PURCHASE_PREFIX = /\A(?:nákup|platba)\s*:\s*/i
-  CARD_ACCEPTOR_LOCATION = /,\s*[^,]+,\s*[A-Z]{2}\.?\z/
+  # A card movement's "Uživatelská identifikace" is the terminal's own receipt line:
+  #   "Nákup: MGGA PAPIRNICTVI,  BELOHORSKA 197 126, PRAHA 6, 160 00, CZE, dne 26.6.2026, částka  958.00 CZK"
+  # Only the first field is the acceptor; the rest is its address plus a copy of the
+  # date and amount the entry already carries. Keeping any of it would give every branch
+  # of a chain its own merchant.
+  CARD_PURCHASE_PREFIX = /\A(?:nákup|platba|výběr)\s*:\s*/i
   # Operation types covering card use ("Platba kartou", "Poplatek - platební karta").
   CARD_OPERATION = /kart/i
 
@@ -169,13 +172,18 @@ class FioEntry::Processor
     end
 
     # Whatever payment detail did not become the name, so the reference the counterparty
-    # sent is not lost. "Uživatelská identifikace" is skipped once the name came out of
-    # it: repeating the acceptor string verbatim under a cleaned-up name is noise on
-    # every single card payment.
+    # sent is not lost. Fio repeats the same text across "Zpráva pro příjemce" and
+    # "Komentář", and on a card movement across "Uživatelská identifikace" too, so any
+    # candidate that is merely the string the name came out of is dropped.
     def notes
       candidates = [ data[:message], data[:comment] ]
       candidates << data[:user_identification] if card_acceptor.blank?
-      candidates.compact_blank.reject { |value| value.to_s == name }.first&.to_s&.truncate(255)
+      echoed = data[:user_identification].to_s if card_acceptor.present?
+
+      candidates
+        .compact_blank
+        .reject { |value| value.to_s == name || value.to_s == echoed }
+        .first&.to_s&.truncate(255)
     end
 
     def merchant
@@ -189,7 +197,7 @@ class FioEntry::Processor
       )
     end
 
-    # Card acceptor name, without Fio's "Nákup: " prefix and trailing ", city, country".
+    # The acceptor is the first field of the receipt line (see CARD_PURCHASE_PREFIX).
     def card_acceptor
       return @card_acceptor if defined?(@card_acceptor)
 
@@ -200,9 +208,10 @@ class FioEntry::Processor
 
       @card_acceptor = identification
         .sub(CARD_PURCHASE_PREFIX, "")
-        .sub(CARD_ACCEPTOR_LOCATION, "")
-        .strip
-        .presence
+        .split(",")
+        .first
+        &.strip
+        &.presence
     end
 
     def extra_metadata
@@ -218,7 +227,10 @@ class FioEntry::Processor
         "counter_bic" => data[:counter_bic],
         "payer_reference" => data[:payer_reference],
         "executed_by" => data[:executed_by],
-        "specification" => data[:specification]
+        "specification" => data[:specification],
+        # The acceptor's address survives only here, since the name keeps just the
+        # first field of the receipt line.
+        "user_identification" => data[:user_identification]
       }.merge(foreign_amount_metadata).compact
 
       { "fio" => fio }

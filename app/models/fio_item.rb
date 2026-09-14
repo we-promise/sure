@@ -188,6 +188,14 @@ class FioItem < ApplicationRecord
     token.present?
   end
 
+  # The counts are memoized for the settings partial, which asks for all three while
+  # rendering one connection. A sync links an account midway through and then asks
+  # again, so the memo has to go when the record is reloaded.
+  def reload(*)
+    @account_counts = nil
+    super
+  end
+
   private
 
     def apply_institution_defaults

@@ -67,20 +67,38 @@ class FioEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 6, 15), entry.date
   end
 
-  # A card payment has no counterparty; the acceptor arrives in "Uživatelská
-  # identifikace" wrapped in Fio's own prefix and trailing location.
+  # Verbatim from the live API: the acceptor is the first field of a receipt line that
+  # then repeats the address, the date and the amount, and Fio echoes the whole thing
+  # into "Zpráva pro příjemce" and "Komentář" as well.
+  RECEIPT_LINE = "Nákup: MGGA PAPIRNICTVI,  BELOHORSKA 197 126, PRAHA 6, 160 00, CZE, " \
+                 "dne 26.6.2026, částka  958.00 CZK".freeze
+
   test "names a card payment after the acceptor and records it as a merchant" do
     entry = process(
       id: 3,
       date: PRAGUE_MIDNIGHT_MS,
-      amount: -239.0,
-      user_identification: "Nákup: PENNY MARKET s.r.o., Jaromer, CZ",
+      amount: -958.0,
+      user_identification: RECEIPT_LINE,
+      message: RECEIPT_LINE,
+      comment: RECEIPT_LINE,
       operation_type: "Platba kartou"
     )
 
-    assert_equal "PENNY MARKET s.r.o.", entry.name
-    assert_equal "PENNY MARKET s.r.o.", entry.entryable.merchant&.name
-    assert_nil entry.notes
+    assert_equal "MGGA PAPIRNICTVI", entry.name
+    assert_equal "MGGA PAPIRNICTVI", entry.entryable.merchant&.name
+    assert_nil entry.notes, "the message and comment only echo the receipt line"
+    assert_equal RECEIPT_LINE, entry.entryable.extra.dig("fio", "user_identification")
+  end
+
+  # Two branches of one chain must not become two merchants.
+  test "gives the same merchant to purchases at different branches" do
+    first = process(id: 31, date: PRAGUE_MIDNIGHT_MS, amount: -100.0, operation_type: "Platba kartou",
+                    user_identification: "Nákup: Lidl dekuje za nakup,  Fugnerova 1543/10 A, Horovice, 26801, CZE, dne 28.6.2026, částka  100.00 CZK")
+    second = process(id: 32, date: PRAGUE_MIDNIGHT_MS, amount: -200.0, operation_type: "Platba kartou",
+                     user_identification: "Nákup: Lidl dekuje za nakup,  Tupolevova 736, Praha, 19900, CZE, dne 29.6.2026, částka  200.00 CZK")
+
+    assert_equal "Lidl dekuje za nakup", first.name
+    assert_equal first.entryable.merchant, second.entryable.merchant
   end
 
   # The same field on a non-card movement is a free-text reference, not an acceptor, so
@@ -96,6 +114,22 @@ class FioEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_nil entry.entryable.merchant
     assert_equal "Nákup: something, else, CZ", entry.name
+  end
+
+  # A transfer repeats its message in "Komentář"; the note should appear once.
+  test "keeps a transfer's message once when Fio echoes it into the comment" do
+    entry = process(
+      id: 41,
+      date: PRAGUE_MIDNIGHT_MS,
+      amount: 248_200.0,
+      counter_account_name: "Junák - český skaut, středisko Mořina, z. s.",
+      message: "Záloha na účet tábora Týček",
+      comment: "Záloha na účet tábora Týček",
+      operation_type: "Příjem převodem uvnitř banky"
+    )
+
+    assert_equal "Junák - český skaut, středisko Mořina, z. s.", entry.name
+    assert_equal "Záloha na účet tábora Týček", entry.notes
   end
 
   test "falls back to the operation type when a movement has no counterparty or reference" do
