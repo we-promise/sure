@@ -161,6 +161,16 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal expected_false_values, Transaction::PENDING_FLAG_FALSE_VALUES.to_set
   end
 
+  # pending_sql and PENDING_CHECK_SQL share one connection-free literal list;
+  # it must quote exactly as the database adapter would.
+  test "the shared SQL false-value list matches the adapter's quoting" do
+    adapter_quoted = Transaction::PENDING_FLAG_FALSE_VALUES.map { |value| Transaction.connection.quote(value) }.join(", ")
+
+    assert_equal adapter_quoted, Transaction::PENDING_FLAG_FALSE_VALUES_SQL
+    assert_includes Transaction.pending_sql, "NOT IN (#{adapter_quoted})"
+    assert_includes Transaction::PENDING_CHECK_SQL, "NOT IN (#{adapter_quoted})"
+  end
+
   test "provider-specific SQL only considers the requested pending namespaces" do
     account = families(:empty).accounts.create! name: "Provider pending scope", balance: 0,
       currency: "USD", accountable: Depository.new
