@@ -2,18 +2,25 @@
 
 <div class="space-y-6" id="balance-sheet"
      data-always-expanded="<%= Current.user.always_expanded_account_groups.to_json %>">
-  <div class="sticky top-0 z-10 flex justify-end px-4 bg-container">
-    <button
-      type="button"
-      data-balance-sheet-expand-all
-      data-expand-label="<%= t("pages.dashboard.balance_sheet.expand_all") %>"
-      data-collapse-label="<%= t("pages.dashboard.balance_sheet.collapse_all") %>"
-      class="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
-      aria-expanded="false">
-      <%= icon("chevrons-up-down", size: "sm") %>
-      <span><%= t("pages.dashboard.balance_sheet.expand_all") %></span>
-    </button>
-  </div>
+  <%# The sticky "Expand all" control and its wiring script share one rendering
+      condition: the script (below) only renders when at least one classification
+      group has account groups, so the button must too. Otherwise an empty
+      dashboard (no accounts yet) would show a permanently dead, interactive-
+      looking control with no click handler and no hide logic. %>
+  <% if balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
+    <div class="sticky top-0 z-10 flex justify-end px-4 bg-container">
+      <button
+        type="button"
+        data-balance-sheet-expand-all
+        data-expand-label="<%= t("pages.dashboard.balance_sheet.expand_all") %>"
+        data-collapse-label="<%= t("pages.dashboard.balance_sheet.collapse_all") %>"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
+        aria-expanded="false">
+        <%= icon("chevrons-up-down", size: "sm") %>
+        <span><%= t("pages.dashboard.balance_sheet.expand_all") %></span>
+      </button>
+    </div>
+  <% end %>
 
   <% balance_sheet.classification_groups.each do |classification_group| %>
     <div class="space-y-4 px-4">
