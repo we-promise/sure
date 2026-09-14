@@ -70,10 +70,7 @@ class Goal::WithdrawalDetector
         # no longer exists, while the posted twin arrives unstamped and gets
         # offered all over again.
         #
-        # `pending_providers_sql` is built to be appended to an existing WHERE,
-        # so it leads with AND; the rest of its clauses chain correctly once
-        # that first one is dropped.
-        .where(Transaction.pending_providers_sql("transactions").sub(/\AAND /, ""))
+        .where(Transaction.not_pending_sql("transactions"))
         .order(date: :desc, id: :desc)
     end
 end

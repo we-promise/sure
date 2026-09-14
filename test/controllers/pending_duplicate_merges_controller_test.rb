@@ -138,6 +138,25 @@ class PendingDuplicateMergesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Invalid transaction selected for merge", flash[:alert]
   end
 
+  # Transaction#pending? calls "no" pending, and pending_duplicate_candidates
+  # does not offer it; the controller must not accept it when posted directly.
+  test "create rejects merge with a transaction whose pending flag is \"no\"" do
+    pending_transaction = create_pending_transaction(amount: -50, account: @account)
+    said_no = create_transaction(amount: -50, account: @account)
+    said_no.entryable.update!(extra: { "simplefin" => { "pending" => "no" } })
+
+    assert_no_difference "Entry.count" do
+      post transaction_pending_duplicate_merges_path(pending_transaction), params: {
+        pending_duplicate_merges: {
+          posted_entry_id: said_no.id
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal "Invalid transaction selected for merge", flash[:alert]
+  end
+
   test "create rejects merge with transaction from different account" do
     pending_transaction = create_pending_transaction(amount: -50, account: @account)
     different_account_transaction = create_transaction(amount: -50, account: accounts(:investment))

@@ -1,14 +1,4 @@
 class Account::ProviderImportAdapter
-  # Matches a transaction any provider has flagged pending, for the lookups below that
-  # join `transactions` directly. Derived from Transaction::PENDING_PROVIDERS rather
-  # than spelled out, so a newly supported provider cannot silently drop out of
-  # pending→posted reconciliation. Frozen constant built from a frozen provider list:
-  # no user input reaches the SQL (same reasoning as Transaction::PENDING_CHECK_SQL).
-  PENDING_LOOKUP_SQL = Transaction::PENDING_PROVIDERS
-    .map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
-    .join(" OR ")
-    .freeze
-
   attr_reader :account, :skipped_entries
 
   def initialize(account)
@@ -806,7 +796,7 @@ class Account::ProviderImportAdapter
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -848,7 +838,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
 
     # If merchant_id is provided, prioritize matching by merchant
     if merchant_id.present?
@@ -913,7 +903,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(PENDING_LOOKUP_SQL)
+      .where(Transaction.pending_sql("transactions"))
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
     if merchant_id.present? && name.present?
