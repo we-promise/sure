@@ -248,15 +248,15 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "persists a maximum length token without relying on index compression" do
-    token = SecureRandom.hex(1024)
+    device_token = SecureRandom.hex(1024)
 
     assert_difference "PushSubscription.count", 1 do
       post api_v1_push_subscriptions_url,
-        params: { token: token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
+        params: { token: device_token, environment: "sandbox", platform: "ios" }, headers: @headers, as: :json
     end
 
     assert_response :created
-    assert_equal token, @user.push_subscriptions.find(response.parsed_body["id"]).token
+    assert_equal device_token, @user.push_subscriptions.find(response.parsed_body["id"]).token
   end
 
   test "rejects tokens exceeding the index limit with a validation response" do
