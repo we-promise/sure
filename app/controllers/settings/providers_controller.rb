@@ -190,7 +190,7 @@ class Settings::ProvidersController < ApplicationController
     FAMILY_PANELS = [
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
-      { key: "monobank",       title: "monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
+      { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
       { key: "fio",            title: "Fio banka",       turbo_id: "fio",            partial: "fio_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
@@ -203,6 +203,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
       { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
       { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
+      { key: "coinspot",       title: "CoinSpot",        turbo_id: "coinspot",       partial: "coinspot_panel" },
       { key: "onchain_wallet", title: "On-chain wallets", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
       { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
       { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
@@ -232,6 +233,7 @@ class Settings::ProvidersController < ApplicationController
       "coinbase"       => "CoinbaseItem",
       "binance"        => "BinanceItem",
       "kraken"         => "KrakenItem",
+      "coinspot"       => "CoinspotItem",
       "onchain_wallet" => "OnchainWalletItem",
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
@@ -274,6 +276,8 @@ class Settings::ProvidersController < ApplicationController
         @binance_items = Current.family.binance_items.active.ordered
       when "kraken"
         @kraken_items = Current.family.kraken_items.active.ordered
+      when "coinspot"
+        @coinspot_items = Current.family.coinspot_items.active.ordered
       when "onchain_wallet"
         @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       when "snaptrade"
@@ -323,6 +327,7 @@ class Settings::ProvidersController < ApplicationController
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
+      @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
       @fio_items = Current.family.fio_items.active.ordered
@@ -358,6 +363,7 @@ class Settings::ProvidersController < ApplicationController
         "coinbase"       => @coinbase_items,
         "binance"        => @binance_items,
         "kraken"         => @kraken_items,
+        "coinspot"       => @coinspot_items,
         "onchain_wallet" => @onchain_wallet_items,
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,

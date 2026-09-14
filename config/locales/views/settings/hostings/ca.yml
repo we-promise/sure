@@ -57,9 +57,9 @@ ca:
         url_label: URL de l'endpoint
         url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
-        description: Introdueix el Client ID proporcionat per Brand Fetch
-        env_configured_message: Has configurat correctament el teu Client ID de Brand
-          Fetch mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
+        description: Introdueix el Client ID proporcionat per Brandfetch
+        env_configured_message: Has configurat correctament el teu Client ID de Brandfetch
+          mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
         high_res_description: Quan està activat, els logotips es recuperaran amb resolució
           120×120 en lloc de 40×40. Això proporciona imatges més nítides en pantalles
           d'alta densitat.
@@ -68,13 +68,13 @@ ca:
         placeholder: Introdueix aquí el teu Client ID
         setup_step_1_html: Visita <a href="https://brandfetch.com/developers" target="_blank"
           rel="noopener noreferrer" class="underline">brandfetch.com</a> i crea un
-          compte de desenvolupador gratuït de Brand Fetch.
+          compte de desenvolupador gratuït de Brandfetch.
         setup_step_2_html: Ves a la pàgina <a href="https://developers.brandfetch.com/dashboard/logo-api"
           target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Toca la icona de l'ull a la secció "Your Client ID" per revelar
           el teu Client ID i enganxa'l a sota.
         show_details: "(mostra detalls)"
-        title: Configuració de Brand Fetch
+        title: Configuració de Brandfetch
       clear_cache:
         cache_cleared: La memòria cau de dades s'ha netejat. Pot trigar uns instants
           a completar-se.

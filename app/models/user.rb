@@ -534,6 +534,43 @@ class User < ApplicationRecord
     account
   end
 
+  # Release highlight ("What's new" popup) tracking. Account-level so every
+  # device the user signs in from stays in sync.
+  def last_seen_release_tag
+    preferences&.[]("last_seen_release_tag")
+  end
+
+  def mark_release_seen!(tag)
+    tag_version = parsed_release_tag_version!(tag)
+
+    with_lock do
+      current = last_seen_release_tag
+
+      # Never regress the marker: a stale tab (or an old app version during a
+      # rolling deploy) must not make an already-acknowledged release look
+      # unseen again. A previously stored malformed tag is overwritten by the
+      # next valid dismissal so the account can recover.
+      if current
+        current_version = parsed_release_tag_version(current)
+        next if current_version && tag_version < current_version
+      end
+
+      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+    end
+  end
+
+  def parsed_release_tag_version!(tag)
+    raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
+
+    Semver.from_release_tag(tag).version
+  end
+
+  def parsed_release_tag_version(tag)
+    parsed_release_tag_version!(tag)
+  rescue ArgumentError
+    nil
+  end
+
   # Dashboard preferences management
   def dashboard_section_collapsed?(section_key)
     preferences&.dig("collapsed_sections", section_key) == true
