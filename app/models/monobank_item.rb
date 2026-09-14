@@ -1,5 +1,5 @@
 class MonobankItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -28,11 +28,6 @@ class MonobankItem < ApplicationRecord
   scope :needs_update, -> { where(status: :requires_update) }
 
   # Mark the item for deletion and enqueue the background destroy job.
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
-
   # Run the importer to fetch the latest accounts/transactions from Monobank.
   def import_latest_monobank_data
     provider = monobank_provider

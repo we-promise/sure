@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class RedbarkItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -32,11 +32,6 @@ class RedbarkItem < ApplicationRecord
   end
 
   # Deliberately not transactional - the job must enqueue after the flag commits
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
-
 
   # Import data from provider API
   def import_latest_redbark_data(sync: nil)

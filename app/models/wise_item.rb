@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class WiseItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   SCA_PRIVATE_KEY_ATTRIBUTE = "sca_private_key"
 
@@ -41,11 +41,6 @@ class WiseItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def import_latest_wise_data(sync_start_date: nil)
     provider = wise_provider
