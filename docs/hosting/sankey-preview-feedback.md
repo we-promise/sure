@@ -2,12 +2,15 @@
 
 The dashboard retains the original Sankey's server calculation, JavaScript
 renderer, zoom, expansion and transaction links. A user who enables Settings →
-Preferences → Preview features sees an independent API-backed chart immediately
+Preferences → Preview features sees an independent server-calculated chart immediately
 below it. Both charts follow the existing period picker and section visibility.
 The preview renderer is deliberately separate while users compare the results.
 
-The API remains available to authenticated native clients regardless of the web
-preview preference. The preference gates the extra web chart, not `cash_flow`.
+The preview fetches `/dashboard/cash_flow` with ordinary browser-session
+authentication and the per-user preview gate. The native `/api/v1/cash_flow`
+endpoint requires OAuth or an API key and remains available independently of
+that preference. Both routes share the same graph representation and Sankey
+calculation; the browser does not call the public API.
 
 ## PostHog survey setup
 

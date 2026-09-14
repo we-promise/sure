@@ -58,18 +58,6 @@ class Api::V1::BaseController < ApplicationController
       render_unauthorized unless performed?
     end
 
-    # Opt-in bridge for the read-only cash-flow dashboard endpoint. Normal API
-    # authentication never calls this or falls back to a browser session.
-    def authenticate_web_session
-      session_record = find_session_by_cookie
-      return false unless session_record
-      Current.session = session_record
-      end_impersonation_if_target_inactive!
-      @current_user = Current.user
-      @authentication_method = :web_session
-      true
-    end
-
     # Try OAuth authentication first
     def authenticate_oauth
       return false unless request.headers["Authorization"].present?
@@ -297,8 +285,6 @@ class Api::V1::BaseController < ApplicationController
       auth_info = case @authentication_method
       when :oauth
         "OAuth Token"
-      when :web_session
-        "Web Session"
       when :api_key
         "API Key: #{@api_key.name}"
       else

@@ -1,5 +1,5 @@
 class Api::V1::CashFlowsController < Api::V1::BaseController
-  before_action :ensure_read_scope
+  before_action -> { authorize_scope!(:read) }
 
   def show
     response.headers["Cache-Control"] = "private, no-store"
@@ -26,28 +26,14 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     end
 
     if params[:view] == "sankey"
-      # Arbitrary dashboard ranges must not allocate a daily comparison series.
-      render json: { as_of: today.iso8601, time_zone: Time.zone.tzinfo.identifier, currency: statement.family.currency,
-        period: { start_date: period.start_date.iso8601, end_date: period.end_date.iso8601 },
-        sankey: IncomeStatement::Sankey.new(statement, period: period) }
+      # Arbitrary graph ranges must not allocate a daily comparison series.
+      render json: IncomeStatement::CashFlowGraph.new(statement, period: period, as_of: today)
     else
       render json: IncomeStatement::CashFlow.new(statement, month: month, as_of: today, include_sankey: params[:include] == "sankey")
     end
   end
 
   private
-    # This read-only endpoint also serves the signed-in dashboard. Cookie auth is
-    # deliberately local to this controller; explicit API credentials never fall
-    # back to a browser identity, including invalid/empty credential headers.
-    def authenticate_request!
-      return super if request.headers["Authorization"] || request.headers["X-Api-Key"]
-      super unless authenticate_web_session
-    end
-
-    def ensure_read_scope
-      authorize_scope!(:read) unless @authentication_method == :web_session
-    end
-
     def invalid_query(error, message)
       render json: { error: error, message: message }, status: :unprocessable_entity
     end

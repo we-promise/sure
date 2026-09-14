@@ -14,12 +14,12 @@ class CashFlowTest < ApplicationSystemTestCase
     create_transaction(account: account, category: child, amount: 50, date: @month)
   end
 
-  test "loads the API graph, expands, zooms, and preserves transaction date filters" do
+  test "loads the dashboard graph, expands, zooms, and preserves transaction date filters" do
     sign_in @user
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
     chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
     assert_selector "#cashflow-preview svg .sankey-link"
-    assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/api/v1/cash_flow?'))")
+    assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/dashboard/cash_flow?'))")
     within "#cashflow-preview" do
       click_button "Expand"
     end
@@ -89,7 +89,7 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_selector "#cashflow-preview svg .sankey-link"
     page.execute_script(<<~JS)
       window.originalCashFlowFetch = window.fetch;
-      window.fetch = (url, options) => String(url).includes('/api/v1/cash_flow')
+      window.fetch = (url, options) => String(url).includes('/dashboard/cash_flow')
         ? Promise.resolve(new Response('{}', {status: 503})) : window.originalCashFlowFetch(url, options);
       document.querySelector('[data-action="cash-flow#load"]').click();
     JS

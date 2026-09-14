@@ -4610,7 +4610,8 @@ paths:
       - Cash Flow
       description: Server-calculated income, spending, savings, and daily cumulative
         comparison in family currency. Uses the authenticated user’s finance accounts
-        and Sure reporting rules.
+        and Sure reporting rules. Browser sessions do not authenticate this public
+        API.
       parameters:
       - name: month
         in: query

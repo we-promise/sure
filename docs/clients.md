@@ -120,7 +120,7 @@ Structural node `name` values are fallback labels; clients should localize
 `include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
 
 Request `include=sankey` to append category nodes and links to the monthly
-summary. For the web dashboard's arbitrary date filters, request
+summary. For arbitrary date filters, request
 `view=sankey&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` to receive only the graph
 and its currency, time zone, as-of date, and inclusive period. This avoids building
 a daily series for long date ranges. The default monthly response is unchanged.
@@ -132,14 +132,19 @@ spending can therefore differ from the gross monthly figures, while net savings
 agrees. Surplus and deficit nodes balance the central flow. Clients own layout,
 formatting, and structural colors; all financial aggregation stays on Sure.
 
-Only this read-only API endpoint additionally accepts a signed web session for
-the dashboard. It honors the dashboard's impersonated identity and finance-account
-scope. Explicit API credentials never fall back to a browser session. Responses
-are private and not HTTP-cacheable; native clients retain their own authenticated,
-identity-scoped offline cache.
+The public endpoint uses the standard OAuth/API-key authentication and does not
+accept browser sessions. Responses are private and not HTTP-cacheable; native
+clients retain their own authenticated, identity-scoped offline cache.
 
-The web dashboard keeps its original Sankey unchanged and renders the API-backed
-chart directly below it only for users with preview features enabled. See
+The Turbo dashboard fetches `/dashboard/cash_flow` through a normal web controller,
+with session authentication, onboarding checks, and the current user's preview
+gate. It honors the impersonated browser identity and finance-account scope. Both
+endpoints use `IncomeStatement::CashFlowGraph` and `IncomeStatement::Sankey`, sharing
+the graph representation and aggregation without sharing authentication paths.
+
+The web dashboard keeps its original Sankey unchanged and renders the new
+server-calculated chart directly below it only for users with preview features
+enabled. See
 [Sankey preview feedback](hosting/sankey-preview-feedback.md) for the PostHog
 survey configuration and display-event definitions.
 
