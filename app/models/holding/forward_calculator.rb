@@ -93,10 +93,16 @@ class Holding::ForwardCalculator
         trade = trade_entry.entryable
         security_id = trade.security_id
 
-        # An internal movement is not a purchase: it contributes no cost and it
-        # makes the whole position unknowable, not just its own units.
         if trade.internal_movement?
-          @transferred_security_ids << security_id if trade.qty.positive?
+          # An inbound transfer brings in units at a price nothing here knows, so
+          # it makes the whole position's cost basis unknowable. An outbound
+          # transfer only removes units, so relieve them at the running average
+          # (like a sell) rather than leaving them to contaminate a later buy.
+          if trade.qty.positive?
+            @transferred_security_ids << security_id
+          else
+            @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+          end
           next
         end
 

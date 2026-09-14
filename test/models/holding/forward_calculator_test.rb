@@ -146,6 +146,24 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("490"), current.cost_basis
   end
 
+  # An outbound transfer removes units without a cost; it must relieve the tracker
+  # (not stay in the average) while leaving the basis known, unlike an inbound one.
+  test "an outbound transfer relieves the tracker instead of contaminating a later buy" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    transfer_out = create_trade(@voo, qty: -10, date: 3.days.ago.to_date, price: 470, account: @account)
+    transfer_out.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # transferred out, not sold
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 490, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # Repurchased lot stands alone at $490, not (460 + 490) / 2 = $475.
+    assert_equal BigDecimal("490"), current.cost_basis
+    assert_not current.cost_basis_unknown, "an outbound-only transfer should not mark the basis unknown"
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 

@@ -90,24 +90,34 @@ class Holding::ReverseCalculator
       @first_transfer_dates = {}
       trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
 
-      portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
+      # get_trades is already chronological (date, then created_at, then id).
+      # Re-sorting by date alone is unstable and could reorder same-day trades,
+      # which now matters because the tracker is order-sensitive once sells relieve.
+      portfolio_cache.get_trades.each do |trade_entry|
         trade = trade_entry.entryable
         security_id = trade.security_id
 
         if trade.internal_movement?
-          @first_transfer_dates[security_id] ||= trade_entry.date if trade.qty.positive?
+          # Inbound transfers make the basis unknown from that date on; outbound
+          # transfers only remove units, so relieve them at the running average.
+          if trade.qty.positive?
+            @first_transfer_dates[security_id] ||= trade_entry.date
+          else
+            trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+            @cost_basis_snapshots[security_id] << [ trade_entry.date, trackers[security_id].average_cost ]
+          end
           next
         end
 
         tracker = trackers[security_id]
-        # Buys raise the basis; sells relieve quantity at the running average so
-        # the figure stays correct after a position is fully sold and repurchased.
+        # Buys raise the basis; sells relieve quantity at the running average, and a
+        # full liquidation resets it so a later repurchase starts from a clean basis.
         tracker.apply(converted_trade_price(trade), trade.qty)
 
-        average_cost = tracker.average_cost
-        next if average_cost.nil?
-
-        @cost_basis_snapshots[security_id] << [ trade_entry.date, average_cost ]
+        # Record the basis after each trade — including nil once a position is fully
+        # closed — so cost_basis_for returns nil for the sold-out span instead of a
+        # stale figure carried forward from the last buy.
+        @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
       end
     end
 
