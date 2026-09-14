@@ -1,4 +1,4 @@
 <%= tag.button **merged_opts do %>
-  <%= helpers.icon("chevrons-up-down", size: "sm") %>
-  <span><%= expand_label %></span>
+  <span data-icon="expand" aria-hidden="true"><%= helpers.icon("chevrons-up-down", size: "sm") %></span>
+  <span data-icon="collapse" aria-hidden="true" style="display:none"><%= helpers.icon("chevrons-down-up", size: "sm") %></span>
 <% end %>

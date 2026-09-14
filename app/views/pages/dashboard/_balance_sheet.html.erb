@@ -2,20 +2,6 @@
 
 <div class="space-y-6" id="balance-sheet"
      data-always-expanded="<%= Current.user.always_expanded_account_groups.to_json %>">
-  <%# The sticky "Expand all" control and its wiring script share one rendering
-      condition: the script (below) only renders when at least one classification
-      group has account groups, so the button must too. Otherwise an empty
-      dashboard (no accounts yet) would show a permanently dead, interactive-
-      looking control with no click handler and no hide logic. %>
-  <% if balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
-    <div class="sticky top-0 z-10 flex justify-end px-4 bg-container">
-      <%= render DS::ExpandToggle.new(
-        expand_label: t("pages.dashboard.balance_sheet.expand_all"),
-        collapse_label: t("pages.dashboard.balance_sheet.collapse_all"),
-        data: { balance_sheet_expand_all: true }
-      ) %>
-    </div>
-  <% end %>
 
   <% balance_sheet.classification_groups.each do |classification_group| %>
     <div class="space-y-4 px-4">
@@ -167,8 +153,9 @@
 <% if balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
 <%= javascript_tag nonce: true do %>
   (function () {
+    var section = document.querySelector('section[data-section-key="balance_sheet"]');
     var root = document.getElementById("balance-sheet");
-    var button = root && root.querySelector("[data-balance-sheet-expand-all]");
+    var button = section && section.querySelector("[data-balance-sheet-expand-all]");
     if (!button) return;
 
     var details = Array.prototype.slice.call(root.querySelectorAll("details"));
@@ -197,8 +184,14 @@
     function syncButton() {
       var open = allOpen();
       button.setAttribute("aria-expanded", open ? "true" : "false");
-      var label = button.querySelector("span");
-      if (label) label.textContent = open ? collapseLabel : expandLabel;
+      button.setAttribute("aria-label", open ? collapseLabel : expandLabel);
+      // Swap the visible icon via inline display (not a Tailwind
+      // group-aria-expanded: variant, which is absent from the precompiled
+      // bundle shipped in the Docker image).
+      var expandIcon = button.querySelector('[data-icon="expand"]');
+      var collapseIcon = button.querySelector('[data-icon="collapse"]');
+      if (expandIcon) expandIcon.style.display = open ? "none" : "";
+      if (collapseIcon) collapseIcon.style.display = open ? "" : "none";
     }
 
     button.addEventListener("click", function () {
