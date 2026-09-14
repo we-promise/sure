@@ -29,6 +29,10 @@ class RecurringTransaction
     # because it is an inflow to the account, which inflates cash-flow
     # projections. Trades are already skipped via the entryable_type filter;
     # this covers the same activity when a provider reports it as a transaction.
+    #
+    # accountable_type is nullable, and SQL NOT IN never matches NULL, so the
+    # predicates below admit NULL explicitly rather than silently dropping
+    # entries from an account whose type was never set.
     NON_BILLABLE_ACCOUNTABLE_TYPES = %w[Investment Crypto].freeze
 
     # Read-only: recurring-shaped patterns NOT already covered by an
@@ -61,7 +65,7 @@ class RecurringTransaction
       inflows = family.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction")
-        .where.not(accounts: { accountable_type: NON_BILLABLE_ACCOUNTABLE_TYPES })
+        .where("accounts.accountable_type IS NULL OR accounts.accountable_type NOT IN (?)", NON_BILLABLE_ACCOUNTABLE_TYPES)
         .where("entries.date >= ?", lookback.ago.to_date)
         .where("entries.amount < 0")
         .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
@@ -211,7 +215,7 @@ class RecurringTransaction
         entries_with_transactions = family.entries
           .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
           .where(entryable_type: "Transaction")
-          .where.not(accounts: { accountable_type: NON_BILLABLE_ACCOUNTABLE_TYPES })
+          .where("accounts.accountable_type IS NULL OR accounts.accountable_type NOT IN (?)", NON_BILLABLE_ACCOUNTABLE_TYPES)
           .where("entries.date >= ?", three_months_ago)
           .where.not("transactions.kind": Transaction::TRANSFER_KINDS)
           .includes(:entryable)
