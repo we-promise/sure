@@ -4,32 +4,17 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
   before_action :ensure_write_scope
 
   def create
-    token = subscription_params[:token].to_s.downcase
-    subscription = current_resource_owner.push_subscriptions.find_or_initialize_by(token: token)
-    subscription.assign_attributes(
-      environment: subscription_params[:environment],
-      platform: subscription_params[:platform],
-      last_registered_at: Time.current
-    )
-    subscription.save!
-
+    subscription = PushSubscription.register_for!(user: current_resource_owner,
+      token: subscription_params[:token].to_s.downcase,
+      environment: subscription_params[:environment], platform: subscription_params[:platform],
+      device_key: subscription_params[:device_key])
     render json: serialize(subscription), status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: "validation_error", message: e.record.errors.full_messages.to_sentence },
            status: :unprocessable_entity
   rescue ActiveRecord::RecordNotUnique
-    subscription = current_resource_owner.push_subscriptions.find_by(token: token)
-    if subscription
-      subscription.update!(
-        environment: subscription_params[:environment],
-        platform: subscription_params[:platform],
-        last_registered_at: Time.current
-      )
-      render json: serialize(subscription), status: :created
-    else
-      render json: { error: "validation_error", message: "Device token is already registered" },
-             status: :unprocessable_entity
-    end
+    render json: { error: "validation_error", message: "Device token is already registered" },
+           status: :unprocessable_entity
   end
 
   def destroy
@@ -43,7 +28,7 @@ class Api::V1::PushSubscriptionsController < Api::V1::BaseController
     end
 
     def subscription_params
-      params.permit(:token, :environment, :platform)
+      params.permit(:token, :environment, :platform, :device_key)
     end
 
     def serialize(subscription)

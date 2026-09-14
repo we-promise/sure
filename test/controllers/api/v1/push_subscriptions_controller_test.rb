@@ -157,4 +157,42 @@ class Api::V1::PushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unauthorized
   end
+  test "a device can change users only with its original installation proof" do
+    secret = "cd" * 32
+    old = PushSubscription.register_for!(user: users(:empty), token: @token,
+      environment: "sandbox", platform: "ios", device_key: secret)
+    [ nil, "ef" * 32, "malformed" ].each do |proof|
+      post api_v1_push_subscriptions_url,
+        params: { token: @token, environment: "production", platform: "ios", device_key: proof },
+        headers: @headers, as: :json
+      assert_response :unprocessable_entity
+      assert_equal users(:empty), old.reload.user
+    end
+
+    assert_no_difference "PushSubscription.count" do
+      post api_v1_push_subscriptions_url,
+        params: { token: @token, environment: "production", platform: "ios", device_key: secret },
+        headers: @headers, as: :json
+      assert_response :created
+    end
+    replacement = PushSubscription.find_by!(token: @token)
+    assert_equal @user, replacement.user
+    assert_not_equal old.id, replacement.id
+    assert_not PushSubscription.exists?(old.id)
+    assert_not response.parsed_body.key?("device_key")
+    assert_not response.parsed_body.key?("device_key_digest")
+    delete api_v1_push_subscription_url(old.id), headers: @headers
+    assert_response :not_found
+    assert PushSubscription.exists?(replacement.id)
+  end
+
+  test "the original owner can enroll an existing subscription for device continuity" do
+    old = @user.push_subscriptions.create!(token: @token, environment: "sandbox", platform: "ios", last_registered_at: Time.current)
+    post api_v1_push_subscriptions_url,
+      params: { token: @token, environment: "sandbox", platform: "ios", device_key: "cd" * 32 },
+      headers: @headers, as: :json
+    assert_response :created
+    assert_equal old.id, response.parsed_body["id"]
+    assert_equal Digest::SHA256.hexdigest("cd" * 32), old.reload.device_key_digest
+  end
 end
