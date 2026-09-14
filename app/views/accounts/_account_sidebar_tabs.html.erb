@@ -38,16 +38,12 @@
             class: "flex-1 justify-start"
           ) %>
 
-          <button
-            type="button"
-            data-account-sidebar-expand-all
-            data-expand-label="<%= t('accounts.sidebar.expand_all') %>"
-            data-collapse-label="<%= t('accounts.sidebar.collapse_all') %>"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
-            aria-expanded="false">
-            <%= icon("chevrons-up-down", size: "sm") %>
-            <span><%= t('accounts.sidebar.expand_all') %></span>
-          </button>
+          <%= render DS::ExpandToggle.new(
+            expand_label: t("accounts.sidebar.expand_all"),
+            collapse_label: t("accounts.sidebar.collapse_all"),
+            data: { account_sidebar_expand_all: true },
+            class_name: "shrink-0"
+          ) %>
         </div>
 
         <div>
@@ -70,16 +66,12 @@
               class: "flex-1 justify-start"
             ) %>
 
-          <button
-            type="button"
-            data-account-sidebar-expand-all
-            data-expand-label="<%= t('accounts.sidebar.expand_all') %>"
-            data-collapse-label="<%= t('accounts.sidebar.collapse_all') %>"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
-            aria-expanded="false">
-            <%= icon("chevrons-up-down", size: "sm") %>
-            <span><%= t('accounts.sidebar.expand_all') %></span>
-          </button>
+          <%= render DS::ExpandToggle.new(
+            expand_label: t("accounts.sidebar.expand_all"),
+            collapse_label: t("accounts.sidebar.collapse_all"),
+            data: { account_sidebar_expand_all: true },
+            class_name: "shrink-0"
+          ) %>
         </div>
 
         <div>
@@ -102,16 +94,12 @@
               class: "flex-1 justify-start"
             ) %>
 
-          <button
-            type="button"
-            data-account-sidebar-expand-all
-            data-expand-label="<%= t('accounts.sidebar.expand_all') %>"
-            data-collapse-label="<%= t('accounts.sidebar.collapse_all') %>"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
-            aria-expanded="false">
-            <%= icon("chevrons-up-down", size: "sm") %>
-            <span><%= t('accounts.sidebar.expand_all') %></span>
-          </button>
+          <%= render DS::ExpandToggle.new(
+            expand_label: t("accounts.sidebar.expand_all"),
+            collapse_label: t("accounts.sidebar.collapse_all"),
+            data: { account_sidebar_expand_all: true },
+            class_name: "shrink-0"
+          ) %>
         </div>
 
         <div>

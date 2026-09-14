@@ -9,16 +9,11 @@
       looking control with no click handler and no hide logic. %>
   <% if balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
     <div class="sticky top-0 z-10 flex justify-end px-4 bg-container">
-      <button
-        type="button"
-        data-balance-sheet-expand-all
-        data-expand-label="<%= t("pages.dashboard.balance_sheet.expand_all") %>"
-        data-collapse-label="<%= t("pages.dashboard.balance_sheet.collapse_all") %>"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-primary bg-container px-3 py-1.5 text-sm font-medium text-primary hover:bg-surface-inset transition-colors"
-        aria-expanded="false">
-        <%= icon("chevrons-up-down", size: "sm") %>
-        <span><%= t("pages.dashboard.balance_sheet.expand_all") %></span>
-      </button>
+      <%= render DS::ExpandToggle.new(
+        expand_label: t("pages.dashboard.balance_sheet.expand_all"),
+        collapse_label: t("pages.dashboard.balance_sheet.collapse_all"),
+        data: { balance_sheet_expand_all: true }
+      ) %>
     </div>
   <% end %>
 
