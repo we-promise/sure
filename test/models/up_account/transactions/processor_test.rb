@@ -65,4 +65,27 @@ class UpAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     entry = @account.entries.find_by(external_id: "up_tx_2")
     assert_equal "Groceries", entry.transaction.category&.name
   end
+
+  test "prunes malformed pending rows but keeps false and current rows" do
+    malformed = create_pending_entry("up_malformed", "maybe")
+    false_flag = create_pending_entry("up_false", "off")
+    current = create_pending_entry("up_current", "maybe")
+
+    pruned = UpAccount::Transactions::Processor.new(@up_account)
+      .send(:prune_stale_pending_entries, [ current.external_id ])
+
+    assert_equal 1, pruned
+    assert_not Entry.exists?(malformed.id)
+    assert Entry.exists?(false_flag.id)
+    assert Entry.exists?(current.id)
+  end
+
+  private
+    def create_pending_entry(external_id, pending)
+      @account.entries.create!(
+        name: external_id, date: 10.days.ago.to_date, amount: 10, currency: "AUD",
+        source: "up", external_id: external_id,
+        entryable: Transaction.new(extra: { "up" => { "pending" => pending } })
+      )
+    end
 end
