@@ -64,12 +64,14 @@ module AccountableResource
     # usually the unsaved account with its nested accountable still attached --
     # but the opening valuation's `entries.create!` or `lock_saved_attributes!`
     # can raise too, and then it is an Entry or the accountable, neither of
-    # which the form can render. Recover the account through it, or start from
-    # a fresh one as `new` does.
+    # which the form can render. Recover the account through it, or rebuild
+    # it from what was submitted so the form comes back filled in rather
+    # than blank.
     @account = if e.record.is_a?(Account)
       e.record
     else
-      e.record.try(:account) || Current.family.accounts.build(currency: Current.family.currency, accountable: accountable_type.new)
+      e.record.try(:account) ||
+        Current.family.accounts.build(account_params.except(:return_to, :opening_balance_date))
     end
     @error_message = e.record.errors.full_messages.join(", ").presence || e.message
     # The `new` template's method-selection branch reads `@provider_configs`,
