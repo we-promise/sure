@@ -23,9 +23,8 @@ class Holding::ForwardCalculator
 
       account.start_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)
-        update_cost_basis_tracker(trades)
+        update_cost_basis_tracker(trades, current_portfolio)
         next_portfolio = transform_portfolio(current_portfolio, trades, direction: :forward)
-        release_transferred_positions(next_portfolio)
         holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
@@ -89,7 +88,14 @@ class Holding::ForwardCalculator
     # Applies each trade to its security's weighted-average cost-basis tracker.
     # Buys raise the basis; sells relieve quantity at the running average and a
     # full liquidation resets it, so a later repurchase starts from a clean basis.
-    def update_cost_basis_tracker(trade_entries)
+    #
+    # Trades are applied in order and the running position is tracked from the
+    # day's opening quantities, so an inbound transfer's "unknown" mark is released
+    # the moment the position hits zero — even when a same-day sell-off and
+    # repurchase net back to a positive end-of-day quantity.
+    def update_cost_basis_tracker(trade_entries, opening_portfolio)
+      running_quantities = Hash.new { |h, k| h[k] = opening_portfolio[k] || 0 }
+
       trade_entries.each do |trade_entry|
         trade = trade_entry.entryable
         security_id = trade.security_id
@@ -104,17 +110,15 @@ class Holding::ForwardCalculator
           else
             @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
           end
-          next
+        else
+          @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
         end
 
-        @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+        # A position back at zero holds no transferred-in units any more, so the
+        # "unknown" mark is released and a later repurchase reads as known again.
+        running_quantities[security_id] += trade.qty
+        @transferred_security_ids.delete(security_id) if running_quantities[security_id] <= 0
       end
-    end
-
-    # A position that has returned to zero holds no transferred-in units any more,
-    # so the "unknown" mark is released and a later repurchase reads as known again.
-    def release_transferred_positions(portfolio)
-      @transferred_security_ids.delete_if { |security_id| (portfolio[security_id] || 0) <= 0 }
     end
 
     # Returns the current cost basis for a security, or nil if nothing is held

@@ -289,15 +289,40 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
       transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
       transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
       create_trade(security, account: @account, qty: -15, price: 130, date: close_date) # fully closed
-      create_trade(security, account: @account, qty: 8, price: 150, date: rebuy_date)     # repurchased
+      create_trade(security, account: @account, qty: 10, price: 150, date: rebuy_date)    # repurchased
     end
 
+    # Trades net to 10, matching the 10-share snapshot, so the position really does
+    # hit zero at the close before the repurchase.
     # Unknown while the transferred-in units are held
     assert_nil cost_basis_for(calc, security, transfer_date)
     assert_nil cost_basis_for(calc, security, close_date - 1)
     # Known again once the position is fully closed and bought back
     assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6
     assert_in_delta 150.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
+  # A reverse-synced account can hold shares before its first imported trade. Here
+  # the snapshot is 10 but the trades net to only 8, so two shares predate the
+  # history and the position never truly reaches zero — the transferred-in units
+  # are still mixed in, so the basis must stay unknown.
+  test "cost_basis_for keeps a transferred position unknown when opening shares prevent liquidation" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date      = 12.days.ago.to_date
+    transfer_date = 9.days.ago.to_date
+    sell_date     = 6.days.ago.to_date
+    rebuy_date    = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+      transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+      transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+      create_trade(security, account: @account, qty: -15, price: 130, date: sell_date)
+      create_trade(security, account: @account, qty: 8, price: 150, date: rebuy_date)
+    end
+
+    assert_nil cost_basis_for(calc, security, rebuy_date)
+    assert_nil cost_basis_for(calc, security, Date.current)
   end
 
   private

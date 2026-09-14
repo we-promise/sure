@@ -188,6 +188,26 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("490"), current.cost_basis
   end
 
+  # A same-day sell-to-zero and repurchase nets back to a positive end-of-day
+  # quantity, so the release has to run per trade, not just on the day's net.
+  test "an inbound transfer is released even when the position crosses zero within a day" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    # All on the same day: transfer in, sell the whole position to zero, buy back.
+    transfer_in = create_trade(@voo, qty: 5, date: 2.days.ago.to_date, price: 480, account: @account)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(@voo, qty: -15, date: 2.days.ago.to_date, price: 480, account: @account)
+    create_trade(@voo, qty: 10, date: 2.days.ago.to_date, price: 480, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # The intra-day liquidation released the mark, so the repurchase is known.
+    assert_not current.cost_basis_unknown
+    assert_equal BigDecimal("480"), current.cost_basis
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 

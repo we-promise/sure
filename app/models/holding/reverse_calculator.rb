@@ -88,13 +88,25 @@ class Holding::ReverseCalculator
       # of unknown cost. `end` is nil while a span is still open at the last trade.
       @unknown_spans = Hash.new { |h, k| h[k] = [] }
       trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
-      positions = Hash.new(0)
       open_unknown_start = {}
 
       # get_trades is already chronological (date, then created_at, then id).
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the tracker is order-sensitive once sells relieve.
-      portfolio_cache.get_trades.each do |trade_entry|
+      trades = portfolio_cache.get_trades
+
+      # A reverse-synced account can hold shares before its first imported trade,
+      # because the provider gives current holdings rather than full history. Seed
+      # each running position from the snapshot minus the net imported trades, so
+      # "position back at zero" reflects the real position, not just the trades we
+      # happen to have.
+      net_qty = Hash.new(0)
+      trades.each { |te| net_qty[te.entryable.security_id] += te.entryable.qty }
+      snapshot = portfolio_snapshot.to_h
+      positions = Hash.new(0)
+      net_qty.each_key { |security_id| positions[security_id] = (snapshot[security_id] || 0) - net_qty[security_id] }
+
+      trades.each do |trade_entry|
         trade = trade_entry.entryable
         security_id = trade.security_id
         positions[security_id] += trade.qty
