@@ -9,6 +9,12 @@ module ExchangeRate::Provided
     end
 
     # Maximum number of days to look back for a cached rate before calling the provider.
+    #
+    # Also bound into the LATERAL rate lookup in
+    # IncomeStatement::ScopedTransactionsQuery#exchange_rates_join_sql, so
+    # income statement totals reuse a nearby rate on exactly the same terms as
+    # this method. Changing it changes reported budget and dashboard FX
+    # conversions too; keep the two paths in sync.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
