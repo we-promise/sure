@@ -19,15 +19,7 @@ RSpec.describe "API V1 Push Subscriptions", type: :request do
       security [ { apiKeyAuth: [] } ]
       consumes "application/json"
       produces "application/json"
-      parameter name: :subscription, in: :body, required: true, schema: {
-        type: :object,
-        required: %w[token environment platform],
-        properties: {
-          token: { type: :string },
-          environment: { type: :string, enum: %w[sandbox production] },
-          platform: { type: :string, enum: %w[ios] }
-        }
-      }
+      parameter name: :subscription, in: :body, required: true, schema: { "$ref" => "#/components/schemas/PushSubscriptionRegistration" }
       let(:subscription) { { token: "ab" * 32, environment: "sandbox", platform: "ios" } }
 
       response "201", "token registered" do
