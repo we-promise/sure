@@ -55,7 +55,7 @@ module TransactionsHelper
       extras = []
       if sf.is_a?(Hash) && sf["extra"].is_a?(Hash) && sf["extra"].present?
         sf["extra"].each do |k, v|
-          extras.concat(provider_extra_rows(k, v))
+          extras.concat(provider_extra_rows(provider_extra_field_label(k), v))
         end
       end
 
@@ -78,7 +78,7 @@ module TransactionsHelper
       if plaid.is_a?(Hash)
         if plaid["payment_meta"].is_a?(Hash) && plaid["payment_meta"].present?
           plaid["payment_meta"].each do |k, v|
-            extras.concat(provider_extra_rows(t("transactions.show.plaid_payment_meta_label", name: k), v))
+            extras.concat(provider_extra_rows(t("transactions.show.plaid_payment_meta_label", name: provider_extra_field_label(k)), v))
           end
         end
 
@@ -114,6 +114,11 @@ module TransactionsHelper
   end
 
   # Flatten hashes into labeled rows; pretty-print remaining nested structures.
+  #
+  # `key` arrives already presentable — localized by the caller, or run through
+  # provider_extra_field_label here. Nothing downstream reformats it, because a
+  # composed label is part translation and part provider identifier and
+  # `humanize` would lowercase the translated half.
   def provider_extra_rows(key, value, depth: 0)
     label = key.to_s
 
@@ -122,7 +127,8 @@ module TransactionsHelper
       value.flat_map do |child_key, child_value|
         next [] if child_value.nil? || child_value == ""
 
-        child_label = depth.zero? ? "#{label} · #{child_key}" : "#{label}.#{child_key}"
+        child = provider_extra_field_label(child_key)
+        child_label = depth.zero? ? "#{label} · #{child}" : "#{label}.#{child}"
         provider_extra_rows(child_label, child_value, depth: depth + 1)
       end
     when Array
@@ -146,10 +152,18 @@ module TransactionsHelper
     end
 
     {
-      key: key.to_s.humanize,
+      key: key.to_s,
       value: display,
       multiline: multiline || value.is_a?(Hash) || value.is_a?(Array)
     }
+  end
+
+  # Provider field names are schema identifiers (reference_number,
+  # confidence_level), so they get a translation where we know the field and
+  # `humanize` otherwise — the set is open-ended and a provider can add to it
+  # without us, which is better served by a readable fallback than a missing key.
+  def provider_extra_field_label(key)
+    t("transactions.show.provider_extra_fields.#{key}", default: key.to_s.humanize)
   end
 
   def pretty_json(value)

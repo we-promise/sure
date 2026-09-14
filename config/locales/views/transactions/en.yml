@@ -117,6 +117,22 @@ en:
       provider_extras: "Provider extras"
       plaid_payment_meta_label: "Payment meta · %{name}"
       plaid_counterparty_label: "Counterparty %{index}"
+      # Provider field names. The set is open-ended — anything not listed falls
+      # back to a humanized form of the provider's own identifier.
+      provider_extra_fields:
+        by_order_of: "By order of"
+        confidence_level: "Confidence level"
+        entity_id: "Entity ID"
+        logo_url: "Logo URL"
+        name: "Name"
+        payee: "Payee"
+        payer: "Payer"
+        phone_number: "Phone number"
+        ppd_id: "PPD ID"
+        reason: "Reason"
+        reference_number: "Reference number"
+        type: "Type"
+        website: "Website"
       transfer_or_debt_payment: "Transfer or Debt Payment?"
       open_matcher: "Open matcher"
       convert: "Convert"
