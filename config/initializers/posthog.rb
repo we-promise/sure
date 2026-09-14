@@ -3,6 +3,8 @@ require "posthog"
 Rails.configuration.x.posthog = ActiveSupport::OrderedOptions.new
 Rails.configuration.x.posthog.api_key = ENV["POSTHOG_KEY"].presence
 Rails.configuration.x.posthog.host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
+Rails.configuration.x.posthog.feedback_api_key = ENV["POSTHOG_FEEDBACK_KEY"].presence
+Rails.configuration.x.posthog.feedback_host = ENV.fetch("POSTHOG_FEEDBACK_HOST", "https://us.i.posthog.com")
 Rails.configuration.x.posthog.sankey_survey_id = ENV["POSTHOG_SANKEY_SURVEY_ID"].presence
 
 if (api_key = Rails.configuration.x.posthog.api_key).present?

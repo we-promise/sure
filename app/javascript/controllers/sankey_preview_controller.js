@@ -1,6 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
 import {
   capturePreviewEvent,
+  feedbackClient,
+  initializeSelfHostedFeedback,
   sankeyFeedbackResponse,
   sankeyFeedbackSurvey,
 } from "utils/sankey_preview_analytics";
@@ -14,9 +16,22 @@ export default class extends Controller {
     "status",
     "form",
   ];
-  static values = { surveyId: String };
+  static values = {
+    surveyId: String,
+    selfHosted: Boolean,
+    feedbackKey: String,
+    feedbackHost: String,
+  };
 
   connect() {
+    if (this.selfHostedValue) {
+      initializeSelfHostedFeedback(
+        window.posthog,
+        this.feedbackKeyValue,
+        this.feedbackHostValue,
+        () => document.dispatchEvent(new Event("posthog:ready")),
+      );
+    }
     this.displays = new Set();
     this.state = "loading";
     this.active = true;
@@ -25,6 +40,10 @@ export default class extends Controller {
       this.trackDisplay();
     });
     this.observer.observe(this.displayTarget);
+  }
+
+  get posthog() {
+    return feedbackClient(window.posthog, this.selfHostedValue);
   }
 
   disconnect() {
@@ -65,7 +84,7 @@ export default class extends Controller {
     const key = `inline:${this.state}`;
     if (this.displays.has(key)) return;
     if (
-      capturePreviewEvent(window.posthog, "sankey_preview_displayed", {
+      capturePreviewEvent(this.posthog, "sankey_preview_displayed", {
         surface: "inline",
         state: this.state,
       })
@@ -82,7 +101,7 @@ export default class extends Controller {
     this.originalDraggable = this.section?.getAttribute("draggable");
     this.section?.setAttribute("draggable", "false");
     this.expandedDialogTarget.showModal();
-    capturePreviewEvent(window.posthog, "sankey_preview_displayed", {
+    capturePreviewEvent(this.posthog, "sankey_preview_displayed", {
       surface: "expanded",
       state: this.state,
     });
@@ -110,7 +129,7 @@ export default class extends Controller {
     this.formTarget.hidden = true;
     this.statusTarget.textContent = this.statusTarget.dataset.loading;
     this.feedbackDialogTarget.showModal();
-    const posthog = window.posthog;
+    const posthog = this.posthog;
     if (
       !this.hasSurveyIdValue ||
       !this.surveyIdValue ||
@@ -174,7 +193,7 @@ export default class extends Controller {
     }
     if (
       !capturePreviewEvent(
-        window.posthog,
+        this.posthog,
         "survey sent",
         sankeyFeedbackResponse(this.survey, this.rating, feedback),
       )
@@ -192,7 +211,7 @@ export default class extends Controller {
     this.feedbackRequest = null;
     clearTimeout(this.feedbackTimeout);
     if (this.survey && !this.sent)
-      capturePreviewEvent(window.posthog, "survey dismissed", {
+      capturePreviewEvent(this.posthog, "survey dismissed", {
         $survey_id: this.survey.id,
       });
     this.survey = null;

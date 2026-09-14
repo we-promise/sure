@@ -30,4 +30,35 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "#cashflow-preview", count: 0
   end
+
+  test "self-hosted feedback is separately configured and stays off outside production" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    config = Rails.configuration.x.posthog
+    config.stubs(:feedback_api_key).returns("public-feedback-token")
+    config.stubs(:feedback_host).returns("https://us.i.posthog.com")
+    config.stubs(:sankey_survey_id).returns("self-hosted-survey")
+    with_self_hosting do
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-self-hosted-value='true'][data-sankey-preview-feedback-key-value='']"
+      Rails.env.stubs(:production?).returns(true)
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value='public-feedback-token'][data-sankey-preview-survey-id-value='self-hosted-survey']"
+      config.stubs(:feedback_api_key).returns(nil)
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value='']"
+    end
+  end
+
+  test "managed app and demo use the configured environment survey without the shared feedback client" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    Rails.env.stubs(:production?).returns(true)
+    config = Rails.configuration.x.posthog
+    config.stubs(:feedback_api_key).returns("unused-feedback-token")
+    [ "app-survey", "demo-survey" ].each do |survey_id|
+      config.stubs(:sankey_survey_id).returns(survey_id)
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-self-hosted-value='false'][data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='#{survey_id}']"
+    end
+  end
 end

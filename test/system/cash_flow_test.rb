@@ -175,6 +175,40 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_event_count "survey dismissed", 1
   end
 
+  test "self-hosted displays and feedback use only the separate project" do
+    with_self_hosting do
+      sign_in @user
+      visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
+      assert_selector "#cashflow-preview svg .sankey-link"
+      install_posthog_fake
+      page.execute_script(<<~JS)
+        const shared = window.posthog;
+        window.posthog = {
+          __loaded: true,
+          has_opted_out_capturing: () => false,
+          capture: () => { throw new Error('Wrong analytics destination'); },
+          getSurveys: () => { throw new Error('Wrong survey destination'); },
+          sankeyFeedback: shared
+        };
+        document.dispatchEvent(new Event('posthog:ready'));
+      JS
+      find("#cashflow-preview").scroll_to(:center)
+      assert_event_count "sankey_preview_displayed", 1
+      within "#cashflow-preview" do
+        click_button "Expand"
+      end
+      assert_event_count "sankey_preview_displayed", 2
+      find("#cashflow-preview-expanded-dialog").find("button[data-action='DS--dialog#close']").click
+      within "#cashflow-preview" do
+        click_button "Something looks wrong"
+      end
+      fill_in "cashflow-preview-feedback", with: "The labels overlap"
+      click_button "Send feedback"
+      assert_event_count "survey sent", 1
+      assert page.evaluate_script("window.sankeyEvents.some(e => e.event === 'survey sent' && e.properties.$survey_id === 'test-survey')")
+    end
+  end
+
   private
     def install_posthog_fake
       page.execute_script(<<~JS)

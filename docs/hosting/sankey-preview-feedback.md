@@ -11,9 +11,47 @@ preview preference. The preference gates the extra web chart, not `cash_flow`.
 
 ## PostHog survey setup
 
-Use the same PostHog project as the installation's existing `POSTHOG_KEY` and
-`POSTHOG_HOST`. PostHog is initialized by the existing production-only snippet.
-Enable Surveys in that project's settings, then create and launch an **API** survey:
+The app and demo use the project selected by that environment's existing
+`POSTHOG_KEY` and `POSTHOG_HOST`. Set `POSTHOG_SANKEY_SURVEY_ID` to the matching
+survey below; no browser hostname heuristics choose the project.
+
+| Environment | Project | Active API survey ID |
+| --- | --- | --- |
+| Sure app | `[app] sure-app` (247266) | [01a0a164-0289-0000-77fe-8038ae279700](https://us.posthog.com/project/247266/surveys/01a0a164-0289-0000-77fe-8038ae279700) |
+| Demo | `[app] sure-demo` (294544) | [01a0a164-9673-0000-0916-669967339593](https://us.posthog.com/project/294544/surveys/01a0a164-9673-0000-0916-669967339593) |
+| Self-hosted | `[app] self-hosted` (609412) | [01a0a162-73a2-0000-9402-ffab5bc45b4a](https://us.posthog.com/project/609412/surveys/01a0a162-73a2-0000-9402-ffab5bc45b4a) |
+
+These surveys were created and verified active on September 14, 2026. This does
+not configure or deploy any Sure server. Apply the environment variables when
+rolling out the preview.
+
+### Self-hosted configuration
+
+Operators explicitly opt in to the shared feedback destination:
+
+```dotenv
+POSTHOG_FEEDBACK_KEY=<public project token from project 609412>
+POSTHOG_FEEDBACK_HOST=https://us.i.posthog.com
+POSTHOG_SANKEY_SURVEY_ID=01a0a162-73a2-0000-9402-ffab5bc45b4a
+```
+
+Get the public project token from [self-hosted project settings](https://us.posthog.com/project/609412/settings/project-details#variables).
+Keep any operator-owned `POSTHOG_KEY` unchanged. In `SELF_HOSTED=true` mode,
+Sankey events and surveys use a separate `posthog.sankeyFeedback` client. Missing
+feedback configuration does **not** fall back to the operator's private project.
+The dedicated client is initialized only on the preview surface in production.
+It uses an in-memory anonymous identity, disables automatic tracking and session
+recording, and removes URL/referrer/person/device metadata from event properties.
+Only preview events and explicit survey lifecycle/response events are allowed.
+Opting out of either the existing client or the dedicated client suppresses
+feedback capture. The ingestion service still receives the connection's IP;
+events disable GeoIP enrichment. No global analytics settings are changed.
+
+### Survey contract
+
+For another project or a replacement survey, create and launch an **API** survey.
+Automatic survey popups may stay disabled: PostHog's manual Surveys API remains
+available, and Sure renders its own dialog.
 
 - Name: `Cash flow Sankey preview feedback`
 - Single choice question: `Does the new cash flow chart look right?`
@@ -54,7 +92,8 @@ not count; late SDK initialization can capture an already visible result.
 `sankey_preview_feedback_clicked` records `rating: positive | negative` and the
 load state. All preview and survey events include `preview_version`. Custom
 event properties contain no amounts, category/account names or IDs, date ranges,
-or graph payloads. PostHog still adds its usual SDK metadata. Preview charts and
+or graph payloads. Managed app/demo events retain their existing SDK metadata; the self-hosted
+feedback client strips incidental metadata as described above. Preview charts and
 the feedback form are excluded from autocapture/session recording; users are
 asked not to put private financial details in their voluntary response.
 
