@@ -1,9 +1,10 @@
 class PlaidEntry::Processor
   # Joins the merchant name to the bank's description in #name. Rule matching has
   # to recognise the same seam to keep exact-match name rules working, so
-  # Rule::ConditionFilter::TransactionName reads this constant rather than
-  # spelling the separator out a second time.
+  # Rule::ConditionFilter::TransactionName reads these constants rather than
+  # spelling the separator and the source out a second time.
   NAME_SEPARATOR = " - "
+  SOURCE = "plaid"
 
   # plaid_transaction is the raw hash fetched from Plaid API and converted to JSONB
   def initialize(plaid_transaction, plaid_account:, category_matcher:)
@@ -19,7 +20,7 @@ class PlaidEntry::Processor
       currency: currency,
       date: date,
       name: name,
-      source: "plaid",
+      source: SOURCE,
       category_id: matched_category&.id,
       merchant: merchant,
       pending_transaction_id: pending_transaction_id, # Plaid's linking ID for pending→posted
@@ -51,10 +52,12 @@ class PlaidEntry::Processor
     #
     # merchant_name alone collapses distinct transactions into one indistinguishable
     # name — every Target purchase becomes "Target", every Tesla charge "Tesla" —
-    # and rules match on the transaction name (Rule::Condition's transaction_name,
-    # compiled to ILIKE '%value%'), so nothing can tell the variants apart. Keeping
-    # both means existing "Target" rules still match while narrower ones become
-    # possible.
+    # and rules match on the transaction name, so nothing can tell the variants
+    # apart. Keeping both makes narrower rules possible.
+    #
+    # Rules the user already wrote are held harmless by
+    # Rule::ConditionFilter::TransactionName, which recognises NAME_SEPARATOR and
+    # keeps matching a Plaid row on the merchant half alone.
     #
     # @return [String, nil] the transaction name, or nil when Plaid sent neither
     def name
@@ -167,7 +170,7 @@ class PlaidEntry::Processor
       @merchant ||= import_adapter.find_or_create_merchant(
         provider_merchant_id: plaid_transaction["merchant_entity_id"],
         name: plaid_transaction["merchant_name"],
-        source: "plaid",
+        source: SOURCE,
         website_url: plaid_transaction["website"],
         logo_url: plaid_transaction["logo_url"]
       )

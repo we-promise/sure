@@ -110,10 +110,39 @@ with `merchant_name` and `original_description`.
 
 The merchant name alone collapses distinct transactions into one name, and
 [rules](../../app/models/rule/condition.rb) match on `transaction_name`, so the
-collapse removes the only signal that could separate them. Substring matching
-(`ILIKE '%value%'`) means a rule written against the merchant name still matches the
-combined form. Merchant records are built from the cleaned name on a separate path,
-so grouping is unaffected.
+collapse removes the only signal that could separate them. Merchant records are
+built from the cleaned name on a separate path, so grouping is unaffected.
+
+Changing a name that rules already target is the cost of this, and it falls
+entirely on the two operators with no substring tolerance. `transaction_name` is a
+text filter, so it offers `=` and `!=` alongside `like`/`not_like`
+([`condition_filter.rb`](../../app/models/rule/condition_filter.rb)); a `like` rule
+written against the merchant name still matches the combined form, but an `=` rule
+would stop matching and a `!=` rule would start matching what it was written to
+exclude — silently, in both directions.
+
+[`Rule::ConditionFilter::TransactionName`](../../app/models/rule/condition_filter/transaction_name.rb)
+absorbs that: for `=` and `!=` only, a row whose `entries.source` is Plaid also
+matches on the text before `PlaidEntry::Processor::NAME_SEPARATOR`. Three
+properties make this safe, and a change here must preserve all of them:
+
+- **Provenance-gated.** Rules run against every transaction in the family
+  ([`resource_scope`](../../app/models/rule/registry/transaction_resource.rb)), not
+  just provider rows. Without the `source` gate, `= "Rent"` would start matching a
+  manually entered "Rent insurance".
+- **Case-preserving.** `=` compiles to a plain `=` and is case-sensitive; the added
+  arm uses `LIKE`, never `ILIKE`.
+- **NULL-safe.** `entries.source` is nullable, so the added arm is `NULL` for manual
+  rows and a bare `NOT (...)` would drop them out of every `!=` rule. The predicate
+  is wrapped in `COALESCE(..., FALSE)` before negation.
+
+This is deliberately runtime behavior rather than a migration over saved rules:
+rewriting operators in place is irreversible, changes rules the user chose, and
+misses families who connect a provider later.
+
+If another provider starts combining names, gate it the same way — do not widen the
+rule engine generally. SimpleFIN is excluded on purpose: it has always emitted the
+combined form, so its rules were written against it.
 
 ## Raw payload debugging
 
