@@ -16,7 +16,11 @@ class ApiCurrentUsageTest < ActiveSupport::TestCase
   # Add new entries only when they are part of that bridge and document why.
   ALLOWED_BASE_CONTROLLER_REFERENCES = [
     "Current.session = @current_user.sessions.build(",
-    "Current.session.active_impersonator_session = nil"
+    "Current.session.active_impersonator_session = nil",
+    # The cash-flow-only browser bridge resolves the same impersonated identity
+    # as the dashboard, then exposes it through current_resource_owner.
+    "Current.session = session_record",
+    "@current_user = Current.user"
   ].freeze
 
   test "api controllers scope through current_resource_owner instead of Current" do

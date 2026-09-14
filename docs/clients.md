@@ -111,8 +111,27 @@ to access it.
 ### Native reporting and device continuity
 
 Read monthly server-calculated totals and the daily spending comparison using
-[`GET /api/v1/cash_flow`](api/cash-flow.md). Native clients should
+[`GET /api/v1/cash_flow`](api/openapi.yaml). Native clients should
 use these values instead of rebuilding Sure's reporting rules from transactions.
+
+Request `include=sankey` to append category nodes and links to the monthly
+summary. For the web dashboard's arbitrary date filters, request
+`view=sankey&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` to receive only the graph
+and its currency, time zone, as-of date, and inclusive period. This avoids building
+a daily series for long date ranges. The default monthly response is unchanged.
+
+Graph values are decimal strings in family currency, with stable node IDs and
+zero-based link indices. Refunds are netted within each category; parent direct
+amounts exclude children before each direction is grouped. Graph income and
+spending can therefore differ from the gross monthly figures, while net savings
+agrees. Surplus and deficit nodes balance the central flow. Clients own layout,
+formatting, and structural colors; all financial aggregation stays on Sure.
+
+Only this read-only API endpoint additionally accepts a signed web session for
+the dashboard. It honors the dashboard's impersonated identity and finance-account
+scope. Explicit API credentials never fall back to a browser session. Responses
+are private and not HTTP-cacheable; native clients retain their own authenticated,
+identity-scoped offline cache.
 
 Push registration accepts an optional `device_key`: 32 securely random bytes
 encoded as 64 lowercase hex characters, generated independently per server and
