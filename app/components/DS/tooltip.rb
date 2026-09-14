@@ -1,7 +1,7 @@
 class DS::Tooltip < ApplicationComponent
   AS_OPTIONS = %i[button span].freeze
 
-  attr_reader :placement, :offset, :cross_axis, :icon_name, :size, :color, :tooltip_id, :as, :html_class
+  attr_reader :placement, :offset, :cross_axis, :icon_name, :size, :color, :tooltip_id, :as, :html_class, :trigger_content
 
   # NOTE: tooltip content must be non-interactive — no buttons, links,
   # or form controls inside. Tooltips are exposed via `aria-describedby`,
@@ -24,7 +24,7 @@ class DS::Tooltip < ApplicationComponent
   # sizing/layout utilities (e.g. `size-full items-center justify-center`)
   # when `as: :span` should fill an icon-only link so hover covers the
   # whole hit target, not just the icon glyph.
-  def initialize(text: nil, placement: "top", offset: 10, cross_axis: 0, icon: "info", size: "sm", color: "default", as: :button, html_class: nil)
+  def initialize(text: nil, placement: "top", offset: 10, cross_axis: 0, icon: "info", size: "sm", color: "default", as: :button, html_class: nil, trigger_content: nil)
     raise ArgumentError, "as: must be one of #{AS_OPTIONS.inspect}" unless AS_OPTIONS.include?(as)
 
     @text = text
@@ -36,6 +36,7 @@ class DS::Tooltip < ApplicationComponent
     @color = color
     @as = as
     @html_class = html_class
+    @trigger_content = trigger_content
     @tooltip_id = "tooltip-#{SecureRandom.hex(4)}"
   end
 
