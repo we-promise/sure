@@ -1,18 +1,27 @@
-<%# locals: (sankey_data:, period:) %>
-<div id="cashflow-sankey-chart">
-  <% if sankey_data[:links].present? %>
+<%# locals: (period:) %>
+<div id="cashflow-sankey-chart" data-controller="cash-flow"
+  data-action="turbo:before-cache@document->cash-flow#clear"
+  data-cash-flow-url-value="<%= api_v1_cash_flow_path(view: "sankey", start_date: period.start_date.iso8601, end_date: period.end_date.iso8601) %>">
+  <p data-cash-flow-target="loading" role="status" class="p-4 text-secondary"><%= t("pages.dashboard.cashflow_sankey.loading") %></p>
+  <div data-cash-flow-target="error" hidden role="alert" class="p-4 space-y-3">
+    <p class="text-secondary"><%= t("pages.dashboard.cashflow_sankey.load_error") %></p>
+    <%= render DS::Button.new(text: t("pages.dashboard.cashflow_sankey.retry"), data: { action: "cash-flow#load" }) %>
+  </div>
+  <div data-cash-flow-target="content" hidden>
     <div class="w-full h-96">
-      <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data, period: period %>
+      <%= render "pages/dashboard/cashflow_sankey_chart", period: period %>
     </div>
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "expanded", disable_frame: true, data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
       <% dialog.with_header(title: t("pages.dashboard.cashflow_sankey.title")) %>
       <% dialog.with_body do %>
         <div class="w-full h-[85dvh] max-h-[90dvh] overflow-y-auto overscroll-contain">
-          <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data, period: period %>
+          <%= render "pages/dashboard/cashflow_sankey_chart", period: period %>
         </div>
       <% end %>
     <% end %>
-  <% else %>
+    <p class="px-4 text-xs text-secondary"><%= t("pages.dashboard.cashflow_sankey.basis") %></p>
+  </div>
+  <div data-cash-flow-target="empty" hidden>
     <div class="h-[300px] lg:h-[340px] bg-container py-4 flex flex-col items-center justify-center">
       <div class="space-y-3 text-center flex flex-col items-center">
         <%= render DS::FilledIcon.new(
@@ -29,5 +38,5 @@
         ) %>
       </div>
     </div>
-  <% end %>
+  </div>
 </div>

@@ -55,6 +55,7 @@
         aria-grabbed="false"
         aria-label="<%= t(section[:title]) %> section. Press Enter or Space to grab for reordering, then use arrow keys to move."
         data-action="
+          <%= "cash-flow:state->cashflow-expand#update" if section[:key] == "cashflow_sankey" %>
           dragstart->dashboard-sortable#dragStart
           dragend->dashboard-sortable#dragEnd
           touchstart->dashboard-sortable#touchStart
@@ -78,11 +79,12 @@
             </h2>
           </div>
           <div class="flex items-center gap-1">
-            <% if section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present? %>
+            <% if section[:key] == "cashflow_sankey" %>
               <button
                 type="button"
-                class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-auto lg:ml-0"
+                class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 ml-auto lg:ml-0"
                 data-action="click->cashflow-expand#open"
+                data-cashflow-expand-target="button" disabled
                 aria-label="<%= t("global.expand") %>">
                 <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
               </button>

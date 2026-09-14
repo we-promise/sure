@@ -133,6 +133,8 @@ scope. Explicit API credentials never fall back to a browser session. Responses
 are private and not HTTP-cacheable; native clients retain their own authenticated,
 identity-scoped offline cache.
 
+![Dashboard cash flow with synthetic test data](screenshots/cash-flow-sankey.png)
+
 Push registration accepts an optional `device_key`: 32 securely random bytes
 encoded as 64 lowercase hex characters, generated independently per server and
 stored only in secure device storage. Preserve it across user logout. The server

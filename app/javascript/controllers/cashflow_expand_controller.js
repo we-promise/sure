@@ -1,6 +1,12 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
+  static targets = ["button"];
+
+  update({ detail }) {
+    if (this.hasButtonTarget) this.buttonTarget.disabled = !detail.ready;
+  }
+
   open() {
     const dialog = this.element.querySelector("dialog");
     if (!dialog) return;
