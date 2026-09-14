@@ -78,7 +78,7 @@ class Entry < ApplicationRecord
       OR NOT EXISTS (
         SELECT 1 FROM transactions t
         WHERE t.id = entries.entryable_id
-        AND (#{Transaction.pending_check_sql})
+        AND (#{Transaction::PENDING_CHECK_SQL})
       )
     SQL
   }
