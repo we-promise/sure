@@ -77,6 +77,10 @@ en:
       insights_feed:
         title: "Insights"
       cashflow_preview:
+        node_labels:
+          cash_flow: "Cash Flow"
+          surplus: "Surplus"
+          deficit: "Deficit"
         title: "New cash flow chart"
         preview: "Preview"
         description: "Compare this chart with the original above and let us know what looks different."

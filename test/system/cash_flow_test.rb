@@ -26,17 +26,62 @@ class CashFlowTest < ApplicationSystemTestCase
     within "#cashflow-preview-expanded-dialog" do
       assert_selector "svg .sankey-link"
     end
+    gradients = page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll('#cashflow-preview linearGradient')).map(g => g.id)
+    JS
+    assert gradients.any?
+    assert_equal gradients.uniq, gradients
+    assert page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll('#cashflow-preview .sankey-link')).every(link => {
+        const id = link.getAttribute('stroke').slice(5, -1);
+        return link.ownerSVGElement.querySelector(`[id="${id}"]`);
+      })
+    JS
     page.execute_script("document.querySelector('#cashflow-preview-expanded-dialog').close()")
     parent = chart.find("svg text", text: "Sankey Shopping", match: :first)
     parent.find(:xpath, "..").find("path").click
     assert_selector "[data-preview-sankey-chart-target='zoomOutButton']:not([hidden])"
     find("[data-preview-sankey-chart-target='zoomOutButton']", match: :first).click
-    chart.find("svg text", text: "Sankey Groceries", match: :first).click
+    chart.find("svg text", text: "Sankey Groceries", match: :first).find(:xpath, "..").find("path").click
     assert_current_path(%r{/transactions\?})
     query = Rack::Utils.parse_nested_query(URI.parse(page.current_url).query)
     assert_equal [ "Sankey Groceries" ], query.dig("q", "categories")
     assert_equal @month.iso8601, query.dig("q", "start_date")
     assert_equal Date.current.iso8601, query.dig("q", "end_date")
+  end
+
+  test "keyboard users can zoom and open category transactions without reordering sections" do
+    sign_in @user
+    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
+    chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
+    parent = chart.find("g[role='button'][tabindex='0'][aria-label^='Sankey Shopping,']")
+    parent.send_keys(:enter)
+    assert_selector "[data-preview-sankey-chart-target='zoomOutButton']:not([hidden])"
+    assert_selector "g[aria-label^='Sankey Shopping,']:focus"
+    assert_equal "false", find("[data-section-key='cashflow_sankey']")["aria-grabbed"]
+    find("[data-preview-sankey-chart-target='zoomOutButton']", match: :first).send_keys(:enter)
+    assert_selector "g[aria-label^='Sankey Shopping,']:focus"
+    chart.find("g[role='link'][tabindex='0'][aria-label^='Sankey Groceries,']").send_keys(:space)
+    assert_current_path(%r{/transactions\?})
+    query = Rack::Utils.parse_nested_query(URI.parse(page.current_url).query)
+    assert_equal [ "Sankey Groceries" ], query.dig("q", "categories")
+    assert_equal @month.iso8601, query.dig("q", "start_date")
+    assert_equal Date.current.iso8601, query.dig("q", "end_date")
+  end
+
+  test "preview structural labels and tooltips use the user locale" do
+    @user.update!(locale: "es")
+    sign_in @user
+    chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
+    assert_selector "#cashflow-preview svg text", text: "Flujo de caja"
+    assert_selector "#cashflow-preview svg text", text: "Déficit"
+    chart.find("svg text", text: "Déficit", match: :first).hover
+    assert_selector ".chart-tooltip.ph-no-capture", text: "Déficit"
+    assert_selector "#cashflow-preview svg text", text: "Sankey Groceries"
+    account = @user.family.accounts.find_by!(name: "Sankey checking")
+    create_transaction(account: account, amount: -1000, date: @month)
+    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
+    assert_selector "#cashflow-preview svg text", text: "Superávit"
   end
 
   test "failed load can retry and an empty range clears old chart data" do
