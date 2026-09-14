@@ -256,5 +256,125 @@ end %>
         <%= render "layouts/shared/release_highlight", tag: tag %>
       <% end %>
     <% end %>
+<%# Preserve the account sidebar's group open/closed state across Turbo Drive
+<%# navigations so the sidebar height stays stable and the scroll position is not
+<%# clamped to the top. See the inline script below for details. %>
+<%= javascript_tag nonce: true do %>
+  // Preserves the account sidebar's group open/closed state across Turbo Drive
+  // navigations so the sidebar height stays stable and the scroll position
+  // (restored by the `preserve-scroll` controller) is not clamped to the top.
+  //
+  // Each account group is a <details> whose open state is decided server-side:
+  // a group is open when it holds the active account or is in the user's
+  // "always expanded" preference. Navigating between accounts re-renders a
+  // different set of open groups, which changes the sidebar's scrollHeight.
+  // If the new sidebar is shorter than the saved offset, the browser clamps
+  // the restored scrollTop to the new maximum and the user sees the sidebar
+  // jump back up. This script re-opens the groups the user had open before
+  // the navigation (never closing any, so the active group can't be hidden),
+  // forces a synchronous layout pass, and re-applies the saved scrollTop so
+  // the offset is valid again.
+  //
+  // groupKeyOf() derives a tab-independent group key from either markup shape:
+  //   (a) the NEW sidebar partial / balance sheet, which carry
+  //       data-group-key on the <details> or its wrapper, or
+  //   (b) the OLD sidebar partial, whose wrapper id is <tab>_<group>
+  //       (all_/asset_/liability_, plus the mobile_ variant) with no
+  //       data-group-key. A key is only accepted if it is a known account
+  //       category, so unrelated <details> widgets are never treated as
+  //       account groups. This makes the fix tolerant of a mixed deployment
+  //       where the sidebar partial and the balance sheet differ.
+  //
+  // State lives on a window global so it survives Turbo Drive visits (the
+  // window is not replaced, only the body). The listeners are bound once;
+  // the trailing restore() also covers a full (non-Turbo) page load, where
+  // the global is fresh and the call is a no-op.
+  (function () {
+    var state = window.__sidebarScrollPreserve ||
+      (window.__sidebarScrollPreserve = { openKeys: null, scrollTop: null });
+
+    var PREFIX_RE = /^(mobile_)?(all|asset|liability)_/;
+    var GROUP_RE = /^(credit_card|depository|investment|loan|property|vehicle)$/;
+
+    function container() { return document.getElementById("sidebar-scroll"); }
+
+    function validKey(value) {
+      return value && GROUP_RE.test(value) ? value : null;
+    }
+
+    // Derive a tab-independent group key from a <details>, or null if it is
+    // not an account group.
+    function groupKeyOf(details) {
+      var root = container();
+      if (!root || !root.contains(details)) return null;
+      // 1. data-group-key on the <details> or its nearest wrapper.
+      for (var node = details; node && node !== root; node = node.parentElement) {
+        if (node.hasAttribute("data-group-key")) {
+          return validKey(node.getAttribute("data-group-key"));
+        }
+      }
+      // 2. Wrapper id with the tab prefix stripped (old partial).
+      for (var w = details.parentElement; w && w !== root; w = w.parentElement) {
+        if (w.id && PREFIX_RE.test(w.id)) {
+          return validKey(w.id.replace(PREFIX_RE, ""));
+        }
+      }
+      return null;
+    }
+
+    function groupDetails() {
+      var root = container();
+      if (!root) return [];
+      return Array.prototype.slice.call(root.querySelectorAll("details"));
+    }
+
+    // Prototype-free map of group keys that are currently open, or null when
+    // no group is open (a fully-collapsed sidebar has nothing to preserve).
+    function openGroupKeys() {
+      var keys = null;
+      groupDetails().forEach(function (d) {
+        if (!d.open) return;
+        var k = groupKeyOf(d);
+        if (k) {
+          if (!keys) keys = Object.create(null);
+          keys[k] = true;
+        }
+      });
+      return keys;
+    }
+
+    function capture() {
+      var el = container();
+      if (!el) return;
+      state.openKeys = openGroupKeys();
+      state.scrollTop = state.openKeys ? el.scrollTop : null;
+    }
+
+    function restore() {
+      var el = container();
+      if (!el || !state.openKeys) return;
+      // Re-open any group the user had open before this navigation. We only
+      // ever open, never close, so the server's active/preference guarantees
+      // (and the active account) are always preserved.
+      groupDetails().forEach(function (d) {
+        var k = groupKeyOf(d);
+        if (k && state.openKeys[k]) d.open = true;
+      });
+      // Force a synchronous layout pass so scrollHeight reflects the re-opened
+      // groups before we write scrollTop; otherwise the browser clamps the
+      // restored offset to the (still-short) container.
+      void el.offsetHeight;
+      if (typeof state.scrollTop === "number") el.scrollTop = state.scrollTop;
+    }
+
+    if (!window.__sidebarScrollPreserveBound) {
+      window.__sidebarScrollPreserveBound = true;
+      window.addEventListener("turbo:before-cache", capture);
+      window.addEventListener("turbo:render", restore);
+    }
+    restore();
+  })();
+
+<% end %>
   </div>
 <% end %>
