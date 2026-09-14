@@ -1675,4 +1675,43 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     assert_equal "online", entry.reload.transaction.extra.dig("plaid", "payment_channel")
   end
+
+  # extra is not uniformly provider-owned. Transaction#exchange_rate lives at
+  # extra["exchange_rate"], is editable through the transaction form, and drives
+  # balance conversion — so refreshing a protected entry must touch only the
+  # namespaces the provider declared, not the whole payload.
+  test "refreshing a protected entry leaves user-owned extra keys alone" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_exchange_rate",
+      amount: 12.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "Wise transfer",
+      source: "wise",
+      extra: { "exchange_rate" => "1.05", "wise" => { "status" => "pending" } },
+      replace_extra_namespaces: [ "wise" ]
+    )
+
+    # The user corrects the rate by hand, which protects the entry.
+    entry.transaction.update!(exchange_rate: "1.23")
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_exchange_rate",
+      amount: 12.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "Wise transfer",
+      source: "wise",
+      extra: { "exchange_rate" => "1.05", "wise" => { "status" => "outgoing_payment_sent" } },
+      replace_extra_namespaces: [ "wise" ]
+    )
+
+    refreshed = entry.reload.transaction
+
+    assert_equal "1.23", refreshed.extra["exchange_rate"].to_s,
+      "the provider must not overwrite a rate the user typed"
+    assert_equal "outgoing_payment_sent", refreshed.extra.dig("wise", "status"),
+      "the provider's own namespace should still refresh"
+  end
 end
