@@ -54,6 +54,8 @@ class UI::AccountPage < ApplicationComponent
       [ :activity ]
     end
 
+    return base_tabs if account.physical_cash?
+
     base_tabs + [ :statements ]
   end
 

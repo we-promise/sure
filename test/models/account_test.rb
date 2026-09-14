@@ -679,4 +679,12 @@ class AccountTest < ActiveSupport::TestCase
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
+
+  test "physical cash accounts share the same balance_type as depository accounts" do
+    physical_cash = accounts(:physical_cash)
+
+    assert_equal :cash, physical_cash.balance_type
+    assert_equal accounts(:depository).balance_type, physical_cash.balance_type
+    assert_not_equal :non_cash, physical_cash.balance_type
+  end
 end

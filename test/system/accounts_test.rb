@@ -160,7 +160,15 @@ class AccountsTest < ApplicationSystemTestCase
 
       within_testid("account-sidebar-tabs") do
         click_on "All"
-        find("details", text: Accountable.from_type(accountable_type).display_name).click
+        # `text:`/`exact_text:` on the whole <details> would also have to match
+        # the balance and sparkline placeholder rendered alongside the group
+        # name (see accounts/_accountable_group.html.erb), so locate the name
+        # span with an exact match first (substring matching made "Cash" and
+        # "Physical Cash" ambiguous), then click its ancestor <details> — the
+        # element previously clicked directly, and the one whose collapsed
+        # bounding box reliably contains the click point.
+        group_name = Accountable.from_type(accountable_type).display_name
+        find("details summary span", exact_text: group_name).find(:xpath, "./ancestor::details[1]").click
         assert_text account_name
       end
 

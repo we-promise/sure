@@ -1664,6 +1664,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "physical_cashes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "locked_attributes", default: {}
+    t.string "subtype"
+    t.datetime "updated_at", null: false
+  end
+
   create_table "plaid_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "available_balance", precision: 19, scale: 4
     t.datetime "created_at", null: false

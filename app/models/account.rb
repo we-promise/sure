@@ -43,6 +43,8 @@ class Account < ApplicationRecord
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
+  # Accountable types whose balance is liquid cash (subset of balance_type == :cash, excludes CreditCard).
+  CASH_ACCOUNTABLE_TYPES = %w[Depository PhysicalCash].freeze
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
@@ -626,7 +628,7 @@ class Account < ApplicationRecord
   end
 
   def supports_default?
-    depository? || credit_card?
+    depository? || credit_card? || physical_cash?
   end
 
   def eligible_for_transaction_default?
@@ -656,7 +658,7 @@ class Account < ApplicationRecord
   # "Investment" = A mix of both, including brokerage cash (liquid) and holdings (illiquid)
   def balance_type
     case accountable_type
-    when "Depository", "CreditCard"
+    when "Depository", "CreditCard", "PhysicalCash"
       :cash
     when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
       :non_cash
