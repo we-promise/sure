@@ -291,6 +291,70 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  # --- payment wallet prefixes ---
+
+  test "a payment wallet prefix does not claim the transaction for the wallet's merchant" do
+    @family.merchants.create!(name: "Apple")
+    @family.merchants.create!(name: "Acme")
+
+    tx = {
+      entry_reference: "ref_wallet_prefix",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "17.95", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Apple pay: ACME 0001234" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_wallet_prefix")
+
+    assert_equal "Acme", entry.name
+    assert_equal "Acme", entry.transaction.merchant&.name
+    # The wallet is still recorded: notes read remittance_information directly.
+    assert_includes entry.notes, "Apple pay:"
+  end
+
+  test "a purchase from the wallet brand itself still resolves to that brand" do
+    @family.merchants.create!(name: "Apple")
+
+    tx = {
+      entry_reference: "ref_wallet_own_brand",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "0.99", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Apple pay: APPLE 0001234" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_wallet_own_brand")
+
+    assert_equal "Apple", entry.name
+    assert_equal "Apple", entry.transaction.merchant&.name
+  end
+
+  test "strips every supported wallet prefix before matching a known merchant" do
+    %w[Apple Google Samsung Acme].each { |merchant_name| @family.merchants.create!(name: merchant_name) }
+
+    [ "Apple pay: ACME 0001234", "Google pay: ACME 0001234", "Samsung pay: ACME 0001234" ].each do |raw_line|
+      name = build_name_with_family(
+        credit_debit_indicator: "DBIT",
+        creditor: { name: "" },
+        bank_transaction_code: nil,
+        remittance_information: [ raw_line ]
+      )
+
+      assert_equal "Acme", name, "expected #{raw_line.inspect} to resolve to \"Acme\""
+    end
+  end
+
   test "does not match a known merchant name shorter than the minimum match length" do
     @family.merchants.create!(name: "IT")
 

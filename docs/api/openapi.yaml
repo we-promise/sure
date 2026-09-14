@@ -344,6 +344,30 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/Insight"
+    PushSubscriptionRegistration:
+      type: object
+      required:
+      - token
+      - environment
+      - platform
+      properties:
+        token:
+          type: string
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        platform:
+          type: string
+          enum:
+          - ios
+        device_key:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: Optional 256-bit installation secret, unique per server and
+            kept in device secure storage. Required proof to replace another user’s
+            registration for this device. Never returned.
     PushSubscription:
       type: object
       required:
@@ -3187,6 +3211,97 @@ components:
         formatted:
           type: string
           description: Locale-formatted money string
+    FinancialPeriod:
+      type: object
+      required:
+      - start_date
+      - end_date
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    SpendingPoint:
+      type: object
+      required:
+      - date
+      - amount
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          description: Cumulative decimal amount in family currency
+    CashFlow:
+      type: object
+      required:
+      - month
+      - as_of
+      - time_zone
+      - currency
+      - period
+      - income
+      - spending
+      - net_savings
+      - savings_rate
+      - spending_comparison
+      properties:
+        month:
+          type: string
+          format: date
+        as_of:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        currency:
+          type: string
+        period:
+          "$ref": "#/components/schemas/FinancialPeriod"
+        income:
+          type: string
+        spending:
+          type: string
+        net_savings:
+          type: string
+        savings_rate:
+          type: string
+          nullable: true
+          description: Percentage points; null when income is nonpositive. May be
+            negative.
+        spending_comparison:
+          type: object
+          required:
+          - previous_period
+          - current_total
+          - comparison_total
+          - comparison_end_date
+          - delta
+          - current
+          - previous
+          properties:
+            previous_period:
+              "$ref": "#/components/schemas/FinancialPeriod"
+            current_total:
+              type: string
+            comparison_total:
+              type: string
+            delta:
+              type: string
+            comparison_end_date:
+              type: string
+              format: date
+            current:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SpendingPoint"
+            previous:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SpendingPoint"
     BalanceSheet:
       type: object
       required:
@@ -3634,7 +3749,7 @@ paths:
                       ai_enabled:
                         type: boolean
         '401':
-          description: invalid credentials or MFA required
+          description: invalid credentials, MFA required, or account deactivated
           content:
             application/json:
               schema:
@@ -3767,7 +3882,7 @@ paths:
                   created_at:
                     type: integer
         '401':
-          description: invalid refresh token
+          description: invalid or revoked refresh token, or account deactivated
           content:
             application/json:
               schema:
@@ -3851,7 +3966,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '401':
-          description: invalid credentials or expired linking code
+          description: invalid credentials, expired linking code, or account deactivated
           content:
             application/json:
               schema:
@@ -4373,6 +4488,44 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: budget not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/cash_flow":
+    get:
+      summary: Show monthly cash flow
+      tags:
+      - Cash Flow
+      description: Server-calculated income, spending, savings, and daily cumulative
+        comparison in family currency. Uses the authenticated user’s finance accounts
+        and Sure reporting rules.
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Non-future first day YYYY-MM-01; defaults to the current month
+          in the family time zone.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: summary returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CashFlow"
+        '422':
+          description: invalid month
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
@@ -6085,23 +6238,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-              - token
-              - environment
-              - platform
-              properties:
-                token:
-                  type: string
-                environment:
-                  type: string
-                  enum:
-                  - sandbox
-                  - production
-                platform:
-                  type: string
-                  enum:
-                  - ios
+              "$ref": "#/components/schemas/PushSubscriptionRegistration"
         required: true
   "/api/v1/push_subscriptions/{id}":
     parameters:
@@ -7301,7 +7438,7 @@ paths:
       parameters: []
       responses:
         '201':
-          description: interest created
+          description: trade created
           content:
             application/json:
               schema:
@@ -7319,7 +7456,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: deposit without amount returns error
+          description: invalid trade request
           content:
             application/json:
               schema:
@@ -7349,23 +7486,30 @@ paths:
                       description: Trade date (required)
                     qty:
                       type: number
-                      description: Quantity (required for buy/sell)
+                      description: Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     price:
                       type: number
-                      description: Price (required for buy/sell)
+                      description: Price (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     amount:
                       type: number
                       description: Amount (required for dividend, deposit, withdrawal,
-                        interest)
+                        interest, fee)
+                    fee:
+                      type: number
+                      description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
                       enum:
                       - buy
                       - sell
+                      - sweep_in
+                      - sweep_out
                       - dividend
+                      - reinvestment
+                      - interest
+                      - fee
                       - deposit
                       - withdrawal
-                      - interest
                       description: Trade type (required)
                     security_id:
                       type: string
@@ -7485,10 +7629,9 @@ paths:
                       enum:
                       - buy
                       - sell
-                      - dividend
-                      - deposit
-                      - withdrawal
-                      - interest
+                      - sweep_in
+                      - sweep_out
+                      - reinvestment
                     nature:
                       type: string
                       enum:
@@ -7849,6 +7992,10 @@ paths:
                         format: uuid
                       description: Array of tag IDs to assign. Omit to preserve existing
                         tags; use [] to clear all tags.
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
         required: true
     delete:
       summary: Delete a transaction

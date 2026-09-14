@@ -11,7 +11,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
-  test "a transaction shows the bill it paid, and links to it" do
+  test "a German transaction shows the bill it paid with localized copy" do
+    @user.update!(locale: "de")
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     series = @user.family.recurring_transactions.create!(
       account: accounts(:depository), name: "Watson Property", amount: 2000,
@@ -32,6 +33,20 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Watson Property", response.body
     assert_match bill_path(series), response.body, "the bill must be reachable from the transaction"
+
+    translations = {
+      "transactions.show.create_bill" => "Rechnung hinzufügen",
+      "transactions.show.applied_to_title" => "Damit bezahlte Rechnungen",
+      "transactions.show.applied_to_detail" => "%{amount} für die am %{date} fällige Rechnung",
+      "transactions.show.applied_to_unreviewed" => "Prüfung erforderlich"
+    }
+    translations.each do |key, text|
+      assert_equal text, I18n.t(key, locale: :de, fallback: false)
+    end
+
+    assert_match translations.fetch("transactions.show.create_bill"), response.body
+    assert_match translations.fetch("transactions.show.applied_to_title"), response.body
+    assert_match(/für die am .* fällige Rechnung/, response.body)
   end
 
   test "the bill link-back stays hidden without preview access" do

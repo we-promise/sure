@@ -11,6 +11,18 @@ class DeliverInsightNotificationJobTest < ActiveJob::TestCase
     )
   end
 
+  test "a job queued before a device changed users cannot reach its replacement" do
+    @subscription.update!(device_key_digest: Digest::SHA256.hexdigest("cd" * 32))
+    old_id = @subscription.id
+    next_user = @insight.family.users.where.not(id: @subscription.user_id).first!
+    replacement = PushSubscription.register_for!(user: next_user, token: @subscription.token,
+      environment: "sandbox", platform: "ios", device_key: "cd" * 32)
+    Apns::Client.expects(:new).never
+    DeliverInsightNotificationJob.perform_now(insight_id: @insight.id, push_subscription_id: old_id)
+    assert PushSubscription.exists?(replacement.id)
+    assert_not PushSubscription.exists?(old_id)
+  end
+
   test "delivers a privacy-preserving insight notification" do
     response = stub(ok?: true)
     client = mock
