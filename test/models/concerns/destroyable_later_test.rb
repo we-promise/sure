@@ -38,6 +38,40 @@ class DestroyableLaterTest < ActiveSupport::TestCase
     assert_not @item.reload.scheduled_for_deletion?
   end
 
+  # The Delete menu stays visible on a flagged item, so a second request is how
+  # a connection stuck by an earlier lost enqueue gets deleted.
+  test "re-enqueues destruction for an item that is already flagged" do
+    @item.update_column(:scheduled_for_deletion, true)
+
+    assert_enqueued_with(job: DestroyJob, args: [ @item ]) do
+      assert @item.destroy_later
+    end
+
+    assert @item.reload.scheduled_for_deletion?
+  end
+
+  # A retry that fails must not clear the flag an earlier request set: that
+  # request's DestroyJob is still queued, and clearing the flag would put the
+  # item back into active/syncable until the job runs.
+  test "a failed retry keeps the flag set by an earlier successful request" do
+    @item.destroy_later
+    assert_enqueued_jobs 1, only: DestroyJob
+
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(RedisClient::CannotConnectError, "Connection refused")
+    assert_raises(RedisClient::CannotConnectError) { @item.destroy_later }
+
+    assert @item.reload.scheduled_for_deletion?
+  end
+
+  test "a rejected retry keeps the flag set by an earlier successful request" do
+    @item.destroy_later
+
+    DestroyJob.queue_adapter.stubs(:enqueue).raises(ActiveJob::EnqueueError, "rejected")
+    assert_equal false, @item.destroy_later
+
+    assert @item.reload.scheduled_for_deletion?
+  end
+
   # QuestradeItem only requires a refresh token while not scheduled for
   # deletion, so a restore that re-ran validations would raise RecordInvalid
   # here, masking the enqueue error and leaving the flag set.

@@ -27,7 +27,6 @@ class MonobankItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  # Mark the item for deletion and enqueue the background destroy job.
   # Run the importer to fetch the latest accounts/transactions from Monobank.
   def import_latest_monobank_data
     provider = monobank_provider

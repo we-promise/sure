@@ -31,8 +31,6 @@ class RedbarkItem < ApplicationRecord
     RedbarkItem::Syncer.new(self)
   end
 
-  # Deliberately not transactional - the job must enqueue after the flag commits
-
   # Import data from provider API
   def import_latest_redbark_data(sync: nil)
     provider = redbark_provider

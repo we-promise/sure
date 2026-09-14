@@ -22,7 +22,6 @@ class UpItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  # Mark the item for deletion and enqueue the background destroy job.
   # Run the importer to fetch the latest accounts/transactions from Up.
   def import_latest_up_data
     provider = up_provider

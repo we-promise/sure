@@ -33,7 +33,6 @@ class CoinstatsItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  # Schedules this item for async deletion.
   # Fetches latest wallet data from CoinStats API and updates local records.
   # @raise [StandardError] if provider is not configured or import fails
   def import_latest_coinstats_data
