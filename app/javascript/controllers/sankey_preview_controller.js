@@ -43,6 +43,7 @@ export default class extends Controller {
   }
 
   get posthog() {
+    if (this.selfHostedValue && !this.feedbackKeyValue) return undefined;
     return feedbackClient(window.posthog, this.selfHostedValue);
   }
 

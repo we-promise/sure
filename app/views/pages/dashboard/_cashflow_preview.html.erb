@@ -8,7 +8,7 @@
   data-sankey-preview-self-hosted-value="<%= self_hosted? %>"
   data-sankey-preview-feedback-key-value="<%= feedback[:api_key] %>"
   data-sankey-preview-feedback-host-value="<%= feedback[:host] %>"
-  data-sankey-preview-survey-id-value="<%= Rails.configuration.x.posthog.sankey_survey_id %>"
+  data-sankey-preview-survey-id-value="<%= feedback[:survey_id] %>"
   data-action="cash-flow:state->sankey-preview#update posthog:ready@document->sankey-preview#trackDisplay visibilitychange@document->sankey-preview#trackDisplay turbo:before-cache@document->sankey-preview#clear keydown->sankey-preview#stopKeydown">
   <header class="px-4 flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-wrap items-center gap-2">

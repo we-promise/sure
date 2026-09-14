@@ -31,21 +31,25 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     assert_select "#cashflow-preview", count: 0
   end
 
-  test "self-hosted feedback is separately configured and stays off outside production" do
+  test "self-hosted production preview needs no operator key or survey configuration" do
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     config = Rails.configuration.x.posthog
-    config.stubs(:feedback_api_key).returns("public-feedback-token")
-    config.stubs(:feedback_host).returns("https://us.i.posthog.com")
-    config.stubs(:sankey_survey_id).returns("self-hosted-survey")
+    config.stubs(:api_key).returns(nil)
+    config.stubs(:sankey_survey_id).returns(nil)
+    config.stubs(:feedback_enabled).returns(true)
     with_self_hosting do
       get root_path
-      assert_select "#cashflow-preview[data-sankey-preview-self-hosted-value='true'][data-sankey-preview-feedback-key-value='']"
+      assert_select "#cashflow-preview[data-sankey-preview-self-hosted-value='true'][data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='']"
       Rails.env.stubs(:production?).returns(true)
       get root_path
-      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value='public-feedback-token'][data-sankey-preview-survey-id-value='self-hosted-survey']"
-      config.stubs(:feedback_api_key).returns(nil)
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value^='phc_'][data-sankey-preview-survey-id-value='01a0a162-73a2-0000-9402-ffab5bc45b4a']"
+      config.stubs(:api_key).returns("operator-owned-project")
+      config.stubs(:sankey_survey_id).returns("operator-owned-survey")
       get root_path
-      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value='']"
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value^='phc_'][data-sankey-preview-survey-id-value='01a0a162-73a2-0000-9402-ffab5bc45b4a']"
+      config.stubs(:feedback_enabled).returns(false)
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='']"
     end
   end
 
@@ -54,7 +58,6 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     Rails.env.stubs(:production?).returns(true)
     config = Rails.configuration.x.posthog
-    config.stubs(:feedback_api_key).returns("unused-feedback-token")
     [ "app-survey", "demo-survey" ].each do |survey_id|
       config.stubs(:sankey_survey_id).returns(survey_id)
       get root_path

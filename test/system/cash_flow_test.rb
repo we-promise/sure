@@ -206,6 +206,14 @@ class CashFlowTest < ApplicationSystemTestCase
       click_button "Send feedback"
       assert_event_count "survey sent", 1
       assert page.evaluate_script("window.sankeyEvents.some(e => e.event === 'survey sent' && e.properties.$survey_id === 'test-survey')")
+      find("#cashflow-preview-feedback-dialog").find("button[data-action='DS--dialog#close']").click
+      page.execute_script("document.querySelector('#cashflow-preview').setAttribute('data-sankey-preview-feedback-key-value', '')")
+      within "#cashflow-preview" do
+        click_button "Looks right"
+      end
+      assert_selector "#cashflow-preview-feedback-dialog[open] [role='status']", text: "Feedback isn't available right now"
+      assert_event_count "survey shown", 1
+      assert_event_count "survey sent", 1
     end
   end
 
@@ -226,6 +234,7 @@ class CashFlowTest < ApplicationSystemTestCase
           }])
         };
         document.querySelector('#cashflow-preview').setAttribute('data-sankey-preview-survey-id-value', 'test-survey');
+        document.querySelector('#cashflow-preview').setAttribute('data-sankey-preview-feedback-key-value', 'test-public-token');
         document.dispatchEvent(new Event('posthog:ready'));
       JS
     end
