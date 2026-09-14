@@ -57,6 +57,15 @@ class FioEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 6, 15), entry.date
   end
 
+  # The documented JSON sample uses epoch milliseconds, but Fio has also been observed
+  # serving the offset form the XML and CSV exports use. Both are the same banking day
+  # and neither may drift by the reader's timezone.
+  test "reads a booking day given as a date with an offset" do
+    entry = process(id: 21, date: "2026-06-15+02:00", amount: -1.0)
+
+    assert_equal Date.new(2026, 6, 15), entry.date
+  end
+
   # A card payment has no counterparty; the acceptor arrives in "Uživatelská
   # identifikace" wrapped in Fio's own prefix and trailing location.
   test "names a card payment after the acceptor and records it as a merchant" do
