@@ -238,6 +238,45 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 100.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
+  test "cost_basis_for is nil while fully sold and resets after repurchase" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date     = 10.days.ago.to_date
+    sell_all_date = 6.days.ago.to_date
+    rebuy_date   = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10,  price: 100, date: buy_date)
+      create_trade(security, account: @account, qty: -10, price: 130, date: sell_all_date) # fully sold
+      create_trade(security, account: @account, qty: 10,  price: 150, date: rebuy_date)     # repurchased
+    end
+
+    assert_in_delta 100.0, cost_basis_for(calc, security, buy_date).to_f, 1e-6
+    # Fully sold: no basis, not the stale $100 carried forward from the first buy
+    assert_nil cost_basis_for(calc, security, sell_all_date)
+    assert_nil cost_basis_for(calc, security, rebuy_date - 1)
+    # Repurchased lot stands alone at $150, not (100 + 150) / 2 = $125
+    assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6
+    assert_in_delta 150.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
+  test "cost_basis_for relieves an outbound transfer instead of contaminating a later buy" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date      = 10.days.ago.to_date
+    transfer_date = 6.days.ago.to_date
+    rebuy_date    = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+      transfer_out = create_trade(security, account: @account, qty: -10, price: 120, date: transfer_date)
+      transfer_out.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # transferred out, not sold
+      create_trade(security, account: @account, qty: 10, price: 150, date: rebuy_date)
+    end
+
+    # Transferred-out lot is relieved, so the repurchase stands alone at $150.
+    assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6
+    assert_in_delta 150.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
