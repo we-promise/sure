@@ -23,7 +23,7 @@
     <div data-cash-flow-target="content" hidden>
       <div class="w-full h-96 overflow-x-auto overscroll-x-contain" tabindex="0" role="region" aria-label="<%= t("pages.dashboard.cashflow_preview.title") %>"><%= render "pages/dashboard/cashflow_preview_chart", period: period %></div>
       <%= render DS::Dialog.new(id: "cashflow-preview-expanded-dialog", auto_open: false, width: "expanded", disable_frame: true,
-        data: { sankey_preview_target: "expandedDialog" }) do |dialog| %>
+        data: { sankey_preview_target: "expandedDialog", action: "close->sankey-preview#restoreDrag" }) do |dialog| %>
         <% dialog.with_header(title: t("pages.dashboard.cashflow_preview.title")) %>
         <% dialog.with_body do %>
           <div class="w-full h-[85dvh] max-h-[90dvh] overflow-auto overscroll-contain" tabindex="0" role="region" aria-label="<%= t("pages.dashboard.cashflow_preview.title") %>">

@@ -38,6 +38,7 @@ export default class extends Controller {
     this.feedbackRequest = null;
     clearTimeout(this.feedbackTimeout);
     this.expandedDialogTarget.close();
+    this.restoreDrag();
     this.feedbackDialogTarget.close();
     this.formTarget.reset();
     this.survey = null;
@@ -74,12 +75,25 @@ export default class extends Controller {
   }
 
   expand() {
-    if (this.state !== "content") return;
+    if (this.state !== "content" || this.expandedDialogTarget.open) return;
+    this.section = this.element.closest(
+      "[data-dashboard-sortable-target='section']",
+    );
+    this.originalDraggable = this.section?.getAttribute("draggable");
+    this.section?.setAttribute("draggable", "false");
     this.expandedDialogTarget.showModal();
     capturePreviewEvent(window.posthog, "sankey_preview_displayed", {
       surface: "expanded",
       state: this.state,
     });
+  }
+
+  restoreDrag() {
+    if (!this.section) return;
+    if (this.originalDraggable === null)
+      this.section.removeAttribute("draggable");
+    else this.section.setAttribute("draggable", this.originalDraggable);
+    this.section = null;
   }
 
   stopKeydown(event) {
