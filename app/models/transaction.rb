@@ -154,10 +154,17 @@ class Transaction < ApplicationRecord
     @pending_flag_false_values_sql ||= PENDING_FLAG_FALSE_VALUES.map { |value| connection.quote(value) }.join(", ").freeze
   end
 
-  # Build the fixed-alias fragment when a correlated query needs it, so class
-  # loading does not need an active database connection.
-  def self.pending_check_sql
-    @pending_check_sql ||= pending_sql("t").freeze
+  # Fixed-alias fragment for correlated SQL. Build from model constants without
+  # borrowing a database connection during class loading.
+  PENDING_CHECK_SQL = begin
+    false_values = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ")
+    PENDING_PROVIDERS
+      .map do |provider|
+        "COALESCE(t.extra -> '#{provider}' ->> 'pending', '') NOT IN (#{false_values})"
+      end
+      .join(" OR ")
+      .then { |predicate| "(#{predicate})" }
+      .freeze
   end
 
   # The negation of pending_sql, for queries that must leave pending rows out.
