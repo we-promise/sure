@@ -1,0 +1,2 @@
+# Intentionally empty: the tests build their own records, but the file must exist so
+# fixtures :all truncates the table between runs.

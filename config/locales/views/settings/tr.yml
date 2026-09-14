@@ -501,6 +501,10 @@ tr:
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
       not_found: Sağlayıcı bulunamadı.
+      open_banking_io_panel:
+        step_1_html: "%{link} adresine gidin, bankanızı bağlayın ve kimlik bilgilerinizi dışa aktarın."
+        step_2: "İndirilen credentials.json dosyasını açın."
+        step_3: "Tüm içeriğini aşağıya yapıştırın, kaydedin ve ardından eşitlenen hesaplarınızı bağlayın."
       plaid_eu_panel:
         step_1_html: "%{link} sayfasını açın ve AB İstemci ID'nizi ve Gizli Anahtarınızı
           kopyalayın."
@@ -543,6 +547,7 @@ tr:
       sync_provider_in_progress: Senkronizasyon başladı.
       sync_provider_no_items: Senkronize edilecek bağlantı yok.
       taglines:
+        open_banking_io: "Avrupa banka hesaplarını open-banking.io ile eşitleyin."
         akahu: Akahu üzerinden Yeni Zelanda finans kurumlarını senkronize edin.
         binance: Salt okunur bir API anahtarı kullanarak Binance spot bakiyelerinizi
           senkronize edin.

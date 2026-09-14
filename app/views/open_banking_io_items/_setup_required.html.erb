@@ -1,0 +1,37 @@
+<%# Rendered when the account picker reaches open-banking.io before any credentials exist.
+    It MUST render inside the modal turbo-frame: a redirect here returns a full page with
+    no matching frame, which Turbo discards, and the modal simply closes with no
+    explanation. Mirrors lunchflow_items/_setup_required. %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <%= render DS::Alert.new(
+          title: t(".credentials_not_configured"),
+          message: t(".credentials_description"),
+          variant: :warning
+        ) %>
+
+        <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
+          <p class="font-medium text-primary"><%= t(".setup_steps_title") %></p>
+          <ol class="list-decimal list-inside space-y-1 text-secondary">
+            <li><%= t(".setup_step_1_html") %></li>
+            <li><%= t(".setup_step_2_html") %></li>
+            <li><%= t(".setup_step_3") %></li>
+            <li><%= t(".setup_step_4") %></li>
+          </ol>
+        </div>
+
+        <div class="mt-4">
+          <%= render DS::Link.new(
+            text: t(".go_to_provider_settings"),
+            href: settings_providers_path,
+            variant: :primary,
+            data: { turbo: false }
+          ) %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

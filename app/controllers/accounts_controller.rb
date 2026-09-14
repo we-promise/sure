@@ -18,6 +18,7 @@ class AccountsController < ApplicationController
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
     @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
+    @open_banking_io_items = visible_provider_items(family.open_banking_io_items.ordered.includes(:open_banking_io_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
     @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
@@ -359,6 +360,7 @@ class AccountsController < ApplicationController
         @lunchflow_items,
         @redbark_items,
         @akahu_items,
+        @open_banking_io_items,
         @up_items,
         @monobank_items,
         @enable_banking_items,
@@ -500,6 +502,15 @@ class AccountsController < ApplicationController
       @akahu_items.each do |item|
         latest_sync = item.latest_sync_record
         @akahu_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # open-banking.io sync stats
+      @open_banking_io_sync_stats_map = {}
+      @open_banking_io_items.each do |item|
+        # latest_sync_record reads the preloaded map; item.syncs.ordered.first was a query
+        # per item, which is what every other provider here avoids.
+        latest_sync = item.latest_sync_record
+        @open_banking_io_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # Up sync stats

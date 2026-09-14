@@ -150,6 +150,38 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment.id)
   end
 
+  # An item left behind by the reset still holds its encrypted credentials, and because
+  # Family::Syncer reflects over every *_items association it would be picked straight back
+  # up by the next nightly sync -- re-importing accounts into a family the user just wiped.
+  test "destructive reset deletes open-banking.io connections and their stored credentials" do
+    account = @other_family.accounts.create!(
+      name: "OBIO Reset Checking",
+      balance: 100,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+    item = @other_family.open_banking_io_items.create!(
+      name: "OBIO Reset Bank",
+      api_base_url: "https://open-banking.io",
+      api_key: "reset-api-key",
+      private_key: "reset-private-key"
+    )
+    obio_account = item.open_banking_io_accounts.create!(
+      account_id: "obio-reset-account",
+      name: "OBIO Reset Account",
+      currency: "EUR",
+      current_balance: 100
+    )
+    account_provider = AccountProvider.create!(account: account, provider: obio_account)
+
+    result = Family::FinancialDataReset.new(family: @other_family, dry_run: false, confirmed: true).call
+
+    assert_equal 0, result.after_counts.values.sum
+    assert_not OpenBankingIoItem.exists?(item.id)
+    assert_not OpenBankingIoAccount.exists?(obio_account.id)
+    assert_not AccountProvider.exists?(account_provider.id)
+  end
+
   test "destructive reset is idempotent" do
     first = Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
     second = Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
