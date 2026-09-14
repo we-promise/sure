@@ -2,6 +2,8 @@
 
 require "test_helper"
 
+RakeTaskTestHelper.load_task("simplefin:pending_restore", "simplefin_pending_cleanup")
+
 # simplefin:pending_restore un-excludes SimpleFIN/Plaid pending entries that have
 # no posted match. "Pending" -- for the excluded entry and for its would-be
 # match -- is decided as Transaction#pending? decides it, for those two providers.
@@ -9,7 +11,6 @@ class SimplefinPendingRestoreTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
   setup do
-    RakeTaskTestHelper.load_task("simplefin:pending_restore", "simplefin_pending_cleanup")
     RakeTaskTestHelper.prepare("simplefin:pending_restore")
 
     @account = families(:empty).accounts.create!(name: "SF Checking", balance: 0, currency: "USD", accountable: Depository.new)

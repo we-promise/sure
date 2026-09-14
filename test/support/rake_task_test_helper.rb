@@ -1,19 +1,15 @@
 # frozen_string_literal: true
 
-# The one correct way to make a rake task available to a test.
+# How a new test should make a rake task available.
 #
-# Three test files had grown three slightly different versions of this, and the
-# differences were the bug (#93). Two called `Rails.application.load_tasks`,
-# which re-reads EVERY file in lib/tasks; `load`ing a rake file whose tasks are
-# already defined does not replace them, Rake APPENDS an action, so those two
-# files silently gave every `loans:*` task a second action and the task body ran
-# twice per `invoke`. It stayed invisible for as long as it did because those
-# tasks are idempotent and the assertions on them matched patterns in output,
-# which a doubled run does not change.
+# `Rails.application.load_tasks` re-reads every file in lib/tasks. Loading a
+# rake file whose tasks are already defined does not replace them: Rake appends
+# another action, so a task loaded twice runs its body twice per `invoke`. That
+# stays invisible while the task is idempotent and the assertions only match
+# patterns in its output, which a doubled run does not change.
 #
 # `load_tasks` also enhances the `environment` task, which reloads .env over the
-# environment the test run was started with -- a second reason a test should
-# never reach for it.
+# environment the test run was started with.
 #
 # So: load one file, only if its task is not already defined, and clear the
 # `environment` prerequisite, which is already satisfied inside a test process
