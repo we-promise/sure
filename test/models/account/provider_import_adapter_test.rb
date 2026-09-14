@@ -1299,6 +1299,102 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_nil result
   end
 
+  test "all pending reconciliation finders use transaction semantics for malformed flags" do
+    exact = @adapter.import_transaction(
+      external_id: "simplefin_unparseable_exact",
+      amount: 49_231.17,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Exact Pending",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "maybe" } }
+    )
+    fuzzy = @adapter.import_transaction(
+      external_id: "simplefin_unparseable_fuzzy",
+      amount: 77.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Fuzzy Pending",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "maybe" } }
+    )
+    merchant = ProviderMerchant.create!(
+      provider_merchant_id: "pending-low-confidence",
+      name: "Low Confidence Merchant",
+      source: "simplefin"
+    )
+    low_confidence = @adapter.import_transaction(
+      external_id: "simplefin_unparseable_low_confidence",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today - 3.days,
+      name: "Low Confidence Pending",
+      source: "simplefin",
+      merchant: merchant,
+      extra: { "simplefin" => { "pending" => "maybe" } }
+    )
+
+    [ exact, fuzzy, low_confidence ].each { |entry| assert entry.transaction.pending? }
+    assert_equal exact.id, @adapter.find_pending_transaction(
+      date: Date.today, amount: 49_231.17, currency: "USD", source: "simplefin"
+    ).id
+    assert_equal fuzzy.id, @adapter.find_pending_transaction_fuzzy(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Pending"
+    ).id
+    assert_equal low_confidence.id, @adapter.find_pending_transaction_low_confidence(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin",
+      merchant_id: merchant.id, name: "Low Confidence Pending"
+    ).id
+  end
+
+  test "all pending reconciliation finders exclude explicit false flags" do
+    exact = @adapter.import_transaction(
+      external_id: "simplefin_false_exact",
+      amount: 49_232.17,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Exact Posted",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "false" } }
+    )
+    fuzzy = @adapter.import_transaction(
+      external_id: "simplefin_false_fuzzy",
+      amount: 77.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Fuzzy Posted",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "false" } }
+    )
+    merchant = ProviderMerchant.create!(
+      provider_merchant_id: "pending-false-low-confidence",
+      name: "False Low Confidence Merchant",
+      source: "simplefin"
+    )
+    low_confidence = @adapter.import_transaction(
+      external_id: "simplefin_false_low_confidence",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today - 3.days,
+      name: "Low Confidence Posted",
+      source: "simplefin",
+      merchant: merchant,
+      extra: { "simplefin" => { "pending" => "false" } }
+    )
+
+    [ exact, fuzzy, low_confidence ].each { |entry| assert_not entry.transaction.pending? }
+    assert_nil @adapter.find_pending_transaction(
+      date: Date.today, amount: 49_232.17, currency: "USD", source: "simplefin"
+    )
+    assert_nil @adapter.find_pending_transaction_fuzzy(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Posted"
+    )
+    assert_nil @adapter.find_pending_transaction_low_confidence(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin",
+      merchant_id: merchant.id, name: "Low Confidence Posted"
+    )
+  end
+
   # ============================================================================
   # Critical Direction Fix Tests (CITGO Bug Prevention)
   # ============================================================================
