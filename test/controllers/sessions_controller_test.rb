@@ -38,6 +38,39 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "login page links to sign-up when onboarding is open" do
+    with_self_hosting do
+      Setting.onboarding_state = "open"
+
+      get new_session_url
+
+      assert_response :success
+      assert_select "a[href=?]", new_registration_path, text: I18n.t("layouts.auth.sign_up")
+    end
+  end
+
+  test "login page links to sign-up when onboarding is invite-only" do
+    with_self_hosting do
+      Setting.onboarding_state = "invite_only"
+
+      get new_session_url
+
+      assert_response :success
+      assert_select "a[href=?]", new_registration_path, text: I18n.t("layouts.auth.sign_up")
+    end
+  end
+
+  test "login page hides sign-up when onboarding is closed" do
+    with_self_hosting do
+      Setting.onboarding_state = "closed"
+
+      get new_session_url
+
+      assert_response :success
+      assert_select "a[href=?]", new_registration_path, count: 0
+    end
+  end
+
   test "login page offers passkey sign-in" do
     AuthConfig.stubs(:passkey_login_enabled?).returns(true)
 
