@@ -78,9 +78,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       when CATEGORY_WITHDRAWAL
         import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("withdrawal")), sign: 1) ? :transaction : nil
       when CATEGORY_INTEREST
-        import_cash_movement(event, detail, external_id, date, label: t("interest"), sign: -1) ? :transaction : nil
+        import_trade_income_event(event, detail, external_id, date, label: "Interest", display_label: t("interest"))
       when CATEGORY_DIVIDEND
-        import_cash_movement(event, detail, external_id, date, label: t("dividend"), sign: -1) ? :transaction : nil
+        import_trade_income_event(event, detail, external_id, date, label: "Dividend", display_label: t("dividend"))
       else
         record_unknown_event(event)
         nil
@@ -187,6 +187,46 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
 
       true
+    end
+
+    # Dividends and interest are trades with no quantity.
+    #
+    # A Trade Republic connection can be linked to a Depository account as well
+    # as an Investment one, and interest paid into an ordinary cash account is
+    # not a trade — there is no position for it to sit against. Those keep the
+    # cash-movement representation, which matches the manual rule that income is
+    # a trade *in an investment account*.
+    #
+    # `label` is the canonical English activity label Trade validates against;
+    # `display_label` is the localized text used for the entry name when the
+    # timeline event carries no title of its own.
+    def import_trade_income_event(event, detail, external_id, date, label:, display_label:)
+      return import_cash_movement(event, detail, external_id, date, label: display_label, sign: -1) ? :transaction : nil unless account.supports_trades?
+
+      amount = parse_decimal(detail[:amount])
+      return nil unless amount && !amount.zero?
+
+      # Dividend events carry the paying instrument's ISIN; interest payouts do
+      # not, so the account's synthetic cash security stands in there.
+      security = resolve_security(detail[:isin].to_s, detail[:name] || event[:title]) ||
+                 Security.cash_for(account, currency: detail[:currency].presence || currency)
+
+      entry = import_adapter.import_trade(
+        external_id: external_id,
+        security: security,
+        quantity: 0,
+        price: 0,
+        # The normalized category is the source of truth for direction, as in
+        # import_cash_movement: TR signs payloads inconsistently across topics.
+        amount: -amount.abs,
+        currency: detail[:currency].presence || currency,
+        date: date,
+        name: event[:title].presence || display_label,
+        source: "trade_republic",
+        activity_label: label
+      )
+
+      entry&.entryable.is_a?(Trade) ? :trade : nil
     end
 
     def category_for(event, label)

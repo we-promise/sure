@@ -3,7 +3,7 @@
 <div id="<%= dom_id(entry, :header) %>">
   <%= tag.header class: "mb-4 space-y-1" do %>
     <% label = entry.trade.investment_activity_label %>
-    <% income_trade = %w[Dividend Interest].include?(label) %>
+    <% income_trade = Trade::INCOME_LABELS.include?(label) %>
     <%# The label is what the importer actually recorded, so it wins over the
         amount's sign: a transfer between two accounts you own is neither a
         purchase nor a sale, and calling it one misreads the event. The sign is

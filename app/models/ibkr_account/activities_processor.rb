@@ -18,9 +18,12 @@ class IbkrAccount::ActivitiesProcessor
     trades_count = trade_results.count { |r| r[:imported] }
     fee_count    = trade_results.sum   { |r| r[:fees] }
 
-    cash_count = cash_transactions.sum { |t| process_cash_transaction(t.with_indifferent_access) ? 1 : 0 }
+    # Dividends come from cash transactions payload, but are recorded as Trades
+    cash_results = cash_transactions.map { |t| process_cash_transaction(t.with_indifferent_access) }
+    income_trade_count = cash_results.count(:trade)
+    cash_count = cash_results.count(:transaction)
 
-    { trades: trades_count, transactions: cash_count + fee_count }
+    { trades: trades_count + income_trade_count, transactions: cash_count + fee_count }
   end
 
   private
@@ -82,30 +85,51 @@ class IbkrAccount::ActivitiesProcessor
       currency = extract_currency(row, fallback: @ibkr_account.currency)
       security = resolve_security_for_cash_transaction(row)
 
-      import_adapter.import_transaction(
+      provider_extra = {
+        exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
+        ibkr: {
+          transaction_id: row[:transaction_id],
+          type: row[:type],
+          conid: row[:conid],
+          amount: row[:amount],
+          currency: row[:currency],
+          fx_rate_to_base: row[:fx_rate_to_base],
+          report_date: row[:report_date]
+        }.compact
+      }
+
+      shared_args = {
         external_id: "ibkr_cash_#{row[:transaction_id]}",
         amount: signed_amount,
         currency: currency,
         date: parse_date(row[:report_date]),
         name: build_cash_transaction_name(row, label, security),
-        source: "ibkr",
-        investment_activity_label: label,
-        extra: {
-          exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
-          security_id: security&.id,
-          ibkr: {
-            transaction_id: row[:transaction_id],
-            type: row[:type],
-            conid: row[:conid],
-            amount: row[:amount],
-            currency: row[:currency],
-            fx_rate_to_base: row[:fx_rate_to_base],
-            report_date: row[:report_date]
-          }.compact
-        }
-      )
+        source: "ibkr"
+      }
 
-      true
+      # A dividend is a trade with no quantity, the same shape manual entry
+      # produces. The security IBKR names by conid becomes a real association
+      # instead of the `extra[:security_id]` a Transaction has to stash it in.
+      entry = if Trade::INCOME_LABELS.include?(label)
+        import_adapter.import_trade(
+          **shared_args,
+          security: security || Security.cash_for(account, currency: currency),
+          quantity: 0,
+          price: 0,
+          activity_label: label,
+          # Carried the same way IBKR's buy/sell trades carry it, so a
+          # foreign-currency dividend converts to base like any other trade.
+          exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f
+        )
+      else
+        import_adapter.import_transaction(
+          **shared_args,
+          investment_activity_label: label,
+          extra: provider_extra.merge(security_id: security&.id)
+        )
+      end
+
+      entry&.entryable.is_a?(Trade) ? :trade : :transaction
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process cash transaction #{row[:transaction_id]}: #{e.message}")
       false

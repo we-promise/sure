@@ -19,6 +19,69 @@ so operators can inspect it in the super-admin `/settings/debug` UI.
 - Reserve raw Rails logging for low-value local noise; incidents operators need
   to investigate belong in the debug log.
 
+## Dividends and interest are trades
+
+Investment income is a trade with no quantity: `qty: 0`, `price: 0`, the cash
+value on the `Entry` (negative for an inflow), and an `investment_activity_label`
+of `"Dividend"` or `"Interest"` (`Trade::INCOME_LABELS`). That is what
+[`Trade::CreateForm#create_income_trade`](../../app/models/trade/create_form.rb)
+builds for manual entry, and provider syncs must match it — otherwise the same
+event has two shapes depending on how it arrived, and
+[`InvestmentStatement`](../../app/models/investment_statement/totals.rb), which
+aggregates over trades, cannot see the synced half.
+
+So import them through `import_trade` like any other trade, never through
+`import_transaction` with an income label. Two things to get right at the call
+site:
+
+- **Security.** `import_trade` requires one. Pass the paying instrument when the
+  provider names it; it belongs in the association, not in an
+  `extra["security_id"]` that a `Transaction` had to stash it in. Interest
+  usually names nothing, so fall back to `Security.cash_for(account, currency:)`,
+  which is what manual interest entry does.
+- **Accounts that cannot hold trades.** A connection may be linked to a
+  `Depository` account (Trade Republic allows both), and interest paid into an
+  ordinary cash account is not a trade — there is no position for it to sit
+  against. Check `Account#supports_trades?` and keep the cash-movement
+  representation there. This matches the manual rule, which makes income a trade
+  *in an investment account*.
+
+`investment_activity_label` must be canonical English from
+`Trade::ACTIVITY_LABELS`; `Trade` validates it, so a localized label ("Kauf",
+"Dividende") fails validation and drops the entry. Localize the entry `name`
+instead.
+
+### Income imported before it was a trade
+
+`import_trade` raises on an entryable-type mismatch, with one narrow exception:
+an income trade landing on an `external_id` that already holds a `Transaction`
+labelled `Dividend` or `Interest`.
+Provider syncs used to import dividends and interest that way, and accounts
+connected back then still hold those rows. That case leaves the existing row
+untouched, records a skip and writes a rate-limited `DebugLogEntry`. Every other
+mismatch still raises.
+
+The old row is kept rather than converted because `Transaction` carries
+`merchant`, `transfer`, `taggings` and `attachments`, none of which `Trade` has a
+column for. The sync protection flags are not a sufficient guard either:
+`determine_skip_reason` checks only `excluded`, `user_modified` and
+`import_locked`, while rules and auto-categorization write through
+`locked_attributes`, and attaching a file marks nothing at all. So the new
+representation applies to new events only.
+
+The log is rate-limited to one entry per account per source per day: a provider
+that re-delivers its whole history on every sync (Trade Republic reprocesses up
+to 5,000 stored timeline events) would otherwise write a row per skipped entry,
+forever.
+
+The entry is logged at `warn` with the remedy in the message — deleting the
+Transaction lets the next sync import it as a Trade — because nothing else
+surfaces the condition to an operator.
+
+This is a workaround for a past mistake, not a permanent feature. Once those rows
+have aged out of every provider's fetch window, `legacy_trade_income_transaction?`
+and its logging can be deleted.
+
 ## Pending transactions and FX metadata
 
 Store provider metadata on `Transaction#extra` under the provider namespace.

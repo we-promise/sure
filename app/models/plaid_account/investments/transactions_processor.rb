@@ -26,7 +26,9 @@ class PlaidAccount::Investments::TransactionsProcessor
 
   def process
     transactions.each do |transaction|
-      if cash_transaction?(transaction)
+      if trade_income_transaction?(transaction)
+        find_or_create_trade_income_entry(transaction)
+      elsif cash_transaction?(transaction)
         find_or_create_cash_entry(transaction)
       else
         find_or_create_trade_entry(transaction)
@@ -47,6 +49,38 @@ class PlaidAccount::Investments::TransactionsProcessor
 
     def cash_transaction?(transaction)
       %w[cash fee transfer contribution withdrawal].include?(transaction["type"])
+    end
+
+    def trade_income_transaction?(transaction)
+      Trade::INCOME_LABELS.include?(label_from_plaid_type(transaction))
+    end
+
+    # A dividend is a trade with no quantity, so it needs its own path rather
+    # than `find_or_create_trade_entry`, which derives the entry amount as
+    # qty x price. Plaid reports both as 0 for an income payment, so that route
+    # stores an amount of 0 and drops the cash value in `transaction["amount"]`.
+    def find_or_create_trade_income_entry(transaction)
+      external_id = transaction["investment_transaction_id"]
+      return if external_id.blank?
+
+      security = security_resolver.resolve(plaid_security_id: transaction["security_id"]).security
+
+      import_adapter.import_trade(
+        external_id: external_id,
+        # Interest names no instrument; the account's synthetic cash security
+        # stands in, as it does for manual interest.
+        security: security || Security.cash_for(account, currency: transaction["iso_currency_code"]),
+        quantity: 0,
+        price: 0,
+        # Plaid signs investment amounts the same way Sure does (negative = cash
+        # into the account), which is why the cash path passes them through too.
+        amount: transaction["amount"],
+        currency: transaction["iso_currency_code"],
+        date: transaction["date"],
+        name: transaction["name"],
+        source: "plaid",
+        activity_label: label_from_plaid_type(transaction)
+      )
     end
 
     def find_or_create_trade_entry(transaction)
