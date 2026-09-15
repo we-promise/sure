@@ -15,3 +15,13 @@
       up. Empty and visually hidden, so it costs nothing when unused. %>
   <div id="aria-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 </div>
+
+<%# The desktop app has no download list of its own: when a download ends it
+    clones one of these into the tray, so the confirmation is an ordinary Sure
+    toast. A template stays inert in a browser. %>
+<template id="desktop-download-complete">
+  <%= render "shared/notifications/notice", message: t(".download_complete"), description: t(".download_location") %>
+</template>
+<template id="desktop-download-failed">
+  <%= render "shared/notifications/alert", message: t(".download_failed") %>
+</template>
