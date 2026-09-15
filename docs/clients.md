@@ -145,10 +145,9 @@ the graph representation and aggregation without sharing authentication paths.
 The web dashboard keeps its original Sankey unchanged and renders the new
 server-calculated chart directly below it only for users with preview features
 enabled. See
-[Sankey preview feedback](hosting/sankey-preview-feedback.md) for the PostHog
-survey configuration and display-event definitions.
-
-![Original and preview cash flow with synthetic test data](screenshots/cash-flow-sankey.png)
+[Preview surveys and event capture](hosting/preview-feedback.md) for deployment
+configuration, survey behavior, and event definitions. Sankey is the first
+implementation of this feedback pattern.
 
 Push registration accepts an optional `device_key`: 32 securely random bytes
 encoded as 64 lowercase hex characters, generated independently per server and

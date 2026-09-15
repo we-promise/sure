@@ -1,5 +1,9 @@
 # Adding feature feedback surveys
 
+See [Preview surveys and event capture](../hosting/preview-feedback.md) for
+deployment behavior, privacy boundaries, and the first implementation's event
+catalog and counting rules.
+
 Use `feedback_config(:feature_name)` from `FeedbackHelper` to select a survey.
 Project routing belongs in this helper and `config/initializers/posthog.rb`;
 question wording, response mapping, UI, and events belong to the feature.
@@ -77,7 +81,5 @@ Sankey-specific. Do not reuse its question assumptions or widen its event filter
 implicitly when adding another feature. Make any shared browser-client extraction
 alongside that feature with tests for both callers.
 
-See [the Sankey implementation and active surveys](../hosting/sankey-preview-feedback.md)
-for the first integration, and `test/helpers/feedback_helper_test.rb` for routing
-coverage using a second test-only feature. No placeholder surveys are registered
-in production.
+See `test/helpers/feedback_helper_test.rb` for routing coverage using a second
+test-only feature. No placeholder surveys are registered in production.

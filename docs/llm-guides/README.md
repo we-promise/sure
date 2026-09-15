@@ -13,7 +13,7 @@ being changed. These guides hold the detailed conventions and procedures.
 | Add or modify an API v1 endpoint | [API endpoint consistency](api-endpoint-consistency.md) |
 | Change provider imports, pending/FX metadata or diagnostics | [Provider sync guidance](providers.md) |
 | Add a securities price provider | [Provider walkthrough](adding-a-securities-provider.md) |
-| Add a feature feedback survey | [Feedback surveys](feedback-surveys.md) |
+| Add a preview survey or usage event | [Feedback surveys](feedback-surveys.md) |
 | Gate or release a preview feature | [Preview-feature gating](gating-a-preview-feature.md) |
 | Change goals, pledges or reconciliation | [Goals](goals.md) |
 
