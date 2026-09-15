@@ -16,7 +16,7 @@
 
       <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-7 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
-            disabled: transaction.transfer.present?,
+            disabled: transaction.transfer?,
             class: "checkbox checkbox--light hidden lg:block",
             data: {
               id: entry.id,

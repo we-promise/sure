@@ -207,6 +207,7 @@ class TransactionsTest < ApplicationSystemTestCase
     outflow_entry = create_transaction("outflow", Date.current, 500, account: asset_account)
     inflow_entry = create_transaction("inflow", 1.day.ago.to_date, -500, account: depository_account)
     @user.family.auto_match_transfers!
+    outflow_entry.transaction.transfer.confirm!
     visit transactions_url
 
     within "#entry-group-" + Date.current.to_s + "-totals" do
