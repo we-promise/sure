@@ -111,7 +111,32 @@ class MonobankAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     assert_empty pending_entries, "it is no longer held, so the pending flag is gone"
   end
 
+  # The prune decides pending the way Transaction#pending? does. A flag PostgreSQL
+  # cannot cast to boolean ("maybe") must neither abort the prune nor survive it,
+  # and a false value ActiveModel recognises ("off") must not be pruned as pending.
+  test "prunes malformed pending rows but keeps false and current rows" do
+    malformed = create_pending_entry("monobank_malformed", "maybe")
+    false_flag = create_pending_entry("monobank_false", "off")
+    current = create_pending_entry("monobank_current", "maybe")
+
+    result = MonobankAccount::Transactions::Processor.new(@monobank_account)
+      .send(:prune_stale_pending_entries, [ current.external_id ])
+
+    assert_equal({ pruned: 1, protected: 0 }, result)
+    assert_not Entry.exists?(malformed.id)
+    assert Entry.exists?(false_flag.id)
+    assert Entry.exists?(current.id)
+  end
+
   private
+
+    def create_pending_entry(external_id, pending)
+      @account.entries.create!(
+        name: external_id, date: 10.days.ago.to_date, amount: 10, currency: "UAH",
+        source: "monobank", external_id: external_id,
+        entryable: Transaction.new(extra: { "monobank" => { "pending" => pending } })
+      )
+    end
 
     def transaction(id:, mcc: 5411, hold: false, amount: -4_000)
       {
@@ -137,6 +162,6 @@ class MonobankAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
       @account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(source: "monobank")
-        .where("(transactions.extra -> 'monobank' ->> 'pending')::boolean = true")
+        .where(Transaction.pending_sql("transactions", providers: [ "monobank" ]))
     end
 end
