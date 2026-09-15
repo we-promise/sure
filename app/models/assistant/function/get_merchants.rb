@@ -18,6 +18,10 @@ class Assistant::Function::GetMerchants < Assistant::Function
         Pass `search` to filter by name instead of paging through everything.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

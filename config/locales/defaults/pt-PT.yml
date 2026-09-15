@@ -10,6 +10,7 @@ pt-PT:
   mcp:
     errors:
       invalid_session_id: "ID de sessão MCP inválido"
+      protocol_version_mismatch: "O cabeçalho MCP-Protocol-Version (%{header}) e o _meta protocolVersion (%{meta}) não coincidem"
       unsupported_protocol_version: "Versão de protocolo MCP não suportada: %{version}"
   activerecord:
     errors:
