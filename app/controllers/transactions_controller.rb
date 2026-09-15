@@ -27,7 +27,7 @@ class TransactionsController < ApplicationController
     base_scope = @search.transactions_scope
                        .reverse_chronological
                        .includes(
-                         { entry: :account },
+                         { entry: [ :account, :reconciled_by_statement ] },
                          :category, :merchant, :tags,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
