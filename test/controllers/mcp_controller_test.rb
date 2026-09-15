@@ -149,7 +149,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "OAuth token with neither read nor read_write scope is rejected" do
-    token = create_oauth_token(scope: "")
+    token = create_oauth_token(scope: "") # pipelock:ignore
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token.token)
@@ -256,7 +256,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   # -- OAuth scope: read --
 
   test "OAuth read scope authenticates and exposes only read tools" do
-    token = create_oauth_token(scope: "read")
+    token = create_oauth_token(scope: "read") # pipelock:ignore
 
     post "/mcp", params: jsonrpc_request("tools/list").to_json,
          headers: mcp_headers(token.token)
@@ -272,7 +272,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "OAuth read scope hides write tools even for a user with preview features on" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
-    token = create_oauth_token(scope: "read")
+    token = create_oauth_token(scope: "read") # pipelock:ignore
 
     post "/mcp", params: jsonrpc_request("tools/list").to_json,
          headers: mcp_headers(token.token)
@@ -284,7 +284,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call refuses a write tool by exact name for an OAuth read-scope token, identically to an unknown tool" do
-    token = create_oauth_token(scope: "read")
+    token = create_oauth_token(scope: "read") # pipelock:ignore
     transaction = transactions(:one)
     original_category_id = transaction.category_id
 
@@ -313,7 +313,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call executes a read tool normally for an OAuth read-scope token" do
-    token = create_oauth_token(scope: "read")
+    token = create_oauth_token(scope: "read") # pipelock:ignore
 
     post "/mcp", params: jsonrpc_request("tools/call", {
       name: "get_balance_sheet",
@@ -327,8 +327,36 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert inner.key?("net_worth") || inner.key?("error")
   end
 
+  # get_budget reads like the other Get* tools but is deliberately excluded
+  # from the read-only allowlist: its default (current-month) path calls
+  # Budget.find_or_bootstrap, which creates a Budget row on first access. A
+  # read-scoped credential must not be able to trigger that via tools/list
+  # or tools/call, and must not be able to create the month's budget as a
+  # side effect of an unrelated family gaining a first budget this month.
+  test "get_budget is not exposed to an OAuth read-scope token, and cannot be called" do
+    token = create_oauth_token(scope: "read") # pipelock:ignore
+
+    post "/mcp", params: jsonrpc_request("tools/list").to_json,
+         headers: mcp_headers(token.token)
+    assert_response :ok
+    tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+    assert_not_includes tool_names, "get_budget"
+
+    assert_no_difference "Budget.count" do
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "get_budget",
+        arguments: {}
+      }, id: 61).to_json, headers: mcp_headers(token.token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal(-32602, body["error"]["code"])
+      assert_includes body["error"]["message"], "Unknown tool: get_budget"
+    end
+  end
+
   test "OAuth read_write scope keeps the full MCP surface available" do
-    token = create_oauth_token(scope: "read_write")
+    token = create_oauth_token(scope: "read_write") # pipelock:ignore
 
     post "/mcp", params: jsonrpc_request("tools/list").to_json,
          headers: mcp_headers(token.token)
@@ -399,7 +427,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "MCP_READ_ONLY=true also restricts an OAuth read_write connection" do
-    token = create_oauth_token(scope: "read_write")
+    token = create_oauth_token(scope: "read_write") # pipelock:ignore
 
     with_env_overrides("MCP_READ_ONLY" => "true") do
       post "/mcp", params: jsonrpc_request("tools/list").to_json,
@@ -489,7 +517,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   test "a session minted with an OAuth read-scope token stays read-only even when reused with a read-write token" do
     with_mcp_cache do
       with_mcp_env do
-        readonly_token = create_oauth_token(scope: "read")
+        readonly_token = create_oauth_token(scope: "read") # pipelock:ignore
 
         post "/mcp", params: jsonrpc_request("initialize").to_json,
              headers: mcp_headers(readonly_token.token)
@@ -515,7 +543,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "a session minted with an OAuth read_write token keeps write tools available on reuse" do
     with_mcp_cache do
-      token = create_oauth_token(scope: "read_write")
+      token = create_oauth_token(scope: "read_write") # pipelock:ignore
 
       post "/mcp", params: jsonrpc_request("initialize").to_json,
            headers: mcp_headers(token.token)
@@ -539,7 +567,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       with_mcp_env do
         session_id = SecureRandom.uuid
         Rails.cache.write("mcp:session:#{session_id}", { user_id: @user.id, access_mode: "not_a_real_mode" }, expires_in: 1.day)
-        readonly_token = create_oauth_token(scope: "read")
+        readonly_token = create_oauth_token(scope: "read") # pipelock:ignore
 
         post "/mcp", params: jsonrpc_request("tools/list").to_json,
              headers: mcp_headers(readonly_token.token).merge(
@@ -1148,7 +1176,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
     end
 
-    def create_oauth_token(scope:, user: @user)
+    def create_oauth_token(scope:, user: @user) # pipelock:ignore
       app = Doorkeeper::Application.create!(
         name: "Test MCP Client #{SecureRandom.hex(4)}",
         redirect_uri: "https://claude.ai/callback",
