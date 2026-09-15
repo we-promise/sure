@@ -470,6 +470,12 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def name_suggestions
+    @suggestions = Current.family.transactions
+      .merge(Account.accessible_by(Current.user))
+      .name_suggestions_for(params[:q])
+  end
+
   private
     # Scoped by user (not just family) because Current.accessible_entries is
     # user-scoped for family sharing (see Current#accessible_entries).

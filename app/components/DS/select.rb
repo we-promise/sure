@@ -31,8 +31,13 @@ module DS
       @selected_value = selected
     end
 
+    # Excludes the synthetic include_blank item (value: nil) so an unselected
+    # field falls back to @placeholder on the trigger button rather than
+    # showing the blank item's own label (e.g. "(none)") — see is_selected in
+    # select.html.erb for the separate, unfiltered check used for the
+    # checkmark/aria-selected state inside the menu itself.
     def selected_item
-      items.find { |item| item[:value] == selected_value }
+      items.find { |item| !item[:value].nil? && item[:value] == selected_value }
     end
 
     # Returns the color for a given item (used in :badge variant)
