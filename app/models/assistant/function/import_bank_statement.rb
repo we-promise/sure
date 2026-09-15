@@ -185,6 +185,6 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     end
 
     def openai_model
-      ENV["OPENAI_MODEL"].presence || Provider::Openai::DEFAULT_MODEL
+      Provider::Openai.effective_model
     end
 end
