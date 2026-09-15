@@ -627,4 +627,32 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("reports.investment_performance.sells_count", count: 1), response.body
     assert_no_match(/#{Regexp.escape(I18n.t("reports.investment_performance.sells_count", count: 2))}/, response.body)
   end
+
+  # The category column of the reports export is a user-supplied name, and this
+  # is the export the app points at Google Sheets.
+  test "transactions export escapes formula-triggering category names" do
+    malicious = "=SUM(A1)"
+    category = @family.categories.create!(name: malicious, color: "#123456")
+    account = @family.accounts.first
+
+    account.entries.create!(
+      name: "Payee",
+      date: Date.current.beginning_of_month + 3.days,
+      amount: 42.00,
+      currency: "USD",
+      entryable: Transaction.new(category: category, kind: "standard")
+    )
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :monthly,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    rows = CSV.parse(@response.body)
+    assert rows.any? { |r| r.first == "'#{malicious}" }, "the category cell must be escaped"
+    assert_not rows.any? { |r| r.first == malicious }, "a raw formula must not lead a row"
+  end
 end
