@@ -258,7 +258,20 @@ class EnableBankingItem < ApplicationRecord
   end
 
   def unlinked_accounts_count
-    enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+    linked_ibans = EnableBankingAccount
+      .where(enable_banking_item_id: family.enable_banking_items.select(:id))
+      .joins(:account_provider)
+      .where.not(account_providers: { account_id: nil })
+      .where.not(iban: nil)
+      .distinct
+      .pluck(:iban)
+
+    base = enable_banking_accounts.left_joins(:account_provider)
+                                  .where(account_providers: { id: nil })
+    if linked_ibans.any?
+      base = base.where("enable_banking_accounts.iban IS NULL OR enable_banking_accounts.iban NOT IN (?)", linked_ibans)
+    end
+    base.count
   end
 
   def total_accounts_count
