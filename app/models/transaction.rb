@@ -6,7 +6,10 @@ class Transaction < ApplicationRecord
   belongs_to :transfer, optional: true
 
   has_many :taggings, as: :taggable, dependent: :destroy
-  has_many :tags, through: :taggings
+  # dependent: :destroy so removing a tag from tag_ids= (edit form, bulk update,
+  # rules, API) destroys the Tagging row-by-row instead of a raw DELETE, which
+  # would skip Tagging#after_destroy :unfill_linked_pocket and leave pockets stale.
+  has_many :tags, through: :taggings, dependent: :destroy
 
   # File attachments (receipts, invoices, etc.) using Active Storage
   # Supports images (JPEG, PNG, GIF, WebP) and PDFs up to 10MB each

@@ -12,5 +12,8 @@ en:
         explanation: "%{tag_name} will be removed from transactions and other taggable
           entities.  Instead of leaving them untagged, you can also assign a new tag
           below."
+        linked_pockets_warning:
+          one: "1 pocket is linked to this tag and will be deleted."
+          other: "%{count} pockets are linked to this tag and will be deleted."
         replacement_tag_prompt: Select tag
         tag: Tag
