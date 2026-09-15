@@ -346,7 +346,7 @@ class Category < ApplicationRecord
 
   def replace_and_destroy!(replacement)
     transaction do
-      transactions.update_all category_id: replacement&.id
+      Transaction.reassign_category!(transactions, replacement&.id)
       destroy!
     end
   end

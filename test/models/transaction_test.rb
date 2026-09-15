@@ -307,4 +307,24 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_nil category.reload.last_used_at
   end
+
+  test "reassign_category! updates category, touches entries, and returns the count" do
+    transaction = transactions(:one)
+    entry = entries(:transaction)
+    new_category = categories(:income)
+
+    before = entry.updated_at
+
+    count = travel_to(1.minute.from_now) do
+      Transaction.reassign_category!(Transaction.where(id: transaction.id), new_category.id)
+    end
+
+    assert_equal 1, count
+    assert_equal new_category.id, transaction.reload.category_id
+    assert entry.reload.updated_at > before
+  end
+
+  test "reassign_category! returns 0 for an empty scope" do
+    assert_equal 0, Transaction.reassign_category!(Transaction.none, categories(:income).id)
+  end
 end
