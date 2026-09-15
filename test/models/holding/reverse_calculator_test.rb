@@ -325,6 +325,28 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_nil cost_basis_for(calc, security, Date.current)
   end
 
+  # A gapped import can record more net buys than the current snapshot, so the
+  # reconstructed baseline is negative. Opening and closing the unknown span must
+  # not collapse onto the transfer's own trade, which would wrongly mark it known.
+  test "cost_basis_for keeps a transferred position unknown when a gapped import gives a negative baseline" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    transfer_date = 9.days.ago.to_date
+    buy_date      = 5.days.ago.to_date
+
+    transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+    create_trade(security, account: @account, qty: 5, price: 150, date: buy_date)
+
+    # Snapshot shows no current holding, but the trades net to +10, so the seeded
+    # baseline is -10 and the transfer lands while the running position is negative.
+    snapshot = OpenStruct.new(to_h: { security.id => 0 })
+    calc = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot)
+    calc.send(:precompute_cost_basis)
+
+    assert_nil cost_basis_for(calc, security, transfer_date)
+    assert_nil cost_basis_for(calc, security, Date.current)
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|

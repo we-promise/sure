@@ -109,6 +109,7 @@ class Holding::ReverseCalculator
       trades.each do |trade_entry|
         trade = trade_entry.entryable
         security_id = trade.security_id
+        previous_position = positions[security_id]
         positions[security_id] += trade.qty
 
         if trade.internal_movement?
@@ -132,9 +133,11 @@ class Holding::ReverseCalculator
           @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
         end
 
-        # A position back at zero holds no transferred-in units any more, so close
-        # any open unknown span; a later repurchase then reads as known again.
-        if positions[security_id] <= 0 && open_unknown_start[security_id]
+        # Close an open unknown span only on a genuine downward crossing through
+        # zero. A position that was already non-positive — e.g. a gapped import
+        # whose reconstructed baseline is negative — never held these units, so
+        # opening and closing must not collapse onto the same trade.
+        if open_unknown_start[security_id] && previous_position.positive? && positions[security_id] <= 0
           @unknown_spans[security_id] << [ open_unknown_start[security_id], trade_entry.date ]
           open_unknown_start.delete(security_id)
         end

@@ -23,8 +23,7 @@ class Holding::ForwardCalculator
 
       account.start_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)
-        update_cost_basis_tracker(trades, current_portfolio)
-        next_portfolio = transform_portfolio(current_portfolio, trades, direction: :forward)
+        next_portfolio = apply_trades(current_portfolio, trades)
         holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
@@ -47,19 +46,6 @@ class Holding::ForwardCalculator
       empty_portfolio
     end
 
-    def transform_portfolio(previous_portfolio, trade_entries, direction: :forward)
-      new_quantities = previous_portfolio.dup
-
-      trade_entries.each do |trade_entry|
-        trade = trade_entry.entryable
-        security_id = trade.security_id
-        qty_change = trade.qty
-        qty_change = qty_change * -1 if direction == :reverse
-        new_quantities[security_id] = (new_quantities[security_id] || 0) + qty_change
-      end
-
-      new_quantities
-    end
 
     def build_holdings(portfolio, date, price_source: nil)
       portfolio.map do |security_id, qty|
@@ -85,20 +71,21 @@ class Holding::ForwardCalculator
       end.compact
     end
 
-    # Applies each trade to its security's weighted-average cost-basis tracker.
-    # Buys raise the basis; sells relieve quantity at the running average and a
-    # full liquidation resets it, so a later repurchase starts from a clean basis.
+    # Applies the day's trades in order and returns the resulting portfolio, so the
+    # caller does not walk the same trades again to compute quantities.
     #
-    # Trades are applied in order and the running position is tracked from the
-    # day's opening quantities, so an inbound transfer's "unknown" mark is released
-    # the moment the position hits zero — even when a same-day sell-off and
-    # repurchase net back to a positive end-of-day quantity.
-    def update_cost_basis_tracker(trade_entries, opening_portfolio)
-      running_quantities = Hash.new { |h, k| h[k] = opening_portfolio[k] || 0 }
+    # Buys raise a security's weighted-average cost basis; sells relieve quantity at
+    # the running average and a full liquidation resets it, so a later repurchase
+    # starts from a clean basis. Tracking the running position here lets an inbound
+    # transfer's "unknown" mark release the moment the position hits zero — even when
+    # a same-day sell-off and repurchase net back to a positive end-of-day quantity.
+    def apply_trades(opening_portfolio, trade_entries)
+      portfolio = opening_portfolio.dup
 
       trade_entries.each do |trade_entry|
         trade = trade_entry.entryable
         security_id = trade.security_id
+        previous_quantity = portfolio[security_id] || 0
 
         if trade.internal_movement?
           # An inbound transfer brings in units at a price nothing here knows, so
@@ -114,11 +101,15 @@ class Holding::ForwardCalculator
           @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
         end
 
-        # A position back at zero holds no transferred-in units any more, so the
-        # "unknown" mark is released and a later repurchase reads as known again.
-        running_quantities[security_id] += trade.qty
-        @transferred_security_ids.delete(security_id) if running_quantities[security_id] <= 0
+        portfolio[security_id] = previous_quantity + trade.qty
+
+        # Release the "unknown" mark only on a genuine downward crossing through
+        # zero: a position that was already non-positive never held these units, so
+        # opening and closing must not collapse onto the same trade.
+        @transferred_security_ids.delete(security_id) if previous_quantity.positive? && portfolio[security_id] <= 0
       end
+
+      portfolio
     end
 
     # Returns the current cost basis for a security, or nil if nothing is held
