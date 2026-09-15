@@ -128,6 +128,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :coinspot_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # Self-custody / on-chain wallets
   resources :onchain_wallet_items, only: [ :update, :destroy ] do
     collection do
@@ -316,7 +331,10 @@ Rails.application.routes.draw do
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
+  get "release_highlight", to: "release_highlights#show"
+  patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
+  get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
 
   resource :current_session, only: %i[update]
@@ -743,6 +761,7 @@ Rails.application.routes.draw do
         post :publish, on: :member
       end
       resource :usage, only: [ :show ], controller: :usage
+      resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ]
       resources :push_subscriptions, only: [ :create, :destroy ]
@@ -880,6 +899,21 @@ Rails.application.routes.draw do
   resources :monobank_items, only: %i[create update destroy] do
     collection do
       get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  resources :fio_items, only: %i[create update destroy] do
+    collection do
       get :select_accounts
       post :link_accounts
       get :select_existing_account

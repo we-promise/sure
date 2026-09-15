@@ -250,17 +250,6 @@ class FamilyMerchantsController < ApplicationController
       end
     end
 
-    # Keeps @merchant/@family_merchant pointed at the original, persisted
-    # ProviderMerchant after a failed conversion attempt (see the #update
-    # rescues), instead of an unpersisted FamilyMerchant that would break
-    # the re-rendered form's submit target. Restores every attribute the
-    # form could have submitted, including :color -- merchant_params
-    # permits it and convert_to_family_merchant_for receives it, so omitting
-    # it here would silently revert a color change on the failed attempt.
-    def restore_merchant_after_failed_conversion!
-      @merchant.assign_attributes(merchant_params.slice(:name, :color, :website_url, :iban))
-    end
-
     def merchant_json(merchant)
       merchant.as_json(only: %i[id name]).merge(
         html: render_to_string(

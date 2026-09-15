@@ -1,4 +1,6 @@
 class Holding::ReverseCalculator
+  include Holding::TradeCalculatorHelpers
+
   attr_reader :account, :portfolio_snapshot
 
   def initialize(account, portfolio_snapshot:, security_ids: nil)
@@ -86,33 +88,36 @@ class Holding::ReverseCalculator
       # position contains units acquired at a price nothing here knows, so it
       # has no cost basis — before it, the purchases still stand on their own.
       @first_transfer_dates = {}
-      tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+      trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
 
-      portfolio_cache.get_trades.sort_by(&:date).each do |trade_entry|
+      # get_trades is already chronological (date, then created_at, then id).
+      # Re-sorting by date alone is unstable and could reorder same-day trades,
+      # which now matters because the tracker is order-sensitive once sells relieve.
+      portfolio_cache.get_trades.each do |trade_entry|
         trade = trade_entry.entryable
-        next unless trade.qty > 0
-
         security_id = trade.security_id
 
-        if trade.investment_activity_label == Trade::TRANSFER_LABEL
-          @first_transfer_dates[security_id] ||= trade_entry.date
+        if trade.internal_movement?
+          # Inbound transfers make the basis unknown from that date on; outbound
+          # transfers only remove units, so relieve them at the running average.
+          if trade.qty.positive?
+            @first_transfer_dates[security_id] ||= trade_entry.date
+          else
+            trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+            @cost_basis_snapshots[security_id] << [ trade_entry.date, trackers[security_id].average_cost ]
+          end
           next
         end
 
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
+        tracker = trackers[security_id]
+        # Buys raise the basis; sells relieve quantity at the running average, and a
+        # full liquidation resets it so a later repurchase starts from a clean basis.
+        tracker.apply(converted_trade_price(trade), trade.qty)
 
-        tracker[security_id][:total_cost] += converted_price * trade.qty
-        tracker[security_id][:total_qty] += trade.qty
-
-        @cost_basis_snapshots[security_id] << [
-          trade_entry.date,
-          tracker[security_id][:total_cost] / tracker[security_id][:total_qty]
-        ]
+        # Record the basis after each trade — including nil once a position is fully
+        # closed — so cost_basis_for returns nil for the sold-out span instead of a
+        # stale figure carried forward from the last buy.
+        @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
       end
     end
 

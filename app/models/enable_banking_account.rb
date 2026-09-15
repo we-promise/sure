@@ -225,20 +225,6 @@ class EnableBankingAccount < ApplicationRecord
       )
     end
 
-    def capture_propagation_failure(target, message)
-      DebugLogEntry.capture(
-        category: "provider_sync_warning",
-        level: "warn",
-        message: "Could not propagate IBAN to account: #{message}",
-        source: self.class.name,
-        provider_key: "enable_banking",
-        family: enable_banking_item&.family,
-        account: target,
-        account_provider: account_provider,
-        metadata: { enable_banking_account_id: id, account_id: target.id }
-      )
-    end
-
     def build_account_name(snapshot)
       # Try to build a meaningful name from the account data
       raw_account_id = snapshot[:account_id]

@@ -67,6 +67,13 @@ class AccountTest < ActiveSupport::TestCase
     admin = users(:empty)
     super_admin = users(:sure_support_staff)
 
+    # Fixtures stamp every row with one `created_at`, and this family holds a
+    # second admin (`sso_only`), so "the earliest admin" is only meaningful
+    # once the timestamps differ. Without this the assertion below rides on
+    # whichever admin the query plan happens to return first.
+    family.users.update_all(created_at: 1.hour.ago)
+    admin.update!(created_at: 2.hours.ago)
+
     Current.reset
 
     account = family.accounts.create!(
@@ -78,6 +85,30 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal admin, account.owner
     assert_not_equal super_admin, account.owner
+  end
+
+  test "default owner is stable when two admins share a created_at" do
+    family = families(:empty)
+    family.users.where(role: "admin").update_all(created_at: 1.hour.ago)
+
+    Current.reset
+
+    owners = 2.times.map do |i|
+      family.accounts.create!(
+        name: "Unowned tie-break account #{i}",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      ).owner
+    end
+
+    # `id` breaks the tie, so the winner is the tied admin with the lowest id.
+    # Asserting only that the two calls agree would pass without the
+    # tie-breaker whenever the database returned the same tied row twice.
+    expected_owner = family.users.where(role: "admin").order(:id).first
+
+    assert_equal expected_owner, owners.first
+    assert_equal expected_owner, owners.last
   end
 
   test "create_and_sync calls sync_later by default" do
@@ -724,5 +755,215 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
+  end
+
+  test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "History Test Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+
+    anchor_date = 30.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 100, date: anchor_date)
+    assert_equal anchor_date, account.history_start_date
+
+    earlier_entry_date = 45.days.ago.to_date
+    account.entries.create!(
+      name: "Past Entry",
+      date: earlier_entry_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    assert_equal earlier_entry_date, account.history_start_date
+  end
+
+  test "history_start_date returns nil when account has no opening anchor, entries, or balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Empty History Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+  end
+
+  test "history_start_date resolves to transaction date when there is no opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Transaction Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Old Trade",
+      date: trade_date,
+      amount: 500,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date resolves to balance date when there are no entries or opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Balance Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    balance_date = 1.year.ago.to_date
+    account.balances.create!(
+      date: balance_date,
+      balance: 1000,
+      currency: "USD"
+    )
+
+    assert_equal balance_date, account.history_start_date
+  end
+
+  test "history_start_date prefers earlier transaction when valuation is added much later" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Late Valuation Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Initial Buy",
+      date: trade_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    # Later reconciliation valuation added 6 months ago
+    account.set_opening_anchor_balance(balance: 500, date: 6.months.ago.to_date)
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date handles transaction from 10 years ago" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Decade Old Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    ten_years_ago = 10.years.ago.to_date
+    account.entries.create!(
+      name: "Decade Ago Trade",
+      date: ten_years_ago,
+      amount: 250,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal ten_years_ago, account.history_start_date
+  end
+
+  test "history_start_date ignores pending transactions" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Pending Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    posted_date = 5.days.ago.to_date
+    account.entries.create!(
+      name: "Posted Entry",
+      date: posted_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    account.entries.create!(
+      name: "Pending Entry",
+      date: 10.days.ago.to_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+
+    assert_equal posted_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account resolves to provider activity ignoring default anchor" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Linked Investment Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    recent_trade_date = 14.days.ago.to_date
+    account.entries.create!(
+      name: "Recent Provider Trade",
+      date: recent_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+
+    assert_equal recent_trade_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account returns nil when no provider activity exists" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Fresh Linked Investment",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    assert_nil account.history_start_date
   end
 end

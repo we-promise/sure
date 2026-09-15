@@ -49,17 +49,6 @@ module AccountableResource
         )
         @account.lock_saved_attributes!
       end
-    rescue ActiveRecord::RecordInvalid => e
-      # create_and_sync uses save! internally, so a validation failure (e.g.
-      # an IBAN already used by another account in the family) raises
-      # instead of returning a normal invalid record -- without this, the
-      # request would 500 instead of re-rendering the form with the error,
-      # like #update already does for its own validation failures.
-      @account = e.record
-      @error_message = @account.errors.full_messages.join(", ")
-      set_link_options
-      render :new, status: :unprocessable_entity
-      return
     rescue ActiveRecord::RecordNotUnique
       # A raw DB-level race on the partial unique index: two concurrent
       # requests both passed the Rails uniqueness validation before either
@@ -81,25 +70,47 @@ module AccountableResource
     return_path = safe_return_to(account_params[:return_to]) || session.delete(:return_to).presence || @account
     redirect_to return_path,
                 notice: t("accounts.create.success", type: accountable_type.name.underscore.humanize)
+  rescue ActiveRecord::RecordInvalid => e
+    # `create_and_sync` saves with `save!`. A validation the user can trip from
+    # the form (a half-filled loan rate change, say) must come back as the form
+    # with the error and what they typed, not as the generic 422 page. The
+    # transaction above has already rolled back. The record on the exception is
+    # usually the unsaved account with its nested accountable still attached --
+    # but the opening valuation's `entries.create!` or `lock_saved_attributes!`
+    # can raise too, and then it is an Entry or the accountable, neither of
+    # which the form can render. Recover the account through it, or start from
+    # a fresh one as `new` does.
+    @account = if e.record.is_a?(Account)
+      e.record
+    else
+      e.record.try(:account) || Current.family.accounts.build(currency: Current.family.currency, accountable: accountable_type.new)
+    end
+    @error_message = e.record.errors.full_messages.join(", ").presence || e.message
+    # The `new` template's method-selection branch reads `@provider_configs`,
+    # which the `new` action's before_action sets up; this render needs it too.
+    set_link_options
+    render :new, status: :unprocessable_entity
   end
 
   def update
-    original_balance = @account.balance
-    balance_change_attempted = false
+    # Assigning a balance can fail before the normal update path assigns the
+    # other submitted fields. Keep them available for the 422 form without
+    # persisting them.
+    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    update_params = resolve_write_only_iban(update_params, clear_flag: update_params[:remove_iban]).except(:remove_iban)
 
-    # Wrapped in one transaction so a later failure (e.g. a duplicate iban)
-    # rolls back the balance change above it instead of leaving it
-    # committed underneath a 422 response -- set_current_balance's own
-    # sync_later enqueue isn't part of this transaction, so a rolled-back
-    # attempt can still trigger a harmless no-op sync against the
-    # now-unchanged balance.
-    @account.transaction do
+    # The balance change and the attribute update are one form, so they commit
+    # or roll back as one. `set_current_balance` writes a valuation and the
+    # account's cached balance; before this, a validation failing on the
+    # attributes (a half-filled loan rate change, say) returned 422 with the
+    # balance half of the rejected form already committed.
+    saved = Account.transaction do
       # Handle balance update if the value actually changed
       if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
-        balance_change_attempted = true
         result = @account.set_current_balance(account_params[:balance].to_d)
         unless result.success?
-          @error_message = result.error_message
+          @account.assign_attributes(update_params)
+          @error_message = result.error
           raise ActiveRecord::Rollback
         end
       end
@@ -107,36 +118,34 @@ module AccountableResource
       # Update remaining account attributes. Note: currency is intentionally allowed
       # here so all account types (depositories, credit cards, loans, etc.) can
       # have their currency changed via this shared update path.
-      update_params = account_params.except(:return_to, :balance, :opening_balance_date)
-      update_params = resolve_write_only_iban(update_params, clear_flag: update_params[:remove_iban]).except(:remove_iban)
-      begin
-        unless @account.update(update_params)
-          @error_message = @account.errors.full_messages.join(", ")
-          raise ActiveRecord::Rollback
-        end
-      rescue ActiveRecord::RecordNotUnique
-        # Same raw DB-level race as #create: another request's iban committed
-        # between our validation check and this update's own commit.
-        @account.errors.add(:iban, :taken)
+      unless @account.update(update_params)
         @error_message = @account.errors.full_messages.join(", ")
         raise ActiveRecord::Rollback
       end
 
+      # Inside the transaction, as `create` does: the locks are saved with
+      # `update!`, and a raise there after the commit left the balance and the
+      # attributes above in place behind a failed request.
       @account.lock_saved_attributes!
+
+      true
+    rescue ActiveRecord::RecordInvalid => e
+      @error_message = e.record.errors.full_messages.join(", ").presence || e.message
+      raise ActiveRecord::Rollback
+    rescue ActiveRecord::RecordNotUnique
+      # Same raw DB-level race as #create: another request's iban committed
+      # between our validation check and this update's own commit.
+      @account.errors.add(:iban, :taken)
+      @error_message = @account.errors.full_messages.join(", ")
+      raise ActiveRecord::Rollback
     end
 
-    if @error_message.present?
-      # set_current_balance persists via its own account.update! before a
-      # later failure rolls the transaction back at the DB level -- restore
-      # just the balance attribute (not a full reload) so the re-rendered
-      # form doesn't show the rolled-back attempted balance as if it had
-      # been saved, while still showing whatever invalid values the user
-      # typed into the other fields (a full reload would wipe those too).
-      @account.balance = original_balance if balance_change_attempted
+    unless saved
       render :edit, status: :unprocessable_entity
-    else
-      redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+      return
     end
+
+    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
   end
 
   private
