@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent, PageLoadPayload};
@@ -12,6 +12,11 @@ static POPUP_WINDOW_ID: AtomicUsize = AtomicUsize::new(0);
 /// Wait after a printable report loads before opening the print dialog. This
 /// matches the delay in Sure's print layout, which lets styles settle.
 const PRINT_DELAY: Duration = Duration::from_millis(500);
+
+/// Ids of the toast templates Sure renders next to its notification tray, one
+/// per download outcome.
+const DOWNLOAD_COMPLETE_TOAST: &str = "desktop-download-complete";
+const DOWNLOAD_FAILED_TOAST: &str = "desktop-download-failed";
 
 pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Build the configured window here so native download and popup handlers
@@ -37,6 +42,7 @@ pub fn setup(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         })
         .on_new_window(move |url, _| on_new_window(&handle, &page, url))
         .build()?;
+    crate::attachments::save_attachments(&window);
 
     // The window is opaque (the app paints its own solid backgrounds), so we
     // skip the transparent-window vibrancy blur — it never showed through and
@@ -143,13 +149,20 @@ fn open_server_window(handle: &AppHandle, url: Url) {
     // Until a page commits, the window stands for the saved-server address it
     // was opened with, so a file served directly at that address can download.
     let page = ShownPage(Arc::new(Mutex::new(Some(url.clone()))));
+    // Stays false when the address answers with a file, as a CSV statement
+    // opened for viewing does: the window then never shows a page.
+    let showed_page = Arc::new(AtomicBool::new(false));
     let popup_handle = handle.clone();
     let result = WebviewWindowBuilder::new(handle, label, WebviewUrl::External(url))
         .title("Sure")
         .inner_size(1000.0, 800.0)
         .on_page_load({
             let page = page.clone();
+            let showed_page = showed_page.clone();
             move |window, payload| {
+                if payload.event() == PageLoadEvent::Started {
+                    showed_page.store(true, Ordering::Relaxed);
+                }
                 page.record(&payload);
                 print_loaded_report(window, payload);
             }
@@ -157,15 +170,38 @@ fn open_server_window(handle: &AppHandle, url: Url) {
         .on_download({
             let page = page.clone();
             let refused = RefusedDownloads::default();
-            move |webview, event| on_download(&page, &refused, webview, event)
+            move |webview, event| {
+                let finished = matches!(event, DownloadEvent::Finished { .. });
+                let window = webview.window();
+                let allowed = on_download(&page, &refused, webview, event);
+                if !showed_page.load(Ordering::Relaxed) {
+                    dismiss_empty_popup(window, finished);
+                }
+                allowed
+            }
         })
         .on_new_window(move |url, _| on_new_window(&popup_handle, &page, url))
         .on_document_title_changed(|window, title| {
             let _ = window.set_title(&title);
         })
         .build();
-    if let Err(error) = result {
-        eprintln!("[sure] failed to open window: {error}");
+    match result {
+        Ok(window) => crate::attachments::save_attachments(&window),
+        Err(error) => eprintln!("[sure] failed to open window: {error}"),
+    }
+}
+
+/// Hide a popup whose address answered with a file instead of a page, then
+/// close it once the download ends. `close` is queued on the event loop, so the
+/// webview, whose download delegate runs this callback, is destroyed only after
+/// the callback returns.
+fn dismiss_empty_popup(window: tauri::Window, download_finished: bool) {
+    if download_finished {
+        if let Err(error) = window.close() {
+            eprintln!("[sure] failed to close an empty window: {error}");
+        }
+    } else if let Err(error) = window.hide() {
+        eprintln!("[sure] failed to hide an empty window: {error}");
     }
 }
 
@@ -233,29 +269,70 @@ fn on_download(
             refused.remember(&url, allowed)
         }
         DownloadEvent::Finished { url, success, .. } => {
-            if !refused.should_report(&url, success) {
-                return true;
-            }
-            // macOS does not return a path in Finished. Wry saves downloads to the
-            // Downloads directory and adds a suffix when a filename already exists.
-            let body = if success {
-                "Download complete. The file is in your Downloads folder."
-            } else {
-                eprintln!("[sure] download failed");
-                "Download failed. Please try again."
-            };
-            if let Err(error) = webview
-                .app_handle()
-                .notification()
-                .builder()
-                .title("Sure")
-                .body(body)
-                .show()
-            {
-                eprintln!("[sure] failed to show download notification: {error}");
+            if refused.should_report(&url, success) {
+                if !success {
+                    eprintln!("[sure] download failed");
+                }
+                report_download(&webview, success);
             }
             true
         }
         _ => true,
+    }
+}
+
+/// Confirm a finished download with Sure's own toast, cloned from a template the
+/// page renders. A native notification replaces it when no visible window can
+/// show it or the page has no such template, as with an older server, and is
+/// sent as well when the window is not in front.
+fn report_download(webview: &tauri::Webview, success: bool) {
+    let app = webview.app_handle().clone();
+    // A popup hidden because its address was the file shows nothing.
+    let target = if webview.window().is_visible().unwrap_or(false) {
+        Some(webview.clone())
+    } else {
+        app.get_webview_window("main")
+            .map(|main| main.as_ref().clone())
+    };
+    // A toast added to a hidden window would only show up, stale, on reopening.
+    let Some(target) = target.filter(|target| target.window().is_visible().unwrap_or(false)) else {
+        return notify_download(&app, success);
+    };
+    let in_front = target.window().is_focused().unwrap_or(false);
+    let template = if success {
+        DOWNLOAD_COMPLETE_TOAST
+    } else {
+        DOWNLOAD_FAILED_TOAST
+    };
+    let script = format!(
+        "(() => {{
+          const template = document.getElementById({template:?});
+          const tray = document.getElementById(\"notification-tray\");
+          if (!(template instanceof HTMLTemplateElement) || !tray) return false;
+          tray.append(template.content.cloneNode(true));
+          return true;
+        }})()"
+    );
+    let notify_app = app.clone();
+    let evaluated = target.eval_with_callback(script, move |shown| {
+        if shown != "true" || !in_front {
+            notify_download(&notify_app, success);
+        }
+    });
+    if evaluated.is_err() {
+        notify_download(&app, success);
+    }
+}
+
+fn notify_download(app: &AppHandle, success: bool) {
+    // macOS does not return a path in Finished. Wry saves downloads to the
+    // Downloads directory and adds a suffix when a filename already exists.
+    let body = if success {
+        "Download complete. The file is in your Downloads folder."
+    } else {
+        "Download failed. Please try again."
+    };
+    if let Err(error) = app.notification().builder().title("Sure").body(body).show() {
+        eprintln!("[sure] failed to show download notification: {error}");
     }
 }
