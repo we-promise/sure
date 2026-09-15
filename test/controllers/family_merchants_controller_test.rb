@@ -44,6 +44,52 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "AT611904300234573201", @merchant.reload.iban # pipelock:ignore IBAN
   end
 
+  test "edit form never renders the stored iban" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_family_merchant_url(@merchant)
+
+    assert_response :success
+    refute_includes response.body, "AT611904300234573201"
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
+  end
+
+  test "edit form does not render a remove_iban toggle when no iban is stored" do
+    get edit_family_merchant_url(@merchant)
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 0
+  end
+
+  test "update with a blank iban field leaves the stored iban unchanged" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "New Name", iban: "" } }
+
+    assert_equal "AT611904300234573201", @merchant.reload.iban # pipelock:ignore IBAN
+    assert_equal "New Name", @merchant.reload.name
+  end
+
+  test "update with remove_iban checked clears the stored iban even with a blank field" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { iban: "", remove_iban: "1" } }
+
+    assert_nil @merchant.reload.iban
+  end
+
+  test "a blank iban field on a provider merchant does not trigger a spurious conversion" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
+    transactions(:one).update!(merchant: provider_merchant)
+
+    assert_no_difference "FamilyMerchant.count" do
+      patch family_merchant_url(provider_merchant), params: { provider_merchant: { website_url: "https://example.com", iban: "" } }
+    end
+
+    assert_equal "AT611904300234573201", provider_merchant.reload.iban # pipelock:ignore IBAN
+    assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
+  end
+
   test "updating only website on a provider merchant updates it directly without converting to a family merchant" do
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
     transactions(:one).update!(merchant: provider_merchant)
