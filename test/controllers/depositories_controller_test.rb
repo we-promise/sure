@@ -116,6 +116,29 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
   end
 
+  test "update with a blank iban field leaves the stored iban unchanged" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "Renamed", iban: "" }
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
+    assert_equal "Renamed", linked_account.reload.name
+  end
+
+  test "update with remove_iban checked clears the stored iban even with a blank field" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { iban: "", remove_iban: "1" }
+    }
+
+    assert_nil linked_account.reload.iban
+  end
+
   test "update persists enable_category_matcher through the shared update action" do
     linked_account = accounts(:connected)
     assert linked_account.enable_category_matcher?
@@ -131,6 +154,27 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert linked_account.reload.enable_category_matcher?
+  end
+
+  test "edit form never renders the stored iban" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_account_url(linked_account)
+
+    assert_response :success
+    refute_includes response.body, "AT611904300234573201"
+    assert_select "input[type=checkbox][name='account[remove_iban]']", 1
+  end
+
+  test "edit form does not render a remove_iban toggle when no iban is stored" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: nil)
+
+    get edit_account_url(linked_account)
+
+    assert_response :success
+    assert_select "input[type=checkbox][name='account[remove_iban]']", 0
   end
 
   test "edit form renders category matcher toggle only for accounts that support it" do
