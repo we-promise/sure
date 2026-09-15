@@ -191,6 +191,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
+      { key: "fio",            title: "Fio banka",       turbo_id: "fio",            partial: "fio_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
@@ -220,6 +221,7 @@ class Settings::ProvidersController < ApplicationController
       "akahu"          => "AkahuItem",
       "up"             => "UpItem",
       "monobank"       => "MonobankItem",
+      "fio"            => "FioItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
@@ -250,6 +252,8 @@ class Settings::ProvidersController < ApplicationController
         @up_items = Current.family.up_items.active.ordered
       when "monobank"
         @monobank_items = Current.family.monobank_items.active.ordered
+      when "fio"
+        @fio_items = Current.family.fio_items.active.ordered
       when "simplefin"
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
@@ -326,6 +330,7 @@ class Settings::ProvidersController < ApplicationController
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      @fio_items = Current.family.fio_items.active.ordered
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -346,6 +351,7 @@ class Settings::ProvidersController < ApplicationController
         "akahu"          => @akahu_items,
         "up"             => @up_items,
         "monobank"       => @monobank_items,
+        "fio"            => @fio_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,
