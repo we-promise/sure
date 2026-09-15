@@ -31,20 +31,32 @@ class Settings::ApiKeysController < ApplicationController
     @api_key = Current.user.api_keys.build(api_key_params)
     @api_key.key = @plain_key
 
-    if @api_key.save
-      flash[:notice] = t(".success")
-      redirect_to settings_api_key_path(@api_key, newly_created: true)
-    else
-      render :new, status: :unprocessable_entity
+    ActiveRecord::Base.transaction do
+      @api_key.save!
+      SecurityAuditLog.log_api_key_created!(user: Current.user, api_key: @api_key, request: request)
     end
+
+    flash[:notice] = t(".success")
+    redirect_to settings_api_key_path(@api_key, newly_created: true)
+  rescue ActiveRecord::RecordInvalid
+    render :new, status: :unprocessable_entity
   end
 
   def destroy
-    @api_key.revoke!
+    begin
+      @api_key.revoke!
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
+      flash[:alert] = t(".revoke_failed")
+      return redirect_to settings_api_keys_path
+    end
+
+    begin
+      SecurityAuditLog.log_api_key_revoked!(user: Current.user, api_key: @api_key, request: request)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("[Settings::ApiKeys] Failed to write audit log for revoked key #{@api_key.id}: #{e.message}")
+    end
+
     flash[:notice] = t(".revoked_successfully")
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed
-    flash[:alert] = t(".revoke_failed")
-  ensure
     redirect_to settings_api_keys_path
   end
 
