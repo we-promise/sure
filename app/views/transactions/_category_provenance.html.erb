@@ -1,0 +1,22 @@
+<%# locals: (transaction:, provenance:) %>
+
+<div class="px-3 pt-3 space-y-1" data-testid="category-provenance">
+  <div class="flex items-center justify-between gap-2">
+    <span class="text-sm text-secondary"><%= t(".title") %></span>
+    <%= render DS::Pill.new(
+      label: t("transactions.transaction.category_provenance.#{provenance.status}"),
+      tone: :neutral,
+      marker: false,
+      icon: provenance.current? ? "sparkles" : "history"
+    ) %>
+  </div>
+  <p class="text-xs text-secondary">
+    <%= t(".assigned",
+          category: category_provenance_category_name(transaction, provenance),
+          source: t("transactions.category_provenance.sources.#{provenance.source}"),
+          time_ago: time_ago_in_words(provenance.recorded_at)) %>
+  </p>
+  <% if provenance.history? %>
+    <p class="text-xs text-secondary"><%= t(".changed_afterwards") %></p>
+  <% end %>
+</div>

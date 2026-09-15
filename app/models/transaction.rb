@@ -8,6 +8,12 @@ class Transaction < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  # Enrichment rows recording automatic category assignments (AI, Bayes) —
+  # scoped so the index can preload them for the provenance pill.
+  has_many :auto_category_enrichments,
+    -> { where(attribute_name: "category_id", source: AUTO_CATEGORY_SOURCES).order(updated_at: :desc) },
+    class_name: "DataEnrichment", as: :enrichable
+
   # File attachments (receipts, invoices, etc.) using Active Storage
   # Supports images (JPEG, PNG, GIF, WebP) and PDFs up to 10MB each
   # Maximum 10 attachments per transaction, family-scoped access
@@ -114,6 +120,9 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark].freeze
 
+  # DataEnrichment sources that represent automatic category assignment
+  AUTO_CATEGORY_SOURCES = %w[ai bayes].freeze
+
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
   PENDING_CHECK_SQL = PENDING_PROVIDERS
@@ -149,6 +158,12 @@ class Transaction < ApplicationRecord
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     TRANSFER_KINDS.include?(kind)
+  end
+
+  # Automatic-categorization provenance for the UI, or nil when no
+  # ai/bayes enrichment was ever recorded for this transaction.
+  def category_provenance
+    @category_provenance ||= Transaction::CategoryProvenance.for(self)
   end
 
   def set_category!(category)

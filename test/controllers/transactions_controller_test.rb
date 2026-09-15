@@ -1574,6 +1574,54 @@ end
     Rails.cache = original_cache
   end
 
+  test "transaction drawer shows auto-categorization provenance" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "[data-testid='category-provenance']"
+    assert_match(/Assigned &quot;Income&quot; by AI .* ago\./, response.body)
+  end
+
+  test "index shows auto-categorization pill for a current match" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "span[title=?]", "Category assigned by AI", count: 1
+  end
+
+  test "index shows history pill after the category was changed" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "span[title=?]", "Auto-categorized by AI, then changed", count: 1
+  end
+
+  test "index shows no provenance pill for transactions without auto-categorization" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "span[title=?]", "Category assigned by AI", count: 0
+    assert_select "span[title=?]", "Auto-categorized by AI, then changed", count: 0
+  end
+
+  test "index preloads auto-categorization enrichments without N+1" do
+    3.times do |i|
+      entry = create_transaction(account: accounts(:depository), amount: 10 + i, category: categories(:food_and_drink))
+      entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    end
+
+    queries = capture_sql_queries { get transactions_url }
+
+    assert_equal 1, queries.count { |sql| sql.include?('"data_enrichments"') }
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
