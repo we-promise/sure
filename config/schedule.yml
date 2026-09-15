@@ -49,6 +49,12 @@ clean_inactive_families:
   queue: "scheduled"
   description: "Archives and destroys families that expired their trial without subscribing (managed mode only)"
 
+clean_sessions:
+  cron: "15 4 * * *" # daily at 4:15 AM
+  class: "SessionCleanerJob"
+  queue: "scheduled"
+  description: "Deletes sessions inactive for over 30 days"
+
 refresh_demo_family:
   cron: "0 5 * * *" # daily at 5:00 AM UTC
   class: "DemoFamilyRefreshJob"
