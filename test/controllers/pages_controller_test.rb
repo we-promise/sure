@@ -144,8 +144,10 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_not_nil expense_index
     assert_not_nil income_index
-    assert links.any? { |link| link["source"] == cash_flow_index && link["target"] == expense_index && link["value"] == 125.0 }
-    assert links.any? { |link| link["source"] == income_index && link["target"] == cash_flow_index && link["value"] == 300.0 }
+    assert_equal 1, links.count { |link| link["source"] == cash_flow_index && link["target"] == expense_index && link["value"] == 125.0 }
+    assert_equal 1, links.count { |link| link["source"] == income_index && link["target"] == cash_flow_index && link["value"] == 300.0 }
+    assert_equal 0, links.count { |link| link["source"] == expense_index && link["target"] == cash_flow_index }
+    assert_equal 0, links.count { |link| link["source"] == cash_flow_index && link["target"] == income_index }
   end
 
   test "dashboard renders money flow widget" do
