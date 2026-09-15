@@ -20,10 +20,11 @@
             AccountOrder.all.map { |order| [ order.label, order.key ] },
             { label: t(".default_account_order") },
             { data: { auto_submit_form_target: "auto" } } %>
-        <%= family_form.select :country,
+        <%= family_form.collection_select :country,
             country_options,
-            { label: t(".country") },
-            { data: { auto_submit_form_target: "auto" } } %>
+            :last,
+            :first,
+            { label: t(".country"), searchable: true } %>
         <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
       <% end %>
     <% end %>

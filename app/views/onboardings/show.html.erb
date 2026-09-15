@@ -64,9 +64,11 @@
               </div>
             </div>
 
-            <%= family_form.select :country,
+            <%= family_form.collection_select :country,
                                    country_options,
-                                   { label: t(".country") },
+                                   :last,
+                                   :first,
+                                   { label: t(".country"), searchable: true },
                                    { required: true, data: { onboarding_target: "countryField" } } %>
           <% end %>
         </div>
