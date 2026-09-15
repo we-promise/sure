@@ -124,7 +124,7 @@ class Provider::Openai::AutoCategorizer
         user_categories: user_categories
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -136,7 +136,10 @@ class Provider::Openai::AutoCategorizer
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
       Rails.logger.info("Tokens used to auto-categorize transactions: #{response.dig("usage", "total_tokens")}")
 
       categorizations = extract_categorizations_native(response)
@@ -233,6 +236,7 @@ class Provider::Openai::AutoCategorizer
         params[:response_format] = { type: "json_object" }
         # JSON_MODE_NONE: no response_format constraint
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 

@@ -9,6 +9,7 @@ class Provider::Openai < Provider
   MIN_REQUEST_TIMEOUT = 1
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
+  REASONING_EFFORTS = %w[none minimal low medium high].freeze
 
   # Returns the effective model that would be used by the provider.
   # Priority: explicit ENV > Setting > DEFAULT_MODEL.
@@ -30,6 +31,34 @@ class Provider::Openai < Provider
     return DEFAULT_REQUEST_TIMEOUT unless configured.positive?
 
     [ configured, MIN_REQUEST_TIMEOUT ].max
+  end
+
+  # Effective reasoning effort for OpenAI-compatible requests. ENV > Setting > nil.
+  # nil means "don't send the parameter" so existing installs/providers see no change.
+  # Unknown values are dropped with a warning rather than forwarded.
+  def self.reasoning_effort
+    raw = ENV["OPENAI_REASONING_EFFORT"].presence || Setting.openai_reasoning_effort.presence
+    return nil if raw.nil?
+
+    value = raw.to_s.strip.downcase
+    return value if REASONING_EFFORTS.include?(value)
+
+    Rails.logger.warn("Ignoring unsupported OPENAI_REASONING_EFFORT #{raw.inspect}; expected one of #{REASONING_EFFORTS.join(', ')}")
+    nil
+  end
+
+  # Merges the configured effort into a request params hash. api: :chat adds
+  # `reasoning_effort: value` (Chat Completions); api: :responses adds
+  # `reasoning: { effort: value }` (Responses API). No-op when unset.
+  def self.apply_reasoning_effort(params, api:)
+    effort = reasoning_effort
+    return params unless effort
+
+    case api
+    when :chat then params.merge(reasoning_effort: effort)
+    when :responses then params.merge(reasoning: { effort: effort })
+    else params
+    end
   end
 
   # Extra HTTP headers for OpenAI-compatible requests, parsed from the
@@ -502,6 +531,7 @@ class Provider::Openai < Provider
           }
           request_params[:tool_choice] = "none" if tool_choice == :none && chat_config.tools.present?
           request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
+          request_params = Provider::Openai.apply_reasoning_effort(request_params, api: :responses)
 
           raw_response = session_client.responses.create(parameters: request_params)
 
@@ -595,6 +625,7 @@ class Provider::Openai < Provider
         params[:tools] = tools if tools.present?
         params[:tool_choice] = "none" if tool_choice == :none && tools.present?
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
+        params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
         begin
           raw_response = session_client.chat(parameters: params)

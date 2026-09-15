@@ -135,6 +135,14 @@ en:
         json_mode_none: None (best for standard models)
         json_mode_json_object: JSON Object
         json_mode_help: "Strict mode works best with thinking models (qwen-thinking, deepseek-reasoner). None mode works best with standard models (llama, mistral, gpt-oss)."
+        reasoning_effort_label: Reasoning effort
+        reasoning_effort_default: Provider default (not sent)
+        reasoning_effort_none: None
+        reasoning_effort_minimal: Minimal
+        reasoning_effort_low: Low
+        reasoning_effort_medium: Medium
+        reasoning_effort_high: High
+        reasoning_effort_help: "Sent as reasoning_effort on every OpenAI-compatible request. Lowers latency and output-budget use for reasoning models (e.g. Qwen3, gpt-oss, GPT-5). Leave on the default unless your model supports it — the official OpenAI API rejects it for non-reasoning models."
         budget_heading: Token Budget
         budget_description: Applies to OpenAI-compatible calls (chat, auto-categorization, merchant detection, and PDF processing). Defaults are conservative for small-context local models. Raise for cloud models with larger context windows.
         context_window_label: Context Window (Optional)
@@ -240,6 +248,7 @@ en:
         invalid_onboarding_state: Invalid onboarding state
         invalid_sync_time: Invalid sync time format. Please use HH:MM format (e.g., 02:30).
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
+        invalid_reasoning_effort: "Reasoning effort must be one of: none, minimal, low, medium, high"
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
