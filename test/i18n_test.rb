@@ -26,6 +26,21 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  # The loan chart's labels, cards, table and accessible description all read
+  # this subtree. Fallbacks would show a German user English rather than a raw
+  # key, but the rest of UI.account.chart is translated, so a missing subtree
+  # is a gap and not a choice. Placeholders are compared too: a translation
+  # that drops %{projected_payoff_date} silently loses the figure it names.
+  def test_german_loan_chart_keys_and_placeholders_match_english
+    en = loan_chart_leaves("en")
+    de = loan_chart_leaves("de")
+
+    assert_equal en.keys.sort, de.keys.sort, "UI.account.chart.loan in de.yml must carry every key en.yml does"
+    en.each do |key, value|
+      assert_equal value.scan(/%\{\w+\}/).sort, de.fetch(key).to_s.scan(/%\{\w+\}/).sort, "placeholders differ for #{key}"
+    end
+  end
+
   def test_no_missing_keys
     skip "Skipping missing keys test"
     missing_keys = @i18n.missing_keys(locales: [ :en ])
@@ -96,6 +111,20 @@ class I18nTest < ActiveSupport::TestCase
   end
 
   private
+    # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
+    def loan_chart_leaves(locale)
+      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/components/#{locale}.yml"), aliases: true)
+        .dig(locale, "UI", "account", "chart", "loan") || {}
+      flatten_leaves(tree)
+    end
+
+    def flatten_leaves(tree, prefix = nil)
+      tree.each_with_object({}) do |(key, value), leaves|
+        path = [ prefix, key ].compact.join(".")
+        value.is_a?(Hash) ? leaves.merge!(flatten_leaves(value, path)) : leaves[path] = value
+      end
+    end
+
     def german_locale_paths
       @german_locale_paths ||= locale_paths.select { |path| path.basename.to_s.match?(/(^|[._-])de\.yml\z/) }
     end
