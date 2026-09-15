@@ -22,6 +22,7 @@ class DataEnrichment < ApplicationRecord
     pluggy: "pluggy",
     redbark: "redbark",
     trade_republic: "trade_republic",
-    bayes: "bayes"
+    bayes: "bayes",
+    fio: "fio"
   }
 end

@@ -216,6 +216,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
+      { key: "fio",            title: "Fio banka",       turbo_id: "fio",            partial: "fio_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
@@ -246,6 +247,7 @@ class Settings::ProvidersController < ApplicationController
       "akahu"          => "AkahuItem",
       "up"             => "UpItem",
       "monobank"       => "MonobankItem",
+      "fio"            => "FioItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
@@ -277,6 +279,8 @@ class Settings::ProvidersController < ApplicationController
         @up_items = Current.family.up_items.active.ordered
       when "monobank"
         @monobank_items = Current.family.monobank_items.active.ordered
+      when "fio"
+        @fio_items = Current.family.fio_items.active.ordered
       when "simplefin"
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
@@ -355,22 +359,9 @@ class Settings::ProvidersController < ApplicationController
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
-      # Partial select feeding the status row ("connected" / "credentials only")
-      # and provider-sync-health. Token minting moved to @connect_item below,
-      # which needs full record access (client_user_id, etc.).
       @pluggy_items = Current.family.pluggy_items.where.not(client_id: [ nil, "" ]).ordered.select(:id, :pluggy_item_id, :client_id, :client_secret, :family_id)
-
-      # The Pluggy Connect token is NO LONGER minted eagerly on this GET. Doing
-      # so hit the live Pluggy API (hydrate_item_id! + connect_token) on every
-      # /settings/providers render — a synchronous network round-trip and a DB
-      # write (save! on hydrate) on a read request, which also silently swallowed
-      # auth failures via `rescue nil`. The token is now minted lazily in the
-      # `connect_form` action (the Connect drawer, loaded via a Turbo frame when
-      # the user opens it). Here we only do a DB-only lookup so the panel can
-      # render the launcher; it falls back to the drawer link when `@connect_token`
-      # is blank (see _pluggy_panel.html.erb). @connect_item stays DB-only — no
-      # upstream Pluggy call, no DB write on GET render.
       @connect_item = PluggyItem.preferred_for_connect(Current.family)
+      @fio_items = Current.family.fio_items.active.ordered
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -391,6 +382,7 @@ class Settings::ProvidersController < ApplicationController
         "akahu"          => @akahu_items,
         "up"             => @up_items,
         "monobank"       => @monobank_items,
+        "fio"            => @fio_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,

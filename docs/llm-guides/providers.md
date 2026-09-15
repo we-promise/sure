@@ -95,3 +95,10 @@ to Up; the SimpleFIN and Lunchflow flags do not provide the same environment gat
 [importer](../../app/models/monobank_item/importer.rb) dumps raw payloads only when
 `Rails.env.local?` is also true, because the dump contains PII (merchant and
 counterparty names, IBANs, amounts, account ids). Preserve that local-only guard.
+
+`FIO_DEBUG_RAW=1` has the same local-only guard in the
+[importer](../../app/models/fio_item/importer.rb). Fio additionally authenticates by
+putting the token in the **URL path**, so neither [the client](../../app/models/provider/fio.rb)
+nor the importer may put a resolved URL into an exception message, a log line or debug
+metadata; requests are labelled with a static operation name instead. Fio reports no
+pending state, so it is deliberately absent from `Transaction::PENDING_PROVIDERS`.
