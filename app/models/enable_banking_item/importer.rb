@@ -598,22 +598,41 @@ class EnableBankingItem::Importer
       duplicates_removed = 0
 
       # Within each duplicate group, keep the richest representative --
-      # BOOK over PDNG, then a present counterparty IBAN -- rather than
-      # whichever row the API happened to return first. Array order isn't a
-      # reliability signal, and picking the first row arbitrarily could
-      # discard a settled/IBAN-bearing row in favor of a thinner one (or, in
-      # a bucket a blank-IBAN row aliases into, discard the row that
-      # actually owns that IBAN).
+      # BOOK over PDNG, same as before IBAN existed -- rather than whichever
+      # row the API happened to return first. Status ranks above IBAN
+      # presence here (unlike an earlier version of this method): picking a
+      # still-pending row over a settled one just because it had richer
+      # account data would leave the transaction permanently stuck pending
+      # (PENDING_PROVIDERS-gated balances/analytics exclude it) on every
+      # future sync, which is worse than the IBAN gap it would have closed.
+      # Instead, when the BOOK-preferred representative itself lacks IBAN
+      # data that a PDNG sibling in the same group carries (some ASPSPs drop
+      # counterparty data once a transaction settles), that IBAN is merged
+      # into the representative's own account fields below -- so both the
+      # settled status and the IBAN data survive, instead of trading one for
+      # the other.
       result = keyed_with_index.values.map do |group|
         duplicates_removed += group.size - 1 if group.size > 1
 
-        group.min_by do |tx, index|
+        representative, index = group.min_by do |tx, index|
           [
             tx[:status].to_s == "BOOK" ? 0 : 1,
-            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present? ? 0 : 1,
             index
           ]
         end
+
+        unless counterparty_iban_for_content_key(representative, representative[:credit_debit_indicator]).present?
+          donor = group.map(&:first).find do |tx|
+            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present?
+          end
+
+          if donor
+            account_key = representative[:credit_debit_indicator] == "CRDT" ? :debtor_account : :creditor_account
+            representative = representative.merge(account_key => donor[account_key])
+          end
+        end
+
+        [ representative, index ]
       end.sort_by { |_tx, index| index }.map(&:first)
 
       if duplicates_removed > 0
@@ -664,9 +683,9 @@ class EnableBankingItem::Importer
       account_key = direction == "CRDT" ? :debtor_account : :creditor_account
       # Normalized the same way EnableBankingEntry::Processor stores it:
       # without this, two representations of the same duplicate transaction
-      # with differently-formatted IBANs (spaces vs none) would produce
-      # different content keys and defeat the dedup this key exists for.
-      tx.dig(account_key, :iban).to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      # with differently-formatted IBANs (spaces/punctuation vs none) would
+      # produce different content keys and defeat the dedup this key exists for.
+      IbanNormalizable.normalize(tx.dig(account_key, :iban))
     end
 
     class PaginationTruncatedError < StandardError; end
