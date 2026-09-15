@@ -1,4 +1,10 @@
 module Family::AutoTransferMatchable
+  # A future-dated rate is only ever a legitimate match for a timezone skew between
+  # a data source and the server (at most a day), not for the provider catching up
+  # on missed days -- unlike the backward direction, it must stay tight so a stale
+  # transaction can't be matched against an unrelated, much-later rate.
+  RATE_LOOKAHEAD_DAYS = 1
+
   def transfer_match_candidates(
     date_window: 4,
     exchange_rate_tolerance: 0.1,
@@ -20,7 +26,9 @@ module Family::AutoTransferMatchable
         account_id:,
         include_rejected:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
-        upper_exchange_rate_bound: 1 + exchange_rate_tolerance
+        upper_exchange_rate_bound: 1 + exchange_rate_tolerance,
+        rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS,
+        rate_lookahead_days: RATE_LOOKAHEAD_DAYS
       }
     ])
   end
@@ -134,6 +142,9 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
+    # On a tie in date-distance between a cached rate before and after the outflow date,
+    # the query below prefers the past-dated rate: the forward window exists only to
+    # cover timezone skew, so it must never outrank real historical data.
     def transfer_match_candidates_sql
       <<~SQL.squish
         SELECT transfer_match_candidates.*
@@ -193,11 +204,16 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency <> inflow_candidates.currency
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
-          JOIN exchange_rates ON (
-            exchange_rates.date = outflow_candidates.date AND
-            exchange_rates.from_currency = outflow_candidates.currency AND
-            exchange_rates.to_currency = inflow_candidates.currency
-          )
+          LEFT JOIN LATERAL (
+            SELECT er.rate
+            FROM exchange_rates er
+            WHERE
+              er.from_currency = outflow_candidates.currency AND
+              er.to_currency = inflow_candidates.currency AND
+              er.date BETWEEN outflow_candidates.date - :rate_lookback_days AND outflow_candidates.date + :rate_lookahead_days
+            ORDER BY ABS(er.date - outflow_candidates.date) ASC, er.date ASC
+            LIMIT 1
+          ) exchange_rates ON TRUE
           LEFT JOIN transfers existing_transfers ON (
             existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
             existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
@@ -216,6 +232,7 @@ module Family::AutoTransferMatchable
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
+            exchange_rates.rate IS NOT NULL AND
             ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
