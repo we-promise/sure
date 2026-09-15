@@ -6,7 +6,7 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     "http://localhost:8787/callback",
     "https://www.cursor.com/agents/mcp/oauth/callback"
   ].freeze
-  test "registers a public client and returns client_id" do
+  test "registers a public client with the least-privilege read scope by default" do
     post "/register",
       params: {
         client_name: "Claude",
@@ -29,7 +29,67 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     app = Doorkeeper::Application.find_by(uid: json["client_id"])
     assert app.present?, "Application should be persisted"
     assert_not app.confidential?, "Application must be non-confidential (public client)"
+    # Least privilege by default: a client that never asked for read_write
+    # does not silently get it.
+    assert_equal "read", app.scopes.to_s
+  end
+
+  test "registers a client with the explicitly requested read scope" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        scope: "read"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by(uid: JSON.parse(response.body)["client_id"])
+    assert_equal "read", app.scopes.to_s
+  end
+
+  test "registers a client with the explicitly requested read_write scope" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        scope: "read_write"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by(uid: JSON.parse(response.body)["client_id"])
     assert_equal "read_write", app.scopes.to_s
+  end
+
+  test "registers a client requesting both scopes as read_write" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        scope: "read read_write"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by(uid: JSON.parse(response.body)["client_id"])
+    assert_equal "read_write", app.scopes.to_s
+  end
+
+  test "rejects an unknown requested scope" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        scope: "admin"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :bad_request
+    json = JSON.parse(response.body)
+    assert_equal "invalid_client_metadata", json["error"]
+    assert_includes json["error_description"], "admin"
+    assert_nil Doorkeeper::Application.find_by(name: "Claude"), "no application should be persisted"
   end
 
   test "returns error for invalid JSON body" do

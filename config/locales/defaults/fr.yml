@@ -171,6 +171,7 @@ fr:
   mcp:
     errors:
       invalid_session_id: Identifiant de session MCP invalide
+      protocol_version_mismatch: "L'en-tête MCP-Protocol-Version (%{header}) et _meta protocolVersion (%{meta}) sont en désaccord"
       unsupported_protocol_version: 'Version du protocole MCP non prise en charge : %{version}'
   number:
     currency:

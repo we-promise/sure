@@ -43,6 +43,10 @@ class Assistant::Function::GetStatementCoverage < Assistant::Function
         ```
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

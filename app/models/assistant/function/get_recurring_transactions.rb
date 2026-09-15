@@ -20,6 +20,10 @@ class Assistant::Function::GetRecurringTransactions < Assistant::Function
         transfers, which move money between the user's own accounts.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?
