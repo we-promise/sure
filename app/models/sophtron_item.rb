@@ -12,6 +12,8 @@
 # @attr [Boolean] scheduled_for_deletion Whether the item is scheduled for deletion
 # @attr [DateTime] last_synced_at When the last successful sync occurred
 class SophtronItem < ApplicationRecord
+  validate :base_url_must_be_an_official_host
+
   include Syncable, Provided, Unlinking
 
   INITIAL_LOAD_LOOKBACK_DAYS = 120
@@ -377,7 +379,7 @@ class SophtronItem < ApplicationRecord
   end
 
   def effective_base_url
-    base_url.presence || Provider::Sophtron::DEFAULT_BASE_URL
+    Provider::Sophtron.normalize_base_url(base_url) || Provider::Sophtron::DEFAULT_BASE_URL
   end
 
   def generated_customer_unique_id
@@ -412,5 +414,14 @@ class SophtronItem < ApplicationRecord
 
       customer_payload = customer_payload.with_indifferent_access
       customer_payload[:CustomerName] || customer_payload[:customer_name] || customer_payload[:name]
+    end
+
+  private
+    # The value an operator typed decides where the app sends their key, so it
+    # is checked against the provider's allow-list rather than used as given.
+    def base_url_must_be_an_official_host
+      return if base_url.blank? || Provider::Sophtron.allowed_base_url?(base_url)
+
+      errors.add(:base_url, :official_hosts_only)
     end
 end

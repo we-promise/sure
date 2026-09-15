@@ -1,4 +1,6 @@
 class LunchflowItem < ApplicationRecord
+  validate :base_url_must_be_an_official_host
+
   include Syncable, Provided, Unlinking, Encryptable
 
   DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
@@ -160,18 +162,17 @@ class LunchflowItem < ApplicationRecord
     api_key.present?
   end
 
+  # Every branch of the old version returned DEFAULT_BASE_URL, so a configured
+  # value was silently discarded rather than checked. It is checked now, and an
+  # allowed value is actually used.
   def effective_base_url
-    return DEFAULT_BASE_URL if base_url.blank?
-
-    uri = URI.parse(base_url)
-    return DEFAULT_BASE_URL unless uri.is_a?(URI::HTTPS)
-    return DEFAULT_BASE_URL unless uri.host == "lunchflow.app"
-    return DEFAULT_BASE_URL unless [ "", "/", "/api/v1", "/api/v1/" ].include?(uri.path)
-    return DEFAULT_BASE_URL unless uri.query.blank?
-    return DEFAULT_BASE_URL unless uri.fragment.blank?
-
-    DEFAULT_BASE_URL
-  rescue URI::InvalidURIError
-    DEFAULT_BASE_URL
+    Provider::Lunchflow.normalize_base_url(base_url) || DEFAULT_BASE_URL
   end
+
+  private
+    def base_url_must_be_an_official_host
+      return if base_url.blank? || Provider::Lunchflow.allowed_base_url?(base_url)
+
+      errors.add(:base_url, :official_hosts_only)
+    end
 end
