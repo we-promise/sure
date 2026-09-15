@@ -764,6 +764,45 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
 
+  test "index shows Pluggy-linked accounts even when they are the only accounts" do
+    # Keep the family provider-empty so the Pluggy-only case exercises the
+    # accounts page empty-state guard.
+    sign_in users(:empty)
+    family = users(:empty).family
+
+    [ IbkrItem, IndexaCapitalItem, SnaptradeItem ].each do |klass|
+      klass.where(family: family).destroy_all
+    end
+
+    pluggy_item = PluggyItem.create!(
+      family: family,
+      name: "Pluggy Connection",
+      client_id: "client-id",
+      client_secret: "client-secret"
+    )
+    pluggy_account = pluggy_item.pluggy_accounts.create!(
+      pluggy_account_id: "pa-linked-only-test",
+      name: "Linked Pluggy Acct",
+      currency: "BRL"
+    )
+    linked_account = Account.create!(
+      family: family,
+      owner: users(:empty),
+      name: "Linked Only Test Account",
+      balance: 0,
+      currency: "BRL",
+      accountable: Depository.new
+    )
+    AccountProvider.create!(account: linked_account, provider: pluggy_account)
+
+    get accounts_path
+
+    assert_response :success
+    assert_includes @response.body, "Linked Only Test Account"
+    assert_select "##{dom_id(pluggy_item)}", count: 1
+    assert_select "p", text: I18n.t("accounts.empty.no_accounts"), count: 0
+  end
+
   # Regression for #2516: the account sidebar fragment cache renders DS::* view
   # components, which Rails' ERB dependency tracker mis-parses as a bogus "Ds/D"
   # template dependency. With automatic digesting enabled that logged
