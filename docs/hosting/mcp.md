@@ -110,9 +110,11 @@ Recommended setups:
   (`read`) — no environment variable needed. See
   [Authentication Modes](#authentication-modes).
 - **ChatGPT via the static token, keeping another client (e.g. Claude)
-  read-write:** give ChatGPT its own `MCP_API_TOKEN`/`MCP_USER_EMAIL` pair
-  with `MCP_API_TOKEN_SCOPE=read`, and leave Claude on OAuth (`read_write`)
-  or a separate read-write static token.
+  read-write:** there is only one `MCP_API_TOKEN` per install, so this only
+  works if ChatGPT uses OAuth (`read` scope) and the static token — with
+  `MCP_API_TOKEN_SCOPE` unset or `read_write` — is reserved for Claude. Two
+  *static* tokens at different scopes are not supported; use OAuth for
+  whichever client needs a scope different from the static token's.
 - **Lock down `/mcp` entirely, regardless of who connects:**
   ```bash
   MCP_READ_ONLY=true
@@ -132,17 +134,19 @@ response does not confirm the tool exists but is forbidden.
 
 Allowed in read-only mode: `get_transactions`, `get_recurring_transactions`,
 `get_accounts`, `get_holdings`, `get_balance_sheet`, `get_income_statement`,
-`get_budget`, `get_tags`, `get_categories`, `get_merchants`, and, for users
+`get_tags`, `get_categories`, `get_merchants`, and, for users
 with preview features enabled, `list_account_statements`,
 `get_account_statement`, `get_statement_coverage`, `get_valuations`,
 `get_insights`, `get_bills`, `get_bill_details`, `get_paycheck_plan`,
 `get_bill_audit`.
 
-Never allowed in read-only mode, even though it performs no writes:
-`search_family_files` — it can surface uploaded-document contents outside the
-structured financial data the other read tools expose, which is a larger data
-surface than this mode is meant to grant an external assistant. Every other
-excluded tool (`create_goal`, `create_tag`, `update_tag`, `create_category`,
+Never allowed in read-only mode, even though the name suggests otherwise:
+`get_budget` — its default (current-month) path calls
+`Budget.find_or_bootstrap`, which creates the month's budget record on first
+access. `search_family_files` — non-mutating, but it can surface
+uploaded-document contents outside the structured financial data the other
+read tools expose, a larger data surface than this mode is meant to grant an
+external assistant. Every other excluded tool (`create_goal`, `create_tag`, `update_tag`, `create_category`,
 `update_category`, `update_transaction`, `update_budget`,
 `import_bank_statement`, `upload_account_statement`, `record_valuation`,
 `create_bill`, `update_bill`, `record_bill_payment`) performs a real mutation.
