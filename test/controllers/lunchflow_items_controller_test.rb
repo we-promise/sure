@@ -132,7 +132,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "•3000"
-    refute_includes response.body, "DE89370400440532013000"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
   end
 
   test "select existing account masks the iban to the last 4 characters" do
@@ -146,7 +146,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "•3000"
-    refute_includes response.body, "DE89370400440532013000"
+    refute_includes response.body, "DE89370400440532013000" # pipelock:ignore IBAN
   end
 
   test "invalid non-Turbo create redirects instead of rendering a missing template" do
