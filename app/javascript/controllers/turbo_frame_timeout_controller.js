@@ -4,17 +4,38 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
-  connect() {
-    this.timeoutId = setTimeout(() => {
-      this.handleTimeout()
-    }, this.timeoutValue)
+  initialize() {
+    this.startTimeout = this.startTimeout.bind(this)
+    this.clearTimeout = this.clearTimeout.bind(this)
+  }
 
-    // Listen for successful frame loads to clear timeout
-    this.element.addEventListener("turbo:frame-load", this.clearTimeout.bind(this))
+  connect() {
+    // The countdown belongs to a request, not to the element. A lazy frame is
+    // only fetched once it scrolls into view, which can be long after this
+    // controller connects, or never, so starting the clock here reports a
+    // timeout for a frame that was never asked to load anything.
+    this.element.addEventListener("turbo:before-fetch-request", this.startTimeout)
+    this.element.addEventListener("turbo:frame-load", this.clearTimeout)
+
+    // Turbo keeps a frame busy for the length of its request. An eager frame
+    // can start fetching before Stimulus connects, and the attribute is what
+    // tells us the event has already been and gone.
+    if (this.element.hasAttribute("busy")) {
+      this.startTimeout()
+    }
   }
 
   disconnect() {
+    this.element.removeEventListener("turbo:before-fetch-request", this.startTimeout)
+    this.element.removeEventListener("turbo:frame-load", this.clearTimeout)
     this.clearTimeout()
+  }
+
+  startTimeout() {
+    this.clearTimeout()
+    this.timeoutId = setTimeout(() => {
+      this.handleTimeout()
+    }, this.timeoutValue)
   }
 
   clearTimeout() {
@@ -39,4 +60,4 @@ export default class extends Controller {
       </div>
     `
   }
-} 
+}
