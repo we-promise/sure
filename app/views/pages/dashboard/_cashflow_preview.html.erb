@@ -1,5 +1,5 @@
 <%# locals: (period:) %>
-<% feedback = sankey_feedback_config %>
+<% feedback = feedback_config(:sankey) %>
 <% if feedback[:api_key].present? %>
   <%= render "shared/posthog_bootstrap" %>
 <% end %>

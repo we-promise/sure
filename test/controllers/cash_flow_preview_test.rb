@@ -35,7 +35,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     config = Rails.configuration.x.posthog
     config.stubs(:api_key).returns(nil)
-    config.stubs(:sankey_survey_id).returns(nil)
+    stub_managed_survey(nil)
     config.stubs(:feedback_enabled).returns(true)
     with_self_hosting do
       get root_path
@@ -44,7 +44,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
       get root_path
       assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value^='phc_'][data-sankey-preview-survey-id-value='01a0a162-73a2-0000-9402-ffab5bc45b4a']"
       config.stubs(:api_key).returns("operator-owned-project")
-      config.stubs(:sankey_survey_id).returns("operator-owned-survey")
+      stub_managed_survey("operator-owned-survey")
       get root_path
       assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value^='phc_'][data-sankey-preview-survey-id-value='01a0a162-73a2-0000-9402-ffab5bc45b4a']"
       config.stubs(:feedback_enabled).returns(false)
@@ -57,11 +57,17 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     Rails.env.stubs(:production?).returns(true)
-    config = Rails.configuration.x.posthog
     [ "app-survey", "demo-survey" ].each do |survey_id|
-      config.stubs(:sankey_survey_id).returns(survey_id)
+      stub_managed_survey(survey_id)
       get root_path
       assert_select "#cashflow-preview[data-sankey-preview-self-hosted-value='false'][data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='#{survey_id}']"
     end
   end
+
+  private
+    def stub_managed_survey(survey_id)
+      config = Rails.configuration.x.posthog
+      surveys = config.feedback_surveys
+      config.stubs(:feedback_surveys).returns(surveys.merge(sankey: surveys.fetch(:sankey).merge(managed: survey_id)))
+    end
 end

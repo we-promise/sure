@@ -14,6 +14,10 @@ calculation; the browser does not call the public API.
 
 ## PostHog survey setup
 
+The view calls `feedback_config(:sankey)`. Project routing is shared through
+`FeedbackHelper`; survey IDs are registered per feature. See the
+[feature feedback guide](../llm-guides/feedback-surveys.md) when adding another survey.
+
 The app and demo use the project selected by that environment's existing
 `POSTHOG_KEY` and `POSTHOG_HOST`. Set `POSTHOG_SANKEY_SURVEY_ID` to the matching
 survey below; no browser hostname heuristics choose the project.
