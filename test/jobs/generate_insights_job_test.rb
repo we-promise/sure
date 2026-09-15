@@ -75,6 +75,41 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     end
   end
 
+  test "end-to-end: a real balance gap on a linked account produces an active balance_discrepancy insight, which expires once the gap is fixed" do
+    account = accounts(:connected)
+    waypoint = ->(date, balance, kind = "reconciliation") do
+      account.entries.create!(
+        name: "Valuation", date: date, amount: balance, currency: account.currency,
+        entryable: Valuation.new(kind: kind)
+      )
+    end
+
+    waypoint.call(10.days.ago.to_date, 1000, "opening_anchor")
+    waypoint.call(5.days.ago.to_date, 1050)
+    waypoint.call(4.days.ago.to_date, 1050)
+    waypoint.call(3.days.ago.to_date, 1050)
+    waypoint.call(2.days.ago.to_date, 1050)
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "balance_discrepancy:#{account.id}:#{5.days.ago.to_date}")
+    assert insight, "expected a balance_discrepancy insight to be generated"
+    assert insight.active?
+    assert_equal "balance_discrepancy", insight.insight_type
+
+    # User finds and enters the missing transaction; the books catch up to
+    # what the bank has been reporting all along.
+    account.entries.create!(
+      name: "Missing deposit", date: 1.day.ago.to_date, amount: -50, currency: account.currency,
+      entryable: Transaction.new
+    )
+    waypoint.call(Date.current, 1050)
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.expired?
+  end
+
   test "creates an active insight with a body from a generated insight" do
     stub_generated([ generated_insight ])
 
