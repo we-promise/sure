@@ -1,5 +1,6 @@
 module AccountableResource
   extend ActiveSupport::Concern
+  include WriteOnlyIbanParams
 
   included do
     include Periodable, StreamExtensions
@@ -107,6 +108,7 @@ module AccountableResource
       # here so all account types (depositories, credit cards, loans, etc.) can
       # have their currency changed via this shared update path.
       update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+      update_params = resolve_write_only_iban(update_params, clear_flag: update_params[:remove_iban]).except(:remove_iban)
       begin
         unless @account.update(update_params)
           @error_message = @account.errors.full_messages.join(", ")
@@ -165,7 +167,7 @@ module AccountableResource
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
-        :institution_name, :institution_domain, :iban, :notes, :exclude_from_reports,
+        :institution_name, :institution_domain, :iban, :remove_iban, :notes, :exclude_from_reports,
         :enable_category_matcher,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
