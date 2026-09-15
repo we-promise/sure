@@ -1,4 +1,6 @@
 class FamilyMerchantsController < ApplicationController
+  include WriteOnlyIbanParams
+
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -41,7 +43,7 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def create
-    @family_merchant = FamilyMerchant.new(merchant_params.merge(family: Current.family))
+    @family_merchant = FamilyMerchant.new(effective_merchant_params.merge(family: Current.family))
 
     if @family_merchant.save
       respond_to do |format|
@@ -67,32 +69,32 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      name_changed = merchant_params[:name].present? && merchant_params[:name] != @merchant.name
+      name_changed = effective_merchant_params[:name].present? && effective_merchant_params[:name] != @merchant.name
       # An IBAN edit must not mutate the shared ProviderMerchant row: unlike
       # website_url (cosmetic, logo lookup only), iban drives cross-family
       # merchant-identity matching (Account::ProviderImportAdapter looks
       # merchants up globally by source+iban), so one family setting it would
       # silently redirect another family's future transactions to this
       # merchant. Route it through the same conversion path as a name change.
-      iban_changed = merchant_params.key?(:iban) && normalize_iban(merchant_params[:iban]) != @merchant.iban
+      iban_changed = effective_merchant_params.key?(:iban) && normalize_iban(effective_merchant_params[:iban]) != @merchant.iban
 
       if name_changed || iban_changed
         # Convert ProviderMerchant to FamilyMerchant for this family only
-        @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
+        @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, effective_merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       else
         # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(merchant_params.slice(:website_url))
+        @merchant.update!(effective_merchant_params.slice(:website_url))
         @merchant.generate_logo_url_from_website!
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       end
-    elsif @merchant.update(merchant_params)
+    elsif @merchant.update(effective_merchant_params)
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
@@ -192,7 +194,15 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url, :iban)
+      params.require(key).permit(:name, :color, :website_url, :iban, :remove_iban)
+    end
+
+    # iban is write-only (see family_merchants/_form.html.erb) -- a blank
+    # submit means "unchanged", not "clear it". Every place that writes
+    # merchant_params to a model should go through this instead, or a form
+    # submit that doesn't retype the IBAN would silently wipe it.
+    def effective_merchant_params
+      @effective_merchant_params ||= resolve_write_only_iban(merchant_params, clear_flag: merchant_params[:remove_iban]).except(:remove_iban)
     end
 
     # So a submitted value can be compared against the persisted
@@ -223,7 +233,7 @@ class FamilyMerchantsController < ApplicationController
     # permits it and convert_to_family_merchant_for receives it, so omitting
     # it here would silently revert a color change on the failed attempt.
     def restore_merchant_after_failed_conversion!
-      @merchant.assign_attributes(merchant_params.slice(:name, :color, :website_url, :iban))
+      @merchant.assign_attributes(effective_merchant_params.slice(:name, :color, :website_url, :iban))
     end
 
     def render_create_error
