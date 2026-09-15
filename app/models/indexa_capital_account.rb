@@ -1,8 +1,15 @@
 # frozen_string_literal: true
 
 class IndexaCapitalAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
   include IndexaCapitalAccount::DataHelpers
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_holdings_payload
+    encrypts :raw_activities_payload
+  end
 
   belongs_to :indexa_capital_item
 
