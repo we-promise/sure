@@ -49,7 +49,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[data-money-field-target=?][data-action=?]", "amount",
-                  "input->goal-form#suggestedChanged paste->money-field#pasteAmount"
+                  "input->goal-form#suggestedChanged paste->money-field#pasteAmount blur->money-field#normalizeAmount"
   end
 
   test "create persists a goal with linked accounts" do
