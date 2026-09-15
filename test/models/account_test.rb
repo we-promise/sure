@@ -30,6 +30,13 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "DE89370400440532013000", @account.iban # pipelock:ignore IBAN
   end
 
+  test "normalizes iban by stripping dots, dashes, and other punctuation" do
+    @account.iban = "de89.3704-0044/0532:0130'00"
+    @account.valid?
+
+    assert_equal "DE89370400440532013000", @account.iban # pipelock:ignore IBAN
+  end
+
   test "leaves a blank iban as nil" do
     @account.iban = ""
     @account.valid?
