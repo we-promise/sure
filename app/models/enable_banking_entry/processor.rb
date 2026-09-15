@@ -23,6 +23,21 @@ class EnableBankingEntry::Processor
   # inside "NAME IT" -- a real chain name observed in this issue's own data).
   MIN_KNOWN_MERCHANT_MATCH_LENGTH = 3
 
+  # Prefix of the identifier synthesised for a transaction the ASPSP returned
+  # with neither transaction_id nor entry_reference.
+  CONTENT_ID_PREFIX = "enable_banking_content_"
+
+  # extra key listing external_ids a transaction was previously stored under.
+  #
+  # Deliberately not auto_claimed_pending_ids. That key also makes
+  # Account::ProviderImportAdapter#import_transaction keep the stored date and
+  # ignore the incoming one, which is right for a pending row claimed by its
+  # booked twin and wrong here: these are BOOK rows whose date the ASPSP may
+  # still correct, and the key is never removed, so the date would freeze
+  # permanently. EnableBankingAccount::Transactions::Processor reads both keys
+  # into excluded_ids, which is the behaviour actually wanted.
+  SUPERSEDED_IDS_KEY = "superseded_external_ids"
+
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
   # {
@@ -51,7 +66,40 @@ class EnableBankingEntry::Processor
     content = [ date, amount, currency, direction, creditor, debtor, remittance_key ].map(&:to_s).join("\x1F")
     return nil if content.gsub("\x1F", "").blank?
 
-    "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
+    "#{CONTENT_ID_PREFIX}#{Digest::MD5.hexdigest(content)}"
+  end
+
+  # True when the ASPSP supplied no identifier of its own, so compute_external_id
+  # falls back to hashing the content.
+  #
+  # Read from the raw fields rather than from the synthesised id's prefix: an
+  # ASPSP identifier may itself begin with "content_", which would make a real
+  # identifier look synthesised and skip the claim below.
+  #
+  # @return [Boolean]
+  def self.identifierless?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    data[:transaction_id].blank? && data[:entry_reference].blank?
+  end
+
+  # External ids of the rows stored under a synthesised content hash, which are
+  # the only rows a later identifier can claim.
+  #
+  # Far smaller than the account's history: these are only the transactions the
+  # ASPSP has not yet given an identifier to, which it typically does within a
+  # day.
+  #
+  # @return [Set<String>]
+  def self.identifierless_external_ids_for(account)
+    return Set.new if account.blank?
+
+    prefix = ActiveRecord::Base.sanitize_sql_like(CONTENT_ID_PREFIX)
+    account.entries
+           .where(source: "enable_banking")
+           .where("external_id LIKE ?", "#{prefix}%")
+           .pluck(:external_id)
+           .compact
+           .to_set
   end
 
   # known_merchant_names: optional pre-fetched Family#known_merchant_names, so a
@@ -59,11 +107,19 @@ class EnableBankingEntry::Processor
   # EnableBankingAccount::Transactions::Processor) can compute it once instead of
   # once per row -- same pattern as the shared import_adapter. Falls back to
   # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil)
+  #
+  # identifierless_external_ids / excluded_external_ids: the batch's live sets,
+  # same pattern again. Both are mutated as claims happen, so a row later in the
+  # same batch sees what earlier rows did -- excluded_ids in the batch processor
+  # is built once, before the loop, and would otherwise be stale.
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
+                 identifierless_external_ids: nil, excluded_external_ids: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
+    @identifierless_external_ids = identifierless_external_ids
+    @excluded_external_ids = excluded_external_ids
   end
 
   def process
@@ -75,6 +131,8 @@ class EnableBankingEntry::Processor
       Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{safe_id}"
       return nil
     end
+
+    claim_identifierless_predecessor!
 
     begin
       import_adapter.import_transaction(
@@ -311,6 +369,92 @@ class EnableBankingEntry::Processor
 
     def known_merchant_names
       @known_merchant_names ||= account&.family&.known_merchant_names || []
+    end
+
+    def identifierless_external_ids
+      @identifierless_external_ids ||= self.class.identifierless_external_ids_for(account)
+    end
+
+    def excluded_external_ids
+      @excluded_external_ids ||= Set.new
+    end
+
+    # Re-key the row this movement was already imported under, when the ASPSP has
+    # since given it an identifier.
+    #
+    # Some ASPSPs return a transaction with neither transaction_id nor
+    # entry_reference on the day it happens and assign one once the statement
+    # closes. compute_external_id prefers the identifier and falls back to a
+    # content hash, so the same movement arrives under a second identity, does not
+    # match existing_ids, and imports again.
+    #
+    # Re-keying rather than skipping means import_transaction upserts onto the row
+    # that is already there, so its category, merchant and any transfer link
+    # survive.
+    #
+    # @return [void]
+    def claim_identifierless_predecessor!
+      return if account.blank?
+      return if self.class.identifierless?(data)
+
+      incoming = self.class.compute_external_id(data)
+      return if incoming.blank?
+
+      content_id = self.class.compute_external_id(data.except(:transaction_id, :entry_reference))
+      return if content_id.blank? || !identifierless_external_ids.include?(content_id)
+
+      # Already stored under its own identifier: nothing to claim, and re-keying
+      # would collide with it. This is also what keeps two genuinely identical
+      # charges apart -- the second finds the predecessor already taken and
+      # imports as its own row, the property build_transaction_content_key exists
+      # to protect. Only reached once a predecessor has been found, so it costs a
+      # query per claim rather than one per transaction.
+      return if account.entries.exists?(source: "enable_banking", external_id: incoming)
+
+      predecessor = account.entries.find_by(source: "enable_banking", external_id: content_id)
+      return if predecessor.nil?
+
+      # Both writes or neither. A re-key whose superseded record was lost would
+      # leave the next sync free to reimport the identifierless payload row as a
+      # fresh duplicate, which is the bug this method exists to prevent.
+      #
+      # The row is locked and re-read inside the transaction because the
+      # predecessor was found outside it: EnableBankingItem::Syncer#perform_sync
+      # processes transactions before scheduling account syncs, so two overlapping
+      # item syncs can reach the same row. Re-checking external_id under the lock
+      # means the second one steps aside instead of overwriting the identifier the
+      # first just assigned.
+      claimed = false
+      ActiveRecord::Base.transaction do
+        predecessor.lock!
+        next unless predecessor.external_id == content_id
+
+        predecessor.update_column(:external_id, incoming)
+        record_superseded_identifier!(predecessor, content_id)
+        claimed = true
+      end
+      return unless claimed
+
+      identifierless_external_ids.delete(content_id)
+      excluded_external_ids.add(content_id)
+    end
+
+    # Record the identifier a row no longer answers to.
+    #
+    # The stored raw payload is never pruned and every sync re-walks all of it, so
+    # without this the identifierless row would find nothing under its content
+    # hash and insert a duplicate on the next run.
+    #
+    # @return [void]
+    def record_superseded_identifier!(entry, abandoned_id)
+      transaction = entry.entryable
+      return unless transaction.is_a?(Transaction)
+
+      extra = transaction.extra.presence || {}
+      recorded = Array(extra[SUPERSEDED_IDS_KEY])
+      return if recorded.include?(abandoned_id)
+
+      transaction.update_column(:extra, extra.merge(SUPERSEDED_IDS_KEY => recorded + [ abandoned_id ]))
     end
 
     def merchant_name_candidate
