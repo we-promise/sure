@@ -1,22 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Connects to data-controller="turbo-frame-timeout"
+//
+// The countdown times a request, not the element. A frame with loading="lazy"
+// is only fetched once it scrolls into view, which can be long after this
+// controller connects, or never, so the frame declares when to start:
+//
+//   data-action="turbo:before-fetch-request->turbo-frame-timeout#startTimeout
+//                turbo:frame-load->turbo-frame-timeout#clearTimeout"
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
-  initialize() {
-    this.startTimeout = this.startTimeout.bind(this)
-    this.clearTimeout = this.clearTimeout.bind(this)
-  }
-
   connect() {
-    // The countdown belongs to a request, not to the element. A lazy frame is
-    // only fetched once it scrolls into view, which can be long after this
-    // controller connects, or never, so starting the clock here reports a
-    // timeout for a frame that was never asked to load anything.
-    this.element.addEventListener("turbo:before-fetch-request", this.startTimeout)
-    this.element.addEventListener("turbo:frame-load", this.clearTimeout)
-
     // Turbo keeps a frame busy for the length of its request. An eager frame
     // can start fetching before Stimulus connects, and the attribute is what
     // tells us the event has already been and gone.
@@ -26,13 +21,12 @@ export default class extends Controller {
   }
 
   disconnect() {
-    this.element.removeEventListener("turbo:before-fetch-request", this.startTimeout)
-    this.element.removeEventListener("turbo:frame-load", this.clearTimeout)
     this.clearTimeout()
   }
 
   startTimeout() {
     this.clearTimeout()
+
     this.timeoutId = setTimeout(() => {
       this.handleTimeout()
     }, this.timeoutValue)
