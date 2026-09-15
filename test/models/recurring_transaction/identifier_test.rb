@@ -34,11 +34,29 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
       )
     end
 
+    # Crypto is excluded by the same constant. Without its own entries the test
+    # would still pass if "Crypto" were dropped from NON_BILLABLE_ACCOUNTABLE_TYPES.
+    crypto = accounts(:crypto)
+    assert_equal "Crypto", crypto.accountable_type
+
+    3.times do |i|
+      crypto.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: 12.50, currency: "USD",
+        name: "EXCHANGE TRADING FEE", entryable: Transaction.new
+      )
+      crypto.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: -60.00, currency: "USD",
+        name: "STAKING REWARD", entryable: Transaction.new
+      )
+    end
+
     bill_names = @identifier.candidate_patterns(sign: :outflow, min_occurrences: 2).map { |p| p[:name] }
     assert_not_includes bill_names, "REINVESTMENT FIDELITY US BOND INDEX"
+    assert_not_includes bill_names, "EXCHANGE TRADING FEE"
 
     income_names = @identifier.income_source_candidates(min_occurrences: 2).map { |c| c[:name] }
     assert_not_includes income_names, "LEGAL & GENERAL S&P DC CIT"
+    assert_not_includes income_names, "STAKING REWARD"
 
     # And the automatic pipeline does not create series for them either.
     assert_no_difference "@family.recurring_transactions.count" do

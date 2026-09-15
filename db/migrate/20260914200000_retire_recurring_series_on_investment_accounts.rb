@@ -6,14 +6,20 @@
 #
 # `ended` is the tombstone status the detector reads and will not recreate.
 class RetireRecurringSeriesOnInvestmentAccounts < ActiveRecord::Migration[7.2]
-  # Deliberately two COMMITTED steps rather than one transaction.
+  # Deliberately two COMMITTED steps rather than one transaction: status first,
+  # so the window in which a concurrent request can generate for these series
+  # is as small as possible.
   #
-  # OccurrenceGenerator#generate! returns early unless the series is active, and
-  # BillsController only lists occurrences for active/inactive series. Once the
-  # status change is committed, no request can add another scheduled occurrence
-  # for these series, so the cleanup that follows is final and needs no
-  # cross-process lock. Doing it the other way round would leave a window in
-  # which a concurrent Bills request re-materialises a row behind the delete.
+  # It is NOT zero. OccurrenceGenerator#generate! tests the in-memory series
+  # object, so a request that loaded the row before the UPDATE committed can
+  # still insert scheduled occurrences after the DELETE below. The cleanup is
+  # therefore best-effort, and that is fine: BillsController#payable_series_ids
+  # scopes to active/inactive, so occurrences on an ended series are never
+  # listed, and the next generate! call loads current state and returns 0. Any
+  # row that slips through is invisible and self-limiting.
+  #
+  # Closing it completely would mean serialising the request path -- a
+  # behaviour change well outside what this migration should carry.
   disable_ddl_transaction!
 
   NON_BILLABLE = %w[Investment Crypto].freeze
@@ -40,9 +46,10 @@ class RetireRecurringSeriesOnInvestmentAccounts < ActiveRecord::Migration[7.2]
         AND status <> 'ended'
     SQL
 
-    # 2. Then drop the re-generatable future. Scoped to every target series, not
-    #    just the ones retired above, so a partially-applied run cleans up fully
-    #    on retry. Paid, skipped and missed rows are history and stay.
+    # 2. Then drop the re-generatable future (best-effort, see above). Scoped to
+    #    every target series, not just the ones retired above, so a
+    #    partially-applied run -- or a row inserted by a racing request -- is
+    #    cleaned up on a re-run. Paid, skipped and missed rows are history.
     execute <<~SQL
       DELETE FROM recurring_occurrences
       WHERE recurring_transaction_id IN (#{quoted_ids})
@@ -52,9 +59,12 @@ class RetireRecurringSeriesOnInvestmentAccounts < ActiveRecord::Migration[7.2]
     say "Retired #{retired} recurring series detected from investment/crypto accounts"
   end
 
-  # Irreversible by design: restoring these would recreate exactly the phantom
-  # bills and income this removes, and the detector will not regenerate them.
+  # Genuinely irreversible: the prior status of each series and the deleted
+  # occurrences are not recorded anywhere, so a rollback cannot restore them.
+  # Returning successfully would drop the version from schema_migrations and
+  # report a rollback that did not happen.
   def down
-    say "No-op: retired investment-account series are not restored"
+    raise ActiveRecord::IrreversibleMigration,
+          "Retired investment-account series cannot be restored"
   end
 end
