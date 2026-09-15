@@ -11,6 +11,7 @@ json.cash_balance cash_balance_money.format
 json.cash_balance_cents((cash_balance_money.amount * cash_balance_money.currency.minor_unit_conversion).round(0).to_i)
 json.currency account.currency
 json.classification account.classification
+json.usage_type account.usage_type
 json.account_type account.accountable_type&.underscore
 json.subtype account.subtype
 json.status account.status
