@@ -11,6 +11,32 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     )
   end
 
+  test "validates sync start date against the provider history limit" do
+    @item.sync_start_date = Date.current + 1.day
+    assert_not @item.valid?
+
+    @item.sync_start_date = EnableBankingItem.minimum_sync_start_date - 1.day
+    assert_not @item.valid?
+
+    @item.sync_start_date = EnableBankingItem.minimum_sync_start_date
+    assert @item.valid?
+
+    @item.sync_start_date = Date.current
+    assert @item.valid?
+  end
+
+  test "does not invalidate an older persisted sync start date on snapshot updates" do
+    @item.save!
+    @item.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+    @item.reload
+
+    assert_nothing_raised do
+      @item.upsert_enable_banking_snapshot!({ accounts: [] })
+    end
+
+    assert_equal({ "accounts" => [] }, @item.reload.raw_payload)
+  end
+
   test "select_auth_method prefers REDIRECT over DECOUPLED and EMBEDDED" do
     aspsp = {
       auth_methods: [

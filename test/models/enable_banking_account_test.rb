@@ -85,6 +85,52 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil @account.suggested_subtype
   end
 
+  test "validates sync start date against Enable Banking history limits" do
+    @account.sync_start_date = Date.current + 1.day
+    assert_not @account.valid?
+
+    @account.sync_start_date = EnableBankingItem.minimum_sync_start_date - 1.day
+    assert_not @account.valid?
+
+    @account.sync_start_date = EnableBankingItem.minimum_sync_start_date
+    assert @account.valid?
+
+    @account.sync_start_date = Date.current
+    assert @account.valid?
+  end
+
+  test "does not invalidate an older persisted sync start date on saves and imports" do
+    aged_date = 2.years.ago.to_date - 1.day
+    @account.update_column(:sync_start_date, aged_date)
+    @account.reload
+
+    assert_nothing_raised do
+      @account.update!(current_balance: 123.45)
+      @account.upsert_enable_banking_snapshot!({
+        uid: @account.uid,
+        identification_hash: @account.uid,
+        currency: "EUR",
+        cash_account_type: "CACC"
+      })
+      @account.upsert_enable_banking_transactions_snapshot!([
+        { "booking_date" => Date.current.to_s, "transaction_amount" => { "amount" => "1.00", "currency" => "EUR" } }
+      ])
+    end
+
+    reloaded_account = @account.reload
+    assert_equal aged_date, reloaded_account.sync_start_date
+    assert_equal(
+      {
+        "uid" => @account.uid,
+        "identification_hash" => @account.uid,
+        "currency" => "EUR",
+        "cash_account_type" => "CACC"
+      },
+      reloaded_account.raw_payload
+    )
+    assert_equal 1, reloaded_account.raw_transactions_payload.size
+  end
+
   test "is case insensitive for account type mapping" do
     @account.update!(account_type: "svgs")
     assert_equal "Depository", @account.suggested_account_type
