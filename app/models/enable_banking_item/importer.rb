@@ -563,21 +563,77 @@ class EnableBankingItem::Importer
     # legitimately distinct transactions with identical content but different
     # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
     def deduplicate_api_transactions(transactions)
-      seen = {}
-      duplicates_removed = 0
+      normalized = transactions.map(&:with_indifferent_access)
 
-      result = transactions.select do |tx|
-        tx = tx.with_indifferent_access
-        key = build_transaction_content_key(tx)
+      # Two-pass: IBAN only splits a base-content group into distinct
+      # transactions when at least two DIFFERENT non-blank IBANs actually
+      # appear in that group. A group where the IBAN is simply absent on
+      # some rows (e.g. a pending row settling into a booked row that
+      # gained account data later) must still collapse to one -- otherwise
+      # the same real transaction's pending/booked duplicate representations
+      # would both survive just because one side happened to lack IBAN data.
+      #
+      # Sorted so a blank-IBAN row in an already-split group (below) aliases
+      # to a stable bucket regardless of array order.
+      distinct_ibans_by_base_key = normalized.group_by { |tx| build_transaction_base_key(tx) }
+        .transform_values { |group| group.filter_map { |tx| counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) }.uniq.sort }
 
-        if seen[key]
-          duplicates_removed += 1
-          false
+      keyed_with_index = normalized.each_with_index.group_by do |tx, _index|
+        base_key = build_transaction_base_key(tx)
+        if distinct_ibans_by_base_key[base_key].size >= 2
+          # A blank-IBAN row (e.g. a pending duplicate that hasn't gained
+          # account data yet) can't be attributed to any one of the split
+          # transactions, but it must still collapse into ONE of them
+          # rather than forming a third, phantom transaction -- so it
+          # aliases to the first (sorted) IBAN bucket in the group. It's
+          # ranked below any real member of that bucket just below, so it
+          # only "wins" the bucket when no fuller row claims it.
+          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) || distinct_ibans_by_base_key[base_key].first
+          "#{base_key}\x1F#{iban}"
         else
-          seen[key] = true
-          true
+          base_key
         end
       end
+
+      duplicates_removed = 0
+
+      # Within each duplicate group, keep the richest representative --
+      # BOOK over PDNG, same as before IBAN existed -- rather than whichever
+      # row the API happened to return first. Status ranks above IBAN
+      # presence here (unlike an earlier version of this method): picking a
+      # still-pending row over a settled one just because it had richer
+      # account data would leave the transaction permanently stuck pending
+      # (PENDING_PROVIDERS-gated balances/analytics exclude it) on every
+      # future sync, which is worse than the IBAN gap it would have closed.
+      # Instead, when the BOOK-preferred representative itself lacks IBAN
+      # data that a PDNG sibling in the same group carries (some ASPSPs drop
+      # counterparty data once a transaction settles), that IBAN is merged
+      # into the representative's own account fields below -- so both the
+      # settled status and the IBAN data survive, instead of trading one for
+      # the other.
+      result = keyed_with_index.values.map do |group|
+        duplicates_removed += group.size - 1 if group.size > 1
+
+        representative, index = group.min_by do |tx, index|
+          [
+            tx[:status].to_s == "BOOK" ? 0 : 1,
+            index
+          ]
+        end
+
+        unless counterparty_iban_for_content_key(representative, representative[:credit_debit_indicator]).present?
+          donor = group.map(&:first).find do |tx|
+            counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]).present?
+          end
+
+          if donor
+            account_key = representative[:credit_debit_indicator] == "CRDT" ? :debtor_account : :creditor_account
+            representative = representative.merge(account_key => donor[account_key])
+          end
+        end
+
+        [ representative, index ]
+      end.sort_by { |_tx, index| index }.map(&:first)
 
       if duplicates_removed > 0
         Rails.logger.info(
@@ -589,23 +645,27 @@ class EnableBankingItem::Importer
       result
     end
 
-    # Build a composite key for deduplication. Two transactions with different
-    # entry_reference values but identical content fields (including
-    # transaction_id and credit_debit_indicator) are considered duplicates.
-    # transaction_id is included as one component — not a standalone key —
-    # because the Enable Banking API docs state it is not guaranteed to be
-    # unique. credit_debit_indicator (CRDT/DBIT) is included because
-    # transaction_amount.amount is always positive — without it, a payment
-    # and a same-day refund of the same amount would produce identical keys.
-    # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
-    # may appear as PDNG then BOOK across imports and must not create duplicates.
+    # Base composite key for deduplication, deliberately WITHOUT counterparty
+    # IBAN -- see #deduplicate_api_transactions for why IBAN is applied as a
+    # conditional second pass instead of being folded in here directly.
+    #
+    # Two transactions with different entry_reference values but identical
+    # content fields (including transaction_id and credit_debit_indicator)
+    # are considered duplicates. transaction_id is included as one
+    # component — not a standalone key — because the Enable Banking API docs
+    # state it is not guaranteed to be unique. credit_debit_indicator
+    # (CRDT/DBIT) is included because transaction_amount.amount is always
+    # positive — without it, a payment and a same-day refund of the same
+    # amount would produce identical keys. status (BOOK/PDNG) is
+    # intentionally excluded: the same logical transaction may appear as
+    # PDNG then BOOK across imports and must not create duplicates.
     # Known limitation: when transaction_id is nil for both, pure content
     # comparison applies. This means two genuinely distinct transactions
     # with identical content (same date, amount, direction, creditor, etc.)
     # and no transaction_id would collapse to one. In practice, banks that
     # omit transaction_id rarely produce such exact duplicates in the same
     # API response; timestamps or remittance info usually differ. (Issue #954)
-    def build_transaction_content_key(tx)
+    def build_transaction_base_key(tx)
       date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
       currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
@@ -617,6 +677,15 @@ class EnableBankingItem::Importer
       direction = tx[:credit_debit_indicator]
 
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+    end
+
+    def counterparty_iban_for_content_key(tx, direction)
+      account_key = direction == "CRDT" ? :debtor_account : :creditor_account
+      # Normalized the same way EnableBankingEntry::Processor stores it:
+      # without this, two representations of the same duplicate transaction
+      # with differently-formatted IBANs (spaces/punctuation vs none) would
+      # produce different content keys and defeat the dedup this key exists for.
+      IbanNormalizable.normalize(tx.dig(account_key, :iban))
     end
 
     class PaginationTruncatedError < StandardError; end
