@@ -16,7 +16,7 @@ module Transaction::Transferable
 
   def transfer_match_candidates(
     date_window: 30,
-    exchange_rate_tolerance: Family::AutoTransferMatchable::MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE
+    exchange_rate_tolerance: Family::AutoTransferMatchable.manual_match_exchange_rate_tolerance
   )
     candidates_scope = if self.entry.amount.negative?
       family_matches_scope(date_window: date_window, exchange_rate_tolerance: exchange_rate_tolerance, inflow_transaction_id: self.id)
