@@ -1574,6 +1574,50 @@ end
     Rails.cache = original_cache
   end
 
+  test "index with ai_status=current renders the AI filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=history renders the AI history filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "history" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI history", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=current excludes history-only transactions" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "clear_filter removes an ai_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "ai_status",
+      param_value: "current",
+      q: { ai_status: [ "current" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/ai_status/, response.location)
+  end
+
   private
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
