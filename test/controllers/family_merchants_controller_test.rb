@@ -50,7 +50,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     get edit_family_merchant_url(@merchant)
 
     assert_response :success
-    refute_includes response.body, "AT611904300234573201"
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
     assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
   end
 
