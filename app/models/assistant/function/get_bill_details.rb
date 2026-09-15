@@ -28,6 +28,10 @@ class Assistant::Function::GetBillDetails < Assistant::Function
         bill_id must be the exact id returned by get_bills.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def params_schema

@@ -5,6 +5,12 @@ class OauthRegistrationController < ApplicationController
   FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto tel sms intent].freeze
   SCHEME_PATTERN = /\A[a-z][a-z0-9+\-.]*\z/.freeze
 
+  # The only two scopes Doorkeeper is configured with (config/initializers/doorkeeper.rb).
+  VALID_SCOPES = %w[read read_write].freeze
+  # Least privilege by default: a client that does not ask for read_write does
+  # not get it. A client that wants MCP writes must say so explicitly.
+  DEFAULT_SCOPE = "read"
+
   skip_authentication
   skip_before_action :verify_authenticity_token
   skip_before_action :require_onboarding_and_upgrade, raise: false
@@ -50,14 +56,14 @@ class OauthRegistrationController < ApplicationController
 
     client_name = body["client_name"].presence || "MCP Client"
 
+    scope = resolve_requested_scope(body["scope"])
+    return if performed?
+
     app = Doorkeeper::Application.new(
       name: client_name,
       redirect_uri: redirect_uris.join("\n"),
       confidential: false,
-      # MCP requires the read_write scope. Without assigning it to the
-      # dynamically registered client, Doorkeeper falls back to the provider's
-      # default read scope and the token is rejected by McpController.
-      scopes: "read_write"
+      scopes: scope
     )
 
     if app.save
@@ -82,6 +88,29 @@ class OauthRegistrationController < ApplicationController
   end
 
   private
+
+    # RFC 7591 §2's "scope" is a space-delimited string ("read read_write"),
+    # but tolerate an array too rather than reject it outright. Blank/absent
+    # falls back to DEFAULT_SCOPE. Any token outside VALID_SCOPES is rejected
+    # rather than dropped, so a typo cannot silently register a narrower (or
+    # wider) client than the caller asked for. Renders and returns nil on
+    # rejection; the caller checks `performed?`.
+    def resolve_requested_scope(raw)
+      return DEFAULT_SCOPE if raw.blank?
+
+      requested = Array(raw).join(" ").split.uniq
+      unknown = requested - VALID_SCOPES
+
+      if unknown.any?
+        render json: {
+          error: "invalid_client_metadata",
+          error_description: t("oauth.registration.invalid_scope", scopes: unknown.join(", "))
+        }, status: :bad_request
+        return nil
+      end
+
+      requested.include?("read_write") ? "read_write" : "read"
+    end
 
     # Returns true for https, loopback http, and RFC 8252 private-use schemes
     # (cursor://, vscode://). Rejects fragments, userinfo, handler schemes, and

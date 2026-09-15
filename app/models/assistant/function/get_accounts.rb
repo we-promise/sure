@@ -14,6 +14,10 @@ class Assistant::Function::GetAccounts < Assistant::Function
         history; the series is omitted by default to keep responses small.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?
