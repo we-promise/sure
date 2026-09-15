@@ -1575,4 +1575,69 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         "pending flag must be cleared even for user-modified entries"
     end
   end
+
+  # Provider metadata is not user-editable, so a user edit elsewhere on the entry
+  # must not freeze it: the drawer has to reflect what the provider last sent,
+  # including dropping fields it no longer sends.
+  test "refreshes provider metadata on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online", "payment_meta" => { "payee" => "Amazon" } } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.transaction.lock_attr!(:category_id)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    plaid_extra = entry.reload.transaction.extra.fetch("plaid")
+    assert_equal "in store", plaid_extra["payment_channel"]
+    assert_nil plaid_extra["payment_meta"], "a dropped field must not survive on a user-modified entry"
+  end
+
+  # determine_skip_reason reports "user_modified" before it checks import_locked?,
+  # so an entry with both flags reaches that branch. Import ownership wins.
+  test "leaves metadata alone on an entry that is also import-locked" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.update!(import_locked: true)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    assert_equal "online", entry.reload.transaction.extra.dig("plaid", "payment_channel")
+  end
 end
