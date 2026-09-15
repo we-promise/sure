@@ -163,7 +163,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     get edit_account_url(linked_account)
 
     assert_response :success
-    refute_includes response.body, "AT611904300234573201"
+    refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
     assert_select "input[type=checkbox][name='account[remove_iban]']", 1
   end
 
