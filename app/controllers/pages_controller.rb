@@ -466,10 +466,10 @@ class PagesController < ApplicationController
     end
 
     def category_transactions_url(category)
-      return nil if category.nil? || category.synthetic?
+      return nil if category.nil? || category.other_investments?
 
       filters = {
-        categories: [ category.name ],
+        categories: [ category.filter_value ],
         start_date: @period.date_range.first,
         end_date: @period.date_range.last
       }

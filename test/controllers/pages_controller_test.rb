@@ -188,6 +188,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     uncategorized_segment = segments.find { |segment| segment["name"] == Category.uncategorized_name }
 
     assert_equal "uncategorized", uncategorized_segment.fetch("id")
+    assert_includes uncategorized_segment.fetch("transactions_url"), "q%5Bcategories%5D%5B%5D=#{Category::UNCATEGORIZED_FILTER_VALUE}"
     assert_select "#segment_uncategorized", count: 1
   end
 

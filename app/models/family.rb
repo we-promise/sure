@@ -474,7 +474,7 @@ class Family < ApplicationRecord
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     # Handle race condition: another process created the category
     I18n.with_locale(locale) do
-      categories.find_by!(default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY) ||
+      categories.find_by(default_key: Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY) ||
         categories.find_by!(name: Category.investment_contributions_name)
     end
   end
@@ -629,7 +629,7 @@ class Family < ApplicationRecord
     @transfers_cache_version ||= begin
       scope = Transfer.joins(outflow_transaction: { entry: :account })
                       .where(accounts: { family_id: id })
-      "#{scope.maximum(:updated_at)&.to_i || 0}-#{scope.count}"
+      "#{scope.maximum(:updated_at)&.to_f || 0}-#{scope.count}"
     end
   end
 

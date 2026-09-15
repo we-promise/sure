@@ -86,6 +86,22 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
                  "a repayment on a Loan account must stay loan_payment, not the provider's funds_movement"
   end
 
+  test "credit card payments take precedence over an explicit provider kind" do
+    credit_card_adapter = Account::ProviderImportAdapter.new(accounts(:credit_card))
+
+    entry = credit_card_adapter.import_transaction(
+      external_id: "up_credit_card_payment_1",
+      amount: -200.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Credit Card Payment",
+      source: "up",
+      kind: "funds_movement"
+    )
+
+    assert_equal "cc_payment", entry.transaction.kind
+  end
+
   test "does not overwrite a matched brokerage inflow with a contribution kind" do
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)
