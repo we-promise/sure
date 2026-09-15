@@ -179,6 +179,70 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 1, result.count
   end
 
+  test "still deduplicates identical transactions whose counterparty iban differs only in punctuation" do
+    transactions = [
+      {
+        entry_reference: "ref_dup_punct_1",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_dup_punct_2",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "de89.3704-0044/0532:0130'00" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+  end
+
+  test "merges a pending row's iban into the booked representative that lost it" do
+    # Some ASPSPs drop counterparty account data once a transaction settles
+    # (the booked delivery has less detail than the earlier pending one).
+    # Status still ranks above IBAN presence when picking the group's
+    # representative (a still-pending row would otherwise get stuck pending
+    # forever), but the IBAN itself must not be silently discarded either --
+    # it's merged into the booked representative instead of being traded
+    # away for it.
+    transactions = [
+      {
+        entry_reference: "ref_pending_with_iban",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_booked_without_iban",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_booked_without_iban", result.first[:entry_reference],
+      "the settled row must be kept, not the still-pending one"
+    assert_equal "DE89370400440532013000", result.first.dig(:creditor_account, :iban), # pipelock:ignore IBAN
+      "the booked representative must still gain the pending sibling's iban"
+  end
+
   test "keeps transactions with different creditors" do
     transactions = [
       {

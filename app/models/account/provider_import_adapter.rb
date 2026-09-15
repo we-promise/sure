@@ -78,10 +78,30 @@ class Account::ProviderImportAdapter
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction)
+            updated_extra = entry.transaction.extra
+
+            if !incoming_pending
+              entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| updated_extra&.dig(p, "pending") }
+              updated_extra = clear_pending_flags_from_extra(updated_extra) if entry_is_pending
+            end
+
+            # counterparty_iban/counterparty_account_id are provider-derived
+            # facts with no corresponding UI field, so backfilling them here
+            # doesn't risk reverting a user edit the way overwriting name/
+            # category/notes would -- unlike those, protecting the user's
+            # work gives no reason to withhold this data. Without this, a
+            # transaction the user touched before this metadata existed
+            # would never receive it, even on later syncs.
+            if extra.is_a?(Hash)
+              counterparty_updates = extra.with_indifferent_access.slice("counterparty_iban", "counterparty_account_id")
+              if counterparty_updates.present?
+                updated_extra = (updated_extra || {}).deep_merge(counterparty_updates.deep_stringify_keys)
+              end
+            end
+
+            if updated_extra != entry.transaction.extra
+              entry.transaction.update!(extra: updated_extra)
             end
           end
           record_skip(entry, skip_reason)
@@ -332,18 +352,42 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param website_url [String, nil] Optional merchant website
   # @param logo_url [String, nil] Optional merchant logo URL
+  # @param iban [String, nil] Optional counterparty IBAN, used as a preferred lookup key when present
   # @return [ProviderMerchant, nil] The merchant object or nil if data is insufficient
-  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
+  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil, iban: nil)
     return nil unless provider_merchant_id.present? && name.present?
+
+    normalized_iban = IbanNormalizable.normalize(iban)
+
+    # A FamilyMerchant with a manually-entered IBAN (see FamilyMerchantsController)
+    # is the family's own canonical identity for that counterparty -- typically set
+    # up because the provider's name for them varies across transactions. Prefer it
+    # outright over creating/matching a ProviderMerchant, so future imports keep
+    # landing on the merchant the user configured instead of a fresh provider one.
+    merchant = account.family.merchants.find_by(iban: normalized_iban) if normalized_iban.present?
+    return merchant if merchant
+
+    # IBAN is the most reliable signal when available (stable across
+    # different remittance text for the same real-world payee), but it isn't
+    # provided by every ASPSP/transaction, so it's a preferred lookup, never
+    # a replacement for the name-based identifiers below.
+    merchant = ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?
 
     # First try to find by provider_merchant_id (stable identifier derived from normalized name)
     # This handles case variations in merchant names (e.g., "ACME Corp" vs "Acme Corp")
-    merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
+    merchant ||= ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source)
 
     # If not found by provider_merchant_id, try by exact name match (backwards compatibility)
     merchant ||= ProviderMerchant.find_by(source: source, name: name)
 
     if merchant
+      if normalized_iban.present? && merchant.iban.blank?
+        # A concurrent import can win the (source, iban) unique index between
+        # our find above and this backfill -- when that happens, the winner
+        # (not our stale, still-blank-iban `merchant`) is the one now
+        # authoritative for this iban, so use it instead.
+        merchant = backfill_merchant_iban!(merchant, normalized_iban) || merchant
+      end
       # Update logo if provided and merchant doesn't have one (or has a different one)
       # Best-effort: don't fail transaction import if logo update fails
       if logo_url.present? && merchant.logo_url != logo_url
@@ -363,15 +407,65 @@ class Account::ProviderImportAdapter
         name: name,
         provider_merchant_id: provider_merchant_id,
         website_url: website_url,
-        logo_url: logo_url
+        logo_url: logo_url,
+        iban: normalized_iban
       )
     rescue ActiveRecord::RecordNotUnique
-      # Race condition - another process created the record
-      merchant = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
+      # Race condition - another process created the record; the unique
+      # index on (source, iban) means a concurrent insert could have won on
+      # iban even when provider_merchant_id/name didn't collide, so that
+      # lookup needs to be retried here too.
+      merchant = (ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?) ||
+                 ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
+                 ProviderMerchant.find_by(source: source, name: name)
+    rescue ActiveRecord::RecordInvalid => e
+      # Same race, surfaced through the Rails-level uniqueness validation
+      # instead of the raw DB constraint (a concurrent insert can commit
+      # between our find and this create!, so the validation itself catches
+      # it before an INSERT is even attempted). Re-raise anything else --
+      # only this specific race is safe to recover from by re-querying.
+      raise unless e.record.errors.of_kind?(:iban, :taken)
+      merchant = (ProviderMerchant.find_by(source: source, iban: normalized_iban) if normalized_iban.present?) ||
+                 ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) ||
                  ProviderMerchant.find_by(source: source, name: name)
     end
 
     merchant
+  end
+
+  # Backfills iban onto a merchant found by provider_merchant_id/name that
+  # doesn't have one yet. Isolated in its own savepoint (see the identical
+  # pattern in #find_or_create_merchant's create! path just above, and
+  # #import_holding below): a concurrent import could insert the same
+  # (source, iban) between our earlier find and this update, and on
+  # PostgreSQL a failed statement aborts the whole surrounding transaction
+  # unless it's isolated like this.
+  # @return [ProviderMerchant] the merchant that now holds normalized_iban --
+  #   `merchant` itself on success, or the concurrent winner on a race.
+  def backfill_merchant_iban!(merchant, normalized_iban)
+    ProviderMerchant.transaction(requires_new: true) do
+      merchant.update!(iban: normalized_iban)
+    end
+    merchant
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+    # This race can change which merchant a transaction lands on (see the
+    # caller), so it's worth more than a Rails log line -- captured with
+    # family/account context for the support debug UI, per AGENTS.md.
+    # Deliberately excludes normalized_iban from message/metadata: both are
+    # persisted as plain jsonb/text and rendered on the admin debug page,
+    # and merchant_id is enough to look the merchant (and its encrypted
+    # iban) up directly if an admin needs to investigate.
+    DebugLogEntry.capture(
+      category: "provider_sync_warning",
+      level: "warn",
+      message: "Failed to backfill merchant iban: merchant_id=#{merchant.id} error_class=#{e.class}",
+      source: self.class.name,
+      provider_key: merchant.source,
+      family: account.family,
+      account: account,
+      metadata: { merchant_id: merchant.id }
+    )
+    ProviderMerchant.find_by(source: merchant.source, iban: normalized_iban)
   end
 
   # Updates account balance from provider data
