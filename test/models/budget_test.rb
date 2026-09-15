@@ -158,6 +158,7 @@ class BudgetTest < ActiveSupport::TestCase
     budget.sync_budget_categories
     budget_category = budget.budget_categories.find_by(category: healthcare)
     budget_category.update!(budgeted_spending: 200)
+    baseline_actual_spending = budget.actual_spending
 
     account = accounts(:depository)
 
@@ -189,7 +190,7 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 500, budget.budget_category_actual_spending(
       budget.budget_categories.find_by(category: healthcare)
     )
-    assert_equal 500, budget.actual_spending
+    assert_equal baseline_actual_spending + 500, budget.actual_spending
     assert_equal 500, budget.expense_category_totals.find { |ct| ct.category == healthcare }.total
     assert_equal 200, budget.income_category_totals.find { |ct| ct.category == healthcare }.total
   end
@@ -226,6 +227,27 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.budget_category_actual_spending(
       budget.budget_categories.find_by(category: category)
     )
+  end
+
+  test "category total breakdowns omit subcategories" do
+    family = families(:dylan_family)
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+    parent = family.categories.create!(name: "Household #{Time.now.to_f}", color: "#3498db")
+    child = family.categories.create!(name: "Groceries #{Time.now.to_f}", parent: parent, color: "#3498db")
+
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: child),
+      date: Date.current,
+      name: "Groceries",
+      amount: 50,
+      currency: "USD"
+    )
+
+    budget = Budget.find(budget.id)
+
+    assert_includes budget.expense_category_totals.map(&:category), parent
+    assert_not_includes budget.expense_category_totals.map(&:category), child
   end
 
   test "to_donut_segments_json only includes top-level budget categories" do
@@ -337,7 +359,7 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 125, uncategorized_segment[:amount]
   end
 
-  test "actual_spending subtracts uncategorized refunds" do
+  test "actual_spending ignores income-classified uncategorized refunds" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
     account = accounts(:depository)
@@ -365,18 +387,15 @@ class BudgetTest < ActiveSupport::TestCase
     budget = Budget.find(budget.id)
     budget.sync_budget_categories
 
-    # The uncategorized refund should reduce overall actual_spending
-    # Other fixtures may contribute spending, so check that the net
-    # uncategorized amount (400 - 150 = 250) is reflected by comparing
-    # with and without the refund rather than asserting an exact total.
+    # Gross spending excludes income-classified refunds.
     spending_with_refund = budget.actual_spending
 
-    # Remove the refund and check spending increases
+    # Removing the refund must not change gross spending.
     Entry.find_by(name: "Uncategorized refund").destroy!
     budget = Budget.find(budget.id)
     spending_without_refund = budget.actual_spending
 
-    assert_equal 150, spending_without_refund - spending_with_refund
+    assert_equal spending_without_refund, spending_with_refund
   end
 
   test "most_recent_initialized_budget returns latest initialized budget before this one" do

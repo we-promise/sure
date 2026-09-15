@@ -172,11 +172,11 @@ class Budget < ApplicationRecord
   end
 
   def income_category_totals
-    income_totals.category_totals.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
+    income_totals.category_totals.reject { |ct| ct.total.zero? || ct.category.subcategory? }.sort_by(&:weight).reverse
   end
 
   def expense_category_totals
-    expense_totals.category_totals.reject { |ct| ct.total.zero? }.sort_by(&:weight).reverse
+    expense_totals.category_totals.reject { |ct| ct.total.zero? || ct.category.subcategory? }.sort_by(&:weight).reverse
   end
 
   def current?
