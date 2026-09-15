@@ -438,6 +438,10 @@ MCP_API_TOKEN=your-secret-token    # Bearer token the agent sends to authenticat
 MCP_USER_EMAIL=user@example.com    # Email of the Sure user the agent acts as
 ```
 
+For a read-only agent (e.g. ChatGPT via the OpenAI Secure MCP Tunnel) or a
+global read-only kill switch, see [Read-only mode](mcp.md#read-only-mode) in
+the full MCP hosting guide.
+
 The agent must send requests to `https://your-sure-instance/mcp` with:
 ```http
 Authorization: Bearer <access-token>
