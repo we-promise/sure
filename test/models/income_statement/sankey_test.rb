@@ -46,6 +46,31 @@ class IncomeStatement::SankeyTest < ActiveSupport::TestCase
     assert_balanced(result)
   end
 
+  test "decimal netting retains sub-cent precision beyond floating point accuracy" do
+    transaction("900719925474.1234".to_d, @parent)
+    transaction("-900719925474.1233".to_d, @parent)
+    transaction("0.2".to_d, @child)
+    result = graph
+    assert_equal "0.2001", result[:spending]
+    assert_equal "0.2001", node(result, "expense_#{@parent.id}")[:value]
+    assert_equal "0.2", node(result, "expense_sub_#{@child.id}")[:value]
+    assert_equal "0.2001", node(result, "deficit_node")[:value]
+    assert_balanced(result)
+  end
+
+  test "a spending-only period has an explicit deficit through cash flow to expenses" do
+    transaction(160, @parent)
+    result = graph
+    assert_equal "0.0", result[:income]
+    assert_equal "160.0", result[:spending]
+    assert_equal "-160.0", result[:net_savings]
+    assert_equal [
+      [ "cash_flow_node", "expense_#{@parent.id}", "160.0" ],
+      [ "deficit_node", "cash_flow_node", "160.0" ]
+    ].sort, result[:links].map { |link| [ result[:nodes][link[:source]][:id], result[:nodes][link[:target]][:id], link[:value] ] }.sort
+    assert_balanced(result)
+  end
+
   test "preserves FX precision, reporting eligibility and surplus" do
     eur = @family.accounts.create!(name: "EUR", currency: "EUR", balance: 0, accountable: Depository.new)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @month, rate: "1.2345")
@@ -89,10 +114,11 @@ class IncomeStatement::SankeyTest < ActiveSupport::TestCase
       outgoing = graph[:links].select { |link| link[:source] == center }.sum { |link| link[:value].to_d }
       assert_equal incoming, outgoing
       graph[:nodes].each_with_index do |node, index|
-        %i[source target].each do |end_point|
-          allocated = graph[:links].select { |link| link[end_point] == index }.sum { |link| link[:value].to_d }
-          assert_operator allocated, :<=, node[:value].to_d
+        allocations = %i[source target].map do |end_point|
+          graph[:links].select { |link| link[end_point] == index }.sum { |link| link[:value].to_d }
         end
+        assert_operator node[:value].to_d, :>, 0
+        assert_equal node[:value].to_d, allocations.max, "#{node[:id]} must match its links' capacity"
       end
     end
 end

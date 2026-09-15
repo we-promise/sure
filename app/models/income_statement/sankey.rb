@@ -31,6 +31,8 @@ class IncomeStatement::Sankey
   end
 
   private
+    # Keep this hierarchy-aware netting separate from IncomeStatement#net_category_totals
+    # while the original dashboard Sankey remains available for preview comparisons.
     def category_groups
       expense = @statement.expense_totals(period: @period).category_totals.index_by { |ct| category_key(ct.category) }
       income = @statement.income_totals(period: @period).category_totals.index_by { |ct| category_key(ct.category) }

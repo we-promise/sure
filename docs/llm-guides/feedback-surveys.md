@@ -36,6 +36,19 @@ Self-hosted configuration also returns `{}` outside production or when
 `POSTHOG_FEEDBACK_ENABLED=false`. This switch is specific to the shared
 self-hosted feedback connection; managed deployments retain their existing rules.
 
+## Rotating the public self-hosted project token
+
+The bundled `phc_` token is deliberately public client configuration, not a
+secret credential. It identifies the shared feedback destination and does not
+grant access to collected data or administrative APIs. Do not replace it with a personal API key.
+
+To change it, update `self_hosted_feedback_project` in the initializer, verify
+survey retrieval and ingestion against that project, and publish a release.
+Existing self-hosted versions keep their bundled token until upgraded; revoking
+the old token can therefore stop their feedback collection. Charts must remain
+usable when collection is unavailable. Operators can disable the shared
+connection immediately with `POSTHOG_FEEDBACK_ENABLED=false`.
+
 ## Adding the next feature
 
 1. Create an API survey in each intended PostHog project. App and demo have

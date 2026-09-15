@@ -533,11 +533,15 @@ export default class extends Controller {
         this.#activateNode(d);
       })
       .on("focus", (event, d) => {
-        applyHover(sankeyData.links.filter((l) => l.source === d || l.target === d));
+        applyHover(
+          sankeyData.links.filter((l) => l.source === d || l.target === d),
+        );
       })
       .on("blur", resetHover)
       .on("mouseenter", (event, d) => {
-        applyHover(sankeyData.links.filter((l) => l.source === d || l.target === d));
+        applyHover(
+          sankeyData.links.filter((l) => l.source === d || l.target === d),
+        );
         this.#showTooltip(
           event,
           d.value,
@@ -553,7 +557,10 @@ export default class extends Controller {
     nodeGroups.selectAll("text").style("cursor", "inherit");
 
     if (this.focusAfterDraw) {
-      nodeGroups.filter((d) => d.id === this.focusAfterDraw).node()?.focus();
+      nodeGroups
+        .filter((d) => d.id === this.focusAfterDraw)
+        .node()
+        ?.focus();
       this.focusAfterDraw = null;
     }
   }
