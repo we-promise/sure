@@ -25,6 +25,28 @@
         <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
       </div>
       <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
+      <%# Never pre-filled with the stored (decrypted) value -- write-only,
+          like a password field. A blank submit means "unchanged"; the
+          "Remove IBAN" toggle below is the only way to actually clear it. %>
+      <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
+        <%= f.text_field :iban,
+              value: nil,
+              placeholder: family_merchant.iban.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
+      </div>
+      <p class="text-xs text-subdued"><%= t(".iban_hint") %></p>
+      <% if family_merchant.iban.present? %>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm"><%= t(".iban_remove_label") %></span>
+          <%# Not a real model attribute (the field is write-only, so there's
+              no stored value to reflect back) -- rendered directly rather
+              than via form.toggle, which would call family_merchant.remove_iban.
+              Uses f.object_name (not a hardcoded "family_merchant") since this
+              same form also edits ProviderMerchant records, which submit
+              under a "provider_merchant" param scope instead -- see
+              FamilyMerchantsController#merchant_params. %>
+          <%= render DS::Toggle.new(id: "#{f.object_name}_remove_iban", name: "#{f.object_name}[remove_iban]", checked: false) %>
+        </div>
+      <% end %>
     </section>
 
     <section>
